@@ -46,7 +46,7 @@
 ;CHECK-NEXT:   1: 6
 ;CHECK-NEXT:   2: 6
 ;CHECK-NEXT:   3: 6
-;CHECK-NEXT: partition_pivot_last:647:7
+;CHECK-NEXT: partition_pivot_last:389:7
 ;CHECK-NEXT:  1: 6
 ;CHECK-NEXT:  2: 6
 ;CHECK-NEXT:  3: 6
@@ -62,7 +62,7 @@
 
 ;CHECK-NEXT:  6: 5
 ;CHECK-NEXT:  7: 5
-;CHECK-NEXT:  5: swap:116
+;CHECK-NEXT:  5: swap:61
 
 ;w/o duplication factor :  1: 9
 ;w/o duplication factor :  2: 9

@@ -274,6 +274,12 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
     uint64_t Count) {
   // Use the maximum count of samples with same line location
   uint32_t Discriminator = getBaseDiscriminator(LeafLoc.Location.Discriminator);
+
+  // Use duplication factor to compensated for loop unroll/vectorization.
+  // Note that this is only needed when we're taking MAX of the counts at
+  // the location instead of SUM.
+  Count *= getDuplicationFactor(LeafLoc.Location.Discriminator);
+
   ErrorOr<uint64_t> R =
       FunctionProfile.findSamplesAt(LeafLoc.Location.LineOffset, Discriminator);
 
@@ -384,12 +390,10 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
       const SampleContextFrameVector &FrameVec =
           Binary->getFrameLocationStack(Offset);
       if (!FrameVec.empty()) {
-        uint64_t DC = Count * getDuplicationFactor(
-                                  FrameVec.back().Location.Discriminator);
         FunctionSamples &FunctionProfile =
-            getLeafProfileAndAddTotalSamples(FrameVec, DC);
+            getLeafProfileAndAddTotalSamples(FrameVec, Count);
         updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
-                                            DC);
+                                            Count);
       }
       // Move to next IP within the range.
       IP.advance();
@@ -430,7 +434,6 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     const SampleContextFrameVector &FrameVec =
         Binary->getFrameLocationStack(SourceOffset);
     if (!FrameVec.empty()) {
-      Count *= getDuplicationFactor(FrameVec.back().Location.Discriminator);
       FunctionSamples &FunctionProfile =
           getLeafProfileAndAddTotalSamples(FrameVec, Count);
       FunctionProfile.addCalledTargetSamples(
@@ -545,10 +548,8 @@ void CSProfileGenerator::populateBodySamplesForFunction(
       auto LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
       if (LeafLoc.hasValue()) {
         // Recording body sample for this specific context
-        uint64_t DC =
-            Count * getDuplicationFactor(LeafLoc->Location.Discriminator);
-        updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, DC);
-        FunctionProfile.addTotalSamples(DC);
+        updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
+        FunctionProfile.addTotalSamples(Count);
       }
 
       // Move to next IP within the range
@@ -575,7 +576,6 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
     if (!LeafLoc.hasValue())
       continue;
-    Count *= getDuplicationFactor(LeafLoc->Location.Discriminator);
     FunctionProfile.addCalledTargetSamples(
         LeafLoc->Location.LineOffset,
         getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,
