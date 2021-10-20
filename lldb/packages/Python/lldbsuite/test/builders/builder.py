@@ -141,17 +141,26 @@ class Builder:
                 configuration.clang_module_cache_dir)
         return ""
 
-    def buildDefault(self,
-                     sender=None,
-                     architecture=None,
-                     compiler=None,
-                     dictionary=None,
-                     testdir=None,
-                     testname=None):
-        """Build the binaries the default way."""
+    def _getDebugInfoArgs(self, debug_info):
+        if debug_info is None:
+            return []
+        if debug_info == "dwarf":
+            return ["MAKE_DSYM=NO"]
+        if debug_info == "dwo":
+            return ["MAKE_DSYM=NO", "MAKE_DWO=YES"]
+        if debug_info == "gmodules":
+            return ["MAKE_DSYM=NO", "MAKE_GMODULES=YES"]
+        return None
+
+    def build(self, debug_info, sender=None, architecture=None, compiler=None,
+            dictionary=None, testdir=None, testname=None):
+        debug_info_args = self._getDebugInfoArgs(debug_info)
+        if debug_info_args is None:
+            return False
+
         commands = []
         commands.append(
-            self.getMake(testdir, testname) + [
+            self.getMake(testdir, testname) + debug_info_args + [
                 "all",
                 self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
@@ -165,100 +174,7 @@ class Builder:
             ])
 
         self.runBuildCommands(commands, sender=sender)
-
-        # True signifies that we can handle building default.
         return True
-
-    def buildDwarf(self,
-                   sender=None,
-                   architecture=None,
-                   compiler=None,
-                   dictionary=None,
-                   testdir=None,
-                   testname=None):
-        """Build the binaries with dwarf debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=NO",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getSwiftTargetFlags(architecture),
-                self.getCCSpec(compiler),
-                self.getSwiftCSpec(),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-        # True signifies that we can handle building dwarf.
-        return True
-
-    def buildDwo(self,
-                 sender=None,
-                 architecture=None,
-                 compiler=None,
-                 dictionary=None,
-                 testdir=None,
-                 testname=None):
-        """Build the binaries with dwarf debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=NO", "MAKE_DWO=YES",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getSwiftTargetFlags(architecture),
-                self.getCCSpec(compiler),
-                self.getSwiftCSpec(),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-        # True signifies that we can handle building dwo.
-        return True
-
-    def buildGModules(self,
-                      sender=None,
-                      architecture=None,
-                      compiler=None,
-                      dictionary=None,
-                      testdir=None,
-                      testname=None):
-        """Build the binaries with dwarf debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=NO", "MAKE_GMODULES=YES",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getSwiftTargetFlags(architecture),
-                self.getCCSpec(compiler),
-                self.getSwiftCSpec(),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-        # True signifies that we can handle building with gmodules.
-        return True
-
-    def buildDsym(self,
-                  sender=None,
-                  architecture=None,
-                  compiler=None,
-                  dictionary=None,
-                  testdir=None,
-                  testname=None):
-        # False signifies that we cannot handle building with dSYM.
-        return False
 
     def cleanup(self, sender=None, dictionary=None):
         """Perform a platform-specific cleanup after the test."""

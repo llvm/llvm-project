@@ -73,7 +73,7 @@ Now let's look inside the test method:
 
     def test_set_output_path(self):
         """Test that setting target.process.output-path for the launched process works."""
-        self.buildDefault()
+        self.build()
 
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -96,49 +96,12 @@ Now let's look inside the test method:
         self.expect(output, exe=False,
             startstr = "This message should go to standard out.")
 
-The self.buildDefault() statement is used to build a default binary for this
-test instance.  For this particular test case, since we don't really care what
-debugging format is used, we instruct the build subsystem to build the default
-binary for us.  The base class TestBase has defined three instance methods:
-
-    def buildDefault(self, architecture=None, compiler=None, dictionary=None):
-        """Platform specific way to build the default binaries."""
-        module = __import__(sys.platform)
-        if not module.buildDefault(self, architecture, compiler, dictionary):
-            raise Exception("Don't know how to build default binary")
-
-    def buildDsym(self, architecture=None, compiler=None, dictionary=None):
-        """Platform specific way to build binaries with dsym info."""
-        module = __import__(sys.platform)
-        if not module.buildDsym(self, architecture, compiler, dictionary):
-            raise Exception("Don't know how to build binary with dsym")
-
-    def buildDwarf(self, architecture=None, compiler=None, dictionary=None):
-        """Platform specific way to build binaries with dwarf maps."""
-        module = __import__(sys.platform)
-        if not module.buildDwarf(self, architecture, compiler, dictionary):
-            raise Exception("Don't know how to build binary with dwarf")
-
-And the test/plugins/darwin.py provides the implementation for all three build
-methods using the makefile mechanism.  We envision that linux plugin can use a
-similar approach to accomplish the task of building the binaries.
-
-macOS provides an additional way to manipulate archived DWARF debug symbol
-files and produces dSYM files.  The buildDsym() instance method is used by the
-test method to build the binary with dsym info.  For an example of this,
-see test/array_types/TestArrayTypes.py:
-
-    @unittest2.skipUnless(sys.platform.startswith("darwin"), "requires Darwin")
-    def test_with_dsym_and_run_command(self):
-        """Test 'frame variable var_name' on some variables with array types."""
-        self.buildDsym()
-        self.array_types()
-
-This method is decorated with a skipUnless decorator so that it will only gets
-included into the test suite if the platform it is running on is 'darwin', a.k.a.
-macOS.
-
-Type 'man dsymutil' for more details. 
+The self.build() statement is used to build a binary for this
+test instance. This will build the binary for the current debug info format. If
+we wanted to avoid running the test for every supported debug info format we
+could annotate it with @no_debug_info_test. The test would then only be run for
+the default format.  The logic for building a test binary resides in the builder
+modules (packages/Python/lldbsuite/test/builders/builder.py)
 
 After the binary is built, it is time to specify the file to be used as the main
 executable by lldb:
