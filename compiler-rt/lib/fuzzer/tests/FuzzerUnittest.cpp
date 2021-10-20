@@ -652,6 +652,39 @@ TEST(Corpus, Distribution) {
   }
 }
 
+TEST(Corpus, Replace) {
+  DataFlowTrace DFT;
+  struct EntropicOptions Entropic = {false, 0xFF, 100, false};
+  std::unique_ptr<InputCorpus> C(
+      new InputCorpus(/*OutputCorpus*/ "", Entropic));
+  InputInfo *FirstII =
+      C->AddToCorpus(Unit{0x01, 0x00}, /*NumFeatures*/ 1,
+                     /*MayDeleteFile*/ false, /*HasFocusFunction*/ false,
+                     /*ForceAddToCorpus*/ false,
+                     /*TimeOfUnit*/ std::chrono::microseconds(1234),
+                     /*FeatureSet*/ {}, DFT,
+                     /*BaseII*/ nullptr);
+  InputInfo *SecondII =
+      C->AddToCorpus(Unit{0x02}, /*NumFeatures*/ 1,
+                     /*MayDeleteFile*/ false, /*HasFocusFunction*/ false,
+                     /*ForceAddToCorpus*/ false,
+                     /*TimeOfUnit*/ std::chrono::microseconds(5678),
+                     /*FeatureSet*/ {}, DFT,
+                     /*BaseII*/ nullptr);
+  Unit ReplacedU = Unit{0x03};
+
+  C->Replace(FirstII, ReplacedU,
+             /*TimeOfUnit*/ std::chrono::microseconds(321));
+
+  EXPECT_EQ(FirstII->U, Unit{0x03});
+  EXPECT_EQ(FirstII->Reduced, true);
+  EXPECT_EQ(FirstII->TimeOfUnit, std::chrono::microseconds(321));
+  std::vector<uint8_t> ExpectedSha1(kSHA1NumBytes);
+  ComputeSHA1(ReplacedU.data(), ReplacedU.size(), ExpectedSha1.data());
+  std::vector<uint8_t> IISha1(FirstII->Sha1, FirstII->Sha1 + kSHA1NumBytes);
+  EXPECT_EQ(IISha1, ExpectedSha1);
+}
+
 template <typename T>
 void EQ(const std::vector<T> &A, const std::vector<T> &B) {
   EXPECT_EQ(A, B);
