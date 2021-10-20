@@ -45,7 +45,7 @@ enum Action : uint32_t {
 
 /// Returns internal type encoding for primary storage. Keep these
 /// values consistent with the sparse runtime support library.
-static unsigned getPrimaryTypeEncoding(Type tp) {
+static uint32_t getPrimaryTypeEncoding(Type tp) {
   if (tp.isF64())
     return 1;
   if (tp.isF32())
@@ -63,7 +63,7 @@ static unsigned getPrimaryTypeEncoding(Type tp) {
 
 /// Returns internal type encoding for overhead storage. Keep these
 /// values consistent with the sparse runtime support library.
-static unsigned getOverheadTypeEncoding(unsigned width) {
+static uint32_t getOverheadTypeEncoding(unsigned width) {
   switch (width) {
   default:
     return 1;
@@ -78,7 +78,7 @@ static unsigned getOverheadTypeEncoding(unsigned width) {
 
 /// Returns internal dimension level type encoding. Keep these
 /// values consistent with the sparse runtime support library.
-static unsigned
+static uint32_t
 getDimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt) {
   switch (dlt) {
   case SparseTensorEncodingAttr::DimLevelType::Dense:
@@ -101,12 +101,6 @@ inline static Value constantZero(ConversionPatternRewriter &rewriter,
 inline static Value constantIndex(ConversionPatternRewriter &rewriter,
                                   Location loc, int64_t i) {
   return rewriter.create<arith::ConstantIndexOp>(loc, i);
-}
-
-/// Generates a constant of `i64` type.
-inline static Value constantI64(ConversionPatternRewriter &rewriter,
-                                Location loc, int64_t i) {
-  return rewriter.create<arith::ConstantIntOp>(loc, i, 64);
 }
 
 /// Generates a constant of `i32` type.
@@ -246,11 +240,9 @@ static void newParams(ConversionPatternRewriter &rewriter,
   params.push_back(genBuffer(rewriter, loc, attrs));
   // Dimension sizes array of the enveloping tensor. Useful for either
   // verification of external data, or for construction of internal data.
-  // The index type is casted to I64 for API consistency.
-  Type iTp = rewriter.getI64Type();
   SmallVector<Value, 4> sizes;
   for (Value s : szs)
-    sizes.push_back(rewriter.create<arith::IndexCastOp>(loc, s, iTp));
+    sizes.push_back(s);
   params.push_back(genBuffer(rewriter, loc, sizes));
   // Dimension order permutation array. This is the "identity" permutation by
   // default, or otherwise the "reverse" permutation of a given ordering, so
@@ -258,21 +250,21 @@ static void newParams(ConversionPatternRewriter &rewriter,
   SmallVector<Value, 4> rev(sz);
   if (AffineMap p = enc.getDimOrdering()) {
     for (unsigned i = 0; i < sz; i++)
-      rev[p.getDimPosition(i)] = constantI64(rewriter, loc, i);
+      rev[p.getDimPosition(i)] = constantIndex(rewriter, loc, i);
   } else {
     for (unsigned i = 0; i < sz; i++)
-      rev[i] = constantI64(rewriter, loc, i);
+      rev[i] = constantIndex(rewriter, loc, i);
   }
   params.push_back(genBuffer(rewriter, loc, rev));
   // Secondary and primary types encoding.
   ShapedType resType = op->getResult(0).getType().cast<ShapedType>();
-  unsigned secPtr = getOverheadTypeEncoding(enc.getPointerBitWidth());
-  unsigned secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());
-  unsigned primary = getPrimaryTypeEncoding(resType.getElementType());
+  uint32_t secPtr = getOverheadTypeEncoding(enc.getPointerBitWidth());
+  uint32_t secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());
+  uint32_t primary = getPrimaryTypeEncoding(resType.getElementType());
   assert(primary);
-  params.push_back(constantI64(rewriter, loc, secPtr));
-  params.push_back(constantI64(rewriter, loc, secInd));
-  params.push_back(constantI64(rewriter, loc, primary));
+  params.push_back(constantI32(rewriter, loc, secPtr));
+  params.push_back(constantI32(rewriter, loc, secInd));
+  params.push_back(constantI32(rewriter, loc, primary));
   // User action and pointer.
   Type pTp = LLVM::LLVMPointerType::get(rewriter.getI8Type());
   if (!ptr)
@@ -608,7 +600,7 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isIndex())
-      name = "sparsePointers"; // 64-bit, but its own name for unique signature
+      name = "sparsePointers";
     else if (eltType.isInteger(64))
       name = "sparsePointers64";
     else if (eltType.isInteger(32))
@@ -637,7 +629,7 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isIndex())
-      name = "sparseIndices"; // 64-bit, but its own name for unique signature
+      name = "sparseIndices";
     else if (eltType.isInteger(64))
       name = "sparseIndices64";
     else if (eltType.isInteger(32))

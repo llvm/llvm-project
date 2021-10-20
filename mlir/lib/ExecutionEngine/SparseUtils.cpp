@@ -273,7 +273,7 @@ public:
     if (tensor) {
       assert(tensor->getRank() == rank);
       for (uint64_t r = 0; r < rank; r++)
-        assert(tensor->getSizes()[perm[r]] == sizes[r] || sizes[r] == 0);
+        assert(sizes[r] == 0 || tensor->getSizes()[perm[r]] == sizes[r]);
       tensor->sort(); // sort lexicographically
       n = new SparseTensorStorage<P, I, V>(tensor->getSizes(), perm, sparsity,
                                            tensor);
@@ -306,8 +306,8 @@ private:
     while (lo < hi) {
       assert(lo < elements.size() && hi <= elements.size());
       // Find segment in interval with same index elements in this dimension.
-      unsigned idx = elements[lo].indices[d];
-      unsigned seg = lo + 1;
+      uint64_t idx = elements[lo].indices[d];
+      uint64_t seg = lo + 1;
       while (seg < hi && elements[seg].indices[d] == idx)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
@@ -505,14 +505,12 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
 
 extern "C" {
 
-/// Helper method to read a sparse tensor filename from the environment,
-/// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
-char *getTensorFilename(uint64_t id) {
-  char var[80];
-  sprintf(var, "TENSOR%" PRIu64, id);
-  char *env = getenv(var);
-  return env;
-}
+/// This type is used in the public API at all places where MLIR expects
+/// values with the built-in type "index". For now, we simply assume that
+/// type is 64-bit, but targets with different "index" bit widths should link
+/// with an alternatively built runtime support library.
+// TODO: support such targets?
+typedef uint64_t index_t;
 
 //===----------------------------------------------------------------------===//
 //
@@ -525,9 +523,9 @@ char *getTensorFilename(uint64_t id) {
 //
 //===----------------------------------------------------------------------===//
 
-enum OverheadTypeEnum : uint64_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
+enum OverheadTypeEnum : uint32_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
 
-enum PrimaryTypeEnum : uint64_t {
+enum PrimaryTypeEnum : uint32_t {
   kF64 = 1,
   kF32 = 2,
   kI64 = 3,
@@ -576,7 +574,7 @@ enum Action : uint32_t {
 
 #define IMPL2(NAME, TYPE, LIB)                                                 \
   void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor,      \
-                           uint64_t d) {                                       \
+                           index_t d) {                                        \
     assert(ref);                                                               \
     assert(tensor);                                                            \
     std::vector<TYPE> *v;                                                      \
@@ -589,17 +587,17 @@ enum Action : uint32_t {
 
 #define IMPL3(NAME, TYPE)                                                      \
   void *_mlir_ciface_##NAME(void *tensor, TYPE value,                          \
-                            StridedMemRefType<uint64_t, 1> *iref,              \
-                            StridedMemRefType<uint64_t, 1> *pref) {            \
+                            StridedMemRefType<index_t, 1> *iref,               \
+                            StridedMemRefType<index_t, 1> *pref) {             \
     assert(tensor);                                                            \
     assert(iref);                                                              \
     assert(pref);                                                              \
     assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
     assert(iref->sizes[0] == pref->sizes[0]);                                  \
-    const uint64_t *indx = iref->data + iref->offset;                          \
-    const uint64_t *perm = pref->data + pref->offset;                          \
+    const index_t *indx = iref->data + iref->offset;                           \
+    const index_t *perm = pref->data + pref->offset;                           \
     uint64_t isize = iref->sizes[0];                                           \
-    std::vector<uint64_t> indices(isize);                                      \
+    std::vector<index_t> indices(isize);                                       \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indices[perm[r]] = indx[r];                                              \
     static_cast<SparseTensorCOO<TYPE> *>(tensor)->add(indices, value);         \
@@ -617,17 +615,17 @@ enum Action : uint32_t {
 /// kToCOO = returns coordinate scheme from storage in ptr to use with kFromCOO
 void *
 _mlir_ciface_newSparseTensor(StridedMemRefType<uint8_t, 1> *aref, // NOLINT
-                             StridedMemRefType<uint64_t, 1> *sref,
-                             StridedMemRefType<uint64_t, 1> *pref,
-                             uint64_t ptrTp, uint64_t indTp, uint64_t valTp,
+                             StridedMemRefType<index_t, 1> *sref,
+                             StridedMemRefType<index_t, 1> *pref,
+                             uint32_t ptrTp, uint32_t indTp, uint32_t valTp,
                              uint32_t action, void *ptr) {
   assert(aref && sref && pref);
   assert(aref->strides[0] == 1 && sref->strides[0] == 1 &&
          pref->strides[0] == 1);
   assert(aref->sizes[0] == sref->sizes[0] && sref->sizes[0] == pref->sizes[0]);
   const uint8_t *sparsity = aref->data + aref->offset;
-  const uint64_t *sizes = sref->data + sref->offset;
-  const uint64_t *perm = pref->data + pref->offset;
+  const index_t *sizes = sref->data + sref->offset;
+  const index_t *perm = pref->data + pref->offset;
   uint64_t rank = aref->sizes[0];
 
   // Double matrices with all combinations of overhead storage.
@@ -687,12 +685,12 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<uint8_t, 1> *aref, // NOLINT
 }
 
 /// Methods that provide direct access to pointers, indices, and values.
-IMPL2(sparsePointers, uint64_t, getPointers)
+IMPL2(sparsePointers, index_t, getPointers)
 IMPL2(sparsePointers64, uint64_t, getPointers)
 IMPL2(sparsePointers32, uint32_t, getPointers)
 IMPL2(sparsePointers16, uint16_t, getPointers)
 IMPL2(sparsePointers8, uint8_t, getPointers)
-IMPL2(sparseIndices, uint64_t, getIndices)
+IMPL2(sparseIndices, index_t, getIndices)
 IMPL2(sparseIndices64, uint64_t, getIndices)
 IMPL2(sparseIndices32, uint32_t, getIndices)
 IMPL2(sparseIndices16, uint16_t, getIndices)
@@ -726,8 +724,17 @@ IMPL3(addEltI8, int8_t)
 //
 //===----------------------------------------------------------------------===//
 
+/// Helper method to read a sparse tensor filename from the environment,
+/// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
+char *getTensorFilename(index_t id) {
+  char var[80];
+  sprintf(var, "TENSOR%" PRIu64, id);
+  char *env = getenv(var);
+  return env;
+}
+
 /// Returns size of sparse tensor in given dimension.
-uint64_t sparseDimSize(void *tensor, uint64_t d) {
+index_t sparseDimSize(void *tensor, index_t d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
 }
 
