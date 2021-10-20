@@ -466,11 +466,11 @@ documentation)
     echo "+++ Generating documentation"
     ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
 ;;
-runtimes-build)
+bootstrapping-build)
     clean
 
     echo "--- Generating CMake"
-    # TODO: We currently enable modules and assertions in the runtimes build
+    # TODO: We currently enable modules and assertions in the bootstrapping build
     #       because that provides coverage for some specific Clang failures
     #       we've been seeing recently, however it would be better to instead
     #       run all CI configurations against a Clang that has assertions enabled.

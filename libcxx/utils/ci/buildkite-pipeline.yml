@@ -280,8 +280,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Runtimes build"
-    command: "libcxx/utils/ci/run-buildbot runtimes-build"
+  - label: "Bootstrapping build"
+    command: "libcxx/utils/ci/run-buildbot bootstrapping-build"
     artifact_paths:
       - "**/test-results.xml"
     agents:
