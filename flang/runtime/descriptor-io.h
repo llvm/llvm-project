@@ -249,7 +249,7 @@ static bool DefaultFormattedComponentIO(IoStatementState &io,
     StaticDescriptor<maxRank, true, 16 /*?*/> statDesc;
     Descriptor &desc{statDesc.descriptor()};
     component.CreatePointerDescriptor(
-        desc, origDescriptor, origSubscripts, terminator);
+        desc, origDescriptor, terminator, origSubscripts);
     return DescriptorIO<DIR>(io, desc);
   } else {
     // Component is itself a descriptor
