@@ -252,14 +252,10 @@ void OpenMPCounterVisitor::PostClauseCommon(const ClauseInfo &ci) {
   if (ci.clause == "nowait") {
     assert(curLoopLogRecord &&
         "loop Construct should be visited before a nowait clause");
-    constructClauseCount[std::make_pair(
-        curLoopLogRecord->construct, ci.clause)]++;
     curLoopLogRecord->clauses.push_back(ci);
   } else {
     assert(!ompWrapperStack.empty() &&
         "Construct should be visited before clause");
-    constructClauseCount[std::make_pair(
-        getName(*ompWrapperStack.back()), ci.clause)]++;
     clauseStrings[ompWrapperStack.back()].push_back(ci);
   }
 }
