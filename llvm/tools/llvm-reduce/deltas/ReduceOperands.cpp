@@ -1,71 +1,105 @@
-//===- ReduceOperands.cpp - Specialized Delta Pass ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a function to reduce operands to undef.
-//
-//===----------------------------------------------------------------------===//
 
 #include "ReduceOperands.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
 
 using namespace llvm;
 
-/// Returns if the given operand is undef.
-static bool operandIsUndefValue(Use &Op) {
-  if (auto *C = dyn_cast<Constant>(Op)) {
-    return isa<UndefValue>(C);
-  }
-  return false;
-}
-
-/// Returns if an operand can be reduced to undef.
-/// TODO: make this logic check what types are reducible rather than
-/// check what types that are not reducible.
-static bool canReduceOperand(Use &Op) {
-  auto *Ty = Op->getType();
-  // Can't reduce labels to undef
-  return !Ty->isLabelTy() && !operandIsUndefValue(Op);
-}
-
-/// Sets Operands to undef.
-static void extractOperandsFromModule(Oracle &O, Module &Program) {
-  // Extract Operands from the module.
+static void
+extractOperandsFromModule(Oracle &O, Module &Program,
+                          function_ref<Value *(Use &)> ReduceValue) {
   for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       for (auto &Op : I.operands()) {
-        // Filter Operands then set to undef.
-        if (canReduceOperand(Op) && !O.shouldKeep()) {
-          auto *Ty = Op->getType();
-          Op.set(UndefValue::get(Ty));
-        }
+        Value *Reduced = ReduceValue(Op);
+        if (Reduced && !O.shouldKeep())
+          Op.set(Reduced);
       }
     }
   }
 }
 
-/// Counts the amount of operands in the module that can be reduced.
-static int countOperands(Module &Program) {
+static int countOperands(Module &Program,
+                         function_ref<Value *(Use &)> ReduceValue) {
   int Count = 0;
   for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       for (auto &Op : I.operands()) {
-        if (canReduceOperand(Op)) {
+        if (ReduceValue(Op))
           Count++;
-        }
       }
     }
   }
   return Count;
 }
 
-void llvm::reduceOperandsDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Operands...\n";
-  int Count = countOperands(Test.getProgram());
-  runDeltaPass(Test, Count, extractOperandsFromModule);
+static bool isOne(Use &Op) {
+  auto *C = dyn_cast<Constant>(Op);
+  return C && C->isOneValue();
+}
+
+static bool isZero(Use &Op) {
+  auto *C = dyn_cast<Constant>(Op);
+  return C && C->isNullValue();
+}
+
+void llvm::reduceOperandsUndefDeltaPass(TestRunner &Test) {
+  errs() << "*** Reducing Operands to undef...\n";
+  auto ReduceValue = [](Use &Op) -> Value * {
+    if (isa<GEPOperator>(Op.getUser()))
+      return nullptr;
+    if (Op->getType()->isLabelTy())
+      return nullptr;
+    // Don't replace existing ConstantData Uses.
+    return isa<ConstantData>(*Op) ? nullptr : UndefValue::get(Op->getType());
+  };
+  int Count = countOperands(Test.getProgram(), ReduceValue);
+  runDeltaPass(Test, Count, [ReduceValue](Oracle &O, Module &Program) {
+    extractOperandsFromModule(O, Program, ReduceValue);
+  });
+}
+
+void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
+  errs() << "*** Reducing Operands to one...\n";
+  auto ReduceValue = [](Use &Op) -> Value * {
+    // TODO: support floats
+    if (isa<GEPOperator>(Op.getUser()))
+      return nullptr;
+    auto *Ty = dyn_cast<IntegerType>(Op->getType());
+    if (!Ty)
+      return nullptr;
+    // Don't replace existing ones and zeroes.
+    return (isOne(Op) || isZero(Op)) ? nullptr : ConstantInt::get(Ty, 1);
+  };
+  int Count = countOperands(Test.getProgram(), ReduceValue);
+  runDeltaPass(Test, Count, [ReduceValue](Oracle &O, Module &Program) {
+    extractOperandsFromModule(O, Program, ReduceValue);
+  });
+}
+
+void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
+  errs() << "*** Reducing Operands to zero...\n";
+  auto ReduceValue = [](Use &Op) -> Value * {
+    // TODO: be more precise about which GEP operands we can reduce (e.g. array
+    // indexes)
+    if (isa<GEPOperator>(Op.getUser()))
+      return nullptr;
+    if (Op->getType()->isLabelTy())
+      return nullptr;
+    // Don't replace existing zeroes.
+    return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
+  };
+  int Count = countOperands(Test.getProgram(), ReduceValue);
+  runDeltaPass(Test, Count, [ReduceValue](Oracle &O, Module &Program) {
+    extractOperandsFromModule(O, Program, ReduceValue);
+  });
 }
