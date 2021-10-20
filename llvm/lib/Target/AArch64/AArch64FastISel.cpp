@@ -4812,7 +4812,7 @@ bool AArch64FastISel::selectSDiv(const Instruction *I) {
 
   const APInt &C = cast<ConstantInt>(I->getOperand(1))->getValue();
   if ((VT != MVT::i32 && VT != MVT::i64) || !C ||
-      !(C.isPowerOf2() || (-C).isPowerOf2()))
+      !(C.isPowerOf2() || C.isNegatedPowerOf2()))
     return selectBinaryOp(I, ISD::SDIV);
 
   unsigned Lg2 = C.countTrailingZeros();
