@@ -1,4 +1,4 @@
-; RUN: opt -S %s -strip -o - | FileCheck %s
+; RUN: opt -S %s -passes=strip -o - | FileCheck %s
 
 ; CHECK-NOT: !llvm.dbg.cu
 ; CHECK-NOT: !llvm.gcov
