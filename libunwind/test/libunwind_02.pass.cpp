@@ -1,9 +1,6 @@
 // TODO: Investigate these failures
 // XFAIL: asan, tsan, ubsan
 
-// TODO: Investigate this failure
-// XFAIL: 32bits-on-64bits
-
 #include <assert.h>
 #include <stdlib.h>
 #include <unwind.h>
