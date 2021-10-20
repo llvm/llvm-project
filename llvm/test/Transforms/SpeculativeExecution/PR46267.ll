@@ -1,4 +1,3 @@
-; RUN: opt < %s -S -speculative-execution | FileCheck %s
 ; RUN: opt < %s -S -passes='speculative-execution' | FileCheck %s
 
 %class.B = type { i32 (...)** }

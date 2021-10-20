@@ -553,6 +553,7 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
       LinalgTransformationFilter()
           .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
   populatePadTensorOpVectorizationPatterns(patterns);
+  populateConvolutionVectorizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 

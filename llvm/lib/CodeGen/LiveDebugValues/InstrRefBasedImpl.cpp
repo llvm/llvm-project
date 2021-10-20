@@ -2034,19 +2034,11 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
 
   for (auto p : BlockOrders) {
     unsigned ThisBBNum = p->getNumber();
-    auto LiveOutMap = LiveOuts.find(p);
-    if (LiveOutMap == LiveOuts.end())
-      // This predecessor isn't in scope, it must have no live-in/live-out
-      // locations.
+    auto OutValIt = LiveOuts.find(p);
+    if (OutValIt == LiveOuts.end())
+      // If we have a predecessor not in scope, we'll never find a PHI position.
       return None;
-
-    auto It = LiveOutMap->second->find(Var);
-    if (It == LiveOutMap->second->end())
-      // There's no value recorded for this variable in this predecessor,
-      // leave an empty set of locations.
-      return None;
-
-    const DbgValue &OutVal = It->second;
+    const DbgValue &OutVal = *OutValIt->second;
 
     if (OutVal.Kind == DbgValue::Const || OutVal.Kind == DbgValue::NoVal)
       // Consts and no-values cannot have locations we can join on.
@@ -2124,10 +2116,9 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
 
 bool InstrRefBasedLDV::vlocJoin(
     MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-    const SmallSet<DebugVariable, 4> &AllVars,
     SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
     SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
-    DenseMap<DebugVariable, DbgValue> &LiveIns) {
+    DbgValue &LiveIn) {
   // To emulate VarLocBasedImpl, process this block if it's not in scope but
   // _does_ assign a variable value. No live-ins for this scope are transferred
   // in though, so we can return immediately.
@@ -2148,137 +2139,94 @@ bool InstrRefBasedLDV::vlocJoin(
 
   unsigned CurBlockRPONum = BBToOrder[&MBB];
 
-  // We re-construct the live-in map each time we join. For each variable, call
-  // one of these "confirm" utilities, according to which flavour of variable
-  // value it is.
-  auto ConfirmValue = [&LiveIns, &Changed](const DebugVariable &DV,
-                                           const DbgValue &VR) {
-    auto OldLiveIn = LiveIns.find(DV);
-    assert(OldLiveIn != LiveIns.end());
-    if (OldLiveIn->second != VR) {
-      Changed = true;
-      OldLiveIn->second = VR;
-    }
-  };
-
-  auto ConfirmVPHI = [&ConfirmValue,
-                      &MBB](const DebugVariable &Var,
-                            const DbgValueProperties &Properties) {
-    DbgValue NoLocPHIVal(MBB.getNumber(), Properties, DbgValue::VPHI);
-    ConfirmValue(Var, NoLocPHIVal);
-  };
-
-  // Attempt to join the values for each variable.
-  for (auto &Var : AllVars) {
-    // Collect all the incoming DbgValues for this variable, from predecessor
-    // live-out values.
-    SmallVector<InValueT, 8> Values;
-    bool Bail = false;
-    int BackEdgesStart = 0;
-    for (auto p : BlockOrders) {
-      // If the predecessor isn't in scope / to be explored, we'll never be
-      // able to join any locations.
-      if (!BlocksToExplore.contains(p)) {
-        Bail = true;
-        break;
-      }
-
-      // If the predecessors OutLocs is absent, there's not much we can do.
-      auto OL = VLOCOutLocs.find(p);
-      if (OL == VLOCOutLocs.end()) {
-        Bail = true;
-        break;
-      }
-
-      // No live-out value for this predecessor also means we can't produce
-      // a joined value.
-      auto VIt = OL->second->find(Var);
-      if (VIt == OL->second->end()) {
-        Bail = true;
-        break;
-      }
-
-      // Keep track of where back-edges begin in the Values vector. Relies on
-      // BlockOrders being sorted by RPO.
-      unsigned ThisBBRPONum = BBToOrder[p];
-      if (ThisBBRPONum < CurBlockRPONum)
-        ++BackEdgesStart;
-
-      Values.push_back(std::make_pair(p, &VIt->second));
+  // Collect all the incoming DbgValues for this variable, from predecessor
+  // live-out values.
+  SmallVector<InValueT, 8> Values;
+  bool Bail = false;
+  int BackEdgesStart = 0;
+  for (auto p : BlockOrders) {
+    // If the predecessor isn't in scope / to be explored, we'll never be
+    // able to join any locations.
+    if (!BlocksToExplore.contains(p)) {
+      Bail = true;
+      break;
     }
 
-    // Pick out the live-in value from last time we vlocJoin'd this block.
-    auto LiveInIt = LiveIns.find(Var);
-    assert(LiveInIt != LiveIns.end() && "Uninitialized live-in vloc?");
-    const DbgValue &OldLiveInDbgValue = LiveInIt->second;
+    // All Live-outs will have been initialized.
+    DbgValue &OutLoc = *VLOCOutLocs.find(p)->second;
 
-    // If there were no values, or one of the predecessors couldn't have a
-    // value, then give up immediately. It's not safe to produce a live-in
-    // value. Leave as whatever it was before.
-    if (Bail || Values.size() == 0) {
-      ConfirmValue(Var, OldLiveInDbgValue);
-      continue;
-    }
+    // Keep track of where back-edges begin in the Values vector. Relies on
+    // BlockOrders being sorted by RPO.
+    unsigned ThisBBRPONum = BBToOrder[p];
+    if (ThisBBRPONum < CurBlockRPONum)
+      ++BackEdgesStart;
 
-    // All (non-entry) blocks have at least one non-backedge predecessor.
-    // Pick the variable value from the first of these, to compare against
-    // all others.
-    const DbgValue &FirstVal = *Values[0].second;
-
-    // If the old live-in value is not a PHI then either a) no PHI is needed
-    // here, or b) we eliminated the PHI that was here. If so, we can just
-    // propagate in the first parents incoming value.
-    if (OldLiveInDbgValue.Kind != DbgValue::VPHI ||
-        OldLiveInDbgValue.BlockNo != MBB.getNumber()) {
-      ConfirmValue(Var, FirstVal);
-      continue;
-    }
-
-    // Scan for variable values that can never be resolved: if they have
-    // different DIExpressions, different indirectness, or are mixed constants /
-    // non-constants.
-    bool AlwaysIncompatible = false;
-    for (auto &V : Values) {
-      if (V.second->Properties != FirstVal.Properties)
-        AlwaysIncompatible = true;
-      if (V.second->Kind == DbgValue::NoVal)
-        AlwaysIncompatible = true;
-      if (V.second->Kind == DbgValue::Const && FirstVal.Kind != DbgValue::Const)
-        AlwaysIncompatible = true;
-    }
-
-    if (AlwaysIncompatible) {
-      // Leave this as a VPHI.
-      ConfirmVPHI(Var, OldLiveInDbgValue.Properties);
-      continue;
-    }
-
-    // Try to eliminate this PHI. Do the incoming values all agree?
-    bool Disagree = false;
-    for (auto &V : Values) {
-      if (*V.second == FirstVal)
-        continue; // No disagreement.
-
-      // Eliminate if a backedge feeds a VPHI back into itself.
-      if (V.second->Kind == DbgValue::VPHI &&
-          V.second->BlockNo == MBB.getNumber() &&
-          // Is this a backedge?
-          std::distance(Values.begin(), &V) >= BackEdgesStart)
-        continue;
-
-      Disagree = true;
-    }
-
-    // No disagreement -> live-through value.
-    if (!Disagree) {
-      ConfirmValue(Var, FirstVal);
-    } else {
-      // Otherwise use a VPHI.
-      ConfirmVPHI(Var, FirstVal.Properties);
-    }
+    Values.push_back(std::make_pair(p, &OutLoc));
   }
 
-  return Changed;
+  // If there were no values, or one of the predecessors couldn't have a
+  // value, then give up immediately. It's not safe to produce a live-in
+  // value. Leave as whatever it was before.
+  if (Bail || Values.size() == 0)
+    return false;
+
+  // All (non-entry) blocks have at least one non-backedge predecessor.
+  // Pick the variable value from the first of these, to compare against
+  // all others.
+  const DbgValue &FirstVal = *Values[0].second;
+
+  // If the old live-in value is not a PHI then either a) no PHI is needed
+  // here, or b) we eliminated the PHI that was here. If so, we can just
+  // propagate in the first parent's incoming value.
+  if (LiveIn.Kind != DbgValue::VPHI || LiveIn.BlockNo != MBB.getNumber()) {
+    Changed = LiveIn != FirstVal;
+    if (Changed)
+      LiveIn = FirstVal;
+    return Changed;
+  }
+
+  // Scan for variable values that can never be resolved: if they have
+  // different DIExpressions, different indirectness, or are mixed constants /
+  // non-constants.
+  for (auto &V : Values) {
+    if (V.second->Properties != FirstVal.Properties)
+      return false;
+    if (V.second->Kind == DbgValue::NoVal)
+      return false;
+    if (V.second->Kind == DbgValue::Const && FirstVal.Kind != DbgValue::Const)
+      return false;
+  }
+
+  // Try to eliminate this PHI. Do the incoming values all agree?
+  bool Disagree = false;
+  for (auto &V : Values) {
+    if (*V.second == FirstVal)
+      continue; // No disagreement.
+
+    // Eliminate if a backedge feeds a VPHI back into itself.
+    if (V.second->Kind == DbgValue::VPHI &&
+        V.second->BlockNo == MBB.getNumber() &&
+        // Is this a backedge?
+        std::distance(Values.begin(), &V) >= BackEdgesStart)
+      continue;
+
+    Disagree = true;
+  }
+
+  // No disagreement -> live-through value.
+  if (!Disagree) {
+    Changed = LiveIn != FirstVal;
+    if (Changed)
+      LiveIn = FirstVal;
+    return Changed;
+  } else {
+    // Otherwise use a VPHI.
+    DbgValue VPHI(MBB.getNumber(), FirstVal.Properties, DbgValue::VPHI);
+    Changed = LiveIn != VPHI;
+    if (Changed)
+      LiveIn = VPHI;
+    return Changed;
+  }
 }
 
 void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
@@ -2383,6 +2331,13 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
   if (BlocksToExplore.size() == 1)
     return;
 
+  // Convert a const set to a non-const set. LexicalScopes
+  // getMachineBasicBlocks returns const MBB pointers, IDF wants mutable ones.
+  // (Neither of them mutate anything).
+  SmallPtrSet<MachineBasicBlock *, 8> MutBlocksToExplore;
+  for (const auto *MBB : BlocksToExplore)
+    MutBlocksToExplore.insert(const_cast<MachineBasicBlock *>(MBB));
+
   // Picks out relevants blocks RPO order and sort them.
   for (auto *MBB : BlocksToExplore)
     BlockOrders.push_back(const_cast<MachineBasicBlock *>(MBB));
@@ -2391,20 +2346,17 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
   unsigned NumBlocks = BlockOrders.size();
 
   // Allocate some vectors for storing the live ins and live outs. Large.
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> LiveIns, LiveOuts;
-  LiveIns.resize(NumBlocks);
-  LiveOuts.resize(NumBlocks);
+  SmallVector<DbgValue, 32> LiveIns, LiveOuts;
+  LiveIns.reserve(NumBlocks);
+  LiveOuts.reserve(NumBlocks);
 
   // Initialize all values to start as NoVals. This signifies "it's live
   // through, but we don't know what it is".
   DbgValueProperties EmptyProperties(EmptyExpr, false);
-  unsigned int BlockIdx = 0;
-  for (auto &VarMap : LiveIns) {
-    for (const DebugVariable &Var : VarsWeCareAbout)
-      VarMap.insert(
-          {Var, DbgValue(BlockIdx, EmptyProperties, DbgValue::NoVal)});
-
-    ++BlockIdx;
+  for (unsigned int I = 0; I < NumBlocks; ++I) {
+    DbgValue EmptyDbgValue(I, EmptyProperties, DbgValue::NoVal);
+    LiveIns.push_back(EmptyDbgValue);
+    LiveOuts.push_back(EmptyDbgValue);
   }
 
   // Produce by-MBB indexes of live-in/live-outs, to ease lookup within
@@ -2417,26 +2369,20 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
     LiveInIdx[BlockOrders[I]] = &LiveIns[I];
   }
 
-  // Initialize all live-outs to "nothing", to avoid later conditionals.
-  for (auto &LiveOut : LiveOutIdx) {
-    const MachineBasicBlock *OutBB = LiveOut.first;
-    auto *LiveOutMap = LiveOut.second;
-    DbgValue EmptyDbgValue(OutBB->getNumber(), EmptyProperties,
-                           DbgValue::NoVal);
-    for (const DebugVariable &Var : VarsWeCareAbout)
+  // Loop over each variable and place PHIs for it, then propagate values
+  // between blocks. This keeps the locality of working on one lexical scope at
+  // at time, but avoids re-processing variable values because some other
+  // variable has been assigned.
+  for (auto &Var : VarsWeCareAbout) {
+    // Re-initialize live-ins and live-outs, to clear the remains of previous
+    // variables live-ins / live-outs.
+    for (unsigned int I = 0; I < NumBlocks; ++I) {
+      DbgValue EmptyDbgValue(I, EmptyProperties, DbgValue::NoVal);
+      LiveIns[I] = EmptyDbgValue;
+      LiveOuts[I] = EmptyDbgValue;
+    }
 
-      LiveOutMap->insert(std::make_pair(Var, EmptyDbgValue));
-  }
-
-  // Convert a const set to a non-const set. LexicalScopes
-  // getMachineBasicBlocks returns const MBB pointers, IDF wants mutable ones.
-  // (Neither of them mutate anything).
-  SmallPtrSet<MachineBasicBlock *, 8> MutBlocksToExplore;
-  for (const auto *MBB : BlocksToExplore)
-    MutBlocksToExplore.insert(const_cast<MachineBasicBlock*>(MBB));
-
-  // Place PHIs for variable values, using the LLVM IDF calculator.
-  for (const DebugVariable &Var : VarsWeCareAbout) {
+    // Place PHIs for variable values, using the LLVM IDF calculator.
     // Collect the set of blocks where variables are def'd.
     SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
     for (const MachineBasicBlock *ExpMBB : BlocksToExplore) {
@@ -2453,157 +2399,134 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
     // Insert PHIs into the per-block live-in tables for this variable.
     for (MachineBasicBlock *PHIMBB : PHIBlocks) {
       unsigned BlockNo = PHIMBB->getNumber();
-      auto *BlockLiveIns = LiveInIdx[PHIMBB];
-      auto It = BlockLiveIns->find(Var);
-      assert(It != BlockLiveIns->end() && "Uninitialized live-in?");
-      It->second = DbgValue(BlockNo, EmptyProperties, DbgValue::VPHI);
+      DbgValue *LiveIn = LiveInIdx[PHIMBB];
+      *LiveIn = DbgValue(BlockNo, EmptyProperties, DbgValue::VPHI);
     }
-  }
 
-  for (auto *MBB : BlockOrders) {
-    Worklist.push(BBToOrder[MBB]);
-    OnWorklist.insert(MBB);
-  }
+    for (auto *MBB : BlockOrders) {
+      Worklist.push(BBToOrder[MBB]);
+      OnWorklist.insert(MBB);
+    }
 
-  // Iterate over all the blocks we selected, propagating variable values. This
-  // loop does two things:
-  //  * Eliminates un-necessary VPHIs in vlocJoin,
-  //  * Evaluates the blocks transfer function (i.e. variable assignments) and
-  //    stores the result to the blocks live-outs.
-  // Always evaluate the transfer function on the first iteration, and when the
-  // live-ins change thereafter.
-  bool FirstTrip = true;
-  while (!Worklist.empty() || !Pending.empty()) {
-    while (!Worklist.empty()) {
-      auto *MBB = OrderToBB[Worklist.top()];
-      CurBB = MBB->getNumber();
-      Worklist.pop();
+    // Iterate over all the blocks we selected, propagating the variables value.
+    // This loop does two things:
+    //  * Eliminates un-necessary VPHIs in vlocJoin,
+    //  * Evaluates the blocks transfer function (i.e. variable assignments) and
+    //    stores the result to the blocks live-outs.
+    // Always evaluate the transfer function on the first iteration, and when
+    // the live-ins change thereafter.
+    bool FirstTrip = true;
+    while (!Worklist.empty() || !Pending.empty()) {
+      while (!Worklist.empty()) {
+        auto *MBB = OrderToBB[Worklist.top()];
+        CurBB = MBB->getNumber();
+        Worklist.pop();
 
-      auto BlockLiveInsIt = LiveInIdx.find(MBB);
-      assert(BlockLiveInsIt != LiveInIdx.end());
-      auto &BlockLiveIns = *BlockLiveInsIt->second;
+        auto LiveInsIt = LiveInIdx.find(MBB);
+        assert(LiveInsIt != LiveInIdx.end());
+        DbgValue *LiveIn = LiveInsIt->second;
 
-      // Join values from predecessors. Updates LiveInIdx, and writes output
-      // into JoinedInLocs.
-      bool InLocsChanged =
-          vlocJoin(*MBB, LiveOutIdx, VarsWeCareAbout, InScopeBlocks,
-                   BlocksToExplore, BlockLiveIns);
+        // Join values from predecessors. Updates LiveInIdx, and writes output
+        // into JoinedInLocs.
+        bool InLocsChanged =
+            vlocJoin(*MBB, LiveOutIdx, InScopeBlocks, BlocksToExplore, *LiveIn);
 
-      SmallVector<const MachineBasicBlock *, 8> Preds;
-      for (const auto *Pred : MBB->predecessors())
-        Preds.push_back(Pred);
+        SmallVector<const MachineBasicBlock *, 8> Preds;
+        for (const auto *Pred : MBB->predecessors())
+          Preds.push_back(Pred);
 
-      // Opportunistically pick a machine-value for any VPHIs starting in this
-      // block. This makes their machine-value available and propagated through
-      // all blocks by the time value propagation finishes. We can't do this any
-      // earlier as it needs to read the block live-outs.
-      for (auto &Var : VarsWeCareAbout) {
-        DbgValue &Val = BlockLiveIns.find(Var)->second;
-        if (Val.Kind != DbgValue::VPHI || Val.BlockNo != (int)CurBB)
+        // If this block's live-in value is a VPHI, try to pick a machine-value
+        // for it. This makes the machine-value available and propagated
+        // through all blocks by the time value propagation finishes. We can't
+        // do this any earlier as it needs to read the block live-outs.
+        if (LiveIn->Kind == DbgValue::VPHI && LiveIn->BlockNo == (int)CurBB) {
+          // There's a small possibility that on a preceeding path, a VPHI is
+          // eliminated and transitions from VPHI-with-location to
+          // live-through-value. As a result, the selected location of any VPHI
+          // might change, so we need to re-compute it on each iteration.
+          Optional<ValueIDNum> ValueNum =
+              pickVPHILoc(*MBB, Var, LiveOutIdx, MOutLocs, Preds);
+
+          if (ValueNum) {
+            InLocsChanged |= LiveIn->ID != *ValueNum;
+            LiveIn->ID = *ValueNum;
+          }
+        }
+
+        if (!InLocsChanged && !FirstTrip)
           continue;
 
-        // There's a small possibility that on a preceeding path, a VPHI is
-        // eliminated and transitions from VPHI-with-location to
-        // live-through-value. As a result, the selected location of any VPHI
-        // might change, so we need to re-compute it on each iteration.
-        Optional<ValueIDNum> ValueNum = pickVPHILoc(
-                  *MBB, Var, LiveOutIdx, MOutLocs, Preds);
+        DbgValue *LiveOut = LiveOutIdx[MBB];
+        bool OLChanged = false;
 
-        if (ValueNum) {
-          InLocsChanged |= Val.ID != *ValueNum;
-          Val.ID = *ValueNum;
-        }
-      }
-
-      if (!InLocsChanged && !FirstTrip)
-        continue;
-
-      auto &LiveOuts = *LiveOutIdx[MBB];
-      bool OLChanged = false;
-
-      // Do transfer function.
-      auto &VTracker = AllTheVLocs[MBB->getNumber()];
-      SmallSet<DebugVariable, 8> VarsTransferred;
-      for (auto &Transfer : VTracker.Vars) {
-        // Is this var we're mangling in this scope?
-        if (VarsWeCareAbout.count(Transfer.first)) {
-          VarsTransferred.insert(Transfer.first);
-          auto OutIt = LiveOuts.find(Transfer.first);
-          assert(OutIt != LiveOuts.end());
-
+        // Do transfer function.
+        auto &VTracker = AllTheVLocs[MBB->getNumber()];
+        auto TransferIt = VTracker.Vars.find(Var);
+        if (TransferIt != VTracker.Vars.end()) {
           // Erase on empty transfer (DBG_VALUE $noreg).
-          if (Transfer.second.Kind == DbgValue::Undef) {
+          if (TransferIt->second.Kind == DbgValue::Undef) {
             DbgValue NewVal(MBB->getNumber(), EmptyProperties, DbgValue::NoVal);
-            if (OutIt->second != NewVal) {
-              OutIt->second = NewVal;
+            if (*LiveOut != NewVal) {
+              *LiveOut = NewVal;
               OLChanged = true;
             }
           } else {
             // Insert new variable value; or overwrite.
-            if (OutIt->second != Transfer.second) {
-              OutIt->second = Transfer.second;
+            if (*LiveOut != TransferIt->second) {
+              *LiveOut = TransferIt->second;
               OLChanged = true;
             }
           }
+        } else {
+          // Just copy live-ins to live-outs, for anything not transferred.
+          if (*LiveOut != *LiveIn) {
+            *LiveOut = *LiveIn;
+            OLChanged = true;
+          }
         }
-      }
 
-      // For anything not assigned by the transfer function, copy live-in to
-      // live-outs.
-      for (const DebugVariable &Var : VarsWeCareAbout) {
-        if (VarsTransferred.count(Var))
+        // If no live-out value changed, there's no need to explore further.
+        if (!OLChanged)
           continue;
 
-        auto OutIt = LiveOuts.find(Var);
-        auto InIt = BlockLiveIns.find(Var);
-        if (InIt->second != OutIt->second) {
-          OutIt->second = InIt->second;
-          OLChanged = true;
+        // We should visit all successors. Ensure we'll visit any non-backedge
+        // successors during this dataflow iteration; book backedge successors
+        // to be visited next time around.
+        for (auto s : MBB->successors()) {
+          // Ignore out of scope / not-to-be-explored successors.
+          if (LiveInIdx.find(s) == LiveInIdx.end())
+            continue;
+
+          if (BBToOrder[s] > BBToOrder[MBB]) {
+            if (OnWorklist.insert(s).second)
+              Worklist.push(BBToOrder[s]);
+          } else if (OnPending.insert(s).second && (FirstTrip || OLChanged)) {
+            Pending.push(BBToOrder[s]);
+          }
         }
       }
-
-      // If no live-out value changed, there's no need to explore further.
-      if (!OLChanged)
-        continue;
-
-      // We should visit all successors. Ensure we'll visit any non-backedge
-      // successors during this dataflow iteration; book backedge successors
-      // to be visited next time around.
-      for (auto s : MBB->successors()) {
-        // Ignore out of scope / not-to-be-explored successors.
-        if (LiveInIdx.find(s) == LiveInIdx.end())
-          continue;
-
-        if (BBToOrder[s] > BBToOrder[MBB]) {
-          if (OnWorklist.insert(s).second)
-            Worklist.push(BBToOrder[s]);
-        } else if (OnPending.insert(s).second && (FirstTrip || OLChanged)) {
-          Pending.push(BBToOrder[s]);
-        }
-      }
+      Worklist.swap(Pending);
+      std::swap(OnWorklist, OnPending);
+      OnPending.clear();
+      assert(Pending.empty());
+      FirstTrip = false;
     }
-    Worklist.swap(Pending);
-    std::swap(OnWorklist, OnPending);
-    OnPending.clear();
-    assert(Pending.empty());
-    FirstTrip = false;
-  }
 
-  // Save live-ins to output vector. Ignore any that are still marked as being
-  // VPHIs with no location -- those are variables that we know the value of,
-  // but are not actually available in the register file.
-  for (auto *MBB : BlockOrders) {
-    auto &VarMap = *LiveInIdx[MBB];
-    for (auto &P : VarMap) {
-      if (P.second.Kind == DbgValue::NoVal)
+    // Save live-ins to output vector. Ignore any that are still marked as being
+    // VPHIs with no location -- those are variables that we know the value of,
+    // but are not actually available in the register file.
+    for (auto *MBB : BlockOrders) {
+      DbgValue *BlockLiveIn = LiveInIdx[MBB];
+      if (BlockLiveIn->Kind == DbgValue::NoVal)
         continue;
-      if (P.second.Kind == DbgValue::VPHI && P.second.ID == ValueIDNum::EmptyValue)
+      if (BlockLiveIn->Kind == DbgValue::VPHI &&
+          BlockLiveIn->ID == ValueIDNum::EmptyValue)
         continue;
-      if (P.second.Kind == DbgValue::VPHI)
-        P.second.Kind = DbgValue::Def;
-      Output[MBB->getNumber()].push_back(P);
+      if (BlockLiveIn->Kind == DbgValue::VPHI)
+        BlockLiveIn->Kind = DbgValue::Def;
+      Output[MBB->getNumber()].push_back(std::make_pair(Var, *BlockLiveIn));
     }
-  }
+  } // Per-variable loop.
 
   BlockOrders.clear();
   BlocksToExplore.clear();
