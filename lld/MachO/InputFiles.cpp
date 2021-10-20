@@ -902,7 +902,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
       for (StringRef dir : config->frameworkSearchPaths) {
         SmallString<128> candidate = dir;
         path::append(candidate, frameworkName);
-        if (Optional<std::string> dylibPath = resolveDylibPath(candidate))
+        if (Optional<StringRef> dylibPath = resolveDylibPath(candidate.str()))
           return loadDylib(*dylibPath, umbrella);
       }
     } else if (Optional<StringRef> dylibPath = findPathCombination(
@@ -913,8 +913,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   // 2. As absolute path.
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
-      if (Optional<std::string> dylibPath =
-              resolveDylibPath((root + path).str()))
+      if (Optional<StringRef> dylibPath = resolveDylibPath((root + path).str()))
         return loadDylib(*dylibPath, umbrella);
 
   // 3. As relative path.
@@ -943,7 +942,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
         path::remove_filename(newPath);
       }
       path::append(newPath, rpath, path.drop_front(strlen("@rpath/")));
-      if (Optional<std::string> dylibPath = resolveDylibPath(newPath))
+      if (Optional<StringRef> dylibPath = resolveDylibPath(newPath.str()))
         return loadDylib(*dylibPath, umbrella);
     }
   }
@@ -961,7 +960,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     }
   }
 
-  if (Optional<std::string> dylibPath = resolveDylibPath(path))
+  if (Optional<StringRef> dylibPath = resolveDylibPath(path))
     return loadDylib(*dylibPath, umbrella);
 
   return nullptr;
