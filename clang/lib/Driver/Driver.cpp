@@ -4962,7 +4962,13 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         return "";
       }
     } else {
-      TmpName = GetTemporaryPath(Split.first, Suffix);
+      if (MultipleArchs && !BoundArch.empty()) {
+        TmpName = GetTemporaryDirectory(Split.first);
+        llvm::sys::path::append(TmpName,
+                                Split.first + "-" + BoundArch + "." + Suffix);
+      } else {
+        TmpName = GetTemporaryPath(Split.first, Suffix);
+      }
     }
     return C.addTempFile(C.getArgs().MakeArgString(TmpName));
   }
