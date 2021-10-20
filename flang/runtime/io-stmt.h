@@ -229,10 +229,10 @@ public:
   std::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
 
-  // Each NAMELIST input item is a distinct "list-directed"
-  // input statement.  This member function resets this state
-  // so that repetition and null values work correctly for each
-  // successive NAMELIST input item.
+  // Each NAMELIST input item is treated like a distinct list-directed
+  // input statement.  This member function resets some state so that
+  // repetition and null values work correctly for each successive
+  // NAMELIST input item.
   void ResetForNextNamelistItem() {
     remaining_ = 0;
     eatComma_ = false;

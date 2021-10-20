@@ -51,6 +51,9 @@ struct DataEdit {
     return descriptor == ListDirected || descriptor == ListDirectedRealPart ||
         descriptor == ListDirectedImaginaryPart;
   }
+  constexpr bool IsNamelist() const {
+    return IsListDirected() && modes.inNamelist;
+  }
 
   static constexpr char DefinedDerivedType{'d'}; // DT user-defined derived type
 

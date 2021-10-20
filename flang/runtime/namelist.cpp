@@ -333,7 +333,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       return false;
     }
     io.HandleRelativePosition(1);
-    // Read the values into the descriptor
+    // Read the values into the descriptor.  An array can be short.
     listInput->ResetForNextNamelistItem();
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
@@ -350,6 +350,27 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   io.HandleRelativePosition(1);
   return true;
+}
+
+bool IsNamelistName(IoStatementState &io) {
+  if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
+    ConnectionState &connection{io.GetConnectionState()};
+    if (connection.modes.inNamelist) {
+      SavedPosition savedPosition{connection};
+      if (auto ch{io.GetNextNonBlank()}) {
+        if (IsLegalIdStart(*ch)) {
+          do {
+            io.HandleRelativePosition(1);
+            ch = io.GetCurrentChar();
+          } while (ch && IsLegalIdChar(*ch));
+          ch = io.GetNextNonBlank();
+          // TODO: how to deal with NaN(...) ambiguity?
+          return ch && (ch == '=' || ch == '(' || ch == '%');
+        }
+      }
+    }
+  }
+  return false;
 }
 
 } // namespace Fortran::runtime::io
