@@ -110,12 +110,10 @@ CoreSimulatorSupport::Device::State CoreSimulatorSupport::Device::GetState() {
 
 CoreSimulatorSupport::ModelIdentifier::ModelIdentifier(const std::string &mi)
     : m_family(), m_versions() {
-  bool any = false;
   bool first_digit = false;
   unsigned int val = 0;
 
   for (char c : mi) {
-    any = true;
     if (::isdigit(c)) {
       if (!first_digit)
         first_digit = true;
