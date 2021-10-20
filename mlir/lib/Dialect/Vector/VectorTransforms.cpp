@@ -3529,6 +3529,80 @@ private:
   const bool enableIndexOptimizations;
 };
 
+// Drop inner most contiguous unit dimensions from transfer_read operand.
+class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
+  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcType = readOp.source().getType().cast<MemRefType>();
+    if (!srcType || !srcType.hasStaticShape())
+      return failure();
+
+    if (!readOp.permutation_map().isMinorIdentity())
+      return failure();
+
+    auto targetType = readOp.getVectorType();
+    if (targetType.getRank() <= 1)
+      return failure();
+
+    SmallVector<int64_t> srcStrides;
+    int64_t srcOffset;
+    if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
+      return failure();
+
+    size_t dimsToDrop = 0;
+    for (size_t i = 1; i < srcStrides.size(); ++i) {
+      int dim = srcType.getRank() - i - 1;
+      if (srcStrides[dim] == 1) {
+        dimsToDrop++;
+      } else {
+        break;
+      }
+    }
+    if (dimsToDrop == 0)
+      return failure();
+
+    auto resultTargetVecType =
+        VectorType::get(targetType.getShape().drop_back(dimsToDrop),
+                        targetType.getElementType());
+
+    MemRefType resultMemrefType;
+    if (srcType.getLayout().getAffineMap().isIdentity()) {
+      resultMemrefType = MemRefType::get(
+          srcType.getShape().drop_back(dimsToDrop), srcType.getElementType(),
+          {}, srcType.getMemorySpaceAsInt());
+    } else {
+      AffineMap map = srcType.getLayout().getAffineMap();
+      int numResultDims = map.getNumDims() - dimsToDrop;
+      int numSymbols = map.getNumSymbols();
+      for (size_t i = 0; i < dimsToDrop; ++i) {
+        int dim = srcType.getRank() - i - 1;
+        map = map.replace(rewriter.getAffineDimExpr(dim),
+                          rewriter.getAffineConstantExpr(0), numResultDims,
+                          numSymbols);
+      }
+      resultMemrefType = MemRefType::get(
+          srcType.getShape().drop_back(dimsToDrop), srcType.getElementType(),
+          map, srcType.getMemorySpaceAsInt());
+    }
+
+    auto loc = readOp.getLoc();
+    SmallVector<int64_t> offsets(srcType.getRank(), 0);
+    SmallVector<int64_t> strides(srcType.getRank(), 1);
+    Value rankedReducedView = rewriter.create<memref::SubViewOp>(
+        loc, resultMemrefType, readOp.source(), offsets, srcType.getShape(),
+        strides);
+    Value result = rewriter.create<vector::TransferReadOp>(
+        loc, resultTargetVecType, rankedReducedView,
+        readOp.indices().drop_back(dimsToDrop));
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
+                                                     result);
+
+    return success();
+  }
+};
+
 void mlir::vector::populateVectorMaskMaterializationPatterns(
     RewritePatternSet &patterns, bool enableIndexOptimizations) {
   patterns.add<VectorCreateMaskOpConversion,
@@ -3616,4 +3690,10 @@ void mlir::vector::populateVectorUnrollPatterns(
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern>(
       patterns.getContext(), options);
+}
+
+void mlir::vector::
+    populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
+        RewritePatternSet &patterns) {
+  patterns.add<DropInnerMostUnitDims>(patterns.getContext());
 }
