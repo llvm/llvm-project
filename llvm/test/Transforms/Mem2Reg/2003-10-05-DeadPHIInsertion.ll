@@ -1,7 +1,7 @@
 ; Mem2reg should not insert dead PHI nodes!  The naive algorithm inserts a PHI
 ;  node in L3, even though there is no load of %A in anything dominated by L3.
 
-; RUN: opt < %s -mem2reg -S | not grep phi
+; RUN: opt < %s -passes=mem2reg -S | not grep phi
 
 define void @test(i32 %B, i1 %C) {
 	%A = alloca i32		; <i32*> [#uses=4]

@@ -1,4 +1,4 @@
-; RUN: opt -S -mem2reg <%s | FileCheck %s
+; RUN: opt -S -passes=mem2reg <%s | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 

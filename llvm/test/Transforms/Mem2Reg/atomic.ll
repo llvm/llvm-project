@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg < %s -S | FileCheck %s
+; RUN: opt -passes=mem2reg < %s -S | FileCheck %s
 
 ; mem2reg is allowed with arbitrary atomic operations (although we only support
 ; it for atomic load and store at the moment).

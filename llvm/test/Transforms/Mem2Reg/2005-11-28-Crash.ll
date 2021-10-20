@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -disable-output
+; RUN: opt < %s -passes=mem2reg -disable-output
 ; PR670
 
 define void @printk(i32, ...) {
