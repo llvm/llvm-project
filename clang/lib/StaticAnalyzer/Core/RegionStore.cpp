@@ -441,6 +441,8 @@ public:
       RegionBindingsConstRef B, const VarRegion *VR, const ElementRegion *R);
   Optional<SVal> getSValFromInitListExpr(const InitListExpr *ILE,
                                          uint64_t Offset, QualType ElemT);
+  SVal getSValFromStringLiteral(const StringLiteral *SL, uint64_t Offset,
+                                QualType ElemT);
 
 public: // Part of public interface to class.
 
@@ -1701,10 +1703,16 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   // From here `Offset` is in the bounds.
 
   // Handle InitListExpr.
+  // Example:
+  //   const char arr[] = { 1, 2, 3 };
   if (const auto *ILE = dyn_cast<InitListExpr>(Init))
     return getSValFromInitListExpr(ILE, Offset, R->getElementType());
 
-  // FIXME: Handle StringLiteral.
+  // Handle StringLiteral.
+  // Example:
+  //   const char arr[] = "abc";
+  if (const auto *SL = dyn_cast<StringLiteral>(Init))
+    return getSValFromStringLiteral(SL, Offset, R->getElementType());
 
   // FIXME: Handle CompoundLiteralExpr.
 
@@ -1715,6 +1723,15 @@ Optional<SVal>
 RegionStoreManager::getSValFromInitListExpr(const InitListExpr *ILE,
                                             uint64_t Offset, QualType ElemT) {
   assert(ILE && "InitListExpr should not be null");
+
+  // C++20 [dcl.init.string] 9.4.2.1:
+  //   An array of ordinary character type [...] can be initialized by [...]
+  //   an appropriately-typed string-literal enclosed in braces.
+  // Example:
+  //   const char arr[] = { "abc" };
+  if (ILE->isStringLiteralInit())
+    if (const auto *SL = dyn_cast<StringLiteral>(ILE->getInit(0)))
+      return getSValFromStringLiteral(SL, Offset, ElemT);
 
   // C++20 [expr.add] 9.4.17.5 (excerpt):
   //   i-th array element is value-initialized for each k < i ≤ n,
@@ -1728,6 +1745,42 @@ RegionStoreManager::getSValFromInitListExpr(const InitListExpr *ILE,
   return svalBuilder.getConstantVal(E);
 }
 
+/// Returns an SVal, if possible, for the specified position in a string
+/// literal.
+///
+/// \param SL The given string literal.
+/// \param Offset The unsigned offset. E.g. for the expression
+///   `char x = str[42];` an offset should be 42.
+///   E.g. for the string "abc" offset:
+///   - 1 returns SVal{b}, because it's the second position in the string.
+///   - 42 returns SVal{0}, because there's no explicit value at this
+///     position in the string.
+/// \param ElemT The type of the result SVal expression.
+///
+/// NOTE: We return `0` for every offset >= the literal length for array
+/// declarations, like:
+///   const char str[42] = "123"; // Literal length is 4.
+///   char c = str[41];           // Offset is 41.
+/// FIXME: Nevertheless, we can't do the same for pointer declaraions, like:
+///   const char * const str = "123"; // Literal length is 4.
+///   char c = str[41];               // Offset is 41. Returns `0`, but Undef
+///                                   // expected.
+/// It should be properly handled before reaching this point.
+/// The main problem is that we can't distinguish between these declarations,
+/// because in case of array we can get the Decl from VarRegion, but in case
+/// of pointer the region is a StringRegion, which doesn't contain a Decl.
+/// Possible solution could be passing an array extent along with the offset.
+SVal RegionStoreManager::getSValFromStringLiteral(const StringLiteral *SL,
+                                                  uint64_t Offset,
+                                                  QualType ElemT) {
+  assert(SL && "StringLiteral should not be null");
+  // C++20 [dcl.init.string] 9.4.2.3:
+  //   If there are fewer initializers than there are array elements, each
+  //   element not explicitly initialized shall be zero-initialized [dcl.init].
+  uint32_t Code = (Offset >= SL->getLength()) ? 0 : SL->getCodeUnit(Offset);
+  return svalBuilder.makeIntVal(Code, ElemT);
+}
+
 SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
                                               const ElementRegion* R) {
   // Check if the region has a binding.
@@ -1739,26 +1792,17 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
   // Check if the region is an element region of a string literal.
   if (const StringRegion *StrR = dyn_cast<StringRegion>(superR)) {
     // FIXME: Handle loads from strings where the literal is treated as
-    // an integer, e.g., *((unsigned int*)"hello")
+    // an integer, e.g., *((unsigned int*)"hello"). Such loads are UB according
+    // to C++20 7.2.1.11 [basic.lval].
     QualType T = Ctx.getAsArrayType(StrR->getValueType())->getElementType();
     if (!Ctx.hasSameUnqualifiedType(T, R->getElementType()))
       return UnknownVal();
-
-    const StringLiteral *Str = StrR->getStringLiteral();
-    SVal Idx = R->getIndex();
-    if (Optional<nonloc::ConcreteInt> CI = Idx.getAs<nonloc::ConcreteInt>()) {
-      int64_t i = CI->getValue().getSExtValue();
-      // Abort on string underrun.  This can be possible by arbitrary
-      // clients of getBindingForElement().
-      if (i < 0)
+    if (const auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
+      const llvm::APSInt &Idx = CI->getValue();
+      if (Idx < 0)
         return UndefinedVal();
-      int64_t length = Str->getLength();
-      // Technically, only i == length is guaranteed to be null.
-      // However, such overflows should be caught before reaching this point;
-      // the only time such an access would be made is if a string literal was
-      // used to initialize a larger array.
-      char c = (i >= length) ? '\0' : Str->getCodeUnit(i);
-      return svalBuilder.makeIntVal(c, T);
+      const StringLiteral *SL = StrR->getStringLiteral();
+      return getSValFromStringLiteral(SL, Idx.getZExtValue(), T);
     }
   } else if (const VarRegion *VR = dyn_cast<VarRegion>(superR)) {
     if (Optional<SVal> V = getConstantValFromConstArrayInitializer(B, VR, R))
