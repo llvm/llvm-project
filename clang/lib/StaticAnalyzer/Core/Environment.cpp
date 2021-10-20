@@ -88,7 +88,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   const Stmt *S = Entry.getStmt();
   assert(!isa<ObjCForCollectionStmt>(S) &&
          "Use ExprEngine::hasMoreIteration()!");
-  assert((isa<Expr>(S) || isa<ReturnStmt>(S)) &&
+  assert((isa<Expr, ReturnStmt>(S)) &&
          "Environment can only argue about Exprs, since only they express "
          "a value! Any non-expression statement stored in Environment is a "
          "result of a hack!");

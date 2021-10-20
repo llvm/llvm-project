@@ -160,7 +160,7 @@ static bool isEnclosingFunctionParam(const Expr *E) {
   E = E->IgnoreParenCasts();
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
     const ValueDecl *VD = DRE->getDecl();
-    if (isa<ImplicitParamDecl>(VD) || isa<ParmVarDecl>(VD))
+    if (isa<ImplicitParamDecl, ParmVarDecl>(VD))
       return true;
   }
   return false;
@@ -199,8 +199,7 @@ unsigned MacOSKeychainAPIChecker::getTrackedFunctionIndex(StringRef Name,
 static bool isBadDeallocationArgument(const MemRegion *Arg) {
   if (!Arg)
     return false;
-  return isa<AllocaRegion>(Arg) || isa<BlockDataRegion>(Arg) ||
-         isa<TypedRegion>(Arg);
+  return isa<AllocaRegion, BlockDataRegion, TypedRegion>(Arg);
 }
 
 /// Given the address expression, retrieve the value it's pointing to. Assume

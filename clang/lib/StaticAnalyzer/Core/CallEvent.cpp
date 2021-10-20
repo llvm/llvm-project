@@ -425,9 +425,7 @@ void CallEvent::dump(raw_ostream &Out) const {
 }
 
 bool CallEvent::isCallStmt(const Stmt *S) {
-  return isa<CallExpr>(S) || isa<ObjCMessageExpr>(S)
-                          || isa<CXXConstructExpr>(S)
-                          || isa<CXXNewExpr>(S);
+  return isa<CallExpr, ObjCMessageExpr, CXXConstructExpr, CXXNewExpr>(S);
 }
 
 QualType CallEvent::getDeclaredResultType(const Decl *D) {

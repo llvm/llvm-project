@@ -425,19 +425,7 @@ bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
   // tell if anything still refers to this region. Unlike SymbolicRegions,
   // AllocaRegions don't have associated symbols, though, so we don't actually
   // have a way to track their liveness.
-  if (isa<AllocaRegion>(MR))
-    return true;
-
-  if (isa<CXXThisRegion>(MR))
-    return true;
-
-  if (isa<MemSpaceRegion>(MR))
-    return true;
-
-  if (isa<CodeTextRegion>(MR))
-    return true;
-
-  return false;
+  return isa<AllocaRegion, CXXThisRegion, MemSpaceRegion, CodeTextRegion>(MR);
 }
 
 bool SymbolReaper::isLive(SymbolRef sym) {
