@@ -92,7 +92,7 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   ASSERT_NOEXCEPT(std::cmp_greater_equal(1, 0));
   test();
   static_assert(test());

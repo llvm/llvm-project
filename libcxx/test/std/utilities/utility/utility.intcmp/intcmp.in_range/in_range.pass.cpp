@@ -74,7 +74,7 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   ASSERT_NOEXCEPT(std::in_range<int>(-1));
   test();
   static_assert(test());

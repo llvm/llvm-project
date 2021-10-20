@@ -29,7 +29,7 @@ struct A2 {
     operator B& () const noexcept { return b; }
 };
 
-int main()
+int main(int, char**)
 {
     {
     std::reference_wrapper<B> b1 = A1();
@@ -60,4 +60,6 @@ int main()
     static_assert(std::is_assignable<std::reference_wrapper<B>, A2>::value, "");
     static_assert(std::is_nothrow_assignable<std::reference_wrapper<B>, A2>::value, "");
     }
+
+    return 0;
 }
