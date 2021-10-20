@@ -1,4 +1,4 @@
-; RUN: opt -O2 -pass-remarks-missed=openmp-opt -enable-new-pm < %s 2>&1 | FileCheck %s --check-prefix=MODULE
+; RUN: opt -passes='default<O2>' -pass-remarks-missed=openmp-opt < %s 2>&1 | FileCheck %s --check-prefix=MODULE
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
