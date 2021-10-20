@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg -S < %s | FileCheck %s
+; RUN: opt -passes=mem2reg -S < %s | FileCheck %s
 
 ; ModuleID = 'newvars.c'
 source_filename = "newvars.c"

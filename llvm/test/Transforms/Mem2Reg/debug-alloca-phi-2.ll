@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
 source_filename = "bugpoint-output.bc"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

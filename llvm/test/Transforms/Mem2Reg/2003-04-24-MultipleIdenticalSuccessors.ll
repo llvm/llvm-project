@@ -1,7 +1,7 @@
 ; Mem2reg used to only add one incoming value to a PHI node, even if it had
 ; multiple incoming edges from a block.
 ;
-; RUN: opt < %s -mem2reg -disable-output
+; RUN: opt < %s -passes=mem2reg -disable-output
 
 define i32 @test(i1 %c1, i1 %c2) {
 	%X = alloca i32		; <i32*> [#uses=2]

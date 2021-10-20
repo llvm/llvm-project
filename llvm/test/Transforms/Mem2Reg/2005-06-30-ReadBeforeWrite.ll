@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -instcombine -S | grep store
+; RUN: opt < %s -passes='mem2reg,instcombine' -S | grep store
 ; PR590
 
 
