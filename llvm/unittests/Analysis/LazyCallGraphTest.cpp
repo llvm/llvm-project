@@ -1978,7 +1978,8 @@ TEST(LazyCallGraphTest, HandleBlockAddress) {
   LazyCallGraph::Node &G = *CG.lookup(lookupFunction(*M, "g"));
   EXPECT_EQ(&FRC, CG.lookupRefSCC(F));
   EXPECT_EQ(&GRC, CG.lookupRefSCC(G));
-  EXPECT_TRUE(GRC.isParentOf(FRC));
+  EXPECT_FALSE(GRC.isParentOf(FRC));
+  EXPECT_FALSE(FRC.isParentOf(GRC));
 }
 
 // Test that a blockaddress that refers to itself creates no new RefSCC
