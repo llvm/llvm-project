@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -43,6 +44,12 @@ using llvm::dbgs;
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
+
+// Forward declarations.
+static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
+                                          SmallVectorImpl<Value> &newResults);
+static FailureOr<Operation *>
+vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp);
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
@@ -147,7 +154,7 @@ static Operation *matchLinalgReduction(OpOperand *outputOperand) {
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   unsigned outputPos =
       outputOperand->getOperandNumber() - linalgOp.getNumInputs();
-  // Only single combiner operatios are supported for now.
+  // Only single combiner operations are supported for now.
   SmallVector<Operation *, 4> combinerOps;
   if (!matchReduction(linalgOp.getRegionOutputArgs(), outputPos, combinerOps) ||
       combinerOps.size() != 1)
@@ -575,6 +582,11 @@ LogicalResult vectorizeAsLinalgGeneric(
   return success();
 }
 
+/// Helper function to vectorize a `linalgOp` with contraction semantics in a
+/// generic fashion.
+/// This helper is needed atm because the truly generic implementation requires
+/// good vector.multi_reduce folding patterns that are currently NYI.
+// TODO: drop reliance on a specific pattern.
 static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
                                           SmallVectorImpl<Value> &newResults) {
   assert(isaContractionOpInterface(linalgOp) &&
@@ -664,6 +676,11 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
     return success();
   if (isaContractionOpInterface(linalgOp))
     return success();
+  // TODO: isaConvolutionOpInterface that can also infer from generic features.
+  // But we will still need stride/dilation attributes that will be annoying to
+  // reverse-engineer...
+  if (isa<ConvolutionOpInterface>(op))
+    return success();
   // TODO: the common vector shape is equal to the static loop sizes only when
   // all indexing maps are projected permutations. For convs and stencils the
   // logic will need to evolve.
@@ -687,6 +704,18 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
   auto linalgOp = cast<LinalgOp>(op);
   if (isaContractionOpInterface(linalgOp))
     return vectorizeContraction(b, linalgOp, newResults);
+
+  // TODO: isaConvolutionOpInterface that can also infer from generic features.
+  // But we will still need stride/dilation attributes that will be annoying to
+  // reverse-engineer...
+  if (auto convOp = dyn_cast<ConvolutionOpInterface>(op)) {
+    FailureOr<Operation *> resultOrFail = vectorizeConvolution(b, convOp);
+    if (failed(resultOrFail))
+      return failure();
+    Operation *newOp = *resultOrFail;
+    llvm::append_range(newResults, newOp->getResults());
+    return success();
+  }
 
   LDBG(""
        << "Vectorize linalg op as a generic by broadcasting to "
@@ -1420,4 +1449,189 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   rewriter.eraseOp(xferOp);
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Convolution vectorization patterns
+//===----------------------------------------------------------------------===//
+namespace {
+/// Generate a vector implementation for:
+/// ```
+///   Op def: (     n,     w,     c,    kw,    f  )
+///    Iters: ({Par(), Par(), Par(), Red(), Red()})
+///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
+/// ```
+/// w and kw are unrolled.
+/// TODO: do not unroll w (resp. kw) when the strideW ( resp. dilationW) is > 1.
+struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
+  Conv1D_NWC_WCF_Generator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
+                           int dilationW)
+      : StructuredGenerator<LinalgOp>(builder, linalgOp), valid(false),
+        strideW(strideW), dilationW(dilationW) {
+    // Determine whether `linalgOp` can be generated with this generator
+    if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
+      return;
+    lhsShaped = linalgOp.inputs()[0];
+    rhsShaped = linalgOp.inputs()[1];
+    resShaped = linalgOp.outputs()[0];
+    lhsShapedType = lhsShaped.getType().dyn_cast<ShapedType>();
+    rhsShapedType = rhsShaped.getType().dyn_cast<ShapedType>();
+    resShapedType = resShaped.getType().dyn_cast<ShapedType>();
+    if (!lhsShapedType || !rhsShapedType || !resShapedType)
+      return;
+    if (lhsShapedType.getRank() != 3 || rhsShapedType.getRank() != 3 ||
+        resShapedType.getRank() != 3)
+      return;
+
+    // Check for reduction `add` preceded by `mul`.
+    Operation *reduceOp = matchLinalgReduction(linalgOp.getOutputOperand(0));
+    if (!reduceOp)
+      return;
+    llvm::Optional<vector::CombiningKind> maybeKind;
+    maybeKind = getKindForOp(reduceOp);
+    if (!maybeKind || *maybeKind != vector::CombiningKind::ADD)
+      return;
+    maybeKind = getKindForOp(&(linalgOp->getRegion(0).front().front()));
+    if (!maybeKind || *maybeKind != vector::CombiningKind::MUL)
+      return;
+
+    // The op is now known to be valid.
+    valid = true;
+  }
+
+  /// Generate a vector implementation for:
+  /// ```
+  ///   Op def: (     n,     w,     c,    kw,    f  )
+  ///    Iters: ({Par(), Par(), Par(), Red(), Red()})
+  ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
+  /// ```
+  /// w and kw are unrolled.
+  /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is > 1.
+  FailureOr<Operation *> conv() {
+    if (!valid)
+      return failure();
+
+    int nSize = lhsShapedType.getShape()[0];
+    int wSize = resShapedType.getShape()[1];
+    int cSize = lhsShapedType.getShape()[2];
+    int kwSize = rhsShapedType.getShape()[0];
+    int fSize = rhsShapedType.getShape()[2];
+
+    vector::TransferWriteOp write;
+    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+
+    // Unroll along kw and read slices of lhs and rhs.
+    // Alternatively we could preload both 3-d slices and extract smaller slices
+    // iteratively without touching memory. But this will quickly spill.
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      // Read rhs slice of size {1, c, f} @ [kw, 0, 0].
+      Value kwVal = builder.create<arith::ConstantIndexOp>(loc, kw);
+      VectorType rhsType =
+          VectorType::get({1, cSize, fSize}, rhsShapedType.getElementType());
+      Value rhs = builder.create<vector::TransferReadOp>(
+          loc, rhsType, rhsShaped, ValueRange{kwVal, zero, zero});
+
+      for (int64_t w = 0; w < wSize; ++w) {
+        // Read lhs slice of size {n, 1, c} @ [0, sw * w + dw * kw, 0].
+        Value lhsStridedIdx = builder.create<arith::ConstantIndexOp>(
+            loc, strideW * w + dilationW * kw);
+        VectorType lhsType =
+            VectorType::get({nSize, 1, cSize}, lhsShapedType.getElementType());
+        Value lhs = builder.create<vector::TransferReadOp>(
+            loc, lhsType, lhsShaped, ValueRange{zero, lhsStridedIdx, zero});
+
+        // Read res slice: {n, 1, f} @ [0, w, 0].
+        Value wVal = builder.create<arith::ConstantIndexOp>(loc, w);
+        VectorType resType =
+            VectorType::get({nSize, 1, fSize}, resShapedType.getElementType());
+        // When operating on tensors, reading from the updated value is required
+        // for vector.transfer_read/write hoisting to function as expected.
+        Value res = builder.create<vector::TransferReadOp>(
+            loc, resType, resShaped, ValueRange{zero, wVal, zero});
+
+        // Compute contraction: I{n, 1, c} * F{1, c, f} -> O{n, 1, f}
+        StringRef par = Par().strRef, red = Red().strRef;
+        AffineExpr n, one, f, c;
+        bindDims(ctx, n, one, f, c);
+        // clang-format off
+        res = builder.create<vector::ContractionOp>(
+          loc, lhs, rhs, res,
+          /*indexingMaps=*/MapList{{n, one, c}, {one, c, f}, {n, one, f}},
+          /*iteratorTypes=*/ArrayRef<StringRef>{par, par, par, red});
+        // clang-format on
+
+        // Write back res slice: {n, 1, f} @ [0, w, 0].
+        write = builder.create<vector::TransferWriteOp>(
+            loc, res, resShaped, ValueRange{zero, wVal, zero});
+        if (write.getNumResults() == 1)
+          resShaped = write->getResult(0);
+      }
+    }
+
+    return write.getOperation();
+  }
+
+  /// Entry point that transposes into the common form:
+  ///   {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
+  FailureOr<Operation *> generateConv() {
+    AffineExpr n, w, f, kw, c;
+    bindDims(ctx, n, w, f, kw, c);
+
+    if (!iters({Par(), Par(), Par(), Red(), Red()}))
+      return failure();
+
+    // No transposition needed.
+    if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
+                /*rhsIndex*/ {kw, c, f},
+                /*resIndex*/ {n, w, f}}))
+      return conv();
+    return failure();
+  }
+
+private:
+  bool valid;
+  int strideW, dilationW;
+  Value lhsShaped, rhsShaped, resShaped;
+  ShapedType lhsShapedType, rhsShapedType, resShapedType;
+};
+} // namespace
+
+/// Helper function to vectorize a `linalgOp` with convolution semantics.
+// TODO: extend the generic vectorization to support windows and drop this.
+static FailureOr<Operation *>
+vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp) {
+  // TODO: these are legitimately part of ConvolutionOpInterface.
+  auto strides = convOp->getAttrOfType<DenseIntElementsAttr>("strides");
+  auto dilations = convOp->getAttrOfType<DenseIntElementsAttr>("dilations");
+  auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
+  auto dilation = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
+  LinalgOp linalgOp = cast<LinalgOp>(convOp.getOperation());
+  Conv1D_NWC_WCF_Generator e(b, linalgOp, stride, dilation);
+  return e.generateConv();
+}
+
+struct VectorizeConvolution
+    : public OpInterfaceRewritePattern<ConvolutionOpInterface> {
+  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+
+  LogicalResult matchAndRewrite(ConvolutionOpInterface convOp,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<Operation *> resultOrFail =
+        vectorizeConvolution(rewriter, convOp);
+    if (failed(resultOrFail))
+      return failure();
+    Operation *newOp = *resultOrFail;
+    if (newOp->getNumResults() == 0) {
+      rewriter.eraseOp(convOp.getOperation());
+      return success();
+    }
+    assert(newOp->getNumResults() == 1 && "expected single result");
+    rewriter.replaceOp(convOp.getOperation(), newOp->getResult(0));
+    return success();
+  }
+};
+
+void mlir::linalg::populateConvolutionVectorizationPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<VectorizeConvolution>(patterns.getContext(), benefit);
 }

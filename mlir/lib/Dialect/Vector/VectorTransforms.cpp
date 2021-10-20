@@ -1257,36 +1257,34 @@ struct Red : public IteratorType {
 struct UnrolledOuterProductGenerator
     : public StructuredGenerator<vector::ContractionOp> {
 
-  UnrolledOuterProductGenerator(PatternRewriter &rewriter,
-                                vector::ContractionOp op)
-      : StructuredGenerator<vector::ContractionOp>(rewriter, op),
+  UnrolledOuterProductGenerator(OpBuilder &builder, vector::ContractionOp op)
+      : StructuredGenerator<vector::ContractionOp>(builder, op),
         kind(op.kind()), lhs(op.lhs()), rhs(op.rhs()), res(op.acc()),
         lhsType(op.getLhsType()) {}
 
   Value t(Value v) {
     static constexpr std::array<int64_t, 2> perm = {1, 0};
-    return rewriter.create<vector::TransposeOp>(loc, v, perm);
+    return builder.create<vector::TransposeOp>(loc, v, perm);
   }
 
-  LogicalResult outer_prod(Value lhs, Value rhs, Value res, int reductionSize) {
+  Value outer_prod(Value lhs, Value rhs, Value res, int reductionSize) {
     assert(reductionSize > 0);
     for (int64_t k = 0; k < reductionSize; ++k) {
-      Value a = rewriter.create<vector::ExtractOp>(loc, lhs, k);
-      Value b = rewriter.create<vector::ExtractOp>(loc, rhs, k);
-      res = rewriter.create<vector::OuterProductOp>(loc, res.getType(), a, b,
-                                                    res, kind);
+      Value a = builder.create<vector::ExtractOp>(loc, lhs, k);
+      Value b = builder.create<vector::ExtractOp>(loc, rhs, k);
+      res = builder.create<vector::OuterProductOp>(loc, res.getType(), a, b,
+                                                   res, kind);
     }
-    rewriter.replaceOp(op, res);
-    return success();
+    return res;
   }
 
   /// Two outer parallel, one inner reduction (matmat flavor).
-  LogicalResult matmat() {
+  FailureOr<Value> matmat() {
     if (!iters({Par(), Par(), Red()}))
       return failure();
     // Set up the parallel/reduction structure in the right form.
     AffineExpr m, n, k;
-    bindDims(rewriter.getContext(), m, n, k);
+    bindDims(builder.getContext(), m, n, k);
     // Classical row-major matmul:  Just permute the lhs.
     if (layout({{m, k}, {k, n}, {m, n}}))
       return outer_prod(t(lhs), rhs, res, lhsType.getDimSize(1));
@@ -1318,11 +1316,11 @@ struct UnrolledOuterProductGenerator
   }
 
   /// One outer parallel, one inner reduction (matvec flavor)
-  LogicalResult matvec() {
+  FailureOr<Value> matvec() {
     if (!iters({Par(), Red()}))
       return failure();
     AffineExpr m, k;
-    bindDims(rewriter.getContext(), m, k);
+    bindDims(builder.getContext(), m, k);
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
@@ -1342,11 +1340,11 @@ struct UnrolledOuterProductGenerator
   //
   // One outer reduction, one inner parallel (tmatvec flavor)
   //
-  LogicalResult tmatvec() {
+  FailureOr<Value> tmatvec() {
     if (!iters({Red(), Par()}))
       return failure();
     AffineExpr k, m;
-    bindDims(rewriter.getContext(), k, m);
+    bindDims(builder.getContext(), k, m);
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
@@ -1399,12 +1397,21 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
     return failure();
 
   UnrolledOuterProductGenerator e(rewriter, op);
-  if (succeeded(e.matmat()))
+  FailureOr<Value> matmatRes = e.matmat();
+  if (succeeded(matmatRes)) {
+    rewriter.replaceOp(op, *matmatRes);
     return success();
-  if (succeeded(e.matvec()))
+  }
+  FailureOr<Value> matvecRes = e.matvec();
+  if (succeeded(matvecRes)) {
+    rewriter.replaceOp(op, *matvecRes);
     return success();
-  if (succeeded(e.tmatvec()))
+  }
+  FailureOr<Value> tmatvecRes = e.tmatvec();
+  if (succeeded(tmatvecRes)) {
+    rewriter.replaceOp(op, *tmatvecRes);
     return success();
+  }
 
   return failure();
 }
