@@ -1165,6 +1165,32 @@ TEST_F(TUSchedulerTests, AsyncPreambleThread) {
   Ready.notify();
 }
 
+TEST_F(TUSchedulerTests, OnlyPublishWhenPreambleIsBuilt) {
+  struct PreamblePublishCounter : public ParsingCallbacks {
+    PreamblePublishCounter(int &PreamblePublishCount)
+        : PreamblePublishCount(PreamblePublishCount) {}
+    void onPreamblePublished(PathRef File) override { ++PreamblePublishCount; }
+    int &PreamblePublishCount;
+  };
+
+  int PreamblePublishCount = 0;
+  TUScheduler S(CDB, optsForTest(),
+                std::make_unique<PreamblePublishCounter>(PreamblePublishCount));
+
+  Path File = testPath("foo.cpp");
+  S.update(File, getInputs(File, ""), WantDiagnostics::Auto);
+  S.blockUntilIdle(timeoutSeconds(10));
+  EXPECT_EQ(PreamblePublishCount, 1);
+  // Same contents, no publish.
+  S.update(File, getInputs(File, ""), WantDiagnostics::Auto);
+  S.blockUntilIdle(timeoutSeconds(10));
+  EXPECT_EQ(PreamblePublishCount, 1);
+  // New contents, should publish.
+  S.update(File, getInputs(File, "#define FOO"), WantDiagnostics::Auto);
+  S.blockUntilIdle(timeoutSeconds(10));
+  EXPECT_EQ(PreamblePublishCount, 2);
+}
+
 // If a header file is missing from the CDB (or inferred using heuristics), and
 // it's included by another open file, then we parse it using that files flags.
 TEST_F(TUSchedulerTests, IncluderCache) {
