@@ -339,7 +339,7 @@ TestDialect::getOperationPrinter(Operation *op) const {
 Optional<MutableOperandRange>
 TestBranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return targetOperandsMutable();
+  return getTargetOperandsMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -369,7 +369,7 @@ struct FoldToCallOpPattern : public OpRewritePattern<FoldToCallOp> {
 
   LogicalResult matchAndRewrite(FoldToCallOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<CallOp>(op, TypeRange(), op.calleeAttr(),
+    rewriter.replaceOpWithNewOp<CallOp>(op, TypeRange(), op.getCalleeAttr(),
                                         ValueRange());
     return success();
   }
@@ -597,8 +597,8 @@ static ParseResult parseIsolatedRegionOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
   p << "test.isolated_region ";
   p.printOperand(op.getOperand());
-  p.shadowRegionArgs(op.region(), op.getOperand());
-  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+  p.shadowRegionArgs(op.getRegion(), op.getOperand());
+  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -622,7 +622,7 @@ static ParseResult parseGraphRegionOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, GraphRegionOp op) {
   p << "test.graph_region ";
-  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
 }
 
 RegionKind GraphRegionOp::getRegionKind(unsigned index) {
@@ -642,7 +642,7 @@ static ParseResult parseAffineScopeOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, AffineScopeOp op) {
   p << "test.affine_scope ";
-  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -678,7 +678,7 @@ static ParseResult parseParseWrappedKeywordOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ParseWrappedKeywordOp op) {
-  p << " " << op.keyword();
+  p << " " << op.getKeyword();
 }
 
 //===----------------------------------------------------------------------===//
@@ -717,7 +717,7 @@ static ParseResult parseWrappingRegionOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, WrappingRegionOp op) {
   p << " wraps ";
-  p.printGenericOp(&op.region().front().front());
+  p.printGenericOp(&op.getRegion().front().front());
 }
 
 //===----------------------------------------------------------------------===//
@@ -762,7 +762,7 @@ void TestOpWithRegionPattern::getCanonicalizationPatterns(
 }
 
 OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {
-  return operand();
+  return getOperand();
 }
 
 OpFoldResult TestOpConstant::fold(ArrayRef<Attribute> operands) {
@@ -971,7 +971,7 @@ static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
   // Note that we only need to print the "name" attribute if the asmprinter
   // result name disagrees with it.  This can happen in strange cases, e.g.
   // when there are conflicts.
-  bool namesDisagree = op.names().size() != op.getNumResults();
+  bool namesDisagree = op.getNames().size() != op.getNumResults();
 
   SmallString<32> resultNameStr;
   for (size_t i = 0, e = op.getNumResults(); i != e && !namesDisagree; ++i) {
@@ -979,7 +979,7 @@ static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
     llvm::raw_svector_ostream tmpStream(resultNameStr);
     p.printOperand(op.getResult(i), tmpStream);
 
-    auto expectedName = op.names()[i].dyn_cast<StringAttr>();
+    auto expectedName = op.getNames()[i].dyn_cast<StringAttr>();
     if (!expectedName ||
         tmpStream.str().drop_front() != expectedName.getValue()) {
       namesDisagree = true;
@@ -997,7 +997,7 @@ static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
 void StringAttrPrettyNameOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
 
-  auto value = names();
+  auto value = getNames();
   for (size_t i = 0, e = value.size(); i != e; ++i)
     if (auto str = value[i].dyn_cast<StringAttr>())
       if (!str.getValue().empty())
@@ -1014,15 +1014,15 @@ static void print(OpAsmPrinter &p, RegionIfOp op) {
   p << ": " << op.getOperandTypes();
   p.printArrowTypeList(op.getResultTypes());
   p << " then";
-  p.printRegion(op.thenRegion(),
+  p.printRegion(op.getThenRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
   p << " else";
-  p.printRegion(op.elseRegion(),
+  p.printRegion(op.getElseRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
   p << " join";
-  p.printRegion(op.joinRegion(),
+  p.printRegion(op.getJoinRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
 }
@@ -1064,15 +1064,15 @@ void RegionIfOp::getSuccessorRegions(
   // We always branch to the join region.
   if (index.hasValue()) {
     if (index.getValue() < 2)
-      regions.push_back(RegionSuccessor(&joinRegion(), getJoinArgs()));
+      regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
       regions.push_back(RegionSuccessor(getResults()));
     return;
   }
 
   // The then and else regions are the entry regions of this op.
-  regions.push_back(RegionSuccessor(&thenRegion(), getThenArgs()));
-  regions.push_back(RegionSuccessor(&elseRegion(), getElseArgs()));
+  regions.push_back(RegionSuccessor(&getThenRegion(), getThenArgs()));
+  regions.push_back(RegionSuccessor(&getElseRegion(), getElseArgs()));
 }
 
 //===----------------------------------------------------------------------===//

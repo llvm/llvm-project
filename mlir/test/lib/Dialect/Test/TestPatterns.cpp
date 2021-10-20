@@ -32,8 +32,8 @@ static void createOpI(PatternRewriter &rewriter, Location loc, Value input) {
 static void handleNoResultOp(PatternRewriter &rewriter,
                              OpSymbolBindingNoResult op) {
   // Turn the no result op to a one-result op.
-  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.operand().getType(),
-                                    op.operand());
+  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.getOperand().getType(),
+                                    op.getOperand());
 }
 
 static bool getFirstI32Result(Operation *op, Value &value) {
@@ -531,7 +531,7 @@ struct TestBoundedRecursiveRewrite
                                 PatternRewriter &rewriter) const final {
     // Decrement the depth of the op in-place.
     rewriter.updateRootInPlace(op, [&] {
-      op->setAttr("depth", rewriter.getI64IntegerAttr(op.depth() - 1));
+      op->setAttr("depth", rewriter.getI64IntegerAttr(op.getDepth() - 1));
     });
     return success();
   }
@@ -705,7 +705,7 @@ struct TestLegalizePatternDriver
 
     // Mark the bound recursion operation as dynamically legal.
     target.addDynamicallyLegalOp<TestRecursiveRewriteOp>(
-        [](TestRecursiveRewriteOp op) { return op.depth() == 0; });
+        [](TestRecursiveRewriteOp op) { return op.getDepth() == 0; });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
@@ -1026,9 +1026,9 @@ struct TestMergeBlock : public OpConversionPattern<TestMergeBlocksOp> {
   LogicalResult
   matchAndRewrite(TestMergeBlocksOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    Block &firstBlock = op.body().front();
+    Block &firstBlock = op.getBody().front();
     Operation *branchOp = firstBlock.getTerminator();
-    Block *secondBlock = &*(std::next(op.body().begin()));
+    Block *secondBlock = &*(std::next(op.getBody().begin()));
     auto succOperands = branchOp->getOperands();
     SmallVector<Value, 2> replacements(succOperands);
     rewriter.eraseOp(branchOp);
@@ -1073,7 +1073,7 @@ struct TestMergeSingleBlockOps
         op->getParentOfType<SingleBlockImplicitTerminatorOp>();
     if (!parentOp)
       return failure();
-    Block &innerBlock = op.region().front();
+    Block &innerBlock = op.getRegion().front();
     TerminatorOp innerTerminator =
         cast<TerminatorOp>(innerBlock.getTerminator());
     rewriter.mergeBlockBefore(&innerBlock, op);
@@ -1104,7 +1104,7 @@ struct TestMergeBlocksPatternDriver
     /// Expect the op to have a single block after legalization.
     target.addDynamicallyLegalOp<TestMergeBlocksOp>(
         [&](TestMergeBlocksOp op) -> bool {
-          return llvm::hasSingleElement(op.body());
+          return llvm::hasSingleElement(op.getBody());
         });
 
     /// Only allow `test.br` within test.merge_blocks op.

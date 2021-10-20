@@ -26,9 +26,7 @@ include "TestInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "::test";
-  // Temporarily flipping to _Both (given this is test only/not intended for
-  // general use, this won't be following the 2 week process here).
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
   let hasCanonicalizer = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
@@ -305,9 +303,9 @@ def RankedIntElementsAttrOp : TEST_Op<"ranked_int_elements_attr"> {
 def DerivedTypeAttrOp : TEST_Op<"derived_type_attr", []> {
   let results = (outs AnyTensor:$output);
   DerivedTypeAttr element_dtype =
-    DerivedTypeAttr<"return getElementTypeOrSelf(output().getType());">;
+    DerivedTypeAttr<"return getElementTypeOrSelf(getOutput().getType());">;
   DerivedAttr size = DerivedAttr<"int",
-    "return output().getType().cast<ShapedType>().getSizeInBits();",
+    "return getOutput().getType().cast<ShapedType>().getSizeInBits();",
     "$_builder.getI32IntegerAttr($_self)">;
 }
 
@@ -374,13 +372,10 @@ def VariadicNoTerminatorOp : TEST_Op<"variadic_no_terminator_op",
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
-  let arguments = (ins Variadic<AnyType>:$inputs, SymbolRefAttr:$callee);
+  let arguments = (ins Variadic<AnyType>:$arg_operands, SymbolRefAttr:$callee);
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
-    /// Get the argument operands to the called function.
-    operand_range getArgOperands() { return inputs(); }
-
     /// Return the callee of this operation.
     ::mlir::CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee");
@@ -394,7 +389,7 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
   let results = (outs FunctionType);
 
   let extraClassDeclaration = [{
-    ::mlir::Region *getCallableRegion() { return &body(); }
+    ::mlir::Region *getCallableRegion() { return &getBody(); }
     ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
       return getType().cast<::mlir::FunctionType>().getResults();
     }
@@ -673,7 +668,7 @@ def AttrWithTraitOp : TEST_Op<"attr_with_trait", []> {
   let arguments = (ins AnyAttr:$attr);
 
   let verifier = [{
-    if (this->attr().hasTrait<AttributeTrait::TestAttrTrait>())
+    if (this->getAttr().hasTrait<AttributeTrait::TestAttrTrait>())
       return success();
     return this->emitError("'attr' attribute should have trait 'TestAttrTrait'");
   }];
@@ -2340,6 +2335,10 @@ def TestLinalgConvOp :
     std::string getLibraryCallName() {
       return "";
     }
+
+    // To conform with interface requirement on operand naming.
+    mlir::ValueRange inputs() { return getInputs(); }
+    mlir::ValueRange outputs() { return getOutputs(); }
   }];
 }
 
