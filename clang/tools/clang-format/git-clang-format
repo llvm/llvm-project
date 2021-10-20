@@ -327,6 +327,8 @@ def extract_lines(patch_file):
         line_count = int(match.group(3))
       if line_count == 0:
         line_count = 1
+      if start_line == 0:
+        continue
       matches.setdefault(filename, []).append(Range(start_line, line_count))
   return matches
 
