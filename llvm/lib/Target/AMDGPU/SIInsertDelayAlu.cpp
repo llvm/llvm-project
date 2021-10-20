@@ -309,6 +309,15 @@ public:
       if (MI.isBundle() || MI.isMetaInstruction())
         continue;
 
+      // Ignore some more instructions that do not generate any code.
+      // FIXME: should these be marked as isMetaInstruction?
+      switch (MI.getOpcode()) {
+      case AMDGPU::SI_MASKED_UNREACHABLE:
+      case AMDGPU::SI_RETURN_TO_EPILOG:
+      case AMDGPU::WAVE_BARRIER:
+        continue;
+      }
+
       auto TSFlags = MI.getDesc().TSFlags;
       DelayType Type =
           (TSFlags & SIInstrFlags::TRANS)

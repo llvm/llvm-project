@@ -136,7 +136,6 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    global_store_b32 v4, v3, s[12:13]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call {half,i32} @llvm.amdgcn.image.sample.2d.f16i32.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)
@@ -226,7 +225,7 @@ define amdgpu_ps <2 x float> @image_sample_c_d_1d_v2f16_tfe(<8 x i32> inreg %rsr
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    image_sample_c_d v[0:1], [v5, v4, v2, v3], s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D tfe d16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -369,7 +368,7 @@ define amdgpu_ps <4 x float> @image_sample_b_2d_v3f16_tfe(<8 x i32> inreg %rsrc,
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
@@ -520,7 +519,7 @@ define amdgpu_ps <4 x float> @image_sample_b_2d_v4f16_tfe(<8 x i32> inreg %rsrc,
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
