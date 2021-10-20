@@ -199,7 +199,6 @@ void __kmpc_serialized_parallel(IdentTy *, uint32_t TId) {
 
 void __kmpc_end_serialized_parallel(IdentTy *, uint32_t TId) {
   state::exitDataEnvironment();
-  --icv::Level;
 }
 
 uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) { return omp_get_level(); }
