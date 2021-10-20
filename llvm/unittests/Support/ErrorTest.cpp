@@ -1032,4 +1032,71 @@ TEST(Error, SubtypeStringErrorTest) {
                                      "Error 2.");
 }
 
+static Error createAnyError() {
+  return errorCodeToError(test_error_code::unspecified);
+}
+
+struct MoveOnlyBox {
+  Optional<int> Box;
+
+  explicit MoveOnlyBox(int I) : Box(I) {}
+  MoveOnlyBox() = default;
+  MoveOnlyBox(MoveOnlyBox &&) = default;
+  MoveOnlyBox &operator=(MoveOnlyBox &&) = default;
+
+  MoveOnlyBox(const MoveOnlyBox &) = delete;
+  MoveOnlyBox &operator=(const MoveOnlyBox &) = delete;
+
+  bool operator==(const MoveOnlyBox &RHS) const {
+    if (bool(Box) != bool(RHS.Box))
+      return false;
+    return Box ? *Box == *RHS.Box : false;
+  }
+};
+
+TEST(Error, moveInto) {
+  // Use MoveOnlyBox as the T in Expected<T>.
+  auto make = [](int I) -> Expected<MoveOnlyBox> { return MoveOnlyBox(I); };
+  auto makeFailure = []() -> Expected<MoveOnlyBox> { return createAnyError(); };
+
+  {
+    MoveOnlyBox V;
+
+    // Failure with no prior value.
+    EXPECT_THAT_ERROR(makeFailure().moveInto(V), Failed());
+    EXPECT_EQ(None, V.Box);
+
+    // Success with no prior value.
+    EXPECT_THAT_ERROR(make(5).moveInto(V), Succeeded());
+    EXPECT_EQ(5, V.Box);
+
+    // Success with an existing value.
+    EXPECT_THAT_ERROR(make(7).moveInto(V), Succeeded());
+    EXPECT_EQ(7, V.Box);
+
+    // Failure with an existing value. Might be nice to assign a
+    // default-constructed value in this case, but for now it's being left
+    // alone.
+    EXPECT_THAT_ERROR(makeFailure().moveInto(V), Failed());
+    EXPECT_EQ(7, V.Box);
+  }
+
+  // Check that this works with optionals too.
+  {
+    // Same cases as above.
+    Optional<MoveOnlyBox> MaybeV;
+    EXPECT_THAT_ERROR(makeFailure().moveInto(MaybeV), Failed());
+    EXPECT_EQ(None, MaybeV);
+
+    EXPECT_THAT_ERROR(make(5).moveInto(MaybeV), Succeeded());
+    EXPECT_EQ(MoveOnlyBox(5), MaybeV);
+
+    EXPECT_THAT_ERROR(make(7).moveInto(MaybeV), Succeeded());
+    EXPECT_EQ(MoveOnlyBox(7), MaybeV);
+
+    EXPECT_THAT_ERROR(makeFailure().moveInto(MaybeV), Failed());
+    EXPECT_EQ(MoveOnlyBox(7), MaybeV);
+  }
+}
+
 } // namespace
