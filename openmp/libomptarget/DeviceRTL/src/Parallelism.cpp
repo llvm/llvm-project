@@ -85,9 +85,10 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   uint32_t TId = mapping::getThreadIdInBlock();
   // Handle the serialized case first, same for SPMD/non-SPMD.
   if (OMP_UNLIKELY(!if_expr || icv::Level)) {
-    __kmpc_serialized_parallel(ident, TId);
+    state::enterDataEnvironment();
+    ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
-    __kmpc_end_serialized_parallel(ident, TId);
+    state::exitDataEnvironment();
     return;
   }
 
@@ -190,15 +191,6 @@ __attribute__((noinline)) void __kmpc_kernel_end_parallel() {
   uint32_t TId = mapping::getThreadIdInBlock();
   state::resetStateForThread(TId);
   ASSERT(!mapping::isSPMDMode());
-}
-
-void __kmpc_serialized_parallel(IdentTy *, uint32_t TId) {
-  state::enterDataEnvironment();
-  ++icv::Level;
-}
-
-void __kmpc_end_serialized_parallel(IdentTy *, uint32_t TId) {
-  state::exitDataEnvironment();
 }
 
 uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) { return omp_get_level(); }

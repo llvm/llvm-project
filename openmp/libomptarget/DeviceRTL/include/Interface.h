@@ -281,12 +281,6 @@ bool __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn);
 void __kmpc_kernel_end_parallel();
 
 /// TODO
-void __kmpc_serialized_parallel(IdentTy *Loc, uint32_t);
-
-/// TODO
-void __kmpc_end_serialized_parallel(IdentTy *Loc, uint32_t);
-
-/// TODO
 void __kmpc_push_proc_bind(IdentTy *Loc, uint32_t TId, int ProcBind);
 
 /// TODO
