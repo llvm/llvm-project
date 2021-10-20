@@ -2863,7 +2863,7 @@ clang fully implements all of standard C++98 except for exported
 templates (which were removed in C++11), all of standard C++11,
 C++14, and C++17, and most of C++20.
 
-See the `C++ support in Clang <https://clang.llvm.org/cxx_status.html>` page
+See the `C++ support in Clang <https://clang.llvm.org/cxx_status.html>`_ page
 for detailed information on C++ feature support across Clang versions.
 
 Controlling implementation limits
