@@ -318,20 +318,3 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
     EXPECT_EQ(strValue, stringLit.getValue().dyn_cast<StringAttr>().getValue());
   }
 }
-
-TEST_F(FIRBuilderTest, allocateLocal) {
-  auto builder = getBuilder();
-  auto loc = builder.getUnknownLoc();
-  llvm::StringRef varName = "var1";
-  auto var = builder.allocateLocal(
-      loc, builder.getI64Type(), "", varName, {}, {}, false);
-  EXPECT_TRUE(mlir::isa<fir::AllocaOp>(var.getDefiningOp()));
-  auto allocaOp = dyn_cast<fir::AllocaOp>(var.getDefiningOp());
-  EXPECT_EQ(builder.getI64Type(), allocaOp.in_type());
-  EXPECT_TRUE(allocaOp.bindc_name().hasValue());
-  EXPECT_EQ(varName, allocaOp.bindc_name().getValue());
-  EXPECT_FALSE(allocaOp.uniq_name().hasValue());
-  EXPECT_FALSE(allocaOp.pinned());
-  EXPECT_EQ(0u, allocaOp.typeparams().size());
-  EXPECT_EQ(0u, allocaOp.shape().size());
-}
