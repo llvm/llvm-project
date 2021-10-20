@@ -112,11 +112,8 @@ Error registerObjCSelectors(
     if (auto Err = validatePointerSectionExtent("__objc_selrefs", ObjCSelRefs))
       return Err;
 
-    fprintf(stderr, "Processing selrefs section at 0x%llx\n",
-            ObjCSelRefs.Start.getValue());
     for (uintptr_t SelEntry : ObjCSelRefs.toSpan<uintptr_t>()) {
       const char *SelName = reinterpret_cast<const char *>(SelEntry);
-      fprintf(stderr, "Registering selector \"%s\"\n", SelName);
       auto Sel = sel_registerName(SelName);
       *reinterpret_cast<SEL *>(SelEntry) = Sel;
     }
