@@ -38,7 +38,7 @@ StringRef CheckerContext::getCalleeName(const FunctionDecl *FunDecl) const {
 }
 
 StringRef CheckerContext::getDeclDescription(const Decl *D) {
-  if (isa<ObjCMethodDecl>(D) || isa<CXXMethodDecl>(D))
+  if (isa<ObjCMethodDecl, CXXMethodDecl>(D))
     return "method";
   if (isa<BlockDecl>(D))
     return "anonymous block";
@@ -55,7 +55,7 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
     if (Name.empty())
       return true;
     StringRef BName = FD->getASTContext().BuiltinInfo.getName(BId);
-    if (BName.find(Name) != StringRef::npos)
+    if (BName.contains(Name))
       return true;
   }
 
@@ -83,11 +83,10 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (FName.equals(Name))
     return true;
 
-  if (FName.startswith("__inline") && (FName.find(Name) != StringRef::npos))
+  if (FName.startswith("__inline") && FName.contains(Name))
     return true;
 
-  if (FName.startswith("__") && FName.endswith("_chk") &&
-      FName.find(Name) != StringRef::npos)
+  if (FName.startswith("__") && FName.endswith("_chk") && FName.contains(Name))
     return true;
 
   return false;

@@ -976,7 +976,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
       // Whitelist the system globals which often DO GET modified, assume the
       // rest are immutable.
-      if (D->getName().find("errno") != StringRef::npos)
+      if (D->getName().contains("errno"))
         sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
       else
         sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
@@ -1012,14 +1012,15 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
       sReg = getUnknownRegion();
     } else {
       if (D->hasLocalStorage()) {
-        sReg = isa<ParmVarDecl>(D) || isa<ImplicitParamDecl>(D)
-               ? static_cast<const MemRegion*>(getStackArgumentsRegion(STC))
-               : static_cast<const MemRegion*>(getStackLocalsRegion(STC));
+        sReg =
+            isa<ParmVarDecl, ImplicitParamDecl>(D)
+                ? static_cast<const MemRegion *>(getStackArgumentsRegion(STC))
+                : static_cast<const MemRegion *>(getStackLocalsRegion(STC));
       }
       else {
         assert(D->isStaticLocal());
         const Decl *STCD = STC->getDecl();
-        if (isa<FunctionDecl>(STCD) || isa<ObjCMethodDecl>(STCD))
+        if (isa<FunctionDecl, ObjCMethodDecl>(STCD))
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   getFunctionCodeRegion(cast<NamedDecl>(STCD)));
         else if (const auto *BD = dyn_cast<BlockDecl>(STCD)) {
@@ -1283,9 +1284,7 @@ bool MemRegion::hasStackParametersStorage() const {
 }
 
 bool MemRegion::hasGlobalsOrParametersStorage() const {
-  const MemSpaceRegion *MS = getMemorySpace();
-  return isa<StackArgumentsSpaceRegion>(MS) ||
-         isa<GlobalsSpaceRegion>(MS);
+  return isa<StackArgumentsSpaceRegion, GlobalsSpaceRegion>(getMemorySpace());
 }
 
 // getBaseRegion strips away all elements and fields, and get the base region

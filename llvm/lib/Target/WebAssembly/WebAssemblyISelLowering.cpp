@@ -215,8 +215,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::SELECT_CC, T, Expand);
 
     // Expand integer operations supported for scalars but not SIMD
-    for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::SDIV, ISD::UDIV,
-                    ISD::SREM, ISD::UREM, ISD::ROTL, ISD::ROTR})
+    for (auto Op :
+         {ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM, ISD::ROTL, ISD::ROTR})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
         setOperationAction(Op, T, Expand);
 
@@ -225,8 +225,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(Op, T, Legal);
 
-    // And we have popcnt for i8x16
+    // And we have popcnt for i8x16. It can be used to expand ctlz/cttz.
     setOperationAction(ISD::CTPOP, MVT::v16i8, Legal);
+    setOperationAction(ISD::CTLZ, MVT::v16i8, Expand);
+    setOperationAction(ISD::CTTZ, MVT::v16i8, Expand);
+
+    // Custom lower bit counting operations for other types to scalarize them.
+    for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP})
+      for (auto T : {MVT::v8i16, MVT::v4i32, MVT::v2i64})
+        setOperationAction(Op, T, Custom);
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
@@ -1405,6 +1412,10 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerLoad(Op, DAG);
   case ISD::STORE:
     return LowerStore(Op, DAG);
+  case ISD::CTPOP:
+  case ISD::CTLZ:
+  case ISD::CTTZ:
+    return DAG.UnrollVectorOp(Op.getNode());
   }
 }
 

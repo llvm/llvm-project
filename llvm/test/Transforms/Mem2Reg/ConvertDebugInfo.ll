@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
 
 define double @testfunc(i32 %i, double %j) nounwind ssp !dbg !1 {
 entry:
