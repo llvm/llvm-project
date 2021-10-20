@@ -3767,16 +3767,17 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
   VectorType vectorType =
       VectorType::get(extractShape(memRefType),
                       getElementTypeOrSelf(getElementTypeOrSelf(memRefType)));
-  result.addTypes(
-      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpace()));
+  result.addTypes(MemRefType::get({}, vectorType, MemRefLayoutAttrInterface(),
+                                  memRefType.getMemorySpace()));
 }
 
 static LogicalResult verify(TypeCastOp op) {
   MemRefType canonicalType = canonicalizeStridedLayout(op.getMemRefType());
-  if (!canonicalType.getAffineMaps().empty())
-    return op.emitOpError("expects operand to be a memref with no layout");
-  if (!op.getResultMemRefType().getAffineMaps().empty())
-    return op.emitOpError("expects result to be a memref with no layout");
+  if (!canonicalType.getLayout().isIdentity())
+    return op.emitOpError(
+        "expects operand to be a memref with identity layout");
+  if (!op.getResultMemRefType().getLayout().isIdentity())
+    return op.emitOpError("expects result to be a memref with identity layout");
   if (op.getResultMemRefType().getMemorySpace() !=
       op.getMemRefType().getMemorySpace())
     return op.emitOpError("expects result in same memory space");

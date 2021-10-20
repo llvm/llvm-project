@@ -2648,9 +2648,7 @@ static LogicalResult generateCopy(
   auto memref = region.memref;
   auto memRefType = memref.getType().cast<MemRefType>();
 
-  auto layoutMaps = memRefType.getAffineMaps();
-  if (layoutMaps.size() > 1 ||
-      (layoutMaps.size() == 1 && !layoutMaps[0].isIdentity())) {
+  if (!memRefType.getLayout().isIdentity()) {
     LLVM_DEBUG(llvm::dbgs() << "Non-identity layout map not yet supported\n");
     return failure();
   }

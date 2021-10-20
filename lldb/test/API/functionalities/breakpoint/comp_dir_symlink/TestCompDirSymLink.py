@@ -77,7 +77,7 @@ class CompDirSymLinkTestCase(TestBase):
         return pwd_symlink
 
     def doBuild(self, pwd_symlink, setting_value):
-        self.build(None, None, {'PWD': pwd_symlink})
+        self.build(dictionary={'PWD': pwd_symlink})
 
         if setting_value:
             cmd = "settings set %s '%s'" % (_COMP_DIR_SYM_LINK_PROP, setting_value)

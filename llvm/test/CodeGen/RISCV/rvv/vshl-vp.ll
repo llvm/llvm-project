@@ -10,11 +10,11 @@ define <vscale x 8 x i7> @vsll_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <v
 ; CHECK-LABEL: vsll_vx_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmv.v.x v25, a0
+; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    addi a0, zero, 127
-; CHECK-NEXT:    vand.vx v25, v25, a0
+; CHECK-NEXT:    vand.vx v9, v9, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
-; CHECK-NEXT:    vsll.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> undef, i7 %b, i32 0
   %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> undef, <vscale x 8 x i32> zeroinitializer

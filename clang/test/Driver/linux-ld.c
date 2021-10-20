@@ -319,7 +319,13 @@
 // CHECK-LD-64-STATIC: "-L[[SYSROOT]]/lib"
 // CHECK-LD-64-STATIC: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-64-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
-//
+
+// RUN: %clang -### %s --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform -shared -static \
+// RUN:   --gcc-toolchain= --sysroot=%S/Inputs/basic_linux_tree 2>&1 | FileCheck --check-prefix=CHECK-LD-SHARED-STATIC %s
+// CHECK-LD-SHARED-STATIC: "-shared" "-static"
+// CHECK-LD-SHARED-STATIC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbeginS.o"
+// CHECK-LD-SHARED-STATIC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtendS.o"
+
 // Check that flags can be combined. The -static dominates.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \

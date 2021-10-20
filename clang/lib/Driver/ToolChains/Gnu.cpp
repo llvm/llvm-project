@@ -474,17 +474,16 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     return;
   }
 
+  if (Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back("-shared");
+
   if (IsStatic) {
     if (Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
         Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb)
       CmdArgs.push_back("-Bstatic");
     else
       CmdArgs.push_back("-static");
-  } else if (Args.hasArg(options::OPT_shared)) {
-    CmdArgs.push_back("-shared");
-  }
-
-  if (!IsStatic) {
+  } else {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
 
@@ -535,10 +534,10 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
       if (P.empty()) {
         const char *crtbegin;
-        if (IsStatic)
-          crtbegin = isAndroid ? "crtbegin_static.o" : "crtbeginT.o";
-        else if (Args.hasArg(options::OPT_shared))
+        if (Args.hasArg(options::OPT_shared))
           crtbegin = isAndroid ? "crtbegin_so.o" : "crtbeginS.o";
+        else if (IsStatic)
+          crtbegin = isAndroid ? "crtbegin_static.o" : "crtbeginT.o";
         else if (IsPIE || IsStaticPIE)
           crtbegin = isAndroid ? "crtbegin_dynamic.o" : "crtbeginS.o";
         else

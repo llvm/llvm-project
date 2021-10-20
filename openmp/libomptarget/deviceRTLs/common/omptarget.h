@@ -273,7 +273,7 @@ extern omptarget_nvptx_SimpleMemoryManager omptarget_nvptx_simpleMemoryManager;
 extern uint32_t EXTERN_SHARED(usedMemIdx);
 extern uint32_t EXTERN_SHARED(usedSlotIdx);
 #if _OPENMP
-extern uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+extern uint32_t volatile parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 #pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
 #else
 extern uint8_t EXTERN_SHARED(parallelLevel)[MAX_THREADS_PER_TEAM / WARPSIZE];

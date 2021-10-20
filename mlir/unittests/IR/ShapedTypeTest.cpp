@@ -32,26 +32,26 @@ TEST(ShapedTypeTest, CloneMemref) {
   ShapedType memrefType =
       MemRefType::Builder(memrefOriginalShape, memrefOriginalType)
           .setMemorySpace(memSpace)
-          .setAffineMaps(map);
+          .setLayout(AffineMapAttr::get(map));
   // Update shape.
   llvm::SmallVector<int64_t> memrefNewShape({30, 40});
   ASSERT_NE(memrefOriginalShape, memrefNewShape);
   ASSERT_EQ(memrefType.clone(memrefNewShape),
             (MemRefType)MemRefType::Builder(memrefNewShape, memrefOriginalType)
                 .setMemorySpace(memSpace)
-                .setAffineMaps(map));
+                .setLayout(AffineMapAttr::get(map)));
   // Update type.
   Type memrefNewType = f32;
   ASSERT_NE(memrefOriginalType, memrefNewType);
   ASSERT_EQ(memrefType.clone(memrefNewType),
             (MemRefType)MemRefType::Builder(memrefOriginalShape, memrefNewType)
                 .setMemorySpace(memSpace)
-                .setAffineMaps(map));
+                .setLayout(AffineMapAttr::get(map)));
   // Update both.
   ASSERT_EQ(memrefType.clone(memrefNewShape, memrefNewType),
             (MemRefType)MemRefType::Builder(memrefNewShape, memrefNewType)
                 .setMemorySpace(memSpace)
-                .setAffineMaps(map));
+                .setLayout(AffineMapAttr::get(map)));
 
   // Test unranked memref cloning.
   ShapedType unrankedTensorType =

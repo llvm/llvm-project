@@ -2361,6 +2361,8 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoReturnType);
   if (Flags & MSDF_NoMemberType)
     OF = OutputFlags(OF | OF_NoMemberType);
+  if (Flags & MSDF_NoVariableType)
+    OF = OutputFlags(OF | OF_NoVariableType);
 
   int InternalStatus = demangle_success;
   if (D.Error)
