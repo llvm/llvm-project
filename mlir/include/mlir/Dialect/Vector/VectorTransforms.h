@@ -97,6 +97,13 @@ struct UnrollVectorOptions {
 void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options);
 
+/// Collect a set of patterns to reduce the rank of the operands of vector
+/// transfer ops to operate on the largest contigious vector.
+/// These patterns are useful when lowering to dialects with 1d vector type
+/// such as llvm and it will result fewer memory reads.
+void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
+    RewritePatternSet &patterns);
+
 /// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
 /// masking) fastpath and a slowpath.
 /// If `ifOp` is not null and the result is `success, the `ifOp` points to the
