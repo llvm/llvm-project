@@ -73,11 +73,8 @@ RefCountBug::RefCountBug(CheckerNameRef Checker, RefCountBugKind BT)
 
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
-  return isa<IntegerLiteral>(E) ||
-         isa<CharacterLiteral>(E) ||
-         isa<FloatingLiteral>(E) ||
-         isa<ObjCBoolLiteralExpr>(E) ||
-         isa<CXXBoolLiteralExpr>(E);
+  return isa<IntegerLiteral, CharacterLiteral, FloatingLiteral,
+             ObjCBoolLiteralExpr, CXXBoolLiteralExpr>(E);
 }
 
 /// If type represents a pointer to CXXRecordDecl,

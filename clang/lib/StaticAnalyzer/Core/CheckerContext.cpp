@@ -38,7 +38,7 @@ StringRef CheckerContext::getCalleeName(const FunctionDecl *FunDecl) const {
 }
 
 StringRef CheckerContext::getDeclDescription(const Decl *D) {
-  if (isa<ObjCMethodDecl>(D) || isa<CXXMethodDecl>(D))
+  if (isa<ObjCMethodDecl, CXXMethodDecl>(D))
     return "method";
   if (isa<BlockDecl>(D))
     return "anonymous block";
