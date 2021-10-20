@@ -30,25 +30,57 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   static llvm::DenseMap<unsigned, MCFixupKindInfo> Infos = {
       {CSKY::Fixups::fixup_csky_addr32, {"fixup_csky_addr32", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_addr_hi16, {"fixup_csky_addr_hi16", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_addr_lo16, {"fixup_csky_addr_lo16", 0, 32, 0}},
       {CSKY::Fixups::fixup_csky_pcrel_imm16_scale2,
        {"fixup_csky_pcrel_imm16_scale2", 0, 32, MCFixupKindInfo::FKF_IsPCRel}},
       {CSKY::Fixups::fixup_csky_pcrel_uimm16_scale4,
-       {"fixup_csky_pcrel_uimm16_scale4", 0, 32, MCFixupKindInfo::FKF_IsPCRel}},
+       {"fixup_csky_pcrel_uimm16_scale4", 0, 32,
+        MCFixupKindInfo::FKF_IsPCRel |
+            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits}},
+      {CSKY::Fixups::fixup_csky_pcrel_uimm8_scale4,
+       {"fixup_csky_pcrel_uimm8_scale4", 0, 32,
+        MCFixupKindInfo::FKF_IsPCRel |
+            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits}},
       {CSKY::Fixups::fixup_csky_pcrel_imm26_scale2,
        {"fixup_csky_pcrel_imm26_scale2", 0, 32, MCFixupKindInfo::FKF_IsPCRel}},
       {CSKY::Fixups::fixup_csky_pcrel_imm18_scale2,
-       {"fixup_csky_pcrel_imm18_scale2", 0, 32, MCFixupKindInfo::FKF_IsPCRel}}};
+       {"fixup_csky_pcrel_imm18_scale2", 0, 32, MCFixupKindInfo::FKF_IsPCRel}},
+      {CSKY::Fixups::fixup_csky_got32, {"fixup_csky_got32", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_got_imm18_scale4,
+       {"fixup_csky_got_imm18_scale4", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_gotoff, {"fixup_csky_gotoff", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_gotpc,
+       {"fixup_csky_gotpc", 0, 32, MCFixupKindInfo::FKF_IsPCRel}},
+      {CSKY::Fixups::fixup_csky_plt32, {"fixup_csky_plt32", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_plt_imm18_scale4,
+       {"fixup_csky_plt_imm18_scale4", 0, 32, 0}},
+      {CSKY::Fixups::fixup_csky_pcrel_imm10_scale2,
+       {"fixup_csky_pcrel_imm10_scale2", 0, 16, MCFixupKindInfo::FKF_IsPCRel}},
+      {CSKY::Fixups::fixup_csky_pcrel_uimm7_scale4,
+       {"fixup_csky_pcrel_uimm7_scale4", 0, 16,
+        MCFixupKindInfo::FKF_IsPCRel |
+            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits}},
+      {CSKY::Fixups::fixup_csky_doffset_imm18,
+       {"fixup_csky_doffset_imm18", 0, 18, 0}},
+      {CSKY::Fixups::fixup_csky_doffset_imm18_scale2,
+       {"fixup_csky_doffset_imm18_scale2", 0, 18, 0}},
+      {CSKY::Fixups::fixup_csky_doffset_imm18_scale4,
+       {"fixup_csky_doffset_imm18_scale4", 0, 18, 0}}};
+
   assert(Infos.size() == CSKY::NumTargetFixupKinds &&
          "Not all fixup kinds added to Infos array");
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-         "Invalid kind!");
-  if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind)
+  if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
+    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+           "Invalid kind!");
+
     return Infos[Kind];
-  else if (Kind < FirstTargetFixupKind)
+  } else if (Kind < FirstTargetFixupKind) {
     return MCAsmBackend::getFixupKindInfo(Kind);
-  else
+  } else {
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
+  }
 }
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,

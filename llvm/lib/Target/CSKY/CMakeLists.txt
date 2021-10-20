@@ -12,6 +12,7 @@ tablegen(LLVM CSKYGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(CSKYCommonTableGen)
 
 add_llvm_target(CSKYCodeGen
+  CSKYSubtarget.cpp
   CSKYTargetMachine.cpp
 
   LINK_COMPONENTS

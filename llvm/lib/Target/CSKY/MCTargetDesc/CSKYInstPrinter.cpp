@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYInstPrinter.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -93,6 +94,107 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
   MO.getExpr()->print(O, &MAI);
+}
+
+void CSKYInstPrinter::printDataSymbol(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  O << "[";
+  if (MO.isImm())
+    O << MO.getImm();
+  else
+    MO.getExpr()->print(O, &MAI);
+  O << "]";
+}
+
+void CSKYInstPrinter::printConstpool(const MCInst *MI, uint64_t Address,
+                                     unsigned OpNo, const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  if (MO.isImm()) {
+    if (PrintBranchImmAsAddress) {
+      uint64_t Target = Address + MO.getImm();
+      Target &= 0xfffffffc;
+      O << formatHex(Target);
+    } else {
+      O << MO.getImm();
+    }
+    return;
+  }
+
+  assert(MO.isExpr() && "Unknown operand kind in printConstpool");
+
+  O << "[";
+  MO.getExpr()->print(O, &MAI);
+  O << "]";
+}
+
+void CSKYInstPrinter::printCSKYSymbolOperand(const MCInst *MI, uint64_t Address,
+                                             unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+  if (!MO.isImm()) {
+    return printOperand(MI, OpNo, STI, O);
+  }
+
+  if (PrintBranchImmAsAddress) {
+    uint64_t Target = Address + MO.getImm();
+    Target &= 0xffffffff;
+    O << formatHex(Target);
+  } else {
+    O << MO.getImm();
+  }
+}
+
+void CSKYInstPrinter::printRegisterSeq(const MCInst *MI, unsigned OpNum,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  printRegName(O, MI->getOperand(OpNum).getReg());
+  O << "-";
+  printRegName(O, MI->getOperand(OpNum + 1).getReg());
+}
+
+void CSKYInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  auto V = MI->getOperand(OpNum).getImm();
+  ListSeparator LS;
+
+  if (V & 0xf) {
+    O << LS;
+    printRegName(O, CSKY::R4);
+    auto Offset = (V & 0xf) - 1;
+    if (Offset) {
+      O << "-";
+      printRegName(O, CSKY::R4 + Offset);
+    }
+  }
+
+  if ((V >> 4) & 0x1) {
+    O << LS;
+    printRegName(O, CSKY::R15);
+  }
+
+  if ((V >> 5) & 0x7) {
+    O << LS;
+    printRegName(O, CSKY::R16);
+
+    auto Offset = ((V >> 5) & 0x7) - 1;
+
+    if (Offset) {
+      O << "-";
+      printRegName(O, CSKY::R16 + Offset);
+    }
+  }
+
+  if ((V >> 8) & 0x1) {
+    O << LS;
+    printRegName(O, CSKY::R28);
+  }
 }
 
 const char *CSKYInstPrinter::getRegisterName(unsigned RegNo) {

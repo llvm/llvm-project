@@ -19,6 +19,9 @@
 namespace llvm {
 
 class CSKYInstPrinter : public MCInstPrinter {
+private:
+  bool ABIRegNames = false;
+
 public:
   CSKYInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                   const MCRegisterInfo &MRI)
@@ -43,6 +46,20 @@ public:
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
 
+  void printDataSymbol(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printConstpool(const MCInst *MI, uint64_t Address, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printPSRFlag(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
+  void printRegisterSeq(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printRegisterList(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printCSKYSymbolOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
+                              const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSPAddr(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
   static const char *getRegisterName(unsigned RegNo);
   static const char *getRegisterName(unsigned RegNo, unsigned AltIdx);
 };
