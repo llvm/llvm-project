@@ -803,4 +803,7 @@ main:
     # CHECK: i64x2.laneselect # encoding: [0xfd,0xd3,0x01]
     i64x2.laneselect
 
+    # CHECK: i8x16.relaxed_swizzle # encoding: [0xfd,0xa2,0x01]
+    i8x16.relaxed_swizzle
+
     end_function

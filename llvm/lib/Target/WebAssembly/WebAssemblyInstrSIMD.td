@@ -1361,3 +1361,14 @@ defm "" : SIMDLANESELECT<I8x16, 0xb2>;
 defm "" : SIMDLANESELECT<I16x8, 0xb3>;
 defm "" : SIMDLANESELECT<I32x4, 0xd2>;
 defm "" : SIMDLANESELECT<I64x2, 0xd3>;
+
+
+//===----------------------------------------------------------------------===//
+// Relaxed swizzle
+//===----------------------------------------------------------------------===//
+
+defm RELAXED_SWIZZLE :
+  RELAXED_I<(outs V128:$dst), (ins V128:$src, V128:$mask), (outs), (ins),
+         [(set (v16i8 V128:$dst),
+           (int_wasm_relaxed_swizzle (v16i8 V128:$src), (v16i8 V128:$mask)))],
+         "i8x16.relaxed_swizzle\t$dst, $src, $mask", "i8x16.relaxed_swizzle", 162>;
