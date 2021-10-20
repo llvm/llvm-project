@@ -14,6 +14,7 @@
 #include "flang/Parser/parsing.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <deque>
 #include <map>
@@ -48,7 +49,7 @@ using OmpWrapperType =
 
 struct OpenMPCounterVisitor {
   std::string normalize_construct_name(std::string s);
-  ClauseInfo normalize_clause_name(const std::string &s);
+  ClauseInfo normalize_clause_name(const llvm::StringRef s);
   SourcePosition getLocation(const OmpWrapperType &w);
   SourcePosition getLocation(const OpenMPDeclarativeConstruct &c);
   SourcePosition getLocation(const OpenMPConstruct &c);
