@@ -254,7 +254,7 @@ constexpr const char *attributeDeleterTemplate = R"Py(
 
 constexpr const char *regionAccessorTemplate = R"PY(
   @builtins.property
-  def {0}():
+  def {0}(self):
     return self.regions[{1}]
 )PY";
 
