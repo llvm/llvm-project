@@ -5,6 +5,36 @@ llvm.mlir.global private @invalid_global_alignment(42 : i64) {alignment = 63} : 
 
 // -----
 
+llvm.func @ctor() {
+  llvm.return
+}
+
+// expected-error@+1{{mismatch between the number of ctors and the number of priorities}}
+llvm.mlir.global_ctors {ctors = [@ctor], priorities = []}
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// expected-error@+1{{mismatch between the number of dtors and the number of priorities}}
+llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32, 32767 : i32]}
+
+// -----
+
+// expected-error@+1{{'ctor' does not reference a valid LLVM function}}
+llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+
+// -----
+
+llvm.func @dtor()
+
+// expected-error@+1{{'dtor' does not have a definition}}
+llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+
+// -----
+
 // expected-error@+1{{expected llvm.noalias argument attribute to be a unit attribute}}
 func @invalid_noalias(%arg0: i32 {llvm.noalias = 3}) {
   "llvm.return"() : () -> ()

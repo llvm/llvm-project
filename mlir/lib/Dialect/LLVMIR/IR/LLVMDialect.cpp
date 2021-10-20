@@ -70,6 +70,22 @@ static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
   printer.printOptionalAttrDict(processFMFAttr(attrs.getValue()));
 }
 
+/// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
+/// fully defined llvm.func.
+static LogicalResult verifySymbolAttrUse(FlatSymbolRefAttr symbol,
+                                         Operation *op,
+                                         SymbolTableCollection &symbolTable) {
+  StringRef name = symbol.getValue();
+  auto func =
+      symbolTable.lookupNearestSymbolFrom<LLVMFuncOp>(op, symbol.getAttr());
+  if (!func)
+    return op->emitOpError("'")
+           << name << "' does not reference a valid LLVM function";
+  if (func.isExternal())
+    return op->emitOpError("'") << name << "' does not have a definition";
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
@@ -1625,6 +1641,48 @@ static LogicalResult verify(GlobalOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// LLVM::GlobalCtorsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GlobalCtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  for (Attribute ctor : ctors()) {
+    if (failed(verifySymbolAttrUse(ctor.cast<FlatSymbolRefAttr>(), *this,
+                                   symbolTable)))
+      return failure();
+  }
+  return success();
+}
+
+static LogicalResult verify(GlobalCtorsOp op) {
+  if (op.ctors().size() != op.priorities().size())
+    return op.emitError(
+        "mismatch between the number of ctors and the number of priorities");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM::GlobalDtorsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GlobalDtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  for (Attribute dtor : dtors()) {
+    if (failed(verifySymbolAttrUse(dtor.cast<FlatSymbolRefAttr>(), *this,
+                                   symbolTable)))
+      return failure();
+  }
+  return success();
+}
+
+static LogicalResult verify(GlobalDtorsOp op) {
+  if (op.dtors().size() != op.priorities().size())
+    return op.emitError(
+        "mismatch between the number of dtors and the number of priorities");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::ShuffleVectorOp.
 //===----------------------------------------------------------------------===//
 // Expects vector to be of wrapped LLVM vector type and position to be of
@@ -2353,7 +2411,7 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
 }
 
-static constexpr const FastmathFlags FastmathFlagsList[] = {
+static constexpr const FastmathFlags fastmathFlagsList[] = {
     // clang-format off
     FastmathFlags::nnan,
     FastmathFlags::ninf,
@@ -2368,7 +2426,7 @@ static constexpr const FastmathFlags FastmathFlagsList[] = {
 
 void FMFAttr::print(DialectAsmPrinter &printer) const {
   printer << "fastmath<";
-  auto flags = llvm::make_filter_range(FastmathFlagsList, [&](auto flag) {
+  auto flags = llvm::make_filter_range(fastmathFlagsList, [&](auto flag) {
     return bitEnumContains(this->getFlags(), flag);
   });
   llvm::interleaveComma(flags, printer,
