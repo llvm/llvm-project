@@ -117,7 +117,7 @@ jal gp, %pcrel_hi(c) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple 
 jal gp, %pcrel_lo(4) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 jal gp, %pcrel_lo(d) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
 
-# Bare symbol names when an operand modifier is required and unsupported 
+# Bare symbol names when an operand modifier is required and unsupported
 # operand modifiers.
 
 lui a0, foo # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]

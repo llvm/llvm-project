@@ -1,9 +1,9 @@
 # With Bitmanip base extension:
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zbb -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbb -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zbb -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zbb < %s \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zbb < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-zbb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zbb < %s \
@@ -11,11 +11,11 @@
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # With Bitmanip permutation extension:
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zbp -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbp -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zbp -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zbp < %s \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zbp < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-zbp -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zbp < %s \
