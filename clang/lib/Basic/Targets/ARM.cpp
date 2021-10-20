@@ -446,6 +446,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
   HasBFloat16 = false;
+  FPRegsDisabled = false;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "-fp64".
@@ -522,6 +523,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ARMCDECoprocMask |= (1U << Coproc);
     } else if (Feature == "+bf16") {
       HasBFloat16 = true;
+    } else if (Feature == "-fpregs") {
+      FPRegsDisabled = true;
     }
   }
 
@@ -978,6 +981,8 @@ bool ARMTargetInfo::validateAsmConstraint(
   case 't': // s0-s31, d0-d31, or q0-q15
   case 'w': // s0-s15, d0-d7, or q0-q3
   case 'x': // s0-s31, d0-d15, or q0-q7
+    if (FPRegsDisabled)
+      return false;
     Info.setAllowsRegister();
     return true;
   case 'j': // An immediate integer between 0 and 65535 (valid for MOVW)
