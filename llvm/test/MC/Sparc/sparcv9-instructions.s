@@ -301,3 +301,13 @@
 
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], 1
+        ! V9: prefetch  [%i1+3968], 1  ! encoding: [0xc3,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], 1
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], 1
+        ! V9: prefetch  [%i1+%i2], 1  ! encoding: [0xc3,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], 1
