@@ -41,10 +41,14 @@ bool skipUnitDimReshape(const OpResult &producer, OpOperand &consumer);
 //===----------------------------------------------------------------------===//
 using LinalgLoops = SmallVector<Operation *, 4>;
 
-/// Populates patterns for vectorization of all ConvN-D ops.
+/// [DEPRECATED] Populates patterns for vectorization of all ConvN-D ops.
 void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
     ArrayRef<int64_t> tileSizes);
+
+/// Populates patterns for vectorizing convolution ops.
+void populateConvolutionVectorizationPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit benefit = 1);
 
 /// Populate patterns that convert `ElementwiseMappable` ops to linalg
 /// parallel loops.
