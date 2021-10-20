@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "gtest/gtest.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 
@@ -242,4 +243,78 @@ TEST_F(FIRBuilderTest, locationToLineNo) {
   line = fir::factory::locationToLineNo(
       builder, builder.getUnknownLoc(), builder.getI64Type());
   checkIntegerConstant(line, builder.getI64Type(), 0);
+}
+
+TEST_F(FIRBuilderTest, hasDynamicSize) {
+  auto builder = getBuilder();
+  auto type = fir::CharacterType::get(builder.getContext(), 1, 16);
+  EXPECT_FALSE(fir::hasDynamicSize(type));
+  EXPECT_TRUE(fir::SequenceType::getUnknownExtent());
+  auto seqTy = builder.getVarLenSeqTy(builder.getI64Type(), 10);
+  EXPECT_TRUE(fir::hasDynamicSize(seqTy));
+  EXPECT_FALSE(fir::hasDynamicSize(builder.getI64Type()));
+}
+
+TEST_F(FIRBuilderTest, locationToFilename) {
+  auto builder = getBuilder();
+  auto loc =
+      mlir::FileLineColLoc::get(builder.getIdentifier("file1.f90"), 10, 5);
+  mlir::Value locToFile = fir::factory::locationToFilename(builder, loc);
+  auto addrOp = dyn_cast<fir::AddrOfOp>(locToFile.getDefiningOp());
+  auto symbol = addrOp.symbol().getRootReference().getValue();
+  auto global = builder.getNamedGlobal(symbol);
+  auto stringLitOps = global.getRegion().front().getOps<fir::StringLitOp>();
+  EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
+  for (auto stringLit : stringLitOps) {
+    EXPECT_EQ(10, stringLit.getSize().cast<mlir::IntegerAttr>().getValue());
+    EXPECT_TRUE(stringLit.getValue().isa<StringAttr>());
+    EXPECT_EQ(0,
+        strcmp("file1.f90\0",
+            stringLit.getValue()
+                .dyn_cast<StringAttr>()
+                .getValue()
+                .str()
+                .c_str()));
+  }
+}
+
+TEST_F(FIRBuilderTest, createStringLitOp) {
+  auto builder = getBuilder();
+  llvm::StringRef data("mystringlitdata");
+  auto loc = builder.getUnknownLoc();
+  auto op = builder.createStringLitOp(loc, data);
+  EXPECT_EQ(15, op.getSize().cast<mlir::IntegerAttr>().getValue());
+  EXPECT_TRUE(op.getValue().isa<StringAttr>());
+  EXPECT_EQ(data, op.getValue().dyn_cast<StringAttr>().getValue());
+}
+
+TEST_F(FIRBuilderTest, createStringLiteral) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+  llvm::StringRef strValue("onestringliteral");
+  auto strLit = fir::factory::createStringLiteral(builder, loc, strValue);
+  EXPECT_EQ(0u, strLit.rank());
+  EXPECT_TRUE(strLit.getCharBox() != nullptr);
+  auto *charBox = strLit.getCharBox();
+  EXPECT_FALSE(fir::isArray(*charBox));
+  checkIntegerConstant(charBox->getLen(), builder.getCharacterLengthType(), 16);
+  auto generalGetLen = fir::getLen(strLit);
+  checkIntegerConstant(generalGetLen, builder.getCharacterLengthType(), 16);
+  auto addr = charBox->getBuffer();
+  EXPECT_TRUE(mlir::isa<fir::AddrOfOp>(addr.getDefiningOp()));
+  auto addrOp = dyn_cast<fir::AddrOfOp>(addr.getDefiningOp());
+  auto symbol = addrOp.symbol().getRootReference().getValue();
+  auto global = builder.getNamedGlobal(symbol);
+  EXPECT_EQ(
+      builder.createLinkOnceLinkage().getValue(), global.linkName().getValue());
+  EXPECT_EQ(fir::CharacterType::get(builder.getContext(), 1, strValue.size()),
+      global.type());
+
+  auto stringLitOps = global.getRegion().front().getOps<fir::StringLitOp>();
+  EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
+  for (auto stringLit : stringLitOps) {
+    EXPECT_EQ(16, stringLit.getSize().cast<mlir::IntegerAttr>().getValue());
+    EXPECT_TRUE(stringLit.getValue().isa<StringAttr>());
+    EXPECT_EQ(strValue, stringLit.getValue().dyn_cast<StringAttr>().getValue());
+  }
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -207,10 +208,41 @@ std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
       nm.append(".").append(llvm::toHex(name)));
 }
 
+mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
+                                             mlir::Location loc) {
+  if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>()) {
+    // must be encoded as asciiz, C string
+    auto fn = flc.getFilename().str() + '\0';
+    return fir::getBase(createStringLiteral(builder, loc, fn));
+  }
+  return builder.createNullConstant(loc);
+}
+
 mlir::Value fir::factory::locationToLineNo(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            mlir::Type type) {
   if (auto flc = loc.dyn_cast<mlir::FileLineColLoc>())
     return builder.createIntegerConstant(loc, type, flc.getLine());
   return builder.createIntegerConstant(loc, type, 0);
+}
+
+fir::ExtendedValue fir::factory::createStringLiteral(fir::FirOpBuilder &builder,
+                                                     mlir::Location loc,
+                                                     llvm::StringRef str) {
+  std::string globalName = fir::factory::uniqueCGIdent("cl", str);
+  auto type = fir::CharacterType::get(builder.getContext(), 1, str.size());
+  auto global = builder.getNamedGlobal(globalName);
+  if (!global)
+    global = builder.createGlobalConstant(
+        loc, type, globalName,
+        [&](fir::FirOpBuilder &builder) {
+          auto stringLitOp = builder.createStringLitOp(loc, str);
+          builder.create<fir::HasValueOp>(loc, stringLitOp);
+        },
+        builder.createLinkOnceLinkage());
+  auto addr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                            global.getSymbol());
+  auto len = builder.createIntegerConstant(
+      loc, builder.getCharacterLengthType(), str.size());
+  return fir::CharBoxValue{addr, len};
 }
