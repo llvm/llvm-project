@@ -92,7 +92,7 @@ static Optional<StringRef> findLibrary(StringRef name) {
                              {".tbd", ".dylib", ".a"});
 }
 
-static Optional<std::string> findFramework(StringRef name) {
+static Optional<StringRef> findFramework(StringRef name) {
   SmallString<260> symlink;
   StringRef suffix;
   std::tie(name, suffix) = name.split(",");
@@ -108,12 +108,12 @@ static Optional<std::string> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return suffixed.str();
+          return saver.save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
 
-    if (Optional<std::string> path = resolveDylibPath(symlink))
+    if (Optional<StringRef> path = resolveDylibPath(symlink.str()))
       return path;
   }
   return {};
@@ -351,7 +351,7 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
 
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
                          bool isReexport, bool isExplicit) {
-  if (Optional<std::string> path = findFramework(name)) {
+  if (Optional<StringRef> path = findFramework(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
             addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
       if (isNeeded)

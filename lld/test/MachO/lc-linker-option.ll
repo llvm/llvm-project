@@ -48,6 +48,23 @@
 ; RUN: not %lld %t/invalid.o -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID %s
 ; INVALID: error: -why_load is not allowed in LC_LINKER_OPTION
 
+;; We are testing this because we want to check a dangling string reference problem (see https://reviews.llvm.org/D111706).
+;; To trigger this problem, we need to create a framework that is an archive,
+;; and it needs to contain a symbol starting with OBJC_CLASS_$.
+;; The bug is triggered as the linker loads this framework twice via LC_LINKER_OPTION.
+;; When the linker adds this framework, it will fail to map the path of framework to this archive due to dangling reference.
+;; Therefore, it will load the framework twice, and if there is any symbol with OBJC_CLASS_$ prefix with forceLoadObjC enabled,
+;; the linker will fetch this symbol twice, which leads to a duplicate symbol error.
+; RUN: llc %t/foo.ll -o %t/foo.o -filetype=obj
+; RUN: mkdir -p %t/foo.framework/Versions/A
+; RUN: llvm-ar rcs %t/foo.framework/Versions/A/foo %t/foo.o
+; RUN: ln -sf A %t/foo.framework/Versions/Current
+; RUN: ln -sf Versions/Current/foo %t/foo.framework/foo
+; RUN: llc %t/objfile1.ll -o %t/objfile1.o -filetype=obj
+; RUN: llc %t/objfile2.ll -o %t/objfile2.o -filetype=obj
+; RUN: llc %t/main.ll -o %t/main.o -filetype=obj
+; RUN: %lld -demangle -ObjC %t/objfile1.o %t/objfile2.o %t/main.o -o %t/main.out -arch x86_64 -platform_version macos 11.0.0 0.0.0 -F%t
+
 ;--- framework.ll
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -90,3 +107,34 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @main() {
   ret void
 }
+
+;--- objfile1.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+!0 = !{!"-framework", !"foo"}
+!llvm.linker.options = !{!0}
+
+;--- objfile2.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+!0 = !{!"-framework", !"foo"}
+!llvm.linker.options = !{!0}
+
+;--- main.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @main() {
+  ret void
+}
+
+;--- foo.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+%0 = type opaque
+%struct._class_t = type {}
+
+@"OBJC_CLASS_$_TestClass" = global %struct._class_t {}, section "__DATA, __objc_data", align 8
