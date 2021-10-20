@@ -1,4 +1,4 @@
-; RUN: opt < %s -bounds-checking -S | FileCheck %s
+; RUN: opt < %s -passes=bounds-checking -S | FileCheck %s
 @array = internal global [1819 x i16] zeroinitializer, section ".bss,bss"
 @offsets = external dso_local global [10 x i16]
 
