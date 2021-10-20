@@ -31,6 +31,7 @@
 # CHECK:            BL @[[OUTLINED_FUNCTION]]
 # CHECK:        bb.5:
 # CHECK:            frame-destroy AUTIBSP
+# CHECK-NEXT:       frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:       RET
 name:            foo
 tracksRegLiveness: true
