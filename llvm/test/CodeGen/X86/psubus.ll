@@ -29,6 +29,7 @@ vector.ph:
 }
 
 ; This is logically equivalent to the above.
+; usubsat X, (1 << (BW-1)) <--> (X ^ (1 << (BW-1))) & (ashr X, (BW-1))
 
 define <8 x i16> @ashr_xor_and(<8 x i16> %x) nounwind {
 ; SSE-LABEL: ashr_xor_and:
@@ -127,14 +128,14 @@ define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x) nounwind {
   ret <4 x i32> %res
 }
 
+; usubsat X, (1 << (BW-1)) <--> (X ^ (1 << (BW-1))) & (ashr X, (BW-1))
+
 define <4 x i32> @usubsat_custom(<4 x i32> %x) nounwind {
 ; SSE2OR3-LABEL: usubsat_custom:
 ; SSE2OR3:       # %bb.0:
-; SSE2OR3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2OR3-NEXT:    pxor %xmm0, %xmm1
-; SSE2OR3-NEXT:    pxor %xmm2, %xmm2
-; SSE2OR3-NEXT:    pcmpgtd %xmm2, %xmm1
-; SSE2OR3-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2OR3-NEXT:    movdqa %xmm0, %xmm1
+; SSE2OR3-NEXT:    psrad $31, %xmm1
+; SSE2OR3-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2OR3-NEXT:    pand %xmm1, %xmm0
 ; SSE2OR3-NEXT:    retq
 ;

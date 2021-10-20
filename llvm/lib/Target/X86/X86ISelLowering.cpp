@@ -28135,7 +28135,19 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
   EVT SetCCResultType =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
+  unsigned BitWidth = VT.getScalarSizeInBits();
   if (Opcode == ISD::USUBSAT && !TLI.isOperationLegal(ISD::UMAX, VT)) {
+    // Handle a special-case with a bit-hack instead of cmp+select:
+    // usubsat X, SMIN --> (X ^ SMIN) & (X s>> BW-1)
+    ConstantSDNode *C = isConstOrConstSplat(Y, true);
+    if (C && C->getAPIntValue().isSignMask()) {
+      SDValue SignMask = DAG.getConstant(C->getAPIntValue(), DL, VT);
+      SDValue ShiftAmt = DAG.getConstant(BitWidth - 1, DL, VT);
+      SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, SignMask);
+      SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, X, ShiftAmt);
+      return DAG.getNode(ISD::AND, DL, VT, Xor, Sra);
+    }
+
     // usubsat X, Y --> (X >u Y) ? X - Y : 0
     SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
     SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
@@ -28148,7 +28160,6 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
 
   if ((Opcode == ISD::SADDSAT || Opcode == ISD::SSUBSAT) &&
       (!VT.isVector() || VT == MVT::v2i64)) {
-    unsigned BitWidth = VT.getScalarSizeInBits();
     APInt MinVal = APInt::getSignedMinValue(BitWidth);
     APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
     SDValue Zero = DAG.getConstant(0, DL, VT);
