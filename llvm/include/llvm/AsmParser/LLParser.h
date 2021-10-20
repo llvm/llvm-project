@@ -304,11 +304,10 @@ namespace llvm {
                      unsigned DLLStorageClass, bool DSOLocal,
                      GlobalVariable::ThreadLocalMode TLM,
                      GlobalVariable::UnnamedAddr UnnamedAddr);
-    bool parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
-                             unsigned L, unsigned Visibility,
-                             unsigned DLLStorageClass, bool DSOLocal,
-                             GlobalVariable::ThreadLocalMode TLM,
-                             GlobalVariable::UnnamedAddr UnnamedAddr);
+    bool parseAliasOrIFunc(const std::string &Name, LocTy NameLoc, unsigned L,
+                           unsigned Visibility, unsigned DLLStorageClass,
+                           bool DSOLocal, GlobalVariable::ThreadLocalMode TLM,
+                           GlobalVariable::UnnamedAddr UnnamedAddr);
     bool parseComdat();
     bool parseStandaloneMetadata();
     bool parseNamedMetadata();

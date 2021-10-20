@@ -26,7 +26,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalIndirectSymbol.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
@@ -68,7 +69,7 @@ struct WorklistEntry {
   enum EntryKind {
     MapGlobalInit,
     MapAppendingVar,
-    MapGlobalIndirectSymbol,
+    MapAliasOrIFunc,
     RemapFunction
   };
   struct GVInitTy {
@@ -79,8 +80,8 @@ struct WorklistEntry {
     GlobalVariable *GV;
     Constant *InitPrefix;
   };
-  struct GlobalIndirectSymbolTy {
-    GlobalIndirectSymbol *GIS;
+  struct AliasOrIFuncTy {
+    GlobalValue *GV;
     Constant *Target;
   };
 
@@ -91,7 +92,7 @@ struct WorklistEntry {
   union {
     GVInitTy GVInit;
     AppendingGVTy AppendingGV;
-    GlobalIndirectSymbolTy GlobalIndirectSymbol;
+    AliasOrIFuncTy AliasOrIFunc;
     Function *RemapF;
   } Data;
 };
@@ -163,8 +164,8 @@ public:
                                     bool IsOldCtorDtor,
                                     ArrayRef<Constant *> NewMembers,
                                     unsigned MCID);
-  void scheduleMapGlobalIndirectSymbol(GlobalIndirectSymbol &GIS, Constant &Target,
-                                       unsigned MCID);
+  void scheduleMapAliasOrIFunc(GlobalValue &GV, Constant &Target,
+                               unsigned MCID);
   void scheduleRemapFunction(Function &F, unsigned MCID);
 
   void flush();
@@ -873,10 +874,17 @@ void Mapper::flush() {
                            E.AppendingGVIsOldCtorDtor, makeArrayRef(NewInits));
       break;
     }
-    case WorklistEntry::MapGlobalIndirectSymbol:
-      E.Data.GlobalIndirectSymbol.GIS->setIndirectSymbol(
-          mapConstant(E.Data.GlobalIndirectSymbol.Target));
+    case WorklistEntry::MapAliasOrIFunc: {
+      GlobalValue *GV = E.Data.AliasOrIFunc.GV;
+      Constant *Target = mapConstant(E.Data.AliasOrIFunc.Target);
+      if (auto *GA = dyn_cast<GlobalAlias>(GV))
+        GA->setAliasee(Target);
+      else if (auto *GI = dyn_cast<GlobalIFunc>(GV))
+        GI->setResolver(Target);
+      else
+        llvm_unreachable("Not alias or ifunc");
       break;
+    }
     case WorklistEntry::RemapFunction:
       remapFunction(*E.Data.RemapF);
       break;
@@ -1069,16 +1077,18 @@ void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
   AppendingInits.append(NewMembers.begin(), NewMembers.end());
 }
 
-void Mapper::scheduleMapGlobalIndirectSymbol(GlobalIndirectSymbol &GIS,
-                                             Constant &Target, unsigned MCID) {
-  assert(AlreadyScheduled.insert(&GIS).second && "Should not reschedule");
+void Mapper::scheduleMapAliasOrIFunc(GlobalValue &GV, Constant &Target,
+                                     unsigned MCID) {
+  assert(AlreadyScheduled.insert(&GV).second && "Should not reschedule");
+  assert((isa<GlobalAlias>(GV) || isa<GlobalIFunc>(GV)) &&
+         "Should be alias or ifunc");
   assert(MCID < MCs.size() && "Invalid mapping context");
 
   WorklistEntry WE;
-  WE.Kind = WorklistEntry::MapGlobalIndirectSymbol;
+  WE.Kind = WorklistEntry::MapAliasOrIFunc;
   WE.MCID = MCID;
-  WE.Data.GlobalIndirectSymbol.GIS = &GIS;
-  WE.Data.GlobalIndirectSymbol.Target = &Target;
+  WE.Data.AliasOrIFunc.GV = &GV;
+  WE.Data.AliasOrIFunc.Target = &Target;
   Worklist.push_back(WE);
 }
 
@@ -1175,10 +1185,14 @@ void ValueMapper::scheduleMapAppendingVariable(GlobalVariable &GV,
       GV, InitPrefix, IsOldCtorDtor, NewMembers, MCID);
 }
 
-void ValueMapper::scheduleMapGlobalIndirectSymbol(GlobalIndirectSymbol &GIS,
-                                                  Constant &Target,
-                                                  unsigned MCID) {
-  getAsMapper(pImpl)->scheduleMapGlobalIndirectSymbol(GIS, Target, MCID);
+void ValueMapper::scheduleMapGlobalAlias(GlobalAlias &GA, Constant &Aliasee,
+                                         unsigned MCID) {
+  getAsMapper(pImpl)->scheduleMapAliasOrIFunc(GA, Aliasee, MCID);
+}
+
+void ValueMapper::scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
+                                         unsigned MCID) {
+  getAsMapper(pImpl)->scheduleMapAliasOrIFunc(GI, Resolver, MCID);
 }
 
 void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
