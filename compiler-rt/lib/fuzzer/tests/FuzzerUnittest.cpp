@@ -671,6 +671,7 @@ TEST(Corpus, Replace) {
                      /*TimeOfUnit*/ std::chrono::microseconds(5678),
                      /*FeatureSet*/ {}, DFT,
                      /*BaseII*/ nullptr);
+  (void) SecondII;
   Unit ReplacedU = Unit{0x03};
 
   C->Replace(FirstII, ReplacedU,
