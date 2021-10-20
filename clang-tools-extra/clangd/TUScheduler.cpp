@@ -286,8 +286,12 @@ public:
   void remove(PathRef MainFile) {
     std::lock_guard<std::mutex> Lock(Mu);
     Association *&First = MainToFirst[MainFile];
-    if (First)
+    if (First) {
       invalidate(First);
+      First = nullptr;
+    }
+    // MainToFirst entry should stay alive, as Associations might be pointing at
+    // its key.
   }
 
   /// Get the mainfile associated with Header, or the empty string if none.

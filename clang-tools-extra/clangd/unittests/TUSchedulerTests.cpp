@@ -1200,10 +1200,10 @@ TEST_F(TUSchedulerTests, IncluderCache) {
                      Unreliable = testPath("unreliable.h"),
                      OK = testPath("ok.h"),
                      NotIncluded = testPath("not_included.h");
-  class NoHeadersCDB : public GlobalCompilationDatabase {
+  struct NoHeadersCDB : public GlobalCompilationDatabase {
     llvm::Optional<tooling::CompileCommand>
     getCompileCommand(PathRef File) const override {
-      if (File == NoCmd || File == NotIncluded)
+      if (File == NoCmd || File == NotIncluded || FailAll)
         return llvm::None;
       auto Basic = getFallbackCommand(File);
       Basic.Heuristic.clear();
@@ -1218,6 +1218,8 @@ TEST_F(TUSchedulerTests, IncluderCache) {
       }
       return Basic;
     }
+
+    std::atomic<bool> FailAll{false};
   } CDB;
   TUScheduler S(CDB, optsForTest());
   auto GetFlags = [&](PathRef Header) {
@@ -1288,6 +1290,21 @@ TEST_F(TUSchedulerTests, IncluderCache) {
       << "association invalidated but not reclaimed";
   EXPECT_THAT(GetFlags(NotIncluded), Contains("-DMAIN2"))
       << "association still valid";
+
+  // Delete the file from CDB, it should invalidate the associations.
+  CDB.FailAll = true;
+  EXPECT_THAT(GetFlags(NoCmd), Not(Contains("-DMAIN3")))
+      << "association should've been invalidated.";
+  // Also run update for Main3 to invalidate the preeamble to make sure next
+  // update populates include cache associations.
+  S.update(Main3, getInputs(Main3, SomeIncludes), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  // Re-add the file and make sure nothing crashes.
+  CDB.FailAll = false;
+  S.update(Main3, getInputs(Main3, SomeIncludes), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN3"))
+      << "association invalidated and then claimed by main3";
 }
 
 TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
