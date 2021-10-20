@@ -88,7 +88,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
   }
   if (Subtarget->hasReferenceTypes()) {
-    for (auto T : {MVT::externref, MVT::funcref}) {
+    // We need custom load and store lowering for both externref, funcref and
+    // Other. The MVT::Other here represents tables of reference types.
+    for (auto T : {MVT::externref, MVT::funcref, MVT::Other}) {
       setOperationAction(ISD::LOAD, T, Custom);
       setOperationAction(ISD::STORE, T, Custom);
     }
@@ -1422,6 +1424,80 @@ static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
   return WebAssemblyFrameLowering::getLocalForStackObject(MF, FI->getIndex());
 }
 
+static bool IsWebAssemblyTable(SDValue Op) {
+  const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op);
+  if (GA && WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace())) {
+    const GlobalValue *Value = GA->getGlobal();
+    const Type *Ty = Value->getValueType();
+
+    if (Ty->isArrayTy() && WebAssembly::isRefType(Ty->getArrayElementType()))
+      return true;
+  }
+  return false;
+}
+
+// This function will accept as Op any access to a table, so Op can
+// be the actual table or an offset into the table.
+static bool IsWebAssemblyTableWithOffset(SDValue Op) {
+  if (Op->getOpcode() == ISD::ADD && Op->getNumOperands() == 2)
+    return (Op->getOperand(1).getSimpleValueType() == MVT::i32 &&
+            IsWebAssemblyTableWithOffset(Op->getOperand(0))) ||
+           (Op->getOperand(0).getSimpleValueType() == MVT::i32 &&
+            IsWebAssemblyTableWithOffset(Op->getOperand(1)));
+
+  return IsWebAssemblyTable(Op);
+}
+
+// Helper for table pattern matching used in LowerStore and LowerLoad
+bool WebAssemblyTargetLowering::MatchTableForLowering(SelectionDAG &DAG,
+                                                      const SDLoc &DL,
+                                                      const SDValue &Base,
+                                                      GlobalAddressSDNode *&GA,
+                                                      SDValue &Idx) const {
+  // We expect the following graph for a load of the form:
+  // table[<var> + <constant offset>]
+  //
+  // Case 1:
+  // externref = load t1
+  // t1: i32 = add t2, i32:<constant offset>
+  // t2: i32 = add tX, table
+  //
+  // This is in some cases simplified to just:
+  // Case 2:
+  // externref = load t1
+  // t1: i32 = add t2, i32:tX
+  //
+  // So, unfortunately we need to check for both cases and if we are in the
+  // first case extract the table GlobalAddressNode and build a new node tY
+  // that's tY: i32 = add i32:<constant offset>, i32:tX
+  //
+  if (IsWebAssemblyTable(Base)) {
+    GA = cast<GlobalAddressSDNode>(Base);
+    Idx = DAG.getConstant(0, DL, MVT::i32);
+  } else {
+    GA = dyn_cast<GlobalAddressSDNode>(Base->getOperand(0));
+    if (GA) {
+      // We are in Case 2 above.
+      Idx = Base->getOperand(1);
+      if (!Idx || GA->getNumValues() != 1 || Idx->getNumValues() != 1)
+        return false;
+    } else {
+      // This might be Case 1 above (or an error)
+      SDValue V = Base->getOperand(0);
+      GA = dyn_cast<GlobalAddressSDNode>(V->getOperand(1));
+
+      if (V->getOpcode() != ISD::ADD || V->getNumOperands() != 2 || !GA)
+        return false;
+
+      SDValue IdxV = DAG.getNode(ISD::ADD, DL, MVT::i32, Base->getOperand(1),
+                                 V->getOperand(0));
+      Idx = IdxV;
+    }
+  }
+
+  return true;
+}
+
 SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -1429,6 +1505,26 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
   const SDValue &Value = SN->getValue();
   const SDValue &Base = SN->getBasePtr();
   const SDValue &Offset = SN->getOffset();
+
+  if (IsWebAssemblyTableWithOffset(Base)) {
+    if (!Offset->isUndef())
+      report_fatal_error(
+          "unexpected offset when loading from webassembly table", false);
+
+    SDValue Idx;
+    GlobalAddressSDNode *GA;
+
+    if (!MatchTableForLowering(DAG, DL, Base, GA, Idx))
+      report_fatal_error("failed pattern matching for lowering table store",
+                         false);
+
+    SDVTList Tys = DAG.getVTList(MVT::Other);
+    SDValue TableSetOps[] = {SN->getChain(), SDValue(GA, 0), Idx, Value};
+    SDValue TableSet =
+        DAG.getMemIntrinsicNode(WebAssemblyISD::TABLE_SET, DL, Tys, TableSetOps,
+                                SN->getMemoryVT(), SN->getMemOperand());
+    return TableSet;
+  }
 
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())
@@ -1461,6 +1557,26 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
   const SDValue &Base = LN->getBasePtr();
   const SDValue &Offset = LN->getOffset();
+
+  if (IsWebAssemblyTableWithOffset(Base)) {
+    if (!Offset->isUndef())
+      report_fatal_error(
+          "unexpected offset when loading from webassembly table", false);
+
+    GlobalAddressSDNode *GA;
+    SDValue Idx;
+
+    if (!MatchTableForLowering(DAG, DL, Base, GA, Idx))
+      report_fatal_error("failed pattern matching for lowering table load",
+                         false);
+
+    SDVTList Tys = DAG.getVTList(LN->getValueType(0), MVT::Other);
+    SDValue TableGetOps[] = {LN->getChain(), SDValue(GA, 0), Idx};
+    SDValue TableGet =
+        DAG.getMemIntrinsicNode(WebAssemblyISD::TABLE_GET, DL, Tys, TableGetOps,
+                                LN->getMemoryVT(), LN->getMemOperand());
+    return TableGet;
+  }
 
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())

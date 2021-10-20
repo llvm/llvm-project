@@ -80,6 +80,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningSlowUAMem16,
       X86::TuningPreferMaskRegisters,
       X86::TuningInsertVZEROUPPER,
+      X86::TuningUseSLMArithCosts,
       X86::TuningUseGLMDivSqrtCosts,
 
       // Perf-tuning flags.
@@ -91,8 +92,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningPrefer256Bit,
 
       // CPU name enums. These just follow CPU string.
-      X86::ProcIntelAtom,
-      X86::ProcIntelSLM,
+      X86::ProcIntelAtom
   };
 
 public:

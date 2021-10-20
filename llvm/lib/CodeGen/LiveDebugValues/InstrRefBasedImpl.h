@@ -636,9 +636,8 @@ public:
   using MLocTransferMap = std::map<LocIdx, ValueIDNum>;
 
   /// Live in/out structure for the variable values: a per-block map of
-  /// variables to their values. XXX, better name?
-  using LiveIdxT =
-      DenseMap<const MachineBasicBlock *, DenseMap<DebugVariable, DbgValue> *>;
+  /// variables to their values.
+  using LiveIdxT = DenseMap<const MachineBasicBlock *, DbgValue *>;
 
   using VarAndLoc = std::pair<DebugVariable, DbgValue>;
 
@@ -856,16 +855,14 @@ private:
   /// Attempt to eliminate un-necessary PHIs on entry to a block. Examines the
   /// live-in values coming from predecessors live-outs, and replaces any PHIs
   /// already present in this blocks live-ins with a live-through value if the
-  /// PHI isn't needed. Live out variable values are stored in
-  /// \p VLOCOutLocs. The live-ins for \p MBB are stored in \p LiveIns, which
-  /// is also an output argument.
+  /// PHI isn't needed.
+  /// \p LiveIn Old live-in value, overwritten with new one if live-in changes.
   /// \returns true if any live-ins change value, either from value propagation
   ///          or PHI elimination.
   bool vlocJoin(MachineBasicBlock &MBB, LiveIdxT &VLOCOutLocs,
-                const SmallSet<DebugVariable, 4> &AllVars,
                 SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
-                DenseMap<DebugVariable, DbgValue> &LiveIns);
+                DbgValue &LiveIn);
 
   /// For the given block and live-outs feeding into it, try to find a
   /// machine location where all the variable values join together.

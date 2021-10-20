@@ -254,22 +254,38 @@ static uint32_t g_s29_invalidates[] = {fpu_d14, fpu_q7, LLDB_INVALID_REGNUM};
 static uint32_t g_s30_invalidates[] = {fpu_d15, fpu_q7, LLDB_INVALID_REGNUM};
 static uint32_t g_s31_invalidates[] = {fpu_d15, fpu_q7, LLDB_INVALID_REGNUM};
 
-static uint32_t g_d0_invalidates[] = {fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_d1_invalidates[] = {fpu_q0, LLDB_INVALID_REGNUM};
-static uint32_t g_d2_invalidates[] = {fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_d3_invalidates[] = {fpu_q1, LLDB_INVALID_REGNUM};
-static uint32_t g_d4_invalidates[] = {fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_d5_invalidates[] = {fpu_q2, LLDB_INVALID_REGNUM};
-static uint32_t g_d6_invalidates[] = {fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_d7_invalidates[] = {fpu_q3, LLDB_INVALID_REGNUM};
-static uint32_t g_d8_invalidates[] = {fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_d9_invalidates[] = {fpu_q4, LLDB_INVALID_REGNUM};
-static uint32_t g_d10_invalidates[] = {fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_d11_invalidates[] = {fpu_q5, LLDB_INVALID_REGNUM};
-static uint32_t g_d12_invalidates[] = {fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_d13_invalidates[] = {fpu_q6, LLDB_INVALID_REGNUM};
-static uint32_t g_d14_invalidates[] = {fpu_q7, LLDB_INVALID_REGNUM};
-static uint32_t g_d15_invalidates[] = {fpu_q7, LLDB_INVALID_REGNUM};
+static uint32_t g_d0_invalidates[] = {fpu_q0, fpu_s0, fpu_s1,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d1_invalidates[] = {fpu_q0, fpu_s2, fpu_s3,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d2_invalidates[] = {fpu_q1, fpu_s4, fpu_s5,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d3_invalidates[] = {fpu_q1, fpu_s6, fpu_s7,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d4_invalidates[] = {fpu_q2, fpu_s8, fpu_s9,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d5_invalidates[] = {fpu_q2, fpu_s10, fpu_s11,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d6_invalidates[] = {fpu_q3, fpu_s12, fpu_s13,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d7_invalidates[] = {fpu_q3, fpu_s14, fpu_s15,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d8_invalidates[] = {fpu_q4, fpu_s16, fpu_s17,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d9_invalidates[] = {fpu_q4, fpu_s18, fpu_s19,
+                                      LLDB_INVALID_REGNUM};
+static uint32_t g_d10_invalidates[] = {fpu_q5, fpu_s20, fpu_s21,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d11_invalidates[] = {fpu_q5, fpu_s22, fpu_s23,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d12_invalidates[] = {fpu_q6, fpu_s24, fpu_s25,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d13_invalidates[] = {fpu_q6, fpu_s26, fpu_s27,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d14_invalidates[] = {fpu_q7, fpu_s28, fpu_s29,
+                                       LLDB_INVALID_REGNUM};
+static uint32_t g_d15_invalidates[] = {fpu_q7, fpu_s30, fpu_s31,
+                                       LLDB_INVALID_REGNUM};
 static uint32_t g_d16_invalidates[] = {fpu_q8, LLDB_INVALID_REGNUM};
 static uint32_t g_d17_invalidates[] = {fpu_q8, LLDB_INVALID_REGNUM};
 static uint32_t g_d18_invalidates[] = {fpu_q9, LLDB_INVALID_REGNUM};
@@ -287,34 +303,60 @@ static uint32_t g_d29_invalidates[] = {fpu_q14, LLDB_INVALID_REGNUM};
 static uint32_t g_d30_invalidates[] = {fpu_q15, LLDB_INVALID_REGNUM};
 static uint32_t g_d31_invalidates[] = {fpu_q15, LLDB_INVALID_REGNUM};
 
-static uint32_t g_q0_contains[] = {
+static uint32_t g_q0_invalidates[] = {
     fpu_d0, fpu_d1, fpu_s0, fpu_s1, fpu_s2, fpu_s3, LLDB_INVALID_REGNUM};
-static uint32_t g_q1_contains[] = {
+static uint32_t g_q1_invalidates[] = {
     fpu_d2, fpu_d3, fpu_s4, fpu_s5, fpu_s6, fpu_s7, LLDB_INVALID_REGNUM};
-static uint32_t g_q2_contains[] = {
+static uint32_t g_q2_invalidates[] = {
     fpu_d4, fpu_d5, fpu_s8, fpu_s9, fpu_s10, fpu_s11, LLDB_INVALID_REGNUM};
-static uint32_t g_q3_contains[] = {
+static uint32_t g_q3_invalidates[] = {
     fpu_d6, fpu_d7, fpu_s12, fpu_s13, fpu_s14, fpu_s15, LLDB_INVALID_REGNUM};
-static uint32_t g_q4_contains[] = {
+static uint32_t g_q4_invalidates[] = {
     fpu_d8, fpu_d9, fpu_s16, fpu_s17, fpu_s18, fpu_s19, LLDB_INVALID_REGNUM};
-static uint32_t g_q5_contains[] = {
+static uint32_t g_q5_invalidates[] = {
     fpu_d10, fpu_d11, fpu_s20, fpu_s21, fpu_s22, fpu_s23, LLDB_INVALID_REGNUM};
-static uint32_t g_q6_contains[] = {
+static uint32_t g_q6_invalidates[] = {
     fpu_d12, fpu_d13, fpu_s24, fpu_s25, fpu_s26, fpu_s27, LLDB_INVALID_REGNUM};
-static uint32_t g_q7_contains[] = {
+static uint32_t g_q7_invalidates[] = {
     fpu_d14, fpu_d15, fpu_s28, fpu_s29, fpu_s30, fpu_s31, LLDB_INVALID_REGNUM};
-static uint32_t g_q8_contains[] = {fpu_d16, fpu_d17, LLDB_INVALID_REGNUM};
-static uint32_t g_q9_contains[] = {fpu_d18, fpu_d19, LLDB_INVALID_REGNUM};
-static uint32_t g_q10_contains[] = {fpu_d20, fpu_d21, LLDB_INVALID_REGNUM};
-static uint32_t g_q11_contains[] = {fpu_d22, fpu_d23, LLDB_INVALID_REGNUM};
-static uint32_t g_q12_contains[] = {fpu_d24, fpu_d25, LLDB_INVALID_REGNUM};
-static uint32_t g_q13_contains[] = {fpu_d26, fpu_d27, LLDB_INVALID_REGNUM};
-static uint32_t g_q14_contains[] = {fpu_d28, fpu_d29, LLDB_INVALID_REGNUM};
-static uint32_t g_q15_contains[] = {fpu_d30, fpu_d31, LLDB_INVALID_REGNUM};
+static uint32_t g_q8_invalidates[] = {fpu_d16, fpu_d17, LLDB_INVALID_REGNUM};
+static uint32_t g_q9_invalidates[] = {fpu_d18, fpu_d19, LLDB_INVALID_REGNUM};
+static uint32_t g_q10_invalidates[] = {fpu_d20, fpu_d21, LLDB_INVALID_REGNUM};
+static uint32_t g_q11_invalidates[] = {fpu_d22, fpu_d23, LLDB_INVALID_REGNUM};
+static uint32_t g_q12_invalidates[] = {fpu_d24, fpu_d25, LLDB_INVALID_REGNUM};
+static uint32_t g_q13_invalidates[] = {fpu_d26, fpu_d27, LLDB_INVALID_REGNUM};
+static uint32_t g_q14_invalidates[] = {fpu_d28, fpu_d29, LLDB_INVALID_REGNUM};
+static uint32_t g_q15_invalidates[] = {fpu_d30, fpu_d31, LLDB_INVALID_REGNUM};
+
+static uint32_t g_q0_contained[] = {fpu_q0, LLDB_INVALID_REGNUM};
+static uint32_t g_q1_contained[] = {fpu_q1, LLDB_INVALID_REGNUM};
+static uint32_t g_q2_contained[] = {fpu_q2, LLDB_INVALID_REGNUM};
+static uint32_t g_q3_contained[] = {fpu_q3, LLDB_INVALID_REGNUM};
+static uint32_t g_q4_contained[] = {fpu_q4, LLDB_INVALID_REGNUM};
+static uint32_t g_q5_contained[] = {fpu_q5, LLDB_INVALID_REGNUM};
+static uint32_t g_q6_contained[] = {fpu_q6, LLDB_INVALID_REGNUM};
+static uint32_t g_q7_contained[] = {fpu_q7, LLDB_INVALID_REGNUM};
+static uint32_t g_q8_contained[] = {fpu_q8, LLDB_INVALID_REGNUM};
+static uint32_t g_q9_contained[] = {fpu_q9, LLDB_INVALID_REGNUM};
+static uint32_t g_q10_contained[] = {fpu_q10, LLDB_INVALID_REGNUM};
+static uint32_t g_q11_contained[] = {fpu_q11, LLDB_INVALID_REGNUM};
+static uint32_t g_q12_contained[] = {fpu_q12, LLDB_INVALID_REGNUM};
+static uint32_t g_q13_contained[] = {fpu_q13, LLDB_INVALID_REGNUM};
+static uint32_t g_q14_contained[] = {fpu_q14, LLDB_INVALID_REGNUM};
+static uint32_t g_q15_contained[] = {fpu_q15, LLDB_INVALID_REGNUM};
 
 #define FPU_REG(name, size, offset, qreg)                                      \
   {                                                                            \
     #name, nullptr, size, FPU_OFFSET(offset), eEncodingIEEE754, eFormatFloat,  \
+        {LLDB_INVALID_REGNUM, dwarf_##name, LLDB_INVALID_REGNUM,               \
+         LLDB_INVALID_REGNUM, fpu_##name },                                    \
+         g_##qreg##_contained, g_##name##_invalidates,                         \
+  }
+
+#define FPU_QREG(name, offset)                                                 \
+  {                                                                            \
+    #name, nullptr, 16, FPU_OFFSET(offset), eEncodingVector,                   \
+        eFormatVectorOfUInt8,                                                  \
         {LLDB_INVALID_REGNUM, dwarf_##name, LLDB_INVALID_REGNUM,               \
          LLDB_INVALID_REGNUM, fpu_##name },                                    \
          nullptr, g_##name##_invalidates,                                      \
@@ -612,198 +654,22 @@ static RegisterInfo g_register_infos_arm[] = {
     FPU_REG(d30, 8, 60, q15),
     FPU_REG(d31, 8, 62, q15),
 
-    {
-        "q0",
-        nullptr,
-        16,
-        FPU_OFFSET(0),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q0, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q0},
-        g_q0_contains,
-        nullptr,
-    },
-    {
-        "q1",
-        nullptr,
-        16,
-        FPU_OFFSET(4),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q1, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q1},
-        g_q1_contains,
-        nullptr,
-    },
-    {
-        "q2",
-        nullptr,
-        16,
-        FPU_OFFSET(8),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q2, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q2},
-        g_q2_contains,
-        nullptr,
-    },
-    {
-        "q3",
-        nullptr,
-        16,
-        FPU_OFFSET(12),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q3, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q3},
-        g_q3_contains,
-        nullptr,
-    },
-    {
-        "q4",
-        nullptr,
-        16,
-        FPU_OFFSET(16),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q4, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q4},
-        g_q4_contains,
-        nullptr,
-    },
-    {
-        "q5",
-        nullptr,
-        16,
-        FPU_OFFSET(20),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q5, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q5},
-        g_q5_contains,
-        nullptr,
-    },
-    {
-        "q6",
-        nullptr,
-        16,
-        FPU_OFFSET(24),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q6, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q6},
-        g_q6_contains,
-        nullptr,
-    },
-    {
-        "q7",
-        nullptr,
-        16,
-        FPU_OFFSET(28),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q7, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q7},
-        g_q7_contains,
-        nullptr,
-    },
-    {
-        "q8",
-        nullptr,
-        16,
-        FPU_OFFSET(32),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q8, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q8},
-        g_q8_contains,
-        nullptr,
-    },
-    {
-        "q9",
-        nullptr,
-        16,
-        FPU_OFFSET(36),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q9, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q9},
-        g_q9_contains,
-        nullptr,
-    },
-    {
-        "q10",
-        nullptr,
-        16,
-        FPU_OFFSET(40),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q10, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q10},
-        g_q10_contains,
-        nullptr,
-    },
-    {
-        "q11",
-        nullptr,
-        16,
-        FPU_OFFSET(44),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q11, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q11},
-        g_q11_contains,
-        nullptr,
-    },
-    {
-        "q12",
-        nullptr,
-        16,
-        FPU_OFFSET(48),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q12, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q12},
-        g_q12_contains,
-        nullptr,
-    },
-    {
-        "q13",
-        nullptr,
-        16,
-        FPU_OFFSET(52),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q13, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q13},
-        g_q13_contains,
-        nullptr,
-    },
-    {
-        "q14",
-        nullptr,
-        16,
-        FPU_OFFSET(56),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q14, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q14},
-        g_q14_contains,
-        nullptr,
-    },
-    {
-        "q15",
-        nullptr,
-        16,
-        FPU_OFFSET(60),
-        eEncodingVector,
-        eFormatVectorOfUInt8,
-        {LLDB_INVALID_REGNUM, dwarf_q15, LLDB_INVALID_REGNUM,
-         LLDB_INVALID_REGNUM, fpu_q15},
-        g_q15_contains,
-        nullptr,
-    },
+    FPU_QREG(q0, 0),
+    FPU_QREG(q1, 4),
+    FPU_QREG(q2, 8),
+    FPU_QREG(q3, 12),
+    FPU_QREG(q4, 16),
+    FPU_QREG(q5, 20),
+    FPU_QREG(q6, 24),
+    FPU_QREG(q7, 28),
+    FPU_QREG(q8, 32),
+    FPU_QREG(q9, 36),
+    FPU_QREG(q10, 40),
+    FPU_QREG(q11, 44),
+    FPU_QREG(q12, 48),
+    FPU_QREG(q13, 52),
+    FPU_QREG(q14, 56),
+    FPU_QREG(q15, 60),
 
     {
         "exception",

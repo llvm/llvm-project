@@ -1623,6 +1623,17 @@ let hasSideEffects = 1 in {
 }
 }
 
+// Section A.42 - Prefetch Data
+let Predicates = [HasV9] in {
+  def PREFETCHr : F3_1<3, 0b101101,
+                   (outs), (ins MEMrr:$addr, shift_imm5:$rd),
+                   "prefetch [$addr], $rd", []>;
+  def PREFETCHi : F3_2<3, 0b101101,
+                   (outs), (ins MEMri:$addr, shift_imm5:$rd),
+                   "prefetch [$addr], $rd", []>;
+}
+
+
 
 // Section A.43 - Read Privileged Register Instructions
 let Predicates = [HasV9] in {

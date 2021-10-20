@@ -90,6 +90,12 @@ option(MLIR_INCLUDE_TESTS
 option(MLIR_INCLUDE_INTEGRATION_TESTS
        "Generate build targets for the MLIR integration tests.")
 
+set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
+    "Installs object files needed for add_mlir_aggregate to work out of \
+    tree. Package maintainers can disable this to exclude these assets if \
+    not desired. Enabling this will result in object files being written \
+    under lib/objects-{CMAKE_BUILD_TYPE}.")
+
 #-------------------------------------------------------------------------------
 # Python Bindings Configuration
 # Requires:

@@ -1,4 +1,4 @@
-; RUN: opt -enable-new-pm=1 -function-attrs --disable-nofree-inference=false -S < %s | FileCheck %s --check-prefix=FNATTR
+; RUN: opt -passes=function-attrs --aa-pipeline=basic-aa --disable-nofree-inference=false -S < %s | FileCheck %s --check-prefix=FNATTR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
