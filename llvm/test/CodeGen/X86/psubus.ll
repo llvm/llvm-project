@@ -9,6 +9,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX512
 
+declare <4 x i32> @llvm.usub.sat.v4i32(<4 x i32>, <4 x i32>)
+
 define <8 x i16> @test1(<8 x i16> %x) nounwind {
 ; SSE-LABEL: test1:
 ; SSE:       # %bb.0: # %vector.ph
@@ -24,6 +26,148 @@ vector.ph:
   %1 = xor <8 x i16> %x, <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>
   %res = select <8 x i1> %0, <8 x i16> %1, <8 x i16> zeroinitializer
   ret <8 x i16> %res
+}
+
+; This is logically equivalent to the above.
+; usubsat X, (1 << (BW-1)) <--> (X ^ (1 << (BW-1))) & (ashr X, (BW-1))
+
+define <8 x i16> @ashr_xor_and(<8 x i16> %x) nounwind {
+; SSE-LABEL: ashr_xor_and:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psraw $15, %xmm1
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: ashr_xor_and:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_xor_and:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_xor_and:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogq $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %flipsign = xor <8 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  %res = and <8 x i16> %signsplat, %flipsign
+  ret <8 x i16> %res
+}
+
+define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x i8>* %p2) nounwind {
+; SSE-LABEL: ashr_xor_and_commute_uses:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, (%rdi)
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ashr_xor_and_commute_uses:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %signsplat = ashr <16 x i8> %x, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  store <16 x i8> %signsplat, <16 x i8>* %p1
+  %flipsign = xor <16 x i8> %x, <i8 undef, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>
+  store <16 x i8> %flipsign, <16 x i8>* %p2
+  %res = and <16 x i8> %flipsign, %signsplat
+  ret <16 x i8> %res
+}
+
+define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x) nounwind {
+; SSE-LABEL: ashr_xor_and_custom:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: ashr_xor_and_custom:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_xor_and_custom:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_xor_and_custom:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogd $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <4 x i32> %x, <i32 undef, i32 31, i32 31, i32 31>
+  %flipsign = xor <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %res = and <4 x i32> %flipsign, %signsplat
+  ret <4 x i32> %res
+}
+
+; usubsat X, (1 << (BW-1)) <--> (X ^ (1 << (BW-1))) & (ashr X, (BW-1))
+
+define <4 x i32> @usubsat_custom(<4 x i32> %x) nounwind {
+; SSE2OR3-LABEL: usubsat_custom:
+; SSE2OR3:       # %bb.0:
+; SSE2OR3-NEXT:    movdqa %xmm0, %xmm1
+; SSE2OR3-NEXT:    psrad $31, %xmm1
+; SSE2OR3-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2OR3-NEXT:    pand %xmm1, %xmm0
+; SSE2OR3-NEXT:    retq
+;
+; SSE41-LABEL: usubsat_custom:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <2147483648,2147483648,2147483648,u>
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    psubd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: usubsat_custom:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = <2147483648,2147483648,2147483648,u>
+; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: usubsat_custom:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: usubsat_custom:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %res = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %x, <4 x i32> <i32 2147483648, i32 2147483648, i32 2147483648, i32 undef>)
+  ret <4 x i32> %res
 }
 
 define <8 x i16> @test2(<8 x i16> %x) nounwind {
@@ -200,6 +344,47 @@ vector.ph:
   %0 = icmp slt <16 x i16> %x, zeroinitializer
   %1 = xor <16 x i16> %x, <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>
   %res = select <16 x i1> %0, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %res
+}
+
+define <16 x i16> @ashr_xor_and_v16i16(<16 x i16> %x) nounwind {
+; SSE-LABEL: ashr_xor_and_v16i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psraw $15, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    psraw $15, %xmm3
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: ashr_xor_and_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsraw $15, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ashr_xor_and_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm1
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: ashr_xor_and_v16i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm1
+; AVX512-NEXT:    vpternlogq $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; AVX512-NEXT:    retq
+  %signsplat = ashr <16 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %flipsign = xor <16 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  %res = and <16 x i16> %signsplat, %flipsign
   ret <16 x i16> %res
 }
 

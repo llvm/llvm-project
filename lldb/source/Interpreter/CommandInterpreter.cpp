@@ -744,8 +744,10 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> connect_gdb_remote_cmd_up(
       new CommandObjectRegexCommand(
           *this, "gdb-remote",
-          "Connect to a process via remote GDB server.  "
-          "If no host is specifed, localhost is assumed.",
+          "Connect to a process via remote GDB server.\n"
+          "If no host is specifed, localhost is assumed.\n"
+          "gdb-remote is an abbreviation for 'process connect --plugin "
+          "gdb-remote connect://<hostname>:<port>'\n",
           "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
   if (connect_gdb_remote_cmd_up) {
     if (connect_gdb_remote_cmd_up->AddRegexCommand(
@@ -762,9 +764,10 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> connect_kdp_remote_cmd_up(
       new CommandObjectRegexCommand(
           *this, "kdp-remote",
-          "Connect to a process via remote KDP server.  "
-          "If no UDP port is specified, port 41139 is "
-          "assumed.",
+          "Connect to a process via remote KDP server.\n"
+          "If no UDP port is specified, port 41139 is assumed.\n"
+          "kdp-remote is an abbreviation for 'process connect --plugin "
+          "kdp-remote udp://<hostname>:<port>'\n",
           "kdp-remote <hostname>[:<portnum>]", 2, 0, false));
   if (connect_kdp_remote_cmd_up) {
     if (connect_kdp_remote_cmd_up->AddRegexCommand(
@@ -1255,13 +1258,11 @@ CommandObject *CommandInterpreter::GetUserCommandObject(
     return exact_cmd;
 
   // We didn't have an exact command, so now look for partial matches.
-  size_t num_found;
   StringList tmp_list;
   StringList *matches_ptr = matches ? matches : &tmp_list;
-  num_found =
-      AddNamesMatchingPartialString(GetUserCommands(), cmd_str, *matches_ptr);
-  num_found += AddNamesMatchingPartialString(GetUserMultiwordCommands(),
-                                             cmd_str, *matches_ptr);
+  AddNamesMatchingPartialString(GetUserCommands(), cmd_str, *matches_ptr);
+  AddNamesMatchingPartialString(GetUserMultiwordCommands(),
+                                cmd_str, *matches_ptr);
 
   return {};
 }

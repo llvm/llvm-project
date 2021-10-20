@@ -218,6 +218,34 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
       .Default([](mlir::Type) { return mlir::Type{}; });
 }
 
+static bool hasDynamicSize(fir::RecordType recTy) {
+  for (auto field : recTy.getTypeList()) {
+    if (auto arr = field.second.dyn_cast<fir::SequenceType>()) {
+      if (sequenceWithNonConstantShape(arr))
+        return true;
+    } else if (characterWithDynamicLen(field.second)) {
+      return true;
+    } else if (auto rec = field.second.dyn_cast<fir::RecordType>()) {
+      if (hasDynamicSize(rec))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool hasDynamicSize(mlir::Type t) {
+  if (auto arr = t.dyn_cast<fir::SequenceType>()) {
+    if (sequenceWithNonConstantShape(arr))
+      return true;
+    t = arr.getEleTy();
+  }
+  if (characterWithDynamicLen(t))
+    return true;
+  if (auto rec = t.dyn_cast<fir::RecordType>())
+    return hasDynamicSize(rec);
+  return false;
+}
+
 } // namespace fir
 
 namespace {

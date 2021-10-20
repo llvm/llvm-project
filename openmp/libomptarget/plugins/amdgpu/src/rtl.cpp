@@ -1400,11 +1400,9 @@ struct device_environment {
     host_device_env.DeviceNum = device_id;
     host_device_env.DebugKind = 0;
     host_device_env.DynamicMemSize = 0;
-#ifdef OMPTARGET_DEBUG
     if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
       host_device_env.DebugKind = std::stoi(envStr);
     }
-#endif
 
     int rc = get_symbol_info_without_loading((char *)image->ImageStart,
                                              img_size, sym(), &si);

@@ -50,15 +50,17 @@ static cl::opt<bool>
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
 
-AArch64Subtarget &
-AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
-                                                  StringRef CPUString) {
+AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
+    StringRef FS, StringRef CPUString, StringRef TuneCPUString) {
   // Determine default and user-specified characteristics
 
   if (CPUString.empty())
     CPUString = "generic";
 
-  ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FS);
+  if (TuneCPUString.empty())
+    TuneCPUString = CPUString;
+
+  ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
   initializeProperties();
 
   return *this;
@@ -198,18 +200,20 @@ void AArch64Subtarget::initializeProperties() {
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
+                                   const std::string &TuneCPU,
                                    const std::string &FS,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride)
-    : AArch64GenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+    : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
-      FrameLowering(), InstrInfo(initializeSubtargetDependencies(FS, CPU)),
-      TSInfo(), TLInfo(TM, *this) {
+      FrameLowering(),
+      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)), TSInfo(),
+      TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
 

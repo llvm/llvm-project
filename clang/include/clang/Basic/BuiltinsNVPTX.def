@@ -687,6 +687,12 @@ BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
 BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
 BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
 
+// Address space predicates.
+BUILTIN(__nvvm_isspacep_const, "bvC*", "nc")
+BUILTIN(__nvvm_isspacep_global, "bvC*", "nc")
+BUILTIN(__nvvm_isspacep_local, "bvC*", "nc")
+BUILTIN(__nvvm_isspacep_shared, "bvC*", "nc")
+
 // Builtins to support WMMA instructions on sm_70
 TARGET_BUILTIN(__hmma_m16n16k16_ld_a, "vi*iC*UiIi", "", AND(SM_70,PTX60))
 TARGET_BUILTIN(__hmma_m16n16k16_ld_b, "vi*iC*UiIi", "", AND(SM_70,PTX60))

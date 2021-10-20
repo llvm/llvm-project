@@ -21,71 +21,78 @@
 
 using namespace lldb_private;
 
-bool Terminal::IsATerminal() const { return m_fd >= 0 && ::isatty(m_fd); }
-
-bool Terminal::SetEcho(bool enabled) {
-  if (FileDescriptorIsValid()) {
-#if LLDB_ENABLE_TERMIOS
-    if (IsATerminal()) {
-      struct termios fd_termios;
-      if (::tcgetattr(m_fd, &fd_termios) == 0) {
-        bool set_corectly = false;
-        if (enabled) {
-          if (fd_termios.c_lflag & ECHO)
-            set_corectly = true;
-          else
-            fd_termios.c_lflag |= ECHO;
-        } else {
-          if (fd_termios.c_lflag & ECHO)
-            fd_termios.c_lflag &= ~ECHO;
-          else
-            set_corectly = true;
-        }
-
-        if (set_corectly)
-          return true;
-        return ::tcsetattr(m_fd, TCSANOW, &fd_termios) == 0;
-      }
-    }
-#endif // #if LLDB_ENABLE_TERMIOS
-  }
-  return false;
-}
-
-bool Terminal::SetCanonical(bool enabled) {
-  if (FileDescriptorIsValid()) {
-#if LLDB_ENABLE_TERMIOS
-    if (IsATerminal()) {
-      struct termios fd_termios;
-      if (::tcgetattr(m_fd, &fd_termios) == 0) {
-        bool set_corectly = false;
-        if (enabled) {
-          if (fd_termios.c_lflag & ICANON)
-            set_corectly = true;
-          else
-            fd_termios.c_lflag |= ICANON;
-        } else {
-          if (fd_termios.c_lflag & ICANON)
-            fd_termios.c_lflag &= ~ICANON;
-          else
-            set_corectly = true;
-        }
-
-        if (set_corectly)
-          return true;
-        return ::tcsetattr(m_fd, TCSANOW, &fd_termios) == 0;
-      }
-    }
-#endif // #if LLDB_ENABLE_TERMIOS
-  }
-  return false;
-}
-
-struct TerminalState::Data {
+struct Terminal::Data {
 #if LLDB_ENABLE_TERMIOS
   struct termios m_termios; ///< Cached terminal state information.
 #endif
 };
+
+bool Terminal::IsATerminal() const { return m_fd >= 0 && ::isatty(m_fd); }
+
+llvm::Expected<Terminal::Data> Terminal::GetData() {
+  if (!FileDescriptorIsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid fd");
+
+#if LLDB_ENABLE_TERMIOS
+  if (!IsATerminal())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "fd not a terminal");
+
+  Data data;
+  if (::tcgetattr(m_fd, &data.m_termios) != 0)
+    return llvm::createStringError(
+        std::error_code(errno, std::generic_category()),
+        "unable to get teletype attributes");
+  return data;
+#else // !LLDB_ENABLE_TERMIOS
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "termios support missing in LLDB");
+#endif // LLDB_ENABLE_TERMIOS
+}
+
+llvm::Error Terminal::SetData(const Terminal::Data &data) {
+#if LLDB_ENABLE_TERMIOS
+  assert(FileDescriptorIsValid());
+  assert(IsATerminal());
+
+  if (::tcsetattr(m_fd, TCSANOW, &data.m_termios) != 0)
+    return llvm::createStringError(
+        std::error_code(errno, std::generic_category()),
+        "unable to set teletype attributes");
+  return llvm::Error::success();
+#else // !LLDB_ENABLE_TERMIOS
+  llvm_unreachable("SetData() should not be called if !LLDB_ENABLE_TERMIOS");
+#endif // LLDB_ENABLE_TERMIOS
+}
+
+llvm::Error Terminal::SetEcho(bool enabled) {
+  llvm::Expected<Data> data = GetData();
+  if (!data)
+    return data.takeError();
+
+#if LLDB_ENABLE_TERMIOS
+  struct termios &fd_termios = data->m_termios;
+  fd_termios.c_lflag &= ~ECHO;
+  if (enabled)
+    fd_termios.c_lflag |= ECHO;
+  return SetData(data.get());
+#endif // LLDB_ENABLE_TERMIOS
+}
+
+llvm::Error Terminal::SetCanonical(bool enabled) {
+  llvm::Expected<Data> data = GetData();
+  if (!data)
+    return data.takeError();
+
+#if LLDB_ENABLE_TERMIOS
+  struct termios &fd_termios = data->m_termios;
+  fd_termios.c_lflag &= ~ICANON;
+  if (enabled)
+    fd_termios.c_lflag |= ICANON;
+  return SetData(data.get());
+#endif // LLDB_ENABLE_TERMIOS
+}
 
 TerminalState::TerminalState(Terminal term, bool save_process_group)
     : m_tty(term) {
@@ -109,7 +116,7 @@ bool TerminalState::Save(Terminal term, bool save_process_group) {
 #if LLDB_ENABLE_POSIX
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #if LLDB_ENABLE_TERMIOS
-    std::unique_ptr<Data> new_data{new Data()};
+    std::unique_ptr<Terminal::Data> new_data{new Terminal::Data()};
     if (::tcgetattr(fd, &new_data->m_termios) == 0)
       m_data = std::move(new_data);
 #endif // LLDB_ENABLE_TERMIOS

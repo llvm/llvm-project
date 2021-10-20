@@ -194,15 +194,20 @@ def compilerMacros(config, flags=''):
 
   If the optional `flags` argument (a string) is provided, these flags will
   be added to the compiler invocation when generating the macros.
+
+  If we fail to extract the compiler macros because of a compiler error, None
+  is returned instead.
   """
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       # Make sure files like <__config> are included, since they can define
       # additional macros.
-      sourceFile.write("#include <cstddef>")
+      sourceFile.write("#include <stddef.h>")
     unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
       "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
+    if exitCode != 0:
+      return None
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
     for line in defines:
