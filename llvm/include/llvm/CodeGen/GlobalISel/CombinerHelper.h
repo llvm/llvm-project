@@ -575,6 +575,9 @@ public:
   matchICmpToLHSKnownBits(MachineInstr &MI,
                           BuildFnTy &MatchInfo);
 
+  /// \returns true if (and (or x, c1), c2) can be replaced with (and x, c2)
+  bool matchAndOrDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   bool matchBitfieldExtractFromSExtInReg(MachineInstr &MI,
                                          BuildFnTy &MatchInfo);
   /// Match: and (lshr x, cst), mask -> ubfx x, cst, width
