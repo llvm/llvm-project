@@ -150,6 +150,22 @@ func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64xf32,
   return %0 : tensor<64xf32, #SparseVector>
 }
 
+// CHECK-LABEL: func @sparse_hidden_nop_cast(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
+func @sparse_hidden_nop_cast(%arg0: tensor<32xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
+  %0 = sparse_tensor.convert %arg0 : tensor<32xf32, #SparseVector> to tensor<?xf32, #SparseVector>
+  return %0 : tensor<?xf32, #SparseVector>
+}
+
+// CHECK-LABEL: func @sparse_nop_cast(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
+func @sparse_nop_cast(%arg0: tensor<64xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
+  %0 = tensor.cast %arg0 : tensor<64xf32, #SparseVector> to tensor<?xf32, #SparseVector>
+  return %0 : tensor<?xf32, #SparseVector>
+}
+
 // CHECK-LABEL: func @sparse_convert_1d(
 //  CHECK-SAME: %[[A:.*]]: tensor<?xi32>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
