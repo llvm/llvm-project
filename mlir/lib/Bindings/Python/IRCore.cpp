@@ -2152,10 +2152,6 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           "Returns the source location the operation was defined or derived "
           "from.")
-      .def("__iter__",
-           [](PyOperationBase &self) {
-             return PyRegionIterator(self.getOperation().getRef());
-           })
       .def(
           "__str__",
           [](PyOperationBase &self) {

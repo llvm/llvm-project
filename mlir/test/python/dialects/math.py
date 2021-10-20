@@ -19,7 +19,7 @@ def testMathOps():
         return mlir_math.SqrtOp(arg)
 
     # CHECK-LABEL: func @emit_sqrt(
-    # CHECK-SAME:                  %[[ARG:.*]]: f32) {
+    # CHECK-SAME:                  %[[ARG:.*]]: f32) -> f32 {
     # CHECK:         math.sqrt %[[ARG]] : f32
     # CHECK:         return
     # CHECK:       }

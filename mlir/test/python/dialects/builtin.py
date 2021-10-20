@@ -15,6 +15,7 @@ def run(f):
 @run
 def testFromPyFunc():
   with Context() as ctx, Location.unknown() as loc:
+    ctx.allow_unregistered_dialects = True
     m = builtin.ModuleOp()
     f32 = F32Type.get()
     f64 = F64Type.get()
@@ -50,6 +51,14 @@ def testFromPyFunc():
       @builtin.FuncOp.from_py_func(f32, f64)
       def call_binary(a, b):
         return binary_return(a, b)
+
+      # We expect coercion of a single result operation to a returned value.
+      # CHECK-LABEL: func @single_result_op
+      # CHECK: %0 = "custom.op1"() : () -> f32
+      # CHECK: return %0 : f32
+      @builtin.FuncOp.from_py_func()
+      def single_result_op():
+        return Operation.create("custom.op1", results=[f32])
 
       # CHECK-LABEL: func @call_none
       # CHECK: call @none_return(%arg0, %arg1) : (f32, f64) -> ()
