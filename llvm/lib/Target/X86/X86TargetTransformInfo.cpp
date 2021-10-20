@@ -314,7 +314,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,   MVT::v2i64, 4  },
   };
 
-  if (ST->isSLM()) {
+  if (ST->useSLMArithCosts()) {
     if (Args.size() == 2 && ISD == ISD::MUL && LT.second == MVT::v4i32) {
       // Check if the operands can be shrinked into a smaller datatype.
       // TODO: Merge this into generiic vXi32 MUL patterns above.
@@ -2572,7 +2572,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SELECT,  MVT::v4f32,   3 }, // andps + andnps + orps
   };
 
-  if (ST->isSLM())
+  if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
       return LT.first * (ExtraCost + Entry->Cost);
 
@@ -3195,7 +3195,7 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
         return adjustTableCost(*Entry, LT.first, ICA.getFlags());
 
-    if (ST->isSLM())
+    if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
         return adjustTableCost(*Entry, LT.first, ICA.getFlags());
 
@@ -3488,7 +3488,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Unexpected vector opcode");
     MVT MScalarTy = LT.second.getScalarType();
-    if (ST->isSLM())
+    if (ST->useSLMArithCosts())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
         return Entry->Cost + RegisterFileMoveCost;
 
@@ -3905,7 +3905,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   EVT VT = TLI->getValueType(DL, ValTy);
   if (VT.isSimple()) {
     MVT MTy = VT.getSimpleVT();
-    if (ST->isSLM())
+    if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
         return Entry->Cost;
 
@@ -3944,7 +3944,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     ArithmeticCost *= LT.first - 1;
   }
 
-  if (ST->isSLM())
+  if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
       return ArithmeticCost + Entry->Cost;
 
