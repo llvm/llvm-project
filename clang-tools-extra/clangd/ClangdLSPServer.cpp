@@ -542,7 +542,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
            {"resolveProvider", false},
            // We do extra checks, e.g. that > is part of ->.
-           {"triggerCharacters", {".", "<", ">", ":", "\"", "/"}},
+           {"triggerCharacters", {".", "<", ">", ":", "\"", "/", "*"}},
        }},
       {"semanticTokensProvider",
        llvm::json::Object{
