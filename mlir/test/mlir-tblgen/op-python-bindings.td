@@ -405,11 +405,11 @@ def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
   let regions = (region AnyRegion:$region, AnyRegion, VariadicRegion<AnyRegion>:$variadic);
 
   // CHECK:  @builtins.property
-  // CHECK:  def region():
+  // CHECK:  def region(self):
   // CHECK:    return self.regions[0]
 
   // CHECK:  @builtins.property
-  // CHECK:  def variadic():
+  // CHECK:  def variadic(self):
   // CHECK:    return self.regions[2:]
 }
 
@@ -429,7 +429,7 @@ def VariadicRegionOp : TestOp<"variadic_region"> {
   let regions = (region VariadicRegion<AnyRegion>:$Variadic);
 
   // CHECK:  @builtins.property
-  // CHECK:  def Variadic():
+  // CHECK:  def Variadic(self):
   // CHECK:    return self.regions[0:]
 }
 

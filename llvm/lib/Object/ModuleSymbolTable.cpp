@@ -204,8 +204,9 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
     if (GVar->isConstant())
       Res |= BasicSymbolRef::SF_Const;
   }
-  if (isa_and_nonnull<Function>(GV->getAliaseeObject()) || isa<GlobalIFunc>(GV))
-    Res |= BasicSymbolRef::SF_Executable;
+  if (const GlobalObject *GO = GV->getAliaseeObject())
+    if (isa<Function>(GO) || isa<GlobalIFunc>(GO))
+      Res |= BasicSymbolRef::SF_Executable;
   if (isa<GlobalAlias>(GV))
     Res |= BasicSymbolRef::SF_Indirect;
   if (GV->hasPrivateLinkage())

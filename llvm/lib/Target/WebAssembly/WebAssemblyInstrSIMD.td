@@ -1372,3 +1372,23 @@ defm RELAXED_SWIZZLE :
          [(set (v16i8 V128:$dst),
            (int_wasm_relaxed_swizzle (v16i8 V128:$src), (v16i8 V128:$mask)))],
          "i8x16.relaxed_swizzle\t$dst, $src, $mask", "i8x16.relaxed_swizzle", 162>;
+
+//===----------------------------------------------------------------------===//
+// Relaxed floating-point min and max.
+//===----------------------------------------------------------------------===//
+
+multiclass SIMD_RELAXED_FMINMAX<Vec vec, bits<32> simdopMin, bits<32> simdopMax> {
+  defm RELAXED_FMIN_#vec :
+    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b), (outs), (ins),
+              [(set (vec.vt V128:$dst), (int_wasm_relaxed_min
+                (vec.vt V128:$a), (vec.vt V128:$b)))],
+              vec.prefix#".relaxed_min\t$dst, $a, $b", vec.prefix#".relaxed_min", simdopMin>;
+  defm RELAXED_FMAX_#vec :
+    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b), (outs), (ins),
+              [(set (vec.vt V128:$dst), (int_wasm_relaxed_max
+                (vec.vt V128:$a), (vec.vt V128:$b)))],
+              vec.prefix#".relaxed_max\t$dst, $a, $b", vec.prefix#".relaxed_max", simdopMax>;
+}
+
+defm "" : SIMD_RELAXED_FMINMAX<F32x4, 0xb4, 0xe2>;
+defm "" : SIMD_RELAXED_FMINMAX<F64x2, 0xd4, 0xee>;

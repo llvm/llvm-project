@@ -385,7 +385,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
       new GlobalVariable(*M, PtrTy, false, GlobalValue::ExternalLinkage, GEP);
   ASSERT_EQ(GEP, Ref->getInitializer());
 
-  auto *Global = new GlobalVariable(*M, PtrTy, false,
+  auto *Global = new GlobalVariable(*M, IntTy, false,
                                     GlobalValue::ExternalLinkage, nullptr);
   auto *Alias = GlobalAlias::create(IntTy, 0, GlobalValue::ExternalLinkage,
                                     "alias", Global, M.get());
