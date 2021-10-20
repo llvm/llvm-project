@@ -80,7 +80,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
       if (Plugin.getName() == CI.getFrontendOpts().ActionName) {
         std::unique_ptr<PluginASTAction> P(Plugin.instantiate());
         if ((P->getActionType() != PluginASTAction::ReplaceAction &&
-             P->getActionType() != PluginASTAction::Cmdline) ||
+             P->getActionType() != PluginASTAction::CmdlineAfterMainAction) ||
             !P->ParseArgs(
                 CI,
                 CI.getFrontendOpts().PluginArgs[std::string(Plugin.getName())]))

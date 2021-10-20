@@ -187,14 +187,19 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
        FrontendPluginRegistry::entries()) {
     std::unique_ptr<PluginASTAction> P = Plugin.instantiate();
     PluginASTAction::ActionType ActionType = P->getActionType();
-    if (ActionType == PluginASTAction::Cmdline) {
+    if (ActionType == PluginASTAction::CmdlineAfterMainAction ||
+        ActionType == PluginASTAction::CmdlineBeforeMainAction) {
       // This is O(|plugins| * |add_plugins|), but since both numbers are
       // way below 50 in practice, that's ok.
       if (llvm::any_of(CI.getFrontendOpts().AddPluginActions,
                        [&](const std::string &PluginAction) {
                          return PluginAction == Plugin.getName();
-                       }))
-        ActionType = PluginASTAction::AddAfterMainAction;
+                       })) {
+        if (ActionType == PluginASTAction::CmdlineBeforeMainAction)
+          ActionType = PluginASTAction::AddBeforeMainAction;
+        else
+          ActionType = PluginASTAction::AddAfterMainAction;
+      }
     }
     if ((ActionType == PluginASTAction::AddBeforeMainAction ||
          ActionType == PluginASTAction::AddAfterMainAction) &&
