@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <deque>
 #include <string>
 
 namespace Fortran {
@@ -62,13 +61,10 @@ struct OpenMPCounterVisitor {
   template <typename A> void Post(const A &) {}
   bool Pre(const OpenMPDeclarativeConstruct &c);
   bool Pre(const OpenMPConstruct &c);
-  bool Pre(const OmpEndLoopDirective &c);
-  bool Pre(const DoConstruct &);
 
   void Post(const OpenMPDeclarativeConstruct &);
   void Post(const OpenMPConstruct &);
   void PostConstructsCommon();
-  void Post(const OmpEndLoopDirective &c);
 
   void Post(const OmpProcBindClause::Type &c);
   void Post(const OmpDefaultClause::Type &c);
@@ -83,20 +79,9 @@ struct OpenMPCounterVisitor {
   void Post(const OmpCancelType::Type &c);
   void Post(const OmpClause &c);
   void PostClauseCommon(const ClauseInfo &ci);
-  void Post(const DoConstruct &);
 
   std::string clauseDetails{""};
-
-  // curLoopLogRecord and loopLogRecordStack store
-  // pointers to this datastructure's entries. Hence a
-  // vector cannot be used since pointers are invalidated
-  // on resize. Next best option seems to be deque. Also a
-  // list cannot be used since YAML gen requires a
-  // datastructure which can be accessed through indices.
-  std::deque<LogRecord> constructClauses;
-
-  LogRecord *curLoopLogRecord{nullptr};
-  llvm::SmallVector<LogRecord *> loopLogRecordStack;
+  llvm::SmallVector<LogRecord> constructClauses;
   llvm::SmallVector<OmpWrapperType *> ompWrapperStack;
   llvm::DenseMap<OmpWrapperType *, llvm::SmallVector<ClauseInfo>> clauseStrings;
   Parsing *parsing{nullptr};
