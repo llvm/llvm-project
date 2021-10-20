@@ -70,11 +70,11 @@ func @sparse_dim3d_const(%arg0: tensor<10x20x30xf64, #SparseTensor>) -> index {
 // CHECK-LABEL: func @sparse_new1d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<1xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<1xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<1xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<1xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<1xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xindex> to memref<?xindex>
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[A]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func @sparse_new1d(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
@@ -85,11 +85,11 @@ func @sparse_new1d(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 // CHECK-LABEL: func @sparse_new2d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<2xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xindex> to memref<?xindex>
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[A]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func @sparse_new2d(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #SparseMatrix> {
@@ -100,11 +100,11 @@ func @sparse_new2d(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #SparseMatrix> {
 // CHECK-LABEL: func @sparse_new3d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<3xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<3xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<3xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<3xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<3xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<3xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<3xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<3xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<3xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<3xindex> to memref<?xindex>
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[A]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor> {
@@ -118,15 +118,13 @@ func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor> {
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<2xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xi64> to memref<?xi64>
-//   CHECK-DAG: %[[II:.*]] = arith.index_cast %[[I]] : index to i64
-//   CHECK-DAG: %[[JJ:.*]] = arith.index_cast %[[J]] : index to i64
-//   CHECK-DAG: memref.store %[[II]], %[[Q]][%[[C0]]] : memref<2xi64>
-//   CHECK-DAG: memref.store %[[JJ]], %[[Q]][%[[C1]]] : memref<2xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xindex> to memref<?xindex>
+//   CHECK-DAG: memref.store %[[I]], %[[Q]][%[[C0]]] : memref<2xindex>
+//   CHECK-DAG: memref.store %[[J]], %[[Q]][%[[C1]]] : memref<2xindex>
 //       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[NP]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
@@ -158,11 +156,11 @@ func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64xf32,
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[U:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?xi32>
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<1xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<1xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<1xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<1xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<1xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xindex> to memref<?xindex>
 //       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<1xindex>
@@ -182,11 +180,11 @@ func @sparse_convert_1d(%arg0: tensor<?xi32>) -> tensor<?xi32, #SparseVector> {
 // CHECK-LABEL: func @sparse_convert_1d_ss(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<1xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<1xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<1xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<1xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<1xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xindex> to memref<?xindex>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[A]])
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[C]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
@@ -200,11 +198,11 @@ func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf3
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<2xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xindex> to memref<?xindex>
 //       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<2xindex>
@@ -229,11 +227,11 @@ func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #SparseMatrix
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<2xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<2xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<2xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<2xindex> to memref<?xindex>
 //       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<2xindex>
@@ -263,11 +261,11 @@ func @sparse_constant() -> tensor<8x7xf32, #SparseMatrix>{
 //   CHECK-DAG: %[[U2:.*]] = tensor.dim %[[A]], %[[C1]] : tensor<?x?x?xf64>
 //   CHECK-DAG: %[[U3:.*]] = tensor.dim %[[A]], %[[C2]] : tensor<?x?x?xf64>
 //   CHECK-DAG: %[[P:.*]] = memref.alloca() : memref<3xi8>
-//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<3xi64>
-//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<3xi64>
+//   CHECK-DAG: %[[Q:.*]] = memref.alloca() : memref<3xindex>
+//   CHECK-DAG: %[[R:.*]] = memref.alloca() : memref<3xindex>
 //   CHECK-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<3xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<3xi64> to memref<?xi64>
-//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<3xi64> to memref<?xi64>
+//   CHECK-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<3xindex> to memref<?xindex>
+//   CHECK-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<3xindex> to memref<?xindex>
 //       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<3xindex>
