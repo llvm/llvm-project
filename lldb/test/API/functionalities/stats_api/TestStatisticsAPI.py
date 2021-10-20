@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 class TestStatsAPI(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def test_stats_api(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -26,9 +28,18 @@ class TestStatsAPI(TestBase):
         stats = target.GetStatistics()
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
-        stats_json = sorted(json.loads(stream.GetData()))
-        self.assertEqual(len(stats_json), 4)
-        self.assertIn("Number of expr evaluation failures", stats_json)
-        self.assertIn("Number of expr evaluation successes", stats_json)
-        self.assertIn("Number of frame var failures", stats_json)
-        self.assertIn("Number of frame var successes", stats_json)
+        stats_json = json.loads(stream.GetData())
+        self.assertEqual('expressionEvaluation' in stats_json, True,
+                'Make sure the "expressionEvaluation" key in in target.GetStatistics()')
+        self.assertEqual('frameVariable' in stats_json, True,
+                'Make sure the "frameVariable" key in in target.GetStatistics()')
+        expressionEvaluation = stats_json['expressionEvaluation']
+        self.assertEqual('successes' in expressionEvaluation, True,
+                'Make sure the "successes" key in in "expressionEvaluation" dictionary"')
+        self.assertEqual('failures' in expressionEvaluation, True,
+                'Make sure the "failures" key in in "expressionEvaluation" dictionary"')
+        frameVariable = stats_json['frameVariable']
+        self.assertEqual('successes' in frameVariable, True,
+                'Make sure the "successes" key in in "frameVariable" dictionary"')
+        self.assertEqual('failures' in frameVariable, True,
+                'Make sure the "failures" key in in "frameVariable" dictionary"')

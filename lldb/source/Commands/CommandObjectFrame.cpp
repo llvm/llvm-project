@@ -708,11 +708,11 @@ protected:
 
     // Increment statistics.
     bool res = result.Succeeded();
-    Target &target = GetSelectedOrDummyTarget();
+    TargetStats &target_stats = GetSelectedOrDummyTarget().GetStatistics();
     if (res)
-      target.IncrementStats(StatisticKind::FrameVarSuccess);
+      target_stats.GetFrameVariableStats().NotifySuccess();
     else
-      target.IncrementStats(StatisticKind::FrameVarFailure);
+      target_stats.GetFrameVariableStats().NotifyFailure();
     return res;
   }
 
