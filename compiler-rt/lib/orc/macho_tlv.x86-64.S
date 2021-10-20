@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The content of this file is x86_64-only
+#if defined(__x86_64__)
+
 #define REGISTER_SAVE_SPACE_SIZE        512
 
         .text
@@ -66,3 +69,5 @@ ___orc_rt_macho_tlv_get_addr:
         addq            $REGISTER_SAVE_SPACE_SIZE, %rsp
         popq            %rbp
         ret
+
+#endif // defined(__x86_64__)
