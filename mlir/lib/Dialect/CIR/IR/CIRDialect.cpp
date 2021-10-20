@@ -39,6 +39,28 @@ void cir::CIRDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConstantOp::verify() {
+  auto opType = getType();
+  auto val = getValue();
+  auto valueType = val.getType();
+
+  // ODS already generates checks to make sure the result type is valid. We just
+  // need to additionally check that the value's attribute type is consistent
+  // with the result type.
+  if (val.isa<IntegerAttr, FloatAttr>()) {
+    if (valueType != opType)
+      return emitOpError("result type (")
+             << opType << ") does not match value type (" << valueType << ")";
+    return success();
+  }
+
+  return emitOpError("cannot have value of type ") << valueType;
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 

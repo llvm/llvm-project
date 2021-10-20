@@ -17,6 +17,7 @@
 include "mlir/Dialect/CIR/IR/CIRDialect.td"
 include "mlir/Dialect/CIR/IR/CIRTypes.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -26,6 +27,36 @@ include "mlir/IR/SymbolInterfaces.td"
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>;
+
+//===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+def ConstantOp : CIR_Op<"cst",
+    [ConstantLike, Pure]> {
+
+  let summary = "constant";
+  let description = [{
+    Constant operation turns a literal into an SSA value. The data is attached
+    to the operation as an attribute. For example:
+
+    ```mlir
+      %0 = cir.cst 42 : i32
+      %1 = cir.cst 4.2 : f32
+    ```
+  }];
+
+  // The constant operation takes an attribute as the only input.
+  let arguments = (ins TypedAttrInterface:$value);
+
+  // The constant operation returns a single value of AnyType.
+  let results = (outs AnyType:$res);
+
+  let assemblyFormat = "`(` $value `)` attr-dict `:` type($res)";
+
+  let hasVerifier = 1;
+
+  // TODO: hasFolder, etc
+}
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
