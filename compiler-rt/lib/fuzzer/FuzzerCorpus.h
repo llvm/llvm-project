@@ -284,7 +284,8 @@ public:
     }
   }
 
-  void Replace(InputInfo *II, const Unit &U) {
+  void Replace(InputInfo *II, const Unit &U,
+               std::chrono::microseconds TimeOfUnit) {
     assert(II->U.size() > U.size());
     Hashes.erase(Sha1ToString(II->Sha1));
     DeleteFile(*II);
@@ -292,6 +293,7 @@ public:
     Hashes.insert(Sha1ToString(II->Sha1));
     II->U = U;
     II->Reduced = true;
+    II->TimeOfUnit = TimeOfUnit;
     DistributionNeedsUpdate = true;
   }
 
