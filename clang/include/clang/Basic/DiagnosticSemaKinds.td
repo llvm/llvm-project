@@ -7587,7 +7587,8 @@ def note_throw_in_function : Note<"function declared non-throwing here">;
 def err_seh_try_outside_functions : Error<
   "cannot use SEH '__try' in blocks, captured regions, or Obj-C method decls">;
 def err_mixing_cxx_try_seh_try : Error<
-  "cannot use C++ 'try' in the same function as SEH '__try'">;
+  "cannot use %select{C++ 'try'|Objective-C '@try'}0 "
+  "in the same function as SEH '__try'">;
 def err_seh_try_unsupported : Error<
   "SEH '__try' is not supported on this target">;
 def note_conflicting_try_here : Note<
