@@ -16,6 +16,7 @@
 #include "c_api.h"
 #include "common.h"
 #include "error.h"
+#include "executor_address.h"
 #include "simple_packed_serialization.h"
 #include <type_traits>
 
@@ -116,14 +117,14 @@ private:
 namespace detail {
 
 template <typename SPSArgListT, typename... ArgTs>
-Expected<WrapperFunctionResult>
+WrapperFunctionResult
 serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
   auto Result = WrapperFunctionResult::allocate(SPSArgListT::size(Args...));
   SPSOutputBuffer OB(Result.data(), Result.size());
   if (!SPSArgListT::serialize(OB, Args...))
-    return make_error<StringError>(
+    return WrapperFunctionResult::createOutOfBandError(
         "Error serializing arguments to blob in call");
-  return std::move(Result);
+  return Result;
 }
 
 template <typename RetT> class WrapperFunctionHandlerCaller {
@@ -171,12 +172,8 @@ public:
     auto HandlerResult = WrapperFunctionHandlerCaller<RetT>::call(
         std::forward<HandlerT>(H), Args, ArgIndices{});
 
-    if (auto Result = ResultSerializer<decltype(HandlerResult)>::serialize(
-            std::move(HandlerResult)))
-      return std::move(*Result);
-    else
-      return WrapperFunctionResult::createOutOfBandError(
-          toString(Result.takeError()));
+    return ResultSerializer<decltype(HandlerResult)>::serialize(
+        std::move(HandlerResult));
   }
 
 private:
@@ -186,13 +183,12 @@ private:
     SPSInputBuffer IB(ArgData, ArgSize);
     return SPSArgList<SPSTagTs...>::deserialize(IB, std::get<I>(Args)...);
   }
-
 };
 
-// Map function references to function types.
+// Map function pointers to function types.
 template <typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT (&)(ArgTs...), ResultSerializer,
+class WrapperFunctionHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
                                    SPSTagTs...>
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
@@ -215,7 +211,7 @@ class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
 
 template <typename SPSRetTagT, typename RetT> class ResultSerializer {
 public:
-  static Expected<WrapperFunctionResult> serialize(RetT Result) {
+  static WrapperFunctionResult serialize(RetT Result) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
         Result);
   }
@@ -223,7 +219,7 @@ public:
 
 template <typename SPSRetTagT> class ResultSerializer<SPSRetTagT, Error> {
 public:
-  static Expected<WrapperFunctionResult> serialize(Error Err) {
+  static WrapperFunctionResult serialize(Error Err) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(Err)));
   }
@@ -232,7 +228,7 @@ public:
 template <typename SPSRetTagT, typename T>
 class ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
-  static Expected<WrapperFunctionResult> serialize(Expected<T> E) {
+  static WrapperFunctionResult serialize(Expected<T> E) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(E)));
   }
@@ -310,12 +306,11 @@ public:
     auto ArgBuffer =
         detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(
             Args...);
-    if (!ArgBuffer)
-      return ArgBuffer.takeError();
+    if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
+      return make_error<StringError>(ErrMsg);
 
-    WrapperFunctionResult ResultBuffer =
-        __orc_rt_jit_dispatch(&__orc_rt_jit_dispatch_ctx, FnTag,
-                              ArgBuffer->data(), ArgBuffer->size());
+    WrapperFunctionResult ResultBuffer = __orc_rt_jit_dispatch(
+        &__orc_rt_jit_dispatch_ctx, FnTag, ArgBuffer.data(), ArgBuffer.size());
     if (auto ErrMsg = ResultBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg);
 
@@ -327,8 +322,8 @@ public:
   static WrapperFunctionResult handle(const char *ArgData, size_t ArgSize,
                                       HandlerT &&Handler) {
     using WFHH =
-        detail::WrapperFunctionHandlerHelper<HandlerT, ResultSerializer,
-                                             SPSTagTs...>;
+        detail::WrapperFunctionHandlerHelper<std::remove_reference_t<HandlerT>,
+                                             ResultSerializer, SPSTagTs...>;
     return WFHH::apply(std::forward<HandlerT>(Handler), ArgData, ArgSize);
   }
 
@@ -359,6 +354,48 @@ public:
 
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;
 };
+
+/// A function object that takes an ExecutorAddr as its first argument,
+/// casts that address to a ClassT*, then calls the given method on that
+/// pointer passing in the remaining function arguments. This utility
+/// removes some of the boilerplate from writing wrappers for method calls.
+///
+///   @code{.cpp}
+///   class MyClass {
+///   public:
+///     void myMethod(uint32_t, bool) { ... }
+///   };
+///
+///   // SPS Method signature -- note MyClass object address as first argument.
+///   using SPSMyMethodWrapperSignature =
+///     SPSTuple<SPSExecutorAddr, uint32_t, bool>;
+///
+///   WrapperFunctionResult
+///   myMethodCallWrapper(const char *ArgData, size_t ArgSize) {
+///     return WrapperFunction<SPSMyMethodWrapperSignature>::handle(
+///        ArgData, ArgSize, makeMethodWrapperHandler(&MyClass::myMethod));
+///   }
+///   @endcode
+///
+template <typename RetT, typename ClassT, typename... ArgTs>
+class MethodWrapperHandler {
+public:
+  using MethodT = RetT (ClassT::*)(ArgTs...);
+  MethodWrapperHandler(MethodT M) : M(M) {}
+  RetT operator()(ExecutorAddr ObjAddr, ArgTs &...Args) {
+    return (ObjAddr.toPtr<ClassT *>()->*M)(std::forward<ArgTs>(Args)...);
+  }
+
+private:
+  MethodT M;
+};
+
+/// Create a MethodWrapperHandler object from the given method pointer.
+template <typename RetT, typename ClassT, typename... ArgTs>
+MethodWrapperHandler<RetT, ClassT, ArgTs...>
+makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
+  return MethodWrapperHandler<RetT, ClassT, ArgTs...>(Method);
+}
 
 } // end namespace __orc_rt
 

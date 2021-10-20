@@ -1526,6 +1526,18 @@ TEST_F(FormatTestObjC, IfNotUnlikely) {
                "  [obj func:arg2];");
 }
 
+TEST_F(FormatTestObjC, Attributes) {
+  verifyFormat("__attribute__((objc_subclassing_restricted))\n"
+               "@interface Foo\n"
+               "@end");
+  verifyFormat("__attribute__((objc_subclassing_restricted))\n"
+               "@protocol Foo\n"
+               "@end");
+  verifyFormat("__attribute__((objc_subclassing_restricted))\n"
+               "@implementation Foo\n"
+               "@end");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

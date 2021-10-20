@@ -598,21 +598,24 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
   for (unsigned int i = 0; i < 2; ++i) {
     if (!LHS->hasNUsesOrMore(3) && match(LHS, m_MaxMin)) {
+      Value *C = RHS;
       const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
-      const SCEV *RHSExpr = SE->getSCEV(RHS);
+      const SCEV *CExpr = SE->getSCEV(C);
       for (unsigned int j = 0; j < 2; ++j) {
         if (j == 0) {
-          if (BExpr == RHSExpr)
+          if (BExpr == CExpr)
             continue;
-          // Transform 'I = (A op B) op RHS' to 'I = (A op RHS) op B' on the
+          // Transform 'I = (A op B) op C' to 'I = (A op C) op B' on the
           // first iteration.
-          std::swap(BExpr, RHSExpr);
+          std::swap(BExpr, CExpr);
+          std::swap(B, C);
         } else {
-          if (AExpr == RHSExpr)
+          if (AExpr == CExpr)
             continue;
-          // Transform 'I = (A op RHS) op B' 'I = (B op RHS) op A' on the second
+          // Transform 'I = (A op C) op B' to 'I = (B op C) op A' on the second
           // iteration.
-          std::swap(AExpr, RHSExpr);
+          std::swap(AExpr, CExpr);
+          std::swap(A, C);
         }
 
         // The optimization is profitable only if LHS can be removed in the end.
@@ -635,8 +638,8 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
         LLVM_DEBUG(dbgs() << "NARY: Found common sub-expr: " << *R1MinMax
                           << "\n");
 
-        R1Expr = SE->getUnknown(R1MinMax);
-        SmallVector<const SCEV *, 2> Ops2{ RHSExpr, R1Expr };
+        SmallVector<const SCEV *, 2> Ops2{SE->getUnknown(C),
+                                          SE->getUnknown(R1MinMax)};
         const SCEV *R2Expr = SE->getMinMaxExpr(SCEVType, Ops2);
 
         Value *NewMinMax = Expander.expandCodeFor(R2Expr, I->getType(), I);
