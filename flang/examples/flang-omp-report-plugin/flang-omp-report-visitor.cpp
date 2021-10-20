@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang-omp-report-visitor.h"
+#include "llvm/ADT/StringExtras.h"
 
 namespace Fortran {
 namespace parser {
@@ -26,23 +27,24 @@ bool operator!=(const LogRecord &a, const LogRecord &b) { return !(a == b); }
 
 std::string OpenMPCounterVisitor::normalize_construct_name(std::string s) {
   std::transform(s.begin(), s.end(), s.begin(),
-      [](unsigned char c) { return std::tolower(c); });
+      [](unsigned char c) { return llvm::toLower(c); });
   return s;
 }
-ClauseInfo OpenMPCounterVisitor::normalize_clause_name(const std::string &s) {
+ClauseInfo OpenMPCounterVisitor::normalize_clause_name(
+    const llvm::StringRef s) {
   std::size_t start = s.find('(');
   std::size_t end = s.find(')');
   std::string clauseName;
-  if (start != std::string::npos && end != std::string::npos) {
+  if (start != llvm::StringRef::npos && end != llvm::StringRef::npos) {
     clauseName = s.substr(0, start);
     clauseDetails = s.substr(start + 1, end - start - 1);
   } else {
     clauseName = s;
   }
   std::transform(clauseName.begin(), clauseName.end(), clauseName.begin(),
-      [](unsigned char c) { return std::tolower(c); });
+      [](unsigned char c) { return llvm::toLower(c); });
   std::transform(clauseDetails.begin(), clauseDetails.end(),
-      clauseDetails.begin(), [](unsigned char c) { return std::tolower(c); });
+      clauseDetails.begin(), [](unsigned char c) { return llvm::toLower(c); });
   return ClauseInfo{clauseName, clauseDetails};
 }
 SourcePosition OpenMPCounterVisitor::getLocation(const OmpWrapperType &w) {
