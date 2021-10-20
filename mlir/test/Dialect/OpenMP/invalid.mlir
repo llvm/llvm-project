@@ -296,19 +296,9 @@ func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
 
 // -----
 
-func @omp_critical1() -> () {
-  // expected-error @below {{must specify a name unless the effect is as if no hint is specified}}
-  omp.critical hint(nonspeculative) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
 func @omp_critical2() -> () {
   // expected-error @below {{expected symbol reference @excl to point to a critical declaration}}
-  omp.critical(@excl) hint(speculative) {
+  omp.critical(@excl) {
     omp.terminator
   }
   return
@@ -316,32 +306,15 @@ func @omp_critical2() -> () {
 
 // -----
 
-omp.critical.declare @mutex
-func @omp_critical() -> () {
-  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
-  omp.critical(@mutex) hint(uncontended, contended) {
-    omp.terminator
-  }
-  return
-}
+// expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+omp.critical.declare @mutex hint(uncontended, contended)
 
 // -----
 
-omp.critical.declare @mutex
-func @omp_critical() -> () {
-  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
-  omp.critical(@mutex) hint(nonspeculative, speculative) {
-    omp.terminator
-  }
-  return
-}
+// expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
+omp.critical.declare @mutex hint(nonspeculative, speculative)
 
 // -----
 
-omp.critical.declare @mutex
-func @omp_critica() -> () {
-  // expected-error @below {{invalid_hint is not a valid hint}}
-  omp.critical(@mutex) hint(invalid_hint) {
-    omp.terminator
-  }
-}
+// expected-error @below {{invalid_hint is not a valid hint}}
+omp.critical.declare @mutex hint(invalid_hint)
