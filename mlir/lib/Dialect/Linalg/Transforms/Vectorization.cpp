@@ -1505,7 +1505,7 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
   ///    Iters: ({Par(), Par(), Par(), Red(), Red()})
   ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
   /// ```
-  /// w and kw are unrolled.
+  /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is > 1.
   FailureOr<Operation *> conv() {
     if (!valid)
@@ -1520,47 +1520,50 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
     vector::TransferWriteOp write;
     Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
 
+    int64_t wSizeStep = strideW == 1 ? wSize : 1;
+
     // Unroll along kw and read slices of lhs and rhs.
     // Alternatively we could preload both 3-d slices and extract smaller slices
     // iteratively without touching memory. But this will quickly spill.
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      // Read rhs slice of size {1, c, f} @ [kw, 0, 0].
+      // Read rhs slice of size {c, f} @ [kw, 0, 0].
       Value kwVal = builder.create<arith::ConstantIndexOp>(loc, kw);
       VectorType rhsType =
-          VectorType::get({1, cSize, fSize}, rhsShapedType.getElementType());
+          VectorType::get({cSize, fSize}, rhsShapedType.getElementType());
       Value rhs = builder.create<vector::TransferReadOp>(
           loc, rhsType, rhsShaped, ValueRange{kwVal, zero, zero});
 
-      for (int64_t w = 0; w < wSize; ++w) {
-        // Read lhs slice of size {n, 1, c} @ [0, sw * w + dw * kw, 0].
+      for (int64_t w_iv = 0; w_iv < wSize; w_iv += wSizeStep) {
+        // Read lhs slice of size {n, wSizeStep, c}
+        //   @ [0, sw * w + dw * kw, 0].
         Value lhsStridedIdx = builder.create<arith::ConstantIndexOp>(
-            loc, strideW * w + dilationW * kw);
-        VectorType lhsType =
-            VectorType::get({nSize, 1, cSize}, lhsShapedType.getElementType());
+            loc, strideW * w_iv + dilationW * kw);
+        VectorType lhsType = VectorType::get({nSize, wSizeStep, cSize},
+                                             lhsShapedType.getElementType());
         Value lhs = builder.create<vector::TransferReadOp>(
             loc, lhsType, lhsShaped, ValueRange{zero, lhsStridedIdx, zero});
 
-        // Read res slice: {n, 1, f} @ [0, w, 0].
-        Value wVal = builder.create<arith::ConstantIndexOp>(loc, w);
-        VectorType resType =
-            VectorType::get({nSize, 1, fSize}, resShapedType.getElementType());
+        // Read res slice: {n, wSizeStep, f} @ [0, w, 0].
+        Value wVal = builder.create<arith::ConstantIndexOp>(loc, w_iv);
+        VectorType resType = VectorType::get({nSize, wSizeStep, fSize},
+                                             resShapedType.getElementType());
         // When operating on tensors, reading from the updated value is required
         // for vector.transfer_read/write hoisting to function as expected.
         Value res = builder.create<vector::TransferReadOp>(
             loc, resType, resShaped, ValueRange{zero, wVal, zero});
 
-        // Compute contraction: I{n, 1, c} * F{1, c, f} -> O{n, 1, f}
+        // Compute contraction: I{n, w, c} * F{c, f} -> O{n, w, f}
         StringRef par = Par().strRef, red = Red().strRef;
-        AffineExpr n, one, f, c;
-        bindDims(ctx, n, one, f, c);
+        AffineExpr n, w, f, c;
+        bindDims(ctx, n, w, f, c);
         // clang-format off
         res = builder.create<vector::ContractionOp>(
           loc, lhs, rhs, res,
-          /*indexingMaps=*/MapList{{n, one, c}, {one, c, f}, {n, one, f}},
+          /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
           /*iteratorTypes=*/ArrayRef<StringRef>{par, par, par, red});
         // clang-format on
 
-        // Write back res slice: {n, 1, f} @ [0, w, 0].
+        // Write back res slice: {n, wSizeStep, f} @ [0, w, 0].
         write = builder.create<vector::TransferWriteOp>(
             loc, res, resShaped, ValueRange{zero, wVal, zero});
         if (write.getNumResults() == 1)
