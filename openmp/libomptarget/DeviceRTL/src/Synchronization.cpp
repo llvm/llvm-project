@@ -132,6 +132,8 @@ void syncWarp(__kmpc_impl_lanemask_t) {
 
 void syncThreads() { __builtin_amdgcn_s_barrier(); }
 
+void syncThreadsAligned() { syncThreads(); }
+
 void fenceTeam(int Ordering) { __builtin_amdgcn_fence(Ordering, "workgroup"); }
 
 void fenceKernel(int Ordering) { __builtin_amdgcn_fence(Ordering, "agent"); }
@@ -178,6 +180,8 @@ void syncThreads() {
   constexpr int BarrierNo = 8;
   asm volatile("barrier.sync %0;" : : "r"(BarrierNo) : "memory");
 }
+
+void syncThreadsAligned() { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
 constexpr uint32_t UNSET = 0;
@@ -227,6 +231,8 @@ void synchronize::warp(LaneMaskTy Mask) { impl::syncWarp(Mask); }
 
 void synchronize::threads() { impl::syncThreads(); }
 
+void synchronize::threadsAligned() { impl::syncThreadsAligned(); }
+
 void fence::team(int Ordering) { impl::fenceTeam(Ordering); }
 
 void fence::kernel(int Ordering) { impl::fenceKernel(Ordering); }
@@ -238,7 +244,7 @@ uint32_t atomic::load(uint32_t *Addr, int Ordering) {
 }
 
 void atomic::store(uint32_t *Addr, uint32_t V, int Ordering) {
-   impl::atomicStore(Addr, V, Ordering);
+  impl::atomicStore(Addr, V, Ordering);
 }
 
 uint32_t atomic::inc(uint32_t *Addr, uint32_t V, int Ordering) {
@@ -275,7 +281,7 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
 
 __attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
                                                           int32_t TId) {
-  synchronize::threads();
+  synchronize::threadsAligned();
 }
 
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {

@@ -69,7 +69,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true);
-    synchronize::threads();
+    synchronize::threadsAligned();
   } else {
     inititializeRuntime(/* IsSPMD */ false);
     // No need to wait since only the main threads will execute user

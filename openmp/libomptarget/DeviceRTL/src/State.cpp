@@ -41,8 +41,8 @@ namespace {
 ///{
 
 extern "C" {
-void *malloc(uint64_t Size);
-void free(void *Ptr);
+__attribute__((leaf)) void *malloc(uint64_t Size);
+__attribute__((leaf)) void free(void *Ptr);
 }
 
 ///}

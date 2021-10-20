@@ -93,18 +93,36 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
   if (mapping::isSPMDMode()) {
-    synchronize::threads();
+    // Avoid the race between the read of the `icv::Level` above and the write
+    // below by synchronizing all threads here.
+    synchronize::threadsAligned();
     {
+      // Note that the order here is important. `icv::Level` has to be updated
+      // last or the other updates will cause a thread specific state to be
+      // created.
       state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
                                             1u, TId == 0);
       state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0);
       state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0);
-      synchronize::threads();
+
+      // Synchronize all threads after the main thread (TId == 0) set up the
+      // team state properly.
+      synchronize::threadsAligned();
+
+      ASSERT(state::ParallelTeamSize == NumThreads);
+      ASSERT(icv::ActiveLevel == 1u);
+      ASSERT(icv::Level == 1u);
 
       if (TId < NumThreads)
         invokeMicrotask(TId, 0, fn, args, nargs);
-      synchronize::threads();
+
+      // Synchronize all threads at the end of a parallel region.
+      synchronize::threadsAligned();
     }
+
+    ASSERT(state::ParallelTeamSize == 1u);
+    ASSERT(icv::ActiveLevel == 0u);
+    ASSERT(icv::Level == 0u);
     return;
   }
 
@@ -130,6 +148,9 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   }
 
   {
+    // Note that the order here is important. `icv::Level` has to be updated
+    // last or the other updates will cause a thread specific state to be
+    // created.
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
                                           1u, true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
