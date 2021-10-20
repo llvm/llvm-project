@@ -210,6 +210,7 @@ struct CommonConfig {
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
+  std::vector<StringRef> UpdateSection;
 
   // Section matchers
   NameMatcher KeepSection;

@@ -2107,6 +2107,17 @@ template <class ELFT> void ELFWriter<ELFT>::writeSegmentData() {
                 Size);
   }
 
+  for (auto it : Obj.getUpdatedSections()) {
+    SectionBase *Sec = it.first;
+    ArrayRef<uint8_t> Data = it.second;
+
+    auto *Parent = Sec->ParentSegment;
+    assert(Parent && "This section should've been part of a segment.");
+    uint64_t Offset =
+        Sec->OriginalOffset - Parent->OriginalOffset + Parent->Offset;
+    llvm::copy(Data, Buf->getBufferStart() + Offset);
+  }
+
   // Iterate over removed sections and overwrite their old data with zeroes.
   for (auto &Sec : Obj.removedSections()) {
     Segment *Parent = Sec.ParentSegment;
@@ -2123,6 +2134,37 @@ ELFWriter<ELFT>::ELFWriter(Object &Obj, raw_ostream &Buf, bool WSH,
                            bool OnlyKeepDebug)
     : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs),
       OnlyKeepDebug(OnlyKeepDebug) {}
+
+Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
+  auto It = llvm::find_if(Sections,
+                          [&](const SecPtr &Sec) { return Sec->Name == Name; });
+  if (It == Sections.end())
+    return createStringError(errc::invalid_argument, "section '%s' not found",
+                             Name.str().c_str());
+
+  auto *OldSec = It->get();
+  if (!OldSec->hasContents())
+    return createStringError(
+        errc::invalid_argument,
+        "section '%s' can't be updated because it does not have contents",
+        Name.str().c_str());
+
+  if (Data.size() > OldSec->Size && OldSec->ParentSegment)
+    return createStringError(errc::invalid_argument,
+                             "cannot fit data of size %zu into section '%s' "
+                             "with size %zu that is part of a segment",
+                             Data.size(), Name.str().c_str(), OldSec->Size);
+
+  if (!OldSec->ParentSegment) {
+    *It = std::make_unique<OwnedDataSection>(*OldSec, Data);
+  } else {
+    // The segment writer will be in charge of updating these contents.
+    OldSec->Size = Data.size();
+    UpdatedSections[OldSec] = Data;
+  }
+
+  return Error::success();
+}
 
 Error Object::removeSections(
     bool AllowBrokenLinks, std::function<bool(const SectionBase &)> ToRemove) {

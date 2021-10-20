@@ -880,6 +880,17 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           "bad format for --add-section: missing file name");
     Config.AddSection.push_back(ArgValue);
   }
+  for (auto Arg : InputArgs.filtered(OBJCOPY_update_section)) {
+    StringRef ArgValue(Arg->getValue());
+    if (!ArgValue.contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --update-section: missing '='");
+    if (ArgValue.split("=").second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --update-section: missing file name");
+    Config.UpdateSection.push_back(ArgValue);
+  }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_dump_section)) {
     StringRef Value(Arg->getValue());
     if (Value.split('=').second.empty())
