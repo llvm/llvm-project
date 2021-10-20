@@ -90,5 +90,17 @@ int main(int, char**)
     assert(test_allocator<A>::count == 0);
     assert(test_allocator<A>::alloc_count == 0);
 
+#if TEST_STD_VER > 14
+    {
+        std::shared_ptr<const A[]> p;
+        A* ptr = new A[8];
+        p.reset(ptr, CDeleter<A[]>(), test_allocator<A[]>());
+        assert(A::count == 8);
+        assert(p.use_count() == 1);
+        assert(p.get() == ptr);
+    }
+    assert(A::count == 0);
+#endif
+
   return 0;
 }
