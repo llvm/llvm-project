@@ -3195,7 +3195,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
       const Expr *ArgE = Call->getArgExpr(0)->IgnoreParenCasts();
       if (const DeclRefExpr *ArgDRE = dyn_cast<DeclRefExpr>(ArgE))
         if (const VarDecl *D = dyn_cast<VarDecl>(ArgDRE->getDecl()))
-          if (D->getCanonicalDecl()->getName().find("std") != StringRef::npos)
+          if (D->getCanonicalDecl()->getName().contains("std"))
             return true;
     }
   }

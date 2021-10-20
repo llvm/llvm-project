@@ -789,7 +789,7 @@ bool GenericTaintChecker::isStdin(const Expr *E, CheckerContext &C) {
   // variable named stdin with the proper type.
   if (const auto *D = dyn_cast_or_null<VarDecl>(DeclReg->getDecl())) {
     D = D->getCanonicalDecl();
-    if ((D->getName().find("stdin") != StringRef::npos) && D->isExternC()) {
+    if (D->getName().contains("stdin") && D->isExternC()) {
       const auto *PtrTy = dyn_cast<PointerType>(D->getType().getTypePtr());
       if (PtrTy && PtrTy->getPointeeType().getCanonicalType() ==
                        C.getASTContext().getFILEType().getCanonicalType())
@@ -816,7 +816,7 @@ static bool getPrintfFormatArgumentNum(const CallEvent &Call,
   }
 
   // Or if a function is named setproctitle (this is a heuristic).
-  if (C.getCalleeName(FDecl).find("setproctitle") != StringRef::npos) {
+  if (C.getCalleeName(FDecl).contains("setproctitle")) {
     ArgNum = 0;
     return true;
   }
