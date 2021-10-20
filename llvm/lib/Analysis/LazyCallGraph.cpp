@@ -1961,6 +1961,47 @@ void LazyCallGraph::buildRefSCCs() {
       });
 }
 
+void LazyCallGraph::visitReferences(SmallVectorImpl<Constant *> &Worklist,
+                                    SmallPtrSetImpl<Constant *> &Visited,
+                                    function_ref<void(Function &)> Callback) {
+  while (!Worklist.empty()) {
+    Constant *C = Worklist.pop_back_val();
+
+    if (Function *F = dyn_cast<Function>(C)) {
+      if (!F->isDeclaration())
+        Callback(*F);
+      continue;
+    }
+
+    // The blockaddress constant expression is a weird special case, we can't
+    // generically walk its operands the way we do for all other constants.
+    if (BlockAddress *BA = dyn_cast<BlockAddress>(C)) {
+      // If we've already visited the function referred to by the block
+      // address, we don't need to revisit it.
+      if (Visited.count(BA->getFunction()))
+        continue;
+
+      // If all of the blockaddress' users are instructions within the
+      // referred to function, we don't need to insert a cycle.
+      if (llvm::all_of(BA->users(), [&](User *U) {
+            if (Instruction *I = dyn_cast<Instruction>(U))
+              return I->getFunction() == BA->getFunction();
+            return false;
+          }))
+        continue;
+
+      // Otherwise we should go visit the referred to function.
+      Visited.insert(BA->getFunction());
+      Worklist.push_back(BA->getFunction());
+      continue;
+    }
+
+    for (Value *Op : C->operand_values())
+      if (Visited.insert(cast<Constant>(Op)).second)
+        Worklist.push_back(cast<Constant>(Op));
+  }
+}
+
 AnalysisKey LazyCallGraphAnalysis::Key;
 
 LazyCallGraphPrinterPass::LazyCallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
