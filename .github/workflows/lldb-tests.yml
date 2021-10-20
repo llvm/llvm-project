@@ -29,7 +29,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Workaround for build faliure on Mac OS X: llvm.org/PR46190, https://github.com/actions/virtual-environments/issues/2274
     env:
-      CPLUS_INCLUDE_PATH: /usr/local/opt/llvm/include/c++/v1:/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include
+      CPLUS_INCLUDE_PATH: /usr/local/opt/llvm/include/c++/v1:/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk/usr/include
     strategy:
       fail-fast: false
       matrix:
