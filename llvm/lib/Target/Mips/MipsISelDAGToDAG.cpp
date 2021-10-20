@@ -328,6 +328,19 @@ void MipsDAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
+  case ISD::Constant: {
+    auto *ConstNode = cast<ConstantSDNode>(Node);
+    MVT VT = Node->getSimpleValueType(0);
+    if (Subtarget->hasNanoMips() && VT == MVT::i32 &&
+        ConstNode->isNullValue()) {
+      SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(Node),
+                                           Mips::ZERO_NM, MVT::i32);
+      ReplaceNode(Node, New.getNode());
+      return;
+    }
+    break;
+  }
+
   // Get target GOT address.
   case ISD::GLOBAL_OFFSET_TABLE:
     ReplaceNode(Node, getGlobalBaseReg());

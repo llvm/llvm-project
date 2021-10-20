@@ -299,11 +299,6 @@ def ROTR_NM : ArithLogicINM<"rotr", uimm5_nm, GPR32NMOpnd, imm32ZExt5, rotr>;
 def EXT_NM : ExtBaseNM;
 def INS_NM : InsBaseNM;
 
-// Use $zero for 0, instead of allocating a separate register for 0 immediate.
-def : NMPat<
- (MipsIns (i32 0), immZExt5:$pos, immZExt5Plus1:$size, GPR32NMOpnd:$src),
- (INS_NM ZERO_NM, immZExt5:$pos, immZExt5Plus1:$size, GPR32NMOpnd:$src)>;
-
 def ADDiu_NM : ArithLogicINM<"addiu", uimm16_simm12, GPR32NMOpnd,
                              imm32SExt12OrZExt16, add>;
 
@@ -555,27 +550,6 @@ def MOVE_NM : InstNM<(outs GPR32NMOpnd:$rt), (ins GPR32NMOpnd:$rs),
 
 }
 
-// Store zero peephole optimizations.
-multiclass StoreZero<Instruction GenericOp, Instruction NMOpU12,
-                     Instruction NMOpS9, Instruction NMOpIdx> {
-  def : NMPat<(GenericOp (i32 0), addruimm12:$addr),
-              (NMOpU12 ZERO_NM, addruimm12:$addr)>;
-  def : NMPat<(GenericOp (i32 0), addrsimm9:$addr),
-              (NMOpS9 ZERO_NM, addrsimm9:$addr)>;
-  def : NMPat<(GenericOp (i32 0), addrindexed:$addr),
-              (NMOpIdx ZERO_NM, addrindexed:$addr)>;
-  def : NMPat<(GenericOp (i32 0), GPR32NM:$rs),
-              (NMOpU12 ZERO_NM, GPR32NM:$rs, 0)>;
-}
-defm : StoreZero<store, SW_NM, SWs9_NM, SWX_NM>;
-defm : StoreZero<truncstorei16, SH_NM, SHs9_NM, SHX_NM>;
-defm : StoreZero<truncstorei8, SB_NM, SBs9_NM, SBX_NM>;
-
-def : NMPat<(store (i32 0), addrindexedlsl2:$rs),
-            (SWXS_NM ZERO_NM, addrindexedlsl2:$rs)>;
-def : NMPat<(truncstorei16 (i32 0), addrindexedlsl1:$rs),
-            (SHXS_NM ZERO_NM, addrindexedlsl1:$rs)>;
-
 // Catching out-of-range immediate loads/stores.
 def : NMPat<(i32 (extloadi8 GPR32NM:$rs)), (LBU_NM GPR32NM:$rs, 0)>;
 def : NMPat<(i32 (zextloadi8 GPR32NM:$rs)), (LBU_NM GPR32NM:$rs, 0)>;
@@ -610,16 +584,6 @@ def : NMPat<(i32 (NMUnalignedLH GPR32NM:$rs, GPR32NM:$src)),
             (UALH_NM GPR32NM:$rs, 0, GPR32NM:$src)>;
 def : NMPat<(NMUnalignedSH GPR32NM:$rt, GPR32NM:$rs),
             (UASH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>;
-
-// Unaligned: Store zero peephole optimization.
-def : NMPat<(NMUnalignedSW (i32 0), addrsimm9:$addr),
-            (UASW_NM ZERO_NM, addrsimm9:$addr)>;
-def : NMPat<(NMUnalignedSH (i32 0), addrsimm9:$addr),
-            (UASH_NM ZERO_NM, addrsimm9:$addr)>;
-def : NMPat<(NMUnalignedSW (i32 0), GPR32NM:$rs),
-            (UASW_NM ZERO_NM, GPR32NM:$rs, 0)>;
-def : NMPat<(NMUnalignedSH (i32 0), GPR32NM:$rs),
-            (UASH_NM ZERO_NM, GPR32NM:$rs, 0)>;
 
 // GP-relative load.
 def : NMPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
