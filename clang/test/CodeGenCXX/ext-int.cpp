@@ -10,7 +10,9 @@
 // RUN: %clang_cc1 -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN32,NoNewStructPathTBAA
 // RUN: %clang_cc1 -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -new-struct-path-tbaa -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN,WIN32,NewStructPathTBAA
 
-#include <typeinfo>
+namespace std {
+  class type_info { public: virtual ~type_info(); private: const char * name; };
+} // namespace std
 
 // Ensure that the layout for these structs is the same as the normal bitfield
 // layouts.
