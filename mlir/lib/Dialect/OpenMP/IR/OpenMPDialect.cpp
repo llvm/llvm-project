@@ -1110,14 +1110,11 @@ static LogicalResult verifyWsLoopOp(WsLoopOp op) {
 // Verifier for critical construct (2.17.1)
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyCriticalOp(CriticalOp op) {
+static LogicalResult verifyCriticalDeclareOp(CriticalDeclareOp op) {
+  return verifySynchronizationHint(op, op.hint());
+}
 
-  if (failed(verifySynchronizationHint(op, op.hint()))) {
-    return failure();
-  }
-  if (!op.name().hasValue() && (op.hint() != 0))
-    return op.emitOpError() << "must specify a name unless the effect is as if "
-                               "no hint is specified";
+static LogicalResult verifyCriticalOp(CriticalOp op) {
 
   if (op.nameAttr()) {
     auto symbolRef = op.nameAttr().cast<SymbolRefAttr>();

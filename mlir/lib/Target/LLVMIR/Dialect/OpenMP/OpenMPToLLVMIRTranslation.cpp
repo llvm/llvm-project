@@ -300,8 +300,19 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(
       builder.saveIP(), builder.getCurrentDebugLocation());
   llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
-  llvm::Constant *hint = llvm::ConstantInt::get(
-      llvm::Type::getInt32Ty(llvmContext), static_cast<int>(criticalOp.hint()));
+  llvm::Constant *hint = nullptr;
+
+  // If it has a name, it probably has a hint too.
+  if (criticalOp.nameAttr()) {
+    // The verifiers in OpenMP Dialect guarentee that all the pointers are
+    // non-null
+    auto symbolRef = criticalOp.nameAttr().cast<SymbolRefAttr>();
+    auto criticalDeclareOp =
+        SymbolTable::lookupNearestSymbolFrom<omp::CriticalDeclareOp>(criticalOp,
+                                                                     symbolRef);
+    hint = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                                  static_cast<int>(criticalDeclareOp.hint()));
+  }
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createCritical(
       ompLoc, bodyGenCB, finiCB, criticalOp.name().getValueOr(""), hint));
   return success();

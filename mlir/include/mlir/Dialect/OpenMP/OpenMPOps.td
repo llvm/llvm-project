@@ -362,9 +362,14 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
     The name can be used in critical constructs in the dialect.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       DefaultValuedAttr<I64Attr, "0">:$hint);
 
-  let assemblyFormat = "$sym_name attr-dict";
+  let assemblyFormat = [{
+    $sym_name custom<SynchronizationHint>($hint) attr-dict
+  }];
+
+  let verifier = "return verifyCriticalDeclareOp(*this);";
 }
 
 
@@ -375,13 +380,12 @@ def CriticalOp : OpenMP_Op<"critical"> {
     block (region) to be executed by only a single thread at a time.
   }];
 
-  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
-                       DefaultValuedAttr<I64Attr, "0">:$hint);
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
-    (`(` $name^ `)`)? custom<SynchronizationHint>($hint) $region attr-dict
+    (`(` $name^ `)`)? $region attr-dict
   }];
 
   let verifier = "return ::verifyCriticalOp(*this);";
