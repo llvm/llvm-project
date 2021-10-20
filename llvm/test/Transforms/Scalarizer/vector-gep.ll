@@ -1,4 +1,3 @@
-; RUN: opt -S -scalarizer %s | FileCheck %s
 ; RUN: opt -S -passes='function(scalarizer)' %s | FileCheck %s
 
 ; Check that the scalarizer can handle vector GEPs with scalar indices
