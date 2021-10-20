@@ -236,11 +236,19 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     }
   }
 
-  if ((ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
-       ISD == ISD::UREM) &&
+  if ((ISD == ISD::MUL || ISD == ISD::SDIV || ISD == ISD::SREM ||
+       ISD == ISD::UDIV || ISD == ISD::UREM) &&
       (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
        Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
+    // Vector multiply by pow2 will be simplified to shifts.
+    if (ISD == ISD::MUL) {
+      InstructionCost Cost = getArithmeticInstrCost(
+          Instruction::Shl, Ty, CostKind, Op1Info, Op2Info,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+      return Cost;
+    }
+
     if (ISD == ISD::SDIV || ISD == ISD::SREM) {
       // On X86, vector signed division by constants power-of-two are
       // normally expanded to the sequence SRA + SRL + ADD + SRA.
