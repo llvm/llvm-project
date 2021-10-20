@@ -85,6 +85,46 @@ addPartialRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
   }
 }
 
+static void
+addCombinedRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
+                     llvm::ArrayRef<RegData *> subregs1,
+                     llvm::ArrayRef<RegData *> subregs2, uint32_t base_size,
+                     lldb::Encoding encoding, lldb::Format format) {
+  for (auto it : llvm::zip(subregs1, subregs2)) {
+    RegData *regdata1, *regdata2;
+    std::tie(regdata1, regdata2) = it;
+    assert(regdata1);
+    assert(regdata2);
+
+    // verify that we've got matching target registers
+    if (regdata1->subreg_name != regdata2->subreg_name)
+      continue;
+
+    uint32_t base_index1 = regdata1->base_index.getValue();
+    uint32_t base_index2 = regdata2->base_index.getValue();
+    if (regs[base_index1].byte_size != base_size ||
+        regs[base_index2].byte_size != base_size)
+      continue;
+
+    lldb_private::DynamicRegisterInfo::Register new_reg{
+        lldb_private::ConstString(regdata1->subreg_name),
+        lldb_private::ConstString(),
+        lldb_private::ConstString("supplementary registers"),
+        base_size * 2,
+        LLDB_INVALID_INDEX32,
+        encoding,
+        format,
+        LLDB_INVALID_REGNUM,
+        LLDB_INVALID_REGNUM,
+        LLDB_INVALID_REGNUM,
+        LLDB_INVALID_REGNUM,
+        {base_index1, base_index2},
+        {}};
+
+    addSupplementaryRegister(regs, new_reg);
+  }
+}
+
 typedef llvm::SmallDenseMap<llvm::StringRef, llvm::SmallVector<RegData, 4>, 64>
     BaseRegToRegsMap;
 
@@ -121,19 +161,33 @@ typedef llvm::SmallDenseMap<llvm::StringRef, llvm::SmallVector<RegData, 4>, 64>
 #define STMM(n)                                                                \
   { BaseRegToRegsMap::value_type("st" #n, {{MM, "mm" #n, llvm::None}}) }
 
-BaseRegToRegsMap makeBaseRegMap(bool is64bit) {
-  BaseRegToRegsMap out{{// GPRs common to amd64 & i386
-                        GPRh("a"), GPRh("b"), GPRh("c"), GPRh("d"), GPR("si"),
-                        GPR("di"), GPR("bp"), GPR("sp"),
+#define YMM(n)                                                                 \
+  {BaseRegToRegsMap::value_type("ymm" #n "h",                                  \
+                                {{YMM_YMMh, "ymm" #n, llvm::None}})},          \
+  {                                                                            \
+    BaseRegToRegsMap::value_type("xmm" #n, {{YMM_XMM, "ymm" #n, llvm::None}})  \
+  }
 
-                        // ST/MM registers
-                        STMM(0), STMM(1), STMM(2), STMM(3), STMM(4), STMM(5),
-                        STMM(6), STMM(7)}};
+BaseRegToRegsMap makeBaseRegMap(bool is64bit) {
+  BaseRegToRegsMap out{
+      {// GPRs common to amd64 & i386
+       GPRh("a"), GPRh("b"), GPRh("c"), GPRh("d"), GPR("si"), GPR("di"),
+       GPR("bp"), GPR("sp"),
+
+       // ST/MM registers
+       STMM(0), STMM(1), STMM(2), STMM(3), STMM(4), STMM(5), STMM(6), STMM(7),
+
+       // lower YMM registers (common to amd64 & i386)
+       YMM(0), YMM(1), YMM(2), YMM(3), YMM(4), YMM(5), YMM(6), YMM(7)}};
 
   if (is64bit) {
     BaseRegToRegsMap amd64_regs{{// GPRs specific to amd64
                                  GPR64(8), GPR64(9), GPR64(10), GPR64(11),
-                                 GPR64(12), GPR64(13), GPR64(14), GPR64(15)}};
+                                 GPR64(12), GPR64(13), GPR64(14), GPR64(15),
+
+                                 // higher YMM registers (specific to amd64)
+                                 YMM(8), YMM(9), YMM(10), YMM(11), YMM(12),
+                                 YMM(13), YMM(14), YMM(15)}};
     out.insert(amd64_regs.begin(), amd64_regs.end());
   }
 
@@ -197,4 +251,7 @@ void ABIX86::AugmentRegisterInfo(
 
   addPartialRegisters(regs, subreg_by_kind[MM], 10, eEncodingUint, eFormatHex,
                       8);
+
+  addCombinedRegisters(regs, subreg_by_kind[YMM_XMM], subreg_by_kind[YMM_YMMh],
+                       16, eEncodingVector, eFormatVectorOfUInt8);
 }
