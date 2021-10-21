@@ -67,6 +67,32 @@ define void @NormalArg(i32 noundef %a) nounwind uwtable sanitize_memory {
   ret void
 }
 
+define void @NormalArgAfterNoUndef(i32 noundef %a, i32 %b) nounwind uwtable sanitize_memory {
+; CHECK-LABEL: @NormalArgAfterNoUndef(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to i32*
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[P]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i32*
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[TMP5]], align 4
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK:       8:
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP7]], align 4
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p = inttoptr i64 0 to i32 *
+  store i32 %b, i32 *%p
+  ret void
+}
+
 define void @PartialArg(i32 %a) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @PartialArg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
@@ -102,6 +128,19 @@ define void @CallNormal() nounwind uwtable sanitize_memory {
 ;
   %r = call i32 @NormalRet() nounwind uwtable sanitize_memory
   call void @NormalArg(i32 %r) nounwind uwtable sanitize_memory
+  ret void
+}
+
+define void @CallNormalArgAfterNoUndef() nounwind uwtable sanitize_memory {
+; CHECK-LABEL: @CallNormalArgAfterNoUndef(
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[R:%.*]] = call i32 @NormalRet() #[[ATTR0]]
+; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
+; CHECK-NEXT:    call void @NormalArgAfterNoUndef(i32 [[R]], i32 [[R]]) #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+  %r = call i32 @NormalRet() nounwind uwtable sanitize_memory
+  call void @NormalArgAfterNoUndef(i32 %r, i32 %r) nounwind uwtable sanitize_memory
   ret void
 }
 
