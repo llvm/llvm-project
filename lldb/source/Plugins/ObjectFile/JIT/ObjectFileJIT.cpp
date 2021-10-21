@@ -111,6 +111,7 @@ Symtab *ObjectFileJIT::GetSymtab() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_symtab_up == nullptr) {
+      ElapsedTime elapsed(module_sp->GetSymtabParseTime());
       m_symtab_up = std::make_unique<Symtab>(this);
       std::lock_guard<std::recursive_mutex> symtab_guard(
           m_symtab_up->GetMutex());

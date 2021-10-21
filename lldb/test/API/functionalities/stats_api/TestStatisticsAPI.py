@@ -28,11 +28,16 @@ class TestStatsAPI(TestBase):
         stats = target.GetStatistics()
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
-        stats_json = json.loads(stream.GetData())
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual('targets' in debug_stats, True,
+                'Make sure the "targets" key in in target.GetStatistics()')
+        self.assertEqual('modules' in debug_stats, True,
+                'Make sure the "modules" key in in target.GetStatistics()')
+        stats_json = debug_stats['targets'][0]
         self.assertEqual('expressionEvaluation' in stats_json, True,
-                'Make sure the "expressionEvaluation" key in in target.GetStatistics()')
+                'Make sure the "expressionEvaluation" key in in target.GetStatistics()["targets"][0]')
         self.assertEqual('frameVariable' in stats_json, True,
-                'Make sure the "frameVariable" key in in target.GetStatistics()')
+                'Make sure the "frameVariable" key in in target.GetStatistics()["targets"][0]')
         expressionEvaluation = stats_json['expressionEvaluation']
         self.assertEqual('successes' in expressionEvaluation, True,
                 'Make sure the "successes" key in in "expressionEvaluation" dictionary"')
