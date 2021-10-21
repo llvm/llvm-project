@@ -254,7 +254,7 @@ function(add_compiler_rt_runtime name type)
       if(COMPILER_RT_USE_BUILTINS_LIBRARY AND NOT type STREQUAL "OBJECT" AND
          NOT name STREQUAL "clang_rt.builtins")
         get_compiler_rt_target(${arch} target)
-        find_compiler_rt_library(builtins builtins_${libname} TARGET ${target})
+        find_compiler_rt_library(builtins ${target} builtins_${libname})
         if(builtins_${libname} STREQUAL "NOTFOUND")
           message(FATAL_ERROR "Cannot find builtins library for the target architecture")
         endif()
