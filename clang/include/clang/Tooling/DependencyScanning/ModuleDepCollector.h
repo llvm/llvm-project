@@ -102,7 +102,7 @@ struct ModuleDeps {
   bool ImportedByMainFile = false;
 
   /// Compiler invocation that can be used to build this module (without paths).
-  CompilerInvocation Invocation;
+  CompilerInvocation BuildInvocation;
 
   /// Gets the canonical command line suitable for passing to clang.
   ///
