@@ -1,6 +1,6 @@
-; REQUIRES: x86
+; REQUIRES: x86, shell
 ; RUN: rm -rf %t; split-file %s %t
-;
+
 ; RUN: llvm-as %t/framework.ll -o %t/framework.o
 ; RUN: %lld -lSystem %t/framework.o -o %t/frame
 ; RUN: llvm-otool -l %t/frame | FileCheck --check-prefix=FRAME %s \
