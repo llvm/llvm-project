@@ -274,7 +274,7 @@ def get_remarks(input_file, filter_=None):
     file_remarks = defaultdict(functools.partial(defaultdict, list))
 
     with io.open(input_file, encoding = 'utf-8') as f:
-        docs = yaml.load_all(f, Loader=Loader)
+        docs = yaml.safe_load_all(f, Loader=Loader)
 
         filter_e = None
         if filter_:
