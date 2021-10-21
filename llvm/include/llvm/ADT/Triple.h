@@ -384,6 +384,9 @@ public:
   /// triple.
   StringRef getArchName() const;
 
+  /// getArchName - Get the architecture name based on Kind and SubArch.
+  StringRef getArchName(ArchType Kind, SubArchType SubArch = NoSubArch) const;
+
   /// getVendorName - Get the vendor (second) component of the triple.
   StringRef getVendorName() const;
 
@@ -838,7 +841,7 @@ public:
 
   /// setArch - Set the architecture (first) component of the triple
   /// to a known type.
-  void setArch(ArchType Kind);
+  void setArch(ArchType Kind, SubArchType SubArch = NoSubArch);
 
   /// setVendor - Set the vendor (second) component of the triple to a
   /// known type.
