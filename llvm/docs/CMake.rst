@@ -491,7 +491,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   This feature allows to have one build for only LLVM and another for clang+llvm
   using the same source checkout.
   The full list is:
-  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;openmp;parallel-libs;polly;pstl``
+  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;openmp;polly;pstl``
 
 **LLVM_ENABLE_RUNTIMES**:STRING
   Build libc++, libc++abi or other projects using that a just-built compiler.

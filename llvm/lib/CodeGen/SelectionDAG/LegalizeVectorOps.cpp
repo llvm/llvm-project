@@ -1101,13 +1101,23 @@ SDValue VectorLegalizer::ExpandBSWAP(SDNode *Node) {
   EVT ByteVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, ShuffleMask.size());
 
   // Only emit a shuffle if the mask is legal.
-  if (!TLI.isShuffleMaskLegal(ShuffleMask, ByteVT))
-    return DAG.UnrollVectorOp(Node);
+  if (TLI.isShuffleMaskLegal(ShuffleMask, ByteVT)) {
+    SDLoc DL(Node);
+    SDValue Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Node->getOperand(0));
+    Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT), ShuffleMask);
+    return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+  }
 
-  SDLoc DL(Node);
-  SDValue Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Node->getOperand(0));
-  Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT), ShuffleMask);
-  return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+  // If we have the appropriate vector bit operations, it is better to use them
+  // than unrolling and expanding each component.
+  if (TLI.isOperationLegalOrCustom(ISD::SHL, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::SRL, VT) &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::AND, VT) &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT))
+    return TLI.expandBSWAP(Node, DAG);
+
+  // Otherwise unroll.
+  return DAG.UnrollVectorOp(Node);
 }
 
 void VectorLegalizer::ExpandBITREVERSE(SDNode *Node,

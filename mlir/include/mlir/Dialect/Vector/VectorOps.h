@@ -215,6 +215,10 @@ void populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns,
     VectorTransformsOptions options = VectorTransformsOptions());
 
+/// Collect patterns to convert reduction op to vector.contract and fold
+/// transpose/broadcast ops into the contract.
+void populateVetorReductionToContractPatterns(RewritePatternSet &patterns);
+
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
 
