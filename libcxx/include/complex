@@ -1269,8 +1269,8 @@ tanh(const complex<_Tp>& __x)
     if (__libcpp_isinf_or_builtin(__x.real()))
     {
         if (!__libcpp_isfinite_or_builtin(__x.imag()))
-            return complex<_Tp>(_Tp(1), _Tp(0));
-        return complex<_Tp>(_Tp(1), copysign(_Tp(0), sin(_Tp(2) * __x.imag())));
+            return complex<_Tp>(copysign(_Tp(1), __x.real()), _Tp(0));
+        return complex<_Tp>(copysign(_Tp(1), __x.real()), copysign(_Tp(0), sin(_Tp(2) * __x.imag())));
     }
     if (__libcpp_isnan_or_builtin(__x.real()) && __x.imag() == 0)
         return __x;
