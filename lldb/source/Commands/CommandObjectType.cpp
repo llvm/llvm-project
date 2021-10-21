@@ -2978,7 +2978,7 @@ public:
   CommandObjectTypeFilter(CommandInterpreter &interpreter)
       : CommandObjectMultiword(interpreter, "type filter",
                                "Commands for operating on type filters.",
-                               "type synthetic [<sub-command-options>] ") {
+                               "type filter [<sub-command-options>] ") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTypeFilterAdd(interpreter)));
     LoadSubCommand("clear", CommandObjectSP(
