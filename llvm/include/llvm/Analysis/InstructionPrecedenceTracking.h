@@ -28,12 +28,13 @@ class BasicBlock;
 class Instruction;
 
 class InstructionPrecedenceTracking {
-  // Maps a block to the topmost instruction which *might* be a special
-  // instruction in it. This value is lazily updated on query to point to the
-  // topmost special instruction, but we allow it to point before that for
-  // efficient invalidation.  If the value is nullptr, it means that it is
-  // known that this block does not contain any special instructions.
+  // Maps a block to the topmost special instruction in it. If the value is
+  // nullptr, it means that it is known that this block does not contain any
+  // special instructions.
   DenseMap<const BasicBlock *, const Instruction *> FirstSpecialInsts;
+
+  // Fills information about the given block's special instructions.
+  void fill(const BasicBlock *BB);
 
 #ifndef NDEBUG
   /// Asserts that the cached info for \p BB is up-to-date. This helps to catch
