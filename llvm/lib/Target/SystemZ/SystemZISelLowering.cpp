@@ -1358,14 +1358,21 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Value);
   case CCValAssign::AExt:
     return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
-  case CCValAssign::BCvt:
-    // If this is a short vector argument to be stored to the stack,
+  case CCValAssign::BCvt: {
+    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128);
+    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f64 ||
+           VA.getValVT() == MVT::f128);
+    MVT BitCastToType = VA.getValVT().isVector() && VA.getLocVT() == MVT::i64
+                            ? MVT::v2i64
+                            : VA.getLocVT();
+    Value = DAG.getNode(ISD::BITCAST, DL, BitCastToType, Value);
+    // For ELF, this is a short vector argument to be stored to the stack,
     // bitcast to v2i64 and then extract first element.
-    assert(VA.getLocVT() == MVT::i64);
-    assert(VA.getValVT().isVector());
-    Value = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Value);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VA.getLocVT(), Value,
-                       DAG.getConstant(0, DL, MVT::i32));
+    if (BitCastToType == MVT::v2i64)
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VA.getLocVT(), Value,
+                         DAG.getConstant(0, DL, MVT::i32));
+    return Value;
+  }
   case CCValAssign::Full:
     return Value;
   default:
@@ -1472,6 +1479,10 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
         NumFixedFPRs += 1;
         RC = &SystemZ::FP64BitRegClass;
         break;
+      case MVT::f128:
+        NumFixedFPRs += 2;
+        RC = &SystemZ::FP128BitRegClass;
+        break;
       case MVT::v16i8:
       case MVT::v8i16:
       case MVT::v4i32:
@@ -1525,7 +1536,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
 
-  if (IsVarArg) {
+  // FIXME: Add support for lowering varargs for XPLINK64 in a later patch.
+  if (IsVarArg && Subtarget.isTargetELF()) {
     // Save the number of non-varargs registers for later use by va_start, etc.
     FuncInfo->setVarArgsFirstGPR(NumFixedGPRs);
     FuncInfo->setVarArgsFirstFPR(NumFixedFPRs);
@@ -1564,6 +1576,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     }
   }
 
+  // FIXME: For XPLINK64, Add in support for handling incoming "ADA" special
+  // register (R5)
   return Chain;
 }
 
@@ -1604,6 +1618,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   EVT PtrVT = getPointerTy(MF.getDataLayout());
   LLVMContext &Ctx = *DAG.getContext();
+  SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
+
+  // FIXME: z/OS support to be added in later.
+  if (Subtarget.isTargetXPLINK64())
+    IsTailCall = false;
 
   // Detect unsupported vector argument and return types.
   if (Subtarget.hasVector()) {
@@ -1623,6 +1642,13 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+
+  if (Subtarget.isTargetXPLINK64())
+    // Although the XPLINK specifications for AMODE64 state that minimum size
+    // of the param area is minimum 32 bytes and no rounding is otherwise
+    // specified, we round this area in 64 bytes increments to be compatible
+    // with existing compilers.
+    NumBytes = std::max(64U, (unsigned)alignTo(NumBytes, 64));
 
   // Mark the start of the call.
   if (!IsTailCall)
@@ -1674,17 +1700,24 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
     } else
       ArgValue = convertValVTToLocVT(DAG, DL, VA, ArgValue);
 
-    if (VA.isRegLoc())
+    if (VA.isRegLoc()) {
+      // In XPLINK64, for the 128-bit vararg case, ArgValue is bitcasted to a
+      // MVT::i128 type. We decompose the 128-bit type to a pair of its high
+      // and low values.
+      if (VA.getLocVT() == MVT::i128)
+        ArgValue = lowerI128ToGR128(DAG, ArgValue);
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
-    else {
+    } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
 
       // Work out the address of the stack slot.  Unpromoted ints and
       // floats are passed as right-justified 8-byte values.
       if (!StackPtr.getNode())
-        StackPtr = DAG.getCopyFromReg(Chain, DL, SystemZ::R15D, PtrVT);
-      unsigned Offset = SystemZMC::ELFCallFrameSize + VA.getLocMemOffset();
+        StackPtr = DAG.getCopyFromReg(Chain, DL,
+                                      Regs->getStackPointerRegister(), PtrVT);
+      unsigned Offset = Regs->getStackPointerBias() + Regs->getCallFrameSize() +
+                        VA.getLocMemOffset();
       if (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::f32)
         Offset += 4;
       SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
@@ -1693,6 +1726,17 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
       // Emit the store.
       MemOpChains.push_back(
           DAG.getStore(Chain, DL, ArgValue, Address, MachinePointerInfo()));
+
+      // Although long doubles or vectors are passed through the stack when
+      // they are vararg (non-fixed arguments), if a long double or vector
+      // occupies the third and fourth slot of the argument list GPR3 should
+      // still shadow the third slot of the argument list.
+      if (Subtarget.isTargetXPLINK64() && VA.needsCustom()) {
+        SDValue ShadowArgValue =
+            DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, ArgValue,
+                        DAG.getIntPtrConstant(1, DL));
+        RegsToPass.push_back(std::make_pair(SystemZ::R3D, ShadowArgValue));
+      }
     }
   }
 
@@ -1704,6 +1748,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // associated Target* opcodes.  Force %r1 to be used for indirect
   // tail calls.
   SDValue Glue;
+  // FIXME: Add support for XPLINK using the ADA register.
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
     Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);

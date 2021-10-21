@@ -224,6 +224,17 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // XPLINK64 ABI compliant code widens integral types smaller than i64
   // to i64 before placing the parameters either on the stack or in registers.
   CCIfType<[i32], CCIfExtend<CCPromoteToType<i64>>>,
+  // Promote f32 to f64 and bitcast to i64, if it needs to be passed in GPRS.
+  CCIfType<[f32], CCIfNotFixed<CCPromoteToType<f64>>>,
+  CCIfType<[f64], CCIfNotFixed<CCBitConvertToType<i64>>>,
+  // long double, can only be passed in GPR2 and GPR3, if available,
+  // hence R2Q
+  CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
+  // Non fixed vector arguments are treated in the same way as long
+  // doubles.
+  CCIfSubtarget<"hasVector()",
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+      CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>>,
 
   // A SwiftSelf is passed in callee-saved R10.
   CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R10D]>>>,
@@ -238,7 +249,7 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // The first 3 integer arguments are passed in registers R1D-R3D.
   // The rest will be passed in the user area. The address offset of the user
   // area can be found in register R4D.
-  CCIfType<[i32], CCAssignToReg<[R1L, R2L, R3L]>>,
+  CCIfType<[i64], CCCustom<"CC_XPLINK64_Shadow_Stack">>,
   CCIfType<[i64], CCAssignToReg<[R1D, R2D, R3D]>>,
 
   // The first 8 named vector arguments are passed in V24-V31.  Sub-128 vectors
@@ -249,33 +260,23 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
              CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>>,
   CCIfSubtarget<"hasVector()",
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+             CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Stack">>>>,
+  CCIfSubtarget<"hasVector()",
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
              CCIfFixed<CCAssignToReg<[V24, V25, V26, V27,
                                       V28, V29, V30, V31]>>>>,
 
   // The first 4 named  float and double arguments are passed in registers FPR0-FPR6.
   // The rest will be passed in the user area.
   CCIfType<[f32, f64], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>,
+  CCIfType<[f32, f64], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Stack">>>,
   CCIfType<[f32], CCIfFixed<CCAssignToReg<[F0S, F2S, F4S, F6S]>>>,
   CCIfType<[f64], CCIfFixed<CCAssignToReg<[F0D, F2D, F4D, F6D]>>>,
   // The first 2 long double arguments are passed in register FPR0/FPR2
   // and FPR4/FPR6. The rest will be passed in the user area.
   CCIfType<[f128], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>,
+  CCIfType<[f128], CCIfFixed<CCCustom<"CC_XPLINK64_Shadow_Stack">>>,
   CCIfType<[f128], CCIfFixed<CCAssignToReg<[F0Q, F4Q]>>>,
-
-  // Non fixed floats are passed in GPRs
-  // Promote f32 to f64, if it needs to be passed in GPRs.
-  CCIfType<[f32], CCIfNotFixed<CCPromoteToType<f64>>>,
-  // Assign f64 varargs to their proper GPRs.
-  CCIfType<[f64], CCIfNotFixed<CCAssignToReg<[R1D, R2D, R3D]>>>,
-  // long double, can only be passed in GPR2 and GPR3, if available,
-  // hence R2Q
-  CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
-
-  // Non fixed vector arguments are treated in the same way as long
-  // doubles.
-  CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-      CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>>,
 
   // Other arguments are passed in 8-byte-aligned 8-byte stack slots.
   CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>,
