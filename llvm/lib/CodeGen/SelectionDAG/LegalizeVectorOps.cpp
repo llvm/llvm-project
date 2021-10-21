@@ -783,22 +783,22 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     ExpandBITREVERSE(Node, Results);
     return;
   case ISD::CTPOP:
-    if (TLI.expandCTPOP(Node, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandCTPOP(Node, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-    if (TLI.expandCTLZ(Node, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandCTLZ(Node, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
-    if (TLI.expandCTTZ(Node, Tmp, DAG)) {
-      Results.push_back(Tmp);
+    if (SDValue Expanded = TLI.expandCTTZ(Node, DAG)) {
+      Results.push_back(Expanded);
       return;
     }
     break;
@@ -1162,9 +1162,10 @@ void VectorLegalizer::ExpandBITREVERSE(SDNode *Node,
   if (TLI.isOperationLegalOrCustom(ISD::SHL, VT) &&
       TLI.isOperationLegalOrCustom(ISD::SRL, VT) &&
       TLI.isOperationLegalOrCustomOrPromote(ISD::AND, VT) &&
-      TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT))
-    // Let LegalizeDAG handle this later.
+      TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT)) {
+    Results.push_back(TLI.expandBITREVERSE(Node, DAG));
     return;
+  }
 
   // Otherwise unroll.
   SDValue Tmp = DAG.UnrollVectorOp(Node);
