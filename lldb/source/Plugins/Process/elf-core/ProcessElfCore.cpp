@@ -252,7 +252,7 @@ Status ProcessElfCore::DoLoadCore() {
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic().GetCString()));
+        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
   return m_dyld_up.get();
 }
 

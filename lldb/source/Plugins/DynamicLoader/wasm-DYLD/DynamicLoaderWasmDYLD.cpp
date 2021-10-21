@@ -30,12 +30,7 @@ void DynamicLoaderWasmDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-ConstString DynamicLoaderWasmDYLD::GetPluginNameStatic() {
-  static ConstString g_plugin_name("wasm-dyld");
-  return g_plugin_name;
-}
-
-const char *DynamicLoaderWasmDYLD::GetPluginDescriptionStatic() {
+llvm::StringRef DynamicLoaderWasmDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
          "loads/unloads in WebAssembly engines.";
 }
