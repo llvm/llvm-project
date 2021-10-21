@@ -720,9 +720,6 @@ func @matmul(
         tensor<256x192xf32> to tensor<256x16xf32>
 
       // %4 does not match an insert_slice, it cannot be bufferized inplace and needs to alloc.
-      // CHECK: %[[T:.*]] = memref.subview %[[C]][%[[I]], %[[J]]] [8, 16] [1, 1]
-      // TODO: %4 is never read but just overwritten, this copy can be elided.
-      // CHECK: linalg.copy(%[[T]], %[[ALLOC]])
       %4 = tensor.extract_slice %C[%arg3, %arg5] [8, 16] [1, 1] :
         tensor<128x192xf32> to tensor<8x16xf32>
 
@@ -748,6 +745,7 @@ func @matmul(
       // insert_slice is inplace but its source comes from an equivalent buffer
       // that is not in place. So we must insert a copy of the small buffer into
       // the bigger buffer.
+      // CHECK: %[[T:.*]] = memref.subview %[[C]][%[[I]], %[[J]]] [8, 16] [1, 1]
       // CHECK: linalg.copy(%[[ALLOC]], %[[T]])
       %7 = tensor.insert_slice %6 into %arg6[%arg3, %arg5] [8, 16] [1, 1] :
         tensor<8x16xf32> into tensor<128x192xf32>
@@ -819,9 +817,6 @@ func @buffer_forwarding_conflict(
   // insert_slice. InitTensorOp replaces the init_tensor with an out-of-place
   // extract_slice.
   // CHECK: %[[EXTRACT_SLICE_ALLOC:.*]] = memref.alloc(%[[sz]])
-  // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
-  // TODO: This copy can be avoided because the copied data is never read.
-  // CHECK: linalg.copy(%[[T_SUBVIEW]], %[[EXTRACT_SLICE_ALLOC]])
   %a = linalg.init_tensor[%sz] : tensor<?xf32>
 
   //     CHECK: linalg.fill({{.*}}, %[[EXTRACT_SLICE_ALLOC]]) : f32, memref<?xf32>
@@ -832,6 +827,7 @@ func @buffer_forwarding_conflict(
   //     CHECK: linalg.copy(%[[EXTRACT_SLICE_ALLOC]], %[[SV0_ALLOC]]) : memref<?xf32>, memref<?xf32>
   %r0 = tensor.insert_slice %f into %t[0][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
+  //     CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
   //     CHECK: linalg.copy(%[[EXTRACT_SLICE_ALLOC]], %[[T_SUBVIEW]])
   %r1 = tensor.insert_slice %f into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
