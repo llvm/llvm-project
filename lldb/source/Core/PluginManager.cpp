@@ -701,11 +701,11 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
-    if (instance.name.GetStringRef() != plugin_name)
-      continue;
-    if (instance.save_core &&
-        instance.save_core(process_sp, outfile, core_style, error))
-      return error;
+    if (plugin_name.empty() || instance.name.GetStringRef() == plugin_name) {
+      if (instance.save_core &&
+          instance.save_core(process_sp, outfile, core_style, error))
+        return error;
+    }
   }
   error.SetErrorString(
       "no ObjectFile plugins were able to save a core for this process");
