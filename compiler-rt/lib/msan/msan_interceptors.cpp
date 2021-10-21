@@ -658,7 +658,8 @@ INTERCEPTOR(int, putenv, char *string) {
   return res;
 }
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#define SANITIZER_STAT_LINUX (SANITIZER_LINUX && __GLIBC_PREREQ(2, 33))
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_STAT_LINUX
 INTERCEPTOR(int, fstat, int fd, void *buf) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstat)(fd, buf);
@@ -666,7 +667,7 @@ INTERCEPTOR(int, fstat, int fd, void *buf) {
     __msan_unpoison(buf, __sanitizer::struct_stat_sz);
   return res;
 }
-#define MSAN_MAYBE_INTERCEPT_FSTAT INTERCEPT_FUNCTION(fstat)
+#  define MSAN_MAYBE_INTERCEPT_FSTAT MSAN_INTERCEPT_FUNC(fstat)
 #else
 #define MSAN_MAYBE_INTERCEPT_FSTAT
 #endif
@@ -679,7 +680,7 @@ INTERCEPTOR(int, __fxstat, int magic, int fd, void *buf) {
     __msan_unpoison(buf, __sanitizer::struct_stat_sz);
   return res;
 }
-#define MSAN_MAYBE_INTERCEPT___FXSTAT INTERCEPT_FUNCTION(__fxstat)
+#  define MSAN_MAYBE_INTERCEPT___FXSTAT MSAN_INTERCEPT_FUNC(__fxstat)
 #else
 #define MSAN_MAYBE_INTERCEPT___FXSTAT
 #endif
@@ -692,20 +693,24 @@ INTERCEPTOR(int, __fxstat64, int magic, int fd, void *buf) {
     __msan_unpoison(buf, __sanitizer::struct_stat64_sz);
   return res;
 }
-#define MSAN_MAYBE_INTERCEPT___FXSTAT64 INTERCEPT_FUNCTION(__fxstat64)
+#  define MSAN_MAYBE_INTERCEPT___FXSTAT64 MSAN_INTERCEPT_FUNC(__fxstat64)
 #else
-#define MSAN_MAYBE_INTERCEPT___FXSTAT64
+#  define MSAN_MAYBE_INTERCEPT___FXSTAT64
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_STAT_LINUX
 INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstatat)(fd, pathname, buf, flags);
   if (!res) __msan_unpoison(buf, __sanitizer::struct_stat_sz);
   return res;
 }
-# define MSAN_INTERCEPT_FSTATAT INTERCEPT_FUNCTION(fstatat)
+#  define MSAN_MAYBE_INTERCEPT_FSTATAT MSAN_INTERCEPT_FUNC(fstatat)
 #else
+#  define MSAN_MAYBE_INTERCEPT_FSTATAT
+#endif
+
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(int, __fxstatat, int magic, int fd, char *pathname, void *buf,
             int flags) {
   ENSURE_MSAN_INITED();
@@ -713,7 +718,9 @@ INTERCEPTOR(int, __fxstatat, int magic, int fd, char *pathname, void *buf,
   if (!res) __msan_unpoison(buf, __sanitizer::struct_stat_sz);
   return res;
 }
-# define MSAN_INTERCEPT_FSTATAT INTERCEPT_FUNCTION(__fxstatat)
+#  define MSAN_MAYBE_INTERCEPT___FXSTATAT MSAN_INTERCEPT_FUNC(__fxstatat)
+#else
+#  define MSAN_MAYBE_INTERCEPT___FXSTATAT
 #endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
@@ -724,9 +731,9 @@ INTERCEPTOR(int, __fxstatat64, int magic, int fd, char *pathname, void *buf,
   if (!res) __msan_unpoison(buf, __sanitizer::struct_stat64_sz);
   return res;
 }
-#define MSAN_MAYBE_INTERCEPT___FXSTATAT64 INTERCEPT_FUNCTION(__fxstatat64)
+#  define MSAN_MAYBE_INTERCEPT___FXSTATAT64 MSAN_INTERCEPT_FUNC(__fxstatat64)
 #else
-#define MSAN_MAYBE_INTERCEPT___FXSTATAT64
+#  define MSAN_MAYBE_INTERCEPT___FXSTATAT64
 #endif
 
 INTERCEPTOR(int, pipe, int pipefd[2]) {
@@ -1690,7 +1697,8 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_FCVT;
   MSAN_MAYBE_INTERCEPT_FSTAT;
   MSAN_MAYBE_INTERCEPT___FXSTAT;
-  MSAN_INTERCEPT_FSTATAT;
+  MSAN_MAYBE_INTERCEPT_FSTATAT;
+  MSAN_MAYBE_INTERCEPT___FXSTATAT;
   MSAN_MAYBE_INTERCEPT___FXSTAT64;
   MSAN_MAYBE_INTERCEPT___FXSTATAT64;
   INTERCEPT_FUNCTION(pipe);
