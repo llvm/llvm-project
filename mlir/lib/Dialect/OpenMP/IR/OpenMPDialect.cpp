@@ -1129,42 +1129,5 @@ static LogicalResult verifyCriticalOp(CriticalOp op) {
   return success();
 }
 
-//===----------------------------------------------------------------------===//
-// Verifier for ordered construct
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verifyOrderedOp(OrderedOp op) {
-  auto container = op->getParentOfType<WsLoopOp>();
-  if (!container || !container.ordered_valAttr() ||
-      container.ordered_valAttr().getInt() == 0)
-    return op.emitOpError() << "ordered depend directive must be closely "
-                            << "nested inside a worksharing-loop with ordered "
-                            << "clause with parameter present";
-
-  if (container.ordered_valAttr().getInt() !=
-      (int64_t)op.num_loops_val().getValue())
-    return op.emitOpError() << "number of variables in depend clause does not "
-                            << "match number of iteration variables in the "
-                            << "doacross loop";
-
-  return success();
-}
-
-static LogicalResult verifyOrderedRegionOp(OrderedRegionOp op) {
-  // TODO: The code generation for ordered simd directive is not supported yet.
-  if (op.simd())
-    return failure();
-
-  if (auto container = op->getParentOfType<WsLoopOp>()) {
-    if (!container.ordered_valAttr() ||
-        container.ordered_valAttr().getInt() != 0)
-      return op.emitOpError() << "ordered region must be closely nested inside "
-                              << "a worksharing-loop region with an ordered "
-                              << "clause without parameter present";
-  }
-
-  return success();
-}
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
