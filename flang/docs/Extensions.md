@@ -122,6 +122,7 @@ end
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
+* Tabs in format strings (not `FORMAT` statements) are allowed on output.
 * REAL and DOUBLE PRECISION variable and bounds in DO loops
 * Integer literals without explicit kind specifiers that are out of range
   for the default kind of INTEGER are assumed to have the least larger kind
