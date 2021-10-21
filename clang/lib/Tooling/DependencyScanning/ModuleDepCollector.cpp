@@ -138,11 +138,11 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // This has to be delayed as the context hash can change at the start of
   // `CompilerInstance::ExecuteAction`.
   if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = Instance.getInvocation().getModuleHash();
+    MDC.ContextHash = MDC.Instance.getInvocation().getModuleHash();
     MDC.Consumer.handleContextHash(MDC.ContextHash);
   }
 
-  SourceManager &SM = Instance.getSourceManager();
+  SourceManager &SM = MDC.Instance.getSourceManager();
 
   // Dependency generation really does want to go all the way to the
   // file entry for a source location to find out what is depended on.
@@ -185,12 +185,13 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
-  FileID MainFileID = Instance.getSourceManager().getMainFileID();
+  FileID MainFileID = MDC.Instance.getSourceManager().getMainFileID();
   MDC.MainFile = std::string(
-      Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
+      MDC.Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
 
-  if (!Instance.getPreprocessorOpts().ImplicitPCHInclude.empty())
-    MDC.FileDeps.push_back(Instance.getPreprocessorOpts().ImplicitPCHInclude);
+  if (!MDC.Instance.getPreprocessorOpts().ImplicitPCHInclude.empty())
+    MDC.FileDeps.push_back(
+        MDC.Instance.getPreprocessorOpts().ImplicitPCHInclude);
 
   for (const Module *M : DirectModularDeps) {
     // A top-level module might not be actually imported as a module when
@@ -229,7 +230,7 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.IsSystem = M->IsSystem;
 
-  const FileEntry *ModuleMap = Instance.getPreprocessor()
+  const FileEntry *ModuleMap = MDC.Instance.getPreprocessor()
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
                                    .getModuleMapFileForUniquing(M);
@@ -319,7 +320,7 @@ ModuleDepCollector::ModuleDepCollector(
       OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(Instance, *this));
+  PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
 }
 
 void ModuleDepCollector::attachToASTReader(ASTReader &R) {}
