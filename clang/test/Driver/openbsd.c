@@ -56,6 +56,8 @@
 // Check passing options to the assembler for various OpenBSD targets
 // RUN: %clang -target amd64-pc-openbsd -m32 -### -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AMD64-M32 %s
+// RUN: %clang -target arm-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM %s
 // RUN: %clang -target powerpc-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC %s
 // RUN: %clang -target sparc64-unknown-openbsd -### -no-integrated-as -c %s 2>&1 \
@@ -69,10 +71,11 @@
 // RUN: %clang -target mips64el-unknown-openbsd -fPIC -### -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-MIPS64EL-PIC %s
 // CHECK-AMD64-M32: as{{.*}}" "--32"
+// CHECK-ARM: as{{.*}}" "-mcpu=cortex-a8"
 // CHECK-POWERPC: as{{.*}}" "-mppc" "-many"
 // CHECK-SPARC64: as{{.*}}" "-64" "-Av9a"
-// CHECK-MIPS64: as{{.*}}" "-mabi" "64" "-EB"
-// CHECK-MIPS64-PIC: as{{.*}}" "-mabi" "64" "-EB" "-KPIC"
+// CHECK-MIPS64: as{{.*}}" "-march" "mips3" "-mabi" "64" "-EB"
+// CHECK-MIPS64-PIC: as{{.*}}" "-march" "mips3" "-mabi" "64" "-EB" "-KPIC"
 // CHECK-MIPS64EL: as{{.*}}" "-mabi" "64" "-EL"
 // CHECK-MIPS64EL-PIC: as{{.*}}" "-mabi" "64" "-EL" "-KPIC"
 
