@@ -93,12 +93,18 @@ class TestCase(TestBase):
                     substrs=["undeclared identifier 'doesnt_exist'"])
         # Doesn't successfully execute.
         self.expect("expr int *i = nullptr; *i", error=True)
-        # Interpret an integer as an array with 3 elements is also a failure.
+        # Interpret an integer as an array with 3 elements is a failure for
+        # the "expr" command, but the expression evaluation will succeed and
+        # be counted as a success even though the "expr" options will for the
+        # command to fail. It is more important to track expression evaluation
+        # from all sources instead of just through the command, so this was
+        # changed. If we want to track command success and fails, we can do
+        # so using another metric.
         self.expect("expr -Z 3 -- 1", error=True,
                     substrs=["expression cannot be used with --element-count"])
         # We should have gotten 3 new failures and the previous success.
         stats = self.get_stats()
-        self.verify_success_fail_count(stats, 'expressionEvaluation', 1, 3)
+        self.verify_success_fail_count(stats, 'expressionEvaluation', 2, 2)
 
         self.expect("statistics enable")
         # 'frame var' with enabled statistics will change stats.
