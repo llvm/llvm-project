@@ -23,17 +23,11 @@ define void @caller() {
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARRAYDECAY]] to [3 x i32]*
 ; IS__TUNIT_NPM-NEXT:    [[DOTCAST:%.*]] = bitcast [3 x i32]* [[TMP0]] to i32*
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTCAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[DOT0:%.*]] = getelementptr [3 x i32], [3 x i32]* [[TMP0]], i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = bitcast [3 x i32]* [[DOT0]] to i8*
-; IS__TUNIT_NPM-NEXT:    [[DOT0_B4:%.*]] = getelementptr i8, i8* [[TMP2]], i32 4
-; IS__TUNIT_NPM-NEXT:    [[DOT0_B4_CAST:%.*]] = bitcast i8* [[DOT0_B4]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOT0_B4_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[DOT01:%.*]] = getelementptr [3 x i32], [3 x i32]* [[TMP0]], i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = bitcast [3 x i32]* [[DOT01]] to i8*
-; IS__TUNIT_NPM-NEXT:    [[DOT0_B8:%.*]] = getelementptr i8, i8* [[TMP4]], i32 8
-; IS__TUNIT_NPM-NEXT:    [[DOT0_B8_CAST:%.*]] = bitcast i8* [[DOT0_B8]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOT0_B8_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    call void @callee(i32 [[TMP1]], i32 [[TMP3]], i32 [[TMP5]])
+; IS__TUNIT_NPM-NEXT:    [[DOT0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[TMP0]], i64 0, i64 1
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOT0_1]], align 4
+; IS__TUNIT_NPM-NEXT:    [[DOT0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[TMP0]], i64 0, i64 2
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOT0_2]], align 4
+; IS__TUNIT_NPM-NEXT:    call void @callee(i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller() {
@@ -61,18 +55,12 @@ define internal void @callee(i32* noalias %arg) {
 ; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
 ; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_CAST:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[ARG_PRIV_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV_0]] to i8*
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_B4:%.*]] = getelementptr i8, i8* [[TMP3]], i32 4
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_B4_CAST:%.*]] = bitcast i8* [[ARG_PRIV_0_B4]] to i32*
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[ARG_PRIV_0_B4_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_01:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = bitcast [3 x i32]* [[ARG_PRIV_01]] to i8*
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_B8:%.*]] = getelementptr i8, i8* [[TMP4]], i32 8
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_B8_CAST:%.*]] = bitcast i8* [[ARG_PRIV_0_B8]] to i32*
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP2]], i32* [[ARG_PRIV_0_B8_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP5]])
+; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 1
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[ARG_PRIV_0_1]], align 4
+; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 2
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP2]], i32* [[ARG_PRIV_0_2]], align 4
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
+; IS__TUNIT_NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP3]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee
@@ -81,18 +69,12 @@ define internal void @callee(i32* noalias %arg) {
 ; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
 ; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_CAST:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
 ; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_CAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV_0]] to i8*
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_B4:%.*]] = getelementptr i8, i8* [[TMP3]], i32 4
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_B4_CAST:%.*]] = bitcast i8* [[ARG_PRIV_0_B4]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_0_B4_CAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_01:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = bitcast [3 x i32]* [[ARG_PRIV_01]] to i8*
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_B8:%.*]] = getelementptr i8, i8* [[TMP4]], i32 8
-; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_B8_CAST:%.*]] = bitcast i8* [[ARG_PRIV_0_B8]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_0_B8_CAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP5]])
+; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 1
+; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_0_1]], align 4
+; IS__CGSCC_NPM-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 2
+; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[ARG_PRIV_0_2]], align 4
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
+; IS__CGSCC_NPM-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP3]])
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
