@@ -179,31 +179,49 @@ isns:
 
   # floating point add
   fadd.sss %r0, %r1, %r2
-#  fadd.ssd %r0, %r1, %r2
-#  fadd.sds %r0, %r1, %r2
-#  fadd.sdd %r0, %r1, %r2
-#  fadd.dss %r0, %r1, %r2
-#  fadd.dsd %r0, %r1, %r2
-#  fadd.dds %r0, %r1, %r2
-#  fadd.ddd %r0, %r1, %r2
+  fadd.ssd %r0, %r1, %r2
+  fadd.sds %r0, %r1, %r2
+  fadd.sdd %r0, %r1, %r2
+  fadd.dss %r0, %r1, %r2
+  fadd.dsd %r0, %r1, %r2
+  fadd.dds %r0, %r1, %r2
+  fadd.ddd %r0, %r1, %r2
 # CHECK: fadd.sss %r0, %r1, %r2          | encoding: [0x84,0x01,0x28,0x02]
-# COM: CHECK: fadd.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x2a,0xa2]
+# CHECK: fadd.ssd %r0, %r1, %r2          | encoding: [0x84,0x01,0x28,0x82]
+# CHECK: fadd.sds %r0, %r1, %r2          | encoding: [0x84,0x01,0x2a,0x02]
+# CHECK: fadd.sdd %r0, %r1, %r2          | encoding: [0x84,0x01,0x2a,0x82]
+# CHECK: fadd.dss %r0, %r1, %r2          | encoding: [0x84,0x01,0x28,0x22]
+# CHECK: fadd.dsd %r0, %r1, %r2          | encoding: [0x84,0x01,0x28,0xa2]
+# CHECK: fadd.dds %r0, %r1, %r2          | encoding: [0x84,0x01,0x2a,0x22]
+# CHECK: fadd.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x2a,0xa2]
 
-  # floating point compare
-#  fcmp.sss %r0, %r1, %r2
-#  fcmp.ssd %r0, %r1, %r2
-#  fcmp.sds %r0, %r1, %r2
-#  fcmp.sdd %r0, %r1, %r2
+# floating point compare
+#  fcmp.ss %r0, %r1, %r2
+#  fcmp.sd %r0, %r1, %r2
+#  fcmp.ds %r0, %r1, %r2
+#  fcmp.dd %r0, %r1, %r2
+# COM: CHECK: fcmp.ss %r0, %r1, %r2           | encoding: [0x84 01 38 02]
+# COM: CHECK: fcmp.sd %r0, %r1, %r2           | encoding: [0x84 01 38 82]
+# COM: CHECK: fcmp.ds %r0, %r1, %r2           | encoding: [0x84 01 3a 02]
+# COM: CHECK: fcmp.dd %r0, %r1, %r2           | encoding: [0x84 01 3a 82]
 
-  # floating point divide
-#  fdiv.sss %r0, %r1, %r2
-#  fdiv.ssd %r0, %r1, %r2
-#  fdiv.sds %r0, %r1, %r2
-#  fdiv.sdd %r0, %r1, %r2
-#  fdiv.dss %r0, %r1, %r2
-#  fdiv.dsd %r0, %r1, %r2
-#  fdiv.dds %r0, %r1, %r2
-#  fdiv.ddd %r0, %r1, %r2
+# floating point divide
+  fdiv.sss %r0, %r1, %r2
+  fdiv.ssd %r0, %r1, %r2
+  fdiv.sds %r0, %r1, %r2
+  fdiv.sdd %r0, %r1, %r2
+  fdiv.dss %r0, %r1, %r2
+  fdiv.dsd %r0, %r1, %r2
+  fdiv.dds %r0, %r1, %r2
+  fdiv.ddd %r0, %r1, %r2
+# CHECK: fdiv.sss %r0, %r1, %r2          | encoding: [0x84,0x01,0x70,0x02]
+# CHECK: fdiv.ssd %r0, %r1, %r2          | encoding: [0x84,0x01,0x70,0x82]
+# CHECK: fdiv.sds %r0, %r1, %r2          | encoding: [0x84,0x01,0x72,0x02]
+# CHECK: fdiv.sdd %r0, %r1, %r2          | encoding: [0x84,0x01,0x72,0x82]
+# CHECK: fdiv.dss %r0, %r1, %r2          | encoding: [0x84,0x01,0x70,0x22]
+# CHECK: fdiv.dsd %r0, %r1, %r2          | encoding: [0x84,0x01,0x70,0xa2]
+# CHECK: fdiv.dds %r0, %r1, %r2          | encoding: [0x84,0x01,0x72,0x22]
+# CHECK: fdiv.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x72,0xa2]
 
 # find first bit clear
   ff0      %r1, %r7
@@ -213,42 +231,59 @@ isns:
   ff1      %r3, %r8
 # CHECK: ff1      %r3, %r8               | encoding: [0xf4,0x60,0xe8,0x08]
 
-  # load from floating-point control register
-#  fldcr    %r0, fcr50
+# load from floating-point control register
+  fldcr    %r0, %fcr50
+# CHECK: fldcr    %r0, %fcr50            | encoding: [0x80,0x00,0x4e,0x40]
 
   # convert integer to floating point
 #  flt.ss   %r0, %r3
 #  flt.ds   %r0, %r10
+# COM: CHECK: flt.ss   %r0, %r3               | encoding: [0x84,0x00,0x20,0x03]
+# COM: CHECK: flt.ds   %r0, %r10              | encoding: [0x84,0x00,0x20,0x2a]
 
   # floating point multiply
   fmul.sss %r0, %r1, %r2
-#  fmul.ssd %r0, %r1, %r2
-#  fmul.sds %r0, %r1, %r2
-#  fmul.sdd %r0, %r1, %r2
-#  fmul.dss %r0, %r1, %r2
-#  fmul.dsd %r0, %r1, %r2
-#  fmul.dds %r0, %r1, %r2
-#  fmul.ddd %r0, %r1, %r2
+  fmul.ssd %r0, %r1, %r2
+  fmul.sds %r0, %r1, %r2
+  fmul.sdd %r0, %r1, %r2
+  fmul.dss %r0, %r1, %r2
+  fmul.dsd %r0, %r1, %r2
+  fmul.dds %r0, %r1, %r2
+  fmul.ddd %r0, %r1, %r2
 # CHECK: fmul.sss %r0, %r1, %r2          | encoding: [0x84,0x01,0x00,0x02]
-# COM: CHECK: fmul.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x02,0xa2]
+# CHECK: fmul.ssd %r0, %r1, %r2          | encoding: [0x84,0x01,0x00,0x82]
+# CHECK: fmul.sds %r0, %r1, %r2          | encoding: [0x84,0x01,0x02,0x02]
+# CHECK: fmul.sdd %r0, %r1, %r2          | encoding: [0x84,0x01,0x02,0x82]
+# CHECK: fmul.dss %r0, %r1, %r2          | encoding: [0x84,0x01,0x00,0x22]
+# CHECK: fmul.dsd %r0, %r1, %r2          | encoding: [0x84,0x01,0x00,0xa2]
+# CHECK: fmul.dds %r0, %r1, %r2          | encoding: [0x84,0x01,0x02,0x22]
+# CHECK: fmul.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x02,0xa2]
 
-  # store to floating point control register
-#  fstcr    %r0, fcr50
+# store to floating point control register
+  fstcr    %r0, %fcr50
+# CHECK: fstcr    %r0, %fcr50            | encoding: [0x80,0x00,0x8e,0x40]
 
   # floating point subtract
   fsub.sss %r0, %r1, %r2
-#  fsub.ssd %r0, %r1, %r2
-#  fsub.sds %r0, %r1, %r2
-#  fsub.sdd %r0, %r1, %r2
-#  fsub.dss %r0, %r1, %r2
-#  fsub.dsd %r0, %r1, %r2
-#  fsub.dds %r0, %r1, %r2
-#  fsub.ddd %r0, %r1, %r2
+  fsub.ssd %r0, %r1, %r2
+  fsub.sds %r0, %r1, %r2
+  fsub.sdd %r0, %r1, %r2
+  fsub.dss %r0, %r1, %r2
+  fsub.dsd %r0, %r1, %r2
+  fsub.dds %r0, %r1, %r2
+  fsub.ddd %r0, %r1, %r2
 # CHECK: fsub.sss %r0, %r1, %r2          | encoding: [0x84,0x01,0x30,0x02]
-# COM: CHECK: fsub.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x32,0xa2]
+# CHECK: fsub.ssd %r0, %r1, %r2          | encoding: [0x84,0x01,0x30,0x82]
+# CHECK: fsub.sds %r0, %r1, %r2          | encoding: [0x84,0x01,0x32,0x02]
+# CHECK: fsub.sdd %r0, %r1, %r2          | encoding: [0x84,0x01,0x32,0x82]
+# CHECK: fsub.dss %r0, %r1, %r2          | encoding: [0x84,0x01,0x30,0x22]
+# CHECK: fsub.dsd %r0, %r1, %r2          | encoding: [0x84,0x01,0x30,0xa2]
+# CHECK: fsub.dds %r0, %r1, %r2          | encoding: [0x84,0x01,0x32,0x22]
+# CHECK: fsub.ddd %r0, %r1, %r2          | encoding: [0x84,0x01,0x32,0xa2]
 
-  # exchange floating point control register
-#  fxcr     %r0, %r1, fcr50
+# exchange floating point control register
+  fxcr     %r0, %r1, %fcr50
+# CHECK: fxcr     %r0, %r1, %fcr50       | encoding: [0x80,0x01,0xce,0x41]
 
   # round floating point to integer
 #  int.ss   %r0, %r1

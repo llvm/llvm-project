@@ -46,9 +46,9 @@ static bool isShiftedMask(uint64_t I, uint64_t &Width, uint64_t &Offset) {
 M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
                                        const M88kSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
-  addRegisterClass(MVT::i32, &M88k::GPRRegClass);
+  addRegisterClass(MVT::i32, &M88k::GPRRCRegClass);
   //addRegisterClass(MVT::i64, &M88k::GPR64RegClass);
-  addRegisterClass(MVT::f32, &M88k::GPRRegClass);
+  addRegisterClass(MVT::f32, &M88k::FPR32RCRegClass);
 
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -290,10 +290,10 @@ SDValue M88kTargetLowering::LowerFormalArguments(
         // Integers smaller than i32 should be promoted to i32.
         llvm_unreachable("Unexpected argument type");
       case MVT::i32:
-        RC = &M88k::GPRRegClass;
+        RC = &M88k::GPRRCRegClass;
         break;
       case MVT::f32:
-        RC = &M88k::GPRRegClass;
+        RC = &M88k::FPR32RCRegClass;
         break;
       }
 

@@ -59,7 +59,7 @@ class F_LI<bits<2> func, bits<1> upper, dag outs, dag ins, string asm,
 // Format: Logical with triadic register.
 class F_LR<bits<5> func, bits<1> comp, string asm,
            list<dag> pattern = [], InstrItinClass itin = NoItinerary>
-   : F_L<(outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
+   : F_L<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
          asm, " $rd, $rs1, $rs2", pattern, itin> {
   bits<5>  rs2;
   let Inst{31-26} = 0b111101;
@@ -80,7 +80,7 @@ class F_B<bits<6> func, dag outs, dag ins, string asm, string operands,
 // Format: Bit-field with triadic register.
 class F_BR<bits<6> func, string asm, list<dag> pattern = [],
          InstrItinClass itin = NoItinerary>
-   : F_B<func, (outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2), asm,
+   : F_B<func, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), asm,
          " $rd, $rs1, $rs2", pattern, itin> {
   bits<5> rs2;
   let Inst{26}  = 0b1;
@@ -121,7 +121,7 @@ class F_I<dag outs, dag ins, string asm, string operands, list<dag> pattern = []
 // Format: Integer with 16bit immediate.
 class F_II<bits<6> func, dag ins, string asm, list<dag> pattern = [],
            InstrItinClass itin = NoItinerary>
-   : F_I<(outs GPROpnd:$rd), ins, asm, " $rd, $rs1, $imm16", pattern, itin> {
+   : F_I<(outs GPR:$rd), ins, asm, " $rd, $rs1, $imm16", pattern, itin> {
   bits<16> imm16;
 
   let Inst{31-26} = func;
@@ -132,7 +132,7 @@ class F_II<bits<6> func, dag ins, string asm, list<dag> pattern = [],
 class F_IRC<bits<6> func, bits<1> carryin, bits<1> carryout,
             string asm, list<dag> pattern = [],
             InstrItinClass itin = NoItinerary>
-   : F_I<(outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2), asm,
+   : F_I<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), asm,
          " $rd, $rs1, $rs2", pattern, itin> {
   bits<5> rs2;
 
@@ -147,7 +147,7 @@ class F_IRC<bits<6> func, bits<1> carryin, bits<1> carryout,
 // Format: Integer with triadic register and register pair destination.
 class F_IRCD<bits<6> func, string asm, list<dag> pattern = [],
             InstrItinClass itin = NoItinerary>
-   : F_I<(outs GPR64Opnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2), asm,
+   : F_I<(outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2), asm,
          " $rd, $rs1, $rs2", pattern, itin> {
   bits<5> rs2;
 

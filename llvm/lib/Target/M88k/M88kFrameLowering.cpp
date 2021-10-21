@@ -24,24 +24,24 @@
  * The M88k stack layout:
  * +-------------------------+ High Address
  * |                         |
- * |                         | 
- * | Argument Area           | 
+ * |                         |
+ * | Argument Area           |
  * +-------------------------+ <- SP before call
- * |                         |    Pointer to last allocated word 
+ * |                         |    Pointer to last allocated word
  * | Temporary Space /       |    16-byte aligned
  * | Local Variable Space    |
  * | (optional)              |
  * +-------------------------+
  * |                         |
- * | Argument Area           | 
- * | (at least 32 bytes,     | 
+ * | Argument Area           |
+ * | (at least 32 bytes,     |
  * |  equals 8 registers)    |
  * +-------------------------+ <- SP after call
  * |                         |
- * |                         | 
+ * |                         |
  * +-------------------------+ <- Low Address
  *
- * 
+ *
  */
 
 using namespace llvm;
@@ -87,7 +87,7 @@ bool M88kFrameLowering::spillCalleeSavedRegisters(
     // Save in the normal TargetInstrInfo way.
     bool IsKill = !IsRetAddrIsTaken;
     // TODO const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    const TargetRegisterClass &RC = M88k::GPRRegClass;
+    const TargetRegisterClass &RC = M88k::GPRRCRegClass;
     TII->storeRegToStackSlot(MBB, MBBI, Reg, IsKill, CS.getFrameIdx(), &RC,
                              TRI);
   }

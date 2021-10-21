@@ -84,30 +84,31 @@ static const uint16_t CRDecoderTable[] = {
     M88k::CR38, M88k::CR39,
 
     M88k::CR40, M88k::CR41, M88k::CR42, M88k::CR43, M88k::CR44, M88k::CR45,
-    M88k::CR46, M88k::CR47,  M88k::CR48, M88k::CR49, M88k::CR50, M88k::CR51,
+    M88k::CR46, M88k::CR47, M88k::CR48, M88k::CR49, M88k::CR50, M88k::CR51,
     M88k::CR52, M88k::CR53, M88k::CR54, M88k::CR55, M88k::CR56, M88k::CR57,
-    M88k::CR58, M88k::CR59, M88k::CR60, M88k::CR61, M88k::CR62, M88k::CR63
-};
+    M88k::CR58, M88k::CR59, M88k::CR60, M88k::CR61, M88k::CR62, M88k::CR63};
 
 static const uint16_t FCRDecoderTable[] = {
-    M88k::FCR0,  M88k::FCR1,  M88k::FCR2,  M88k::FCR3,  M88k::FCR4,  M88k::FCR5,
-    M88k::FCR6,  M88k::FCR7,  M88k::FCR8,  M88k::FCR9,  M88k::FCR10, M88k::FCR11,
-    M88k::FCR12, M88k::FCR13, M88k::FCR14, M88k::FCR15,
+    M88k::FCR0,  M88k::FCR1,  M88k::FCR2,  M88k::FCR3,  M88k::FCR4,
+    M88k::FCR5,  M88k::FCR6,  M88k::FCR7,  M88k::FCR8,  M88k::FCR9,
+    M88k::FCR10, M88k::FCR11, M88k::FCR12, M88k::FCR13, M88k::FCR14,
+    M88k::FCR15,
 
-    M88k::FCR16, M88k::FCR17, M88k::FCR18, M88k::FCR19, M88k::FCR20, M88k::FCR21,
-    M88k::FCR22, M88k::FCR23, M88k::FCR24, M88k::FCR25, M88k::FCR26, M88k::FCR27,
-    M88k::FCR28, M88k::FCR29, M88k::FCR30, M88k::FCR31,
+    M88k::FCR16, M88k::FCR17, M88k::FCR18, M88k::FCR19, M88k::FCR20,
+    M88k::FCR21, M88k::FCR22, M88k::FCR23, M88k::FCR24, M88k::FCR25,
+    M88k::FCR26, M88k::FCR27, M88k::FCR28, M88k::FCR29, M88k::FCR30,
+    M88k::FCR31,
 
-    M88k::FCR32, M88k::FCR33, M88k::FCR34, M88k::FCR35, M88k::FCR36, M88k::FCR37,
-    M88k::FCR38, M88k::FCR39,
+    M88k::FCR32, M88k::FCR33, M88k::FCR34, M88k::FCR35, M88k::FCR36,
+    M88k::FCR37, M88k::FCR38, M88k::FCR39,
 
-    M88k::FCR40, M88k::FCR41, M88k::FCR42, M88k::FCR43, M88k::FCR44, M88k::FCR45,
-    M88k::FCR46, M88k::FCR47,  M88k::FCR48, M88k::FCR49, M88k::FCR50, M88k::FCR51,
-    M88k::FCR52, M88k::FCR53, M88k::FCR54, M88k::FCR55, M88k::FCR56, M88k::FCR57,
-    M88k::FCR58, M88k::FCR59, M88k::FCR60, M88k::FCR61, M88k::FCR62, M88k::FCR63
-};
+    M88k::FCR40, M88k::FCR41, M88k::FCR42, M88k::FCR43, M88k::FCR44,
+    M88k::FCR45, M88k::FCR46, M88k::FCR47, M88k::FCR48, M88k::FCR49,
+    M88k::FCR50, M88k::FCR51, M88k::FCR52, M88k::FCR53, M88k::FCR54,
+    M88k::FCR55, M88k::FCR56, M88k::FCR57, M88k::FCR58, M88k::FCR59,
+    M88k::FCR60, M88k::FCR61, M88k::FCR62, M88k::FCR63};
 
-static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus decodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
   if (RegNo > 31)
@@ -118,9 +119,9 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeXRRegisterClass(MCInst &Inst, uint64_t RegNo,
-                                           uint64_t Address,
-                                           const void *Decoder) {
+static DecodeStatus decodeXRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
   if (RegNo > 31)
     return MCDisassembler::Fail;
 
@@ -129,7 +130,7 @@ static DecodeStatus DecodeXRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeCRRegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus decodeCRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
                                           const void *Decoder) {
   if (RegNo > 63)
@@ -140,7 +141,7 @@ static DecodeStatus DecodeCRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeFCRRegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus decodeFCRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
   if (RegNo > 63)
@@ -152,22 +153,22 @@ static DecodeStatus DecodeFCRRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 
 // TODO More checks.
-static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus decodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,
                                              const void *Decoder) {
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
-                                              uint64_t Address,
-                                              const void *Decoder) {
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+static DecodeStatus decodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
-                                              uint64_t Address,
-                                              const void *Decoder) {
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+static DecodeStatus decodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 template <unsigned N>
