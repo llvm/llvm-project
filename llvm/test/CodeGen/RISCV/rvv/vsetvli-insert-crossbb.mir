@@ -442,10 +442,6 @@ body:             |
 
 ...
 ---
-# FIXME: We incorrectly merge info for %bb.1 into that for %bb.0, leading us to
-# skip a vsetvli for the PseudoVADD_VX_MF2 in %bb.3. In fact, the
-# PseudoVPOPC_M_B1 is given a vsetvli (e8,mf8) which, if control flow flows
-# through %bb.1 to %bb.3, misconfigures the PseudoVADD_VX_MF2.
 name:            vsetvli_vpopc
 tracksRegLiveness: true
 registers:
@@ -495,6 +491,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[DEF]], %bb.1, [[LWU]], %bb.2
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 87, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVADD_VX_MF2_:%[0-9]+]]:vr = nsw PseudoVADD_VX_MF2 [[PseudoVLE32_V_MF2_MASK]], [[PHI]], -1, 5, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $v0 = COPY [[PseudoVADD_VX_MF2_]]
   ; CHECK-NEXT:   PseudoRET implicit $v0
