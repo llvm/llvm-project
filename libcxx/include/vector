@@ -903,7 +903,7 @@ private:
 
   struct _ConstructTransaction {
     explicit _ConstructTransaction(vector &__v, size_type __n)
-      : __v_(__v),  __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
+      : __v_(__v), __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
 #ifndef _LIBCPP_HAS_NO_ASAN
       __v_.__annotate_increase(__n);
 #endif
@@ -1736,10 +1736,10 @@ vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__first)) == this,
-        "vector::erase(iterator,  iterator) called with an iterator not"
+        "vector::erase(iterator, iterator) called with an iterator not"
         " referring to this vector");
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__last)) == this,
-        "vector::erase(iterator,  iterator) called with an iterator not"
+        "vector::erase(iterator, iterator) called with an iterator not"
         " referring to this vector");
 #endif
     _LIBCPP_ASSERT(__first <= __last, "vector::erase(first, last) called with invalid range");
