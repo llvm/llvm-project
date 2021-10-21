@@ -3820,17 +3820,19 @@ def ReleaseHandle : InheritableParamAttr {
 }
 
 // Custom attributes for P2:
-def Cogtext : InheritableAttr {
+def Cogtext : InheritableAttr, TargetSpecificAttr<TargetP2> {
   let Spellings = [Clang<"cogtext">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CogtextDocs];
+  let Args = [];
 }
 
 // Custom attributes for P2:
-def Cogmain : InheritableAttr {
+def Cogmain : InheritableAttr, TargetSpecificAttr<TargetP2> {
   let Spellings = [Clang<"cogmain">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CogmainDocs];
+  let Args = [];
 }
 
 def Builtin : InheritableAttr {

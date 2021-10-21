@@ -568,7 +568,7 @@ SDValue P2TargetLowering::LowerReturn(SDValue Chain,
     // the return value to a location
     SmallVector<CCValAssign, 16> RVLocs;
     MachineFunction &MF = DAG.getMachineFunction();
-    MachineFrameInfo MFI = MF.getFrameInfo();
+    // MachineFrameInfo MFI = MF.getFrameInfo();
 
     // CCState - Info about the registers and stack slot.
     CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());

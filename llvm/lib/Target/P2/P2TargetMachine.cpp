@@ -15,19 +15,21 @@
 #include "P2.h"
 #include "P2TargetObjectFile.h"
 #include "P2ISelDAGToDAG.h"
+#include "TargetInfo/P2TargetInfo.h"
 
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Support/TargetRegistry.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "p2"
 
-extern "C" void LLVMInitializeP2Target() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeP2Target() {
   // Register the target.
-    RegisterTargetMachine<P2TargetMachine> X(TheP2Target);
+    RegisterTargetMachine<P2TargetMachine> X(getTheP2Target());
 }
 
 P2TargetMachine::P2TargetMachine(const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
@@ -82,7 +84,7 @@ namespace {
     }
 
     void P2PassConfig::addPreEmitPass() {
-        P2TargetMachine &TM = getP2TargetMachine();
+        // P2TargetMachine &TM = getP2TargetMachine();
     }
 
     void P2PassConfig::addPreRegAlloc() {

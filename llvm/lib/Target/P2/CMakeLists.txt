@@ -1,3 +1,5 @@
+add_llvm_component_group(P2)
+
 set(LLVM_TARGET_DEFINITIONS P2.td)
 
 tablegen(LLVM P2GenSubtargetInfo.inc -gen-subtarget)
@@ -30,6 +32,23 @@ add_llvm_target(P2CodeGen
     P2MachineFunctionInfo.cpp
     P2MCInstLower.cpp
     P2ISelDAGToDAG.cpp
+
+    DEPENDS
+    intrinsics_gen
+
+    LINK_COMPONENTS
+    AsmPrinter
+    CodeGen
+    Core
+    MC
+    P2Desc
+    P2Info
+    SelectionDAG
+    Support
+    Target
+
+    ADD_TO_COMPONENT
+    P2
   )
 
 add_subdirectory(TargetInfo)

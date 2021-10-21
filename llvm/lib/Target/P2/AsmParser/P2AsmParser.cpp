@@ -11,6 +11,7 @@
 #include "MCTargetDesc/P2MCTargetDesc.h"
 #include "MCTargetDesc/P2BaseInfo.h"
 #include "P2RegisterInfo.h"
+#include "TargetInfo/P2TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -28,9 +29,9 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -596,8 +597,8 @@ bool P2AsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     return true;
 }
 
-extern "C" void LLVMInitializeP2AsmParser() {
-    RegisterMCAsmParser<P2AsmParser> X(TheP2Target);
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeP2AsmParser() {
+    RegisterMCAsmParser<P2AsmParser> X(getTheP2Target());
 }
 
 #define GET_REGISTER_MATCHER

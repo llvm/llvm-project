@@ -36,13 +36,10 @@ namespace lld {
         namespace {
             class P2 final : public TargetInfo {
             public:
-                P2();
                 RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc) const override;
                 void relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const override;
             };
         } // namespace
-
-        P2::P2() { noneRel = R_P2_NONE; }
 
         RelExpr P2::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc) const {
             switch (type) {

@@ -7,13 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "P2.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/TargetRegistry.h"
-using namespace llvm;
+#include "TargetInfo/P2TargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 
-Target llvm::TheP2Target;
+namespace llvm {
+    Target &getTheP2Target() {
+        static Target TheP2Target;
+        return TheP2Target;
+    }
+} // namespace llvm
 
-extern "C" void LLVMInitializeP2TargetInfo() {
-    RegisterTarget<Triple::p2, false> X(TheP2Target, "p2", "Propeller 2", "P2");
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeP2TargetInfo() {
+    llvm::RegisterTarget<llvm::Triple::p2> X(llvm::getTheP2Target(), "p2", "Propeller 2", "P2");
 }

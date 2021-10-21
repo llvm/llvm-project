@@ -173,6 +173,10 @@ let Constraints = "$s = $d" in {
 
 def ENCODrr : P2InstCZIDS<0b0111100, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "encod $d, $s">;
 
+def : Pat<(rotl P2GPR:$src1, P2GPR:$s), (ROLrr P2GPR:$src1, P2GPR:$s, always, noeff)>;
+def : Pat<(rotl P2GPR:$src1, imm9:$s), (ROLri P2GPR:$src1, imm9:$s, always, noeff)>;
+def : Pat<(rotr P2GPR:$src1, P2GPR:$s), (RORrr P2GPR:$src1, P2GPR:$s, always, noeff)>;
+def : Pat<(rotr P2GPR:$src1, imm9:$s), (RORri P2GPR:$src1, imm9:$s, always, noeff)>;
 def : Pat<(srl P2GPR:$src1, P2GPR:$s), (SHRrr P2GPR:$src1, P2GPR:$s, always, noeff)>;
 def : Pat<(srl P2GPR:$src1, imm9:$s), (SHRri P2GPR:$src1, imm9:$s, always, noeff)>;
 def : Pat<(shl P2GPR:$src1, P2GPR:$s), (SHLrr P2GPR:$src1, P2GPR:$s, always, noeff)>;

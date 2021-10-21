@@ -347,5 +347,5 @@ def : MergeRule<"adjustNullPointerValidAttr">;
 def : MergeRule<"setAND<MustProgressAttr>">;
 
 // P2 specific attributes
-def Cogtext : EnumAttr<"cogtext">;
-def Cogmain : EnumAttr<"cogmain">;
+def Cogtext : EnumAttr<"cogtext", [FnAttr]>;
+def Cogmain : EnumAttr<"cogmain", [FnAttr]>;

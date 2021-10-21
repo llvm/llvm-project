@@ -864,6 +864,7 @@ enum {
 // ELF Relocation types for P2
 enum {
 #include "ELFRelocs/P2.def"
+};
 
 // ELF Relocation types for CSKY
 enum {

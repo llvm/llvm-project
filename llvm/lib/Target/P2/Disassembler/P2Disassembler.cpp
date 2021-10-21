@@ -13,6 +13,7 @@
 #include "P2.h"
 #include "P2RegisterInfo.h"
 #include "P2Subtarget.h"
+#include "TargetInfo/P2TargetInfo.h"
 #include "MCTargetDesc/P2MCTargetDesc.h"
 #include "MCTargetDesc/P2BaseInfo.h"
 
@@ -21,7 +22,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -47,9 +48,9 @@ static MCDisassembler *createP2Disassembler(const Target &T, const MCSubtargetIn
 	return new P2Disassembler(STI, Ctx);
 }
 
-extern "C" void LLVMInitializeP2Disassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeP2Disassembler() {
 	// Register the disassembler.
-	TargetRegistry::RegisterMCDisassembler(TheP2Target, createP2Disassembler);
+	TargetRegistry::RegisterMCDisassembler(getTheP2Target(), createP2Disassembler);
 }
 
 static const uint16_t GPRDecoderTable[] = {

@@ -10,7 +10,6 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_P2_H
 
 #include "Gnu.h"
-#include "InputInfo.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Tool.h"
 

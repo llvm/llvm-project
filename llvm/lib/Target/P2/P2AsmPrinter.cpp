@@ -17,6 +17,7 @@
 #include "MCTargetDesc/P2InstPrinter.h"
 #include "P2.h"
 #include "P2InstrInfo.h"
+#include "TargetInfo/P2TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -32,8 +33,8 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -135,5 +136,5 @@ void P2AsmPrinter::emitStartOfAsmFile(Module &M) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeP2AsmPrinter() {
-    RegisterAsmPrinter<P2AsmPrinter> X(TheP2Target);
+    llvm::RegisterAsmPrinter<llvm::P2AsmPrinter> X(getTheP2Target());
 }

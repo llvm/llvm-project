@@ -462,6 +462,10 @@ enum Kind {
   kw_bit,
   kw_varFlags,
 
+  // P2 keywords
+  kw_cogmain,
+  kw_cogtext,
+
   // Unsigned Valued tokens (UIntVal).
   LabelID,    // 42:
   GlobalID,   // @42

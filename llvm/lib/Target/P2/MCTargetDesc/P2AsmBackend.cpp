@@ -33,7 +33,7 @@
 #define DEBUG_TYPE "p2-asm-backend"
 
 using namespace llvm;
-static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, bool cogex, MCContext *Ctx = nullptr) {
+static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, bool cogex=false, MCContext *Ctx = nullptr) {
 
     unsigned Kind = Fixup.getKind();
 
@@ -72,12 +72,13 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                         uint64_t Value, bool IsResolved,
                         const MCSubtargetInfo *STI) const {
 
-    const P2Subtarget *subtarget = static_cast<const P2Subtarget*>(STI);
+    // const P2Subtarget *subtarget = static_cast<const P2Subtarget*>(STI);
 
     MCFixupKind Kind = Fixup.getKind();
     // turns out--you don't need to know if this is hub or cog because of how the JMP instruction works,
-    // but going to leave it in for future potential future use.
-    Value = adjustFixupValue(Fixup, Value, subtarget->isCogex());
+    // but going to leave it in for future potential future use. Don't check if it's cogex for now, since STI seems 
+    // to come in null so need to figure out what to do about that...
+    Value = adjustFixupValue(Fixup, Value);
     uint64_t Mask = ((uint64_t)(-1) >> (64 - getFixupKindInfo(Kind).TargetSize));
 
     if (!Value)
@@ -85,8 +86,8 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
     LLVM_DEBUG(errs() << "-- applying fixup for ");
     LLVM_DEBUG(Target.dump(); errs() << "\n");
-    if (subtarget->isCogex())
-        LLVM_DEBUG(errs() << "fixup is for a cogex function\n");
+    // if (subtarget->isCogex())
+    //     LLVM_DEBUG(errs() << "fixup is for a cogex function\n");
 
     LLVM_DEBUG(errs() << "new value is " << Value << "\n");
 
@@ -142,7 +143,10 @@ const MCFixupKindInfo &P2AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
     return Infos[Kind - FirstTargetFixupKind];
 }
 
-bool P2AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool P2AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count, const MCSubtargetInfo *STI) const {
+    if (Count % 4 != 0) return false;
+
+    OS.write_zeros(Count);
     return true;
 }
 

@@ -13,8 +13,6 @@
 #include "P2Subtarget.h"
 #include "P2.h"
 
-#include "llvm/Support/TargetRegistry.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "p2-subtarget"

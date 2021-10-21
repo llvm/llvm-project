@@ -85,7 +85,7 @@ bool P2FrameLowering::hasFP(const MachineFunction &MF) const {
 
     return MF.getTarget().Options.DisableFramePointerElim(MF) ||
             MFI->hasVarSizedObjects() || MFI->isFrameAddressTaken() ||
-            TRI->needsStackRealignment(MF);
+            TRI->hasStackRealignment(MF);
 }
 
 void P2FrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const {
@@ -177,7 +177,7 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
     const P2Subtarget &STI = MF.getSubtarget<P2Subtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
     P2FunctionInfo *P2FI = MF.getInfo<P2FunctionInfo>();
-    MachineFrameInfo *MFI = &MF.getFrameInfo();
+    // MachineFrameInfo *MFI = &MF.getFrameInfo();
 
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
     LLVM_DEBUG(errs() << "Spilling callee saves\n");
@@ -266,7 +266,7 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
     MachineFunction &MF = *MBB.getParent();
     const P2Subtarget &STI = MF.getSubtarget<P2Subtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
-    MachineFrameInfo *MFI = &MF.getFrameInfo();
+    // MachineFrameInfo *MFI = &MF.getFrameInfo();
     DebugLoc DL = MBB.findDebugLoc(MI);
 
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");

@@ -7817,6 +7817,7 @@ static void handleCogmainAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
    }
    handleSimpleAttribute<CogmainAttr>(S, D, AL);
+}
 
 template <typename AttrTy>
 static const AttrTy *findEnforceTCBAttrByName(Decl *D, StringRef Name) {
@@ -8530,6 +8531,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_Cogmain:
     handleCogmainAttr(S, D, AL);
+    break;
+    
   case ParsedAttr::AT_EnforceTCB:
     handleEnforceTCBAttr<EnforceTCBAttr, EnforceTCBLeafAttr>(S, D, AL);
     break;
