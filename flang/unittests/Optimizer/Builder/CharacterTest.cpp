@@ -41,14 +41,6 @@ public:
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };
 
-static void checkIntegerConstant(mlir::Value value, mlir::Type ty, int64_t v) {
-  EXPECT_TRUE(mlir::isa<ConstantOp>(value.getDefiningOp()));
-  auto cstOp = dyn_cast<ConstantOp>(value.getDefiningOp());
-  EXPECT_EQ(ty, cstOp.getType());
-  auto valueAttr = cstOp.getValue().dyn_cast_or_null<IntegerAttr>();
-  EXPECT_EQ(v, valueAttr.getInt());
-}
-
 TEST_F(CharacterTest, smallUtilityFunctions) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
