@@ -48,7 +48,8 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
     : TargetLowering(TM), Subtarget(STI) {
   addRegisterClass(MVT::i32, &M88k::GPRRCRegClass);
   //addRegisterClass(MVT::i64, &M88k::GPR64RegClass);
-  addRegisterClass(MVT::f32, &M88k::FPR32RCRegClass);
+  addRegisterClass(MVT::f32, &M88k::GPRRCRegClass);
+  addRegisterClass(MVT::f64, &M88k::GPR64RCRegClass);
 
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -290,10 +291,11 @@ SDValue M88kTargetLowering::LowerFormalArguments(
         // Integers smaller than i32 should be promoted to i32.
         llvm_unreachable("Unexpected argument type");
       case MVT::i32:
+      case MVT::f32:
         RC = &M88k::GPRRCRegClass;
         break;
-      case MVT::f32:
-        RC = &M88k::FPR32RCRegClass;
+      case MVT::f64:
+        RC = &M88k::GPR64RCRegClass;
         break;
       }
 

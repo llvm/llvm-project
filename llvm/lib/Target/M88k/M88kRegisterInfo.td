@@ -61,17 +61,13 @@ let AsmName = "", SubRegIndices = [sub_hi, sub_lo], CoveredBySubRegs = true in {
   }
 }
 
-defm GPR : M88kRegisterClass<[i32], 32, 32,
+defm GPR : M88kRegisterClass<[i32, f32], 32, 32,
                              (add (sequence "R%u", 0, 31))>;
 defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32,
                                (add R0_R1, R2_R3, R4_R5, R6_R7, R8_R9,
                                     R10_R11, R12_R13, R14_R15, R16_R17, R18_R19,
                                     R20_R21, R22_R23, R24_R25, R26_R27, R28_R29,
                                     R30_R31)>;
-
-// Experimental: GPR with floating point types.
-defm FPR32 : M88kRegisterClass<[f32], 32, 32,
-                               (add GPRRC)>;
 
 // Extended (floating point) registers.
 foreach I = 0-31 in {

@@ -159,12 +159,6 @@ static DecodeStatus decodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus decodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
-                                             uint64_t Address,
-                                             const void *Decoder) {
-  return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))

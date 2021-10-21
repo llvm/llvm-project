@@ -131,8 +131,7 @@ void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (M88k::GPRRCRegClass.contains(DestReg, SrcReg) ||
-      M88k::FPR32RCRegClass.contains(DestReg, SrcReg)) {
+  if (M88k::GPRRCRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(M88k::ORrr), DestReg)
         .addReg(M88k::R0)
         .addReg(SrcReg, getKillRegState(KillSrc));
@@ -142,14 +141,14 @@ void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Opc;
   if (M88k::XRRCRegClass.contains(DestReg, SrcReg))
     Opc = M88k::MOVxx;
-  else if (M88k::FPR32RCRegClass.contains(DestReg) &&
+  else if (M88k::GPRRCRegClass.contains(DestReg) &&
            M88k::XRRCRegClass.contains(SrcReg))
     Opc = M88k::MOVrxs;
   else if (M88k::GPR64RCRegClass.contains(DestReg) &&
            M88k::XRRCRegClass.contains(SrcReg))
     Opc = M88k::MOVrxd;
   else if (M88k::XRRCRegClass.contains(DestReg) &&
-           M88k::FPR32RCRegClass.contains(SrcReg))
+           M88k::GPRRCRegClass.contains(SrcReg))
     Opc = M88k::MOVxrs;
   else if (M88k::XRRCRegClass.contains(DestReg) &&
            M88k::GPR64RCRegClass.contains(SrcReg))
