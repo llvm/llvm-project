@@ -113,8 +113,8 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
 
 func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
 {
-  // expected-error @+1 {{unsupported op with tensors}}
   %r = scf.if %b -> (tensor<4xf32>) {
+    // expected-error @+1 {{expected scf::ForOp parent for scf::YieldOp}}
     scf.yield %A : tensor<4xf32>
   } else {
     scf.yield %B : tensor<4xf32>
@@ -144,7 +144,7 @@ func @mini_test_case1() -> tensor<10x20xf32> {
 // -----
 
 func @main() -> tensor<4xi32> {
-  // expected-error @+1 {{unsupported op with tensors}}
+  // expected-error @+1 {{expected result-less scf.execute_region containing op}}
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     scf.yield %A: tensor<4xi32>

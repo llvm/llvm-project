@@ -836,28 +836,37 @@ void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
 
 /// Starting from `value`, follow the use-def chain in reverse, always selecting
 /// the corresponding aliasing OpOperand. Try to find and return a Value for
-/// which `condition` evaluates to true for the aliasing OpOperand. Return an
-/// empty Value if no such Value was found. If `returnLast`, return the last
-/// Value (at the end of the chain), even if it does not satisfy the condition.
-static Value
+/// which `condition` evaluates to true.
+///
+/// When reaching the end of the chain (BlockArgument or Value without aliasing
+/// OpOperands), return the last Value of the chain.
+///
+/// Note: The returned SetVector contains exactly one element.
+static llvm::SetVector<Value>
 findValueInReverseUseDefChain(Value value,
-                              std::function<bool(OpOperand &)> condition,
-                              bool returnLast = false) {
-  while (value.isa<OpResult>()) {
-    auto opResult = value.cast<OpResult>();
+                              std::function<bool(Value)> condition) {
+  llvm::SetVector<Value> result, workingSet;
+  workingSet.insert(value);
+
+  while (!workingSet.empty()) {
+    Value value = workingSet.pop_back_val();
+    if (condition(value) || value.isa<BlockArgument>()) {
+      result.insert(value);
+      continue;
+    }
+
+    OpResult opResult = value.cast<OpResult>();
     SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
-    assert(opOperands.size() <= 1 && "more than 1 OpOperand not supported yet");
-    if (opOperands.empty())
-      // No aliasing OpOperand. This could be an unsupported op or an op without
-      // a tensor arg such as InitTensorOp. This is the end of the chain.
-      return returnLast ? value : Value();
-    OpOperand *opOperand = opOperands.front();
-    if (condition(*opOperand))
-      return value;
-    value = opOperand->get();
+    if (opOperands.empty()) {
+      result.insert(value);
+      continue;
+    }
+
+    assert(opOperands.size() == 1 && "multiple OpOperands not supported yet");
+    workingSet.insert(opOperands.front()->get());
   }
-  // Value is a BlockArgument. Reached the end of the chain.
-  return returnLast ? value : Value();
+
+  return result;
 }
 
 /// Find the Value (result) of the last preceding write of a given Value.
@@ -866,20 +875,41 @@ findValueInReverseUseDefChain(Value value,
 /// Furthermore, BlockArguments are also assumed to be writes. There is no
 /// analysis across block boundaries.
 static Value findLastPrecedingWrite(Value value) {
-  return findValueInReverseUseDefChain(value, bufferizesToMemoryWrite, true);
+  SetVector<Value> result =
+      findValueInReverseUseDefChain(value, [](Value value) {
+        Operation *op = value.getDefiningOp();
+        if (!op)
+          return true;
+        if (!hasKnownBufferizationAliasingBehavior(op))
+          return true;
+
+        SmallVector<OpOperand *> opOperands =
+            getAliasingOpOperand(value.cast<OpResult>());
+        assert(opOperands.size() <= 1 &&
+               "op with multiple aliasing OpOperands not expected");
+
+        if (opOperands.empty())
+          return true;
+
+        return bufferizesToMemoryWrite(*opOperands.front());
+      });
+  assert(result.size() == 1 && "expected exactly one result");
+  return result.front();
 }
 
 /// Return true if `value` is originating from an ExtractSliceOp that matches
 /// the given InsertSliceOp.
 bool BufferizationAliasInfo::hasMatchingExtractSliceOp(
     Value value, InsertSliceOp insertOp) const {
-  return static_cast<bool>(
-      findValueInReverseUseDefChain(value, [&](OpOperand &opOperand) {
-        if (auto extractOp = dyn_cast<ExtractSliceOp>(opOperand.getOwner()))
-          if (areEquivalentExtractSliceOps(extractOp, insertOp))
-            return true;
-        return false;
-      }));
+  auto condition = [&](Value val) {
+    if (auto extractOp = val.getDefiningOp<ExtractSliceOp>())
+      if (areEquivalentExtractSliceOps(extractOp, insertOp))
+        return true;
+    return false;
+  };
+
+  return llvm::all_of(findValueInReverseUseDefChain(value, condition),
+                      condition);
 }
 
 /// Given sets of uses and writes, return true if there is a RaW conflict under
@@ -1422,10 +1452,11 @@ static Value getResultBuffer(OpBuilder &b, OpResult result,
 /// Helper function for LinalgOp bufferization.
 /// When allocating a new buffer, analyze whether `op` wants to read form that
 /// buffer. Only in that case, a copy of the result buffer may be needed.
-static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
-                                      SmallVectorImpl<Value> &resultBuffers,
-                                      BlockAndValueMapping &bvm,
-                                      BufferizationAliasInfo &aliasInfo) {
+static LogicalResult
+allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
+                          SmallVectorImpl<Value> &resultBuffers,
+                          BlockAndValueMapping &bvm,
+                          BufferizationAliasInfo &aliasInfo) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
@@ -1437,11 +1468,15 @@ static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     assert(opResult && "could not find correspond OpResult");
     bool skipCopy = !op.payloadUsesValueFromOperand(opOperand);
     Value resultBuffer = getResultBuffer(b, opResult, bvm, aliasInfo, skipCopy);
+    if (!resultBuffer)
+      return failure();
     resultBuffers.push_back(resultBuffer);
   }
 
   if (op->getNumResults())
     map(bvm, op->getResults(), resultBuffers);
+
+  return success();
 }
 
 /// Generic conversion for any LinalgOp on tensors.
@@ -1469,7 +1504,9 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
   }
   SmallVector<Value> newOutputBuffers;
   // Try to allocate new buffers depending on op's inplace semantics.
-  allocateBuffersForResults(b, loc, op, newOutputBuffers, bvm, aliasInfo);
+  if (failed(allocateBuffersForResults(b, loc, op, newOutputBuffers, bvm,
+                                       aliasInfo)))
+    return failure();
 
   // Clone the newly bufferized op.
   SmallVector<Value> newOperands = newInputBuffers;
@@ -1625,6 +1662,7 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
   Operation *newCallOp = b.create<CallOp>(callOp.getLoc(), funcOp.sym_name(),
                                           resultTypes, newOperands);
   newCallOp->setAttrs(callOp->getAttrs());
+  callOp->erase();
   return success();
 }
 
@@ -1637,6 +1675,8 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
   b.setInsertionPoint(castOp);
 
   Value resultBuffer = getResultBuffer(b, castOp->getResult(0), bvm, aliasInfo);
+  if (!resultBuffer)
+    return failure();
   Type sourceType = resultBuffer.getType();
   auto rankedMemRefType = sourceType.dyn_cast<MemRefType>();
   auto unrankedMemRefType = sourceType.dyn_cast<UnrankedMemRefType>();
@@ -1712,6 +1752,8 @@ static LogicalResult bufferize(OpBuilder &b, scf::ForOp forOp,
 
     // TODO: More general: Matching bbArg does not bufferize to a read.
     Value resultBuffer = getResultBuffer(b, opResult, bvm, aliasInfo);
+    if (!resultBuffer)
+      return failure();
 
     OpOperand &opOperand = forOp.getOpOperandForResult(opResult);
     BlockArgument bbArg = forOp.getRegionIterArgForOpOperand(opOperand);
@@ -1833,6 +1875,8 @@ static LogicalResult bufferize(OpBuilder &b, TiledLoopOp tiledLoopOp,
     const OpResult &opResult = tiledLoopOp->getResult(resultIndex);
     OpOperand &yieldOperand = yieldOp->getOpOperand(resultIndex);
     Value resultBuffer = getResultBuffer(b, opResult, bvm, aliasInfo);
+    if (!resultBuffer)
+      return failure();
 
     // Insert mapping and aliasing info.
     aliasInfo.createAliasInfoEntry(resultBuffer);
@@ -1981,6 +2025,9 @@ static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
   // buffer.
   Value dstMemref =
       getResultBuffer(b, insertSliceOp->getResult(0), bvm, aliasInfo);
+  if (!dstMemref)
+    return failure();
+
   auto dstMemrefType = dstMemref.getType().cast<MemRefType>();
 
   Value srcMemref = lookup(bvm, insertSliceOp.source());
@@ -2043,6 +2090,8 @@ static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
   // this point.
   auto writeOp = cast<vector::TransferWriteOp>(op.getOperation());
   Value resultBuffer = getResultBuffer(b, op->getResult(0), bvm, aliasInfo);
+  if (!resultBuffer)
+    return failure();
   b.create<vector::TransferWriteOp>(
       op.getLoc(), writeOp.vector(), resultBuffer, writeOp.indices(),
       writeOp.permutation_map(),
@@ -2316,33 +2365,43 @@ static LogicalResult bufferizeFuncOpInternals(
   LLVM_DEBUG(llvm::dbgs() << "\n\n");
   LDBG("Begin BufferizeFuncOpInternals:\n" << funcOp << '\n');
   OpBuilder b(funcOp->getContext());
-  /// Start by bufferizing `funcOp` arguments.
+
+  // Start by bufferizing `funcOp` arguments.
   if (failed(bufferize(b, funcOp, bvm, aliasInfo)))
     return failure();
 
-  // Walk in PreOrder to ensure ops with regions are handled before their body.
-  // Since walk has to be PreOrder, we need to erase ops that require it
-  // separately: this is the case for CallOp
-  SmallVector<Operation *> toErase;
-  if (funcOp
-          .walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
-            if (failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
-                                   &globalCreator)))
-              return failure();
-            // Register post-walk erasure, if necessary.
-            if (isa<CallOpInterface>(op))
-              if (llvm::any_of(op->getOperandTypes(), isaTensor) ||
-                  llvm::any_of(op->getResultTypes(), isaTensor))
-                toErase.push_back(op);
-            return success();
-          })
-          .wasInterrupted())
+  // Bufferize the function body. `bufferizedOps` keeps track ops that were
+  // already bufferized with pre-order traversal.
+  DenseSet<Operation *> bufferizedOps;
+  auto walkFunc = [&](Operation *op) -> WalkResult {
+    // Collect ops that need to be bufferized before `op`.
+    SmallVector<Operation *> preorderBufferize;
+    Operation *parentOp = op->getParentOp();
+    // scf::ForOp and TiledLoopOp must be bufferized before their blocks
+    // ("pre-order") because BBargs must be mapped when bufferizing children.
+    while (isa_and_nonnull<scf::ForOp, TiledLoopOp>(parentOp)) {
+      if (bufferizedOps.contains(parentOp))
+        break;
+      bufferizedOps.insert(parentOp);
+      preorderBufferize.push_back(parentOp);
+      parentOp = parentOp->getParentOp();
+    }
+
+    for (Operation *op : llvm::reverse(preorderBufferize))
+      if (failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
+                             &globalCreator)))
+        return failure();
+
+    if (!bufferizedOps.contains(op) &&
+        failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
+                           &globalCreator)))
+      return failure();
+    return success();
+  };
+  if (funcOp.walk(walkFunc).wasInterrupted())
     return failure();
 
   LDBG("End BufferizeFuncOpInternals:\n" << funcOp << '\n');
-
-  for (Operation *op : toErase)
-    op->erase();
 
   return success();
 }
