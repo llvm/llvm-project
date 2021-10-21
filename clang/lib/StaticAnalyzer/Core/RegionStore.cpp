@@ -62,8 +62,8 @@ private:
     : P(r, k), Data(offset) {
     assert(r && "Must have known regions.");
     assert(getOffset() == offset && "Failed to store offset");
-    assert((r == r->getBaseRegion() || isa<ObjCIvarRegion>(r) ||
-            isa <CXXDerivedObjectRegion>(r)) &&
+    assert((r == r->getBaseRegion() ||
+            isa<ObjCIvarRegion, CXXDerivedObjectRegion>(r)) &&
            "Not a base");
   }
 public:
@@ -1135,7 +1135,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   if (Regions)
     Regions->push_back(baseR);
 
-  if (isa<AllocaRegion>(baseR) || isa<SymbolicRegion>(baseR)) {
+  if (isa<AllocaRegion, SymbolicRegion>(baseR)) {
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
@@ -1224,7 +1224,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
           // detection.
           SVal V = I.getData();
           const MemRegion *R = V.getAsRegion();
-          if (R && isa<SymbolicRegion>(R))
+          if (isa_and_nonnull<SymbolicRegion>(R))
             VisitBinding(V);
         }
       }

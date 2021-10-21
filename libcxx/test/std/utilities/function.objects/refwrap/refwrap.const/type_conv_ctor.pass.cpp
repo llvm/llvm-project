@@ -52,7 +52,7 @@ test(T& t)
 
 void f() {}
 
-int main()
+int main(int, char**)
 {
     convertible_to_int_ref convi;
     test(convi);
@@ -80,4 +80,6 @@ int main()
     static_assert((std::is_same<decltype(rj), std::reference_wrapper<const int>>::value), "" );
     }
 #endif
+
+    return 0;
 }

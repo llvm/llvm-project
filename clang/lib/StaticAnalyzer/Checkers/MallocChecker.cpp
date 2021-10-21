@@ -936,7 +936,7 @@ public:
   /// Did not track -> allocated. Other state (released) -> allocated.
   static inline bool isAllocated(const RefState *RSCurr, const RefState *RSPrev,
                                  const Stmt *Stmt) {
-    return (Stmt && (isa<CallExpr>(Stmt) || isa<CXXNewExpr>(Stmt)) &&
+    return (isa_and_nonnull<CallExpr, CXXNewExpr>(Stmt) &&
             (RSCurr &&
              (RSCurr->isAllocated() || RSCurr->isAllocatedOfSizeZero())) &&
             (!RSPrev ||
@@ -949,8 +949,7 @@ public:
                                 const Stmt *Stmt) {
     bool IsReleased =
         (RSCurr && RSCurr->isReleased()) && (!RSPrev || !RSPrev->isReleased());
-    assert(!IsReleased ||
-           (Stmt && (isa<CallExpr>(Stmt) || isa<CXXDeleteExpr>(Stmt))) ||
+    assert(!IsReleased || (isa_and_nonnull<CallExpr, CXXDeleteExpr>(Stmt)) ||
            (!Stmt && RSCurr->getAllocationFamily() == AF_InnerBuffer));
     return IsReleased;
   }
@@ -958,11 +957,10 @@ public:
   /// Did not track -> relinquished. Other state (allocated) -> relinquished.
   static inline bool isRelinquished(const RefState *RSCurr,
                                     const RefState *RSPrev, const Stmt *Stmt) {
-    return (Stmt &&
-            (isa<CallExpr>(Stmt) || isa<ObjCMessageExpr>(Stmt) ||
-             isa<ObjCPropertyRefExpr>(Stmt)) &&
-            (RSCurr && RSCurr->isRelinquished()) &&
-            (!RSPrev || !RSPrev->isRelinquished()));
+    return (
+        isa_and_nonnull<CallExpr, ObjCMessageExpr, ObjCPropertyRefExpr>(Stmt) &&
+        (RSCurr && RSCurr->isRelinquished()) &&
+        (!RSPrev || !RSPrev->isRelinquished()));
   }
 
   /// If the expression is not a call, and the state change is
@@ -972,7 +970,7 @@ public:
   static inline bool hasReallocFailed(const RefState *RSCurr,
                                       const RefState *RSPrev,
                                       const Stmt *Stmt) {
-    return ((!Stmt || !isa<CallExpr>(Stmt)) &&
+    return ((!isa_and_nonnull<CallExpr>(Stmt)) &&
             (RSCurr &&
              (RSCurr->isAllocated() || RSCurr->isAllocatedOfSizeZero())) &&
             (RSPrev &&
@@ -1921,7 +1919,7 @@ ProgramStateRef MallocChecker::FreeMemAux(
 
   // Parameters, locals, statics, globals, and memory returned by
   // __builtin_alloca() shouldn't be freed.
-  if (!(isa<UnknownSpaceRegion>(MS) || isa<HeapSpaceRegion>(MS))) {
+  if (!isa<UnknownSpaceRegion, HeapSpaceRegion>(MS)) {
     // FIXME: at the time this code was written, malloc() regions were
     // represented by conjured symbols, which are all in UnknownSpaceRegion.
     // This means that there isn't actually anything from HeapSpaceRegion
@@ -2904,7 +2902,7 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
     // the callee could still free the memory.
     // TODO: This logic should be a part of generic symbol escape callback.
     if (const MemRegion *MR = RetVal.getAsRegion())
-      if (isa<FieldRegion>(MR) || isa<ElementRegion>(MR))
+      if (isa<FieldRegion, ElementRegion>(MR))
         if (const SymbolicRegion *BMR =
               dyn_cast<SymbolicRegion>(MR->getBaseRegion()))
           Sym = BMR->getSymbol();
@@ -3087,7 +3085,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
   // TODO: If we want to be more optimistic here, we'll need to make sure that
   // regions escape to C++ containers. They seem to do that even now, but for
   // mysterious reasons.
-  if (!(isa<SimpleFunctionCall>(Call) || isa<ObjCMethodCall>(Call)))
+  if (!isa<SimpleFunctionCall, ObjCMethodCall>(Call))
     return true;
 
   // Check Objective-C messages by selector name.
@@ -3195,7 +3193,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
       const Expr *ArgE = Call->getArgExpr(0)->IgnoreParenCasts();
       if (const DeclRefExpr *ArgDRE = dyn_cast<DeclRefExpr>(ArgE))
         if (const VarDecl *D = dyn_cast<VarDecl>(ArgDRE->getDecl()))
-          if (D->getCanonicalDecl()->getName().find("std") != StringRef::npos)
+          if (D->getCanonicalDecl()->getName().contains("std"))
             return true;
     }
   }

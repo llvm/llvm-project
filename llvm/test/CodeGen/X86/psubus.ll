@@ -162,9 +162,8 @@ define <4 x i32> @usubsat_custom(<4 x i32> %x) nounwind {
 ;
 ; AVX512-LABEL: usubsat_custom:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogd $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %res = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %x, <4 x i32> <i32 2147483648, i32 2147483648, i32 2147483648, i32 undef>)
   ret <4 x i32> %res

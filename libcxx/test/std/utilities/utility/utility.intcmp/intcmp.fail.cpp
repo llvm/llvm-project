@@ -124,7 +124,7 @@ constexpr void test_uchars() {
 }
 #endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
-int main() {
+int main(int, char**) {
   test<bool>();
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

@@ -1,4 +1,4 @@
-; RUN: opt -strip -S < %s | FileCheck %s
+; RUN: opt -passes=strip -S < %s | FileCheck %s
 ; PR10286
 
 @main_addrs = constant [2 x i8*] [i8* blockaddress(@f, %FOO), i8* blockaddress(@f, %BAR)]

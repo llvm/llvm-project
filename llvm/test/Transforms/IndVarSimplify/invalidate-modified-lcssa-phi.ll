@@ -40,5 +40,46 @@ latch.1:
 latch.2:
   %p.2.lcssa = phi i32 [ %p.2, %header.2 ]
   br label %header.1
+}
 
+define i8 @test_pr52023(i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @test_pr52023(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[INC79:%.*]] = phi i8 [ [[TMP0:%.*]], [[LOOP_1_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0]] = add i8 [[INC79]], 1
+; CHECK-NEXT:    br label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP_2_LATCH:%.*]], label [[LOOP_1_LATCH]]
+; CHECK:       loop.2.latch:
+; CHECK-NEXT:    br label [[LOOP_1_LATCH]]
+; CHECK:       loop.1.latch:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[EXIT:%.*]], label [[LOOP_1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i8 [ [[TMP0]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    ret i8 [[INC_LCSSA_LCSSA]]
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %inc79 = phi i8 [ %inc.lcssa, %loop.1.latch ], [ 0, %entry ]
+  br label %loop.2
+
+loop.2:
+  %inc6 = phi i8 [ %inc79, %loop.1 ], [ %inc, %loop.2.latch ]
+  %inc = add i8 %inc6, 1
+  br i1 %c.1, label %loop.2.latch , label %loop.1.latch
+
+loop.2.latch:
+  br i1 false, label %loop.2, label %loop.1.latch
+
+loop.1.latch:
+  %inc.lcssa = phi i8 [ %inc, %loop.2.latch ], [ undef, %loop.2 ]
+  br i1 %c.2, label %exit, label %loop.1
+
+exit:
+  %inc.lcssa.lcssa = phi i8 [ %inc.lcssa, %loop.1.latch ]
+  ret i8 %inc.lcssa.lcssa
 }

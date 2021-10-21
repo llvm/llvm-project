@@ -198,7 +198,7 @@ public:
   void emitCodeGenSwitchBody(raw_ostream &o) const;
 
   // Emit the macros for mapping C/C++ intrinsic function to builtin functions.
-  void emitIntrinsicMacro(raw_ostream &o) const;
+  void emitIntrinsicFuncDef(raw_ostream &o) const;
 
   // Emit the mangled function definition.
   void emitMangledFuncDef(raw_ostream &o) const;
@@ -855,34 +855,30 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
   OS << "  break;\n";
 }
 
-void RVVIntrinsic::emitIntrinsicMacro(raw_ostream &OS) const {
-  OS << "#define " << getName() << "(";
+void RVVIntrinsic::emitIntrinsicFuncDef(raw_ostream &OS) const {
+  OS << "__attribute__((__clang_builtin_alias__(";
+  OS << "__builtin_rvv_" << getName() << ")))\n";
+  OS << OutputType->getTypeStr() << " " << getName() << "(";
+  // Emit function arguments
   if (!InputTypes.empty()) {
     ListSeparator LS;
-    for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
-      OS << LS << "op" << i;
+    for (unsigned i = 0; i < InputTypes.size(); ++i)
+      OS << LS << InputTypes[i]->getTypeStr();
   }
-  OS << ") \\\n";
-  OS << "__builtin_rvv_" << getName() << "(";
-  if (!InputTypes.empty()) {
-    ListSeparator LS;
-    for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
-      OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
-  }
-  OS << ")\n";
+  OS << ");\n";
 }
 
 void RVVIntrinsic::emitMangledFuncDef(raw_ostream &OS) const {
-  OS << "__attribute__((clang_builtin_alias(";
+  OS << "__attribute__((__clang_builtin_alias__(";
   OS << "__builtin_rvv_" << getName() << ")))\n";
   OS << OutputType->getTypeStr() << " " << getMangledName() << "(";
   // Emit function arguments
   if (!InputTypes.empty()) {
     ListSeparator LS;
     for (unsigned i = 0; i < InputTypes.size(); ++i)
-      OS << LS << InputTypes[i]->getTypeStr() << " op" << i;
+      OS << LS << InputTypes[i]->getTypeStr();
   }
-  OS << ");\n\n";
+  OS << ");\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -980,23 +976,31 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     return A->getRISCVExtensions() < B->getRISCVExtensions();
   });
 
+  OS << "#define __rvv_ai static __inline__ "
+        "__attribute__((__always_inline__, __nodebug__))\n";
+
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
-    Inst.emitIntrinsicMacro(OS);
+    OS << "__rvv_ai ";
+    Inst.emitIntrinsicFuncDef(OS);
   });
+
+  OS << "#undef __rvv_ai\n\n";
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
 
   // Print Overloaded APIs
-  OS << "#define __rvv_overloaded static inline "
+  OS << "#define __rvv_aio static __inline__ "
         "__attribute__((__always_inline__, __nodebug__, __overloadable__))\n";
 
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     if (!Inst.isMask() && !Inst.hasNoMaskedOverloaded())
       return;
-    OS << "__rvv_overloaded ";
+    OS << "__rvv_aio ";
     Inst.emitMangledFuncDef(OS);
   });
+
+  OS << "#undef __rvv_aio\n";
 
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";

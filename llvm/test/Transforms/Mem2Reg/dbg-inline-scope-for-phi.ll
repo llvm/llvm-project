@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -mem2reg -verify | FileCheck %s
+; RUN: opt -S < %s -passes='function(mem2reg),require<verify>' | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
