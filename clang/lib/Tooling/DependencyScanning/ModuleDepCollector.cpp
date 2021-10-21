@@ -84,7 +84,7 @@ serializeCompilerInvocation(const CompilerInvocation &CI) {
 std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  CompilerInvocation CI(Invocation);
+  CompilerInvocation CI(BuildInvocation);
   FrontendOptions &FrontendOpts = CI.getFrontendOpts();
 
   InputKind ModuleMapInputKind(FrontendOpts.DashX.getLanguage(),
@@ -101,7 +101,7 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
 
 std::vector<std::string>
 ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
-  return serializeCompilerInvocation(Invocation);
+  return serializeCompilerInvocation(BuildInvocation);
 }
 
 void dependencies::detail::collectPCMAndModuleMapPaths(
@@ -260,13 +260,13 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   llvm::DenseSet<const Module *> SeenModules;
   addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
 
-  MD.Invocation = MDC.makeInvocationForModuleBuildWithoutPaths(
-      MD, [&](CompilerInvocation &CI) {
+  MD.BuildInvocation = MDC.makeInvocationForModuleBuildWithoutPaths(
+      MD, [&](CompilerInvocation &BuildInvocation) {
         if (MDC.OptimizeArgs)
-          optimizeHeaderSearchOpts(CI.getHeaderSearchOpts(),
+          optimizeHeaderSearchOpts(BuildInvocation.getHeaderSearchOpts(),
                                    *MDC.ScanInstance.getASTReader(), *MF);
       });
-  MD.ID.ContextHash = MD.Invocation.getModuleHash();
+  MD.ID.ContextHash = MD.BuildInvocation.getModuleHash();
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);

@@ -362,7 +362,7 @@ private:
     SmallString<256> ExplicitPCMPath(
         !ModuleFilesDir.empty()
             ? ModuleFilesDir
-            : MD.Invocation.getHeaderSearchOpts().ModuleCachePath);
+            : MD.BuildInvocation.getHeaderSearchOpts().ModuleCachePath);
     llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
     return std::string(ExplicitPCMPath);
   }
