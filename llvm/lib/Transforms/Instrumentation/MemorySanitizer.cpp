@@ -1708,7 +1708,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           if (FArgEagerCheck) {
             *ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
-            continue;
+            break;
           } else if (FArgByVal) {
             Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
             // ByVal pointer itself has clean shadow. We copy the actual
