@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <omp.h>
 
+// Used to detect architecture
+#include "../../src/kmp_platform.h"
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -24,6 +27,7 @@ extern long double __kmpc_atomic_float10_min_cpt(ident_t *id_ref, int gtid,
 
 int main() {
   int ret = 0;
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
   long double s = 012.3456; // small
   long double e = 123.4567; // middle
   long double d = 234.5678; // big
@@ -151,5 +155,8 @@ int main() {
 
   if (ret == 0)
     printf("passed\n");
+#else
+  printf("Unsupported architecture, skipping test...\n");
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
   return ret;
 }
