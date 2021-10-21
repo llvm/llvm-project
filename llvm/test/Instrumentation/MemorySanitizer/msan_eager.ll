@@ -69,8 +69,8 @@ define void @NormalArg(i32 noundef %a) nounwind uwtable sanitize_memory {
 
 define void @NormalArgAfterNoUndef(i32 noundef %a, i32 %b) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @NormalArgAfterNoUndef(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i32*), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*), align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[P]] to i64
@@ -135,7 +135,7 @@ define void @CallNormalArgAfterNoUndef() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @CallNormalArgAfterNoUndef(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @NormalRet() #[[ATTR0]]
-; CHECK-NEXT:    store i32 0, i32* bitcast ([100 x i64]* @__msan_param_tls to i32*), align 8
+; CHECK-NEXT:    store i32 0, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i32*), align 8
 ; CHECK-NEXT:    call void @NormalArgAfterNoUndef(i32 [[R]], i32 [[R]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
