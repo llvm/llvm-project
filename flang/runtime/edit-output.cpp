@@ -52,6 +52,9 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
       *--p = digit >= 10 ? 'A' + (digit - 10) : '0' + digit;
     }
     break;
+  case 'A': // legacy extension
+    return EditDefaultCharacterOutput(
+        io, edit, reinterpret_cast<char *>(&n), sizeof n);
   default:
     io.GetIoErrorHandler().Crash(
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
@@ -402,6 +405,9 @@ template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
             decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw()));
   case 'G':
     return Edit(EditForGOutput(edit));
+  case 'A': // legacy extension
+    return EditDefaultCharacterOutput(
+        io_, edit, reinterpret_cast<char *>(&x_), sizeof x_);
   default:
     if (edit.IsListDirected()) {
       return EditListDirectedOutput(edit);

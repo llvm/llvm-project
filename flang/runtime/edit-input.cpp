@@ -83,6 +83,9 @@ bool EditIntegerInput(
     return EditBOZInput(io, edit, n, 8, kind << 3);
   case 'Z':
     return EditBOZInput(io, edit, n, 16, kind << 3);
+  case 'A': // legacy extension
+    return EditDefaultCharacterInput(
+        io, edit, reinterpret_cast<char *>(n), kind);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
@@ -323,6 +326,9 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   case 'Z':
     return EditBOZInput(
         io, edit, n, 16, common::BitsForBinaryPrecision(binaryPrecision));
+  case 'A': // legacy extension
+    return EditDefaultCharacterInput(
+        io, edit, reinterpret_cast<char *>(n), KIND);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used for REAL input",
