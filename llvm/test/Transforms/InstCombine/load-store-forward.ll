@@ -2,15 +2,14 @@
 ; RUN: opt -S -instcombine < %s | FileCheck %s --check-prefixes=CHECK,LITTLE
 ; RUN: opt -S -instcombine -data-layout="E" < %s | FileCheck %s --check-prefixes=CHECK,BIG
 
-; Some cases where store to load forwarding is principally possible,
-; but is non-trivial.
-
 define i8 @load_smaller_int(i16* %p) {
-; CHECK-LABEL: @load_smaller_int(
-; CHECK-NEXT:    store i16 258, i16* [[P:%.*]], align 2
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i16* [[P]] to i8*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[P2]], align 1
-; CHECK-NEXT:    ret i8 [[LOAD]]
+; LITTLE-LABEL: @load_smaller_int(
+; LITTLE-NEXT:    store i16 258, i16* [[P:%.*]], align 2
+; LITTLE-NEXT:    ret i8 2
+;
+; BIG-LABEL: @load_smaller_int(
+; BIG-NEXT:    store i16 258, i16* [[P:%.*]], align 2
+; BIG-NEXT:    ret i8 1
 ;
   store i16 258, i16* %p
   %p2 = bitcast i16* %p to i8*
