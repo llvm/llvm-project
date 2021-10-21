@@ -493,6 +493,23 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 };
 
+struct TestVectorReduceToContractPatternsPatterns
+    : public PassWrapper<TestVectorReduceToContractPatternsPatterns,
+                         FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-reduction-to-contract-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to convert multireduce op to contract and combine "
+           "broadcast/transpose to contract";
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateVetorReductionToContractPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -519,6 +536,8 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorMultiReductionLoweringPatterns>();
 
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
+
+  PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 }
 } // namespace test
 } // namespace mlir
