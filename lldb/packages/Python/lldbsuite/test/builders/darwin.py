@@ -98,7 +98,7 @@ class BuilderDarwin(Builder):
         version_min = ""
         if env == "simulator":
             version_min = "-m{}-simulator-version-min={}".format(os, version)
-        elif os == "macosx":
+        else:
             version_min = "-m{}-version-min={}".format(os, version)
 
         return "ARCH_CFLAGS=\"-target {} {}\"".format(triple, version_min)
