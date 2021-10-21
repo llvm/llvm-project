@@ -1,5 +1,5 @@
 ; Promoting some values allows promotion of other values.
-; RUN: opt < %s -mem2reg -S | not grep alloca
+; RUN: opt < %s -passes=mem2reg -S | not grep alloca
 
 define i32 @test2() {
 	%result = alloca i32		; <i32*> [#uses=2]

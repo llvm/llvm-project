@@ -1441,12 +1441,13 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation InnerStatementTrailingElseLoc;
   StmtResult ThenStmt;
   {
-    bool ShouldEnter =
-        (ConstexprCondition && !*ConstexprCondition) || IsConsteval;
+    bool ShouldEnter = ConstexprCondition && !*ConstexprCondition;
     Sema::ExpressionEvaluationContext Context =
         Sema::ExpressionEvaluationContext::DiscardedStatement;
-    if (NotLocation.isInvalid() && IsConsteval)
+    if (NotLocation.isInvalid() && IsConsteval) {
       Context = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+      ShouldEnter = true;
+    }
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
@@ -1485,12 +1486,13 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                           Tok.is(tok::l_brace));
 
     MisleadingIndentationChecker MIChecker(*this, MSK_else, ElseLoc);
-    bool ShouldEnter =
-        (ConstexprCondition && *ConstexprCondition) || IsConsteval;
+    bool ShouldEnter = ConstexprCondition && *ConstexprCondition;
     Sema::ExpressionEvaluationContext Context =
         Sema::ExpressionEvaluationContext::DiscardedStatement;
-    if (NotLocation.isValid() && IsConsteval)
+    if (NotLocation.isValid() && IsConsteval) {
       Context = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+      ShouldEnter = true;
+    }
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,

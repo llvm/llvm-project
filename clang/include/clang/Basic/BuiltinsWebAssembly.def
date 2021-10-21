@@ -172,5 +172,12 @@ TARGET_BUILTIN(__builtin_wasm_laneselect_i16x8, "V8sV8sV8sV8s", "nc", "relaxed-s
 TARGET_BUILTIN(__builtin_wasm_laneselect_i32x4, "V4iV4iV4iV4i", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_laneselect_i64x2, "V2LLiV2LLiV2LLiV2LLi", "nc", "relaxed-simd")
 
+TARGET_BUILTIN(__builtin_wasm_relaxed_swizzle_i8x16, "V16ScV16ScV16Sc", "nc", "relaxed-simd")
+
+TARGET_BUILTIN(__builtin_wasm_relaxed_min_f32x4, "V4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_max_f32x4, "V4fV4fV4f", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_min_f64x2, "V2dV2dV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_max_f64x2, "V2dV2dV2d", "nc", "relaxed-simd")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

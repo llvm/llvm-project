@@ -17,17 +17,19 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/LineIterator.h"
+#include <memory>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "inline-replay"
+#define DEBUG_TYPE "replay-inline"
 
 ReplayInlineAdvisor::ReplayInlineAdvisor(
     Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
     std::unique_ptr<InlineAdvisor> OriginalAdvisor, StringRef RemarksFile,
-    bool EmitRemarks)
+    ReplayInlineScope Scope, bool EmitRemarks)
     : InlineAdvisor(M, FAM), OriginalAdvisor(std::move(OriginalAdvisor)),
-      HasReplayRemarks(false), EmitRemarks(EmitRemarks) {
+      HasReplayRemarks(false), Scope(Scope), EmitRemarks(EmitRemarks) {
+
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(RemarksFile);
   std::error_code EC = BufferOrErr.getError();
   if (EC) {
@@ -36,26 +38,45 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
   }
 
   // Example for inline remarks to parse:
-  //   main:3:1.1: '_Z3subii' inlined into 'main' at callsite sum:1 @ main:3:1.1
+  //   main:3:1.1: '_Z3subii' inlined into 'main' at callsite sum:1 @
+  //   main:3:1.1;
   // We use the callsite string after `at callsite` to replay inlining.
   line_iterator LineIt(*BufferOrErr.get(), /*SkipBlanks=*/true);
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;
     auto Pair = Line.split(" at callsite ");
 
-    StringRef Callee = Pair.first.split(" inlined into")
-                           .first.rsplit(": '")
-                           .second.drop_back();
+    auto CalleeCaller = Pair.first.split("' inlined into '");
+
+    StringRef Callee = CalleeCaller.first.rsplit(": '").second;
+    StringRef Caller = CalleeCaller.second.rsplit("'").first;
+
     auto CallSite = Pair.second.split(";").first;
 
-    if (Callee.empty() || CallSite.empty())
-      continue;
+    if (Callee.empty() || Caller.empty() || CallSite.empty()) {
+      Context.emitError("Invalid remark format: " + Line);
+      return;
+    }
 
     std::string Combined = (Callee + CallSite).str();
-    InlineSitesFromRemarks.insert(Combined);
+    InlineSitesFromRemarks[Combined] = false;
+    if (Scope == ReplayInlineScope::Function)
+      CallersToReplay.insert(Caller);
   }
 
   HasReplayRemarks = true;
+}
+
+std::unique_ptr<InlineAdvisor> llvm::getReplayInlineAdvisor(
+    Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
+    std::unique_ptr<InlineAdvisor> OriginalAdvisor, StringRef RemarksFile,
+    ReplayInlineScope Scope, bool EmitRemarks) {
+  auto Advisor = std::make_unique<ReplayInlineAdvisor>(
+      M, FAM, Context, std::move(OriginalAdvisor), RemarksFile, Scope,
+      EmitRemarks);
+  if (!Advisor->areReplayRemarksLoaded())
+    Advisor.reset();
+  return Advisor;
 }
 
 std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
@@ -64,18 +85,23 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   Function &Caller = *CB.getCaller();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
-  if (InlineSitesFromRemarks.empty())
-    return std::make_unique<DefaultInlineAdvice>(this, CB, None, ORE,
-                                                 EmitRemarks);
+  Optional<InlineCost> InlineRecommended;
 
-  std::string CallSiteLoc = getCallSiteLocation(CB.getDebugLoc());
-  StringRef Callee = CB.getCalledFunction()->getName();
-  std::string Combined = (Callee + CallSiteLoc).str();
-  auto Iter = InlineSitesFromRemarks.find(Combined);
+  if (Scope == ReplayInlineScope::Module ||
+      CallersToReplay.count(CB.getFunction()->getName())) {
+    std::string CallSiteLoc = getCallSiteLocation(CB.getDebugLoc());
+    StringRef Callee = CB.getCalledFunction()->getName();
+    std::string Combined = (Callee + CallSiteLoc).str();
 
-  Optional<InlineCost> InlineRecommended = None;
-  if (Iter != InlineSitesFromRemarks.end()) {
-    InlineRecommended = llvm::InlineCost::getAlways("found in replay");
+    auto Iter = InlineSitesFromRemarks.find(Combined);
+    if (Iter != InlineSitesFromRemarks.end()) {
+      InlineSitesFromRemarks[Combined] = true;
+      InlineRecommended = llvm::InlineCost::getAlways("previously inlined");
+    }
+  } else if (Scope == ReplayInlineScope::Function) {
+    if (OriginalAdvisor)
+      return OriginalAdvisor->getAdvice(CB);
+    return {};
   }
 
   return std::make_unique<DefaultInlineAdvice>(this, CB, InlineRecommended, ORE,

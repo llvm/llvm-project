@@ -8,6 +8,7 @@
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/Sequence.h"
 
 using namespace mlir;
@@ -71,4 +72,18 @@ uint64_t ElementsAttr::getFlattenedIndex(Attribute elementsAttr,
     dimMultiplier *= shape[i];
   }
   return valueIndex;
+}
+
+//===----------------------------------------------------------------------===//
+// MemRefLayoutAttrInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::detail::verifyAffineMapAsLayout(
+    AffineMap m, ArrayRef<int64_t> shape,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (m.getNumDims() != shape.size())
+    return emitError() << "memref layout mismatch between rank and affine map: "
+                       << shape.size() << " != " << m.getNumDims();
+
+  return success();
 }

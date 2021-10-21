@@ -13,7 +13,7 @@ void some_func() {
   statvfs64(&st);
 // Check that even if there is a structure with redefined name before the
 // pragma, subsequent function name redefined properly. PR5172, Comment 11.
-// CHECK:  call i32 @statvfs(%struct.statvfs64* noundef %st)
+// CHECK:  call i32 @statvfs(%struct.statvfs64* %st)
 }
 
 // This is a case when redefenition is deferred *and* we have a local of the

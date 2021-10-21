@@ -19,13 +19,20 @@ public:
   enum VariantKind {
     VK_CSKY_None,
     VK_CSKY_ADDR,
+    VK_CSKY_ADDR_HI16,
+    VK_CSKY_ADDR_LO16,
     VK_CSKY_PCREL,
     VK_CSKY_GOT,
+    VK_CSKY_GOT_IMM18_BY4,
     VK_CSKY_GOTPC,
     VK_CSKY_GOTOFF,
     VK_CSKY_PLT,
-    VK_CSKY_TPOFF,
+    VK_CSKY_PLT_IMM18_BY4,
+    VK_CSKY_TLSIE,
+    VK_CSKY_TLSLE,
     VK_CSKY_TLSGD,
+    VK_CSKY_TLSLDO,
+    VK_CSKY_TLSLDM,
     VK_CSKY_Invalid
   };
 

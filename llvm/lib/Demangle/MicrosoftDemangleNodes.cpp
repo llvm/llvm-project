@@ -613,12 +613,12 @@ void VariableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   if (!(Flags & OF_NoMemberType) && IsStatic)
     OS << "static ";
 
-  if (Type) {
+  if (!(Flags & OF_NoVariableType) && Type) {
     Type->outputPre(OS, Flags);
     outputSpaceIfNecessary(OS);
   }
   Name->output(OS, Flags);
-  if (Type)
+  if (!(Flags & OF_NoVariableType) && Type)
     Type->outputPost(OS, Flags);
 }
 

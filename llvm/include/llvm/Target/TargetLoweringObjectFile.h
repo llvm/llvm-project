@@ -15,6 +15,7 @@
 #define LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include <cstdint>
 
 namespace llvm {
@@ -217,6 +218,14 @@ public:
   /// Target supports TLS offset relocation in debug section?
   bool supportDebugThreadLocalLocation() const {
     return SupportDebugThreadLocalLocation;
+  }
+
+  /// Returns the register used as static base in RWPI variants.
+  virtual const MCRegister getStaticBase() const { return MCRegister::NoRegister; }
+
+  /// Get the target specific RWPI relocation.
+  virtual const MCExpr *getIndirectSymViaRWPI(const MCSymbol *Sym) const {
+    return nullptr;
   }
 
   /// Get the target specific PC relative GOT entry relocation

@@ -91,7 +91,7 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   ASSERT_NOEXCEPT(std::cmp_less_equal(0, 1));
   test();
   static_assert(test());

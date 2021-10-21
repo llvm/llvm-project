@@ -13,7 +13,7 @@
 void foo();
 void bar();
 
-// CHECK: define{{.*}} void @{{.*}}baz{{.*}}(i32 noundef %n)
+// CHECK: define{{.*}} void @{{.*}}baz{{.*}}(i32 %n)
 void baz(int n) {
   static float a[10];
   static double b;

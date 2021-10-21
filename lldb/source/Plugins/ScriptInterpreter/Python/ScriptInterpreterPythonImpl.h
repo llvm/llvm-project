@@ -435,8 +435,9 @@ public:
         TerminalState terminal_state(terminal);
 
         if (terminal.IsATerminal()) {
-          terminal.SetCanonical(false);
-          terminal.SetEcho(true);
+          // FIXME: error handling?
+          llvm::consumeError(terminal.SetCanonical(false));
+          llvm::consumeError(terminal.SetEcho(true));
         }
 
         ScriptInterpreterPythonImpl::Locker locker(

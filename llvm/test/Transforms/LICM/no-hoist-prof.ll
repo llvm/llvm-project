@@ -1,4 +1,4 @@
-; RUN: opt -enable-new-pm=1 -sample-profile -licm -S -sample-profile-file='%S/Inputs/no-hoist-prof.prof' < %s | FileCheck %s --check-prefix=CHECK-BFI-LICM
+; RUN: opt -passes='sample-profile,function(loop-mssa(licm))' -aa-pipeline=basic-aa -S -sample-profile-file='%S/Inputs/no-hoist-prof.prof' < %s | FileCheck %s --check-prefix=CHECK-BFI-LICM
 ; RUN: opt -passes=licm -S < %s | FileCheck %s --check-prefix=CHECK-LICM
 
 ; Original source code:

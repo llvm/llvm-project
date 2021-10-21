@@ -291,6 +291,7 @@ public:
         sawDigit = true;
         if (*numString == '0' && this->numDigits == 0) {
           --this->decimalPoint;
+          ++numString;
           continue;
         }
         if (this->numDigits < MAX_NUM_DIGITS) {
@@ -311,6 +312,11 @@ public:
       ++numString;
       if (isdigit(*numString) || *numString == '+' || *numString == '-') {
         int32_t addToExp = strtointeger<int32_t>(numString, nullptr, 10);
+        if (addToExp > 100000) {
+          addToExp = 100000;
+        } else if (addToExp < -100000) {
+          addToExp = -100000;
+        }
         this->decimalPoint += addToExp;
       }
     }

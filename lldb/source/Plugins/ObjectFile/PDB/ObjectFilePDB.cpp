@@ -46,11 +46,6 @@ void ObjectFilePDB::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFilePDB::GetPluginNameStatic() {
-  static ConstString g_name("pdb");
-  return g_name;
-}
-
 ArchSpec ObjectFilePDB::GetArchitecture() {
   auto dbi_stream = m_file_up->getPDBDbiStream();
   if (!dbi_stream) {

@@ -235,7 +235,7 @@ bool GlobalValue::isDeclaration() const {
     return F->empty() && !F->isMaterializable();
 
   // Aliases and ifuncs are always definitions.
-  assert(isa<GlobalIndirectSymbol>(this));
+  assert(isa<GlobalAlias>(this) || isa<GlobalIFunc>(this));
   return false;
 }
 
@@ -280,12 +280,42 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-const GlobalObject *GlobalValue::getAliaseeObject() const {
-  if (auto *GO = dyn_cast<GlobalObject>(this))
+static const GlobalObject *
+findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
+  if (auto *GO = dyn_cast<GlobalObject>(C))
     return GO;
-  if (auto *GA = dyn_cast<GlobalAlias>(this))
-    return GA->getAliaseeObject();
+  if (auto *GA = dyn_cast<GlobalAlias>(C))
+    if (Aliases.insert(GA).second)
+      return findBaseObject(GA->getOperand(0), Aliases);
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    switch (CE->getOpcode()) {
+    case Instruction::Add: {
+      auto *LHS = findBaseObject(CE->getOperand(0), Aliases);
+      auto *RHS = findBaseObject(CE->getOperand(1), Aliases);
+      if (LHS && RHS)
+        return nullptr;
+      return LHS ? LHS : RHS;
+    }
+    case Instruction::Sub: {
+      if (findBaseObject(CE->getOperand(1), Aliases))
+        return nullptr;
+      return findBaseObject(CE->getOperand(0), Aliases);
+    }
+    case Instruction::IntToPtr:
+    case Instruction::PtrToInt:
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+      return findBaseObject(CE->getOperand(0), Aliases);
+    default:
+      break;
+    }
+  }
   return nullptr;
+}
+
+const GlobalObject *GlobalValue::getAliaseeObject() const {
+  DenseSet<const GlobalAlias *> Aliases;
+  return findBaseObject(this, Aliases);
 }
 
 bool GlobalValue::isAbsoluteSymbolRef() const {
@@ -421,58 +451,15 @@ void GlobalVariable::dropAllReferences() {
 }
 
 //===----------------------------------------------------------------------===//
-// GlobalIndirectSymbol Implementation
-//===----------------------------------------------------------------------===//
-
-GlobalIndirectSymbol::GlobalIndirectSymbol(Type *Ty, ValueTy VTy,
-    unsigned AddressSpace, LinkageTypes Linkage, const Twine &Name,
-    Constant *Symbol)
-    : GlobalValue(Ty, VTy, &Op<0>(), 1, Linkage, Name, AddressSpace) {
-    Op<0>() = Symbol;
-}
-
-static const GlobalObject *
-findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
-  if (auto *GO = dyn_cast<GlobalObject>(C))
-    return GO;
-  if (auto *GA = dyn_cast<GlobalAlias>(C))
-    if (Aliases.insert(GA).second)
-      return findBaseObject(GA->getOperand(0), Aliases);
-  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    switch (CE->getOpcode()) {
-    case Instruction::Add: {
-      auto *LHS = findBaseObject(CE->getOperand(0), Aliases);
-      auto *RHS = findBaseObject(CE->getOperand(1), Aliases);
-      if (LHS && RHS)
-        return nullptr;
-      return LHS ? LHS : RHS;
-    }
-    case Instruction::Sub: {
-      if (findBaseObject(CE->getOperand(1), Aliases))
-        return nullptr;
-      return findBaseObject(CE->getOperand(0), Aliases);
-    }
-    case Instruction::IntToPtr:
-    case Instruction::PtrToInt:
-    case Instruction::BitCast:
-    case Instruction::GetElementPtr:
-      return findBaseObject(CE->getOperand(0), Aliases);
-    default:
-      break;
-    }
-  }
-  return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
 // GlobalAlias Implementation
 //===----------------------------------------------------------------------===//
 
 GlobalAlias::GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                          const Twine &Name, Constant *Aliasee,
                          Module *ParentModule)
-    : GlobalIndirectSymbol(Ty, Value::GlobalAliasVal, AddressSpace, Link, Name,
-                           Aliasee) {
+    : GlobalValue(Ty, Value::GlobalAliasVal, &Op<0>(), 1, Link, Name,
+                  AddressSpace) {
+  setAliasee(Aliasee);
   if (ParentModule)
     ParentModule->getAliasList().push_back(this);
 }
@@ -516,7 +503,7 @@ void GlobalAlias::eraseFromParent() {
 void GlobalAlias::setAliasee(Constant *Aliasee) {
   assert((!Aliasee || Aliasee->getType() == getType()) &&
          "Alias and aliasee types should match!");
-  setIndirectSymbol(Aliasee);
+  Op<0>().set(Aliasee);
 }
 
 const GlobalObject *GlobalAlias::getAliaseeObject() const {
@@ -531,8 +518,9 @@ const GlobalObject *GlobalAlias::getAliaseeObject() const {
 GlobalIFunc::GlobalIFunc(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                          const Twine &Name, Constant *Resolver,
                          Module *ParentModule)
-    : GlobalIndirectSymbol(Ty, Value::GlobalIFuncVal, AddressSpace, Link, Name,
-                           Resolver) {
+    : GlobalObject(Ty, Value::GlobalIFuncVal, &Op<0>(), 1, Link, Name,
+                   AddressSpace) {
+  setResolver(Resolver);
   if (ParentModule)
     ParentModule->getIFuncList().push_back(this);
 }
@@ -553,5 +541,5 @@ void GlobalIFunc::eraseFromParent() {
 
 const Function *GlobalIFunc::getResolverFunction() const {
   DenseSet<const GlobalAlias *> Aliases;
-  return cast<Function>(findBaseObject(getIndirectSymbol(), Aliases));
+  return cast<Function>(findBaseObject(getResolver(), Aliases));
 }

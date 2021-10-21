@@ -2,6 +2,7 @@ import os
 import platform
 import subprocess
 import sys
+import itertools
 
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
@@ -25,11 +26,11 @@ class Builder:
         Helper function to return extra argumentsfor the make system. This
         method is meant to be overridden by platform specific builders.
         """
-        return ""
+        return []
 
     def getArchCFlags(self, architecture):
         """Returns the ARCH_CFLAGS for the make system."""
-        return ""
+        return []
 
     def getMake(self, test_subdir, test_name):
         """Returns the invocation for GNU make.
@@ -59,29 +60,27 @@ class Builder:
 
     def getCmdLine(self, d):
         """
-        Helper function to return a properly formatted command line argument(s)
-        string used for the make system.
+        Helper function to return a command line argument string used for the
+        make system.
         """
 
-        # If d is None or an empty mapping, just return an empty string.
+        # If d is None or an empty mapping, just return an empty list.
         if not d:
-            return ""
-        pattern = '%s="%s"' if "win32" in sys.platform else "%s='%s'"
+            return []
 
         def setOrAppendVariable(k, v):
             append_vars = ["CFLAGS", "CFLAGS_EXTRAS", "LD_EXTRAS"]
             if k in append_vars and k in os.environ:
                 v = os.environ[k] + " " + v
-            return pattern % (k, v)
+            return '%s=%s' % (k, v)
 
-        cmdline = " ".join(
-            [setOrAppendVariable(k, v) for k, v in list(d.items())])
+        cmdline = [setOrAppendVariable(k, v) for k, v in list(d.items())]
 
         return cmdline
 
-    def runBuildCommands(self, commands, sender):
+    def runBuildCommands(self, commands):
         try:
-            lldbtest.system(commands, sender=sender)
+            lldbtest.system(commands)
         except subprocess.CalledProcessError as called_process_error:
             # Convert to a build-specific error.
             # We don't do that in lldbtest.system() since that
@@ -93,7 +92,7 @@ class Builder:
         Helper function to return the key-value string to specify the architecture
         used for the make system.
         """
-        return ("ARCH=" + architecture) if architecture else ""
+        return ["ARCH=" + architecture] if architecture else []
 
     def getCCSpec(self, compiler):
         """
@@ -104,9 +103,8 @@ class Builder:
         if not cc and configuration.compiler:
             cc = configuration.compiler
         if cc:
-            return "CC=\"%s\"" % cc
-        else:
-            return ""
+            return ["CC=\"%s\"" % cc]
+        return []
 
     def getSDKRootSpec(self):
         """
@@ -114,8 +112,8 @@ class Builder:
         used for the make system.
         """
         if configuration.sdkroot:
-            return "SDKROOT={}".format(configuration.sdkroot)
-        return ""
+            return ["SDKROOT={}".format(configuration.sdkroot)]
+        return []
 
     def getModuleCacheSpec(self):
         """
@@ -123,121 +121,38 @@ class Builder:
         module cache used for the make system.
         """
         if configuration.clang_module_cache_dir:
-            return "CLANG_MODULE_CACHE_DIR={}".format(
-                configuration.clang_module_cache_dir)
-        return ""
+            return ["CLANG_MODULE_CACHE_DIR={}".format(
+                configuration.clang_module_cache_dir)]
+        return []
 
-    def buildDefault(self,
-                     sender=None,
-                     architecture=None,
-                     compiler=None,
-                     dictionary=None,
-                     testdir=None,
-                     testname=None):
-        """Build the binaries the default way."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "all",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getCCSpec(compiler),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
+    def _getDebugInfoArgs(self, debug_info):
+        if debug_info is None:
+            return []
+        if debug_info == "dwarf":
+            return ["MAKE_DSYM=NO"]
+        if debug_info == "dwo":
+            return ["MAKE_DSYM=NO", "MAKE_DWO=YES"]
+        if debug_info == "gmodules":
+            return ["MAKE_DSYM=NO", "MAKE_GMODULES=YES"]
+        return None
 
-        self.runBuildCommands(commands, sender=sender)
+    def build(self, debug_info, architecture=None, compiler=None,
+            dictionary=None, testdir=None, testname=None):
+        debug_info_args = self._getDebugInfoArgs(debug_info)
+        if debug_info_args is None:
+            return False
 
-        # True signifies that we can handle building default.
+        command_parts = [
+            self.getMake(testdir, testname), debug_info_args, ["all"],
+            self.getArchCFlags(architecture), self.getArchSpec(architecture),
+            self.getCCSpec(compiler), self.getExtraMakeArgs(),
+            self.getSDKRootSpec(), self.getModuleCacheSpec(),
+            self.getCmdLine(dictionary)]
+        command = list(itertools.chain(*command_parts))
+
+        self.runBuildCommands([command])
         return True
 
-    def buildDwarf(self,
-                   sender=None,
-                   architecture=None,
-                   compiler=None,
-                   dictionary=None,
-                   testdir=None,
-                   testname=None):
-        """Build the binaries with dwarf debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=NO",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getCCSpec(compiler),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-        # True signifies that we can handle building dwarf.
-        return True
-
-    def buildDwo(self,
-                 sender=None,
-                 architecture=None,
-                 compiler=None,
-                 dictionary=None,
-                 testdir=None,
-                 testname=None):
-        """Build the binaries with dwarf debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=NO", "MAKE_DWO=YES",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getCCSpec(compiler),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-        # True signifies that we can handle building dwo.
-        return True
-
-    def buildGModules(self,
-                      sender=None,
-                      architecture=None,
-                      compiler=None,
-                      dictionary=None,
-                      testdir=None,
-                      testname=None):
-        """Build the binaries with dwarf debug info."""
-        commands = []
-        commands.append(
-            self.getMake(testdir, testname) + [
-                "MAKE_DSYM=NO", "MAKE_GMODULES=YES",
-                self.getArchCFlags(architecture),
-                self.getArchSpec(architecture),
-                self.getCCSpec(compiler),
-                self.getExtraMakeArgs(),
-                self.getSDKRootSpec(),
-                self.getModuleCacheSpec(),
-                self.getCmdLine(dictionary)
-            ])
-
-        self.runBuildCommands(commands, sender=sender)
-        # True signifies that we can handle building with gmodules.
-        return True
-
-    def buildDsym(self,
-                  sender=None,
-                  architecture=None,
-                  compiler=None,
-                  dictionary=None,
-                  testdir=None,
-                  testname=None):
-        # False signifies that we cannot handle building with dSYM.
-        return False
-
-    def cleanup(self, sender=None, dictionary=None):
+    def cleanup(self, dictionary=None):
         """Perform a platform-specific cleanup after the test."""
         return True

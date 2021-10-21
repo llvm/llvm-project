@@ -64,7 +64,7 @@ void implicit_maps_host_global (int a){
   }
 }
 
-// CK6: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK6: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
 // CK6: [[ADDR:%.+]] = alloca i[[sz]],
 // CK6: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK6-64: [[CADDR:%.+]] = bitcast i64* [[ADDR]] to i32*

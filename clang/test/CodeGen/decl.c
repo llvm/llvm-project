@@ -28,7 +28,7 @@ void test2() {
   // CHECK: @test2()
   // CHECK: %x = alloca [13 x i32]
   // CHECK: call void @llvm.memcpy
-  // CHECK: call{{.*}}@foo{{.*}}i32* noundef %
+  // CHECK: call{{.*}}@foo{{.*}}i32* %
 }
 
 

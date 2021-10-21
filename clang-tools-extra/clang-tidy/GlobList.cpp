@@ -42,13 +42,14 @@ static llvm::Regex consumeGlob(StringRef &GlobList) {
   return llvm::Regex(RegexText);
 }
 
-GlobList::GlobList(StringRef Globs) {
+GlobList::GlobList(StringRef Globs, bool KeepNegativeGlobs /* =true */) {
   Items.reserve(Globs.count(',') + 1);
   do {
     GlobListItem Item;
     Item.IsPositive = !consumeNegativeIndicator(Globs);
     Item.Regex = consumeGlob(Globs);
-    Items.push_back(std::move(Item));
+    if (Item.IsPositive || KeepNegativeGlobs)
+      Items.push_back(std::move(Item));
   } while (!Globs.empty());
 }
 

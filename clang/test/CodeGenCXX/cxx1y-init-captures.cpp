@@ -28,9 +28,9 @@ void g() {
 // CHECK: store i32 1, i32*
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 1
 // CHECK: store i32 2, i32*
-// CHECK: call noundef i32 @"_ZZ1gvENK3$_1clEv"(
+// CHECK: call i32 @"_ZZ1gvENK3$_1clEv"(
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1gvENK3$_1clEv"(
+// CHECK-LABEL: define internal i32 @"_ZZ1gvENK3$_1clEv"(
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 0
 // CHECK: load i32, i32*
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 1
@@ -66,9 +66,9 @@ int h(int a) {
   // CHECK: load i32, i32* %[[A_ADDR]],
   // CHECK: store i32
   //
-  // CHECK: call noundef i32 @"_ZZ1hiENK3$_2clEv"({{.*}}* {{[^,]*}} %[[OUTER]])
+  // CHECK: call i32 @"_ZZ1hiENK3$_2clEv"({{.*}}* {{[^,]*}} %[[OUTER]])
   return [&b(a), c(a)] {
-    // CHECK-LABEL: define internal noundef i32 @"_ZZ1hiENK3$_2clEv"(
+    // CHECK-LABEL: define internal i32 @"_ZZ1hiENK3$_2clEv"(
     // CHECK: %[[OUTER_ADDR:.*]] = alloca
     // CHECK: %[[INNER:.*]] = alloca
     // CHECK: store {{.*}}, {{.*}}** %[[OUTER_ADDR]],
@@ -86,12 +86,12 @@ int h(int a) {
     // CHECK-NEXT: load i32, i32* %
     // CHECK-NEXT: store i32
     //
-    // CHECK: call noundef i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"({{.*}}* {{[^,]*}} %[[INNER]])
+    // CHECK: call i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"({{.*}}* {{[^,]*}} %[[INNER]])
     return [=, &c] {
       // CHECK-LABEL: define internal void @"_ZZ1fvEN3$_0D2Ev"(
       // CHECK: call void @_ZN1SD1Ev(
 
-      // CHECK-LABEL: define internal noundef i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"(
+      // CHECK-LABEL: define internal i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"(
       // CHECK: %[[INNER_ADDR:.*]] = alloca
       // CHECK: store {{.*}}, {{.*}}** %[[INNER_ADDR]],
       // CHECK: %[[INNER:.*]] = load {{.*}}*, {{.*}}** %[[INNER_ADDR]]

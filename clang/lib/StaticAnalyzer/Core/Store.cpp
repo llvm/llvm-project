@@ -84,7 +84,7 @@ Optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
     // involved.  Blocks can be casted to/from 'id', as they can be treated
     // as Objective-C objects.  This could possibly be handled by enhancing
     // our reasoning of downcasts of symbolic objects.
-    if (isa<CodeTextRegion>(R) || isa<SymbolicRegion>(R))
+    if (isa<CodeTextRegion, SymbolicRegion>(R))
       return R;
 
     // We don't know what to make of it.  Return a NULL region, which

@@ -15,7 +15,7 @@ low_target:
  bl high_target
  ret
 // CHECK: <low_target>:
-// CHECK-NEXT:       d8:       bl      0xec <__AArch64ADRPThunk_high_target>
+// CHECK-NEXT:        0:       bl      0x14 <__AArch64ADRPThunk_high_target>
 // CHECK-NEXT:                 ret
 
  .hidden low_target2
@@ -28,23 +28,23 @@ low_target2:
  bl .text_high+8
  ret
 // CHECK: <low_target2>:
-// CHECK-NEXT:       e0:       bl      0xf8 <__AArch64ADRPThunk_high_target2>
-// CHECK-NEXT:       e4:       bl      0x104 <__AArch64ADRPThunk_>
+// CHECK-NEXT:        8:       bl      0x20 <__AArch64ADRPThunk_high_target2>
+// CHECK-NEXT:        c:       bl      0x2c <__AArch64ADRPThunk_>
 // CHECK-NEXT:                 ret
 
 // Expect range extension thunks for .text_low
 // adrp calculation is (PC + signed immediate) & (!0xfff)
 // CHECK: <__AArch64ADRPThunk_high_target>:
-// CHECK-NEXT:       ec:       adrp    x16, 0x10000000
+// CHECK-NEXT:       14:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 add     x16, x16, #0x40
 // CHECK-NEXT:                 br      x16
 // CHECK: <__AArch64ADRPThunk_high_target2>:
-// CHECK-NEXT:       f8:       adrp    x16, 0x10000000
+// CHECK-NEXT:       20:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 add     x16, x16, #0x8
 // CHECK-NEXT:                 br      x16
 /// Identical to the previous one, but for the target .text_high+8.
 // CHECK: <__AArch64ADRPThunk_>:
-// CHECK-NEXT:      104:       adrp    x16, 0x10000000
+// CHECK-NEXT:       2c:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 add     x16, x16, #0x8
 // CHECK-NEXT:                 br      x16
 
@@ -75,7 +75,7 @@ high_target2:
 
 // CHECK: <__AArch64ADRPThunk_low_target2>:
 // CHECK-NEXT: 10000010:       adrp    x16, 0x0
-// CHECK-NEXT:                 add     x16, x16, #0xe0
+// CHECK-NEXT:                 add     x16, x16, #0x8
 // CHECK-NEXT:                 br      x16
 
 // CHECK: Disassembly of section .plt:
@@ -83,8 +83,8 @@ high_target2:
 // CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 10000020:       stp     x16, x30, [sp, #-0x10]!
 // CHECK-NEXT:                 adrp    x16, 0x10000000
-// CHECK-NEXT:                 ldr     x17, [x16, #0x120]
-// CHECK-NEXT:                 add     x16, x16, #0x120
+// CHECK-NEXT:                 ldr     x17, [x16, #0x1f8]
+// CHECK-NEXT:                 add     x16, x16, #0x1f8
 // CHECK-NEXT:                 br      x17
 // CHECK-NEXT:                 nop
 // CHECK-NEXT:                 nop
@@ -92,14 +92,14 @@ high_target2:
 // CHECK-EMPTY:
 // CHECK-NEXT:   <high_target@plt>:
 // CHECK-NEXT: 10000040:       adrp    x16, 0x10000000
-// CHECK-NEXT:                 ldr     x17, [x16, #0x128]
-// CHECK-NEXT:                 add     x16, x16, #0x128
+// CHECK-NEXT:                 ldr     x17, [x16, #0x200]
+// CHECK-NEXT:                 add     x16, x16, #0x200
 // CHECK-NEXT:                 br      x17
 // CHECK-EMPTY:
 // CHECK-NEXT:   <low_target@plt>:
 // CHECK-NEXT: 10000050:       adrp    x16, 0x10000000
-// CHECK-NEXT:                 ldr     x17, [x16, #0x130]
-// CHECK-NEXT:                 add     x16, x16, #0x130
+// CHECK-NEXT:                 ldr     x17, [x16, #0x208]
+// CHECK-NEXT:                 add     x16, x16, #0x208
 // CHECK-NEXT:                 br      x17
 
 //--- lds

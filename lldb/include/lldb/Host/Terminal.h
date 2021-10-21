@@ -12,11 +12,22 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
+class TerminalState;
+
 class Terminal {
 public:
+  enum class Parity {
+    No,
+    Even,
+    Odd,
+    Space,
+    Mark,
+  };
+
   Terminal(int fd = -1) : m_fd(fd) {}
 
   ~Terminal() = default;
@@ -31,12 +42,29 @@ public:
 
   void Clear() { m_fd = -1; }
 
-  bool SetEcho(bool enabled);
+  llvm::Error SetEcho(bool enabled);
 
-  bool SetCanonical(bool enabled);
+  llvm::Error SetCanonical(bool enabled);
+
+  llvm::Error SetRaw();
+
+  llvm::Error SetBaudRate(unsigned int baud_rate);
+
+  llvm::Error SetStopBits(unsigned int stop_bits);
+
+  llvm::Error SetParity(Parity parity);
+
+  llvm::Error SetHardwareFlowControl(bool enabled);
 
 protected:
+  struct Data;
+
   int m_fd; // This may or may not be a terminal file descriptor
+
+  llvm::Expected<Data> GetData();
+  llvm::Error SetData(const Data &data);
+
+  friend class TerminalState;
 };
 
 /// \class TerminalState Terminal.h "lldb/Host/Terminal.h"
@@ -45,8 +73,6 @@ protected:
 /// This class can be used to remember the terminal state for a file
 /// descriptor and later restore that state as it originally was.
 class TerminalState {
-  struct Data;
-
 public:
   /// Construct a new instance and optionally save terminal state.
   ///
@@ -125,10 +151,10 @@ protected:
   bool ProcessGroupIsValid() const;
 
   // Member variables
-  Terminal m_tty;               ///< A terminal
-  int m_tflags = -1;            ///< Cached tflags information.
-  std::unique_ptr<Data> m_data; ///< Platform-specific implementation.
-  lldb::pid_t m_process_group = -1; ///< Cached process group information.
+  Terminal m_tty;                         ///< A terminal
+  int m_tflags = -1;                      ///< Cached tflags information.
+  std::unique_ptr<Terminal::Data> m_data; ///< Platform-specific implementation.
+  lldb::pid_t m_process_group = -1;       ///< Cached process group information.
 };
 
 } // namespace lldb_private

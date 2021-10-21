@@ -17,6 +17,7 @@
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
+#include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 // This disables the removal of registers when lowering into MC, as required
@@ -56,15 +58,36 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
       const TargetMachine &TM = MF.getTarget();
       const Function &CurrentFunc = MF.getFunction();
+      Type *GlobalVT = Global->getValueType();
       SmallVector<MVT, 1> VTs;
-      computeLegalValueVTs(CurrentFunc, TM, Global->getValueType(), VTs);
-      if (VTs.size() != 1)
+      computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
+
+      // Tables are represented as Arrays in LLVM IR therefore
+      // they reach this point as aggregate Array types with an element type
+      // that is a reference type.
+      wasm::ValType Type;
+      if (GlobalVT->isArrayTy() &&
+          WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
+        MVT VT;
+        switch (GlobalVT->getArrayElementType()->getPointerAddressSpace()) {
+        case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF:
+          VT = MVT::funcref;
+          break;
+        case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF:
+          VT = MVT::externref;
+          break;
+        default:
+          report_fatal_error("unhandled address space type");
+        }
+        Type = WebAssembly::toValType(VT);
+      } else if (VTs.size() == 1) {
+        Type = WebAssembly::toValType(VTs[0]);
+      } else
         report_fatal_error("Aggregate globals not yet implemented");
 
-      bool Mutable = true;
-      wasm::ValType Type = WebAssembly::toValType(VTs[0]);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-      WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), Mutable});
+      WasmSym->setGlobalType(
+          wasm::WasmGlobalType{uint8_t(Type), /*Mutable=*/true});
     }
     return WasmSym;
   }

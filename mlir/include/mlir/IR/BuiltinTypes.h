@@ -9,6 +9,7 @@
 #ifndef MLIR_IR_BUILTINTYPES_H
 #define MLIR_IR_BUILTINTYPES_H
 
+#include "BuiltinAttributeInterfaces.h"
 #include "SubElementInterfaces.h"
 
 namespace llvm {
@@ -209,12 +210,11 @@ public:
   // Build from another MemRefType.
   explicit Builder(MemRefType other)
       : shape(other.getShape()), elementType(other.getElementType()),
-        affineMaps(other.getAffineMaps()), memorySpace(other.getMemorySpace()) {
-  }
+        layout(other.getLayout()), memorySpace(other.getMemorySpace()) {}
 
   // Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType)
-      : shape(shape), elementType(elementType), affineMaps() {}
+      : shape(shape), elementType(elementType) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape) {
     shape = newShape;
@@ -226,8 +226,8 @@ public:
     return *this;
   }
 
-  Builder &setAffineMaps(ArrayRef<AffineMap> newAffineMaps) {
-    affineMaps = newAffineMaps;
+  Builder &setLayout(MemRefLayoutAttrInterface newLayout) {
+    layout = newLayout;
     return *this;
   }
 
@@ -240,13 +240,13 @@ public:
   Builder &setMemorySpace(unsigned newMemorySpace);
 
   operator MemRefType() {
-    return MemRefType::get(shape, elementType, affineMaps, memorySpace);
+    return MemRefType::get(shape, elementType, layout, memorySpace);
   }
 
 private:
   ArrayRef<int64_t> shape;
   Type elementType;
-  ArrayRef<AffineMap> affineMaps;
+  MemRefLayoutAttrInterface layout;
   Attribute memorySpace;
 };
 

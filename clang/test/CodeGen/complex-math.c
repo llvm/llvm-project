@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple aarch64-unknown-unknown -ffast-math -ffp-contract=fast -o - | FileCheck %s --check-prefix=AARCH64-FASTMATH
-// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple spir -o - | FileCheck %s --check-prefix=SPIR
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple aarch64-unknown-unknown -ffast-math -ffp-contract=fast -o - | FileCheck %s --check-prefix=AARCH64-FASTMATH
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple spir -o - | FileCheck %s --check-prefix=SPIR
 
 float _Complex add_float_rr(float a, float b) {
   // X86-LABEL: @add_float_rr(
@@ -136,7 +136,7 @@ float _Complex div_float_rc(float a, float _Complex b) {
   // SPIR: call spir_func {{.*}} @__divsc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_float_rc(float noundef %a, [2 x float] noundef %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_float_rc(float %a, [2 x float] %b.coerce)
   // A = a
   // B = 0
   //
@@ -165,7 +165,7 @@ float _Complex div_float_cc(float _Complex a, float _Complex b) {
   // SPIR: call spir_func {{.*}} @__divsc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_float_cc([2 x float] noundef %a.coerce, [2 x float] noundef %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_float_cc([2 x float] %a.coerce, [2 x float] %b.coerce)
   //
   // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast float
   // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast float
@@ -313,7 +313,7 @@ double _Complex div_double_rc(double a, double _Complex b) {
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_double_rc(double noundef %a, [2 x double] noundef %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_double_rc(double %a, [2 x double] %b.coerce)
   // A = a
   // B = 0
   //
@@ -342,7 +342,7 @@ double _Complex div_double_cc(double _Complex a, double _Complex b) {
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_double_cc([2 x double] noundef %a.coerce, [2 x double] noundef %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_double_cc([2 x double] %a.coerce, [2 x double] %b.coerce)
   //
   // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast double
   // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast double
@@ -506,7 +506,7 @@ long double _Complex div_long_double_rc(long double a, long double _Complex b) {
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_long_double_rc(fp128 noundef %a, [2 x fp128] noundef %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_long_double_rc(fp128 %a, [2 x fp128] %b.coerce)
   // A = a
   // B = 0
   //
@@ -538,7 +538,7 @@ long double _Complex div_long_double_cc(long double _Complex a, long double _Com
   // SPIR: call spir_func {{.*}} @__divdc3(
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
-  // AARCH64-FASTMATH-LABEL: @div_long_double_cc([2 x fp128] noundef %a.coerce, [2 x fp128] noundef %b.coerce)
+  // AARCH64-FASTMATH-LABEL: @div_long_double_cc([2 x fp128] %a.coerce, [2 x fp128] %b.coerce)
   //
   // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast fp128
   // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast fp128

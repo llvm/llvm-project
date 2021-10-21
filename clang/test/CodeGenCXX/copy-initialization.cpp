@@ -12,7 +12,7 @@ struct Bar {
 
 void f(Foo);
 
-// CHECK-LABEL: define{{.*}} void @_Z1g3Foo(%struct.Foo* noundef %foo)
+// CHECK-LABEL: define{{.*}} void @_Z1g3Foo(%struct.Foo* %foo)
 void g(Foo foo) {
   // CHECK: call void @_ZN3BarC1Ev
   // CHECK: @_ZNK3BarcvRK3FooEv

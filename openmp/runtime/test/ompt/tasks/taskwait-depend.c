@@ -4,6 +4,9 @@
 // taskwait with depend clause was introduced with gcc-9
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
 
+// icc does not yet support taskwait with depend clause
+// XFAIL: icc
+
 // clang does not yet support taskwait with depend clause
 // clang-12 introduced parsing, but no codegen
 // update expected result when codegen in clang was added

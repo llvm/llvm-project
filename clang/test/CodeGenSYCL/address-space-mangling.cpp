@@ -8,15 +8,15 @@ void foo(__attribute__((opencl_local)) int *);
 void foo(__attribute__((opencl_private)) int *);
 void foo(int *);
 
-// SPIR: declare spir_func void @_Z3fooPU3AS1i(i32 addrspace(1)* noundef) #1
-// SPIR: declare spir_func void @_Z3fooPU3AS3i(i32 addrspace(3)* noundef) #1
-// SPIR: declare spir_func void @_Z3fooPU3AS0i(i32* noundef) #1
-// SPIR: declare spir_func void @_Z3fooPi(i32 addrspace(4)* noundef) #1
+// SPIR: declare spir_func void @_Z3fooPU3AS1i(i32 addrspace(1)*) #1
+// SPIR: declare spir_func void @_Z3fooPU3AS3i(i32 addrspace(3)*) #1
+// SPIR: declare spir_func void @_Z3fooPU3AS0i(i32*) #1
+// SPIR: declare spir_func void @_Z3fooPi(i32 addrspace(4)*) #1
 
-// X86: declare void @_Z3fooPU8SYglobali(i32* noundef) #1
-// X86: declare void @_Z3fooPU7SYlocali(i32* noundef) #1
-// X86: declare void @_Z3fooPU9SYprivatei(i32* noundef) #1
-// X86: declare void @_Z3fooPi(i32* noundef) #1
+// X86: declare void @_Z3fooPU8SYglobali(i32*) #1
+// X86: declare void @_Z3fooPU7SYlocali(i32*) #1
+// X86: declare void @_Z3fooPU9SYprivatei(i32*) #1
+// X86: declare void @_Z3fooPi(i32*) #1
 
 void test() {
   __attribute__((opencl_global)) int *glob;

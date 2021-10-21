@@ -815,7 +815,7 @@ bool NoStoreFuncVisitor::prettyPrintRegionName(const RegionVector &FieldChain,
 
     // Just keep going up to the base region.
     // Element regions may appear due to casts.
-    if (isa<CXXBaseObjectRegion>(R) || isa<CXXTempObjectRegion>(R))
+    if (isa<CXXBaseObjectRegion, CXXTempObjectRegion>(R))
       continue;
 
     if (Sep.empty())
@@ -2735,9 +2735,8 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
 
-  if (isa<GNUNullExpr>(Ex) || isa<ObjCBoolLiteralExpr>(Ex) ||
-      isa<CXXBoolLiteralExpr>(Ex) || isa<IntegerLiteral>(Ex) ||
-      isa<FloatingLiteral>(Ex)) {
+  if (isa<GNUNullExpr, ObjCBoolLiteralExpr, CXXBoolLiteralExpr, IntegerLiteral,
+          FloatingLiteral>(Ex)) {
     // Use heuristics to determine if the expression is a macro
     // expanding to a literal and if so, use the macro's name.
     SourceLocation BeginLoc = OriginalExpr->getBeginLoc();

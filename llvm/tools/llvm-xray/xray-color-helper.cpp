@@ -21,7 +21,7 @@ using namespace xray;
 //  Sequential ColorMaps, which are used to represent information
 //  from some minimum to some maximum.
 
-static const std::tuple<uint8_t, uint8_t, uint8_t> SequentialMaps[][9] = {
+const std::tuple<uint8_t, uint8_t, uint8_t> SequentialMaps[][9] = {
     {// The greys color scheme from http://colorbrewer2.org/
      std::make_tuple(255, 255, 255), std::make_tuple(240, 240, 240),
      std::make_tuple(217, 217, 217), std::make_tuple(189, 189, 189),
@@ -42,7 +42,7 @@ static const std::tuple<uint8_t, uint8_t, uint8_t> SequentialMaps[][9] = {
      std::make_tuple(2, 56, 88)}};
 
 // Sequential Maps extend the last colors given out of range inputs.
-static const std::tuple<uint8_t, uint8_t, uint8_t> SequentialBounds[][2] = {
+const std::tuple<uint8_t, uint8_t, uint8_t> SequentialBounds[][2] = {
     {// The Bounds for the greys color scheme
      std::make_tuple(255, 255, 255), std::make_tuple(0, 0, 0)},
     {// The Bounds for the OrRd color Scheme
@@ -58,7 +58,7 @@ ColorHelper::ColorHelper(ColorHelper::SequentialScheme S)
 // representing differenes, or a range that goes from negative to positive.
 // These take an input in the range [-1,1].
 
-static const std::tuple<uint8_t, uint8_t, uint8_t> DivergingCoeffs[][11] = {
+const std::tuple<uint8_t, uint8_t, uint8_t> DivergingCoeffs[][11] = {
     {// The PiYG color scheme from http://colorbrewer2.org/
      std::make_tuple(142, 1, 82), std::make_tuple(197, 27, 125),
      std::make_tuple(222, 119, 174), std::make_tuple(241, 182, 218),
@@ -69,7 +69,7 @@ static const std::tuple<uint8_t, uint8_t, uint8_t> DivergingCoeffs[][11] = {
 
 // Diverging maps use out of bounds ranges to show missing data. Missing Right
 // Being below min, and missing left being above max.
-static const std::tuple<uint8_t, uint8_t, uint8_t> DivergingBounds[][2] = {
+const std::tuple<uint8_t, uint8_t, uint8_t> DivergingBounds[][2] = {
     {// The PiYG color scheme has green and red for missing right and left
      // respectively.
      std::make_tuple(255, 0, 0), std::make_tuple(0, 255, 0)}};

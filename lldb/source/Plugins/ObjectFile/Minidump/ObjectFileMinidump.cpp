@@ -32,11 +32,6 @@ void ObjectFileMinidump::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFileMinidump::GetPluginNameStatic() {
-  static ConstString g_name("minidump");
-  return g_name;
-}
-
 ObjectFile *ObjectFileMinidump::CreateInstance(
     const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
     lldb::offset_t data_offset, const lldb_private::FileSpec *file,

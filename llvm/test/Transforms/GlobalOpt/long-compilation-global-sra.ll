@@ -1,4 +1,4 @@
-; RUN: opt %s --O0 -globalopt -S -o -
+; RUN: opt %s -passes='default<O0>,globalopt' -S -o -
 
 ; This is a regression test against very slow execution...
 ; In bad case it should fail by timeout.

@@ -625,8 +625,8 @@ bool LoopIdiomRecognize::runOnLoopBlock(
   // We can only promote stores in this block if they are unconditionally
   // executed in the loop.  For a block to be unconditionally executed, it has
   // to dominate all the exit blocks of the loop.  Verify this now.
-  for (unsigned i = 0, e = ExitBlocks.size(); i != e; ++i)
-    if (!DT->dominates(BB, ExitBlocks[i]))
+  for (BasicBlock *ExitBlock : ExitBlocks)
+    if (!DT->dominates(BB, ExitBlock))
       return false;
 
   bool MadeChange = false;
@@ -750,16 +750,13 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
   bool Changed = false;
 
   // For stores that start but don't end a link in the chain:
-  for (SetVector<StoreInst *>::iterator it = Heads.begin(), e = Heads.end();
-       it != e; ++it) {
-    if (Tails.count(*it))
+  for (StoreInst *I : Heads) {
+    if (Tails.count(I))
       continue;
 
     // We found a store instr that starts a chain. Now follow the chain and try
     // to transform it.
     SmallPtrSet<Instruction *, 8> AdjacentStores;
-    StoreInst *I = *it;
-
     StoreInst *HeadStore = I;
     unsigned StoreSize = 0;
 
@@ -1020,9 +1017,8 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // which will then no-alias a store to &A[100].
   MemoryLocation StoreLoc(Ptr, AccessSize);
 
-  for (Loop::block_iterator BI = L->block_begin(), E = L->block_end(); BI != E;
-       ++BI)
-    for (Instruction &I : **BI)
+  for (BasicBlock *B : L->blocks())
+    for (Instruction &I : *B)
       if (IgnoredInsts.count(&I) == 0 &&
           isModOrRefSet(
               intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
@@ -1675,24 +1671,22 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 4: Find the instruction which count the population: cnt2 = cnt1 + 1
   {
     CountInst = nullptr;
-    for (BasicBlock::iterator Iter = LoopEntry->getFirstNonPHI()->getIterator(),
-                              IterE = LoopEntry->end();
-         Iter != IterE; Iter++) {
-      Instruction *Inst = &*Iter;
-      if (Inst->getOpcode() != Instruction::Add)
+    for (Instruction &Inst : llvm::make_range(
+             LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+      if (Inst.getOpcode() != Instruction::Add)
         continue;
 
-      ConstantInt *Inc = dyn_cast<ConstantInt>(Inst->getOperand(1));
+      ConstantInt *Inc = dyn_cast<ConstantInt>(Inst.getOperand(1));
       if (!Inc || !Inc->isOne())
         continue;
 
-      PHINode *Phi = getRecurrenceVar(Inst->getOperand(0), Inst, LoopEntry);
+      PHINode *Phi = getRecurrenceVar(Inst.getOperand(0), &Inst, LoopEntry);
       if (!Phi)
         continue;
 
       // Check if the result of the instruction is live of the loop.
       bool LiveOutLoop = false;
-      for (User *U : Inst->users()) {
+      for (User *U : Inst.users()) {
         if ((cast<Instruction>(U))->getParent() != LoopEntry) {
           LiveOutLoop = true;
           break;
@@ -1700,7 +1694,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
       }
 
       if (LiveOutLoop) {
-        CountInst = Inst;
+        CountInst = &Inst;
         CountPhi = Phi;
         break;
       }
@@ -1801,22 +1795,20 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (BasicBlock::iterator Iter = LoopEntry->getFirstNonPHI()->getIterator(),
-                            IterE = LoopEntry->end();
-       Iter != IterE; Iter++) {
-    Instruction *Inst = &*Iter;
-    if (Inst->getOpcode() != Instruction::Add)
+  for (Instruction &Inst : llvm::make_range(
+           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+    if (Inst.getOpcode() != Instruction::Add)
       continue;
 
-    ConstantInt *Inc = dyn_cast<ConstantInt>(Inst->getOperand(1));
+    ConstantInt *Inc = dyn_cast<ConstantInt>(Inst.getOperand(1));
     if (!Inc || (!Inc->isOne() && !Inc->isMinusOne()))
       continue;
 
-    PHINode *Phi = getRecurrenceVar(Inst->getOperand(0), Inst, LoopEntry);
+    PHINode *Phi = getRecurrenceVar(Inst.getOperand(0), &Inst, LoopEntry);
     if (!Phi)
       continue;
 
-    CntInst = Inst;
+    CntInst = &Inst;
     CntPhi = Phi;
     break;
   }

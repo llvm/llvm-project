@@ -19,8 +19,11 @@
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/non_propagating_cache.h>
+#include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
+#include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <type_traits>
 
@@ -104,6 +107,80 @@ namespace ranges {
 
   template<class _Tp>
   inline constexpr bool enable_borrowed_range<reverse_view<_Tp>> = enable_borrowed_range<_Tp>;
+
+  namespace views {
+  namespace __reverse {
+    template<class _Tp>
+    constexpr bool __is_reverse_view = false;
+
+    template<class _Tp>
+    constexpr bool __is_reverse_view<reverse_view<_Tp>> = true;
+
+    template<class _Tp>
+    constexpr bool __is_sized_reverse_subrange = false;
+
+    template<class _Iter>
+    constexpr bool __is_sized_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, subrange_kind::sized>> = true;
+
+    template<class _Tp>
+    constexpr bool __is_unsized_reverse_subrange = false;
+
+    template<class _Iter, subrange_kind _Kind>
+    constexpr bool __is_unsized_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, _Kind>> = _Kind == subrange_kind::unsized;
+
+    template<class _Tp>
+    struct __unwrapped_reverse_subrange {
+      using type = void; // avoid SFINAE-ing out the overload below -- let the concept requirements do it for better diagnostics
+    };
+
+    template<class _Iter, subrange_kind _Kind>
+    struct __unwrapped_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, _Kind>> {
+      using type = subrange<_Iter, _Iter, _Kind>;
+    };
+
+    struct __fn : __range_adaptor_closure<__fn> {
+      template<class _Range>
+        requires __is_reverse_view<remove_cvref_t<_Range>>
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+      constexpr auto operator()(_Range&& __range) const
+        noexcept(noexcept(_VSTD::forward<_Range>(__range).base()))
+        -> decltype(      _VSTD::forward<_Range>(__range).base())
+        { return          _VSTD::forward<_Range>(__range).base(); }
+
+      template<class _Range,
+               class _UnwrappedSubrange = typename __unwrapped_reverse_subrange<remove_cvref_t<_Range>>::type>
+        requires __is_sized_reverse_subrange<remove_cvref_t<_Range>>
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+      constexpr auto operator()(_Range&& __range) const
+        noexcept(noexcept(_UnwrappedSubrange(__range.end().base(), __range.begin().base(), __range.size())))
+        -> decltype(      _UnwrappedSubrange(__range.end().base(), __range.begin().base(), __range.size()))
+        { return          _UnwrappedSubrange(__range.end().base(), __range.begin().base(), __range.size()); }
+
+      template<class _Range,
+               class _UnwrappedSubrange = typename __unwrapped_reverse_subrange<remove_cvref_t<_Range>>::type>
+        requires __is_unsized_reverse_subrange<remove_cvref_t<_Range>>
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+      constexpr auto operator()(_Range&& __range) const
+        noexcept(noexcept(_UnwrappedSubrange(__range.end().base(), __range.begin().base())))
+        -> decltype(      _UnwrappedSubrange(__range.end().base(), __range.begin().base()))
+        { return          _UnwrappedSubrange(__range.end().base(), __range.begin().base()); }
+
+      template<class _Range>
+        requires (!__is_reverse_view<remove_cvref_t<_Range>> &&
+                  !__is_sized_reverse_subrange<remove_cvref_t<_Range>> &&
+                  !__is_unsized_reverse_subrange<remove_cvref_t<_Range>>)
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+      constexpr auto operator()(_Range&& __range) const
+        noexcept(noexcept(reverse_view{_VSTD::forward<_Range>(__range)}))
+        -> decltype(      reverse_view{_VSTD::forward<_Range>(__range)})
+        { return          reverse_view{_VSTD::forward<_Range>(__range)}; }
+    };
+  }
+
+  inline namespace __cpo {
+    inline constexpr auto reverse = __reverse::__fn{};
+  }
+  } // namespace views
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
