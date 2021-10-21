@@ -54,6 +54,7 @@ extern void __asan_store_n (uptr addr, uptr size);
 extern void __asan_store_n_noabort (uptr addr, uptr size);
 extern void __asan_load_n (uptr addr, uptr size);
 extern void __asan_load_n_noabort (uptr addr, uptr size);
+extern uptr __asan_region_is_poisoned(uptr beg, uptr size);
 extern void* __asan_memmove(void* to, void* from, uptr size);
 extern void* __asan_memcpy(void* to, void* from, uptr size);
 extern void* __asan_memset(void* s, int c, uptr n);
@@ -122,6 +123,7 @@ __amdgpu_device_library_preserve_asan_functions(void)
     __asan_store_n_noabort(0, 0);
     __asan_load_n(0, 0);
     __asan_load_n_noabort(0, 0);
+    __asan_region_is_poisoned(0, 0);
     (void)__asan_memmove((void*)0, (void*)0, 0);
     (void)__asan_memcpy((void*)0, (void*)0, 0);
     (void)__asan_memset((void*)0, 0, 0);

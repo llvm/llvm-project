@@ -6,7 +6,7 @@
  *===------------------------------------------------------------------------*/
 
 #pragma once
-#include "shadow_mapping.h"
+#include "asan_util.h"
 
 // The strucutures semantics and layout must match the host instrumented
 // global variable as defined in
