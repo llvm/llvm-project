@@ -111,7 +111,7 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
         if constexpr (constexpr auto resultType{
                           GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
           if constexpr (resultType->first == RCAT &&
-              resultType->second <= RKIND) {
+              (resultType->second <= RKIND || RCAT == TypeCategory::Logical)) {
             return DoDotProduct<RCAT, RKIND, CppTypeFor<XCAT, XKIND>,
                 CppTypeFor<YCAT, YKIND>>(x, y, terminator);
           }
