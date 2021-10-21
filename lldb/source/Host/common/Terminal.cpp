@@ -112,6 +112,7 @@ llvm::Error Terminal::SetRaw() {
 #endif // #if LLDB_ENABLE_TERMIOS
 }
 
+#if LLDB_ENABLE_TERMIOS
 static llvm::Optional<speed_t> baudRateToConst(unsigned int baud_rate) {
   switch (baud_rate) {
 #if defined(B50)
@@ -254,6 +255,7 @@ static llvm::Optional<speed_t> baudRateToConst(unsigned int baud_rate) {
     return llvm::None;
   }
 }
+#endif
 
 llvm::Error Terminal::SetBaudRate(unsigned int baud_rate) {
   llvm::Expected<Data> data = GetData();
