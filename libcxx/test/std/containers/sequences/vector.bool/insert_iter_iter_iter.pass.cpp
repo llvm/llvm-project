@@ -93,6 +93,22 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 11
     {
+        std::vector<bool, explicit_allocator<bool>> v(100);
+        bool a[] = {1, 0, 0, 1, 1};
+        const unsigned N = sizeof(a)/sizeof(a[0]);
+        std::vector<bool, explicit_allocator<bool>>::iterator i = v.insert(v.cbegin() + 10, cpp17_input_iterator<const bool*>(a),
+                                        cpp17_input_iterator<const bool*>(a+N));
+        assert(v.size() == 100 + N);
+        assert(i == v.begin() + 10);
+        std::size_t j;
+        for (j = 0; j < 10; ++j)
+            assert(v[j] == 0);
+        for (std::size_t k = 0; k < N; ++j, ++k)
+            assert(v[j] == a[k]);
+        for (; j < v.size(); ++j)
+            assert(v[j] == 0);
+    }
+    {
         std::vector<bool, min_allocator<bool>> v(100);
         bool a[] = {1, 0, 0, 1, 1};
         const unsigned N = sizeof(a)/sizeof(a[0]);

@@ -41,6 +41,11 @@ int main(int, char**)
         assert(v.capacity() >= 10);
     }
     {
+        std::vector<bool, explicit_allocator<bool>> v;
+        v.reserve(10);
+        assert(v.capacity() >= 10);
+    }
+    {
         std::vector<bool, min_allocator<bool>> v(100);
         assert(v.capacity() >= 100);
         v.reserve(50);
