@@ -531,6 +531,14 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
     fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("L2", ctx),
                                           stage1Patterns);
   }
+  {
+    // Canonicalization patterns
+    RewritePatternSet canonicalizationPatterns(funcOp.getContext());
+    vector::populateVectorTransferPermutationMapLoweringPatterns(
+        canonicalizationPatterns);
+    vector::populateVetorReductionToContractPatterns(canonicalizationPatterns);
+    stage1Patterns.push_back(std::move(canonicalizationPatterns));
+  }
   SmallVector<FrozenRewritePatternSet, 4> frozenStage1Patterns;
   llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
   FrozenRewritePatternSet stage2Patterns =
