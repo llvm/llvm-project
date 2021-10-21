@@ -143,12 +143,11 @@ TEST_F(TerminalTest, SetParity) {
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
   EXPECT_EQ(terminfo.c_cflag & PARENB, 0U);
 
+#if !defined(__linux__) // Linux pty devices do not support setting parity
   ASSERT_THAT_ERROR(m_term.SetParity(Terminal::Parity::Even),
                     llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
-#if !defined(__linux__) // Linux pty devices strip PARENB
   EXPECT_NE(terminfo.c_cflag & PARENB, 0U);
-#endif
   EXPECT_EQ(terminfo.c_cflag & PARODD, 0U);
 #if defined(CMSPAR)
   EXPECT_EQ(terminfo.c_cflag & CMSPAR, 0U);
@@ -156,9 +155,7 @@ TEST_F(TerminalTest, SetParity) {
 
   ASSERT_THAT_ERROR(m_term.SetParity(Terminal::Parity::Odd), llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
-#if !defined(__linux__) // Linux pty devices strip PARENB
   EXPECT_NE(terminfo.c_cflag & PARENB, 0U);
-#endif
   EXPECT_NE(terminfo.c_cflag & PARODD, 0U);
 #if defined(CMSPAR)
   EXPECT_EQ(terminfo.c_cflag & CMSPAR, 0U);
@@ -168,21 +165,20 @@ TEST_F(TerminalTest, SetParity) {
   ASSERT_THAT_ERROR(m_term.SetParity(Terminal::Parity::Space),
                     llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
-#if !defined(__linux__) // Linux pty devices strip PARENB
   EXPECT_NE(terminfo.c_cflag & PARENB, 0U);
-#endif
   EXPECT_EQ(terminfo.c_cflag & PARODD, 0U);
   EXPECT_NE(terminfo.c_cflag & CMSPAR, 0U);
 
   ASSERT_THAT_ERROR(m_term.SetParity(Terminal::Parity::Mark),
                     llvm::Succeeded());
   ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
-#if !defined(__linux__) // Linux pty devices strip PARENB
   EXPECT_NE(terminfo.c_cflag & PARENB, 0U);
-#endif
   EXPECT_NE(terminfo.c_cflag & PARODD, 0U);
   EXPECT_NE(terminfo.c_cflag & CMSPAR, 0U);
-#else
+#endif // defined(CMSPAR)
+#endif // !defined(__linux__)
+
+#if !defined(CMSPAR)
   ASSERT_THAT_ERROR(m_term.SetParity(Terminal::Parity::Space),
                     llvm::Failed<llvm::ErrorInfoBase>(testing::Property(
                         &llvm::ErrorInfoBase::message,
