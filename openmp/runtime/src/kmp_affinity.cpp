@@ -198,14 +198,82 @@ void kmp_hw_thread_t::print() const {
 ////////////////////////////////////////////////////////////////////////////////
 // kmp_topology_t methods
 
+// Add a layer to the topology based on the ids. Assume the topology
+// is perfectly nested (i.e., so no object has more than one parent)
+void kmp_topology_t::_insert_layer(kmp_hw_t type, const int *ids) {
+  // Figure out where the layer should go by comparing the ids of the current
+  // layers with the new ids
+  int target_layer;
+  int previous_id = kmp_hw_thread_t::UNKNOWN_ID;
+  int previous_new_id = kmp_hw_thread_t::UNKNOWN_ID;
+
+  // Start from the highest layer and work down to find target layer
+  // If new layer is equal to another layer then put the new layer above
+  for (target_layer = 0; target_layer < depth; ++target_layer) {
+    bool layers_equal = true;
+    bool strictly_above_target_layer = false;
+    for (int i = 0; i < num_hw_threads; ++i) {
+      int id = hw_threads[i].ids[target_layer];
+      int new_id = ids[i];
+      if (id != previous_id && new_id == previous_new_id) {
+        // Found the layer we are strictly above
+        strictly_above_target_layer = true;
+        layers_equal = false;
+        break;
+      } else if (id == previous_id && new_id != previous_new_id) {
+        // Found a layer we are below. Move to next layer and check.
+        layers_equal = false;
+        break;
+      }
+      previous_id = id;
+      previous_new_id = new_id;
+    }
+    if (strictly_above_target_layer || layers_equal)
+      break;
+  }
+
+  // Found the layer we are above. Now move everything to accommodate the new
+  // layer. And put the new ids and type into the topology.
+  for (int i = depth - 1, j = depth; i >= target_layer; --i, --j)
+    types[j] = types[i];
+  types[target_layer] = type;
+  for (int k = 0; k < num_hw_threads; ++k) {
+    for (int i = depth - 1, j = depth; i >= target_layer; --i, --j)
+      hw_threads[k].ids[j] = hw_threads[k].ids[i];
+    hw_threads[k].ids[target_layer] = ids[k];
+  }
+  equivalent[type] = type;
+  depth++;
+}
+
+#if KMP_GROUP_AFFINITY
+// Insert the Windows Processor Group structure into the topology
+void kmp_topology_t::_insert_windows_proc_groups() {
+  // Do not insert the processor group structure for a single group
+  if (__kmp_num_proc_groups == 1)
+    return;
+  kmp_affin_mask_t *mask;
+  int *ids = (int *)__kmp_allocate(sizeof(int) * num_hw_threads);
+  KMP_CPU_ALLOC(mask);
+  for (int i = 0; i < num_hw_threads; ++i) {
+    KMP_CPU_ZERO(mask);
+    KMP_CPU_SET(hw_threads[i].os_id, mask);
+    ids[i] = __kmp_get_proc_group(mask);
+  }
+  KMP_CPU_FREE(mask);
+  _insert_layer(KMP_HW_PROC_GROUP, ids);
+  __kmp_free(ids);
+}
+#endif
+
 // Remove layers that don't add information to the topology.
 // This is done by having the layer take on the id = UNKNOWN_ID (-1)
 void kmp_topology_t::_remove_radix1_layers() {
   int preference[KMP_HW_LAST];
   int top_index1, top_index2;
   // Set up preference associative array
-  preference[KMP_HW_PROC_GROUP] = 110;
-  preference[KMP_HW_SOCKET] = 100;
+  preference[KMP_HW_SOCKET] = 110;
+  preference[KMP_HW_PROC_GROUP] = 100;
   preference[KMP_HW_CORE] = 95;
   preference[KMP_HW_THREAD] = 90;
   preference[KMP_HW_NUMA] = 85;
@@ -440,7 +508,7 @@ kmp_topology_t *kmp_topology_t::allocate(int nproc, int ndepth,
   kmp_topology_t *retval;
   // Allocate all data in one large allocation
   size_t size = sizeof(kmp_topology_t) + sizeof(kmp_hw_thread_t) * nproc +
-                sizeof(int) * ndepth * 3;
+                sizeof(int) * (size_t)KMP_HW_LAST * 3;
   char *bytes = (char *)__kmp_allocate(size);
   retval = (kmp_topology_t *)bytes;
   if (nproc > 0) {
@@ -453,8 +521,8 @@ kmp_topology_t *kmp_topology_t::allocate(int nproc, int ndepth,
   int *arr =
       (int *)(bytes + sizeof(kmp_topology_t) + sizeof(kmp_hw_thread_t) * nproc);
   retval->types = (kmp_hw_t *)arr;
-  retval->ratio = arr + ndepth;
-  retval->count = arr + 2 * ndepth;
+  retval->ratio = arr + (size_t)KMP_HW_LAST;
+  retval->count = arr + 2 * (size_t)KMP_HW_LAST;
   KMP_FOREACH_HW_TYPE(type) { retval->equivalent[type] = KMP_HW_UNKNOWN; }
   for (int i = 0; i < ndepth; ++i) {
     retval->types[i] = types[i];
@@ -651,6 +719,9 @@ void kmp_topology_t::print(const char *env_var) const {
 }
 
 void kmp_topology_t::canonicalize() {
+#if KMP_GROUP_AFFINITY
+  _insert_windows_proc_groups();
+#endif
   _remove_radix1_layers();
   _gather_enumeration_information();
   _discover_uniformity();
@@ -699,6 +770,25 @@ void kmp_topology_t::canonicalize() {
                   __kmp_hw_get_catalog_string(gran_type));
       __kmp_affinity_gran = gran_type;
     }
+#if KMP_GROUP_AFFINITY
+    // If more than one processor group exists, and the level of
+    // granularity specified by the user is too coarse, then the
+    // granularity must be adjusted "down" to processor group affinity
+    // because threads can only exist within one processor group.
+    // For example, if a user sets granularity=socket and there are two
+    // processor groups that cover a socket, then the runtime must
+    // restrict the granularity down to the processor group level.
+    if (__kmp_num_proc_groups > 1) {
+      int gran_depth = __kmp_topology->get_level(gran_type);
+      int proc_group_depth = __kmp_topology->get_level(KMP_HW_PROC_GROUP);
+      if (gran_depth >= 0 && proc_group_depth >= 0 &&
+          gran_depth < proc_group_depth) {
+        KMP_WARNING(AffGranTooCoarseProcGroup, "KMP_AFFINITY",
+                    __kmp_hw_get_catalog_string(__kmp_affinity_gran));
+        __kmp_affinity_gran = gran_type = KMP_HW_PROC_GROUP;
+      }
+    }
+#endif
     __kmp_affinity_gran_levels = 0;
     for (int i = depth - 1; i >= 0 && get_type(i) != gran_type; --i)
       __kmp_affinity_gran_levels++;

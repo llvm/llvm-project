@@ -638,7 +638,9 @@ class kmp_topology_t {
 
   int depth;
 
-  // The following arrays are all 'depth' long
+  // The following arrays are all 'depth' long and have been
+  // allocated to hold up to KMP_HW_LAST number of objects if
+  // needed so layers can be added without reallocation of any array
 
   // Orderd array of the types in the topology
   kmp_hw_t *types;
@@ -670,6 +672,14 @@ class kmp_topology_t {
 
   // Flags describing the topology
   flags_t flags;
+
+  // Insert a new topology layer after allocation
+  void _insert_layer(kmp_hw_t type, const int *ids);
+
+#if KMP_GROUP_AFFINITY
+  // Insert topology information about Windows Processor groups
+  void _insert_windows_proc_groups();
+#endif
 
   // Count each item & get the num x's per y
   // e.g., get the number of cores and the number of threads per core
