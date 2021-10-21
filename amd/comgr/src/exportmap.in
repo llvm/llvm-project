@@ -65,3 +65,8 @@ global: amd_comgr_set_data_from_file_slice;
         amd_comgr_lookup_code_object;
 } @amd_comgr_NAME@_2.2;
 
+@amd_comgr_NAME@_2.4 {
+global: amd_comgr_create_symbolizer_info;
+        amd_comgr_destroy_symbolizer_info;
+        amd_comgr_symbolize;
+} @amd_comgr_NAME@_2.3;

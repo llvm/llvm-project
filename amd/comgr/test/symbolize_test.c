@@ -33,39 +33,69 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_METADATA_H
-#define COMGR_METADATA_H
+#include "amd_comgr.h"
+#include "common.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "comgr.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
+typedef struct container {
+  char *data;
+  int sz;
+} container_t;
 
-namespace COMGR {
-namespace metadata {
+void print_symbolized_string(const char *input, void *data) {
+  int sz = strlen(input);
+  container_t *ptr = (container_t *)data;
+  ptr->data = (char *)malloc(sz + 1);
+  ptr->data[sz] = '\0';
+  memcpy(ptr->data, input, sz);
+  printf("\n symbolized string is %s", ptr->data);
+  free(ptr->data);
+}
 
-amd_comgr_status_t getMetadataRoot(DataObject *DataP, DataMeta *MetaP);
+int main(int argc, char *argv[]) {
+  size_t Size1;
+  char *Buf1;
+  amd_comgr_data_t DataIn1;
+  amd_comgr_status_t Status;
+  amd_comgr_symbolizer_info_t symbolizer;
+  container_t user_data;
 
-size_t getIsaCount();
+  // Read input file
+  Size1 = setBuf(TEST_OBJ_DIR "/shared.so", &Buf1);
 
-const char *getIsaName(size_t Index);
+  // Create data object
+  {
+    printf("Test create input data set\n");
 
-amd_comgr_status_t getIsaMetadata(llvm::StringRef IsaName,
-                                  llvm::msgpack::Document &MetaP);
+    Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &DataIn1);
+    checkError(Status, "amd_comgr_create_data");
+    Status = amd_comgr_set_data(DataIn1, Size1, Buf1);
+    checkError(Status, "amd_comgr_set_data");
+    Status = amd_comgr_set_data_name(DataIn1, "DO_IN1");
+    checkError(Status, "amd_comgr_set_data_name");
+  }
 
-bool isValidIsaName(llvm::StringRef IsaName);
+  {
+    printf("Test create symbolizer info\n");
 
-amd_comgr_status_t getElfIsaName(DataObject *DataP, std::string &IsaName);
+    Status = amd_comgr_create_symbolizer_info(DataIn1, &print_symbolized_string,
+                                              &symbolizer);
+    checkError(Status, "amd_comgr_create_symbolizer_info");
+    Status = amd_comgr_symbolize(symbolizer, 100, 1, (void *)&user_data);
+    checkError(Status, "amd_comgr_symbolize");
+  }
 
-amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
-                                    amd_comgr_code_object_info_t *QueryList,
-                                    size_t QueryListsize);
+  {
+    printf("Test destroy symbolizer info\n");
 
-amd_comgr_status_t getIsaIndex(const llvm::StringRef IsaName, size_t &Index);
+    Status = amd_comgr_destroy_symbolizer_info(symbolizer);
+    checkError(Status, "amd_comgr_destroy_symbolizer_info");
+    Status = amd_comgr_release_data(DataIn1);
+    checkError(Status, "amd_comgr_release_data");
+    free(Buf1);
+  }
 
-bool isSupportedFeature(size_t IsaIndex, llvm::StringRef Feature);
-
-} // namespace metadata
-} // namespace COMGR
-
-#endif
+  return 0;
+}
