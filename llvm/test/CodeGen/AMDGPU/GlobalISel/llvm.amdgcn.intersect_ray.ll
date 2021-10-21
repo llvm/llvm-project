@@ -258,14 +258,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v15
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v16
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v17
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[14:15]
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v5, v9, v[18:20], v[6:8], v[10:12]], s[4:7]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[16:17]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz BB6_1
 ; GFX11-NEXT:  ; %bb.2:
@@ -368,14 +367,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v11
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v12
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v13
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[10:11]
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v14, v15, v[16:18], v[4:6]], s[4:7] a16
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[12:13]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz BB7_1
 ; GFX11-NEXT:  ; %bb.2:
@@ -456,14 +454,13 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v16
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v17
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v18
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[15:16]
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[22:23], v6, v[19:21], v[7:9], v[11:13]], s[4:7]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[17:18]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz BB8_1
 ; GFX11-NEXT:  ; %bb.2:
@@ -567,14 +564,13 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v12
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v13
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v14
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[11:12]
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[15:16], v17, v[18:20], v[4:6]], s[4:7] a16
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz BB9_1
 ; GFX11-NEXT:  ; %bb.2:

@@ -1916,7 +1916,6 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x 
 ; GFX11-NEXT:    v_mov_b32_e32 v10, v12
 ; GFX11-NEXT:    image_sample_c_d_o v[9:10], v[0:15], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v9
 ; GFX11-NEXT:    global_store_b32 v11, v10, s[12:13]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
