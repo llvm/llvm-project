@@ -34,36 +34,20 @@ vector.ph:
 define <8 x i16> @ashr_xor_and(<8 x i16> %x) nounwind {
 ; SSE-LABEL: ashr_xor_and:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psraw $15, %xmm1
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    psubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: ashr_xor_and:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm1
-; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: ashr_xor_and:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm1
-; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: ashr_xor_and:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogq $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: ashr_xor_and:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
   %signsplat = ashr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %flipsign = xor <8 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
   %res = and <8 x i16> %signsplat, %flipsign
   ret <8 x i16> %res
 }
+
+; negative test - extra uses may lead to extra instructions when custom-lowered
 
 define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x i8>* %p2) nounwind {
 ; SSE-LABEL: ashr_xor_and_commute_uses:
@@ -94,27 +78,33 @@ define <16 x i8> @ashr_xor_and_commute_uses(<16 x i8> %x, <16 x i8>* %p1, <16 x 
 }
 
 define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x) nounwind {
-; SSE-LABEL: ashr_xor_and_custom:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2OR3-LABEL: ashr_xor_and_custom:
+; SSE2OR3:       # %bb.0:
+; SSE2OR3-NEXT:    movdqa %xmm0, %xmm1
+; SSE2OR3-NEXT:    psrad $31, %xmm1
+; SSE2OR3-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2OR3-NEXT:    pand %xmm1, %xmm0
+; SSE2OR3-NEXT:    retq
+;
+; SSE41-LABEL: ashr_xor_and_custom:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    pmaxud %xmm1, %xmm0
+; SSE41-NEXT:    psubd %xmm1, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: ashr_xor_and_custom:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ashr_xor_and_custom:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: ashr_xor_and_custom:
@@ -349,37 +339,28 @@ vector.ph:
 define <16 x i16> @ashr_xor_and_v16i16(<16 x i16> %x) nounwind {
 ; SSE-LABEL: ashr_xor_and_v16i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psraw $15, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    psraw $15, %xmm3
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE-NEXT:    psubusw %xmm2, %xmm0
+; SSE-NEXT:    psubusw %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: ashr_xor_and_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpsraw $15, %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ashr_xor_and_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm1
-; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpsubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: ashr_xor_and_v16i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm1
-; AVX512-NEXT:    vpternlogq $72, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; AVX512-NEXT:    vpsubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %signsplat = ashr <16 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %flipsign = xor <16 x i16> %x, <i16 undef, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>

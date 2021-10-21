@@ -5627,6 +5627,35 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Setcc, DL, VT);
 }
 
+/// For targets that support usubsat, match a bit-hack form of that operation
+/// that ends in 'and' and convert it.
+static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N1.getValueType();
+
+  // Canonicalize xor as operand 0.
+  if (N1.getOpcode() == ISD::XOR)
+    std::swap(N0, N1);
+
+  if (N0.getOpcode() != ISD::XOR || N1.getOpcode() != ISD::SRA ||
+      !N0.hasOneUse() || !N1.hasOneUse() ||
+      N0.getOperand(0) != N1.getOperand(0))
+    return SDValue();
+
+  unsigned BitWidth = VT.getScalarSizeInBits();
+  ConstantSDNode *XorC = isConstOrConstSplat(N0.getOperand(1), true);
+  ConstantSDNode *SraC = isConstOrConstSplat(N1.getOperand(1), true);
+  if (!XorC || !XorC->getAPIntValue().isSignMask() ||
+      !SraC || SraC->getAPIntValue() != BitWidth - 1)
+    return SDValue();
+
+  // (i8 X ^ 128) & (i8 X s>> 7) --> usubsat X, 128
+  SDLoc DL(N);
+  SDValue SignMask = DAG.getConstant(XorC->getAPIntValue(), DL, VT);
+  return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0), SignMask);
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5988,6 +6017,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // Replace (and (sign_extend ...) #bitmask) with (zero_extend ...).
   if (IsAndZeroExtMask(N0, N1))
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, N0.getOperand(0));
+
+  if (hasOperation(ISD::USUBSAT, VT))
+    if (SDValue V = foldAndToUsubsat(N, DAG))
+      return V;
 
   return SDValue();
 }
