@@ -223,7 +223,7 @@ public:
 
   virtual ConstString GetFullNameForDylib(ConstString basename);
 
-  virtual const char *GetDescription() = 0;
+  virtual llvm::StringRef GetDescription() = 0;
 
   /// Report the current status for this platform.
   ///

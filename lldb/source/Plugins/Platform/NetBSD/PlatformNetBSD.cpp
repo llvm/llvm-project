@@ -65,21 +65,10 @@ PlatformSP PlatformNetBSD::CreateInstance(bool force, const ArchSpec *arch) {
   return PlatformSP();
 }
 
-ConstString PlatformNetBSD::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-netbsd");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformNetBSD::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformNetBSD::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local NetBSD user platform plug-in.";
-  else
-    return "Remote NetBSD user platform plug-in.";
+  return "Remote NetBSD user platform plug-in.";
 }
 
 void PlatformNetBSD::Initialize() {

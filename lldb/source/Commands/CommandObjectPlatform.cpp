@@ -216,15 +216,13 @@ protected:
 
     uint32_t idx;
     for (idx = 0; true; ++idx) {
-      const char *plugin_name =
+      llvm::StringRef plugin_name =
           PluginManager::GetPlatformPluginNameAtIndex(idx);
-      if (plugin_name == nullptr)
+      if (plugin_name.empty())
         break;
-      const char *plugin_desc =
+      llvm::StringRef plugin_desc =
           PluginManager::GetPlatformPluginDescriptionAtIndex(idx);
-      if (plugin_desc == nullptr)
-        break;
-      ostrm.Printf("%s: %s\n", plugin_name, plugin_desc);
+      ostrm.Format("{0}: {1}\n", plugin_name, plugin_desc);
     }
 
     if (idx == 0) {

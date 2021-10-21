@@ -72,17 +72,12 @@ PlatformSP PlatformRemoteGDBServer::CreateInstance(bool force,
   return PlatformSP();
 }
 
-ConstString PlatformRemoteGDBServer::GetPluginNameStatic() {
-  static ConstString g_name("remote-gdb-server");
-  return g_name;
-}
-
-const char *PlatformRemoteGDBServer::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteGDBServer::GetDescriptionStatic() {
   return "A platform that uses the GDB remote protocol as the communication "
          "transport.";
 }
 
-const char *PlatformRemoteGDBServer::GetDescription() {
+llvm::StringRef PlatformRemoteGDBServer::GetDescription() {
   if (m_platform_description.empty()) {
     if (IsConnected()) {
       // Send the get description packet

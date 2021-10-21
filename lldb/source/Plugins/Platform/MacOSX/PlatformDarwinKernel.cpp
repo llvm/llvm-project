@@ -166,12 +166,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
   return PlatformSP();
 }
 
-lldb_private::ConstString PlatformDarwinKernel::GetPluginNameStatic() {
-  static ConstString g_name("darwin-kernel");
-  return g_name;
-}
-
-const char *PlatformDarwinKernel::GetDescriptionStatic() {
+llvm::StringRef PlatformDarwinKernel::GetDescriptionStatic() {
   return "Darwin Kernel platform plug-in.";
 }
 
@@ -941,21 +936,6 @@ void PlatformDarwinKernel::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("fleh_decirq"));
   m_trap_handlers.push_back(ConstString("fleh_fiq_generic"));
   m_trap_handlers.push_back(ConstString("fleh_dec"));
-}
-
-#else // __APPLE__
-
-// Since DynamicLoaderDarwinKernel is compiled in for all systems, and relies
-// on PlatformDarwinKernel for the plug-in name, we compile just the plug-in
-// name in here to avoid issues. We are tracking an internal bug to resolve
-// this issue by either not compiling in DynamicLoaderDarwinKernel for non-
-// apple builds, or to make PlatformDarwinKernel build on all systems.
-// PlatformDarwinKernel is currently not compiled on other platforms due to the
-// use of the Mac-specific source/Host/macosx/cfcpp utilities.
-
-lldb_private::ConstString PlatformDarwinKernel::GetPluginNameStatic() {
-  static lldb_private::ConstString g_name("darwin-kernel");
-  return g_name;
 }
 
 #endif // __APPLE__

@@ -135,12 +135,7 @@ PlatformSP PlatformRemoteAppleWatch::CreateInstance(bool force,
   return lldb::PlatformSP();
 }
 
-lldb_private::ConstString PlatformRemoteAppleWatch::GetPluginNameStatic() {
-  static ConstString g_name("remote-watchos");
-  return g_name;
-}
-
-const char *PlatformRemoteAppleWatch::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteAppleWatch::GetDescriptionStatic() {
   return "Remote Apple Watch platform plug-in.";
 }
 
