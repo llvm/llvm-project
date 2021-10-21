@@ -1801,8 +1801,12 @@ static int __kmp_get_xproc(void) {
 
   int r = 0;
 
-#if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+#if KMP_OS_LINUX
+
+  __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
+
+#elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
+    KMP_OS_HURD
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
