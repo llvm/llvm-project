@@ -18,7 +18,9 @@ if (android_ndk_path != "") {
   ]
 }
 group("compiler-rt") {
-  deps = []
+  deps = [
+    "//compiler-rt/include($host_toolchain)",
+  ]
   foreach(toolchain, supported_toolchains) {
     deps += [ "//compiler-rt/lib($toolchain)" ]
   }
