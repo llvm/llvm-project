@@ -326,12 +326,11 @@ class ManglingSubstitutor
 public:
   ManglingSubstitutor() : Base(nullptr, nullptr) {}
 
-  template<typename... Ts>
+  template <typename... Ts>
   ConstString substitute(llvm::StringRef Mangled, Ts &&... Vals) {
     this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
     return substituteImpl(Mangled);
   }
-
 
 protected:
   void reset(llvm::StringRef Mangled) {
@@ -386,7 +385,6 @@ private:
         llvm::StringRef(Written, std::distance(Written, currentParserPos()));
     Written = currentParserPos();
   }
-
 };
 
 /// Given a mangled function `Mangled`, replace all the primitive function type
@@ -560,26 +558,23 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
                 "std::u16string summary provider",
-                ConstString(
-                    "^std::__[[:alnum:]]+::basic_string<char16_t, "
-                    "std::__[[:alnum:]]+::char_traits<char16_t>, "
-                    "std::__[[:alnum:]]+::allocator<char16_t> >$"),
+                ConstString("^std::__[[:alnum:]]+::basic_string<char16_t, "
+                            "std::__[[:alnum:]]+::char_traits<char16_t>, "
+                            "std::__[[:alnum:]]+::allocator<char16_t> >$"),
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF32,
                 "std::u32string summary provider",
-                ConstString(
-                    "^std::__[[:alnum:]]+::basic_string<char32_t, "
-                    "std::__[[:alnum:]]+::char_traits<char32_t>, "
-                    "std::__[[:alnum:]]+::allocator<char32_t> >$"),
+                ConstString("^std::__[[:alnum:]]+::basic_string<char32_t, "
+                            "std::__[[:alnum:]]+::char_traits<char32_t>, "
+                            "std::__[[:alnum:]]+::allocator<char32_t> >$"),
                 stl_summary_flags, true);
 
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxWStringSummaryProvider,
-                "std::wstring summary provider",
-                ConstString("^std::__[[:alnum:]]+::wstring$"),
-                stl_summary_flags, true);
+  AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::LibcxxWStringSummaryProvider,
+      "std::wstring summary provider",
+      ConstString("^std::__[[:alnum:]]+::wstring$"), stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxWStringSummaryProvider,
                 "std::wstring summary provider",
@@ -776,11 +771,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::tuple summary provider",
                 ConstString("^std::__[[:alnum:]]+::tuple<.*>(( )?&)?$"),
                 stl_summary_flags, true);
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::LibCxxAtomicSummaryProvider,
-      "libc++ std::atomic summary provider",
-      ConstString("^std::__[[:alnum:]]+::atomic<.+>$"), stl_summary_flags,
-      true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibCxxAtomicSummaryProvider,
+                "libc++ std::atomic summary provider",
+                ConstString("^std::__[[:alnum:]]+::atomic<.+>$"),
+                stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxOptionalSummaryProvider,
                 "libc++ std::optional summary provider",
@@ -867,7 +862,8 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::allocator<char> >"),
       cxx11_string_summary_sp);
   cpp_category_sp->GetTypeSummariesContainer()->Add(
-      ConstString("std::__cxx11::basic_string<unsigned char, std::char_traits<unsigned char>, "
+      ConstString("std::__cxx11::basic_string<unsigned char, "
+                  "std::char_traits<unsigned char>, "
                   "std::allocator<unsigned char> >"),
       cxx11_string_summary_sp);
 
@@ -1172,9 +1168,8 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
 
   llvm::call_once(g_initialize, []() -> void {
     g_formatters.push_back([](lldb_private::ValueObject &valobj,
-                              lldb::DynamicValueType,
-                              FormatManager &
-                                  fmt_mgr) -> SyntheticChildren::SharedPointer {
+                              lldb::DynamicValueType, FormatManager &fmt_mgr)
+                               -> SyntheticChildren::SharedPointer {
       static CXXSyntheticChildren::SharedPointer formatter_sp(
           new CXXSyntheticChildren(
               SyntheticChildren::Flags()
@@ -1191,9 +1186,8 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
       return nullptr;
     });
     g_formatters.push_back([](lldb_private::ValueObject &valobj,
-                              lldb::DynamicValueType,
-                              FormatManager &
-                                  fmt_mgr) -> SyntheticChildren::SharedPointer {
+                              lldb::DynamicValueType, FormatManager &fmt_mgr)
+                               -> SyntheticChildren::SharedPointer {
       static CXXSyntheticChildren::SharedPointer formatter_sp(
           new CXXSyntheticChildren(
               SyntheticChildren::Flags()
@@ -1208,7 +1202,6 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
       }
       return nullptr;
     });
-
   });
 
   return g_formatters;

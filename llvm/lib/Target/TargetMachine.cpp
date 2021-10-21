@@ -135,6 +135,9 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     return true;
   }
 
+  if (TT.isOSBinFormatGOFF())
+    return true;
+
   if (TT.isOSBinFormatMachO()) {
     if (RM == Reloc::Static)
       return true;

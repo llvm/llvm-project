@@ -66,6 +66,12 @@ public:
   virtual const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                                CallingConv::ID CC) const = 0;
 
+  /// \returns the offset to the locals area.
+  virtual int getCallFrameSize() = 0;
+
+  /// \returns the stack pointer bias.
+  virtual int getStackPointerBias() = 0;
+
   /// Destroys the object. Bogus destructor allowing derived classes
   /// to override it.
   virtual ~SystemZCallingConventionRegisters(){};
@@ -91,6 +97,10 @@ public:
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override final;
 
+  int getCallFrameSize() override final { return 128; }
+
+  int getStackPointerBias() override final { return 2048; }
+
   /// Destroys the object. Bogus destructor overriding base class destructor
   ~SystemZXPLINK64Registers(){};
 };
@@ -112,6 +122,10 @@ public:
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override final;
+
+  int getCallFrameSize() override final { return SystemZMC::ELFCallFrameSize; }
+
+  int getStackPointerBias() override final { return 0; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
   ~SystemZELFRegisters(){};
