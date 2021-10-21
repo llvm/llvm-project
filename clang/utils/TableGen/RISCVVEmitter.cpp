@@ -652,7 +652,7 @@ void RVVType::applyModifier(StringRef Transformer) {
     assert(Idx != StringRef::npos);
     StringRef ComplexType = Transformer.slice(1, Idx);
     Transformer = Transformer.drop_front(Idx + 1);
-    assert(Transformer.find('(') == StringRef::npos &&
+    assert(!Transformer.contains('(') &&
            "Only allow one complex type transformer");
 
     auto UpdateAndCheckComplexProto = [&]() {

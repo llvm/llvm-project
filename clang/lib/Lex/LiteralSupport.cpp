@@ -1242,7 +1242,7 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
 
   llvm::SmallString<16> Buffer;
   StringRef Str(ThisTokBegin, n);
-  if (Str.find('\'') != StringRef::npos) {
+  if (Str.contains('\'')) {
     Buffer.reserve(n);
     std::remove_copy_if(Str.begin(), Str.end(), std::back_inserter(Buffer),
                         &isDigitSeparator);

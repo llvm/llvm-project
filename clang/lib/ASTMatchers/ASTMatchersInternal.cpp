@@ -468,8 +468,8 @@ hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
 }
 
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
-    : UseUnqualifiedMatch(llvm::all_of(
-          N, [](StringRef Name) { return Name.find("::") == Name.npos; })),
+    : UseUnqualifiedMatch(
+          llvm::all_of(N, [](StringRef Name) { return !Name.contains("::"); })),
       Names(std::move(N)) {
 #ifndef NDEBUG
   for (StringRef Name : Names)
