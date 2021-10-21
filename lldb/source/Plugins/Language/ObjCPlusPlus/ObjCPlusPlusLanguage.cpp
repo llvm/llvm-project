@@ -34,11 +34,6 @@ void ObjCPlusPlusLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjCPlusPlusLanguage::GetPluginNameStatic() {
-  static ConstString g_name("objcplusplus");
-  return g_name;
-}
-
 // Static Functions
 Language *ObjCPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
   switch (language) {

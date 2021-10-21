@@ -131,7 +131,7 @@ enum {
 class PluginProperties : public Properties {
 public:
   static ConstString GetSettingName() {
-    return SymbolFileDWARF::GetPluginNameStatic();
+    return ConstString(SymbolFileDWARF::GetPluginNameStatic());
   }
 
   PluginProperties() {
@@ -277,12 +277,7 @@ void SymbolFileDWARF::Terminate() {
   LogChannelDWARF::Terminate();
 }
 
-lldb_private::ConstString SymbolFileDWARF::GetPluginNameStatic() {
-  static ConstString g_name("dwarf");
-  return g_name;
-}
-
-const char *SymbolFileDWARF::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader.";
 }
 

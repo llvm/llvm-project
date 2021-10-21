@@ -62,8 +62,7 @@ TEST_F(SymbolFileDWARFTests, TestAbilitiesForDWARF) {
 
   SymbolFile *symfile = module->GetSymbolFile();
   ASSERT_NE(nullptr, symfile);
-  EXPECT_EQ(symfile->GetPluginName(),
-            SymbolFileDWARF::GetPluginNameStatic().GetStringRef());
+  EXPECT_EQ(symfile->GetPluginName(), SymbolFileDWARF::GetPluginNameStatic());
 
   uint32_t expected_abilities = SymbolFile::kAllAbilities;
   EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());

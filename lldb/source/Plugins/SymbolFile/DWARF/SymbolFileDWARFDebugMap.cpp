@@ -228,12 +228,7 @@ void SymbolFileDWARFDebugMap::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SymbolFileDWARFDebugMap::GetPluginNameStatic() {
-  static ConstString g_name("dwarf-debugmap");
-  return g_name;
-}
-
-const char *SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader (debug map).";
 }
 
@@ -528,8 +523,8 @@ SymbolFileDWARFDebugMap::GetSymbolFileByOSOIndex(uint32_t oso_idx) {
 
 SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file) {
-  if (sym_file && sym_file->GetPluginName() ==
-                      SymbolFileDWARF::GetPluginNameStatic().GetStringRef())
+  if (sym_file &&
+      sym_file->GetPluginName() == SymbolFileDWARF::GetPluginNameStatic())
     return static_cast<SymbolFileDWARF *>(sym_file);
   return nullptr;
 }

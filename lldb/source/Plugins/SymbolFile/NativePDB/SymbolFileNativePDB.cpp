@@ -240,12 +240,7 @@ void SymbolFileNativePDB::Terminate() {
 
 void SymbolFileNativePDB::DebuggerInitialize(Debugger &debugger) {}
 
-ConstString SymbolFileNativePDB::GetPluginNameStatic() {
-  static ConstString g_name("native-pdb");
-  return g_name;
-}
-
-const char *SymbolFileNativePDB::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolFileNativePDB::GetPluginDescriptionStatic() {
   return "Microsoft PDB debug symbol cross-platform file reader.";
 }
 

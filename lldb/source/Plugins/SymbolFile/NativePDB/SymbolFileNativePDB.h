@@ -60,9 +60,9 @@ public:
 
   static void DebuggerInitialize(Debugger &debugger);
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "native-pdb"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp);
 
@@ -153,9 +153,7 @@ public:
   FindNamespace(ConstString name,
                 const CompilerDeclContext &parent_decl_ctx) override;
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   llvm::pdb::PDBFile &GetPDBFile() { return m_index->pdb(); }
   const llvm::pdb::PDBFile &GetPDBFile() const { return m_index->pdb(); }

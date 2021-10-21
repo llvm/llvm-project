@@ -176,11 +176,6 @@ void SymbolFileBreakpad::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString SymbolFileBreakpad::GetPluginNameStatic() {
-  static ConstString g_name("breakpad");
-  return g_name;
-}
-
 uint32_t SymbolFileBreakpad::CalculateAbilities() {
   if (!m_objfile_sp || !llvm::isa<ObjectFileBreakpad>(*m_objfile_sp))
     return 0;
