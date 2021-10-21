@@ -1590,6 +1590,8 @@ vector<_Tp, _Allocator>::reserve(size_type __n)
 {
     if (__n > capacity())
     {
+        if (__n > max_size())
+            this->__throw_length_error();
         allocator_type& __a = this->__alloc();
         __split_buffer<value_type, allocator_type&> __v(__n, size(), __a);
         __swap_out_circular_buffer(__v);
@@ -3018,6 +3020,8 @@ vector<bool, _Allocator>::reserve(size_type __n)
 {
     if (__n > capacity())
     {
+        if (__n > max_size())
+            this->__throw_length_error();
         vector __v(this->get_allocator());
         __v.__vallocate(__n);
         __v.__construct_at_end(this->begin(), this->end());

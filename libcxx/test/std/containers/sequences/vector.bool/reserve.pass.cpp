@@ -16,6 +16,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 int main(int, char**)
 {
@@ -54,6 +55,23 @@ int main(int, char**)
         v.reserve(150);
         assert(v.size() == 100);
         assert(v.capacity() >= 150);
+    }
+#endif
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        std::vector<bool, limited_allocator<bool, 10> > v;
+        v.reserve(5);
+        try {
+            // A typical implementation would allocate chunks of bits.
+            // In libc++ the chunk has the same size as the machine word. It is
+            // reasonable to assume that in practice no implementation would use
+            // 64 kB or larger chunks.
+            v.reserve(10 * 65536);
+            assert(false);
+        } catch (const std::length_error&) {
+            // no-op
+        }
+        assert(v.capacity() >= 5);
     }
 #endif
 

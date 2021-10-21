@@ -67,6 +67,22 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(v));
     }
 #endif
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        std::vector<int, limited_allocator<int, 100> > v;
+        v.reserve(50);
+        assert(v.capacity() == 50);
+        assert(is_contiguous_container_asan_correct(v));
+        try {
+            v.reserve(101);
+            assert(false);
+        } catch (const std::length_error&) {
+            // no-op
+        }
+        assert(v.capacity() == 50);
+        assert(is_contiguous_container_asan_correct(v));
+    }
+#endif
 
   return 0;
 }
