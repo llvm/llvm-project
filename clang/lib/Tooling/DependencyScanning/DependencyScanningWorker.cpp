@@ -165,34 +165,34 @@ public:
     CompilerInvocation OriginalInvocation(*Invocation);
 
     // Create a compiler instance to handle the actual work.
-    CompilerInstance Compiler(std::move(PCHContainerOps));
-    Compiler.setInvocation(std::move(Invocation));
+    CompilerInstance ScanInstance(std::move(PCHContainerOps));
+    ScanInstance.setInvocation(std::move(Invocation));
 
     // Create the compiler's actual diagnostics engine.
-    sanitizeDiagOpts(Compiler.getDiagnosticOpts());
-    Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-    if (!Compiler.hasDiagnostics())
+    sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
+    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+    if (!ScanInstance.hasDiagnostics())
       return false;
 
-    Compiler.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath = true;
+    ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
+        true;
 
     FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
-    Compiler.setFileManager(FileMgr);
-    Compiler.createSourceManager(*FileMgr);
+    ScanInstance.setFileManager(FileMgr);
+    ScanInstance.createSourceManager(*FileMgr);
 
     llvm::StringSet<> PrebuiltModulesInputFiles;
     // Store the list of prebuilt module files into header search options. This
     // will prevent the implicit build to create duplicate modules and will
     // force reuse of the existing prebuilt module files instead.
-    if (!Compiler.getPreprocessorOpts().ImplicitPCHInclude.empty())
+    if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
       visitPrebuiltModule(
-          Compiler.getPreprocessorOpts().ImplicitPCHInclude, Compiler,
-          Compiler.getHeaderSearchOpts().PrebuiltModuleFiles,
+          ScanInstance.getPreprocessorOpts().ImplicitPCHInclude, ScanInstance,
+          ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
           PrebuiltModulesInputFiles, /*VisitInputFiles=*/DepFS != nullptr);
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      const CompilerInvocation &CI = Compiler.getInvocation();
       DepFS->clearIgnoredFiles();
       // Ignore any files that contributed to prebuilt modules. The implicit
       // build validates the modules by comparing the reported sizes of their
@@ -203,20 +203,20 @@ public:
       // Add any filenames that were explicity passed in the build settings and
       // that might be opened, as we want to ensure we don't run source
       // minimization on them.
-      for (const auto &Entry : CI.getHeaderSearchOpts().UserEntries)
-        DepFS->ignoreFile(Entry.Path);
-      for (const auto &Entry : CI.getHeaderSearchOpts().VFSOverlayFiles)
-        DepFS->ignoreFile(Entry);
+      for (const auto &E : ScanInstance.getHeaderSearchOpts().UserEntries)
+        DepFS->ignoreFile(E.Path);
+      for (const auto &F : ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
+        DepFS->ignoreFile(F);
 
       // Support for virtual file system overlays on top of the caching
       // filesystem.
       FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
-          CI, Compiler.getDiagnostics(), DepFS));
+          ScanInstance.getInvocation(), ScanInstance.getDiagnostics(), DepFS));
 
       // Pass the skip mappings which should speed up excluded conditional block
       // skipping in the preprocessor.
       if (PPSkipMappings)
-        Compiler.getPreprocessorOpts()
+        ScanInstance.getPreprocessorOpts()
             .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
     }
 
@@ -228,24 +228,25 @@ public:
     // which ensures that the compiler won't create new dependency collectors,
     // and thus won't write out the extra '.d' files to disk.
     auto Opts = std::make_unique<DependencyOutputOptions>();
-    std::swap(*Opts, Compiler.getInvocation().getDependencyOutputOpts());
+    std::swap(*Opts, ScanInstance.getInvocation().getDependencyOutputOpts());
     // We need at least one -MT equivalent for the generator of make dependency
     // files to work.
     if (Opts->Targets.empty())
-      Opts->Targets = {deduceDepTarget(Compiler.getFrontendOpts().OutputFile,
-                                       Compiler.getFrontendOpts().Inputs)};
+      Opts->Targets = {
+          deduceDepTarget(ScanInstance.getFrontendOpts().OutputFile,
+                          ScanInstance.getFrontendOpts().Inputs)};
     Opts->IncludeSystemHeaders = true;
 
     switch (Format) {
     case ScanningOutputFormat::Make:
-      Compiler.addDependencyCollector(
+      ScanInstance.addDependencyCollector(
           std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
                                                         Consumer));
       break;
     case ScanningOutputFormat::Full:
-      Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer, std::move(OriginalInvocation),
-          OptimizeArgs));
+      ScanInstance.addDependencyCollector(std::make_shared<ModuleDepCollector>(
+          std::move(Opts), ScanInstance, Consumer,
+          std::move(OriginalInvocation), OptimizeArgs));
       break;
     }
 
@@ -254,7 +255,7 @@ public:
     //
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
-    Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
     std::unique_ptr<FrontendAction> Action;
 
@@ -263,7 +264,7 @@ public:
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
-    const bool Result = Compiler.ExecuteAction(*Action);
+    const bool Result = ScanInstance.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();
     return Result;
