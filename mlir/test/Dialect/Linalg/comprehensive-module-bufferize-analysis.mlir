@@ -1039,3 +1039,51 @@ func @non_reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
 
   return %o, %v3 : tensor<?xf32>, vector<5xf32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// InitTensorOp elimination
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @buffer_forwarding_conflict
+func @buffer_forwarding_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  // Instead of allocating, share buffer with some inplace bufferization?
+  %0 = linalg.init_tensor [%arg1] : tensor<?xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %2 = tensor.insert_slice %1 into %arg0[0] [%arg1] [1] : tensor<?xf32> into tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %3 = tensor.insert_slice %1 into %arg0[42] [%arg1] [1] : tensor<?xf32> into tensor<?xf32>
+  return %2, %3 : tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @buffer_forwarding_no_conflict
+func @buffer_forwarding_no_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  // Instead of allocating, share buffer with some inplace bufferization?
+  %0 = linalg.init_tensor [%arg1] : tensor<?xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %2 = tensor.insert_slice %1 into %arg0[42] [%arg1] [1] : tensor<?xf32> into tensor<?xf32>
+  return %2, %2 : tensor<?xf32>, tensor<?xf32>
+}
