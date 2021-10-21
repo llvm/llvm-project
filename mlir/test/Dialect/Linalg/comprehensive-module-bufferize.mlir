@@ -305,6 +305,28 @@ func @scf_for_yield_only(%A : tensor<?xf32>,
 
 // -----
 
+// Ensure that the function bufferizes without error. This tests pre-order
+// traversal of scf.for loops during bufferization. No need to check the IR,
+// just want to make sure that it does not crash.
+
+// CHECK-LABEL: func @nested_scf_for
+func @nested_scf_for(%A : tensor<?xf32> {linalg.inplaceable = true},
+                     %v : vector<5xf32>) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %r1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%B = %A) -> tensor<?xf32> {
+    %r2 = scf.for %j = %c0 to %c10 step %c1 iter_args(%C = %B) -> tensor<?xf32> {
+      %w = vector.transfer_write %v, %C[%c0] : vector<5xf32>, tensor<?xf32>
+      scf.yield %w : tensor<?xf32>
+    }
+    scf.yield %r2 : tensor<?xf32>
+  }
+  return %r1 : tensor<?xf32>
+}
+
+// -----
+
 // CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 // CHECK-LABEL: func @scf_for_with_tensor.insert_slice
@@ -767,7 +789,7 @@ func @tensor_cast_not_in_place(
 // CHECK-LABEL: func @dominance_violation_bug_1
 func @dominance_violation_bug_1(%A : tensor<?x?xf32>, %idx : index) -> tensor<?x?xf32> {
   %f0 = arith.constant 0.0 : f32
-  
+
   %sA = tensor.extract_slice %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssA = tensor.extract_slice %sA[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
   %FA = linalg.fill(%f0, %ssA) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
