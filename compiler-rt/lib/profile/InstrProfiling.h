@@ -301,11 +301,14 @@ void __llvm_profile_set_dumped();
 COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
 
 /*!
- * This variable is defined in InstrProfilingVersionVar.c as a hidden symbol.
- * Its main purpose is to encode the raw profile version value and other format
- * related information such as whether the profile is from IR based
- * instrumentation. The variable is defined as weak so that compiler can emit an
- * overriding definition depending on user option.
+ * This variable is defined in InstrProfiling.c. Its main purpose is to
+ * encode the raw profile version value and other format related information
+ * such as whether the profile is from IR based instrumentation. The variable
+ * is defined as weak so that compiler can emit an overriding definition
+ * depending on user option.  Since we don't support mixing FE and IR based
+ * data in the same raw profile data file (in other words, shared libs and
+ * main program are expected to be instrumented in the same way), there is
+ * no need for this variable to be hidden.
  */
 extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 

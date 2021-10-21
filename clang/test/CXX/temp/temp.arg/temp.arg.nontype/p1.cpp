@@ -113,7 +113,7 @@ namespace addr_of_obj_or_func {
 
     X2<i> x2a;
     X2<&i> x2a_addr; // expected-error {{address taken}}
-    X2<iarr> x2b; // expected-error {{cannot bind to template argument of type 'int [10]'}}
+    X2<iarr> x2b; // expected-error {{cannot bind to template argument of type 'int[10]'}}
     X2<&iarr> x2b_addr; // expected-error {{address taken}}
     X2<ki> x2c; // expected-error {{ignores qualifiers}}
 #if __cplusplus <= 199711L

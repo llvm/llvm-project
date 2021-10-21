@@ -750,10 +750,6 @@ class Base(unittest2.TestCase):
         """Return absolute path to an artifact in the test's build directory."""
         return os.path.join(self.getBuildDir(), name)
 
-    def getSourcePath(self, name):
-        """Return absolute path to a file in the test's source directory."""
-        return os.path.join(self.getSourceDir(), name)
-
     @classmethod
     def setUpCommands(cls):
         commands = [

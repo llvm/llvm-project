@@ -157,7 +157,7 @@ namespace Decay {
 
   C<E[10]> e;
 #if __cplusplus <= 199711L
-  // expected-note@-2 {{in instantiation of template class 'Decay::C<Decay::E [10]>' requested here}}
+  // expected-note@-2 {{in instantiation of template class 'Decay::C<Decay::E[10]>' requested here}}
 #endif
 }
 
