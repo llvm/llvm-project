@@ -1625,6 +1625,7 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
   Operation *newCallOp = b.create<CallOp>(callOp.getLoc(), funcOp.sym_name(),
                                           resultTypes, newOperands);
   newCallOp->setAttrs(callOp->getAttrs());
+  callOp->erase();
   return success();
 }
 
@@ -2316,33 +2317,43 @@ static LogicalResult bufferizeFuncOpInternals(
   LLVM_DEBUG(llvm::dbgs() << "\n\n");
   LDBG("Begin BufferizeFuncOpInternals:\n" << funcOp << '\n');
   OpBuilder b(funcOp->getContext());
-  /// Start by bufferizing `funcOp` arguments.
+
+  // Start by bufferizing `funcOp` arguments.
   if (failed(bufferize(b, funcOp, bvm, aliasInfo)))
     return failure();
 
-  // Walk in PreOrder to ensure ops with regions are handled before their body.
-  // Since walk has to be PreOrder, we need to erase ops that require it
-  // separately: this is the case for CallOp
-  SmallVector<Operation *> toErase;
-  if (funcOp
-          .walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
-            if (failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
-                                   &globalCreator)))
-              return failure();
-            // Register post-walk erasure, if necessary.
-            if (isa<CallOpInterface>(op))
-              if (llvm::any_of(op->getOperandTypes(), isaTensor) ||
-                  llvm::any_of(op->getResultTypes(), isaTensor))
-                toErase.push_back(op);
-            return success();
-          })
-          .wasInterrupted())
+  // Bufferize the function body. `bufferizedOps` keeps track ops that were
+  // already bufferized with pre-order traversal.
+  DenseSet<Operation *> bufferizedOps;
+  auto walkFunc = [&](Operation *op) -> WalkResult {
+    // Collect ops that need to be bufferized before `op`.
+    SmallVector<Operation *> preorderBufferize;
+    Operation *parentOp = op->getParentOp();
+    // scf::ForOp and TiledLoopOp must be bufferized before their blocks
+    // ("pre-order") because BBargs must be mapped when bufferizing children.
+    while (isa_and_nonnull<scf::ForOp, TiledLoopOp>(parentOp)) {
+      if (bufferizedOps.contains(parentOp))
+        break;
+      bufferizedOps.insert(parentOp);
+      preorderBufferize.push_back(parentOp);
+      parentOp = parentOp->getParentOp();
+    }
+
+    for (Operation *op : llvm::reverse(preorderBufferize))
+      if (failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
+                             &globalCreator)))
+        return failure();
+
+    if (!bufferizedOps.contains(op) &&
+        failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
+                           &globalCreator)))
+      return failure();
+    return success();
+  };
+  if (funcOp.walk(walkFunc).wasInterrupted())
     return failure();
 
   LDBG("End BufferizeFuncOpInternals:\n" << funcOp << '\n');
-
-  for (Operation *op : toErase)
-    op->erase();
 
   return success();
 }
