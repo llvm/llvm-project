@@ -259,7 +259,7 @@ bool Rewriter::InsertText(SourceLocation Loc, StringRef Str,
   unsigned StartOffs = getLocationOffsetAndFileID(Loc, FID);
 
   SmallString<128> indentedStr;
-  if (indentNewLines && Str.find('\n') != StringRef::npos) {
+  if (indentNewLines && Str.contains('\n')) {
     StringRef MB = SourceMgr->getBufferData(FID);
 
     unsigned lineNo = SourceMgr->getLineNumber(FID, StartOffs) - 1;
