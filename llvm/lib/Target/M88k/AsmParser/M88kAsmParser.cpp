@@ -51,7 +51,7 @@ bool inRange(const MCExpr *Expr, int64_t MinValue, int64_t MaxValue) {
   return false;
 }
 
-enum RegisterKind { GR, GR64, FPR32, FPR64, XR, CR, FCR };
+enum RegisterKind { GR, GR64, FPR32, XR, CR, FCR };
 enum class RegisterGroup { GR, XR, CR, FCR };
 
 // Instances of this class represented a parsed machine instruction
@@ -179,11 +179,6 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
-  void addFPR64Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
   void addXROperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands");
     Inst.addOperand(MCOperand::createReg(getReg()));
@@ -207,7 +202,6 @@ public:
   bool isGPR() const { return isReg(GR); }
   bool isGPR64() const { return isReg(GR64); }
   bool isFPR32() const { return isReg(FPR32); }
-  bool isFPR64() const { return isReg(FPR64); }
   bool isXR() const { return isReg(XR); }
   bool isCR() const { return isReg(CR); }
   bool isFCR() const { return isReg(FCR); }
@@ -265,7 +259,6 @@ class M88kAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseGPR(OperandVector &Operands);
   OperandMatchResultTy parseGPR64(OperandVector &Operands);
   OperandMatchResultTy parseFPR32(OperandVector &Operands);
-  OperandMatchResultTy parseFPR64(OperandVector &Operands);
   OperandMatchResultTy parseXR(OperandVector &Operands);
   OperandMatchResultTy parseCR(OperandVector &Operands);
   OperandMatchResultTy parseFCR(OperandVector &Operands);
@@ -402,10 +395,6 @@ OperandMatchResultTy M88kAsmParser::parseFPR32(OperandVector &Operands) {
   return parseRegister(Operands, FPR32);
 }
 
-OperandMatchResultTy M88kAsmParser::parseFPR64(OperandVector &Operands) {
-  return parseRegister(Operands, FPR64);
-}
-
 OperandMatchResultTy M88kAsmParser::parseXR(OperandVector &Operands) {
   return parseRegister(Operands, XR);
 }
@@ -466,7 +455,6 @@ OperandMatchResultTy M88kAsmParser::parseRegister(OperandVector &Operands,
   case GR:
   case GR64:
   case FPR32:
-  case FPR64:
     ExpectedRegGrp = RegisterGroup::GR;
     break;
   case XR:

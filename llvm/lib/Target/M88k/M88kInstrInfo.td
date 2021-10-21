@@ -350,9 +350,9 @@ defm : BinaryOpPat<"DIVS", sdiv>; // TODO Correct?
 
 
 multiclass SetCCPat<CondCode CC, bits<10> w5o5> {
-  def : Pat<(setcc GPR:$lhs, GPR:$rhs, CC),
+  def : Pat<(setcc (i32 GPR:$lhs), (i32 GPR:$rhs), CC),
             (EXTUrwo (CMPrr GPR:$lhs, GPR:$rhs), w5o5)>;
-  def : Pat<(setcc GPR:$lhs, imm32zx16:$rhs, CC),
+  def : Pat<(setcc (i32 GPR:$lhs), imm32zx16:$rhs, CC),
             (EXTUrwo (CMPrr GPR:$lhs, imm32zx16:$rhs), w5o5)>;
 }
 
@@ -376,10 +376,6 @@ Register indirect with scaled index:    ld rD, rS1, [rS2]
 def ADDRrr : ComplexPattern<i32, 2, "selectAddrRr", [], []>;
 def ADDRri : ComplexPattern<i32, 2, "selectAddrRi", [], []>;
 def ADDRrs : ComplexPattern<i32, 1, "selectAddrRs", [], []>;
-
-//def : Pat<(load GPR:$rd, (ADDRri GPR:$rs1, imm32zx16:$si16)),
-//          (LDriw GPR:$rd, GPR:$rs1, imm32zx16:$si16)>;
-
 
 // Multiclass for load and store instructions.
 multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
@@ -465,6 +461,10 @@ def LDurih : LoadUnsigned<0b0, "ld.hu", zextloadi16>;
 def LDurib : LoadUnsigned<0b1, "ld.bu", zextloadi8>;
 
 defm LD : LoadUnscaled<0b0001, "ld", load>;
+
+//def : Pat<(load (ADDRri GPR:$rs1, imm32zx16:$si16)),
+//          (LDriw GPR:$rs1, imm32zx16:$si16)>;
+
 
 
 // GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
@@ -576,7 +576,7 @@ class FT<string p, RegisterOperand FReg> {
 }
 
 def FT32 : FT<"s", FPR32>;
-def FT64 : FT<"d", FPR64>;
+def FT64 : FT<"d", GPR64>;
 def FT80 : FT<"x", ?>;
 
 class getFT<int n> {
@@ -658,16 +658,16 @@ multiclass FArith2<bits<4> Func, string OpcStr,
 multiclass FloatBinPat<string Inst, SDPatternOperator OpNode> {
   def : Pat<(OpNode FPR32:$rs1, FPR32:$rs2),
             (!cast<InstM88k>(Inst#"gsss") FPR32:$rs1, FPR32:$rs2)>;
-//  def : Pat<(ftrunc (OpNode (fpextend FPR32:$rs1), FPR64:$rs2)),
+//  def : Pat<(ftrunc (OpNode (fpextend FPR32:$rs1), GPR64:$rs2)),
 //            (!cast<InstM88k>(Inst#"ssd") FPR32:$rs1, FPR32:$rs2)>;
   def : Pat<(fpextend (OpNode FPR32:$rs1, FPR32:$rs2)),
             (!cast<InstM88k>(Inst#"gdss") FPR32:$rs1, FPR32:$rs2)>;
-  def : Pat<(OpNode (fpextend FPR32:$rs1), FPR64:$rs2),
-            (!cast<InstM88k>(Inst#"gdsd") FPR32:$rs1, FPR64:$rs2)>;
-  def : Pat<(OpNode FPR64:$rs1, (fpextend FPR32:$rs2)),
-            (!cast<InstM88k>(Inst#"gdds") FPR64:$rs1, FPR32:$rs2)>;
-  def : Pat<(OpNode FPR64:$rs1, FPR64:$rs2),
-            (!cast<InstM88k>(Inst#"gddd") FPR64:$rs1, FPR64:$rs2)>;
+  def : Pat<(OpNode (fpextend FPR32:$rs1), GPR64:$rs2),
+            (!cast<InstM88k>(Inst#"gdsd") FPR32:$rs1, GPR64:$rs2)>;
+  def : Pat<(OpNode GPR64:$rs1, (fpextend FPR32:$rs2)),
+            (!cast<InstM88k>(Inst#"gdds") GPR64:$rs1, FPR32:$rs2)>;
+  def : Pat<(OpNode GPR64:$rs1, GPR64:$rs2),
+            (!cast<InstM88k>(Inst#"gddd") GPR64:$rs1, GPR64:$rs2)>;
 
   def : Pat<(OpNode (f32 XR:$rs1), (f32 XR:$rs2)),
             (!cast<InstM88k>(Inst#"xsss") XR:$rs1, XR:$rs2)>;
@@ -701,9 +701,9 @@ def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
                      "mov.s",
                      [(set FPR32:$rd, (f32 XR:$rs2))]>;
 def MOVrxd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b01,
-                     (outs FPR64:$rd), (ins XR:$rs2),
+                     (outs GPR64:$rd), (ins XR:$rs2),
                      "mov.d",
-                     [(set FPR64:$rd, (f64 XR:$rs2))]>;
+                     [(set GPR64:$rd, (f64 XR:$rs2))]>;
 def MOVxx : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b11,
                     (outs XR:$rd), (ins XR:$rs2),
                     "mov",
@@ -717,9 +717,9 @@ def MOVxrs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b00,
                      "mov.s",
                      [(set (f32 XR:$rd), FPR32:$rs2)]>;
 def MOVxrd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b01,
-                     (outs XR:$rd), (ins FPR64:$rs2),
+                     (outs XR:$rd), (ins GPR64:$rs2),
                      "mov.d",
-                     [(set (f64 XR:$rd), FPR64:$rs2)]>;
+                     [(set (f64 XR:$rd), GPR64:$rs2)]>;
 }
 
 // ---------------------------------------------------------------------------//

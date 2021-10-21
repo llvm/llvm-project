@@ -145,14 +145,14 @@ void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (M88k::FPR32RCRegClass.contains(DestReg) &&
            M88k::XRRCRegClass.contains(SrcReg))
     Opc = M88k::MOVrxs;
-  else if (M88k::FPR64RCRegClass.contains(DestReg) &&
+  else if (M88k::GPR64RCRegClass.contains(DestReg) &&
            M88k::XRRCRegClass.contains(SrcReg))
     Opc = M88k::MOVrxd;
   else if (M88k::XRRCRegClass.contains(DestReg) &&
            M88k::FPR32RCRegClass.contains(SrcReg))
     Opc = M88k::MOVxrs;
   else if (M88k::XRRCRegClass.contains(DestReg) &&
-           M88k::FPR64RCRegClass.contains(SrcReg))
+           M88k::GPR64RCRegClass.contains(SrcReg))
     Opc = M88k::MOVxrd;
   else
     llvm_unreachable("m88: Impossible reg-to-reg copy");
