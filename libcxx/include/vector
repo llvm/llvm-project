@@ -1296,7 +1296,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
     __get_db()->__insert_c(this);
-    __get_db()->swap(this, &__x);
+    __get_db()->swap(this, _VSTD::addressof(__x));
 #endif
     this->__begin_ = __x.__begin_;
     this->__end_ = __x.__end_;
@@ -1319,7 +1319,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __identity_t<allocator_type>
         this->__end_cap() = __x.__end_cap();
         __x.__begin_ = __x.__end_ = __x.__end_cap() = nullptr;
 #if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->swap(this, &__x);
+        __get_db()->swap(this, _VSTD::addressof(__x));
 #endif
     }
     else
@@ -1395,7 +1395,7 @@ vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
     this->__end_cap() = __c.__end_cap();
     __c.__begin_ = __c.__end_ = __c.__end_cap() = nullptr;
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__c);
+    __get_db()->swap(this, _VSTD::addressof(__c));
 #endif
 }
 
@@ -1716,7 +1716,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::erase(iterator) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1735,10 +1735,10 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__first)) == this,
         "vector::erase(iterator,  iterator) called with an iterator not"
         " referring to this vector");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__last) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__last)) == this,
         "vector::erase(iterator,  iterator) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1776,7 +1776,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1813,7 +1813,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1846,7 +1846,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::emplace(iterator, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1881,7 +1881,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, n, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1932,7 +1932,7 @@ typename enable_if
 vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __first, _InputIterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, range) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1985,7 +1985,7 @@ typename enable_if
 vector<_Tp, _Allocator>::insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, range) called with an iterator not"
         " referring to this vector");
 #endif
@@ -2066,7 +2066,7 @@ vector<_Tp, _Allocator>::swap(vector& __x)
     _VSTD::__swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool,__alloc_traits::propagate_on_container_swap::value>());
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__x);
+    __get_db()->swap(this, _VSTD::addressof(__x));
 #endif
 }
 

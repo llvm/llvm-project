@@ -25,18 +25,26 @@ int i1 __invalid; // expected-error {{'btf_decl_tag' attribute requires a string
 
 enum e1 {
   E1
-} __tag1; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, and non-static data members}}
+} __tag1; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, non-static data members, and typedefs}}
 
 enum e2 {
   E2
-} __tag_no_arg; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, and non-static data members}}
+} __tag_no_arg; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, non-static data members, and typedefs}}
 
 enum e3 {
   E3
-} __tag_2_arg; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, and non-static data members}}
+} __tag_2_arg; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, non-static data members, and typedefs}}
 
 int __tag1 __tag2 foo(struct t1 *arg, struct t2 *arg2);
 int __tag2 __tag3 foo(struct t1 *arg, struct t2 *arg2);
 int __tag1 foo(struct t1 *arg __tag1, struct t2 *arg2) {
   return arg->a + arg2->a;
+}
+
+typedef unsigned * __u1 __tag1 __tag2;
+typedef struct {
+  int a;
+} __t2 __tag1 __tag2;
+int convert2(__t2 *arg) {
+  return arg->a;
 }

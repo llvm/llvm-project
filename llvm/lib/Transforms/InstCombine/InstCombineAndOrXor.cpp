@@ -1521,25 +1521,43 @@ static Instruction *reassociateFCmps(BinaryOperator &BO,
   return BinaryOperator::Create(Opcode, NewFCmp, BO11);
 }
 
-/// Match De Morgan's Laws:
+/// Match variations of De Morgan's Laws:
 /// (~A & ~B) == (~(A | B))
 /// (~A | ~B) == (~(A & B))
 static Instruction *matchDeMorgansLaws(BinaryOperator &I,
                                        InstCombiner::BuilderTy &Builder) {
-  auto Opcode = I.getOpcode();
+  const Instruction::BinaryOps Opcode = I.getOpcode();
   assert((Opcode == Instruction::And || Opcode == Instruction::Or) &&
          "Trying to match De Morgan's Laws with something other than and/or");
 
   // Flip the logic operation.
-  Opcode = (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
+  const Instruction::BinaryOps FlippedOpcode =
+      (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *A, *B;
-  if (match(I.getOperand(0), m_OneUse(m_Not(m_Value(A)))) &&
-      match(I.getOperand(1), m_OneUse(m_Not(m_Value(B)))) &&
+  if (match(Op0, m_OneUse(m_Not(m_Value(A)))) &&
+      match(Op1, m_OneUse(m_Not(m_Value(B)))) &&
       !InstCombiner::isFreeToInvert(A, A->hasOneUse()) &&
       !InstCombiner::isFreeToInvert(B, B->hasOneUse())) {
-    Value *AndOr = Builder.CreateBinOp(Opcode, A, B, I.getName() + ".demorgan");
+    Value *AndOr =
+        Builder.CreateBinOp(FlippedOpcode, A, B, I.getName() + ".demorgan");
     return BinaryOperator::CreateNot(AndOr);
+  }
+
+  // The 'not' ops may require reassociation.
+  // (A & ~B) & ~C --> A & ~(B | C)
+  // (~B & A) & ~C --> A & ~(B | C)
+  // (A | ~B) | ~C --> A | ~(B & C)
+  // (~B | A) | ~C --> A | ~(B & C)
+  BinaryOperator *BO;
+  if (match(Op0, m_OneUse(m_BinOp(BO))) && BO->getOpcode() == Opcode) {
+    Value *C;
+    if (match(BO, m_c_BinOp(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op1, m_Not(m_Value(C)))) {
+      Value *FlippedBO = Builder.CreateBinOp(FlippedOpcode, B, C);
+      return BinaryOperator::Create(Opcode, A, Builder.CreateNot(FlippedBO));
+    }
   }
 
   return nullptr;
@@ -2012,13 +2030,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     if (match(Op0, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
-
-    // (A & ~B) & ~C -> A & ~(B | C)
-    // (~B & A) & ~C -> A & ~(B | C)
-    if (match(Op0, m_OneUse(m_c_And(m_Value(A), m_Not(m_Value(B))))) &&
-        match(Op1, m_Not(m_Value(C))))
-      return BinaryOperator::CreateAnd(
-          A, Builder.CreateNot(Builder.CreateOr(B, C)));
   }
 
   {
