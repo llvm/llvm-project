@@ -287,6 +287,21 @@ struct LinalgStrategyLowerVectorsPass
   LinalgVectorLoweringOptions options;
   LinalgTransformationFilter filter;
 };
+
+/// Configurable pass to lower vector operations.
+struct LinalgStrategyRemoveMarkersPass
+    : public LinalgStrategyRemoveMarkersPassBase<
+          LinalgStrategyRemoveMarkersPass> {
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+    funcOp.walk([](LinalgOp op) {
+      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
+    });
+  }
+};
 } // namespace
 
 /// Create a LinalgStrategyTilePass.
@@ -339,4 +354,10 @@ std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgStrategyLowerVectorsPass(LinalgVectorLoweringOptions opt,
                                            LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyLowerVectorsPass>(opt, filter);
+}
+
+/// Create a LinalgStrategyRemoveMarkersPass.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyRemoveMarkersPass() {
+  return std::make_unique<LinalgStrategyRemoveMarkersPass>();
 }

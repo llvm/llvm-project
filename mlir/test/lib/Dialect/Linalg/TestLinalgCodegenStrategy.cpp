@@ -162,7 +162,13 @@ void TestLinalgCodegenStrategy::runStrategy(
               .setVectorTransferSplit(vectorTransferSplit))
       .setVectorTransferToSCFOptions(
           VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
-  (void)strategy.transform(getFunction());
+
+  // Created a nested OpPassManager and run.
+  FuncOp funcOp = getFunction();
+  OpPassManager dynamicPM("builtin.func");
+  strategy.configurePassPipeline(dynamicPM, funcOp.getContext());
+  if (failed(runPipeline(dynamicPM, funcOp)))
+    return signalPassFailure();
 }
 } // end anonymous namespace
 
