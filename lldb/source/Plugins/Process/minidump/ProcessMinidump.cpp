@@ -190,12 +190,7 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
 
 } // namespace
 
-ConstString ProcessMinidump::GetPluginNameStatic() {
-  static ConstString g_name("minidump");
-  return g_name;
-}
-
-const char *ProcessMinidump::GetPluginDescriptionStatic() {
+llvm::StringRef ProcessMinidump::GetPluginDescriptionStatic() {
   return "Minidump plug-in.";
 }
 

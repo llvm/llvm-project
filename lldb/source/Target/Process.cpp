@@ -363,9 +363,8 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
   if (!plugin_name.empty()) {
-    ConstString const_plugin_name(plugin_name);
     create_callback =
-        PluginManager::GetProcessCreateCallbackForPluginName(const_plugin_name);
+        PluginManager::GetProcessCreateCallbackForPluginName(plugin_name);
     if (create_callback) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);

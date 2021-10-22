@@ -1665,8 +1665,9 @@ public:
     names.push_back("<default>");
 
     size_t i = 0;
-    while (auto name = PluginManager::GetProcessPluginNameAtIndex(i++))
-      names.push_back(name);
+    for (llvm::StringRef name = PluginManager::GetProcessPluginNameAtIndex(i++);
+         !name.empty(); name = PluginManager::GetProcessPluginNameAtIndex(i++))
+      names.push_back(name.str());
     return names;
   }
 

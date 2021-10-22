@@ -106,12 +106,7 @@ void ProcessWindows::Initialize() {
 
 void ProcessWindows::Terminate() {}
 
-lldb_private::ConstString ProcessWindows::GetPluginNameStatic() {
-  static ConstString g_name("windows");
-  return g_name;
-}
-
-const char *ProcessWindows::GetPluginDescriptionStatic() {
+llvm::StringRef ProcessWindows::GetPluginDescriptionStatic() {
   return "Process plugin for Windows";
 }
 
