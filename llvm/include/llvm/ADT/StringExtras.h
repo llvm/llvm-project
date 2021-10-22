@@ -505,6 +505,7 @@ public:
 class SplittingIterator
     : public iterator_facade_base<SplittingIterator, std::forward_iterator_tag,
                                   StringRef> {
+  char SeparatorStorage;
   StringRef Current;
   StringRef Next;
   StringRef Separator;
@@ -515,8 +516,35 @@ public:
     ++*this;
   }
 
+  SplittingIterator(StringRef Str, char Separator)
+      : SeparatorStorage(Separator), Next(Str),
+        Separator(&SeparatorStorage, 1) {
+    ++*this;
+  }
+
+  SplittingIterator(const SplittingIterator &R)
+      : SeparatorStorage(R.SeparatorStorage), Current(R.Current), Next(R.Next),
+        Separator(R.Separator) {
+    if (R.Separator.data() == &R.SeparatorStorage)
+      Separator = StringRef(&SeparatorStorage, 1);
+  }
+
+  SplittingIterator &operator=(const SplittingIterator &R) {
+    if (this == &R)
+      return *this;
+
+    SeparatorStorage = R.SeparatorStorage;
+    Current = R.Current;
+    Next = R.Next;
+    Separator = R.Separator;
+    if (R.Separator.data() == &R.SeparatorStorage)
+      Separator = StringRef(&SeparatorStorage, 1);
+    return *this;
+  }
+
   bool operator==(const SplittingIterator &R) const {
-    return Current == R.Current && Next == R.Next && Separator == R.Separator;
+    assert(Separator == R.Separator);
+    return Current.data() == R.Current.data();
   }
 
   const StringRef &operator*() const { return Current; }
@@ -524,9 +552,7 @@ public:
   StringRef &operator*() { return Current; }
 
   SplittingIterator &operator++() {
-    std::pair<StringRef, StringRef> Res = Next.split(Separator);
-    Current = Res.first;
-    Next = Res.second;
+    std::tie(Current, Next) = Next.split(Separator);
     return *this;
   }
 };
@@ -536,26 +562,21 @@ public:
 /// over separated strings like so:
 ///
 /// \code
-///   for (StringRef x : llvm::Split("foo,bar,baz", ','))
+///   for (StringRef x : llvm::split("foo,bar,baz", ","))
 ///     ...;
 /// \end
 ///
 /// Note that the passed string must remain valid throuhgout lifetime
 /// of the iterators.
-class Split {
-  StringRef Str;
-  std::string SeparatorStr;
+inline iterator_range<SplittingIterator> split(StringRef Str, StringRef Separator) {
+  return {SplittingIterator(Str, Separator),
+          SplittingIterator(StringRef(), Separator)};
+}
 
-public:
-  Split(StringRef NewStr, StringRef Separator)
-      : Str(NewStr), SeparatorStr(Separator) {}
-  Split(StringRef NewStr, char Separator)
-      : Str(NewStr), SeparatorStr(1, Separator) {}
-
-  SplittingIterator begin() { return SplittingIterator(Str, SeparatorStr); }
-
-  SplittingIterator end() { return SplittingIterator("", SeparatorStr); }
-};
+inline iterator_range<SplittingIterator> split(StringRef Str, char Separator) {
+  return {SplittingIterator(Str, Separator),
+          SplittingIterator(StringRef(), Separator)};
+}
 
 } // end namespace llvm
 

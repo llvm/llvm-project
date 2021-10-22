@@ -9,7 +9,7 @@ static_assert(alignof(X<int, char, 1>) == alignof(int), "");
 
 
 template<typename T, typename A, int N> struct Y {
-  alignas(A) T buffer[N]; // expected-error {{requested alignment is less than minimum alignment of 4 for type 'int [1]'}}
+  alignas(A) T buffer[N]; // expected-error {{requested alignment is less than minimum alignment of 4 for type 'int[1]'}}
 };
 
 static_assert(alignof(Y<char, int, sizeof(int)>) == alignof(int), "");

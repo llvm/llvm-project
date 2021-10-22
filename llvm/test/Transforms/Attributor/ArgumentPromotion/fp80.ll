@@ -35,7 +35,7 @@ define void @run() {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[A_CAST:%.*]] = bitcast %struct.Foo* @a to i32*
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_CAST]], align 8
-; IS__TUNIT_NPM-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* @a, i64 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = call i64 @CaptureAStruct(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR0]]
 ; IS__TUNIT_NPM-NEXT:    unreachable
@@ -121,7 +121,7 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__TUNIT_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
 ; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
@@ -136,7 +136,7 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
-; IS__CGSCC____-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
+; IS__CGSCC____-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0, i32 1
 ; IS__CGSCC____-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
 ; IS__CGSCC____-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC____:       loop:

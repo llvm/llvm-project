@@ -277,9 +277,8 @@ define dso_local i32 @load_between_stores(i32 %x, i16* %p, i32 *%ptr) {
 define dso_local void @invalid_shift(i16 %x, i8* %p) {
 ; CHECK-LABEL: invalid_shift:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    ubfx w8, w0, #4, #12
 ; CHECK-NEXT:    strb w0, [x1]
-; CHECK-NEXT:    lsr w8, w8, #4
 ; CHECK-NEXT:    strb w8, [x1, #1]
 ; CHECK-NEXT:    ret
   %t1 = trunc i16 %x to i8
@@ -316,9 +315,8 @@ define dso_local void @missing_store(i32 %x, i8* %p) {
 define dso_local void @different_base_reg(i16 %x, i8* %p, i8 *%p2) {
 ; CHECK-LABEL: different_base_reg:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    ubfx w8, w0, #8, #8
 ; CHECK-NEXT:    strb w0, [x1]
-; CHECK-NEXT:    lsr w8, w8, #8
 ; CHECK-NEXT:    strb w8, [x2, #1]
 ; CHECK-NEXT:    ret
   %t1 = trunc i16 %x to i8
@@ -333,9 +331,8 @@ define dso_local void @different_base_reg(i16 %x, i8* %p, i8 *%p2) {
 define dso_local void @second_store_is_volatile(i16 %x, i8* %p) {
 ; CHECK-LABEL: second_store_is_volatile:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    ubfx w8, w0, #8, #8
 ; CHECK-NEXT:    strb w0, [x1]
-; CHECK-NEXT:    lsr w8, w8, #8
 ; CHECK-NEXT:    strb w8, [x1, #1]
 ; CHECK-NEXT:    ret
   %t1 = trunc i16 %x to i8

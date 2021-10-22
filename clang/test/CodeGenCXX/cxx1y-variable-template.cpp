@@ -40,7 +40,7 @@ namespace PR42111 {
   // CHECK: load {{.*}} @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
-  // CHECK: call noundef i32 @_ZN7PR421111fEv(
+  // CHECK: call i32 @_ZN7PR421111fEv(
   // CHECK: store i32 {{.*}}, i32* @_ZN7PR4211112_GLOBAL__N_11nILi0EEE
   // CHECK: store i8 1, i8* @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   int g() { return n<> + n<>; }

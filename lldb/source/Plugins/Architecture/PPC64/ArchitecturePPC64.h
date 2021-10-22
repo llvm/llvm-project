@@ -15,11 +15,11 @@ namespace lldb_private {
 
 class ArchitecturePPC64 : public Architecture {
 public:
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "ppc64"; }
   static void Initialize();
   static void Terminate();
 
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   void OverrideStopInfo(Thread &thread) const override {}
 

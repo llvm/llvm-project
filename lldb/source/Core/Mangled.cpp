@@ -131,9 +131,9 @@ void Mangled::SetValue(ConstString name) {
 static char *GetMSVCDemangledStr(const char *M) {
   char *demangled_cstr = llvm::microsoftDemangle(
       M, nullptr, nullptr, nullptr, nullptr,
-      llvm::MSDemangleFlags(llvm::MSDF_NoAccessSpecifier |
-                            llvm::MSDF_NoCallingConvention |
-                            llvm::MSDF_NoMemberType));
+      llvm::MSDemangleFlags(
+          llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
+          llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
 
   if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
     if (demangled_cstr && demangled_cstr[0])
@@ -260,7 +260,8 @@ ConstString Mangled::GetDemangledName() const {
   if (m_mangled && m_demangled.IsNull()) {
     // Don't bother running anything that isn't mangled
     const char *mangled_name = m_mangled.GetCString();
-    ManglingScheme mangling_scheme = GetManglingScheme(m_mangled.GetStringRef());
+    ManglingScheme mangling_scheme =
+        GetManglingScheme(m_mangled.GetStringRef());
     if (mangling_scheme != eManglingSchemeNone &&
         !m_mangled.GetMangledCounterpart(m_demangled)) {
       // We didn't already mangle this name, demangle it and if all goes well
@@ -296,8 +297,7 @@ ConstString Mangled::GetDemangledName() const {
   return m_demangled;
 }
 
-ConstString
-Mangled::GetDisplayDemangledName() const {
+ConstString Mangled::GetDisplayDemangledName() const {
   return GetDemangledName();
 }
 

@@ -3,7 +3,7 @@
 // CHECK: [[ATTR_LOC:@[0-9]+]] = {{.*}} global { {{.*}} i32 15, i32 38
 
 // CHECK-LABEL: define{{.*}} i8* @_Z3foov()
-// CHECK: [[CALL:%.*]] = call noundef i8* @_Z6helperv()
+// CHECK: [[CALL:%.*]] = call i8* @_Z6helperv()
 // CHECK: icmp ne i8* [[CALL]]
 // CHECK: call void @__ubsan_handle_nullability_return_v1_abort({{.*}}[[ATTR_LOC]]
 

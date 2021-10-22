@@ -962,14 +962,3 @@ void ABISysV_ppc::Initialize() {
 void ABISysV_ppc::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_ppc::GetPluginNameStatic() {
-  static ConstString g_name("sysv-ppc");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_ppc::GetPluginName() {
-  return GetPluginNameStatic();
-}

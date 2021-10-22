@@ -7,6 +7,6 @@
 // CHECK: var2.c:3:5: warning: external variable 'x2' declared with incompatible types in different translation units ('int' vs. 'double')
 // CHECK: In file included from{{.*}}var1.c:3:
 // CHECK: var1.h:1:8: note: declared here with type 'double'
-// CHECK: warning: external variable 'xarray3' declared with incompatible types in different translation units ('int [17]' vs. 'int [18]')
-// CHECK: var1.c:7:5: note: declared here with type 'int [18]'
+// CHECK: warning: external variable 'xarray3' declared with incompatible types in different translation units ('int[17]' vs. 'int[18]')
+// CHECK: var1.c:7:5: note: declared here with type 'int[18]'
 // CHECK: 3 warnings generated

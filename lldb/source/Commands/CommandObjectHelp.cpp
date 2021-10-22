@@ -51,8 +51,9 @@ CommandObjectHelp::CommandObjectHelp(CommandInterpreter &interpreter)
   CommandArgumentEntry arg;
   CommandArgumentData command_arg;
 
-  // Define the first (and only) variant of this arg.
-  command_arg.arg_type = eArgTypeCommandName;
+  // A list of command names forming a path to the command we want help on.
+  // No names is allowed - in which case we dump the top-level help.
+  command_arg.arg_type = eArgTypeCommand;
   command_arg.arg_repetition = eArgRepeatStar;
 
   // There is only one variant this argument could be; put it into the argument
@@ -85,8 +86,10 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
     uint32_t cmd_types = CommandInterpreter::eCommandTypesBuiltin;
     if (m_options.m_show_aliases)
       cmd_types |= CommandInterpreter::eCommandTypesAliases;
-    if (m_options.m_show_user_defined)
+    if (m_options.m_show_user_defined) {
       cmd_types |= CommandInterpreter::eCommandTypesUserDef;
+      cmd_types |= CommandInterpreter::eCommandTypesUserMW;
+    }
     if (m_options.m_show_hidden)
       cmd_types |= CommandInterpreter::eCommandTypesHidden;
 

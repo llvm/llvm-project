@@ -1,9 +1,6 @@
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
-// RUN: %clang_cc1 -fno-experimental-new-pass-manager -flto -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s -check-prefix=LTO
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -flto -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s -check-prefix=LTO
+// RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %clang_cc1 -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %clang_cc1 -flto -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s -check-prefix=LTO
 
 // Ensure that we don't emit available_externally functions at -O0.
 // Also should not emit them at -O2, unless -flto is present in which case
@@ -13,7 +10,7 @@ int x;
 inline void f0(int y) { x = y; }
 
 // CHECK-LABEL: define{{.*}} void @test()
-// CHECK: declare void @f0(i32 noundef)
+// CHECK: declare void @f0(i32)
 // LTO-LABEL: define{{.*}} void @test()
 // LTO: define available_externally void @f0
 void test() {

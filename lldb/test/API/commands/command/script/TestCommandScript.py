@@ -147,7 +147,7 @@ class CmdPythonTestCase(TestBase):
         self.expect('my_command Blah', substrs=['Hello Blah, welcome to LLDB'])
 
         self.runCmd(
-            'command script add my_command --class welcome.TargetnameCommand')
+            'command script add my_command -o --class welcome.TargetnameCommand')
         self.expect('my_command', substrs=['a.out'])
 
         self.runCmd("command script clear")

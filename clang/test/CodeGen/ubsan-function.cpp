@@ -3,7 +3,7 @@
 // CHECK-LABEL: define{{.*}} void @_Z3funv() #0 prologue <{ i32, i32 }> <{ i32 846595819, i32 trunc (i64 sub (i64 ptrtoint (i8** @0 to i64), i64 ptrtoint (void ()* @_Z3funv to i64)) to i32) }> {
 void fun() {}
 
-// CHECK-LABEL: define{{.*}} void @_Z6callerPFvvE(void ()* noundef %f)
+// CHECK-LABEL: define{{.*}} void @_Z6callerPFvvE(void ()* %f)
 // CHECK: getelementptr <{ i32, i32 }>, <{ i32, i32 }>* {{.*}}, i32 0, i32 0, !nosanitize
 // CHECK: load i32, i32* {{.*}}, align {{.*}}, !nosanitize
 // CHECK: icmp eq i32 {{.*}}, 846595819, !nosanitize

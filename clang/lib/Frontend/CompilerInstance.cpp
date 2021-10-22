@@ -565,25 +565,28 @@ namespace {
 // the files we were handed.
 struct ReadModuleNames : ASTReaderListener {
   Preprocessor &PP;
-  llvm::SmallVector<IdentifierInfo*, 8> LoadedModules;
+  llvm::SmallVector<std::string, 8> LoadedModules;
 
   ReadModuleNames(Preprocessor &PP) : PP(PP) {}
 
   void ReadModuleName(StringRef ModuleName) override {
-    LoadedModules.push_back(PP.getIdentifierInfo(ModuleName));
+    // Keep the module name as a string for now. It's not safe to create a new
+    // IdentifierInfo from an ASTReader callback.
+    LoadedModules.push_back(ModuleName.str());
   }
 
   void registerAll() {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
-    for (auto *II : LoadedModules)
-      MM.cacheModuleLoad(*II, MM.findModule(II->getName()));
+    for (const std::string &LoadedModule : LoadedModules)
+      MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
+                         MM.findModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
-    for (auto *II : LoadedModules) {
+    for (const std::string &LoadedModule : LoadedModules) {
       if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
-              II->getName())) {
+              LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
         // Mark module as available if the only reason it was unavailable
@@ -1151,14 +1154,12 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Remove any macro definitions that are explicitly ignored by the module.
   // They aren't supposed to affect how the module is built anyway.
   HeaderSearchOptions &HSOpts = Invocation->getHeaderSearchOpts();
-  PPOpts.Macros.erase(
-      std::remove_if(PPOpts.Macros.begin(), PPOpts.Macros.end(),
-                     [&HSOpts](const std::pair<std::string, bool> &def) {
+  llvm::erase_if(
+      PPOpts.Macros, [&HSOpts](const std::pair<std::string, bool> &def) {
         StringRef MacroDef = def.first;
         return HSOpts.ModulesIgnoreMacros.count(
                    llvm::CachedHashString(MacroDef.split('=').first)) > 0;
-      }),
-      PPOpts.Macros.end());
+      });
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts()->ModuleName =

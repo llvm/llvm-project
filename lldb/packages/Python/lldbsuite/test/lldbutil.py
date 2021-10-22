@@ -953,7 +953,8 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
                              bkpt_module = None,
                              in_cwd = True,
                              only_one_thread = True,
-                             extra_images = None):
+                             extra_images = None,
+                             has_locations_before_run = True):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by source regex bkpt_pattern.
 
@@ -964,9 +965,10 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
             bkpt_pattern, source_spec, bkpt_module)
-    test.assertTrue(breakpoint.GetNumLocations() > 0,
-        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
-        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+    if has_locations_before_run:
+        test.assertTrue(breakpoint.GetNumLocations() > 0,
+                        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+                        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info,
                                     only_one_thread, extra_images)
 

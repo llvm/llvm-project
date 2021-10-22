@@ -29,7 +29,7 @@ template<int x> int f() { return x; }
 extern "C" int g() { return f<3>(); }
 #pragma GCC visibility pop
 // CHECK-LABEL: define hidden i32 @g()
-// CHECK-LABEL: define linkonce_odr hidden noundef i32 @_Z1fILi3EEiv()
+// CHECK-LABEL: define linkonce_odr hidden i32 @_Z1fILi3EEiv()
 
 #pragma GCC visibility push(hidden)
 template<class T> struct x5 {

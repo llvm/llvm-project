@@ -1,6 +1,6 @@
 ; Uninitialized values are not handled correctly.
 ;
-; RUN: opt < %s -mem2reg -disable-output
+; RUN: opt < %s -passes=mem2reg -disable-output
 ;
 
 define i32 @test() {

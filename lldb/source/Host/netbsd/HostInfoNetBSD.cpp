@@ -42,20 +42,16 @@ llvm::VersionTuple HostInfoNetBSD::GetOSVersion() {
   return llvm::VersionTuple();
 }
 
-bool HostInfoNetBSD::GetOSBuildString(std::string &s) {
+llvm::Optional<std::string> HostInfoNetBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
   char osrev_str[12];
   int osrev = 0;
   size_t osrev_len = sizeof(osrev);
 
-  if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0) {
-    ::snprintf(osrev_str, sizeof(osrev_str), "%-10.10d", osrev);
-    s.assign(osrev_str);
-    return true;
-  }
+  if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0)
+    return llvm::formatv("{0,10:10}", osrev).str();
 
-  s.clear();
-  return false;
+  return llvm::None;
 }
 
 bool HostInfoNetBSD::GetOSKernelDescription(std::string &s) {

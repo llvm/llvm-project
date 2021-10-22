@@ -172,11 +172,6 @@ ProcessKDP::~ProcessKDP() {
   Finalize();
 }
 
-// PluginInterface
-lldb_private::ConstString ProcessKDP::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 Status ProcessKDP::WillLaunch(Module *module) {
   Status error;
   error.SetErrorString("launching not supported in kdp-remote plug-in");

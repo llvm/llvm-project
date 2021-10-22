@@ -13,14 +13,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: LV: Checking a loop in "test"
 ;
 ; SSE2: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v1, i16* %out1, align 2
-; SSE2: LV: Found an estimated cost of 9 for VF 2 For instruction:   store i16 %v1, i16* %out1, align 2
-; SSE2: LV: Found an estimated cost of 17 for VF 4 For instruction:   store i16 %v1, i16* %out1, align 2
+; SSE2: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %v1, i16* %out1, align 2
+; SSE2: LV: Found an estimated cost of 2 for VF 4 For instruction:   store i16 %v1, i16* %out1, align 2
 ; SSE2: LV: Found an estimated cost of 34 for VF 8 For instruction:   store i16 %v1, i16* %out1, align 2
 ; SSE2: LV: Found an estimated cost of 68 for VF 16 For instruction:   store i16 %v1, i16* %out1, align 2
 ;
 ; AVX1: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i16 %v1, i16* %out1, align 2
-; AVX1: LV: Found an estimated cost of 9 for VF 2 For instruction:   store i16 %v1, i16* %out1, align 2
-; AVX1: LV: Found an estimated cost of 17 for VF 4 For instruction:   store i16 %v1, i16* %out1, align 2
+; AVX1: LV: Found an estimated cost of 2 for VF 2 For instruction:   store i16 %v1, i16* %out1, align 2
+; AVX1: LV: Found an estimated cost of 2 for VF 4 For instruction:   store i16 %v1, i16* %out1, align 2
 ; AVX1: LV: Found an estimated cost of 35 for VF 8 For instruction:   store i16 %v1, i16* %out1, align 2
 ; AVX1: LV: Found an estimated cost of 86 for VF 16 For instruction:   store i16 %v1, i16* %out1, align 2
 ; AVX1: LV: Found an estimated cost of 172 for VF 32 For instruction:   store i16 %v1, i16* %out1, align 2

@@ -96,7 +96,7 @@ void test_unaligned() {
   p3_aligned_type4 = p1_aligned_type4;
 
   __unaligned int a[10];
-  int *b = a; // expected-error {{cannot initialize a variable of type 'int *' with an lvalue of type '__unaligned int [10]'}}
+  int *b = a; // expected-error {{cannot initialize a variable of type 'int *' with an lvalue of type '__unaligned int[10]'}}
 }
 
 // Test from PR27367

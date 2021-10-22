@@ -659,13 +659,8 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
         fixed_command.append(m_fixed_expression);
       history.AppendString(fixed_command);
     }
-    // Increment statistics to record this expression evaluation success.
-    target.IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
-
-  // Increment statistics to record this expression evaluation failure.
-  target.IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

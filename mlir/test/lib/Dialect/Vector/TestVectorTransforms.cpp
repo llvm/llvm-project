@@ -466,6 +466,50 @@ struct TestVectorMultiReductionLoweringPatterns
   }
 };
 
+struct TestVectorTransferCollapseInnerMostContiguousDims
+    : public PassWrapper<TestVectorTransferCollapseInnerMostContiguousDims,
+                         FunctionPass> {
+  TestVectorTransferCollapseInnerMostContiguousDims() = default;
+  TestVectorTransferCollapseInnerMostContiguousDims(
+      const TestVectorTransferCollapseInnerMostContiguousDims &pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect, AffineDialect>();
+  }
+
+  StringRef getArgument() const final {
+    return "test-vector-transfer-collapse-inner-most-dims";
+  }
+
+  StringRef getDescription() const final {
+    return "Test conversion patterns that reducedes the rank of the vector "
+           "transfer memory and vector operands.";
+  }
+
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorTransferCollapseInnerMostContiguousDimsPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
+struct TestVectorReduceToContractPatternsPatterns
+    : public PassWrapper<TestVectorReduceToContractPatternsPatterns,
+                         FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-reduction-to-contract-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to convert multireduce op to contract and combine "
+           "broadcast/transpose to contract";
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateVetorReductionToContractPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -490,6 +534,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorTransferLoweringPatterns>();
 
   PassRegistration<TestVectorMultiReductionLoweringPatterns>();
+
+  PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
+
+  PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 }
 } // namespace test
 } // namespace mlir

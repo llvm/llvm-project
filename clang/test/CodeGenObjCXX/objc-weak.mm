@@ -12,7 +12,7 @@ id test0() {
 }
 
 // Copy Assignment Operator
-// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSERKS_(
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSERKS_(
 // CHECK:       [[THISADDR:%this.*]] = alloca [[A:.*]]*
 // CHECK:       [[OBJECTADDR:%.*]] = alloca [[A:.*]]*
 // CHECK:       [[THIS:%this.*]] = load [[A]]*, [[A]]** [[THISADDR]]
@@ -23,7 +23,7 @@ id test0() {
 // CHECK-NEXT:  [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
 
 // Move Assignment Operator
-// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSEOS_(
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSEOS_(
 // CHECK:       [[THISADDR:%this.*]] = alloca [[A:.*]]*
 // CHECK:       [[OBJECTADDR:%.*]] = alloca [[A:.*]]*
 // CHECK:       [[THIS:%this.*]] = load [[A]]*, [[A]]** [[THISADDR]]

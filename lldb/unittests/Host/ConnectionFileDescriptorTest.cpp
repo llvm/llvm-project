@@ -28,12 +28,12 @@ public:
 
     llvm::StringRef scheme;
     llvm::StringRef hostname;
-    int port;
+    llvm::Optional<uint16_t> port;
     llvm::StringRef path;
     std::string uri(connection_file_descriptor.GetURI());
     EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
     EXPECT_EQ(ip, hostname);
-    EXPECT_EQ(socket->GetRemotePortNumber(), port);
+    EXPECT_EQ(socket->GetRemotePortNumber(), port.getValue());
   }
 };
 

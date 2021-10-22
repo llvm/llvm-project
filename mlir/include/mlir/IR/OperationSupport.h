@@ -301,7 +301,7 @@ public:
 
   /// Replaces the attributes with new list of attributes.
   void assign(ArrayRef<NamedAttribute> range) {
-    append(range.begin(), range.end());
+    assign(range.begin(), range.end());
   }
 
   bool empty() const { return attrs.empty(); }

@@ -966,6 +966,7 @@ public:
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
   }
 
+/*
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   // TODO Implement locale conversions.
   template <class _Source, class = _EnableIfPathable<_Source, void> >
@@ -974,6 +975,7 @@ public:
   path(_InputIt __first, _InputIt _last, const locale& __loc,
        format = format::auto_format);
 #endif
+*/
 
   _LIBCPP_INLINE_VISIBILITY
   ~path() = default;

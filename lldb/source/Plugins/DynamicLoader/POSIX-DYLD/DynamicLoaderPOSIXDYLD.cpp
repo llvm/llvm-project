@@ -38,10 +38,6 @@ void DynamicLoaderPOSIXDYLD::Initialize() {
 
 void DynamicLoaderPOSIXDYLD::Terminate() {}
 
-lldb_private::ConstString DynamicLoaderPOSIXDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 lldb_private::ConstString DynamicLoaderPOSIXDYLD::GetPluginNameStatic() {
   static ConstString g_name("linux-dyld");
   return g_name;

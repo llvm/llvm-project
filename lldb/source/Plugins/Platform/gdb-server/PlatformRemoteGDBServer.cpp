@@ -145,10 +145,10 @@ Status PlatformRemoteGDBServer::ResolveExecutable(
 
     if (error.Fail() || !exe_module_sp) {
       if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormat(
-            "'%s' doesn't contain any '%s' platform architectures: %s",
-            resolved_module_spec.GetFileSpec().GetPath().c_str(),
-            GetPluginName().GetCString(), arch_names.GetData());
+        error.SetErrorStringWithFormatv(
+            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+            resolved_module_spec.GetFileSpec(), GetPluginName(),
+            arch_names.GetData());
       } else {
         error.SetErrorStringWithFormat(
             "'%s' is not readable",
@@ -305,7 +305,7 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   if (!url)
     return Status("URL is null.");
 
-  int port;
+  llvm::Optional<uint16_t> port;
   llvm::StringRef scheme, hostname, pathname;
   if (!UriParser::Parse(url, scheme, hostname, port, pathname))
     return Status("Invalid URL: %s", url);

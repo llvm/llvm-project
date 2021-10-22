@@ -31,8 +31,8 @@ public:
 
   static lldb::InstrumentationRuntimeType GetTypeStatic();
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
 
   virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }

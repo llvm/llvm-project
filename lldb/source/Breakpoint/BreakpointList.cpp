@@ -101,10 +101,8 @@ void BreakpointList::RemoveAllowed(bool notify) {
       NotifyChange(bp_sp, eBreakpointEventTypeRemoved);
   }
 
-  m_breakpoints.erase(
-      std::remove_if(m_breakpoints.begin(), m_breakpoints.end(),
-                     [&](const BreakpointSP &bp) { return bp->AllowDelete(); }),
-      m_breakpoints.end());
+  llvm::erase_if(m_breakpoints,
+                 [&](const BreakpointSP &bp) { return bp->AllowDelete(); });
 }
 
 BreakpointList::bp_collection::iterator

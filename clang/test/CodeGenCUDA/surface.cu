@@ -27,9 +27,9 @@ surface<void, 2> surf;
 
 __attribute__((device)) int suld_2d_zero(surface<void, 2>, int, int) asm("llvm.nvvm.suld.2d.i32.zero");
 
-// DEVICE-LABEL: i32 @_Z3fooii(i32 noundef %x, i32 noundef %y)
+// DEVICE-LABEL: i32 @_Z3fooii(i32 %x, i32 %y)
 // DEVICE: call i64 @llvm.nvvm.texsurf.handle.internal.p1i64(i64 addrspace(1)* @surf)
-// DEVICE: call noundef i32 @llvm.nvvm.suld.2d.i32.zero(i64 %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}})
+// DEVICE: call i32 @llvm.nvvm.suld.2d.i32.zero(i64 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
 __attribute__((device)) int foo(int x, int y) {
   return suld_2d_zero(surf, x, y);
 }

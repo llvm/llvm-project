@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <omp.h>
 
+// Used to detect architecture
+#include "../../src/kmp_platform.h"
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -32,6 +35,7 @@ __kmpc_atomic_val_8_cas(ident_t *loc, int gtid, long long *x, long long e,
 
 int main() {
   int ret = 0;
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
   bool r;
   char c0 = 1;
   char c1 = 2;
@@ -176,5 +180,8 @@ int main() {
 
   if (ret == 0)
     printf("passed\n");
+#else
+  printf("Unsupported architecture, skipping test...\n");
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
   return ret;
 }

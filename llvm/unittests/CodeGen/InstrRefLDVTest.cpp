@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -13,6 +14,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -33,10 +35,11 @@ public:
   using MLocTransferMap = InstrRefBasedLDV::MLocTransferMap;
 
   LLVMContext Ctx;
-  Module Mod;
+  std::unique_ptr<Module> Mod;
   std::unique_ptr<TargetMachine> Machine;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<MachineDominatorTree> DomTree;
+  std::unique_ptr<MachineModuleInfo> MMI;
   DICompileUnit *OurCU;
   DIFile *OurFile;
   DISubprogram *OurFunc;
@@ -55,13 +58,15 @@ public:
   std::unique_ptr<MLocTracker> MTracker;
   std::unique_ptr<VLocTracker> VTracker;
 
-  InstrRefLDVTest() : Ctx(), Mod("beehives", Ctx) {
-  }
+  SmallString<256> MIRStr;
+
+  InstrRefLDVTest() : Ctx(), Mod(std::make_unique<Module>("beehives", Ctx)) {}
 
   void SetUp() {
     // Boilerplate that creates a MachineFunction and associated blocks.
 
-    Mod.setDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128");
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
+                       "n8:16:32:64-S128");
     Triple TargetTriple("x86_64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -69,21 +74,24 @@ public:
       GTEST_SKIP();
 
     TargetOptions Options;
-    Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "X86", "", "", Options, None, None, CodeGenOpt::Aggressive));
+    Machine = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(Triple::normalize("x86_64--"), "", "", Options,
+                               None, None, CodeGenOpt::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-    auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &Mod);
+    auto F =
+        Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MachineModuleInfo MMI((LLVMTargetMachine*)&*Machine);
+    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
-    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine&)*Machine, STI, FunctionNum, MMI);
+    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
+                                           STI, FunctionNum, *MMI);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.
-    DIBuilder DIB(Mod);
+    DIBuilder DIB(*Mod);
     OurFile = DIB.createFile("xyzzy.c", "/cave");
     OurCU =
         DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
@@ -126,7 +134,7 @@ public:
     llvm_unreachable("Can't find register by name");
   }
 
-  InstrRefBasedLDV *setupLDVObj() {
+  InstrRefBasedLDV *setupLDVObj(MachineFunction *MF) {
     // Create a new LDV object, and plug some relevant object ptrs into it.
     LDV = std::make_unique<InstrRefBasedLDV>();
     const TargetSubtargetInfo &STI = MF->getSubtarget();
@@ -144,12 +152,11 @@ public:
     // mappings.
     LDV->initialSetup(*MF);
     LDV->LS.initialize(*MF);
-    addMTracker();
-    addVTracker();
+    addMTracker(MF);
     return &*LDV;
   }
 
-  void addMTracker() {
+  void addMTracker(MachineFunction *MF) {
     ASSERT_TRUE(LDV);
     // Add a machine-location-tracking object to LDV. Don't initialize any
     // register locations within it though.
@@ -179,13 +186,11 @@ public:
   }
 
   bool vlocJoin(MachineBasicBlock &MBB, InstrRefBasedLDV::LiveIdxT &VLOCOutLocs,
-                InstrRefBasedLDV::LiveIdxT &VLOCInLocs,
-                const SmallSet<DebugVariable, 4> &AllVars,
                 SmallPtrSet<const MachineBasicBlock *, 8> &InScopeBlocks,
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
-                DenseMap<DebugVariable, DbgValue> &InLocsT) {
-    return LDV->vlocJoin(MBB, VLOCOutLocs, VLOCInLocs, AllVars,
-                         InScopeBlocks, BlocksToExplore, InLocsT);
+                DbgValue &InLoc) {
+    return LDV->vlocJoin(MBB, VLOCOutLocs, InScopeBlocks, BlocksToExplore,
+                         InLoc);
   }
 
   void buildVLocValueMap(const DILocation *DILoc,
@@ -214,7 +219,7 @@ public:
     MF->insert(MF->end(), MBB0);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupDiamondBlocks() {
@@ -247,7 +252,7 @@ public:
     MBB2->addSuccessor(MBB3);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupSimpleLoop() {
@@ -277,7 +282,7 @@ public:
     MBB1->addSuccessor(MBB1);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupNestedLoops() {
@@ -322,7 +327,7 @@ public:
     MBB3->addSuccessor(MBB4);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupNoDominatingLoop() {
@@ -367,7 +372,7 @@ public:
     MBB3->addSuccessor(MBB4);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupBadlyNestedLoops() {
@@ -418,9 +423,463 @@ public:
     MBB3->addSuccessor(MBB4);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
+  }
+
+  MachineFunction *readMIRBlock(const char *Input) {
+    MIRStr.clear();
+    StringRef S = Twine(Twine(R"MIR(
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+  define void @test() { ret void }
+...
+---
+name: test
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:  |
+   bb.0:
+    liveins: $rdi, $rsi
+)MIR") + Twine(Input) + Twine("...\n"))
+                      .toNullTerminatedStringRef(MIRStr);
+    ;
+
+    // Clear the "test" function from MMI if it's still present.
+    if (Function *Fn = Mod->getFunction("test"))
+      MMI->deleteMachineFunctionFor(*Fn);
+
+    auto MemBuf = MemoryBuffer::getMemBuffer(S, "<input>");
+    auto MIRParse = createMIRParser(std::move(MemBuf), Ctx);
+    Mod = MIRParse->parseIRModule();
+    assert(Mod);
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
+                       "n8:16:32:64-S128");
+
+    bool Result = MIRParse->parseMachineFunctions(*Mod, *MMI);
+    assert(!Result && "Failed to parse unit test machine function?");
+    (void)Result;
+
+    Function *Fn = Mod->getFunction("test");
+    assert(Fn && "Failed to parse a unit test module string?");
+    Fn->setSubprogram(OurFunc);
+    return MMI->getMachineFunction(*Fn);
+  }
+
+  void
+  produceMLocTransferFunction(MachineFunction &MF,
+                              SmallVectorImpl<MLocTransferMap> &MLocTransfer,
+                              unsigned MaxNumBlocks) {
+    LDV->produceMLocTransferFunction(MF, MLocTransfer, MaxNumBlocks);
   }
 };
+
+TEST_F(InstrRefLDVTest, MTransferDefs) {
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+
+  // We should start with only SP tracked.
+  EXPECT_TRUE(MTracker->getNumLocs() == 1);
+
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Code contains only one register write: that should assign to each of the
+  // aliasing registers. Test that all of them get locations, and have a
+  // corresponding def at the first instr in the function.
+  const char *RegNames[] = {"RAX", "HAX", "EAX", "AX", "AH", "AL"};
+  EXPECT_TRUE(MTracker->getNumLocs() == 7);
+  for (const char *RegName : RegNames) {
+    Register R = getRegByName(RegName);
+    ASSERT_TRUE(MTracker->isRegisterTracked(R));
+    LocIdx L = MTracker->getRegMLoc(R);
+    ValueIDNum V = MTracker->readReg(R);
+    // Value of this register should be: block zero, instruction 1, and the
+    // location it's defined in is itself.
+    ValueIDNum ToCmp(0, 1, L);
+    EXPECT_EQ(V, ToCmp);
+  }
+
+  // Do the same again, but with an aliasing write. This should write to all
+  // the same registers again, except $ah and $hax (the upper 8 bits of $ax
+  // and 32 bits of $rax resp.).
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $al = MOV8ri 0\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  auto TestRegSetSite = [&](const char *Name, unsigned InstrNum) {
+    Register R = getRegByName(Name);
+    ASSERT_TRUE(MTracker->isRegisterTracked(R));
+    LocIdx L = MTracker->getRegMLoc(R);
+    ValueIDNum V = MTracker->readMLoc(L);
+    ValueIDNum ToCmp(0, InstrNum, L);
+    EXPECT_EQ(V, ToCmp);
+  };
+
+  TestRegSetSite("AL", 2);
+  TestRegSetSite("AH", 1);
+  TestRegSetSite("AX", 2);
+  TestRegSetSite("EAX", 2);
+  TestRegSetSite("HAX", 1);
+  TestRegSetSite("RAX", 2);
+
+  // This call should:
+  //  * Def rax via the implicit-def,
+  //  * Clobber rsi/rdi and all their subregs, via the register mask
+  //  * Same for rcx, despite it not being a use in the instr, it's in the mask
+  //  * NOT clobber $rsp / $esp $ sp, LiveDebugValues deliberately ignores
+  //    these.
+  //  * NOT clobber $rbx, because it's non-volatile
+  //  * Not track every other register in the machine, only those needed.
+ MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n" // instr 1
+   "    $rbx = MOV64ri 0\n" // instr 2
+   "    $rcx = MOV64ri 0\n" // instr 3
+   "    $rdi = MOV64ri 0\n" // instr 4
+   "    $rsi = MOV64ri 0\n" // instr 5
+   "    CALL64r $rax, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $esp, implicit-def $sp\n\n\n\n" // instr 6
+   "    RETQ $rax\n"); // instr 7
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  const char *RegsSetInCall[] = {"AL",  "AH",  "AX", "EAX", "HAX", "RAX",
+                                 "DIL", "DIH", "DI", "EDI", "HDI", "RDI",
+                                 "SIL", "SIH", "SI", "ESI", "HSI", "RSI",
+                                 "CL",  "CH",  "CX", "ECX", "HCX", "RCX"};
+  for (const char *RegSetInCall : RegsSetInCall)
+    TestRegSetSite(RegSetInCall, 6);
+
+  const char *RegsLeftAlone[] = {"BL", "BH", "BX", "EBX", "HBX", "RBX"};
+  for (const char *RegLeftAlone : RegsLeftAlone)
+    TestRegSetSite(RegLeftAlone, 2);
+
+  // Stack pointer should be the live-in to the function, instruction zero.
+  TestRegSetSite("RSP", 0);
+  // These stack regs should not be tracked either. Nor the (fake) subregs.
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("ESP")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("SP")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("SPL")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("SPH")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("HSP")));
+
+  // Should only be tracking: 6 x {A, B, C, DI, SI} registers = 30,
+  // Plus RSP, SSP = 32.
+  EXPECT_EQ(32u, MTracker->getNumLocs());
+
+
+  // When we DBG_PHI something, we should track all its subregs.
+  MF = readMIRBlock(
+   "    DBG_PHI $rdi, 0\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // All DI regs and RSP tracked.
+  EXPECT_EQ(7u, MTracker->getNumLocs());
+
+  // All the DI registers should have block live-in values, i.e. the argument
+  // to the function.
+  const char *DIRegs[] = {"DIL", "DIH", "DI", "EDI", "HDI", "RDI"};
+  for (const char *DIReg : DIRegs)
+    TestRegSetSite(DIReg, 0);
+}
+
+TEST_F(InstrRefLDVTest, MTransferMeta) {
+  // Meta instructions should not have any effect on register values.
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $rax = IMPLICIT_DEF\n"
+   "    $rax = KILL killed $rax\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  LocIdx RaxLoc = MTracker->getRegMLoc(getRegByName("RAX"));
+  ValueIDNum V = MTracker->readMLoc(RaxLoc);
+  // Def of rax should be from instruction 1, i.e., unmodified.
+  ValueIDNum Cmp(0, 1, RaxLoc);
+  EXPECT_EQ(Cmp, V);
+}
+
+TEST_F(InstrRefLDVTest, MTransferCopies) {
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  // This memory spill should be recognised, and a spill slot created.
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Check that the spill location contains the value defined in rax by
+  // instruction 1. The MIR header says -16 offset, but it's stored as -8;
+  // it's not completely clear why, but here we only care about correctly
+  // identifying the slot, not that all the surrounding data is correct.
+  SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+  unsigned SpillLocID = MTracker->getLocID(SpillNo, {64, 0});
+  LocIdx SpillLoc = MTracker->getSpillMLoc(SpillLocID);
+  ValueIDNum V = MTracker->readMLoc(SpillLoc);
+  Register RAX = getRegByName("RAX");
+  LocIdx RaxLoc = MTracker->getRegMLoc(RAX);
+  ValueIDNum Cmp(0, 1, RaxLoc);
+  EXPECT_EQ(V, Cmp);
+
+  // A spill and restore should be recognised.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Test that rbx contains rax from instruction 1.
+  RAX = getRegByName("RAX");
+  RaxLoc = MTracker->getRegMLoc(RAX);
+  Register RBX = getRegByName("RBX");
+  LocIdx RbxLoc = MTracker->getRegMLoc(RBX);
+  Cmp = ValueIDNum(0, 1, RaxLoc);
+  ValueIDNum RbxVal = MTracker->readMLoc(RbxLoc);
+  EXPECT_EQ(RbxVal, Cmp);
+
+  // Testing that all the subregisters are transferred happens in
+  // MTransferSubregSpills.
+
+  // Copies and x86 movs should be recognised and honoured. In addition, all
+  // of the subregisters should be copied across too.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $rcx = COPY $rax\n"
+   "    $rbx = MOV64rr $rcx\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  const char *ARegs[] = {"AL", "AH", "AX", "EAX", "HAX", "RAX"};
+  const char *BRegs[] = {"BL", "BH", "BX", "EBX", "HBX", "RBX"};
+  const char *CRegs[] = {"CL", "CH", "CX", "ECX", "HCX", "RCX"};
+  auto CheckReg = [&](unsigned int I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx B = MTracker->getRegMLoc(getRegByName(BRegs[I]));
+    LocIdx C = MTracker->getRegMLoc(getRegByName(CRegs[I]));
+    ValueIDNum ARefVal(0, 1, A);
+    ValueIDNum AVal = MTracker->readMLoc(A);
+    ValueIDNum BVal = MTracker->readMLoc(B);
+    ValueIDNum CVal = MTracker->readMLoc(C);
+    EXPECT_EQ(ARefVal, AVal);
+    EXPECT_EQ(ARefVal, BVal);
+    EXPECT_EQ(ARefVal, CVal);
+  };
+
+  for (unsigned int I = 0; I < 6; ++I)
+    CheckReg(I);
+
+  // When we copy to a subregister, the super-register should be def'd too: it's
+  // value will have changed.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $ecx = COPY $eax\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // First four regs [al, ah, ax, eax] should be copied to *cx.
+  for (unsigned int I = 0; I < 4; ++I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx C = MTracker->getRegMLoc(getRegByName(CRegs[I]));
+    ValueIDNum ARefVal(0, 1, A);
+    ValueIDNum AVal = MTracker->readMLoc(A);
+    ValueIDNum CVal = MTracker->readMLoc(C);
+    EXPECT_EQ(ARefVal, AVal);
+    EXPECT_EQ(ARefVal, CVal);
+  }
+
+  // But rcx should contain a value defined by the COPY.
+  LocIdx RcxLoc = MTracker->getRegMLoc(getRegByName("RCX"));
+  ValueIDNum RcxVal = MTracker->readMLoc(RcxLoc);
+  ValueIDNum RcxDefVal(0, 2, RcxLoc); // instr 2 -> the copy
+  EXPECT_EQ(RcxVal, RcxDefVal);
+}
+
+TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Check that all the subregs of rax and rbx contain the same values. One
+  // should completely transfer to the other.
+  const char *ARegs[] = {"AL", "AH", "AX", "EAX", "HAX", "RAX"};
+  const char *BRegs[] = {"BL", "BH", "BX", "EBX", "HBX", "RBX"};
+  for (unsigned int I = 0; I < 6; ++I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx B = MTracker->getRegMLoc(getRegByName(BRegs[I]));
+    EXPECT_EQ(MTracker->readMLoc(A), MTracker->readMLoc(B));
+  }
+
+  // Explicitly check what's in the different subreg slots, on the stack.
+  // Pair up subreg idx fields with the corresponding subregister in $rax.
+  MLocTracker::StackSlotPos SubRegIdxes[] = {{8, 0}, {8, 8}, {16, 0}, {32, 0}, {64, 0}};
+  const char *SubRegNames[] = {"AL", "AH", "AX", "EAX", "RAX"};
+  for (unsigned int I = 0; I < 5; ++I) {
+    // Value number where it's defined,
+    LocIdx RegLoc = MTracker->getRegMLoc(getRegByName(SubRegNames[I]));
+    ValueIDNum DefNum(0, 1, RegLoc);
+    // Read the corresponding subreg field from the stack.
+    SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+    unsigned SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
+    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
+    ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
+    EXPECT_EQ(DefNum, SpillValue);
+  }
+
+  // If we have exactly the same code, but we write $eax to the stack slot after
+  // $rax, then we should still have exactly the same output in the lower five
+  // subregisters. Storing $eax to the start of the slot will overwrite with the
+  // same values. $rax, as an aliasing register, should be reset to something
+  // else by that write.
+  // In theory, we could try and recognise that we're writing the _same_ values
+  // to the stack again, and so $rax doesn't need to be reset to something else.
+  // It seems vanishingly unlikely that LLVM would generate such code though,
+  // so the benefits would be small.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    MOV32mr $rsp, 1, $noreg, 16, $noreg, $eax :: (store 4 into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Check lower five registers up to and include $eax == $ebx,
+  for (unsigned int I = 0; I < 5; ++I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx B = MTracker->getRegMLoc(getRegByName(BRegs[I]));
+    EXPECT_EQ(MTracker->readMLoc(A), MTracker->readMLoc(B));
+  }
+
+  // $rbx should contain something else; today it's a def at the spill point
+  // of the 4 byte value.
+  SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+  unsigned SpillID = MTracker->getLocID(SpillNo, {64, 0});
+  LocIdx Spill64Loc = MTracker->getSpillMLoc(SpillID);
+  ValueIDNum DefAtSpill64(0, 3, Spill64Loc);
+  LocIdx RbxLoc = MTracker->getRegMLoc(getRegByName("RBX"));
+  EXPECT_EQ(MTracker->readMLoc(RbxLoc), DefAtSpill64);
+
+  // Same again, test that the lower four subreg slots on the stack are the
+  // value defined by $rax in instruction 1.
+  for (unsigned int I = 0; I < 4; ++I) {
+    // Value number where it's defined,
+    LocIdx RegLoc = MTracker->getRegMLoc(getRegByName(SubRegNames[I]));
+    ValueIDNum DefNum(0, 1, RegLoc);
+    // Read the corresponding subreg field from the stack.
+    SpillNo = MTracker->getOrTrackSpillLoc(L);
+    SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
+    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
+    ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
+    EXPECT_EQ(DefNum, SpillValue);
+  }
+
+  // Stack slot for $rax should be a different value, today it's EmptyValue.
+  ValueIDNum SpillValue = MTracker->readMLoc(Spill64Loc);
+  EXPECT_EQ(SpillValue, DefAtSpill64);
+
+  // If we write something to the stack, then over-write with some register
+  // from a completely different hierarchy, none of the "old" values should be
+  // readable.
+  // NB: slight hack, store 16 in to a 8 byte stack slot.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    $xmm0 = IMPLICIT_DEF\n"
+   "    MOVUPDmr $rsp, 1, $noreg, 16, $noreg, killed $xmm0 :: (store (s128) into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  for (unsigned int I = 0; I < 5; ++I) {
+    // Read subreg fields from the stack.
+    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+    unsigned SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
+    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
+    ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
+
+    // Value should be defined by the spill-to-xmm0 instr, get value of a def
+    // at the point of the spill.
+    ValueIDNum SpillDef(0, 4, SpillLoc);
+    EXPECT_EQ(SpillValue, SpillDef);
+  }
+
+  // Read xmm0's position and ensure it has a value. Should be the live-in
+  // value to the block, as IMPLICIT_DEF isn't a real def.
+  SpillNo = MTracker->getOrTrackSpillLoc(L);
+  SpillID = MTracker->getLocID(SpillNo, {128, 0});
+  LocIdx Spill128Loc = MTracker->getSpillMLoc(SpillID);
+  SpillValue = MTracker->readMLoc(Spill128Loc);
+  Register XMM0 = getRegByName("XMM0");
+  LocIdx Xmm0Loc = MTracker->getRegMLoc(XMM0);
+  EXPECT_EQ(ValueIDNum(0, 0, Xmm0Loc), SpillValue);
+
+  // What happens if we spill ah to the stack, then load al? It should find
+  // the same value.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV8mr $rsp, 1, $noreg, 16, $noreg, $ah :: (store 1 into %stack.0)\n"
+   "    $al = MOV8rm $rsp, 1, $noreg, 0, $noreg :: (load 1 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  Register AL = getRegByName("AL");
+  Register AH = getRegByName("AH");
+  LocIdx AlLoc = MTracker->getRegMLoc(AL);
+  LocIdx AhLoc = MTracker->getRegMLoc(AH);
+  ValueIDNum AHDef(0, 1, AhLoc);
+  ValueIDNum ALValue = MTracker->readMLoc(AlLoc);
+  EXPECT_EQ(ALValue, AHDef);
+}
 
 TEST_F(InstrRefLDVTest, MLocSingleBlock) {
   // Test some very simple properties about interpreting the transfer function.
@@ -1243,8 +1702,8 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts;
-  VLiveOuts.resize(4);
+  SmallVector<DbgValue, 32> VLiveOuts;
+  VLiveOuts.resize(4, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
@@ -1262,13 +1721,14 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   Optional<ValueIDNum> Result;
 
   // Simple case: join two distinct values on entry to the block.
-  VLiveOuts[1].insert({Var,  DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var,  DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 3.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk3);
+  }
 
   // If the incoming values are swapped between blocks, we should not
   // successfully join. The CFG merge would select the right values, but in
@@ -1280,22 +1740,20 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   // Swap back,
   std::swap(VLiveOuts[1], VLiveOuts[2]);
   // Setting one of these to being a constant should prohibit merging.
-  VLiveOuts[1].find(Var)->second.Kind = DbgValue::Const;
-  VLiveOuts[1].find(Var)->second.MO = MachineOperand::CreateImm(0);
+  VLiveOuts[1].Kind = DbgValue::Const;
+  VLiveOuts[1].MO = MachineOperand::CreateImm(0);
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 
   // Seeing both to being a constant -> still prohibit, it shouldn't become
   // a value in the register file anywhere.
-  VLiveOuts[2].find(Var)->second = VLiveOuts[1].find(Var)->second;
+  VLiveOuts[2] = VLiveOuts[1];
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 
   // NoVals shouldn't join with anything else.
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var,  DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var,  DbgValue(2, EmptyProps, DbgValue::NoVal)});
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::NoVal);
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 
@@ -1303,9 +1761,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   // such a scenario: first, where one incoming edge has a VPHI with no known
   // value. This represents an edge where there was a PHI value that can't be
   // found in the register file -- we can't subsequently find a PHI here.
-  VLiveOuts[2].clear();
-  VLiveOuts[2].insert({Var,  DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  EXPECT_EQ(VLiveOuts[2].find(Var)->second.ID, ValueIDNum::EmptyValue);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  EXPECT_EQ(VLiveOuts[2].ID, ValueIDNum::EmptyValue);
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 
@@ -1313,11 +1771,14 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   // location. Use a PHI machine-value for doing this, as VPHIs should always
   // have PHI values, or they should have been eliminated.
   OutLocs[2][0] = RspPHIInBlk2;
-  VLiveOuts[2].find(Var)->second.ID = RspPHIInBlk2;
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2].ID = RspPHIInBlk2; // Set location where PHI happens.
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk3);
+  }
 
   // If that value isn't available from that block, don't join.
   OutLocs[2][0] = LiveInRsp;
@@ -1326,16 +1787,17 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
 
   // Check that we don't pick values when the properties disagree, for example
   // different indirectness or DIExpression.
-  DIExpression *NewExpr = DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
+  DIExpression *NewExpr =
+      DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
   DbgValueProperties PropsWithExpr(NewExpr, false);
-  VLiveOuts[2].clear();
-  VLiveOuts[2].insert({Var,  DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def)});
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def);
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 
   DbgValueProperties PropsWithIndirect(EmptyExpr, true);
-  VLiveOuts[2].clear();
-  VLiveOuts[2].insert({Var,  DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
   Result = pickVPHILoc(*MBB3, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 }
@@ -1369,8 +1831,8 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts;
-  VLiveOuts.resize(3);
+  SmallVector<DbgValue, 32> VLiveOuts;
+  VLiveOuts.resize(3, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
@@ -1387,13 +1849,14 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   Optional<ValueIDNum> Result;
 
   // See that we can merge as normal on a backedge.
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 1.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // And that, if the desired values aren't available, we don't merge.
   OutLocs[1][0] = LiveInRsp;
@@ -1408,15 +1871,14 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   OutLocs[0][1] = LiveInRsp;
   OutLocs[1][0] = RaxPHIInBlk1;
   OutLocs[1][1] = RaxPHIInBlk1;
-  VLiveOuts[0].clear();
-  VLiveOuts[1].clear();
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
   // Crucially, a VPHI originating in this block:
-  VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RaxPHIInBlk1);
+  }
 
   // Merging should not be permitted if there's a usable PHI on the backedge,
   // but it's in the wrong place. (Overwrite $rax).
@@ -1427,8 +1889,8 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   // Additionally, if the VPHI coming back on the loop backedge isn't from
   // this block (block 1), we can't merge it.
   OutLocs[1][1] = RaxPHIInBlk1;
-  VLiveOuts[1].clear();
-  VLiveOuts[1].insert({Var, DbgValue(0, EmptyProps, DbgValue::VPHI)});
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(0, EmptyProps, DbgValue::VPHI);
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_FALSE(Result);
 }
@@ -1471,8 +1933,8 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts;
-  VLiveOuts.resize(5);
+  SmallVector<DbgValue, 32> VLiveOuts;
+  VLiveOuts.resize(5, DbgValue(EmptyProps, DbgValue::Undef));
   InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
@@ -1494,14 +1956,15 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   Optional<ValueIDNum> Result;
 
   // See that we can merge as normal on a backedge.
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRbx, EmptyProps, DbgValue::Def)});
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRbx, EmptyProps, DbgValue::Def);
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   // Should have picked a PHI in $rsp in block 1.
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Check too that permuting the live-out locations prevents merging
   OutLocs[0][0] = LiveInRax;
@@ -1522,21 +1985,25 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
 
   // If the variables value on that edge is a VPHI feeding into itself, that's
   // fine.
-  VLiveOuts[1].clear();
-  VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2] = DbgValue(LiveInRbx, EmptyProps, DbgValue::Def);
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Likewise: the other backedge being a VPHI from block 1 should be accepted.
   OutLocs[2][0] = RspPHIInBlk1;
-  VLiveOuts[2].clear();
-  VLiveOuts[2].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2] = DbgValue(1, EmptyProps, DbgValue::VPHI);
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RspPHIInBlk1);
+  }
 
   // Here's where it becomes tricky: we should not merge if there are two
   // _distinct_ backedge PHIs. We can't have a PHI that happens in both rsp
@@ -1568,8 +2035,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   OutLocs[2][2] = RbxPHIInBlk1;
   Result = pickVPHILoc(*MBB1, Var, VLiveOutIdx, OutLocsPtr, Preds);
   EXPECT_TRUE(Result);
-  if (Result)
+  if (Result) {
     EXPECT_EQ(*Result, RbxPHIInBlk1);
+  }
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
@@ -1594,18 +2062,13 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts, VLiveIns;
-  VLiveOuts.resize(4);
-  VLiveIns.resize(4);
-  InstrRefBasedLDV::LiveIdxT VLiveOutIdx, VLiveInIdx;
+  SmallVector<DbgValue, 32> VLiveOuts;
+  VLiveOuts.resize(4, DbgValue(EmptyProps, DbgValue::Undef));
+  InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
   VLiveOutIdx[MBB2] = &VLiveOuts[2];
   VLiveOutIdx[MBB3] = &VLiveOuts[3];
-  VLiveInIdx[MBB0] = &VLiveIns[0];
-  VLiveInIdx[MBB1] = &VLiveIns[1];
-  VLiveInIdx[MBB2] = &VLiveIns[2];
-  VLiveInIdx[MBB3] = &VLiveIns[3];
 
   SmallPtrSet<const MachineBasicBlock *, 8> AllBlocks;
   AllBlocks.insert(MBB0);
@@ -1620,45 +2083,33 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   SmallSet<DebugVariable, 4> AllVars;
   AllVars.insert(Var);
 
-  DenseMap<DebugVariable, DbgValue> JoinedLocs;
-
   // vlocJoin is here to propagate incoming values, and eliminate PHIs. Start
   // off by propagating a value into the merging block, number 3.
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::NoVal)});
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  bool Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                         AllBlocks, AllBlocks, JoinedLocs);
+  DbgValue JoinedLoc = DbgValue(3, EmptyProps, DbgValue::NoVal);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  bool Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result); // Output locs should have changed.
-  auto It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRsp);
-  JoinedLocs.clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // And if we did it a second time, leaving the live-ins as it was, then
   // we should report no change.
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
 
   // If the live-in variable values are different, but there's no PHI placed
   // in this block, then just pick a location. It should be the first (in RPO)
   // predecessor to avoid being a backedge.
-  VLiveOuts[2].clear();
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::NoVal)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  JoinedLoc = DbgValue(3, EmptyProps, DbgValue::NoVal);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   // RPO is blocks 0 2 1 3, so LiveInRax is picked as the first predecessor
   // of this join.
-  EXPECT_EQ(It->second.ID, LiveInRax);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.ID, LiveInRax);
 
   // No tests for whether vlocJoin will pass-through a variable with differing
   // expressions / properties. Those can only come about due to assignments; and
@@ -1668,124 +2119,82 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
 
   // Try placing a PHI. With differing input values (LiveInRsp, LiveInRax),
   // this PHI should not be eliminated.
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   // Expect no change.
   EXPECT_FALSE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
   // This should not have been assigned a fixed value.
-  EXPECT_EQ(It->second.ID, ValueIDNum::EmptyValue);
-  EXPECT_EQ(It->second.BlockNo, 3);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.ID, ValueIDNum::EmptyValue);
+  EXPECT_EQ(JoinedLoc.BlockNo, 3);
 
   // Try a simple PHI elimination. Put a PHI in block 3, but LiveInRsp on both
   // incoming edges. Re-load in and out-locs with unrelated values; they're
   // irrelevant.
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRsp);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // If the "current" live-in is a VPHI, but not a VPHI generated in the current
   // block, then it's the remains of an earlier value propagation. We should
   // value propagate through this merge. Even if the current incoming values
   // disagree, because we've previously determined any VPHI here is redundant.
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRax); // from block 2
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRax); // from block 2
 
   // The above test, but test that we will install one value-propagated VPHI
   // over another.
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(0, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[3].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(0, EmptyProps, DbgValue::VPHI);
+  JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 0);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 0);
 
   // We shouldn't eliminate PHIs when properties disagree.
   DbgValueProperties PropsWithIndirect(EmptyExpr, true);
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
+  JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 3);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 3);
 
   // Even if properties disagree, we should still value-propagate if there's no
   // PHI to be eliminated. The disagreeing values should work themselves out,
   // seeing how we've determined no PHI is necessary.
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithIndirect, DbgValue::Def);
+  JoinedLoc = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRsp);
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
   // Also check properties come from block 2, the first RPO predecessor to block
   // three.
-  EXPECT_EQ(It->second.Properties, PropsWithIndirect);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
+  EXPECT_EQ(JoinedLoc.Properties, PropsWithIndirect);
 
   // Again, disagreeing properties, this time the expr, should cause a PHI to
   // not be eliminated.
-  DIExpression *NewExpr = DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
+  DIExpression *NewExpr =
+      DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
   DbgValueProperties PropsWithExpr(NewExpr, false);
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def)});
-  VLiveIns[3].insert({Var, DbgValue(3, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB3, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRsp, PropsWithExpr, DbgValue::Def);
+  JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[3].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 3);
-  EXPECT_EQ(It->second.Properties, EmptyProps);
-  JoinedLocs.clear();
-  VLiveIns[3].clear();
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinLoops) {
@@ -1810,16 +2219,12 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts, VLiveIns;
-  VLiveOuts.resize(3);
-  VLiveIns.resize(3);
-  InstrRefBasedLDV::LiveIdxT VLiveOutIdx, VLiveInIdx;
+  SmallVector<DbgValue, 32> VLiveOuts;
+  VLiveOuts.resize(3, DbgValue(EmptyProps, DbgValue::Undef));
+  InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
   VLiveOutIdx[MBB2] = &VLiveOuts[2];
-  VLiveInIdx[MBB0] = &VLiveIns[0];
-  VLiveInIdx[MBB1] = &VLiveIns[1];
-  VLiveInIdx[MBB2] = &VLiveIns[2];
 
   SmallPtrSet<const MachineBasicBlock *, 8> AllBlocks;
   AllBlocks.insert(MBB0);
@@ -1833,82 +2238,59 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   SmallSet<DebugVariable, 4> AllVars;
   AllVars.insert(Var);
 
-  DenseMap<DebugVariable, DbgValue> JoinedLocs;
-
   // Test some back-edge-specific behaviours of vloc join. Mostly: the fact that
   // VPHIs that arrive on backedges can be eliminated, despite having different
   // values to the predecessor.
 
   // First: when there's no VPHI placed already, propagate the live-in value of
   // the first RPO predecessor.
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  DbgValue JoinedLoc = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  auto It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRsp);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // If there is a VPHI: don't elimiante it if there are disagreeing values.
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 1);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 1);
 
   // If we feed this VPHI back into itself though, we can eliminate it.
-  VLiveOuts[0].clear();
-  VLiveOuts[1].clear();
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRsp);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // Don't eliminate backedge VPHIs if the predecessors have different
   // properties.
-  DIExpression *NewExpr = DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
+  DIExpression *NewExpr =
+      DIExpression::prepend(EmptyExpr, DIExpression::ApplyOffset, 4);
   DbgValueProperties PropsWithExpr(NewExpr, false);
-  VLiveOuts[1].clear();
-  VLiveOuts[1].insert({Var, DbgValue(1, PropsWithExpr, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, PropsWithExpr, DbgValue::VPHI);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 1);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 1);
 
   // Backedges with VPHIs, but from the wrong block, shouldn't be eliminated.
-  VLiveOuts[1].clear();
-  VLiveOuts[1].insert({Var, DbgValue(0, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(0, EmptyProps, DbgValue::VPHI);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 1);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 1);
 }
 
 TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
@@ -1940,20 +2322,14 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
 
   DebugVariable Var(FuncVariable, None, nullptr);
   DbgValueProperties EmptyProps(EmptyExpr, false);
-  SmallVector<DenseMap<DebugVariable, DbgValue>, 32> VLiveOuts, VLiveIns;
-  VLiveOuts.resize(5);
-  VLiveIns.resize(5);
-  InstrRefBasedLDV::LiveIdxT VLiveOutIdx, VLiveInIdx;
+  SmallVector<DbgValue, 32> VLiveOuts;
+  VLiveOuts.resize(5, DbgValue(EmptyProps, DbgValue::Undef));
+  InstrRefBasedLDV::LiveIdxT VLiveOutIdx;
   VLiveOutIdx[MBB0] = &VLiveOuts[0];
   VLiveOutIdx[MBB1] = &VLiveOuts[1];
   VLiveOutIdx[MBB2] = &VLiveOuts[2];
   VLiveOutIdx[MBB3] = &VLiveOuts[3];
   VLiveOutIdx[MBB4] = &VLiveOuts[4];
-  VLiveInIdx[MBB0] = &VLiveIns[0];
-  VLiveInIdx[MBB1] = &VLiveIns[1];
-  VLiveInIdx[MBB2] = &VLiveIns[2];
-  VLiveInIdx[MBB3] = &VLiveIns[3];
-  VLiveInIdx[MBB4] = &VLiveIns[4];
 
   SmallPtrSet<const MachineBasicBlock *, 8> AllBlocks;
   AllBlocks.insert(MBB0);
@@ -1970,73 +2346,46 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   SmallSet<DebugVariable, 4> AllVars;
   AllVars.insert(Var);
 
-  DenseMap<DebugVariable, DbgValue> JoinedLocs;
-
   // Test a normal VPHI isn't eliminated.
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(LiveInRax, EmptyProps, DbgValue::Def)});
-  VLiveOuts[2].insert({Var, DbgValue(LiveInRbx, EmptyProps, DbgValue::Def)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  bool Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(LiveInRax, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(LiveInRbx, EmptyProps, DbgValue::Def);
+  DbgValue JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  bool Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  auto It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 1);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 1);
 
   // Common VPHIs on backedges should merge.
-  VLiveOuts[0].clear();
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveOuts[2].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_TRUE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::Def);
-  EXPECT_EQ(It->second.ID, LiveInRsp);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
   // They shouldn't merge if one of their properties is different.
   DbgValueProperties PropsWithIndirect(EmptyExpr, true);
-  VLiveOuts[0].clear();
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveOuts[2].insert({Var, DbgValue(1, PropsWithIndirect, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2] = DbgValue(1, PropsWithIndirect, DbgValue::VPHI);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 1);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 1);
 
   // VPHIs from different blocks should not merge.
-  VLiveOuts[0].clear();
-  VLiveOuts[1].clear();
-  VLiveOuts[2].clear();
-  VLiveOuts[0].insert({Var, DbgValue(LiveInRsp, EmptyProps, DbgValue::Def)});
-  VLiveOuts[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  VLiveOuts[2].insert({Var, DbgValue(2, EmptyProps, DbgValue::VPHI)});
-  VLiveIns[1].insert({Var, DbgValue(1, EmptyProps, DbgValue::VPHI)});
-  Result = vlocJoin(*MBB1, VLiveOutIdx, VLiveInIdx, AllVars,
-                    AllBlocks, AllBlocks, JoinedLocs);
+  VLiveOuts[0] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[1] = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  JoinedLoc = DbgValue(1, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB1, VLiveOutIdx, AllBlocks, AllBlocks, JoinedLoc);
   EXPECT_FALSE(Result);
-  It = VLiveIns[1].find(Var);
-  EXPECT_EQ(It->second.Kind, DbgValue::VPHI);
-  EXPECT_EQ(It->second.BlockNo, 1);
-  JoinedLocs.clear();
-  VLiveIns[1].clear();
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.BlockNo, 1);
 }
 
 // Above are tests for picking VPHI locations, and eliminating VPHIs. No

@@ -32,6 +32,37 @@ define <vscale x 4 x i32> @shrnb_d(<vscale x 2 x i64> %a) {
 }
 
 ;
+; RSHRNB
+;
+
+define <vscale x 16 x i8> @rshrnb_h(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: rshrnb_h:
+; CHECK: rshrnb z0.b, z0.h, #2
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.rshrnb.nxv8i16(<vscale x 8 x i16> %a,
+                                                                  i32 2)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @rshrnb_s(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: rshrnb_s:
+; CHECK: rshrnb z0.h, z0.s, #2
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.rshrnb.nxv4i32(<vscale x 4 x i32> %a,
+                                                                  i32 2)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @rshrnb_d(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: rshrnb_d:
+; CHECK: rshrnb z0.s, z0.d, #2
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.rshrnb.nxv2i64(<vscale x 2 x i64> %a,
+                                                                  i32 2)
+  ret <vscale x 4 x i32> %out
+}
+
+;
 ; UQSHRNB
 ;
 
@@ -252,6 +283,40 @@ define <vscale x 4 x i32> @shrnt_d(<vscale x 4 x i32> %a, <vscale x 2 x i64> %b)
 }
 
 ;
+; RSHRNT
+;
+
+define <vscale x 16 x i8> @rshrnt_h(<vscale x 16 x i8> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: rshrnt_h:
+; CHECK: rshrnt z0.b, z1.h, #1
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.rshrnt.nxv8i16(<vscale x 16 x i8> %a,
+                                                                  <vscale x 8 x i16> %b,
+                                                                  i32 1)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @rshrnt_s(<vscale x 8 x i16> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: rshrnt_s:
+; CHECK: rshrnt z0.h, z1.s, #5
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.rshrnt.nxv4i32(<vscale x 8 x i16> %a,
+                                                                  <vscale x 4 x i32> %b,
+                                                                  i32 5)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @rshrnt_d(<vscale x 4 x i32> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: rshrnt_d:
+; CHECK: rshrnt z0.s, z1.d, #5
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.rshrnt.nxv2i64(<vscale x 4 x i32> %a,
+                                                                  <vscale x 2 x i64> %b,
+                                                                  i32 5)
+  ret <vscale x 4 x i32> %out
+}
+
+;
 ; UQSHRNT
 ;
 
@@ -459,6 +524,10 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.shrnb.nxv8i16(<vscale x 8 x i16>, i
 declare <vscale x 8 x i16> @llvm.aarch64.sve.shrnb.nxv4i32(<vscale x 4 x i32>, i32)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.shrnb.nxv2i64(<vscale x 2 x i64>, i32)
 
+declare <vscale x 16 x i8> @llvm.aarch64.sve.rshrnb.nxv8i16(<vscale x 8 x i16>, i32)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.rshrnb.nxv4i32(<vscale x 4 x i32>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.rshrnb.nxv2i64(<vscale x 2 x i64>, i32)
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.uqshrnb.nxv8i16(<vscale x 8 x i16>, i32)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uqshrnb.nxv4i32(<vscale x 4 x i32>, i32)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.uqshrnb.nxv2i64(<vscale x 2 x i64>, i32)
@@ -486,6 +555,10 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.sqrshrunb.nxv2i64(<vscale x 2 x i64
 declare <vscale x 16 x i8> @llvm.aarch64.sve.shrnt.nxv8i16(<vscale x 16 x i8>, <vscale x 8 x i16>, i32)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.shrnt.nxv4i32(<vscale x 8 x i16>, <vscale x 4 x i32>, i32)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.shrnt.nxv2i64(<vscale x 4 x i32>, <vscale x 2 x i64>, i32)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.rshrnt.nxv8i16(<vscale x 16 x i8>, <vscale x 8 x i16>, i32)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.rshrnt.nxv4i32(<vscale x 8 x i16>, <vscale x 4 x i32>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.rshrnt.nxv2i64(<vscale x 4 x i32>, <vscale x 2 x i64>, i32)
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.uqshrnt.nxv8i16(<vscale x 16 x i8>, <vscale x 8 x i16>, i32)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uqshrnt.nxv4i32(<vscale x 8 x i16>, <vscale x 4 x i32>, i32)

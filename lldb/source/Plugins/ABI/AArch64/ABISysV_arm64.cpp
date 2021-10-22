@@ -845,12 +845,3 @@ void ABISysV_arm64::Initialize() {
 void ABISysV_arm64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_arm64::GetPluginNameStatic() {
-  static ConstString g_name("SysV-arm64");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-ConstString ABISysV_arm64::GetPluginName() { return GetPluginNameStatic(); }

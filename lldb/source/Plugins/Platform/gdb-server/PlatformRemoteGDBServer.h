@@ -37,7 +37,9 @@ public:
   ~PlatformRemoteGDBServer() override;
 
   // lldb_private::PluginInterface functions
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // lldb_private::Platform functions
   Status

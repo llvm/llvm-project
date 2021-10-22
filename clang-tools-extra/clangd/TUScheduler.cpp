@@ -286,8 +286,12 @@ public:
   void remove(PathRef MainFile) {
     std::lock_guard<std::mutex> Lock(Mu);
     Association *&First = MainToFirst[MainFile];
-    if (First)
+    if (First) {
       invalidate(First);
+      First = nullptr;
+    }
+    // MainToFirst entry should stay alive, as Associations might be pointing at
+    // its key.
   }
 
   /// Get the mainfile associated with Header, or the empty string if none.
@@ -901,15 +905,17 @@ void ASTWorker::runWithAST(
 void PreambleThread::build(Request Req) {
   assert(Req.CI && "Got preamble request with null compiler invocation");
   const ParseInputs &Inputs = Req.Inputs;
+  bool ReusedPreamble = false;
 
   Status.update([&](TUStatus &Status) {
     Status.PreambleActivity = PreambleAction::Building;
   });
-  auto _ = llvm::make_scope_exit([this, &Req] {
+  auto _ = llvm::make_scope_exit([this, &Req, &ReusedPreamble] {
     ASTPeer.updatePreamble(std::move(Req.CI), std::move(Req.Inputs),
                            LatestBuild, std::move(Req.CIDiags),
                            std::move(Req.WantDiags));
-    Callbacks.onPreamblePublished(FileName);
+    if (!ReusedPreamble)
+      Callbacks.onPreamblePublished(FileName);
   });
 
   if (!LatestBuild || Inputs.ForceRebuild) {
@@ -918,6 +924,7 @@ void PreambleThread::build(Request Req) {
   } else if (isPreambleCompatible(*LatestBuild, Inputs, FileName, *Req.CI)) {
     vlog("Reusing preamble version {0} for version {1} of {2}",
          LatestBuild->Version, Inputs.Version, FileName);
+    ReusedPreamble = true;
     return;
   } else {
     vlog("Rebuilding invalidated preamble for {0} version {1} (previous was "

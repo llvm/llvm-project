@@ -145,7 +145,7 @@ void f13_test() {
   f13();
 }
 // f13()::L::foo[abi:C][abi:D]()
-// CHECK-DAG: define linkonce_odr {{(dso_local )?}}{{(noundef )?}}%struct.E* @_ZZ3f13vEN1L3fooB1CB1DEv(
+// CHECK-DAG: define linkonce_odr {{(dso_local )?}}%struct.E* @_ZZ3f13vEN1L3fooB1CB1DEv(
 
 // f13()::L::foo[abi:C][abi:D]()::a[abi:A][abi:B]
 // CHECK-DAG: @_ZZZ3f13vEN1L3fooB1CB1DEvE1aB1AB1B =

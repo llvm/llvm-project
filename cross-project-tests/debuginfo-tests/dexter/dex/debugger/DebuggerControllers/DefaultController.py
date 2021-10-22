@@ -14,6 +14,13 @@ from dex.debugger.DebuggerControllers.DebuggerControllerBase import DebuggerCont
 from dex.debugger.DebuggerControllers.ControllerHelpers import in_source_file, update_step_watches
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
 
+class EarlyExitCondition(object):
+    def __init__(self, on_line, hit_count, expression, values):
+        self.on_line = on_line
+        self.hit_count = hit_count
+        self.expression = expression
+        self.values = values
+
 class DefaultController(DebuggerControllerBase):
     def __init__(self, context, step_collection):
         self.context = context
@@ -32,6 +39,40 @@ class DefaultController(DebuggerControllerBase):
                 except DebuggerException:
                    raise LoadDebuggerException(DebuggerException.msg)
 
+    def _get_early_exit_conditions(self):
+        commands = self.step_collection.commands
+        early_exit_conditions = []
+        if 'DexFinishTest' in commands:
+            finish_commands = commands['DexFinishTest']
+            for fc in finish_commands:
+                condition = EarlyExitCondition(on_line=fc.on_line,
+                                               hit_count=fc.hit_count,
+                                               expression=fc.expression,
+                                               values=fc.values)
+                early_exit_conditions.append(condition)
+        return early_exit_conditions
+
+    def _should_exit(self, early_exit_conditions, line_no):
+        for condition in early_exit_conditions:
+            if condition.on_line == line_no:
+                exit_condition_hit = condition.expression is None
+                if condition.expression is not None:
+                    # For the purposes of consistent behaviour with the
+                    # Conditional Controller, check equality in the debugger
+                    # rather than in python (as the two can differ).
+                    for value in condition.values:
+                        expr_val = self.debugger.evaluate_expression(f'({condition.expression}) == ({value})')
+                        if expr_val.value == 'true':
+                            exit_condition_hit = True
+                            break
+                if exit_condition_hit:
+                    if condition.hit_count <= 0:
+                        return True
+                    else:
+                        condition.hit_count -= 1
+        return False
+
+
     def _run_debugger_custom(self):
         self.step_collection.debugger = self.debugger.debugger_info
         self._break_point_all_lines()
@@ -39,6 +80,7 @@ class DefaultController(DebuggerControllerBase):
 
         for command_obj in chain.from_iterable(self.step_collection.commands.values()):
             self.watches.update(command_obj.get_watches())
+        early_exit_conditions = self._get_early_exit_conditions()
 
         max_steps = self.context.options.max_steps
         for _ in range(max_steps):
@@ -54,6 +96,8 @@ class DefaultController(DebuggerControllerBase):
             if step_info.current_frame:
                 update_step_watches(step_info, self.watches, self.step_collection.commands)
                 self.step_collection.new_step(self.context, step_info)
+                if self._should_exit(early_exit_conditions, step_info.current_frame.loc.lineno):
+                    break
 
             if in_source_file(self.source_files, step_info):
                 self.debugger.step()

@@ -74,19 +74,18 @@ llvm::VersionTuple HostInfoWindows::GetOSVersion() {
                             info.wServicePackMajor);
 }
 
-bool HostInfoWindows::GetOSBuildString(std::string &s) {
-  s.clear();
+llvm::Optional<std::string> HostInfoWindows::GetOSBuildString() {
   llvm::VersionTuple version = GetOSVersion();
   if (version.empty())
-    return false;
+    return llvm::None;
 
-  llvm::raw_string_ostream stream(s);
-  stream << "Windows NT " << version.getAsString();
-  return true;
+  return "Windows NT " + version.getAsString();
 }
 
 bool HostInfoWindows::GetOSKernelDescription(std::string &s) {
-  return GetOSBuildString(s);
+  llvm::Optional<std::string> build = GetOSBuildString();
+  s = build.getValueOr("");
+  return build.hasValue();
 }
 
 bool HostInfoWindows::GetHostname(std::string &s) {

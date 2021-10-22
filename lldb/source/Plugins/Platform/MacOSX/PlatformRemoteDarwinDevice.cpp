@@ -111,10 +111,10 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
 
     if (error.Fail() || !exe_module_sp) {
       if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormat(
-            "'%s' doesn't contain any '%s' platform architectures: %s",
-            resolved_module_spec.GetFileSpec().GetPath().c_str(),
-            GetPluginName().GetCString(), arch_names.GetData());
+        error.SetErrorStringWithFormatv(
+            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+            resolved_module_spec.GetFileSpec(), GetPluginName(),
+            arch_names.GetData());
       } else {
         error.SetErrorStringWithFormat(
             "'%s' is not readable",
@@ -486,9 +486,9 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
     if (FileSystem::Instance().Exists(local_file))
       return error;
 
-    error.SetErrorStringWithFormat(
-        "unable to locate a platform file for '%s' in platform '%s'",
-        platform_file_path, GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "unable to locate a platform file for '{0}' in platform '{1}'",
+        platform_file_path, GetPluginName());
   } else {
     error.SetErrorString("invalid platform file argument");
   }

@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -276,7 +277,7 @@ TEST(StringExtrasTest, toStringAPSInt) {
 }
 
 TEST(StringExtrasTest, splitStringRef) {
-  auto Spl = Split("foo<=>bar<=><=>baz", "<=>");
+  auto Spl = split("foo<=>bar<=><=>baz", "<=>");
   auto It = Spl.begin();
   auto End = Spl.end();
 
@@ -291,8 +292,15 @@ TEST(StringExtrasTest, splitStringRef) {
   ASSERT_EQ(++It, End);
 }
 
-TEST(StringExtrasTest, splItChar) {
-  auto Spl = Split("foo,bar,,baz", ',');
+TEST(StringExtrasTest, splitStringRefForLoop) {
+  llvm::SmallVector<StringRef, 4> Result;
+  for (StringRef x : split("foo<=>bar<=><=>baz", "<=>"))
+    Result.push_back(x);
+  EXPECT_THAT(Result, testing::ElementsAre("foo", "bar", "", "baz"));
+}
+
+TEST(StringExtrasTest, splitChar) {
+  auto Spl = split("foo,bar,,baz", ',');
   auto It = Spl.begin();
   auto End = Spl.end();
 
@@ -305,4 +313,11 @@ TEST(StringExtrasTest, splItChar) {
   ASSERT_NE(++It, End);
   EXPECT_EQ(*It, StringRef("baz"));
   ASSERT_EQ(++It, End);
+}
+
+TEST(StringExtrasTest, splitCharForLoop) {
+  llvm::SmallVector<StringRef, 4> Result;
+  for (StringRef x : split("foo,bar,,baz", ','))
+    Result.push_back(x);
+  EXPECT_THAT(Result, testing::ElementsAre("foo", "bar", "", "baz"));
 }

@@ -106,9 +106,7 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
     MemRefType type) const {
   if (!typeConverter->convertType(type.getElementType()))
     return false;
-  return type.getAffineMaps().empty() ||
-         llvm::all_of(type.getAffineMaps(),
-                      [](AffineMap map) { return map.isIdentity(); });
+  return type.getLayout().isIdentity();
 }
 
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {

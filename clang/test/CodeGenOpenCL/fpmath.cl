@@ -25,8 +25,8 @@ float4 spvectordiv(float4 a, float4 b) {
 void printf(constant char* fmt, ...);
 
 void testdbllit(long *val) {
-  // CHECK-FLT: float noundef 2.000000e+01
-  // CHECK-DBL: double noundef 2.000000e+01
+  // CHECK-FLT: float 2.000000e+01
+  // CHECK-DBL: double 2.000000e+01
   printf("%f", 20.0);
 }
 

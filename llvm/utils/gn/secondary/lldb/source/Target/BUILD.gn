@@ -62,6 +62,7 @@ static_library("Target") {
     "StackFrameList.cpp",
     "StackFrameRecognizer.cpp",
     "StackID.cpp",
+    "Statistics.cpp",
     "StopInfo.cpp",
     "StructuredDataPlugin.cpp",
     "SystemRuntime.cpp",

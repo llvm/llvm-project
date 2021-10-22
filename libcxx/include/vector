@@ -903,7 +903,7 @@ private:
 
   struct _ConstructTransaction {
     explicit _ConstructTransaction(vector &__v, size_type __n)
-      : __v_(__v),  __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
+      : __v_(__v), __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
 #ifndef _LIBCPP_HAS_NO_ASAN
       __v_.__annotate_increase(__n);
 #endif
@@ -1296,7 +1296,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
     __get_db()->__insert_c(this);
-    __get_db()->swap(this, &__x);
+    __get_db()->swap(this, _VSTD::addressof(__x));
 #endif
     this->__begin_ = __x.__begin_;
     this->__end_ = __x.__end_;
@@ -1319,7 +1319,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __identity_t<allocator_type>
         this->__end_cap() = __x.__end_cap();
         __x.__begin_ = __x.__end_ = __x.__end_cap() = nullptr;
 #if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->swap(this, &__x);
+        __get_db()->swap(this, _VSTD::addressof(__x));
 #endif
     }
     else
@@ -1395,7 +1395,7 @@ vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
     this->__end_cap() = __c.__end_cap();
     __c.__begin_ = __c.__end_ = __c.__end_cap() = nullptr;
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__c);
+    __get_db()->swap(this, _VSTD::addressof(__c));
 #endif
 }
 
@@ -1590,6 +1590,8 @@ vector<_Tp, _Allocator>::reserve(size_type __n)
 {
     if (__n > capacity())
     {
+        if (__n > max_size())
+            this->__throw_length_error();
         allocator_type& __a = this->__alloc();
         __split_buffer<value_type, allocator_type&> __v(__n, size(), __a);
         __swap_out_circular_buffer(__v);
@@ -1714,7 +1716,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::erase(iterator) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1733,11 +1735,11 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
-        "vector::erase(iterator,  iterator) called with an iterator not"
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__first)) == this,
+        "vector::erase(iterator, iterator) called with an iterator not"
         " referring to this vector");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__last) == this,
-        "vector::erase(iterator,  iterator) called with an iterator not"
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__last)) == this,
+        "vector::erase(iterator, iterator) called with an iterator not"
         " referring to this vector");
 #endif
     _LIBCPP_ASSERT(__first <= __last, "vector::erase(first, last) called with invalid range");
@@ -1774,7 +1776,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1811,7 +1813,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1844,7 +1846,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::emplace(iterator, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1879,7 +1881,7 @@ typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, n, x) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1930,7 +1932,7 @@ typename enable_if
 vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __first, _InputIterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, range) called with an iterator not"
         " referring to this vector");
 #endif
@@ -1983,7 +1985,7 @@ typename enable_if
 vector<_Tp, _Allocator>::insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__position) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
         "vector::insert(iterator, range) called with an iterator not"
         " referring to this vector");
 #endif
@@ -2064,7 +2066,7 @@ vector<_Tp, _Allocator>::swap(vector& __x)
     _VSTD::__swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool,__alloc_traits::propagate_on_container_swap::value>());
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__x);
+    __get_db()->swap(this, _VSTD::addressof(__x));
 #endif
 }
 
@@ -2963,7 +2965,7 @@ vector<bool, _Allocator>::assign(size_type __n, const value_type& __x)
             __size_ = __n;
         else
         {
-            vector __v(__alloc());
+            vector __v(get_allocator());
             __v.reserve(__recommend(__n));
             __v.__size_ = __n;
             swap(__v);
@@ -3018,7 +3020,9 @@ vector<bool, _Allocator>::reserve(size_type __n)
 {
     if (__n > capacity())
     {
-        vector __v(this->__alloc());
+        if (__n > max_size())
+            this->__throw_length_error();
+        vector __v(this->get_allocator());
         __v.__vallocate(__n);
         __v.__construct_at_end(this->begin(), this->end());
         swap(__v);
@@ -3088,7 +3092,7 @@ vector<bool, _Allocator>::insert(const_iterator __position, const value_type& __
     }
     else
     {
-        vector __v(__alloc());
+        vector __v(get_allocator());
         __v.reserve(__recommend(__size_ + 1));
         __v.__size_ = __size_ + 1;
         __r = _VSTD::copy(cbegin(), __position, __v.begin());
@@ -3114,7 +3118,7 @@ vector<bool, _Allocator>::insert(const_iterator __position, size_type __n, const
     }
     else
     {
-        vector __v(__alloc());
+        vector __v(get_allocator());
         __v.reserve(__recommend(__size_ + __n));
         __v.__size_ = __size_ + __n;
         __r = _VSTD::copy(cbegin(), __position, __v.begin());
@@ -3143,7 +3147,7 @@ vector<bool, _Allocator>::insert(const_iterator __position, _InputIterator __fir
         ++this->__size_;
         back() = *__first;
     }
-    vector __v(__alloc());
+    vector __v(get_allocator());
     if (__first != __last)
     {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -3193,7 +3197,7 @@ vector<bool, _Allocator>::insert(const_iterator __position, _ForwardIterator __f
     }
     else
     {
-        vector __v(__alloc());
+        vector __v(get_allocator());
         __v.reserve(__recommend(__size_ + __n));
         __v.__size_ = __size_ + __n;
         __r = _VSTD::copy(cbegin(), __position, __v.begin());
@@ -3260,7 +3264,7 @@ vector<bool, _Allocator>::resize(size_type __sz, value_type __x)
         }
         else
         {
-            vector __v(__alloc());
+            vector __v(get_allocator());
             __v.reserve(__recommend(__size_ + __n));
             __v.__size_ = __size_ + __n;
             __r = _VSTD::copy(cbegin(), cend(), __v.begin());

@@ -1939,7 +1939,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
-  let Predicates = [HasSVE, UseScalarIncVL], AddedComplexity = 5 in {
+  let Predicates = [HasSVEorStreamingSVE, UseScalarIncVL], AddedComplexity = 5 in {
     def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm i32:$imm))),
               (INCH_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm i32:$imm))),

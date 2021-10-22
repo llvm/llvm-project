@@ -23,7 +23,7 @@ extern "C" void use_cxx() {
 
 // CXXEH-LABEL: define dso_local void @use_cxx()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
-// CXXEH: call noundef %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
+// CXXEH: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // CXXEH: invoke void @might_throw()
 // CXXEH:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -38,7 +38,7 @@ extern "C" void use_cxx() {
 
 // NOCXX-LABEL: define dso_local void @use_cxx()
 // NOCXX-NOT: invoke
-// NOCXX: call noundef %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
+// NOCXX: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // NOCXX-NOT: invoke
 // NOCXX: call void @might_throw()
 // NOCXX-NOT: invoke
@@ -90,12 +90,12 @@ extern "C" void nested_finally() {
 // CHECK-LABEL: define dso_local void @nested_finally() #{{[0-9]+}}
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
-// CHECK: call void @"?fin$0@0@nested_finally@@"(i8 noundef 1, i8* {{.*}})
+// CHECK: call void @"?fin$0@0@nested_finally@@"(i8 1, i8* {{.*}})
 
 // CHECK-LABEL: define internal void @"?fin$0@0@nested_finally@@"
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
-// CHECK: call void @"?fin$1@0@nested_finally@@"(i8 noundef 1, i8* {{.*}})
+// CHECK: call void @"?fin$1@0@nested_finally@@"(i8 1, i8* {{.*}})
 
 void use_seh_in_lambda() {
   ([]() {
@@ -148,19 +148,19 @@ void use_inline() {
 // CHECK: invoke void @might_throw()
 //
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@use_seh_in_inline_func@@"(i8 noundef 0, i8* noundef %[[fp]])
+// CHECK: call void @"?fin$0@0@use_seh_in_inline_func@@"(i8 0, i8* %[[fp]])
 // CHECK: ret void
 //
 // CHECK: cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: call void @"?fin$0@0@use_seh_in_inline_func@@"(i8 noundef 1, i8* noundef %[[fp]])
+// CHECK: call void @"?fin$0@0@use_seh_in_inline_func@@"(i8 1, i8* %[[fp]])
 
-// CHECK-LABEL: define internal noundef i32 @"?filt$0@0@use_seh_in_inline_func@@"(i8* noundef %exception_pointers, i8* noundef %frame_pointer) #{{[0-9]+}}
+// CHECK-LABEL: define internal i32 @"?filt$0@0@use_seh_in_inline_func@@"(i8* %exception_pointers, i8* %frame_pointer) #{{[0-9]+}}
 // CHECK: icmp eq i32 %{{.*}}, 424242
 // CHECK: zext i1 %{{.*}} to i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define internal void @"?fin$0@0@use_seh_in_inline_func@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer) #{{[0-9]+}}
+// CHECK-LABEL: define internal void @"?fin$0@0@use_seh_in_inline_func@@"(i8 %abnormal_termination, i8* %frame_pointer) #{{[0-9]+}}
 // CHECK: store i32 1234, i32* @my_unique_global
 
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }

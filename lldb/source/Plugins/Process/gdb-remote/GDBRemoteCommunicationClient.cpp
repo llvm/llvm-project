@@ -355,7 +355,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
     // configuration of the transport before attaching/launching the process.
     m_qSupported_response = response.GetStringRef().str();
 
-    for (llvm::StringRef x : llvm::Split(response.GetStringRef(), ';')) {
+    for (llvm::StringRef x : llvm::split(response.GetStringRef(), ';')) {
       if (x == "qXfer:auxv:read+")
         m_supports_qXfer_auxv_read = eLazyBoolYes;
       else if (x == "qXfer:libraries-svr4:read+")
@@ -1609,7 +1609,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           error.SetErrorString(error_string.c_str());
         } else if (name.equals("dirty-pages")) {
           std::vector<addr_t> dirty_page_list;
-          for (llvm::StringRef x : llvm::Split(value, ',')) {
+          for (llvm::StringRef x : llvm::split(value, ',')) {
             addr_t page;
             x.consume_front("0x");
             if (llvm::to_integer(x, page, 16))

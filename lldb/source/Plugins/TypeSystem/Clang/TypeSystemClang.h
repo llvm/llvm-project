@@ -138,7 +138,9 @@ public:
   void Finalize() override;
 
   // PluginInterface functions
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   static ConstString GetPluginNameStatic();
 
@@ -936,7 +938,8 @@ public:
   LLVM_DUMP_METHOD void dump(lldb::opaque_compiler_type_t type) const override;
 #endif
 
-  void Dump(Stream &s);
+  /// \see lldb_private::TypeSystem::Dump
+  void Dump(llvm::raw_ostream &output) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1159,6 +1162,9 @@ public:
                                        const clang::LangOptions &lang_opts) {
     return GetForTarget(target, InferIsolatedASTKindFromLangOpts(lang_opts));
   }
+
+  /// \see lldb_private::TypeSystem::Dump
+  void Dump(llvm::raw_ostream &output) override;
 
   UserExpression *
   GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,

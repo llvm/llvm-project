@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -S
+; RUN: opt < %s -passes=mem2reg -S
 ; PR5023
 
 declare i32 @test1f()

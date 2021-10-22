@@ -74,6 +74,10 @@ Changes to the AArch64 Backend
 ------------------------------
 
 * Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
+* The compiler now recognises the "tune-cpu" function attribute to support
+  the use of the -mtune frontend flag. This allows certain scheduling features
+  and optimisations to be enabled independently of the architecture. If the
+  "tune-cpu" attribute is absent it tunes according to the "target-cpu".
 
 Changes to the ARM Backend
 --------------------------
@@ -124,7 +128,8 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
-* ...
+* ``LLVMSetInstDebugLocation`` has been deprecated in favor of the more general
+  ``LLVMAddMetadataToInst``.
 
 Changes to the Go bindings
 --------------------------

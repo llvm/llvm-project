@@ -61,10 +61,10 @@ struct C : A, B {
 
 C::C() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef i8* @"??_EC@@W3AEPAXI@Z"(%struct.C* noundef %this, i32 noundef %should_call_delete) {{.*}} comdat
+// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@@W3AEPAXI@Z"(%struct.C* %this, i32 %should_call_delete) {{.*}} comdat
 // CODEGEN:   getelementptr i8, i8* {{.*}}, i32 -4
 // FIXME: should actually call _EC, not _GC.
-// CODEGEN:   call x86_thiscallcc noundef i8* @"??_GC@@UAEPAXI@Z"
+// CODEGEN:   call x86_thiscallcc i8* @"??_GC@@UAEPAXI@Z"
 // CODEGEN: ret
 
 // CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?public_f@C@@W3AEXXZ"(%struct.C*
@@ -91,8 +91,8 @@ struct E : D {
 
 E::E() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc noundef %struct.C* @"?goo@E@@QAEPAUB@@XZ"{{.*}} comdat
-// CODEGEN:   call x86_thiscallcc noundef %struct.C* @"?goo@E@@UAEPAUC@@XZ"
+// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc %struct.C* @"?goo@E@@QAEPAUB@@XZ"{{.*}} comdat
+// CODEGEN:   call x86_thiscallcc %struct.C* @"?goo@E@@UAEPAUC@@XZ"
 // CODEGEN:   getelementptr inbounds i8, i8* {{.*}}, i32 4
 // CODEGEN: ret
 
@@ -124,8 +124,8 @@ struct I : D {
 
 I::I() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc noundef %struct.{{[BF]}}* @"?goo@I@@QAEPAUB@@XZ"{{.*}} comdat
-// CODEGEN: %[[ORIG_RET:.*]] = call x86_thiscallcc noundef %struct.F* @"?goo@I@@UAEPAUF@@XZ"
+// CODEGEN-LABEL: define weak_odr dso_local x86_thiscallcc %struct.{{[BF]}}* @"?goo@I@@QAEPAUB@@XZ"{{.*}} comdat
+// CODEGEN: %[[ORIG_RET:.*]] = call x86_thiscallcc %struct.F* @"?goo@I@@UAEPAUF@@XZ"
 // CODEGEN: %[[ORIG_RET_i8:.*]] = bitcast %struct.F* %[[ORIG_RET]] to i8*
 // CODEGEN: %[[VBPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[ORIG_RET_i8]], i32 4
 // CODEGEN: %[[VBPTR:.*]] = bitcast i8* %[[VBPTR_i8]] to i32**
@@ -160,5 +160,5 @@ struct E : D {
 E::E() {}
 E e;
 // Class with internal linkage has internal linkage thunks.
-// CODEGEN: define internal x86_thiscallcc noundef %struct.C* @"?goo@E@?A0x{{[^@]*}}@@QAEPAUB@@XZ"
+// CODEGEN: define internal x86_thiscallcc %struct.C* @"?goo@E@?A0x{{[^@]*}}@@QAEPAUB@@XZ"
 }

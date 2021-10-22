@@ -19,10 +19,6 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ArchitectureArm)
 
-ConstString ArchitectureArm::GetPluginNameStatic() {
-  return ConstString("arm");
-}
-
 void ArchitectureArm::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Arm-specific algorithms",
@@ -38,8 +34,6 @@ std::unique_ptr<Architecture> ArchitectureArm::Create(const ArchSpec &arch) {
     return nullptr;
   return std::unique_ptr<Architecture>(new ArchitectureArm());
 }
-
-ConstString ArchitectureArm::GetPluginName() { return GetPluginNameStatic(); }
 
 void ArchitectureArm::OverrideStopInfo(Thread &thread) const {
   // We need to check if we are stopped in Thumb mode in a IT instruction and

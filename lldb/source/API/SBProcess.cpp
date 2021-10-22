@@ -88,7 +88,7 @@ const char *SBProcess::GetPluginName() {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    return process_sp->GetPluginName().GetCString();
+    return ConstString(process_sp->GetPluginName()).GetCString();
   }
   return "<Unknown>";
 }
@@ -98,7 +98,7 @@ const char *SBProcess::GetShortPluginName() {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    return process_sp->GetPluginName().GetCString();
+    return ConstString(process_sp->GetPluginName()).GetCString();
   }
   return "<Unknown>";
 }
@@ -1228,8 +1228,7 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
 
   FileSpec core_file(file_name);
   SaveCoreStyle core_style = SaveCoreStyle::eSaveCoreFull;
-  error.ref() =
-      PluginManager::SaveCore(process_sp, core_file, core_style, ConstString());
+  error.ref() = PluginManager::SaveCore(process_sp, core_file, core_style, "");
   return LLDB_RECORD_RESULT(error);
 }
 

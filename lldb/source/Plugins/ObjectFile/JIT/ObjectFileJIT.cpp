@@ -53,15 +53,6 @@ void ObjectFileJIT::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjectFileJIT::GetPluginNameStatic() {
-  static ConstString g_name("jit");
-  return g_name;
-}
-
-const char *ObjectFileJIT::GetPluginDescriptionStatic() {
-  return "JIT code object file";
-}
-
 ObjectFile *ObjectFileJIT::CreateInstance(const lldb::ModuleSP &module_sp,
                                           DataBufferSP &data_sp,
                                           lldb::offset_t data_offset,
@@ -197,11 +188,6 @@ ArchSpec ObjectFileJIT::GetArchitecture() {
   if (ObjectFileJITDelegateSP delegate_sp = m_delegate_wp.lock())
     return delegate_sp->GetArchitecture();
   return ArchSpec();
-}
-
-// PluginInterface protocol
-lldb_private::ConstString ObjectFileJIT::GetPluginName() {
-  return GetPluginNameStatic();
 }
 
 bool ObjectFileJIT::SetLoadAddress(Target &target, lldb::addr_t value,

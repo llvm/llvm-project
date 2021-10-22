@@ -68,7 +68,7 @@ namespace PR11630 {
     static void f()
     {
       typedef int q[C == 1 ? 1 : -1]; // expected-note{{previous definition is here}}
-      typedef int q[C >= 1 ? 2 : -2]; // expected-error{{typedef redefinition with different types ('int [2]' vs 'int [1]')}}
+      typedef int q[C >= 1 ? 2 : -2]; // expected-error{{typedef redefinition with different types ('int[2]' vs 'int[1]')}}
       typedef int n[C == 1 ? 1 : -1];
       typedef int n[C >= 1 ? 1 : -1];
     }
@@ -80,7 +80,7 @@ namespace PR11630 {
     static void f()
     {
       typedef int q[1];  // expected-note{{previous definition is here}}
-      typedef int q[T];  // expected-error{{typedef redefinition with different types ('int [2]' vs 'int [1]')}}
+      typedef int q[T];  // expected-error{{typedef redefinition with different types ('int[2]' vs 'int[1]')}}
     }
   };
 

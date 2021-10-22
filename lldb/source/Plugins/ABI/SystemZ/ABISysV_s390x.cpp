@@ -716,14 +716,3 @@ void ABISysV_s390x::Initialize() {
 void ABISysV_s390x::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_s390x::GetPluginNameStatic() {
-  static ConstString g_name("sysv-s390x");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_s390x::GetPluginName() {
-  return GetPluginNameStatic();
-}

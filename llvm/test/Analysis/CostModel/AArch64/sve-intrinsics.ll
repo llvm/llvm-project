@@ -80,8 +80,8 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 
 define void @strict_fp_reductions(<vscale x 4 x float> %v0, <vscale x 4 x double> %v1) {
 ; CHECK-LABEL: 'strict_fp_reductions'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %fadd_nxv4f32 = call float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %fadd_nxv4f64 = call double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fadd_nxv4f32 = call float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fadd_nxv4f64 = call double @llvm.vector.reduce.fadd.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fmul_nxv4f32 = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> %v0)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %fmul_nxv4f64 = call double @llvm.vector.reduce.fmul.nxv4f64(double 0.000000e+00, <vscale x 4 x double> %v1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void

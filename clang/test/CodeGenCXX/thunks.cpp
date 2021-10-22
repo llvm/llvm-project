@@ -88,7 +88,7 @@ struct B : A {
 };
 
 // CHECK: define{{.*}} %{{.*}}* @_ZTch0_v0_n24_N5Test31B1fEv(
-// WIN64: define weak_odr dso_local noundef %{{.*}} @"?f@B@Test3@@QEAAPEAUV1@2@XZ"(
+// WIN64: define weak_odr dso_local %{{.*}} @"?f@B@Test3@@QEAAPEAUV1@2@XZ"(
 V2 *B::f() { return 0; }
 
 }
@@ -327,10 +327,10 @@ namespace Test11 {
   // CHECK-DBG-NOT: dbg.declare
   // CHECK: ret
 
-  // WIN64-LABEL: define dso_local noundef %{{.*}}* @"?f@C@Test11@@UEAAPEAU12@XZ"(i8*
+  // WIN64-LABEL: define dso_local %{{.*}}* @"?f@C@Test11@@UEAAPEAU12@XZ"(i8*
 
-  // WIN64-LABEL: define weak_odr dso_local noundef %{{.*}}* @"?f@C@Test11@@QEAAPEAUA@2@XZ"(i8*
-  // WIN64: call noundef %{{.*}}* @"?f@C@Test11@@UEAAPEAU12@XZ"(i8* noundef %{{.*}})
+  // WIN64-LABEL: define weak_odr dso_local %{{.*}}* @"?f@C@Test11@@QEAAPEAUA@2@XZ"(i8*
+  // WIN64: call %{{.*}}* @"?f@C@Test11@@UEAAPEAU12@XZ"(i8* %{{.*}})
   //
   // Match the vbtable return adjustment.
   // WIN64: load i32*, i32** %{{[^,]*}}, align 8
@@ -372,15 +372,15 @@ namespace Test12 {
   // FIXME: The weak_odr linkage is probably not necessary and just an artifact
   // of Itanium ABI details.
   // WIN64-LABEL: define dso_local {{.*}} @"?f@C@Test12@@UEAAPEAU12@HZZ"(
-  // WIN64: call noundef %{{.*}}* @"?makeC@Test12@@YAPEAUC@1@XZ"()
+  // WIN64: call %{{.*}}* @"?makeC@Test12@@YAPEAUC@1@XZ"()
   //
   // This thunk needs return adjustment, clone.
   // WIN64-LABEL: define weak_odr dso_local {{.*}} @"?f@C@Test12@@W7EAAPEAUB@2@HZZ"(
-  // WIN64: call noundef %{{.*}}* @"?makeC@Test12@@YAPEAUC@1@XZ"()
+  // WIN64: call %{{.*}}* @"?makeC@Test12@@YAPEAUC@1@XZ"()
   // WIN64: getelementptr inbounds i8, i8* %{{.*}}, i32 8
   //
   // Musttail call back to the A implementation after this adjustment from B to A.
-  // WIN64-LABEL: define linkonce_odr dso_local noundef %{{.*}}* @"?f@C@Test12@@W7EAAPEAU12@HZZ"(
+  // WIN64-LABEL: define linkonce_odr dso_local %{{.*}}* @"?f@C@Test12@@W7EAAPEAU12@HZZ"(
   // WIN64: getelementptr i8, i8* %{{[^,]*}}, i32 -8
   // WIN64: musttail call {{.*}} @"?f@C@Test12@@UEAAPEAU12@HZZ"(
   C c;
@@ -412,7 +412,7 @@ namespace Test13 {
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
   // CHECK: ret %"struct.Test13::D"*
 
-  // WIN64-LABEL: define weak_odr dso_local noundef %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
+  // WIN64-LABEL: define weak_odr dso_local %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
   //    This adjustment.
   // WIN64: getelementptr inbounds i8, i8* {{.*}}, i64 -12
   //    Call implementation.
@@ -512,7 +512,7 @@ C c;
 // MSVC-LABEL: define linkonce_odr dso_local void @"?f@C@Test17@@G7EAAXPEBDZZ"
 // MSVC-SAME: (%"class.Test17::C"* %this, i8* %[[ARG:[^,]+]], ...)
 // MSVC: getelementptr i8, i8* %{{.*}}, i32 -8
-// MSVC: musttail call void (%"class.Test17::C"*, i8*, ...) @"?f@C@Test17@@EEAAXPEBDZZ"(%"class.Test17::C"* %{{.*}}, i8* noundef %[[ARG]], ...)
+// MSVC: musttail call void (%"class.Test17::C"*, i8*, ...) @"?f@C@Test17@@EEAAXPEBDZZ"(%"class.Test17::C"* %{{.*}}, i8* %[[ARG]], ...)
 }
 
 /**** The following has to go at the end of the file ****/
@@ -529,7 +529,7 @@ C c;
 // CHECK-NONOPT-LABEL: define linkonce_odr void @_ZThn8_N6Test101C3fooEv
 
 // Checking with opt
-// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* noundef %this) unnamed_addr #1 align 2
+// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* %this) unnamed_addr #1 align 2
 
 // This is from Test5:
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test51B1fEv

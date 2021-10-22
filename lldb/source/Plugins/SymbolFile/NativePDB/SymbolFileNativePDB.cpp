@@ -1566,8 +1566,3 @@ SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   }
   return type_system_or_err;
 }
-
-ConstString SymbolFileNativePDB::GetPluginName() {
-  static ConstString g_name("pdb");
-  return g_name;
-}

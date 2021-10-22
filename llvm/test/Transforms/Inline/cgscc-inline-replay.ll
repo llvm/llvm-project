@@ -1,8 +1,32 @@
 ;; Note that this needs new pass manager for now. Passing `-cgscc-inline-replay` to legacy pass manager is a no-op.
 
-;; Check replay inline decisions
-; RUN: opt < %s -passes=inline -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=DEFAULT %s
-; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY %s
+;; Check baseline inline decisions
+; RUN: opt < %s -passes=inline -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=DEFAULT %s
+
+;; Check module-scope replay inline decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Module -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY %s
+
+;; Check function-scope inline replay decisions
+; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Function -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-FUNCTION %s
+
+;; Check behavior on non-existent replay file
+; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
+
+;; Check scope inlining errors out on non <Module|Function> inputs
+; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=function -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s
+
+; DEFAULT: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
+; DEFAULT: '_Z3sumii' inlined into 'main' with (cost={{[-0-9]+}}
+; DEFAULT-NOT: '_Z3subii' inlined into 'main'
+
+; REPLAY: '_Z3sumii' inlined into 'main' with (cost=always)
+; REPLAY: '_Z3subii' inlined into 'main' with (cost=always)
+
+; REPLAY-FUNCTION: '_Z3subii' inlined into '_Z3sumii' with (cost={{[-0-9]+}}
+; REPLAY-FUNCTION: '_Z3sumii' inlined into 'main' with (cost=always)
+
+; REPLAY-ERROR: error: Could not open remarks file:
+; REPLAY-ERROR-SCOPE: for the --cgscc-inline-replay-scope option: Cannot find option named 'function'!
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
@@ -109,11 +133,3 @@ attributes #0 = { "use-sample-profile" }
 !24 = !DILexicalBlockFile(scope: !18, file: !1, discriminator: 6)
 !25 = !DILocation(line: 11, scope: !12)
 !26 = !DILocation(line: 12, scope: !12)
-
-; DEFAULT: '_Z3subii' inlined into '_Z3sumii'
-; DEFAULT: '_Z3sumii' inlined into 'main'
-; DEFAULT-NOT: '_Z3subii' inlined into 'main'
-
-; REPLAY: '_Z3sumii' inlined into 'main'
-; REPLAY: '_Z3subii' inlined into 'main'
-; REPLAY-NOT: '_Z3subii' inlined into '_Z3sumii'

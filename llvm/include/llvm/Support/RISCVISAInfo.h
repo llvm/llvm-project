@@ -12,7 +12,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 
 #include <map>
@@ -55,8 +54,8 @@ public:
   parseFeatures(unsigned XLen, const std::vector<std::string> &Features);
 
   /// Convert RISCV ISA info to a feature vector.
-  void toFeatures(const llvm::opt::ArgList &Args,
-                  std::vector<StringRef> &Features) const;
+  void toFeatures(std::vector<StringRef> &Features,
+                  std::function<StringRef(const Twine &)> StrAlloc) const;
 
   const OrderedExtensionMap &getExtensions() const { return Exts; };
 

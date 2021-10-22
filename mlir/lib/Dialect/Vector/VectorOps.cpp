@@ -2204,20 +2204,6 @@ public:
   }
 };
 
-// Helper that returns a subset of `arrayAttr` as a vector of int64_t.
-static SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
-                                              unsigned dropFront = 0,
-                                              unsigned dropBack = 0) {
-  assert(arrayAttr.size() > dropFront + dropBack && "Out of bounds");
-  auto range = arrayAttr.getAsRange<IntegerAttr>();
-  SmallVector<int64_t, 4> res;
-  res.reserve(arrayAttr.size() - dropFront - dropBack);
-  for (auto it = range.begin() + dropFront, eit = range.end() - dropBack;
-       it != eit; ++it)
-    res.push_back((*it).getValue().getSExtValue());
-  return res;
-}
-
 // Pattern to rewrite an ExtractStridedSliceOp(BroadcastOp) to
 // BroadcastOp(ExtractStrideSliceOp).
 class StridedSliceBroadcast final
@@ -3634,6 +3620,20 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
   if (auto otherOp = source().getDefiningOp<ShapeCastOp>()) {
     if (result().getType() == otherOp.source().getType())
       return otherOp.source();
+
+    // Only allows valid transitive folding.
+    VectorType srcType = otherOp.source().getType().cast<VectorType>();
+    VectorType resultType = getResult().getType().cast<VectorType>();
+    if (srcType.getRank() < resultType.getRank()) {
+      if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
+        return {};
+    } else if (srcType.getRank() > resultType.getRank()) {
+      if (!isValidShapeCast(resultType.getShape(), srcType.getShape()))
+        return {};
+    } else {
+      return {};
+    }
+
     setOperand(otherOp.source());
     return getResult();
   }
@@ -3753,16 +3753,17 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
   VectorType vectorType =
       VectorType::get(extractShape(memRefType),
                       getElementTypeOrSelf(getElementTypeOrSelf(memRefType)));
-  result.addTypes(
-      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpace()));
+  result.addTypes(MemRefType::get({}, vectorType, MemRefLayoutAttrInterface(),
+                                  memRefType.getMemorySpace()));
 }
 
 static LogicalResult verify(TypeCastOp op) {
   MemRefType canonicalType = canonicalizeStridedLayout(op.getMemRefType());
-  if (!canonicalType.getAffineMaps().empty())
-    return op.emitOpError("expects operand to be a memref with no layout");
-  if (!op.getResultMemRefType().getAffineMaps().empty())
-    return op.emitOpError("expects result to be a memref with no layout");
+  if (!canonicalType.getLayout().isIdentity())
+    return op.emitOpError(
+        "expects operand to be a memref with identity layout");
+  if (!op.getResultMemRefType().getLayout().isIdentity())
+    return op.emitOpError("expects result to be a memref with identity layout");
   if (op.getResultMemRefType().getMemorySpace() !=
       op.getMemRefType().getMemorySpace())
     return op.emitOpError("expects result in same memory space");

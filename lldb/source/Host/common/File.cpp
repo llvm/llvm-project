@@ -769,5 +769,87 @@ mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
   return mode;
 }
 
+llvm::Expected<SerialPort::Options>
+SerialPort::OptionsFromURL(llvm::StringRef urlqs) {
+  SerialPort::Options serial_options;
+  for (llvm::StringRef x : llvm::split(urlqs, '&')) {
+    if (x.consume_front("baud=")) {
+      unsigned int baud_rate;
+      if (!llvm::to_integer(x, baud_rate, 10))
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Invalid baud rate: %s",
+                                       x.str().c_str());
+      serial_options.BaudRate = baud_rate;
+    } else if (x.consume_front("parity=")) {
+      serial_options.Parity =
+          llvm::StringSwitch<llvm::Optional<Terminal::Parity>>(x)
+              .Case("no", Terminal::Parity::No)
+              .Case("even", Terminal::Parity::Even)
+              .Case("odd", Terminal::Parity::Odd)
+              .Case("mark", Terminal::Parity::Mark)
+              .Case("space", Terminal::Parity::Space)
+              .Default(llvm::None);
+      if (!serial_options.Parity)
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid parity (must be no, even, odd, mark or space): %s",
+            x.str().c_str());
+    } else if (x.consume_front("stop-bits=")) {
+      unsigned int stop_bits;
+      if (!llvm::to_integer(x, stop_bits, 10) ||
+          (stop_bits != 1 && stop_bits != 2))
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid stop bit number (must be 1 or 2): %s", x.str().c_str());
+      serial_options.StopBits = stop_bits;
+    } else
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Unknown parameter: %s", x.str().c_str());
+  }
+  return serial_options;
+}
+
+llvm::Expected<std::unique_ptr<SerialPort>>
+SerialPort::Create(int fd, OpenOptions options, Options serial_options,
+                   bool transfer_ownership) {
+  std::unique_ptr<SerialPort> out{
+      new SerialPort(fd, options, serial_options, transfer_ownership)};
+
+  if (!out->GetIsInteractive())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "the specified file is not a teletype");
+
+  Terminal term{fd};
+  if (llvm::Error error = term.SetRaw())
+    return std::move(error);
+  if (serial_options.BaudRate) {
+    if (llvm::Error error =
+            term.SetBaudRate(serial_options.BaudRate.getValue()))
+      return std::move(error);
+  }
+  if (serial_options.Parity) {
+    if (llvm::Error error = term.SetParity(serial_options.Parity.getValue()))
+      return std::move(error);
+  }
+  if (serial_options.StopBits) {
+    if (llvm::Error error =
+            term.SetStopBits(serial_options.StopBits.getValue()))
+      return std::move(error);
+  }
+
+  return out;
+}
+
+SerialPort::SerialPort(int fd, OpenOptions options,
+                       SerialPort::Options serial_options,
+                       bool transfer_ownership)
+    : NativeFile(fd, options, transfer_ownership), m_state(fd) {}
+
+Status SerialPort::Close() {
+  m_state.Restore();
+  return NativeFile::Close();
+}
+
 char File::ID = 0;
 char NativeFile::ID = 0;
+char SerialPort::ID = 0;

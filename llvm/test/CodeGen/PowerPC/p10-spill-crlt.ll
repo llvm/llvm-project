@@ -25,10 +25,9 @@ declare void @call_4() local_unnamed_addr
 
 define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-LABEL: P10_Spill_CR_LT:
-; CHECK:         .localentry P10_Spill_CR_LT, 1
-; CHECK-NEXT:  # %bb.0: # %bb
-; CHECK-NEXT:    mflr r0
+; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfcr r12
+; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stw r12, 8(r1)
 ; CHECK-NEXT:    stdu r1, -80(r1)
@@ -90,8 +89,8 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ;
 ; CHECK-BE-LABEL: P10_Spill_CR_LT:
 ; CHECK-BE:       # %bb.0: # %bb
-; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    mfcr r12
+; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    std r0, 16(r1)
 ; CHECK-BE-NEXT:    stw r12, 8(r1)
 ; CHECK-BE-NEXT:    stdu r1, -160(r1)
