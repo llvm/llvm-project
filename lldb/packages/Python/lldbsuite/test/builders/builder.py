@@ -20,6 +20,10 @@ class Builder:
         compiler = lldbutil.which(compiler)
         return os.path.abspath(compiler)
 
+    def getTriple(self, arch):
+        """Returns the triple for the given architecture or None."""
+        return None
+
     def getExtraMakeArgs(self):
         """
         Helper function to return extra argumentsfor the make system. This
