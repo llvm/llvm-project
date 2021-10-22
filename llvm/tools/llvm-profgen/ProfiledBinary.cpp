@@ -10,6 +10,7 @@
 #include "ErrorHandling.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -597,6 +598,12 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
     }
   }
   assert(!StartOffset2FuncRangeMap.empty() && "Misssing debug info.");
+}
+
+void ProfiledBinary::populateSymbolListFromDWARF(
+    ProfileSymbolList &SymbolList) {
+  for (auto &I : StartOffset2FuncRangeMap)
+    SymbolList.add(I.second.getFuncName());
 }
 
 void ProfiledBinary::setupSymbolizer() {

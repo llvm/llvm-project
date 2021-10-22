@@ -33,7 +33,7 @@ cl::opt<bool> UseMD5(
              "meaningful for -extbinary)"));
 
 static cl::opt<bool> PopulateProfileSymbolList(
-    "populate-profile-symbol-list", cl::init(true), cl::Hidden,
+    "populate-profile-symbol-list", cl::init(false), cl::Hidden,
     cl::desc("Populate profile symbol list (only meaningful for -extbinary)"));
 
 static cl::opt<int32_t, true> RecursionCompression(
@@ -97,16 +97,8 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
   // Populate profile symbol list if extended binary format is used.
   ProfileSymbolList SymbolList;
 
-  // Turn it off temporarily for CS profile.
-  if (FunctionSamples::ProfileIsCS &&
-      !PopulateProfileSymbolList.getNumOccurrences())
-    PopulateProfileSymbolList = false;
-
   if (PopulateProfileSymbolList && OutputFormat == SPF_Ext_Binary) {
-    for (const auto &Item : ProfileMap) {
-      auto &Profile = Item.second;
-      SymbolList.add(Profile.getName(), true);
-    }
+    Binary->populateSymbolListFromDWARF(SymbolList);
     Writer->setProfileSymbolList(&SymbolList);
   }
 
