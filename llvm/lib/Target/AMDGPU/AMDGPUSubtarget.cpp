@@ -967,6 +967,13 @@ void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
       --Lat;
     }
     Dep.setLatency(Lat);
+  } else if (Dep.getLatency() == 0 && Dep.getReg() == AMDGPU::VCC_LO) {
+    // Work around the fact that SIInstrInfo::fixImplicitOperands modifies
+    // implicit operands which come from the MCInstrDesc, which can fool
+    // ScheduleDAGInstrs::addPhysRegDataDeps into treating them as implicit
+    // pseudo operands.
+    Dep.setLatency(InstrInfo.getSchedModel().computeOperandLatency(
+        DefI, DefOpIdx, UseI, UseOpIdx));
   }
 }
 
