@@ -2577,11 +2577,11 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   int Size = 0;
 
   SmallPtrSet<const Value *, 32> EphValues;
-  auto IsEphemeral = [&](const Value *V) {
-    if (isa<AssumeInst>(V))
+  auto IsEphemeral = [&](const Instruction *I) {
+    if (isa<AssumeInst>(I))
       return true;
-    return isSafeToSpeculativelyExecute(V) &&
-           all_of(V->users(),
+    return !I->mayHaveSideEffects() && !I->isTerminator() &&
+           all_of(I->users(),
                   [&](const User *U) { return EphValues.count(U); });
   };
 
