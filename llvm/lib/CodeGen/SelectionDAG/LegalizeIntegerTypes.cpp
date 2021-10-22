@@ -586,7 +586,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
   // If the larger CTLZ isn't supported by the target, try to expand now.
   // If we expand later we'll end up with more operations since we lost the
   // original type.
-  if (!OVT.isVector() &&
+  if (!OVT.isVector() && TLI.isTypeLegal(NVT) &&
       !TLI.isOperationLegalOrCustomOrPromote(ISD::CTLZ, NVT) &&
       !TLI.isOperationLegalOrCustomOrPromote(ISD::CTLZ_ZERO_UNDEF, NVT)) {
     if (SDValue Result = TLI.expandCTLZ(N, DAG)) {
@@ -614,7 +614,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {
   // original type.
   // TODO: Expand ISD::PARITY. Need to move ExpandPARITY from LegalizeDAG to
   // TargetLowering.
-  if (N->getOpcode() == ISD::CTPOP && !OVT.isVector() &&
+  if (N->getOpcode() == ISD::CTPOP && !OVT.isVector() && TLI.isTypeLegal(NVT) &&
       !TLI.isOperationLegalOrCustomOrPromote(ISD::CTPOP, NVT)) {
     if (SDValue Result = TLI.expandCTPOP(N, DAG)) {
       Result = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Result);
@@ -636,7 +636,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
   // If the larger CTTZ isn't supported by the target, try to expand now.
   // If we expand later we'll end up with more operations since we lost the
   // original type.
-  if (!OVT.isVector() &&
+  if (!OVT.isVector() && TLI.isTypeLegal(NVT) &&
       !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ, NVT) &&
       !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ_ZERO_UNDEF, NVT)) {
     if (SDValue Result = TLI.expandCTTZ(N, DAG)) {
