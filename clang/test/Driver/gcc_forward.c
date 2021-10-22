@@ -1,4 +1,4 @@
-// RUN: %clang -### %s -target aarch64-none-elf \
+// RUN: %clang -### %s -target x86-none-elf \
 // RUN:   --coverage -e _start -fuse-ld=lld --ld-path=ld -nostartfiles \
 // RUN:   -nostdlib -r -rdynamic -specs=nosys.specs -static -static-pie \
 // RUN:   2>&1 | FileCheck --check-prefix=FORWARD %s

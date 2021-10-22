@@ -3422,11 +3422,14 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     return std::move(Err);
 
   QualType FromTy = D->getType();
+  TypeSourceInfo *FromTSI = D->getTypeSourceInfo();
   // Set to true if we do not import the type of the function as is. There are
   // cases when the original type would result in an infinite recursion during
   // the import. To avoid an infinite recursion when importing, we create the
   // FunctionDecl with a simplified function type and update it only after the
   // relevant AST nodes are already imported.
+  // The type is related to TypeSourceInfo (it references the type), so we must
+  // do the same with TypeSourceInfo.
   bool UsedDifferentProtoType = false;
   if (const auto *FromFPT = FromTy->getAs<FunctionProtoType>()) {
     QualType FromReturnTy = FromFPT->getReturnType();
@@ -3453,11 +3456,13 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     }
     FromTy = Importer.getFromContext().getFunctionType(
         FromReturnTy, FromFPT->getParamTypes(), FromEPI);
+    FromTSI = Importer.getFromContext().getTrivialTypeSourceInfo(
+        FromTy, D->getBeginLoc());
   }
 
   Error Err = Error::success();
   auto T = importChecked(Err, FromTy);
-  auto TInfo = importChecked(Err, D->getTypeSourceInfo());
+  auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
   auto ToEndLoc = importChecked(Err, D->getEndLoc());
   auto ToQualifierLoc = importChecked(Err, D->getQualifierLoc());
@@ -3635,6 +3640,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
       ToFunction->setType(*TyOrErr);
     else
       return TyOrErr.takeError();
+    if (Expected<TypeSourceInfo *> TSIOrErr = import(D->getTypeSourceInfo()))
+      ToFunction->setTypeSourceInfo(*TSIOrErr);
+    else
+      return TSIOrErr.takeError();
   }
 
   // FIXME: Other bits to merge?
