@@ -388,6 +388,9 @@ ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
 
 template <Direction DIR, typename CHAR>
 int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    this->BeginReadingRecord(); // in case there were no I/O items
+  }
   format_.Finish(*this);
   return ExternalIoStatementState<DIR>::EndIoStatement();
 }
