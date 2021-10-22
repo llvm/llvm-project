@@ -1,4 +1,4 @@
-//===- llvm/unittest/OutputStreamTest.cpp - OutputStream unit tests -------===//
+//===- llvm/unittest/OutputBufferTest.cpp - OutputStream unit tests -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,26 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Demangle/MicrosoftDemangleNodes.h"
 #include "llvm/Demangle/Utility.h"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace llvm;
-using llvm::itanium_demangle::OutputStream;
+using llvm::itanium_demangle::OutputBuffer;
 
-static std::string toString(OutputStream &OS) {
-  return {OS.getBuffer(), OS.getCurrentPosition()};
+static std::string toString(OutputBuffer &OB) {
+  return {OB.getBuffer(), OB.getCurrentPosition()};
 }
 
 template <typename T> static std::string printToString(const T &Value) {
-  OutputStream OS;
-  OS << Value;
-  std::string s = toString(OS);
-  std::free(OS.getBuffer());
+  OutputBuffer OB;
+  OB << Value;
+  std::string s = toString(OB);
+  std::free(OB.getBuffer());
   return s;
 }
 
-TEST(OutputStreamTest, Format) {
+TEST(OutputBufferTest, Format) {
   EXPECT_EQ("0", printToString(0));
   EXPECT_EQ("1", printToString(1));
   EXPECT_EQ("-1", printToString(-1));
@@ -39,23 +40,23 @@ TEST(OutputStreamTest, Format) {
   EXPECT_EQ("abc", printToString("abc"));
 }
 
-TEST(OutputStreamTest, Insert) {
-  OutputStream OS;
+TEST(OutputBufferTest, Insert) {
+  OutputBuffer OB;
 
-  OS.insert(0, "", 0);
-  EXPECT_EQ("", toString(OS));
+  OB.insert(0, "", 0);
+  EXPECT_EQ("", toString(OB));
 
-  OS.insert(0, "abcd", 4);
-  EXPECT_EQ("abcd", toString(OS));
+  OB.insert(0, "abcd", 4);
+  EXPECT_EQ("abcd", toString(OB));
 
-  OS.insert(0, "x", 1);
-  EXPECT_EQ("xabcd", toString(OS));
+  OB.insert(0, "x", 1);
+  EXPECT_EQ("xabcd", toString(OB));
 
-  OS.insert(5, "y", 1);
-  EXPECT_EQ("xabcdy", toString(OS));
+  OB.insert(5, "y", 1);
+  EXPECT_EQ("xabcdy", toString(OB));
 
-  OS.insert(3, "defghi", 6);
-  EXPECT_EQ("xabdefghicdy", toString(OS));
+  OB.insert(3, "defghi", 6);
+  EXPECT_EQ("xabdefghicdy", toString(OB));
 
-  std::free(OS.getBuffer());
+  std::free(OB.getBuffer());
 }

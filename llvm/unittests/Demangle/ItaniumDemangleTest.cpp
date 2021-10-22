@@ -52,8 +52,8 @@ TEST(ItaniumDemangle, MethodOverride) {
   EXPECT_THAT(Parser.Types, testing::ElementsAre('i', 'j', 'l'));
 }
 
-static std::string toString(OutputStream &OS) {
-  return {OS.getBuffer(), OS.getCurrentPosition()};
+static std::string toString(OutputBuffer &OB) {
+  return {OB.getBuffer(), OB.getCurrentPosition()};
 }
 
 TEST(ItaniumDemangle, HalfType) {
@@ -64,15 +64,15 @@ TEST(ItaniumDemangle, HalfType) {
         : AbstractManglingParser(Str, Str + strlen(Str)) {}
 
     Node *parseType() {
-      OutputStream OS;
+      OutputBuffer OB;
       Node *N = AbstractManglingParser<TestParser, TestAllocator>::parseType();
-      N->printLeft(OS);
+      N->printLeft(OB);
       StringView Name = N->getBaseName();
       if (!Name.empty())
         Types.push_back(std::string(Name.begin(), Name.end()));
       else
-        Types.push_back(toString(OS));
-      std::free(OS.getBuffer());
+        Types.push_back(toString(OB));
+      std::free(OB.getBuffer());
       return N;
     }
   };

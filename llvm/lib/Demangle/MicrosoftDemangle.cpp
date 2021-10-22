@@ -965,13 +965,13 @@ NamedIdentifierNode *Demangler::demangleBackRefName(StringView &MangledName) {
 void Demangler::memorizeIdentifier(IdentifierNode *Identifier) {
   // Render this class template name into a string buffer so that we can
   // memorize it for the purpose of back-referencing.
-  OutputStream OS;
-  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
-  Identifier->output(OS, OF_Default);
-  OS << '\0';
-  char *Name = OS.getBuffer();
+  Identifier->output(OB, OF_Default);
+  OB << '\0';
+  char *Name = OB.getBuffer();
 
   StringView Owned = copyString(Name);
   memorizeString(Owned);
@@ -1107,7 +1107,7 @@ static void writeHexDigit(char *Buffer, uint8_t Digit) {
   *Buffer = (Digit < 10) ? ('0' + Digit) : ('A' + Digit - 10);
 }
 
-static void outputHex(OutputStream &OS, unsigned C) {
+static void outputHex(OutputBuffer &OB, unsigned C) {
   assert (C != 0);
 
   // It's easier to do the math if we can work from right to left, but we need
@@ -1130,43 +1130,43 @@ static void outputHex(OutputStream &OS, unsigned C) {
   TempBuffer[Pos--] = 'x';
   assert(Pos >= 0);
   TempBuffer[Pos--] = '\\';
-  OS << StringView(&TempBuffer[Pos + 1]);
+  OB << StringView(&TempBuffer[Pos + 1]);
 }
 
-static void outputEscapedChar(OutputStream &OS, unsigned C) {
+static void outputEscapedChar(OutputBuffer &OB, unsigned C) {
   switch (C) {
   case '\0': // nul
-    OS << "\\0";
+    OB << "\\0";
     return;
   case '\'': // single quote
-    OS << "\\\'";
+    OB << "\\\'";
     return;
   case '\"': // double quote
-    OS << "\\\"";
+    OB << "\\\"";
     return;
   case '\\': // backslash
-    OS << "\\\\";
+    OB << "\\\\";
     return;
   case '\a': // bell
-    OS << "\\a";
+    OB << "\\a";
     return;
   case '\b': // backspace
-    OS << "\\b";
+    OB << "\\b";
     return;
   case '\f': // form feed
-    OS << "\\f";
+    OB << "\\f";
     return;
   case '\n': // new line
-    OS << "\\n";
+    OB << "\\n";
     return;
   case '\r': // carriage return
-    OS << "\\r";
+    OB << "\\r";
     return;
   case '\t': // tab
-    OS << "\\t";
+    OB << "\\t";
     return;
   case '\v': // vertical tab
-    OS << "\\v";
+    OB << "\\v";
     return;
   default:
     break;
@@ -1174,11 +1174,11 @@ static void outputEscapedChar(OutputStream &OS, unsigned C) {
 
   if (C > 0x1F && C < 0x7F) {
     // Standard ascii char.
-    OS << (char)C;
+    OB << (char)C;
     return;
   }
 
-  outputHex(OS, C);
+  outputHex(OB, C);
 }
 
 static unsigned countTrailingNullBytes(const uint8_t *StringBytes, int Length) {
@@ -1273,7 +1273,7 @@ FunctionSymbolNode *Demangler::demangleVcallThunkNode(StringView &MangledName) {
 EncodedStringLiteralNode *
 Demangler::demangleStringLiteral(StringView &MangledName) {
   // This function uses goto, so declare all variables up front.
-  OutputStream OS;
+  OutputBuffer OB;
   StringView CRC;
   uint64_t StringByteSize;
   bool IsWcharT = false;
@@ -1284,7 +1284,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   EncodedStringLiteralNode *Result = Arena.alloc<EncodedStringLiteralNode>();
 
   // Must happen before the first `goto StringLiteralError`.
-  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
+  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
 
@@ -1329,7 +1329,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
         goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);
       if (StringByteSize != 2 || Result->IsTruncated)
-        outputEscapedChar(OS, W);
+        outputEscapedChar(OB, W);
       StringByteSize -= 2;
       if (Error)
         goto StringLiteralError;
@@ -1371,19 +1371,19 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
       unsigned NextChar =
           decodeMultiByteChar(StringBytes, CharIndex, CharBytes);
       if (CharIndex + 1 < NumChars || Result->IsTruncated)
-        outputEscapedChar(OS, NextChar);
+        outputEscapedChar(OB, NextChar);
     }
   }
 
-  OS << '\0';
-  ResultBuffer = OS.getBuffer();
+  OB << '\0';
+  ResultBuffer = OB.getBuffer();
   Result->DecodedString = copyString(ResultBuffer);
   std::free(ResultBuffer);
   return Result;
 
 StringLiteralError:
   Error = true;
-  std::free(OS.getBuffer());
+  std::free(OB.getBuffer());
   return nullptr;
 }
 
@@ -1447,16 +1447,16 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
     return nullptr;
 
   // Render the parent symbol's name into a buffer.
-  OutputStream OS;
-  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
-  OS << '`';
-  Scope->output(OS, OF_Default);
-  OS << '\'';
-  OS << "::`" << Number << "'";
-  OS << '\0';
-  char *Result = OS.getBuffer();
+  OB << '`';
+  Scope->output(OB, OF_Default);
+  OB << '\'';
+  OB << "::`" << Number << "'";
+  OB << '\0';
+  char *Result = OB.getBuffer();
   Identifier->Name = copyString(Result);
   std::free(Result);
   return Identifier;
@@ -2313,19 +2313,19 @@ void Demangler::dumpBackReferences() {
               (int)Backrefs.FunctionParamCount);
 
   // Create an output stream so we can render each type.
-  OutputStream OS;
-  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
     std::terminate();
   for (size_t I = 0; I < Backrefs.FunctionParamCount; ++I) {
-    OS.setCurrentPosition(0);
+    OB.setCurrentPosition(0);
 
     TypeNode *T = Backrefs.FunctionParams[I];
-    T->output(OS, OF_Default);
+    T->output(OB, OF_Default);
 
-    std::printf("  [%d] - %.*s\n", (int)I, (int)OS.getCurrentPosition(),
-                OS.getBuffer());
+    std::printf("  [%d] - %.*s\n", (int)I, (int)OB.getCurrentPosition(),
+                OB.getBuffer());
   }
-  std::free(OS.getBuffer());
+  std::free(OB.getBuffer());
 
   if (Backrefs.FunctionParamCount > 0)
     std::printf("\n");
@@ -2342,7 +2342,7 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
                               char *Buf, size_t *N,
                               int *Status, MSDemangleFlags Flags) {
   Demangler D;
-  OutputStream S;
+  OutputBuffer OB;
 
   StringView Name{MangledName};
   SymbolNode *AST = D.parse(Name);
@@ -2367,14 +2367,14 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
   int InternalStatus = demangle_success;
   if (D.Error)
     InternalStatus = demangle_invalid_mangled_name;
-  else if (!initializeOutputStream(Buf, N, S, 1024))
+  else if (!initializeOutputBuffer(Buf, N, OB, 1024))
     InternalStatus = demangle_memory_alloc_failure;
   else {
-    AST->output(S, OF);
-    S += '\0';
+    AST->output(OB, OF);
+    OB += '\0';
     if (N != nullptr)
-      *N = S.getCurrentPosition();
-    Buf = S.getBuffer();
+      *N = OB.getCurrentPosition();
+    Buf = OB.getBuffer();
   }
 
   if (Status)
