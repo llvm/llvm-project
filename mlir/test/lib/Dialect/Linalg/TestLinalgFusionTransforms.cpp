@@ -187,26 +187,28 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
         // removed.
         linalg::Aliases aliases;
         linalg::LinalgDependenceGraph graph(aliases, linalgOps);
-        if (auto info = fuseProducerOfBuffer(b, *opOperand, graph)) {
-          auto *originalOp = info->originalProducer.getOperation();
-          eraseSet.insert(originalOp);
-          auto *originalOpInLinalgOpsVector =
-              std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-          *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
-          changed = true;
-        }
+        auto info = fuseProducerOfBuffer(b, *opOperand, graph);
+        if (failed(info))
+          continue;
+        auto *originalOp = info->originalProducer.getOperation();
+        eraseSet.insert(originalOp);
+        auto *originalOpInLinalgOpsVector =
+            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
+        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
+        changed = true;
       } else if (opOperand->get().getType().isa<RankedTensorType>()) {
         // Tile and Fuse tensor input.
         if (opOperand->getOperandNumber() >= linalgOp.getNumInputs())
           continue;
-        if (auto info = fuseProducerOfTensor(b, *opOperand)) {
-          auto *originalOp = info->originalProducer.getOperation();
-          auto *originalOpInLinalgOpsVector =
-              std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-          *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
-          // Don't mark for erasure in the tensor case, let DCE handle this.
-          changed = true;
-        }
+        auto info = fuseProducerOfTensor(b, *opOperand);
+        if (failed(info))
+          continue;
+        auto *originalOp = info->originalProducer.getOperation();
+        auto *originalOpInLinalgOpsVector =
+            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
+        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
+        // Don't mark for erasure in the tensor case, let DCE handle this.
+        changed = true;
       }
     }
   }
