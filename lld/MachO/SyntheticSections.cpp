@@ -860,7 +860,10 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   if (!file->archiveName.empty())
     path.append({"(", file->getName(), ")"});
 
-  stab.strx = stringTableSection.addString(saver.save(path.str()));
+  StringRef adjustedPath = saver.save(path.str());
+  adjustedPath.consume_front(config->osoPrefix);
+
+  stab.strx = stringTableSection.addString(adjustedPath);
   stab.desc = 1;
   stab.value = file->modTime;
   stabs.emplace_back(std::move(stab));
