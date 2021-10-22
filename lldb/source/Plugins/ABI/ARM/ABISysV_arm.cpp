@@ -2027,8 +2027,3 @@ void ABISysV_arm::Initialize() {
 void ABISysV_arm::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_arm::GetPluginNameStatic() {
-  static ConstString g_name("SysV-arm");
-  return g_name;
-}

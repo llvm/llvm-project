@@ -22,10 +22,6 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ArchitecturePPC64)
 
-ConstString ArchitecturePPC64::GetPluginNameStatic() {
-  return ConstString("ppc64");
-}
-
 void ArchitecturePPC64::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "PPC64-specific algorithms",

@@ -23,10 +23,6 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ArchitectureMips)
 
-ConstString ArchitectureMips::GetPluginNameStatic() {
-  return ConstString("mips");
-}
-
 void ArchitectureMips::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Mips-specific algorithms",

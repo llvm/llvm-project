@@ -3637,7 +3637,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   StringRef packet_str{packet.GetStringRef()};
   assert(packet_str.startswith("qSaveCore"));
   if (packet_str.consume_front("qSaveCore;")) {
-    for (auto x : llvm::Split(packet_str, ';')) {
+    for (auto x : llvm::split(packet_str, ';')) {
       if (x.consume_front("path-hint:"))
         StringExtractor(x).GetHexByteString(path_hint);
       else

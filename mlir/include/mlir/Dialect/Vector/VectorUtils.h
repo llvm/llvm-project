@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_VECTORUTILS_H_
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -183,6 +184,11 @@ bool checkSameValueRAW(vector::TransferWriteOp defWrite,
 /// op.
 bool checkSameValueWAW(vector::TransferWriteOp write,
                        vector::TransferWriteOp priorWrite);
+
+// Helper that returns a subset of `arrayAttr` as a vector of int64_t.
+SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
+                                       unsigned dropFront = 0,
+                                       unsigned dropBack = 0);
 
 namespace matcher {
 

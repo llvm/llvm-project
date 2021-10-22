@@ -285,9 +285,11 @@ static ABIInstances &GetABIInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(ConstString name, const char *description,
+bool PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
                                    ABICreateInstance create_callback) {
-  return GetABIInstances().RegisterPlugin(name, description, create_callback);
+  return GetABIInstances().RegisterPlugin(
+      ConstString(name), description.str().c_str(), create_callback);
 }
 
 bool PluginManager::UnregisterPlugin(ABICreateInstance create_callback) {
@@ -308,11 +310,11 @@ static ArchitectureInstances &GetArchitectureInstances() {
   return g_instances;
 }
 
-void PluginManager::RegisterPlugin(ConstString name,
+void PluginManager::RegisterPlugin(llvm::StringRef name,
                                    llvm::StringRef description,
                                    ArchitectureCreateInstance create_callback) {
   GetArchitectureInstances().push_back(
-      {name, std::string(description), create_callback});
+      {ConstString(name), std::string(description), create_callback});
 }
 
 void PluginManager::UnregisterPlugin(
@@ -347,10 +349,11 @@ static DisassemblerInstances &GetDisassemblerInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(ConstString name, const char *description,
+bool PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
                                    DisassemblerCreateInstance create_callback) {
-  return GetDisassemblerInstances().RegisterPlugin(name, description,
-                                                   create_callback);
+  return GetDisassemblerInstances().RegisterPlugin(
+      ConstString(name), description.str().c_str(), create_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -364,8 +367,9 @@ PluginManager::GetDisassemblerCreateCallbackAtIndex(uint32_t idx) {
 }
 
 DisassemblerCreateInstance
-PluginManager::GetDisassemblerCreateCallbackForPluginName(ConstString name) {
-  return GetDisassemblerInstances().GetCallbackForName(name);
+PluginManager::GetDisassemblerCreateCallbackForPluginName(
+    llvm::StringRef name) {
+  return GetDisassemblerInstances().GetCallbackForName(ConstString(name));
 }
 
 #pragma mark DynamicLoader

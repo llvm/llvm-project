@@ -772,7 +772,7 @@ mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
 llvm::Expected<SerialPort::Options>
 SerialPort::OptionsFromURL(llvm::StringRef urlqs) {
   SerialPort::Options serial_options;
-  for (llvm::StringRef x : llvm::Split(urlqs, '&')) {
+  for (llvm::StringRef x : llvm::split(urlqs, '&')) {
     if (x.consume_front("baud=")) {
       unsigned int baud_rate;
       if (!llvm::to_integer(x, baud_rate, 10))

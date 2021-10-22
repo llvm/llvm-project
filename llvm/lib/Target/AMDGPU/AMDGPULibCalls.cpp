@@ -61,8 +61,7 @@ private:
   // Replace a normal function with its native version.
   bool replaceWithNative(CallInst *CI, const FuncInfo &FInfo);
 
-  bool parseFunctionName(const StringRef& FMangledName,
-                         FuncInfo *FInfo=nullptr /*out*/);
+  bool parseFunctionName(const StringRef &FMangledName, FuncInfo &FInfo);
 
   bool TDOFold(CallInst *CI, const FuncInfo &FInfo);
 
@@ -466,9 +465,9 @@ FunctionCallee AMDGPULibCalls::getFunction(Module *M, const FuncInfo &fInfo) {
                        : AMDGPULibFunc::getFunction(M, fInfo);
 }
 
-bool AMDGPULibCalls::parseFunctionName(const StringRef& FMangledName,
-                                    FuncInfo *FInfo) {
-  return AMDGPULibFunc::parse(FMangledName, *FInfo);
+bool AMDGPULibCalls::parseFunctionName(const StringRef &FMangledName,
+                                       FuncInfo &FInfo) {
+  return AMDGPULibFunc::parse(FMangledName, FInfo);
 }
 
 bool AMDGPULibCalls::isUnsafeMath(const CallInst *CI) const {
@@ -529,7 +528,7 @@ bool AMDGPULibCalls::useNative(CallInst *aCI) {
   Function *Callee = aCI->getCalledFunction();
 
   FuncInfo FInfo;
-  if (!parseFunctionName(Callee->getName(), &FInfo) || !FInfo.isMangled() ||
+  if (!parseFunctionName(Callee->getName(), FInfo) || !FInfo.isMangled() ||
       FInfo.getPrefix() != AMDGPULibFunc::NOPFX ||
       getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()) ||
       !(AllNative || useNativeFunc(FInfo.getName()))) {
@@ -644,7 +643,7 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   }
 
   FuncInfo FInfo;
-  if (!parseFunctionName(Callee->getName(), &FInfo))
+  if (!parseFunctionName(Callee->getName(), FInfo))
     return false;
 
   // Further check the number of arguments to see if they match.

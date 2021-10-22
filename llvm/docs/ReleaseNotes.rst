@@ -128,7 +128,8 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
-* ...
+* ``LLVMSetInstDebugLocation`` has been deprecated in favor of the more general
+  ``LLVMAddMetadataToInst``.
 
 Changes to the Go bindings
 --------------------------

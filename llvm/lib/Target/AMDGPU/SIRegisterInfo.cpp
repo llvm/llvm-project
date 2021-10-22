@@ -510,18 +510,36 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, Reg);
   }
 
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
-  // TODO: In an entry function without calls and AGPRs used it is possible
-  //       to use the whole register budget for VGPRs. Even more it shall
-  //       be possible to estimate maximum AGPR/VGPR pressure and split
-  //       register file accordingly.
-  if (ST.hasGFX90AInsts())
-    MaxNumVGPRs /= 2;
+  unsigned MaxNumAGPRs = MaxNumVGPRs;
   unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+
+  if (ST.hasGFX90AInsts()) {
+    // In an entry function without calls and AGPRs used it is possible to use
+    // the whole register budget for VGPRs.
+
+    // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and
+    //       split register file accordingly.
+    if (MFI->usesAGPRs(MF)) {
+      MaxNumVGPRs /= 2;
+      MaxNumAGPRs = MaxNumVGPRs;
+    } else {
+      if (MaxNumVGPRs > TotalNumVGPRs) {
+        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
+        MaxNumVGPRs = TotalNumVGPRs;
+      } else
+        MaxNumAGPRs = 0;
+    }
+  }
+
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
     unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
-    Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
+  }
+
+  for (unsigned i = MaxNumAGPRs; i < TotalNumVGPRs; ++i) {
+    unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
   }
 
@@ -544,8 +562,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       reserveRegisterTuples(Reserved, Reg);
     }
   }
-
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   Register ScratchRSrcReg = MFI->getScratchRSrcReg();
   if (ScratchRSrcReg != AMDGPU::NoRegister) {
