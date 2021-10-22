@@ -654,12 +654,8 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
     return isValueRead(forOp.getRegionIterArgForOpOperand(opOperand));
   // TiledLoop alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
-  if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner())) {
-    for (OpOperand &use : tiledLoopOp.getTiedBlockArgument(opOperand).getUses())
-      if (bufferizesToMemoryRead(use))
-        return true;
-    return false;
-  }
+  if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner()))
+    return isValueRead(tiledLoopOp.getTiedBlockArgument(opOperand));
   // CallOpInterface alone doesn't bufferize to a memory read, one of the uses
   // of the matching bbArg may. It is the responsibility of the caller to
   // inspect bbArgs. In the absence of a BufferizationAliasInfo, we need to be
