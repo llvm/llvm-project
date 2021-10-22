@@ -164,6 +164,11 @@ void AArch64Subtarget::initializeProperties() {
     PrefFunctionLogAlignment = 4;
     VScaleForTuning = 2;
     break;
+  case Neoverse512TVB:
+    PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
+    MaxInterleaveFactor = 4;
+    break;
   case Saphira:
     MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.

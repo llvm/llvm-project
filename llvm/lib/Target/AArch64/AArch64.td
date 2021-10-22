@@ -843,6 +843,11 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeaturePostRAScheduler,
                                       FeatureFuseAES
                                       ]>;
+def TuneNeoverse512TVB : SubtargetFeature<"neoverse512tvb", "ARMProcFamily", "Neoverse512TVB",
+                                      "Neoverse 512-TVB ARM processors", [
+                                      FeaturePostRAScheduler,
+                                      FeatureFuseAES
+                                      ]>;
 
 def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1",
                                       "Neoverse V1 ARM processors", [
@@ -975,6 +980,11 @@ def ProcessorFeatures {
   list<SubtargetFeature> NeoverseN2 = [HasV8_5aOps, FeatureBF16, FeatureETE,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
                                        FeatureSVE2BitPerm, FeatureTRBE, FeatureCrypto];
+  list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
+                                           FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
+                                           FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
+                                           FeaturePerfMon, FeatureRandGen, FeatureSPE,
+                                           FeatureSSBS, FeatureSVE];
   list<SubtargetFeature> NeoverseV1 = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                        FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
                                        FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
@@ -1045,6 +1055,8 @@ def : ProcessorModel<"neoverse-n1", CortexA57Model,
                      ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
 def : ProcessorModel<"neoverse-n2", CortexA57Model,
                      ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
+def : ProcessorModel<"neoverse-512tvb", CortexA57Model,
+                     ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;
 def : ProcessorModel<"neoverse-v1", CortexA57Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
