@@ -146,8 +146,7 @@ class ModuleDepCollector;
 /// \c DependencyConsumer of the parent \c ModuleDepCollector.
 class ModuleDepCollectorPP final : public PPCallbacks {
 public:
-  ModuleDepCollectorPP(CompilerInstance &I, ModuleDepCollector &MDC)
-      : Instance(I), MDC(MDC) {}
+  ModuleDepCollectorPP(ModuleDepCollector &MDC) : MDC(MDC) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -164,8 +163,6 @@ public:
   void EndOfMainFile() override;
 
 private:
-  /// The compiler instance for the current translation unit.
-  CompilerInstance &Instance;
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
   /// Working set of direct modular dependencies.
