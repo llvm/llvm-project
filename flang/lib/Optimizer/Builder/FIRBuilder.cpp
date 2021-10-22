@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
@@ -110,6 +111,113 @@ mlir::Value fir::FirOpBuilder::createRealConstant(mlir::Location loc,
     return create<mlir::arith::ConstantOp>(loc, fltTy, attr);
   }
   llvm_unreachable("should use builtin floating-point type");
+}
+
+static llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape) {
+  auto arrTy = type.dyn_cast<fir::SequenceType>();
+  if (shape.empty() || !arrTy)
+    return {};
+  // elide the constant dimensions before construction
+  assert(shape.size() == arrTy.getDimension());
+  llvm::SmallVector<mlir::Value> dynamicShape;
+  auto typeShape = arrTy.getShape();
+  for (unsigned i = 0, end = arrTy.getDimension(); i < end; ++i)
+    if (typeShape[i] == fir::SequenceType::getUnknownExtent())
+      dynamicShape.push_back(shape[i]);
+  return dynamicShape;
+}
+
+static llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
+  if (lenParams.empty())
+    return {};
+  if (auto arrTy = type.dyn_cast<fir::SequenceType>())
+    type = arrTy.getEleTy();
+  if (fir::hasDynamicSize(type))
+    return lenParams;
+  return {};
+}
+
+/// Allocate a local variable.
+/// A local variable ought to have a name in the source code.
+mlir::Value fir::FirOpBuilder::allocateLocal(
+    mlir::Location loc, mlir::Type ty, llvm::StringRef uniqName,
+    llvm::StringRef name, bool pinned, llvm::ArrayRef<mlir::Value> shape,
+    llvm::ArrayRef<mlir::Value> lenParams, bool asTarget) {
+  // Convert the shape extents to `index`, as needed.
+  llvm::SmallVector<mlir::Value> indices;
+  llvm::SmallVector<mlir::Value> elidedShape =
+      elideExtentsAlreadyInType(ty, shape);
+  llvm::SmallVector<mlir::Value> elidedLenParams =
+      elideLengthsAlreadyInType(ty, lenParams);
+  auto idxTy = getIndexType();
+  llvm::for_each(elidedShape, [&](mlir::Value sh) {
+    indices.push_back(createConvert(loc, idxTy, sh));
+  });
+  // Add a target attribute, if needed.
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  if (asTarget)
+    attrs.emplace_back(
+        mlir::Identifier::get(fir::getTargetAttrName(), getContext()),
+        getUnitAttr());
+  // Create the local variable.
+  if (name.empty()) {
+    if (uniqName.empty())
+      return create<fir::AllocaOp>(loc, ty, pinned, elidedLenParams, indices,
+                                   attrs);
+    return create<fir::AllocaOp>(loc, ty, uniqName, pinned, elidedLenParams,
+                                 indices, attrs);
+  }
+  return create<fir::AllocaOp>(loc, ty, uniqName, name, pinned, elidedLenParams,
+                               indices, attrs);
+}
+
+mlir::Value fir::FirOpBuilder::allocateLocal(
+    mlir::Location loc, mlir::Type ty, llvm::StringRef uniqName,
+    llvm::StringRef name, llvm::ArrayRef<mlir::Value> shape,
+    llvm::ArrayRef<mlir::Value> lenParams, bool asTarget) {
+  return allocateLocal(loc, ty, uniqName, name, /*pinned=*/false, shape,
+                       lenParams, asTarget);
+}
+
+/// Get the block for adding Allocas.
+mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
+  // auto iface =
+  //     getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  // return iface ? iface.getAllocaBlock() : getEntryBlock();
+  return getEntryBlock();
+}
+
+/// Create a temporary variable on the stack. Anonymous temporaries have no
+/// `name` value. Temporaries do not require a uniqued name.
+mlir::Value
+fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
+                                   llvm::StringRef name, mlir::ValueRange shape,
+                                   mlir::ValueRange lenParams,
+                                   llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+  llvm::SmallVector<mlir::Value> dynamicShape =
+      elideExtentsAlreadyInType(type, shape);
+  llvm::SmallVector<mlir::Value> dynamicLength =
+      elideLengthsAlreadyInType(type, lenParams);
+  InsertPoint insPt;
+  const bool hoistAlloc = dynamicShape.empty() && dynamicLength.empty();
+  if (hoistAlloc) {
+    insPt = saveInsertionPoint();
+    setInsertionPointToStart(getAllocaBlock());
+  }
+
+  // If the alloca is inside an OpenMP Op which will be outlined then pin the
+  // alloca here.
+  const bool pinned =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
+  auto ae =
+      create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{}, name,
+                            pinned, dynamicLength, dynamicShape, attrs);
+  if (hoistAlloc)
+    restoreInsertionPoint(insPt);
+  return ae;
 }
 
 /// Create a global variable in the (read-only) data section. A global variable

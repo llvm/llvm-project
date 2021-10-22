@@ -2511,8 +2511,7 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
     // Return if the builtin doesn't have any required features.
     if (FeatureList.empty())
       return;
-    assert(FeatureList.find(' ') == StringRef::npos &&
-           "Space in feature list");
+    assert(!FeatureList.contains(' ') && "Space in feature list");
     TargetFeatures TF(CallerFeatureMap);
     if (!TF.hasRequiredFeatures(FeatureList))
       CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)

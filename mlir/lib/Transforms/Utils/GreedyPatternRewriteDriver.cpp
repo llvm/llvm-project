@@ -18,11 +18,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 
-#define DEBUG_TYPE "pattern-matcher"
+#define DEBUG_TYPE "greedy-rewriter"
 
 //===----------------------------------------------------------------------===//
 // GreedyPatternRewriteDriver
@@ -35,89 +36,48 @@ class GreedyPatternRewriteDriver : public PatternRewriter {
 public:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
                                       const FrozenRewritePatternSet &patterns,
-                                      const GreedyRewriteConfig &config)
-      : PatternRewriter(ctx), matcher(patterns), folder(ctx), config(config) {
-    worklist.reserve(64);
+                                      const GreedyRewriteConfig &config);
 
-    // Apply a simple cost model based solely on pattern benefit.
-    matcher.applyDefaultCostModel();
-  }
-
+  /// Simplify the operations within the given regions.
   bool simplify(MutableArrayRef<Region> regions);
 
-  void addToWorklist(Operation *op) {
-    // Check to see if the worklist already contains this op.
-    if (worklistMap.count(op))
-      return;
+  /// Add the given operation to the worklist.
+  void addToWorklist(Operation *op);
 
-    worklistMap[op] = worklist.size();
-    worklist.push_back(op);
-  }
+  /// Pop the next operation from the worklist.
+  Operation *popFromWorklist();
 
-  Operation *popFromWorklist() {
-    auto *op = worklist.back();
-    worklist.pop_back();
+  /// If the specified operation is in the worklist, remove it.
+  void removeFromWorklist(Operation *op);
 
-    // This operation is no longer in the worklist, keep worklistMap up to date.
-    if (op)
-      worklistMap.erase(op);
-    return op;
-  }
-
-  /// If the specified operation is in the worklist, remove it.  If not, this is
-  /// a no-op.
-  void removeFromWorklist(Operation *op) {
-    auto it = worklistMap.find(op);
-    if (it != worklistMap.end()) {
-      assert(worklist[it->second] == op && "malformed worklist data structure");
-      worklist[it->second] = nullptr;
-      worklistMap.erase(it);
-    }
-  }
-
-  // These are hooks implemented for PatternRewriter.
 protected:
   // Implement the hook for inserting operations, and make sure that newly
   // inserted ops are added to the worklist for processing.
-  void notifyOperationInserted(Operation *op) override { addToWorklist(op); }
+  void notifyOperationInserted(Operation *op) override;
 
   // Look over the provided operands for any defining operations that should
   // be re-added to the worklist. This function should be called when an
   // operation is modified or removed, as it may trigger further
   // simplifications.
   template <typename Operands>
-  void addToWorklist(Operands &&operands) {
-    for (Value operand : operands) {
-      // If the use count of this operand is now < 2, we re-add the defining
-      // operation to the worklist.
-      // TODO: This is based on the fact that zero use operations
-      // may be deleted, and that single use values often have more
-      // canonicalization opportunities.
-      if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
-        continue;
-      if (auto *defOp = operand.getDefiningOp())
-        addToWorklist(defOp);
-    }
-  }
+  void addToWorklist(Operands &&operands);
 
   // If an operation is about to be removed, make sure it is not in our
   // worklist anymore because we'd get dangling references to it.
-  void notifyOperationRemoved(Operation *op) override {
-    addToWorklist(op->getOperands());
-    op->walk([this](Operation *operation) {
-      removeFromWorklist(operation);
-      folder.notifyRemoval(operation);
-    });
-  }
+  void notifyOperationRemoved(Operation *op) override;
 
   // When the root of a pattern is about to be replaced, it can trigger
   // simplifications to its users - make sure to add them to the worklist
   // before the root is changed.
-  void notifyRootReplaced(Operation *op) override {
-    for (auto result : op->getResults())
-      for (auto *user : result.getUsers())
-        addToWorklist(user);
-  }
+  void notifyRootReplaced(Operation *op) override;
+
+  /// PatternRewriter hook for erasing a dead operation.
+  void eraseOp(Operation *op) override;
+
+  /// PatternRewriter hook for notifying match failure reasons.
+  LogicalResult
+  notifyMatchFailure(Operation *op,
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
 
   /// The low-level pattern applicator.
   PatternApplicator matcher;
@@ -135,12 +95,43 @@ protected:
 private:
   /// Configuration information for how to simplify.
   GreedyRewriteConfig config;
+
+#ifndef NDEBUG
+  /// A logger used to emit information during the application process.
+  llvm::ScopedPrinter logger{llvm::dbgs()};
+#endif
 };
 } // end anonymous namespace
 
-/// Performs the rewrites while folding and erasing any dead ops. Returns true
-/// if the rewrite converges in `maxIterations`.
+GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
+    MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
+    const GreedyRewriteConfig &config)
+    : PatternRewriter(ctx), matcher(patterns), folder(ctx), config(config) {
+  worklist.reserve(64);
+
+  // Apply a simple cost model based solely on pattern benefit.
+  matcher.applyDefaultCostModel();
+}
+
 bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
+#ifndef NDEBUG
+  const char *logLineComment =
+      "//===-------------------------------------------===//\n";
+
+  /// A utility function to log a process result for the given reason.
+  auto logResult = [&](StringRef result, const llvm::Twine &msg = {}) {
+    logger.unindent();
+    logger.startLine() << "} -> " << result;
+    if (!msg.isTriviallyEmpty())
+      logger.getOStream() << " : " << msg;
+    logger.getOStream() << "\n";
+  };
+  auto logResultWithLine = [&](StringRef result, const llvm::Twine &msg = {}) {
+    logResult(result, msg);
+    logger.startLine() << logLineComment;
+  };
+#endif
+
   bool changed = false;
   unsigned iteration = 0;
   do {
@@ -176,11 +167,29 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
       if (op == nullptr)
         continue;
 
+      LLVM_DEBUG({
+        logger.getOStream() << "\n";
+        logger.startLine() << logLineComment;
+        logger.startLine() << "Processing operation : '" << op->getName()
+                           << "'(" << op << ") {\n";
+        logger.indent();
+
+        // If the operation has no regions, just print it here.
+        if (op->getNumRegions() == 0) {
+          op->print(
+              logger.startLine(),
+              OpPrintingFlags().printGenericOpForm().elideLargeElementsAttrs());
+          logger.getOStream() << "\n\n";
+        }
+      });
+
       // If the operation is trivially dead - remove it.
       if (isOpTriviallyDead(op)) {
         notifyOperationRemoved(op);
         op->erase();
         changed = true;
+
+        LLVM_DEBUG(logResultWithLine("success", "operation is trivially dead"));
         continue;
       }
 
@@ -207,6 +216,8 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
       bool inPlaceUpdate;
       if ((succeeded(folder.tryToFold(op, collectOps, preReplaceAction,
                                       &inPlaceUpdate)))) {
+        LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
+
         changed = true;
         if (!inPlaceUpdate)
           continue;
@@ -215,7 +226,41 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
       // Try to match one of the patterns. The rewriter is automatically
       // notified of any necessary changes, so there is nothing else to do
       // here.
-      changed |= succeeded(matcher.matchAndRewrite(op, *this));
+#ifndef NDEBUG
+      auto canApply = [&](const Pattern &pattern) {
+        LLVM_DEBUG({
+          logger.getOStream() << "\n";
+          logger.startLine() << "* Pattern " << pattern.getDebugName() << " : '"
+                             << op->getName() << " -> (";
+          llvm::interleaveComma(pattern.getGeneratedOps(), logger.getOStream());
+          logger.getOStream() << ")' {\n";
+          logger.indent();
+        });
+        return true;
+      };
+      auto onFailure = [&](const Pattern &pattern) {
+        LLVM_DEBUG(logResult("failure", "pattern failed to match"));
+      };
+      auto onSuccess = [&](const Pattern &pattern) {
+        LLVM_DEBUG(logResult("success", "pattern applied successfully"));
+        return success();
+      };
+
+      LogicalResult matchResult =
+          matcher.matchAndRewrite(op, *this, canApply, onFailure, onSuccess);
+      if (succeeded(matchResult))
+        LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
+      else
+        LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
+#else
+      LogicalResult matchResult = matcher.matchAndRewrite(op, *this);
+#endif
+
+
+#ifndef NDEBUG
+#endif
+
+      changed |= succeeded(matchResult);
     }
 
     // After applying patterns, make sure that the CFG of each of the regions
@@ -228,6 +273,93 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
 
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return !changed;
+}
+
+void GreedyPatternRewriteDriver::addToWorklist(Operation *op) {
+  // Check to see if the worklist already contains this op.
+  if (worklistMap.count(op))
+    return;
+
+  worklistMap[op] = worklist.size();
+  worklist.push_back(op);
+}
+
+Operation *GreedyPatternRewriteDriver::popFromWorklist() {
+  auto *op = worklist.back();
+  worklist.pop_back();
+
+  // This operation is no longer in the worklist, keep worklistMap up to date.
+  if (op)
+    worklistMap.erase(op);
+  return op;
+}
+
+void GreedyPatternRewriteDriver::removeFromWorklist(Operation *op) {
+  auto it = worklistMap.find(op);
+  if (it != worklistMap.end()) {
+    assert(worklist[it->second] == op && "malformed worklist data structure");
+    worklist[it->second] = nullptr;
+    worklistMap.erase(it);
+  }
+}
+
+void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {
+  LLVM_DEBUG({
+    logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
+                       << ")\n";
+  });
+  addToWorklist(op);
+}
+
+template <typename Operands>
+void GreedyPatternRewriteDriver::addToWorklist(Operands &&operands) {
+  for (Value operand : operands) {
+    // If the use count of this operand is now < 2, we re-add the defining
+    // operation to the worklist.
+    // TODO: This is based on the fact that zero use operations
+    // may be deleted, and that single use values often have more
+    // canonicalization opportunities.
+    if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
+      continue;
+    if (auto *defOp = operand.getDefiningOp())
+      addToWorklist(defOp);
+  }
+}
+
+void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
+  addToWorklist(op->getOperands());
+  op->walk([this](Operation *operation) {
+    removeFromWorklist(operation);
+    folder.notifyRemoval(operation);
+  });
+}
+
+void GreedyPatternRewriteDriver::notifyRootReplaced(Operation *op) {
+  LLVM_DEBUG({
+    logger.startLine() << "** Replace : '" << op->getName() << "'(" << op
+                       << ")\n";
+  });
+  for (auto result : op->getResults())
+    for (auto *user : result.getUsers())
+      addToWorklist(user);
+}
+
+void GreedyPatternRewriteDriver::eraseOp(Operation *op) {
+  LLVM_DEBUG({
+    logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
+                       << ")\n";
+  });
+  PatternRewriter::eraseOp(op);
+}
+
+LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
+    Operation *op, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(op->getLoc(), DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    logger.startLine() << "** Failure : " << diag.str() << "\n";
+  });
+  return failure();
 }
 
 /// Rewrite the regions of the specified operation, which must be isolated from

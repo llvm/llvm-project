@@ -10,13 +10,13 @@ void num_elems() {
 
   auto [] = a0; // expected-warning {{does not allow a decomposition group to be empty}}
   auto [v1] = a0; // expected-error {{type 'A0' decomposes into 0 elements, but 1 name was provided}}
-  auto [] = a1; // expected-error {{type 'int [1]' decomposes into 1 element, but no names were provided}} expected-warning {{empty}}
+  auto [] = a1; // expected-error {{type 'int[1]' decomposes into 1 element, but no names were provided}} expected-warning {{empty}}
   auto [v2] = a1;
-  auto [v3, v4] = a1; // expected-error {{type 'int [1]' decomposes into 1 element, but 2 names were provided}}
-  auto [] = a2; // expected-error {{type 'int [2]' decomposes into 2 elements, but no names were provided}} expected-warning {{empty}}
-  auto [v5] = a2; // expected-error {{type 'int [2]' decomposes into 2 elements, but only 1 name was provided}}
+  auto [v3, v4] = a1; // expected-error {{type 'int[1]' decomposes into 1 element, but 2 names were provided}}
+  auto [] = a2; // expected-error {{type 'int[2]' decomposes into 2 elements, but no names were provided}} expected-warning {{empty}}
+  auto [v5] = a2; // expected-error {{type 'int[2]' decomposes into 2 elements, but only 1 name was provided}}
   auto [v6, v7] = a2;
-  auto [v8, v9, v10] = a2; // expected-error {{type 'int [2]' decomposes into 2 elements, but 3 names were provided}}
+  auto [v8, v9, v10] = a2; // expected-error {{type 'int[2]' decomposes into 2 elements, but 3 names were provided}}
 }
 
 // As a Clang extension, _Complex can be decomposed.

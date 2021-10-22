@@ -1317,3 +1317,8 @@ let Command = "trace schema" in {
   def trace_schema_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace schema logging for debugging the plug-in.">;
 }
+
+let Command = "statistics dump" in {
+  def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
+    Desc<"Include statistics for all targets.">;
+}

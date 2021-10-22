@@ -132,9 +132,9 @@ struct D {
   int a;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:7> col:7 a 'int'
   int b[10];
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> col:7 b 'int [10]'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> col:7 b 'int[10]'
   int c[];
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> col:7 c 'int []'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> col:7 c 'int[]'
 };
 
 union E;

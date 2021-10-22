@@ -293,10 +293,10 @@ public:
   /// @name Normalization
   /// @{
 
-  /// normalize - Turn an arbitrary machine specification into the canonical
-  /// triple form (or something sensible that the Triple class understands if
-  /// nothing better can reasonably be done).  In particular, it handles the
-  /// common case in which otherwise valid components are in the wrong order.
+  /// Turn an arbitrary machine specification into the canonical triple form (or
+  /// something sensible that the Triple class understands if nothing better can
+  /// reasonably be done).  In particular, it handles the common case in which
+  /// otherwise valid components are in the wrong order.
   static std::string normalize(StringRef Str);
 
   /// Return the normalized form of this triple's string.
@@ -306,25 +306,24 @@ public:
   /// @name Typed Component Access
   /// @{
 
-  /// getArch - Get the parsed architecture type of this triple.
+  /// Get the parsed architecture type of this triple.
   ArchType getArch() const { return Arch; }
 
-  /// getSubArch - get the parsed subarchitecture type for this triple.
+  /// get the parsed subarchitecture type for this triple.
   SubArchType getSubArch() const { return SubArch; }
 
-  /// getVendor - Get the parsed vendor type of this triple.
+  /// Get the parsed vendor type of this triple.
   VendorType getVendor() const { return Vendor; }
 
-  /// getOS - Get the parsed operating system type of this triple.
+  /// Get the parsed operating system type of this triple.
   OSType getOS() const { return OS; }
 
-  /// hasEnvironment - Does this triple have the optional environment
-  /// (fourth) component?
+  /// Does this triple have the optional environment (fourth) component?
   bool hasEnvironment() const {
     return getEnvironmentName() != "";
   }
 
-  /// getEnvironment - Get the parsed environment type of this triple.
+  /// Get the parsed environment type of this triple.
   EnvironmentType getEnvironment() const { return Environment; }
 
   /// Parse the version number from the OS name component of the
@@ -336,39 +335,39 @@ public:
   void getEnvironmentVersion(unsigned &Major, unsigned &Minor,
                              unsigned &Micro) const;
 
-  /// getFormat - Get the object format for this triple.
+  /// Get the object format for this triple.
   ObjectFormatType getObjectFormat() const { return ObjectFormat; }
 
-  /// getOSVersion - Parse the version number from the OS name component of the
-  /// triple, if present.
+  /// Parse the version number from the OS name component of the triple, if
+  /// present.
   ///
   /// For example, "fooos1.2.3" would return (1, 2, 3).
   ///
   /// If an entry is not defined, it will be returned as 0.
   void getOSVersion(unsigned &Major, unsigned &Minor, unsigned &Micro) const;
 
-  /// getOSMajorVersion - Return just the major version number, this is
-  /// specialized because it is a common query.
+  /// Return just the major version number, this is specialized because it is a
+  /// common query.
   unsigned getOSMajorVersion() const {
     unsigned Maj, Min, Micro;
     getOSVersion(Maj, Min, Micro);
     return Maj;
   }
 
-  /// getMacOSXVersion - Parse the version number as with getOSVersion and then
-  /// translate generic "darwin" versions to the corresponding OS X versions.
-  /// This may also be called with IOS triples but the OS X version number is
-  /// just set to a constant 10.4.0 in that case.  Returns true if successful.
+  /// Parse the version number as with getOSVersion and then translate generic
+  /// "darwin" versions to the corresponding OS X versions.  This may also be
+  /// called with IOS triples but the OS X version number is just set to a
+  /// constant 10.4.0 in that case.  Returns true if successful.
   bool getMacOSXVersion(unsigned &Major, unsigned &Minor,
                         unsigned &Micro) const;
 
-  /// getiOSVersion - Parse the version number as with getOSVersion.  This should
-  /// only be called with IOS or generic triples.
+  /// Parse the version number as with getOSVersion.  This should only be called
+  /// with IOS or generic triples.
   void getiOSVersion(unsigned &Major, unsigned &Minor,
                      unsigned &Micro) const;
 
-  /// getWatchOSVersion - Parse the version number as with getOSVersion.  This
-  /// should only be called with WatchOS or generic triples.
+  /// Parse the version number as with getOSVersion.  This should only be called
+  /// with WatchOS or generic triples.
   void getWatchOSVersion(unsigned &Major, unsigned &Minor,
                          unsigned &Micro) const;
 
@@ -380,27 +379,24 @@ public:
 
   const std::string &getTriple() const { return Data; }
 
-  /// getArchName - Get the architecture (first) component of the
-  /// triple.
+  /// Get the architecture (first) component of the triple.
   StringRef getArchName() const;
 
-  /// getArchName - Get the architecture name based on Kind and SubArch.
+  /// Get the architecture name based on Kind and SubArch.
   StringRef getArchName(ArchType Kind, SubArchType SubArch = NoSubArch) const;
 
-  /// getVendorName - Get the vendor (second) component of the triple.
+  /// Get the vendor (second) component of the triple.
   StringRef getVendorName() const;
 
-  /// getOSName - Get the operating system (third) component of the
-  /// triple.
+  /// Get the operating system (third) component of the triple.
   StringRef getOSName() const;
 
-  /// getEnvironmentName - Get the optional environment (fourth)
-  /// component of the triple, or "" if empty.
+  /// Get the optional environment (fourth) component of the triple, or "" if
+  /// empty.
   StringRef getEnvironmentName() const;
 
-  /// getOSAndEnvironmentName - Get the operating system and optional
-  /// environment components as a single string (separated by a '-'
-  /// if the environment component is present).
+  /// Get the operating system and optional environment components as a single
+  /// string (separated by a '-' if the environment component is present).
   StringRef getOSAndEnvironmentName() const;
 
   /// @}
@@ -426,8 +422,8 @@ public:
   /// Note that this tests for 16-bit pointer width, and nothing else.
   bool isArch16Bit() const;
 
-  /// isOSVersionLT - Helper function for doing comparisons against version
-  /// numbers included in the target triple.
+  /// Helper function for doing comparisons against version numbers included in
+  /// the target triple.
   bool isOSVersionLT(unsigned Major, unsigned Minor = 0,
                      unsigned Micro = 0) const {
     unsigned LHS[3];
@@ -449,14 +445,13 @@ public:
     return isOSVersionLT(RHS[0], RHS[1], RHS[2]);
   }
 
-  /// isMacOSXVersionLT - Comparison function for checking OS X version
-  /// compatibility, which handles supporting skewed version numbering schemes
-  /// used by the "darwin" triples.
+  /// Comparison function for checking OS X version compatibility, which handles
+  /// supporting skewed version numbering schemes used by the "darwin" triples.
   bool isMacOSXVersionLT(unsigned Major, unsigned Minor = 0,
                          unsigned Micro = 0) const;
 
-  /// isMacOSX - Is this a Mac OS X triple. For legacy reasons, we support both
-  /// "darwin" and "osx" as OS X triples.
+  /// Is this a Mac OS X triple. For legacy reasons, we support both "darwin"
+  /// and "osx" as OS X triples.
   bool isMacOSX() const {
     return getOS() == Triple::Darwin || getOS() == Triple::MacOSX;
   }
@@ -486,7 +481,7 @@ public:
 
   bool isOSzOS() const { return getOS() == Triple::ZOS; }
 
-  /// isOSDarwin - Is this a "Darwin" OS (macOS, iOS, tvOS or watchOS).
+  /// Is this a "Darwin" OS (macOS, iOS, tvOS or watchOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS();
   }
@@ -839,46 +834,38 @@ public:
   /// @name Mutators
   /// @{
 
-  /// setArch - Set the architecture (first) component of the triple
-  /// to a known type.
+  /// Set the architecture (first) component of the triple to a known type.
   void setArch(ArchType Kind, SubArchType SubArch = NoSubArch);
 
-  /// setVendor - Set the vendor (second) component of the triple to a
-  /// known type.
+  /// Set the vendor (second) component of the triple to a known type.
   void setVendor(VendorType Kind);
 
-  /// setOS - Set the operating system (third) component of the triple
-  /// to a known type.
+  /// Set the operating system (third) component of the triple to a known type.
   void setOS(OSType Kind);
 
-  /// setEnvironment - Set the environment (fourth) component of the triple
-  /// to a known type.
+  /// Set the environment (fourth) component of the triple to a known type.
   void setEnvironment(EnvironmentType Kind);
 
-  /// setObjectFormat - Set the object file format
+  /// Set the object file format.
   void setObjectFormat(ObjectFormatType Kind);
 
-  /// setTriple - Set all components to the new triple \p Str.
+  /// Set all components to the new triple \p Str.
   void setTriple(const Twine &Str);
 
-  /// setArchName - Set the architecture (first) component of the
-  /// triple by name.
+  /// Set the architecture (first) component of the triple by name.
   void setArchName(StringRef Str);
 
-  /// setVendorName - Set the vendor (second) component of the triple
-  /// by name.
+  /// Set the vendor (second) component of the triple by name.
   void setVendorName(StringRef Str);
 
-  /// setOSName - Set the operating system (third) component of the
-  /// triple by name.
+  /// Set the operating system (third) component of the triple by name.
   void setOSName(StringRef Str);
 
-  /// setEnvironmentName - Set the optional environment (fourth)
-  /// component of the triple by name.
+  /// Set the optional environment (fourth) component of the triple by name.
   void setEnvironmentName(StringRef Str);
 
-  /// setOSAndEnvironmentName - Set the operating system and optional
-  /// environment components with a single string.
+  /// Set the operating system and optional environment components with a single
+  /// string.
   void setOSAndEnvironmentName(StringRef Str);
 
   /// @}
@@ -944,33 +931,30 @@ public:
   /// @name Static helpers for IDs.
   /// @{
 
-  /// getArchTypeName - Get the canonical name for the \p Kind architecture.
+  /// Get the canonical name for the \p Kind architecture.
   static StringRef getArchTypeName(ArchType Kind);
 
-  /// getArchTypePrefix - Get the "prefix" canonical name for the \p Kind
-  /// architecture. This is the prefix used by the architecture specific
-  /// builtins, and is suitable for passing to \see
-  /// Intrinsic::getIntrinsicForGCCBuiltin().
+  /// Get the "prefix" canonical name for the \p Kind architecture. This is the
+  /// prefix used by the architecture specific builtins, and is suitable for
+  /// passing to \see Intrinsic::getIntrinsicForGCCBuiltin().
   ///
   /// \return - The architecture prefix, or 0 if none is defined.
   static StringRef getArchTypePrefix(ArchType Kind);
 
-  /// getVendorTypeName - Get the canonical name for the \p Kind vendor.
+  /// Get the canonical name for the \p Kind vendor.
   static StringRef getVendorTypeName(VendorType Kind);
 
-  /// getOSTypeName - Get the canonical name for the \p Kind operating system.
+  /// Get the canonical name for the \p Kind operating system.
   static StringRef getOSTypeName(OSType Kind);
 
-  /// getEnvironmentTypeName - Get the canonical name for the \p Kind
-  /// environment.
+  /// Get the canonical name for the \p Kind environment.
   static StringRef getEnvironmentTypeName(EnvironmentType Kind);
 
   /// @}
   /// @name Static helpers for converting alternate architecture names.
   /// @{
 
-  /// getArchTypeForLLVMName - The canonical type for the given LLVM
-  /// architecture name (e.g., "x86").
+  /// The canonical type for the given LLVM architecture name (e.g., "x86").
   static ArchType getArchTypeForLLVMName(StringRef Str);
 
   /// @}

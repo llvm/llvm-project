@@ -26,10 +26,10 @@ define i32 @inner(i8* %y) {
   ret i32 %a1
 }
 
-; TODO: The load should be considered ephemeral here, even though it is not
-; speculatable.
+; Only the ret should be included in the instruction count, the load and icmp
+; are both ephemeral.
 ; CHECK: Analyzing call of inner2...
-; CHECK: NumInstructions: 2
+; CHECK: NumInstructions: 1
 define void @inner2(i8* %y) {
   %v = load i8, i8* %y
   %c = icmp eq i8 %v, 42

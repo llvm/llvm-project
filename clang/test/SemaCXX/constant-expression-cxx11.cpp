@@ -2065,11 +2065,11 @@ namespace ZeroSizeTypes {
   constexpr int (*p1)[0] = 0, (*p2)[0] = 0;
   constexpr int k = p2 - p1;
   // expected-error@-1 {{constexpr variable 'k' must be initialized by a constant expression}}
-  // expected-note@-2 {{subtraction of pointers to type 'int [0]' of zero size}}
+  // expected-note@-2 {{subtraction of pointers to type 'int[0]' of zero size}}
 
   int arr[5][0];
   constexpr int f() { // expected-error {{never produces a constant expression}}
-    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int [0]' of zero size}}
+    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int[0]' of zero size}}
   }
 }
 

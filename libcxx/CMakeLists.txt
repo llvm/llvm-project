@@ -14,8 +14,6 @@ cmake_minimum_required(VERSION 3.13.4)
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
   ${CMAKE_MODULE_PATH}
   )
 
