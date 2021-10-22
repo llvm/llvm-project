@@ -6145,6 +6145,50 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportDefaultConstructibleLambdas) {
             2u);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportFunctionDeclWithTypeSourceInfoWithSourceDecl) {
+  // This code results in a lambda with implicit constructor.
+  // The constructor's TypeSourceInfo points out the function prototype.
+  // This prototype has an EST_Unevaluated in its exception information and a
+  // SourceDecl that is the function declaration itself.
+  // The test verifies that AST import of such AST does not crash.
+  // (Here the function's TypeSourceInfo references the function itself.)
+  Decl *FromTU = getTuDecl(
+      R"(
+        template<typename T> void f(T) { auto X = [](){}; }
+        void g() { f(10); }
+        )",
+      Lang_CXX11, "input0.cc");
+
+  // Use LastDeclMatcher to find the LambdaExpr in the template specialization.
+  CXXRecordDecl *FromL = LastDeclMatcher<LambdaExpr>()
+                             .match(FromTU, lambdaExpr())
+                             ->getLambdaClass();
+
+  CXXConstructorDecl *FromCtor = *FromL->ctor_begin();
+  ASSERT_TRUE(FromCtor->isCopyConstructor());
+  ASSERT_TRUE(FromCtor->getTypeSourceInfo());
+  const auto *FromFPT = FromCtor->getType()->getAs<FunctionProtoType>();
+  ASSERT_TRUE(FromFPT);
+  EXPECT_EQ(FromCtor->getTypeSourceInfo()->getType().getTypePtr(), FromFPT);
+  FunctionProtoType::ExtProtoInfo FromEPI = FromFPT->getExtProtoInfo();
+  // If type is EST_Unevaluated, SourceDecl should be set to the parent Decl.
+  EXPECT_EQ(FromEPI.ExceptionSpec.Type, EST_Unevaluated);
+  EXPECT_EQ(FromEPI.ExceptionSpec.SourceDecl, FromCtor);
+
+  auto ToL = Import(FromL, Lang_CXX11);
+
+  // Check if the import was correct.
+  CXXConstructorDecl *ToCtor = *ToL->ctor_begin();
+  EXPECT_TRUE(ToCtor->getTypeSourceInfo());
+  const auto *ToFPT = ToCtor->getType()->getAs<FunctionProtoType>();
+  ASSERT_TRUE(ToFPT);
+  EXPECT_EQ(ToCtor->getTypeSourceInfo()->getType().getTypePtr(), ToFPT);
+  FunctionProtoType::ExtProtoInfo ToEPI = ToFPT->getExtProtoInfo();
+  EXPECT_EQ(ToEPI.ExceptionSpec.Type, EST_Unevaluated);
+  EXPECT_EQ(ToEPI.ExceptionSpec.SourceDecl, ToCtor);
+}
+
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportAutoFunctions, ReturnWithTypedefDeclaredInside) {
