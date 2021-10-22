@@ -1435,8 +1435,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
 
     auto *LHS = ICmp->getOperand(0);
     auto *RHS = ICmp->getOperand(1);
-    // Avoid computing SCEVs in the loop to avoid poisoning cache with
-    // sub-optimal results.
+    // For the range reasoning, avoid computing SCEVs in the loop to avoid
+    // poisoning cache with sub-optimal results.  For the must-execute case,
+    // this is a neccessary precondition for correctness.
     if (!L->isLoopInvariant(RHS))
       continue;
 
@@ -1450,13 +1451,36 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
     FullCR = FullCR.zeroExtend(OuterBitWidth);
-    if (!FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS))))
+    if (FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS)))) {
+      // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
+      // replace the signed condition with the unsigned version.
+      ICmp->setPredicate(ICmp->getUnsignedPredicate());
+      Changed = true;
+      // Note: No SCEV invalidation needed.  We've changed the predicate, but
+      // have not changed exit counts, or the values produced by the compare.
       continue;
+    }
 
-    // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
-    // replace the signed condition with the unsigned version.
-    ICmp->setPredicate(ICmp->getUnsignedPredicate());
-    Changed = true;
+    // If we have a loop which would be undefined if infinite, and it has at
+    // most one possible dynamic exit, then we can conclude that exit must
+    // be taken.  If that exit must be taken, and we know the LHS can only
+    // take values in the positive domain, then we can conclude RHS must
+    // also be in that same range, and replace a signed compare with an
+    // unsigned one.
+    // If the exit might not be taken in a well defined program.
+    if (ExitingBlocks.size() == 1 && SE->loopHasNoAbnormalExits(L) &&
+        SE->loopIsFiniteByAssumption(L)) {
+      // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
+      // replace the signed condition with the unsigned version.
+      ICmp->setPredicate(ICmp->getUnsignedPredicate());
+      Changed = true;
+
+      // Given we've changed exit counts, notify SCEV.  
+      // Some nested loops may share same folded exit basic block,
+      // thus we need to notify top most loop.
+      SE->forgetTopmostLoop(L);
+      continue;
+    }
   }
   return Changed;
 }
@@ -1842,10 +1866,9 @@ bool IndVarSimplify::run(Loop *L) {
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
 
-  if (canonicalizeExitCondition(L))
-    // We've changed the predicate, but have not changed exit counts, or the
-    // values which can flow through any SCEV.  i.e, no invalidation needed.
-    Changed = true;
+  // Try to convert exit conditions to unsigned
+  // Note: Handles invalidation internally if needed.
+  Changed |= canonicalizeExitCondition(L);
 
   // Try to eliminate loop exits based on analyzeable exit counts
   if (optimizeLoopExits(L, Rewriter))  {
