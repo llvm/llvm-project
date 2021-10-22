@@ -35,13 +35,13 @@ __parallel_invoke(_ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
 {
     if (omp_in_parallel())
     {
-        __parallel_invoke_body(std::forward<_F1>(__f1), std::forward<_F2>(__f2));
+        __pstl::__omp_backend::__parallel_invoke_body(std::forward<_F1>(__f1), std::forward<_F2>(__f2));
     }
     else
     {
         _PSTL_PRAGMA(omp parallel)
         _PSTL_PRAGMA(omp single nowait)
-        __parallel_invoke_body(std::forward<_F1>(__f1), std::forward<_F2>(__f2));
+        __pstl::__omp_backend::__parallel_invoke_body(std::forward<_F1>(__f1), std::forward<_F2>(__f2));
     }
 }
 
