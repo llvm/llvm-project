@@ -1295,11 +1295,6 @@ void DisassemblerLLVMC::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString DisassemblerLLVMC::GetPluginNameStatic() {
-  static ConstString g_name("llvm-mc");
-  return g_name;
-}
-
 int DisassemblerLLVMC::OpInfoCallback(void *disassembler, uint64_t pc,
                                       uint64_t offset, uint64_t size,
                                       int tag_type, void *tag_bug) {

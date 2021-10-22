@@ -1302,8 +1302,3 @@ void ABISysV_x86_64::Initialize() {
 void ABISysV_x86_64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_x86_64::GetPluginNameStatic() {
-  static ConstString g_name("sysv-x86_64");
-  return g_name;
-}

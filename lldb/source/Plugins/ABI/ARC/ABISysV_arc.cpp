@@ -599,8 +599,3 @@ void ABISysV_arc::Initialize() {
 void ABISysV_arc::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-ConstString ABISysV_arc::GetPluginNameStatic() {
-  static ConstString g_name("sysv-arc");
-  return g_name;
-}
