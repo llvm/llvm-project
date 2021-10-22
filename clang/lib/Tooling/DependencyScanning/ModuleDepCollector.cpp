@@ -281,7 +281,8 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
           optimizeHeaderSearchOpts(CI.getHeaderSearchOpts(),
                                    *MDC.Instance.getASTReader(), *MF);
       });
-  MD.ID.ContextHash = MD.Invocation.getModuleHash(Instance.getDiagnostics());
+  MD.ID.ContextHash =
+      MD.Invocation.getModuleHash(MDC.Instance.getDiagnostics());
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
