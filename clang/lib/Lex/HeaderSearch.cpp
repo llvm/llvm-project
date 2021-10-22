@@ -1037,7 +1037,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
   // resolve "foo.h" any other way, change the include to <Foo/foo.h>, where
   // "Foo" is the name of the framework in which the including header was found.
   if (!Includers.empty() && Includers.front().first && !isAngled &&
-      Filename.find('/') == StringRef::npos) {
+      !Filename.contains('/')) {
     HeaderFileInfo &IncludingHFI = getFileInfo(Includers.front().first);
     if (IncludingHFI.IndexHeaderMapHeader) {
       SmallString<128> ScratchFilename;
