@@ -5,6 +5,7 @@ add_flang_library(FIRBuilder
   Character.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
+  MutableBox.cpp
 
   DEPENDS
   FIRDialect

@@ -15,7 +15,8 @@
 struct FIRBuilderTest : public testing::Test {
 public:
   void SetUp() override {
-    fir::KindMapping kindMap(&context);
+    llvm::ArrayRef<fir::KindTy> defs;
+    fir::KindMapping kindMap(&context, defs);
     mlir::OpBuilder builder(&context);
     auto loc = builder.getUnknownLoc();
 
@@ -334,4 +335,81 @@ TEST_F(FIRBuilderTest, allocateLocal) {
   EXPECT_FALSE(allocaOp.pinned());
   EXPECT_EQ(0u, allocaOp.typeparams().size());
   EXPECT_EQ(0u, allocaOp.shape().size());
+}
+
+static void checkShapeOp(mlir::Value shape, mlir::Value c10, mlir::Value c100) {
+  EXPECT_TRUE(mlir::isa<fir::ShapeOp>(shape.getDefiningOp()));
+  fir::ShapeOp op = dyn_cast<fir::ShapeOp>(shape.getDefiningOp());
+  auto shapeTy = op.getType().dyn_cast<fir::ShapeType>();
+  EXPECT_EQ(2u, shapeTy.getRank());
+  EXPECT_EQ(2u, op.getExtents().size());
+  EXPECT_EQ(c10, op.getExtents()[0]);
+  EXPECT_EQ(c100, op.getExtents()[1]);
+}
+
+TEST_F(FIRBuilderTest, genShapeWithExtents) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+  auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
+  auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
+  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  auto shape = builder.genShape(loc, extents);
+  checkShapeOp(shape, c10, c100);
+}
+
+TEST_F(FIRBuilderTest, genShapeWithExtentsAndShapeShift) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+  auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
+  auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
+  auto c1 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
+  llvm::SmallVector<mlir::Value> shifts = {c1, c1};
+  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  auto shape = builder.genShape(loc, shifts, extents);
+  EXPECT_TRUE(mlir::isa<fir::ShapeShiftOp>(shape.getDefiningOp()));
+  fir::ShapeShiftOp op = dyn_cast<fir::ShapeShiftOp>(shape.getDefiningOp());
+  auto shapeTy = op.getType().dyn_cast<fir::ShapeShiftType>();
+  EXPECT_EQ(2u, shapeTy.getRank());
+  EXPECT_EQ(2u, op.getExtents().size());
+  EXPECT_EQ(2u, op.getOrigins().size());
+}
+
+TEST_F(FIRBuilderTest, genShapeWithAbstractArrayBox) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+  auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
+  auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
+  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  fir::AbstractArrayBox aab(extents, {});
+  EXPECT_TRUE(aab.lboundsAllOne());
+  auto shape = builder.genShape(loc, aab);
+  checkShapeOp(shape, c10, c100);
+}
+
+TEST_F(FIRBuilderTest, readCharLen) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+  llvm::StringRef strValue("length");
+  auto strLit = fir::factory::createStringLiteral(builder, loc, strValue);
+  auto len = fir::factory::readCharLen(builder, loc, strLit);
+  EXPECT_EQ(strLit.getCharBox()->getLen(), len);
+}
+
+TEST_F(FIRBuilderTest, getExtents) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+  llvm::StringRef strValue("length");
+  auto strLit = fir::factory::createStringLiteral(builder, loc, strValue);
+  auto ext = fir::factory::getExtents(builder, loc, strLit);
+  EXPECT_EQ(0u, ext.size());
+  auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
+  auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
+  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  fir::SequenceType::Shape shape(2, fir::SequenceType::getUnknownExtent());
+  auto arrayTy = fir::SequenceType::get(shape, builder.getI64Type());
+  mlir::Value array = builder.create<fir::UndefOp>(loc, arrayTy);
+  fir::ArrayBoxValue aab(array, extents, {});
+  fir::ExtendedValue ex(aab);
+  auto readExtents = fir::factory::getExtents(builder, loc, ex);
+  EXPECT_EQ(2u, readExtents.size());
 }

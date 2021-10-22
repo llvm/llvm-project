@@ -23,7 +23,9 @@
 #include "mlir/IR/BuiltinOps.h"
 
 namespace fir {
+class AbstractArrayBox;
 class ExtendedValue;
+class BoxValue;
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
@@ -241,6 +243,16 @@ public:
     return createFunction(loc, module, name, ty);
   }
 
+  /// Construct one of the two forms of shape op from an array box.
+  mlir::Value genShape(mlir::Location loc, const fir::AbstractArrayBox &arr);
+  mlir::Value genShape(mlir::Location loc, llvm::ArrayRef<mlir::Value> shift,
+                       llvm::ArrayRef<mlir::Value> exts);
+  mlir::Value genShape(mlir::Location loc, llvm::ArrayRef<mlir::Value> exts);
+
+  /// Create one of the shape ops given an extended value. For a boxed value,
+  /// this may create a `fir.shift` op.
+  mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);
+
   /// Create constant i1 with value 1. if \p b is true or 0. otherwise
   mlir::Value createBool(mlir::Location loc, bool b) {
     return createIntegerConstant(loc, getIntegerType(1), b ? 1 : 0);
@@ -321,6 +333,28 @@ private:
 } // namespace fir
 
 namespace fir::factory {
+
+//===----------------------------------------------------------------------===//
+// ExtendedValue inquiry helpers
+//===----------------------------------------------------------------------===//
+
+/// Read or get character length from \p box that must contain a character
+/// entity. If the length value is contained in the ExtendedValue, this will
+/// not generate any code, otherwise this will generate a read of the fir.box
+/// describing the entity.
+mlir::Value readCharLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                        const fir::ExtendedValue &box);
+
+/// Read extents from \p box.
+llvm::SmallVector<mlir::Value> readExtents(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::BoxValue &box);
+
+/// Get extents from \p box. For fir::BoxValue and
+/// fir::MutableBoxValue, this will generate code to read the extents.
+llvm::SmallVector<mlir::Value> getExtents(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          const fir::ExtendedValue &box);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers

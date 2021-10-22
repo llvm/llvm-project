@@ -26,8 +26,8 @@
 #include "llvm/ADT/Optional.h"
 
 namespace Fortran::lower {
-
 class AbstractConverter;
+class BoxValue;
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
