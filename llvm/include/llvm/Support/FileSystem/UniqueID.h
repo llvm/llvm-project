@@ -64,7 +64,7 @@ template <> struct DenseMapInfo<llvm::sys::fs::UniqueID> {
     return {TombstoneKey.first, TombstoneKey.second};
   }
 
-  static unsigned getHashValue(const llvm::sys::fs::UniqueID &Tag) {
+  static hash_code getHashValue(const llvm::sys::fs::UniqueID &Tag) {
     return hash_value(std::make_pair(Tag.getDevice(), Tag.getFile()));
   }
 
