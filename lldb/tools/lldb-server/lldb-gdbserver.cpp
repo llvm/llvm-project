@@ -17,7 +17,6 @@
 #include <unistd.h>
 #endif
 
-#include "Acceptor.h"
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
@@ -164,15 +163,14 @@ void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
   }
 }
 
-Status writeSocketIdToPipe(Pipe &port_pipe, const std::string &socket_id) {
+Status writeSocketIdToPipe(Pipe &port_pipe, llvm::StringRef socket_id) {
   size_t bytes_written = 0;
   // Write the port number as a C string with the NULL terminator.
-  return port_pipe.Write(socket_id.c_str(), socket_id.size() + 1,
-                         bytes_written);
+  return port_pipe.Write(socket_id.data(), socket_id.size() + 1, bytes_written);
 }
 
 Status writeSocketIdToPipe(const char *const named_pipe_path,
-                           const std::string &socket_id) {
+                           llvm::StringRef socket_id) {
   Pipe port_name_pipe;
   // Wait for 10 seconds for pipe to be opened.
   auto error = port_name_pipe.OpenAsWriterWithTimeout(named_pipe_path, false,
@@ -183,7 +181,7 @@ Status writeSocketIdToPipe(const char *const named_pipe_path,
 }
 
 Status writeSocketIdToPipe(lldb::pipe_t unnamed_pipe,
-                           const std::string &socket_id) {
+                           llvm::StringRef socket_id) {
   Pipe port_pipe{LLDB_INVALID_PIPE, unnamed_pipe};
   return writeSocketIdToPipe(port_pipe, socket_id);
 }
@@ -197,120 +195,69 @@ void ConnectToRemote(MainLoop &mainloop,
   Status error;
 
   std::unique_ptr<Connection> connection_up;
+  std::string url;
+
   if (connection_fd != -1) {
-    // Build the connection string.
-    std::string connection_url = llvm::formatv("fd://{0}", connection_fd).str();
+    url = llvm::formatv("fd://{0}", connection_fd).str();
 
     // Create the connection.
 #if LLDB_ENABLE_POSIX && !defined _WIN32
     ::fcntl(connection_fd, F_SETFD, FD_CLOEXEC);
 #endif
-    connection_up.reset(new ConnectionFileDescriptor);
-    auto connection_result = connection_up->Connect(connection_url, &error);
+  } else if (!host_and_port.empty()) {
+    llvm::Expected<std::string> url_exp =
+        LLGSArgToURL(host_and_port, reverse_connect);
+    if (!url_exp) {
+      llvm::errs() << llvm::formatv("error: invalid host:port or URL '{0}': "
+                                    "{1}\n",
+                                    host_and_port,
+                                    llvm::toString(url_exp.takeError()));
+      exit(-1);
+    }
+
+    url = std::move(url_exp.get());
+  }
+
+  if (!url.empty()) {
+    // Create the connection or server.
+    std::unique_ptr<ConnectionFileDescriptor> conn_fd_up{
+        new ConnectionFileDescriptor};
+    auto connection_result = conn_fd_up->Connect(
+        url,
+        [named_pipe_path, unnamed_pipe](llvm::StringRef socket_id) {
+          // If we have a named pipe to write the socket id back to, do that
+          // now.
+          if (named_pipe_path && named_pipe_path[0]) {
+            Status error = writeSocketIdToPipe(named_pipe_path, socket_id);
+            if (error.Fail())
+              llvm::errs() << llvm::formatv(
+                  "failed to write to the named peipe '{0}': {1}\n",
+                  named_pipe_path, error.AsCString());
+          }
+          // If we have an unnamed pipe to write the socket id back to, do
+          // that now.
+          else if (unnamed_pipe != LLDB_INVALID_PIPE) {
+            Status error = writeSocketIdToPipe(unnamed_pipe, socket_id);
+            if (error.Fail())
+              llvm::errs() << llvm::formatv(
+                  "failed to write to the unnamed pipe: {0}\n", error);
+          }
+        },
+        &error);
+
     if (error.Fail()) {
       llvm::errs() << llvm::formatv(
-          "error: failed to connect to client at '{0}': {1}\n", connection_url,
-          error);
+          "error: failed to connect to client at '{0}': {1}\n", url, error);
       exit(-1);
     }
     if (connection_result != eConnectionStatusSuccess) {
       llvm::errs() << llvm::formatv(
           "error: failed to connect to client at '{0}' "
           "(connection status: {1})\n",
-          connection_url, static_cast<int>(connection_result));
+          url, static_cast<int>(connection_result));
       exit(-1);
     }
-  } else if (!host_and_port.empty()) {
-    // Parse out host and port.
-    std::string final_host_and_port;
-
-    // If host_and_port starts with ':', default the host to be "localhost" and
-    // expect the remainder to be the port.
-    if (host_and_port[0] == ':')
-      final_host_and_port.append("localhost");
-    final_host_and_port.append(host_and_port.str());
-
-    if (reverse_connect) {
-      // llgs will connect to the gdb-remote client.
-
-      // Ensure we have a port number for the connection.
-      // Note: use rfind, because the host/port may look like "[::1]:12345".
-      uint32_t connection_portno = 0;
-      const std::string::size_type colon_pos = final_host_and_port.rfind(':');
-      if (colon_pos != std::string::npos)
-        llvm::to_integer(final_host_and_port.substr(colon_pos + 1),
-                         connection_portno);
-      if (connection_portno == 0) {
-        llvm::errs() << "error: port number must be specified on when using "
-                        "reverse connect\n";
-        exit(1);
-      }
-
-      // Build the connection string.
-      final_host_and_port.insert(0, "connect://");
-
-      // Create the connection.
-      connection_up.reset(new ConnectionFileDescriptor);
-      auto connection_result =
-          connection_up->Connect(final_host_and_port, &error);
-      if (error.Fail()) {
-        llvm::errs() << llvm::formatv(
-            "error: failed to connect to client at '{0}': {1}\n",
-            final_host_and_port, error);
-        exit(-1);
-      }
-      if (connection_result != eConnectionStatusSuccess) {
-        llvm::errs() << llvm::formatv(
-            "error: failed to connect to client at '{0}' "
-            "(connection status: {1})\n",
-            final_host_and_port, static_cast<int>(connection_result));
-        exit(-1);
-      }
-    } else {
-      std::unique_ptr<Acceptor> acceptor_up(
-          Acceptor::Create(final_host_and_port, false, error));
-      if (error.Fail()) {
-        llvm::errs() << llvm::formatv("failed to create acceptor: {0}\n",
-                                      error);
-        exit(1);
-      }
-      error = acceptor_up->Listen(1);
-      if (error.Fail()) {
-        llvm::errs() << llvm::formatv("failed to listen: {0}\n", error);
-        exit(1);
-      }
-      const std::string socket_id = acceptor_up->GetLocalSocketId();
-      if (!socket_id.empty()) {
-        // If we have a named pipe to write the socket id back to, do that now.
-        if (named_pipe_path && named_pipe_path[0]) {
-          error = writeSocketIdToPipe(named_pipe_path, socket_id);
-          if (error.Fail())
-            llvm::errs() << llvm::formatv(
-                "failed to write to the named peipe '{0}': {1}\n",
-                named_pipe_path, error.AsCString());
-        }
-        // If we have an unnamed pipe to write the socket id back to, do that
-        // now.
-        else if (unnamed_pipe != LLDB_INVALID_PIPE) {
-          error = writeSocketIdToPipe(unnamed_pipe, socket_id);
-          if (error.Fail())
-            llvm::errs() << llvm::formatv(
-                "failed to write to the unnamed pipe: {0}\n", error);
-        }
-      } else {
-        llvm::errs()
-            << "unable to get the socket id for the listening connection\n";
-      }
-
-      Connection *conn = nullptr;
-      error = acceptor_up->Accept(false, conn);
-      if (error.Fail()) {
-        llvm::errs() << llvm::formatv("failed to accept new connection: {0}\n",
-                                      error);
-        exit(1);
-      }
-      connection_up.reset(conn);
-    }
+    connection_up = std::move(conn_fd_up);
   }
   error = gdb_server.InitializeConnection(std::move(connection_up));
   if (error.Fail()) {
