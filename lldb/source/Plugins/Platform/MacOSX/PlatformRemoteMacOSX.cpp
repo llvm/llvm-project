@@ -161,7 +161,7 @@ lldb_private::Status PlatformRemoteMacOSX::GetFileWithUUID(
   if (m_remote_platform_sp) {
     std::string local_os_build;
 #if !defined(__linux__)
-    HostInfo::GetOSBuildString(local_os_build);
+    local_os_build = HostInfo::GetOSBuildString().getValueOr("");
 #endif
     std::string remote_os_build;
     m_remote_platform_sp->GetOSBuildString(remote_os_build);
