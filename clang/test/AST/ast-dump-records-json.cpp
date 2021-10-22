@@ -1338,7 +1338,7 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "int [10]"
+// CHECK-NEXT:     "qualType": "int[10]"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -1364,7 +1364,7 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "c",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "int []"
+// CHECK-NEXT:     "qualType": "int[]"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]

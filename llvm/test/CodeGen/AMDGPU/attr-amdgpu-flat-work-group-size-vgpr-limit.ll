@@ -560,6 +560,7 @@ attributes #256 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
 ; GFX11CU-WAVE32: NumVgprs: 192
 ; GFX11CU-WAVE64: NumVgprs: 192
 define amdgpu_kernel void @f512() #512 {
+  call void @foo()
   call void @use256vgprs()
   ret void
 }
@@ -579,7 +580,11 @@ attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 ; GFX11CU-WAVE32: NumVgprs: 96
 ; GFX11CU-WAVE64: NumVgprs: 96
 define amdgpu_kernel void @f1024() #1024 {
+  call void @foo()
   call void @use256vgprs()
   ret void
 }
+
 attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }
+
+declare void @foo()

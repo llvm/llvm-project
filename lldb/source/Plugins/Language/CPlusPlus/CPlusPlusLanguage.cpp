@@ -1006,7 +1006,7 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::Char8StringSummaryProvider,
                 "char8_t [] summary provider",
-                ConstString("char8_t \\[[0-9]+\\]"), string_array_flags, true);
+                ConstString("char8_t ?\\[[0-9]+\\]"), string_array_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16StringSummaryProvider,
@@ -1014,7 +1014,7 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::Char16StringSummaryProvider,
                 "char16_t [] summary provider",
-                ConstString("char16_t \\[[0-9]+\\]"), string_array_flags, true);
+                ConstString("char16_t ?\\[[0-9]+\\]"), string_array_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char32StringSummaryProvider,
@@ -1022,7 +1022,7 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::Char32StringSummaryProvider,
                 "char32_t [] summary provider",
-                ConstString("char32_t \\[[0-9]+\\]"), string_array_flags, true);
+                ConstString("char32_t ?\\[[0-9]+\\]"), string_array_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::WCharStringSummaryProvider,
@@ -1030,7 +1030,7 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::WCharStringSummaryProvider,
                 "wchar_t * summary provider",
-                ConstString("wchar_t \\[[0-9]+\\]"), string_array_flags, true);
+                ConstString("wchar_t ?\\[[0-9]+\\]"), string_array_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char16StringSummaryProvider,

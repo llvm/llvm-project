@@ -1049,7 +1049,7 @@ TEST_P(ASTMatchersTest, StmtExpr) {
 TEST_P(ASTMatchersTest, PredefinedExpr) {
   // __func__ expands as StringLiteral("foo")
   EXPECT_TRUE(matches("void foo() { __func__; }",
-                      predefinedExpr(hasType(asString("const char [4]")),
+                      predefinedExpr(hasType(asString("const char[4]")),
                                      has(stringLiteral()))));
 }
 
@@ -1367,7 +1367,7 @@ TEST_P(ASTMatchersTest, ExprWithCleanups_MatchesExprWithCleanups) {
 
 TEST_P(ASTMatchersTest, InitListExpr) {
   EXPECT_TRUE(matches("int a[] = { 1, 2 };",
-                      initListExpr(hasType(asString("int [2]")))));
+                      initListExpr(hasType(asString("int[2]")))));
   EXPECT_TRUE(matches("struct B { int x, y; }; struct B b = { 5, 6 };",
                       initListExpr(hasType(recordDecl(hasName("B"))))));
   EXPECT_TRUE(

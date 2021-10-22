@@ -29,7 +29,7 @@ typedef int int_fn();
 typedef _Atomic int_fn atomic_int_fn; // expected-error {{_Atomic cannot be applied to function type 'int_fn' (aka 'int ()')}} \
                                       // ext-warning {{'_Atomic' is a C11 extension}}
 typedef _Atomic int atomic_int_array[3]; // ext-warning {{'_Atomic' is a C11 extension}}
-typedef _Atomic atomic_int_array atomic_int_atomic_array; // expected-error {{_Atomic cannot be applied to array type 'atomic_int_array' (aka '_Atomic(int) [3]')}} \
+typedef _Atomic atomic_int_array atomic_int_atomic_array; // expected-error {{_Atomic cannot be applied to array type 'atomic_int_array' (aka '_Atomic(int)[3]')}} \
                                                           // ext-warning {{'_Atomic' is a C11 extension}}
 
 _Atomic struct S { int n; }; // expected-warning {{'_Atomic' ignored on this declaration}} \

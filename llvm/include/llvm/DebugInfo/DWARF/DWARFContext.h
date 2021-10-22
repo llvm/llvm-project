@@ -375,6 +375,23 @@ public:
   static bool isAddressSizeSupported(unsigned AddressSize) {
     return llvm::is_contained(getSupportedAddressSizes(), AddressSize);
   }
+  template <typename... Ts>
+  static Error checkAddressSizeSupported(unsigned AddressSize,
+                                         std::error_code EC, char const *Fmt,
+                                         const Ts &...Vals) {
+    if (isAddressSizeSupported(AddressSize))
+      return Error::success();
+    std::string Buffer;
+    raw_string_ostream Stream(Buffer);
+    Stream << format(Fmt, Vals...)
+           << " has unsupported address size: " << AddressSize
+           << " (supported are ";
+    ListSeparator LS;
+    for (unsigned Size : DWARFContext::getSupportedAddressSizes())
+      Stream << LS << Size;
+    Stream << ')';
+    return make_error<StringError>(Stream.str(), EC);
+  }
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);
 

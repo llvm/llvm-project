@@ -80,7 +80,7 @@ int check_non_pod_block1[__is_pod(int (^ __unsafe_unretained)(int))? 1 : -1];
 
 struct FlexibleArrayMember0 {
   int length;
-  id array[]; // expected-error{{flexible array member 'array' of type '__strong id []' with non-trivial destruction}}
+  id array[]; // expected-error{{flexible array member 'array' of type '__strong id[]' with non-trivial destruction}}
 };
 
 struct FlexibleArrayMember1 {

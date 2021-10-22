@@ -455,7 +455,7 @@ void ASTPropsEmitter::emitPropertiedReaderWriterBody(HasProperties node,
   // Emit code to read all the properties.
   visitAllProperties(node, nodeInfo, [&](Property prop) {
     // Verify that the creation code refers to this property.
-    if (info.IsReader && creationCode.find(prop.getName()) == StringRef::npos)
+    if (info.IsReader && !creationCode.contains(prop.getName()))
       PrintFatalError(nodeInfo.Creator.getLoc(),
                       "creation code for " + node.getName()
                         + " doesn't refer to property \""

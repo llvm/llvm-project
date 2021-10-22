@@ -442,6 +442,7 @@ static bool hasKnownBufferizationAliasingBehavior(Operation *op) {
           ConstantOp,
           tensor::DimOp,
           ExtractSliceOp,
+          scf::IfOp,
           scf::ForOp,
           InsertSliceOp,
           InitTensorOp,
@@ -550,6 +551,16 @@ static OpResult getInplaceableOpResult(OpOperand &opOperand) {
   // clang-format on
 }
 
+/// Either one of the corresponding yield values from the then/else branches
+/// may alias with the result.
+static void populateAliasingOpOperands(scf::IfOp op, OpResult result,
+                                       SmallVector<OpOperand *> &operands) {
+  size_t resultNum = std::distance(op->getOpResults().begin(),
+                                   llvm::find(op->getOpResults(), result));
+  operands.push_back(&op.thenYield()->getOpOperand(resultNum));
+  operands.push_back(&op.elseYield()->getOpOperand(resultNum));
+}
+
 /// Determine which OpOperand* will alias with `result` if the op is bufferized
 /// in place. Note that multiple OpOperands can may potentially alias with an
 /// OpResult. E.g.: std.select in the future.
@@ -561,6 +572,7 @@ static SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) {
   TypeSwitch<Operation *>(result.getDefiningOp())
       .Case([&](tensor::CastOp op) { r.push_back(&op->getOpOperand(0)); })
       .Case([&](ExtractSliceOp op) { r.push_back(&op->getOpOperand(0)); })
+      .Case([&](scf::IfOp op) { populateAliasingOpOperands(op, result, r); })
       // In the case of scf::ForOp, this currently assumes the iter_args / yield
       // are 1-1. This may fail and is verified at the end.
       // TODO: update this.
@@ -730,6 +742,19 @@ BufferizationAliasInfo::BufferizationAliasInfo(Operation *rootOp) {
           if (bbArg.getType().isa<TensorType>())
             createAliasInfoEntry(bbArg);
   });
+
+  // The return value of an scf::IfOp aliases with both yield values.
+  rootOp->walk([&](scf::IfOp ifOp) {
+    if (ifOp->getNumResults() > 0) {
+      for (auto it : llvm::zip(ifOp.thenYield().results(),
+                               ifOp.elseYield().results(), ifOp.results())) {
+        aliasInfo.unionSets(std::get<0>(it), std::get<1>(it));
+        aliasInfo.unionSets(std::get<0>(it), std::get<2>(it));
+        equivalentInfo.unionSets(std::get<0>(it), std::get<1>(it));
+        equivalentInfo.unionSets(std::get<0>(it), std::get<2>(it));
+      }
+    }
+  });
 }
 
 /// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
@@ -834,13 +859,28 @@ void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
 }
 
 /// Starting from `value`, follow the use-def chain in reverse, always selecting
-/// the corresponding aliasing OpOperand. Try to find and return a Value for
-/// which `condition` evaluates to true.
+/// the aliasing OpOperands. Find and return Values for which `condition`
+/// evaluates to true. OpOperands of such matching Values are not traversed any
+/// further.
 ///
-/// When reaching the end of the chain (BlockArgument or Value without aliasing
-/// OpOperands), return the last Value of the chain.
+/// When reaching the end of a chain (BlockArgument or Value without aliasing
+/// OpOperands), also return the last Value of that chain.
 ///
-/// Note: The returned SetVector contains exactly one element.
+/// Example:
+///
+///                               8
+///                               |
+///   6*         7*         +-----+----+
+///   |          |          |          |
+///   2*         3          4*         5
+///   |          |          |          |
+///   +----------+----------+----------+
+///              |
+///              1
+///
+/// In the above example, Values with a star satisfy the condition. When
+/// starting the traversal from Value 1, the resulting SetVector is:
+/// { 2, 7, 8, 5 }
 static llvm::SetVector<Value>
 findValueInReverseUseDefChain(Value value,
                               std::function<bool(Value)> condition) {
@@ -861,18 +901,22 @@ findValueInReverseUseDefChain(Value value,
       continue;
     }
 
-    assert(opOperands.size() == 1 && "multiple OpOperands not supported yet");
-    workingSet.insert(opOperands.front()->get());
+    for (OpOperand *o : opOperands)
+      workingSet.insert(o->get());
   }
 
   return result;
 }
 
-/// Find the Value (result) of the last preceding write of a given Value.
+/// Find the Value of the last preceding write of a given Value.
 ///
 /// Note: Unknown ops are handled conservatively and assumed to be writes.
 /// Furthermore, BlockArguments are also assumed to be writes. There is no
 /// analysis across block boundaries.
+///
+/// Note: To simplify the analysis, scf.if ops are considered writes. Treating
+/// a non-writing op as a writing op may introduce unnecessary out-of-place
+/// bufferizations, but is always safe from a correctness point of view.
 static Value findLastPrecedingWrite(Value value) {
   SetVector<Value> result =
       findValueInReverseUseDefChain(value, [](Value value) {
@@ -880,6 +924,8 @@ static Value findLastPrecedingWrite(Value value) {
         if (!op)
           return true;
         if (!hasKnownBufferizationAliasingBehavior(op))
+          return true;
+        if (isa<scf::IfOp>(op))
           return true;
 
         SmallVector<OpOperand *> opOperands =
@@ -911,6 +957,21 @@ bool BufferizationAliasInfo::hasMatchingExtractSliceOp(
                       condition);
 }
 
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b,
+                          const DominanceInfo &domInfo) {
+  do {
+    // TODO: Instead of isProperAncestor + properlyDominates, we should use
+    // properlyDominatesImpl(a, b, /*enclosingOpOk=*/false)
+    if (a->isProperAncestor(b))
+      return false;
+    if (domInfo.properlyDominates(a, b))
+      return true;
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
 /// Given sets of uses and writes, return true if there is a RaW conflict under
 /// the assumption that all given reads/writes alias the same buffer and that
 /// all given writes bufferize inplace.
@@ -935,7 +996,6 @@ bool BufferizationAliasInfo::hasReadAfterWriteInterference(
     // In the above example, if uRead is the OpOperand of reading_op, lastWrite
     // is %0. Note that operations that create an alias but do not write (such
     // as ExtractSliceOp) are skipped.
-    // TODO: With branches this should probably be a list of Values.
     Value lastWrite = findLastPrecedingWrite(uRead->get());
 
     // Look for conflicting memory writes. Potential conflicts are writes to an
@@ -949,20 +1009,34 @@ bool BufferizationAliasInfo::hasReadAfterWriteInterference(
       LDBG("Found potential conflict:\n");
       LDBG("READ = #" << uRead->getOperandNumber() << " of "
                       << printOperationInfo(readingOp) << "\n");
-      LDBG("WRITE = #" << printValueInfo(lastWrite) << "\n");
       LDBG("CONFLICTING WRITE = #"
            << uConflictingWrite->getOperandNumber() << " of "
            << printOperationInfo(conflictingWritingOp) << "\n");
 
       // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
       // write is not visible when reading.
-      if (domInfo.properlyDominates(readingOp, conflictingWritingOp))
+      if (happensBefore(readingOp, conflictingWritingOp, domInfo))
         continue;
 
-      // No conflict if the conflicting write happens before the last write.
+      // No conflict if the reading use equals the use of the conflicting write.
+      // A use cannot conflict with itself. Note: Just being the same op is not
+      // enough. It has to be the same use.
+      if (uConflictingWrite == uRead)
+        continue;
+
+      if (scf::insideMutuallyExclusiveBranches(readingOp, conflictingWritingOp))
+        continue;
+
+      LDBG("WRITE = #" << printValueInfo(lastWrite) << "\n");
+
+      // No conflict if the conflicting write happens before the last
+      // write.
       if (Operation *writingOp = lastWrite.getDefiningOp()) {
-        if (domInfo.properlyDominates(conflictingWritingOp, writingOp))
+        if (happensBefore(conflictingWritingOp, writingOp, domInfo))
           // conflictingWritingOp happens before writingOp. No conflict.
+          continue;
+        // No conflict if conflictingWritingOp is contained in writingOp.
+        if (writingOp->isProperAncestor(conflictingWritingOp))
           continue;
       } else {
         auto bbArg = lastWrite.cast<BlockArgument>();
@@ -976,11 +1050,6 @@ bool BufferizationAliasInfo::hasReadAfterWriteInterference(
       // No conflict if the conflicting write and the last write are the same
       // use.
       if (getAliasingOpResult(*uConflictingWrite) == lastWrite)
-        continue;
-
-      // No conflict is the same use is the read and the conflicting write. A
-      // use cannot conflict with itself.
-      if (uConflictingWrite == uRead)
         continue;
 
       // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
@@ -1423,15 +1492,27 @@ static Value getResultBuffer(OpBuilder &b, OpResult result,
   OpBuilder::InsertionGuard guard(b);
   Operation *op = result.getOwner();
   SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
-  // TODO: Support multiple OpOperands.
-  assert(aliasingOperands.size() == 1 &&
-         "more than 1 OpOperand not supported yet");
+  assert(!aliasingOperands.empty() && "could not get aliasing OpOperand");
   Value operand = aliasingOperands.front()->get();
   Value operandBuffer = lookup(bvm, operand);
   assert(operandBuffer && "operand buffer not found");
+  // Make sure that all OpOperands are the same buffer. If this is not the case,
+  // we would have to materialize a memref value.
+  if (!llvm::all_of(aliasingOperands, [&](OpOperand *o) {
+        return lookup(bvm, o->get()) == operandBuffer;
+      })) {
+    op->emitError("result buffer is ambiguous");
+    return Value();
+  }
 
   // If bufferizing out-of-place, allocate a new buffer.
-  if (getInPlace(result) != InPlaceSpec::True) {
+  bool needCopy =
+      getInPlace(result) != InPlaceSpec::True && !isa<scf::IfOp>(op);
+  if (needCopy) {
+    // Ops such as scf::IfOp can currently not bufferize out-of-place.
+    assert(
+        aliasingOperands.size() == 1 &&
+        "ops with multiple aliasing OpOperands cannot bufferize out-of-place");
     Location loc = op->getLoc();
     // Allocate the result buffer.
     Value resultBuffer =
@@ -1771,6 +1852,31 @@ static LogicalResult bufferize(OpBuilder &b, scf::ForOp forOp,
   return success();
 }
 
+static LogicalResult bufferize(OpBuilder &b, scf::IfOp ifOp,
+                               BlockAndValueMapping &bvm,
+                               BufferizationAliasInfo &aliasInfo) {
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+
+  for (OpResult opResult : ifOp->getResults()) {
+    if (!opResult.getType().isa<TensorType>())
+      continue;
+    // TODO: Atm we bail on unranked TensorType because we don't know how to
+    // alloc an UnrankedMemRefType + its underlying ranked MemRefType.
+    assert(opResult.getType().isa<RankedTensorType>() &&
+           "unsupported unranked tensor");
+
+    Value resultBuffer = getResultBuffer(b, opResult, bvm, aliasInfo);
+    if (!resultBuffer)
+      return failure();
+
+    aliasInfo.createAliasInfoEntry(resultBuffer);
+    map(bvm, opResult, resultBuffer);
+  }
+
+  return success();
+}
+
 /// FuncOp always creates TensorToMemRef ops.
 static LogicalResult bufferize(OpBuilder &b, FuncOp funcOp,
                                BlockAndValueMapping &bvm,
@@ -2038,7 +2144,6 @@ static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
       getResultBuffer(b, insertSliceOp->getResult(0), bvm, aliasInfo);
   if (!dstMemref)
     return failure();
-
   auto dstMemrefType = dstMemref.getType().cast<MemRefType>();
 
   Value srcMemref = lookup(bvm, insertSliceOp.source());
@@ -2126,6 +2231,9 @@ static LogicalResult bufferize(OpBuilder &b, scf::YieldOp yieldOp,
           "expected result-less scf.execute_region containing op");
     return success();
   }
+
+  if (auto ifOp = dyn_cast<scf::IfOp>(yieldOp->getParentOp()))
+    return success();
 
   scf::ForOp forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
   if (!forOp)
@@ -2341,6 +2449,13 @@ LogicalResult mlir::linalg::bufferizeOp(
             InitTensorOp, InsertSliceOp, tensor::ExtractOp, LinalgOp, ReturnOp,
             TiledLoopOp, VectorTransferOpInterface, linalg::YieldOp,
             scf::YieldOp>([&](auto op) {
+        LDBG("Begin bufferize:\n" << op << '\n');
+        return bufferize(b, op, bvm, aliasInfo);
+      })
+      .Case<tensor::CastOp, tensor::DimOp, ExtractSliceOp, InitTensorOp,
+            InsertSliceOp, tensor::ExtractOp, LinalgOp, ReturnOp,
+            VectorTransferOpInterface, linalg::YieldOp, scf::YieldOp,
+            scf::IfOp>([&](auto op) {
         LDBG("Begin bufferize:\n" << op << '\n');
         return bufferize(b, op, bvm, aliasInfo);
       })
