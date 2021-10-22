@@ -80,5 +80,7 @@ HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx1033",  false, false, EF_AMDGPU_MACH_AMDGCN
 HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx1034",  false, false, EF_AMDGPU_MACH_AMDGCN_GFX1034, true, 65536,  32,  4,   40, 1024,  106, 800, 106,    8, 256, 256)
 HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx1035",  false, false, EF_AMDGPU_MACH_AMDGCN_GFX1035, true, 65536,  32,  4,   40, 1024,  106, 800, 106,    8, 256, 256)
 HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx1100",  false, false, EF_AMDGPU_MACH_AMDGCN_GFX1100, true, 65536,  32,  4,   40, 1024,  106, 800, 106,   24, 1536, 256)
+HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx1101",  false, false, EF_AMDGPU_MACH_AMDGCN_GFX1101, true, 65536,  32,  4,   40, 1024,  106, 800, 106,   24, 1536, 256)
+HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx1102",  false, false, EF_AMDGPU_MACH_AMDGCN_GFX1102, true, 65536,  32,  4,   40, 1024,  106, 800, 106,   16, 1024, 256)
 
 #undef HANDLE_ISA
