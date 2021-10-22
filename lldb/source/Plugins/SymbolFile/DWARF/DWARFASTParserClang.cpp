@@ -2342,8 +2342,11 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   return enumerators_added;
 }
 
-Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
-                                                      const DWARFDIE &die) {
+Function *
+DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
+                                            const DWARFDIE &die,
+                                            const AddressRange &func_range) {
+  assert(func_range.GetBaseAddress().IsValid());
   DWARFRangeList func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
@@ -2363,94 +2366,75 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
                                &frame_base)) {
+    Mangled func_name;
+    if (mangled)
+      func_name.SetValue(ConstString(mangled), true);
+    else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
+              die.GetParent().Tag() == DW_TAG_partial_unit) &&
+             Language::LanguageIsCPlusPlus(
+                 SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+             !Language::LanguageIsObjC(
+                 SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+             name && strcmp(name, "main") != 0) {
+      // If the mangled name is not present in the DWARF, generate the
+      // demangled name using the decl context. We skip if the function is
+      // "main" as its name is never mangled.
+      bool is_static = false;
+      bool is_variadic = false;
+      bool has_template_params = false;
+      unsigned type_quals = 0;
+      std::vector<CompilerType> param_types;
+      std::vector<clang::ParmVarDecl *> param_decls;
+      StreamString sstr;
 
-    // Union of all ranges in the function DIE (if the function is
-    // discontiguous)
-    AddressRange func_range;
-    lldb::addr_t lowest_func_addr = func_ranges.GetMinRangeBase(0);
-    lldb::addr_t highest_func_addr = func_ranges.GetMaxRangeEnd(0);
-    if (lowest_func_addr != LLDB_INVALID_ADDRESS &&
-        lowest_func_addr <= highest_func_addr) {
-      ModuleSP module_sp(die.GetModule());
-      func_range.GetBaseAddress().ResolveAddressUsingFileSections(
-          lowest_func_addr, module_sp->GetSectionList());
-      if (func_range.GetBaseAddress().IsValid())
-        func_range.SetByteSize(highest_func_addr - lowest_func_addr);
-    }
+      DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
+      sstr << decl_ctx.GetQualifiedName();
 
-    if (func_range.GetBaseAddress().IsValid()) {
-      Mangled func_name;
-      if (mangled)
-        func_name.SetValue(ConstString(mangled), true);
-      else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
-                die.GetParent().Tag() == DW_TAG_partial_unit) &&
-               Language::LanguageIsCPlusPlus(
-                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
-               !Language::LanguageIsObjC(
-                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
-               name && strcmp(name, "main") != 0) {
-        // If the mangled name is not present in the DWARF, generate the
-        // demangled name using the decl context. We skip if the function is
-        // "main" as its name is never mangled.
-        bool is_static = false;
-        bool is_variadic = false;
-        bool has_template_params = false;
-        unsigned type_quals = 0;
-        std::vector<CompilerType> param_types;
-        std::vector<clang::ParmVarDecl *> param_decls;
-        StreamString sstr;
+      clang::DeclContext *containing_decl_ctx =
+          GetClangDeclContextContainingDIE(die, nullptr);
+      ParseChildParameters(containing_decl_ctx, die, true, is_static,
+                           is_variadic, has_template_params, param_types,
+                           param_decls, type_quals);
+      sstr << "(";
+      for (size_t i = 0; i < param_types.size(); i++) {
+        if (i > 0)
+          sstr << ", ";
+        sstr << param_types[i].GetTypeName();
+      }
+      if (is_variadic)
+        sstr << ", ...";
+      sstr << ")";
+      if (type_quals & clang::Qualifiers::Const)
+        sstr << " const";
 
-        DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
-        sstr << decl_ctx.GetQualifiedName();
+      func_name.SetValue(ConstString(sstr.GetString()), false);
+    } else
+      func_name.SetValue(ConstString(name), false);
 
-        clang::DeclContext *containing_decl_ctx =
-            GetClangDeclContextContainingDIE(die, nullptr);
-        ParseChildParameters(containing_decl_ctx, die, true, is_static,
-                             is_variadic, has_template_params, param_types,
-                             param_decls, type_quals);
-        sstr << "(";
-        for (size_t i = 0; i < param_types.size(); i++) {
-          if (i > 0)
-            sstr << ", ";
-          sstr << param_types[i].GetTypeName();
-        }
-        if (is_variadic)
-          sstr << ", ...";
-        sstr << ")";
-        if (type_quals & clang::Qualifiers::Const)
-          sstr << " const";
+    FunctionSP func_sp;
+    std::unique_ptr<Declaration> decl_up;
+    if (decl_file != 0 || decl_line != 0 || decl_column != 0)
+      decl_up = std::make_unique<Declaration>(die.GetCU()->GetFile(decl_file),
+                                              decl_line, decl_column);
 
-        func_name.SetValue(ConstString(sstr.GetString()), false);
-      } else
-        func_name.SetValue(ConstString(name), false);
+    SymbolFileDWARF *dwarf = die.GetDWARF();
+    // Supply the type _only_ if it has already been parsed
+    Type *func_type = dwarf->GetDIEToType().lookup(die.GetDIE());
 
-      FunctionSP func_sp;
-      std::unique_ptr<Declaration> decl_up;
-      if (decl_file != 0 || decl_line != 0 || decl_column != 0)
-        decl_up = std::make_unique<Declaration>(die.GetCU()->GetFile(decl_file),
-                                                decl_line, decl_column);
+    assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
-      SymbolFileDWARF *dwarf = die.GetDWARF();
-      // Supply the type _only_ if it has already been parsed
-      Type *func_type = dwarf->GetDIEToType().lookup(die.GetDIE());
-
-      assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
-
-      if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
-        const user_id_t func_user_id = die.GetID();
-        func_sp =
-            std::make_shared<Function>(&comp_unit,
+    const user_id_t func_user_id = die.GetID();
+    func_sp =
+        std::make_shared<Function>(&comp_unit,
                                    func_user_id, // UserID is the DIE offset
                                    func_user_id, func_name, func_type,
-                                       func_range); // first address range
+                                   func_range); // first address range
 
-        if (func_sp.get() != nullptr) {
-          if (frame_base.IsValid())
-            func_sp->GetFrameBaseExpression() = frame_base;
-          comp_unit.AddFunction(func_sp);
-          return func_sp.get();
-        }
-      }
+    if (func_sp.get() != nullptr) {
+      if (frame_base.IsValid())
+        func_sp->GetFrameBaseExpression() = frame_base;
+      comp_unit.AddFunction(func_sp);
+      return func_sp.get();
     }
   }
   return nullptr;
