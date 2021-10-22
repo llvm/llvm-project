@@ -1785,9 +1785,9 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
       XcodeSDK sdk;
       if (SymbolFile *sym_file = module.GetSymbolFile())
         for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
-          auto &cu = *sym_file->GetCompileUnitAtIndex(i);
-          if (cu.GetLanguage() == lldb::eLanguageTypeSwift)
-            sdk.Merge(sym_file->ParseXcodeSDK(cu));
+          if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
+            if (cu_sp->GetLanguage() == lldb::eLanguageTypeSwift)
+              sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
         }
 
       std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
