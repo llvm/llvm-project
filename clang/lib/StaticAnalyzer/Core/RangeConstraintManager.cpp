@@ -20,8 +20,8 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -955,18 +955,7 @@ private:
   }
 
   RangeSet VisitBinaryOperator(RangeSet LHS, BinaryOperator::Opcode Op,
-                               RangeSet RHS, QualType T) {
-    switch (Op) {
-    case BO_Or:
-      return VisitBinaryOperator<BO_Or>(LHS, RHS, T);
-    case BO_And:
-      return VisitBinaryOperator<BO_And>(LHS, RHS, T);
-    case BO_Rem:
-      return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
-    default:
-      return infer(T);
-    }
-  }
+                               RangeSet RHS, QualType T);
 
   //===----------------------------------------------------------------------===//
   //                         Ranges and operators
@@ -1232,6 +1221,29 @@ private:
 //===----------------------------------------------------------------------===//
 
 template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_NE>(RangeSet LHS,
+                                                           RangeSet RHS,
+                                                           QualType T) {
+  // When both the RangeSets are non-overlapping then all possible pairs of
+  // (x, y) in LHS, RHS respectively, will satisfy expression (x != y).
+  if ((LHS.getMaxValue() < RHS.getMinValue()) ||
+      (LHS.getMinValue() > RHS.getMaxValue())) {
+    return getTrueRange(T);
+  }
+
+  // If both RangeSets contain only one Point which is equal then the
+  // expression will always return true.
+  if ((LHS.getMinValue() == RHS.getMaxValue()) &&
+      (LHS.getMaxValue() == RHS.getMaxValue()) &&
+      (LHS.getMinValue() == RHS.getMinValue())) {
+    return getFalseRange(T);
+  }
+
+  // In all other cases, the resulting range cannot be deduced.
+  return infer(T);
+}
+
+template <>
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Or>(Range LHS, Range RHS,
                                                            QualType T) {
   APSIntType ResultType = ValueFactory.getAPSIntType(T);
@@ -1389,6 +1401,23 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
   // Nevertheless, the symmetrical range for RHS is a conservative estimate
   // for any sign of either LHS, or RHS.
   return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
+}
+
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
+                                                    BinaryOperator::Opcode Op,
+                                                    RangeSet RHS, QualType T) {
+  switch (Op) {
+  case BO_NE:
+    return VisitBinaryOperator<BO_NE>(LHS, RHS, T);
+  case BO_Or:
+    return VisitBinaryOperator<BO_Or>(LHS, RHS, T);
+  case BO_And:
+    return VisitBinaryOperator<BO_And>(LHS, RHS, T);
+  case BO_Rem:
+    return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
+  default:
+    return infer(T);
+  }
 }
 
 //===----------------------------------------------------------------------===//
