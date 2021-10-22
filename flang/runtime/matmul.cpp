@@ -22,19 +22,19 @@
 #include "flang/Runtime/matmul.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include <cstring>
 
 namespace Fortran::runtime {
 
+// General accumulator for any type and stride; this is not used for
+// contiguous numeric cases.
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 class Accumulator {
 public:
-  // Accumulate floating-point results in (at least) double precision
-  using Result = CppTypeFor<RCAT,
-      RCAT == TypeCategory::Real || RCAT == TypeCategory::Complex
-          ? std::max(RKIND, static_cast<int>(sizeof(double)))
-          : RKIND>;
+  using Result = AccumulationType<RCAT, RKIND>;
   Accumulator(const Descriptor &x, const Descriptor &y) : x_{x}, y_{y} {}
   void Accumulate(const SubscriptValue xAt[], const SubscriptValue yAt[]) {
     if constexpr (RCAT == TypeCategory::Logical) {
@@ -51,6 +51,103 @@ private:
   const Descriptor &x_, &y_;
   Result sum_{};
 };
+
+// Contiguous numeric matrix*matrix multiplication
+//   matrix(rows,n) * matrix(n,cols) -> matrix(rows,cols)
+// Straightforward algorithm:
+//   DO 1 I = 1, NROWS
+//    DO 1 J = 1, NCOLS
+//     RES(I,J) = 0
+//     DO 1 K = 1, N
+//   1  RES(I,J) = RES(I,J) + X(I,K)*Y(K,J)
+// With loop distribution and transposition to avoid the inner sum
+// reduction and to avoid non-unit strides:
+//   DO 1 I = 1, NROWS
+//    DO 1 J = 1, NCOLS
+//   1 RES(I,J) = 0
+//   DO 2 K = 1, N
+//    DO 2 J = 1, NCOLS
+//     DO 2 I = 1, NROWS
+//   2  RES(I,J) = RES(I,J) + X(I,K)*Y(K,J) ! loop-invariant last term
+template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
+inline void MatrixTimesMatrix(CppTypeFor<RCAT, RKIND> *RESTRICT product,
+    SubscriptValue rows, SubscriptValue cols, const XT *RESTRICT x,
+    const YT *RESTRICT y, SubscriptValue n) {
+  using ResultType = CppTypeFor<RCAT, RKIND>;
+  std::memset(product, 0, rows * cols * sizeof *product);
+  const XT *RESTRICT xp0{x};
+  for (SubscriptValue k{0}; k < n; ++k) {
+    ResultType *RESTRICT p{product};
+    for (SubscriptValue j{0}; j < cols; ++j) {
+      const XT *RESTRICT xp{xp0};
+      auto yv{static_cast<ResultType>(y[k + j * n])};
+      for (SubscriptValue i{0}; i < rows; ++i) {
+        *p++ += static_cast<ResultType>(*xp++) * yv;
+      }
+    }
+    xp0 += rows;
+  }
+}
+
+// Contiguous numeric matrix*vector multiplication
+//   matrix(rows,n) * column vector(n) -> column vector(rows)
+// Straightforward algorithm:
+//   DO 1 J = 1, NROWS
+//    RES(J) = 0
+//    DO 1 K = 1, N
+//   1 RES(J) = RES(J) + X(J,K)*Y(K)
+// With loop distribution and transposition to avoid the inner
+// sum reduction and to avoid non-unit strides:
+//   DO 1 J = 1, NROWS
+//   1 RES(J) = 0
+//   DO 2 K = 1, N
+//    DO 2 J = 1, NROWS
+//   2 RES(J) = RES(J) + X(J,K)*Y(K)
+template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
+inline void MatrixTimesVector(CppTypeFor<RCAT, RKIND> *RESTRICT product,
+    SubscriptValue rows, SubscriptValue n, const XT *RESTRICT x,
+    const YT *RESTRICT y) {
+  using ResultType = CppTypeFor<RCAT, RKIND>;
+  std::memset(product, 0, rows * sizeof *product);
+  for (SubscriptValue k{0}; k < n; ++k) {
+    ResultType *RESTRICT p{product};
+    auto yv{static_cast<ResultType>(*y++)};
+    for (SubscriptValue j{0}; j < rows; ++j) {
+      *p++ += static_cast<ResultType>(*x++) * yv;
+    }
+  }
+}
+
+// Contiguous numeric vector*matrix multiplication
+//   row vector(n) * matrix(n,cols) -> row vector(cols)
+// Straightforward algorithm:
+//   DO 1 J = 1, NCOLS
+//    RES(J) = 0
+//    DO 1 K = 1, N
+//   1 RES(J) = RES(J) + X(K)*Y(K,J)
+// With loop distribution and transposition to avoid the inner
+// sum reduction and one non-unit stride (the other remains):
+//   DO 1 J = 1, NCOLS
+//   1 RES(J) = 0
+//   DO 2 K = 1, N
+//    DO 2 J = 1, NCOLS
+//   2 RES(J) = RES(J) + X(K)*Y(K,J)
+template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
+inline void VectorTimesMatrix(CppTypeFor<RCAT, RKIND> *RESTRICT product,
+    SubscriptValue n, SubscriptValue cols, const XT *RESTRICT x,
+    const YT *RESTRICT y) {
+  using ResultType = CppTypeFor<RCAT, RKIND>;
+  std::memset(product, 0, cols * sizeof *product);
+  for (SubscriptValue k{0}; k < n; ++k) {
+    ResultType *RESTRICT p{product};
+    auto xv{static_cast<ResultType>(*x++)};
+    const YT *RESTRICT yp{&y[k]};
+    for (SubscriptValue j{0}; j < cols; ++j) {
+      *p++ += xv * static_cast<ResultType>(*yp);
+      yp += n;
+    }
+  }
+}
 
 // Implements an instance of MATMUL for given argument types.
 template <bool IS_ALLOCATING, TypeCategory RCAT, int RKIND, typename XT,
@@ -79,36 +176,82 @@ static inline void DoMatmul(
     }
   } else {
     RUNTIME_CHECK(terminator, resRank == result.rank());
-    RUNTIME_CHECK(terminator, result.type() == (TypeCode{RCAT, RKIND}));
+    RUNTIME_CHECK(
+        terminator, result.ElementBytes() == static_cast<std::size_t>(RKIND));
     RUNTIME_CHECK(terminator, result.GetDimension(0).Extent() == extent[0]);
     RUNTIME_CHECK(terminator,
         resRank == 1 || result.GetDimension(1).Extent() == extent[1]);
   }
-  using WriteResult =
-      CppTypeFor<RCAT == TypeCategory::Logical ? TypeCategory::Integer : RCAT,
-          RKIND>;
   SubscriptValue n{x.GetDimension(xRank - 1).Extent()};
   if (n != y.GetDimension(0).Extent()) {
     terminator.Crash("MATMUL: arrays do not conform (%jd != %jd)",
         static_cast<std::intmax_t>(n),
         static_cast<std::intmax_t>(y.GetDimension(0).Extent()));
   }
+  using WriteResult =
+      CppTypeFor<RCAT == TypeCategory::Logical ? TypeCategory::Integer : RCAT,
+          RKIND>;
+  if constexpr (RCAT != TypeCategory::Logical) {
+    if (x.IsContiguous() && y.IsContiguous() &&
+        (IS_ALLOCATING || result.IsContiguous())) {
+      // Contiguous numeric matrices
+      if (resRank == 2) { // M*M -> M
+        if (std::is_same_v<XT, YT>) {
+          if constexpr (std::is_same_v<XT, float>) {
+            // TODO: call BLAS-3 SGEMM
+          } else if constexpr (std::is_same_v<XT, double>) {
+            // TODO: call BLAS-3 DGEMM
+          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+            // TODO: call BLAS-3 CGEMM
+          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+            // TODO: call BLAS-3 ZGEMM
+          }
+        }
+        MatrixTimesMatrix<RCAT, RKIND, XT, YT>(
+            result.template OffsetElement<WriteResult>(), extent[0], extent[1],
+            x.OffsetElement<XT>(), y.OffsetElement<YT>(), n);
+        return;
+      } else if (xRank == 2) { // M*V -> V
+        if (std::is_same_v<XT, YT>) {
+          if constexpr (std::is_same_v<XT, float>) {
+            // TODO: call BLAS-2 SGEMV(x,y)
+          } else if constexpr (std::is_same_v<XT, double>) {
+            // TODO: call BLAS-2 DGEMV(x,y)
+          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+            // TODO: call BLAS-2 CGEMV(x,y)
+          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+            // TODO: call BLAS-2 ZGEMV(x,y)
+          }
+        }
+        MatrixTimesVector<RCAT, RKIND, XT, YT>(
+            result.template OffsetElement<WriteResult>(), extent[0], n,
+            x.OffsetElement<XT>(), y.OffsetElement<YT>());
+        return;
+      } else { // V*M -> V
+        if (std::is_same_v<XT, YT>) {
+          if constexpr (std::is_same_v<XT, float>) {
+            // TODO: call BLAS-2 SGEMV(y,x)
+          } else if constexpr (std::is_same_v<XT, double>) {
+            // TODO: call BLAS-2 DGEMV(y,x)
+          } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+            // TODO: call BLAS-2 CGEMV(y,x)
+          } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+            // TODO: call BLAS-2 ZGEMV(y,x)
+          }
+        }
+        VectorTimesMatrix<RCAT, RKIND, XT, YT>(
+            result.template OffsetElement<WriteResult>(), n, extent[0],
+            x.OffsetElement<XT>(), y.OffsetElement<YT>());
+        return;
+      }
+    }
+  }
+  // General algorithms for LOGICAL and noncontiguity
   SubscriptValue xAt[2], yAt[2], resAt[2];
   x.GetLowerBounds(xAt);
   y.GetLowerBounds(yAt);
   result.GetLowerBounds(resAt);
   if (resRank == 2) { // M*M -> M
-    if constexpr (std::is_same_v<XT, YT>) {
-      if constexpr (std::is_same_v<XT, float>) {
-        // TODO: call BLAS-3 SGEMM
-      } else if constexpr (std::is_same_v<XT, double>) {
-        // TODO: call BLAS-3 DGEMM
-      } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
-        // TODO: call BLAS-3 CGEMM
-      } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
-        // TODO: call BLAS-3 ZGEMM
-      }
-    }
     SubscriptValue x1{xAt[1]}, y0{yAt[0]}, y1{yAt[1]}, res1{resAt[1]};
     for (SubscriptValue i{0}; i < extent[0]; ++i) {
       for (SubscriptValue j{0}; j < extent[1]; ++j) {
@@ -125,44 +268,31 @@ static inline void DoMatmul(
       ++resAt[0];
       ++xAt[0];
     }
-  } else {
-    if constexpr (std::is_same_v<XT, YT>) {
-      if constexpr (std::is_same_v<XT, float>) {
-        // TODO: call BLAS-2 SGEMV
-      } else if constexpr (std::is_same_v<XT, double>) {
-        // TODO: call BLAS-2 DGEMV
-      } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
-        // TODO: call BLAS-2 CGEMV
-      } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
-        // TODO: call BLAS-2 ZGEMV
+  } else if (xRank == 2) { // M*V -> V
+    SubscriptValue x1{xAt[1]}, y0{yAt[0]};
+    for (SubscriptValue j{0}; j < extent[0]; ++j) {
+      Accumulator<RCAT, RKIND, XT, YT> accumulator{x, y};
+      for (SubscriptValue k{0}; k < n; ++k) {
+        xAt[1] = x1 + k;
+        yAt[0] = y0 + k;
+        accumulator.Accumulate(xAt, yAt);
       }
+      *result.template Element<WriteResult>(resAt) = accumulator.GetResult();
+      ++resAt[0];
+      ++xAt[0];
     }
-    if (xRank == 2) { // M*V -> V
-      SubscriptValue x1{xAt[1]}, y0{yAt[0]};
-      for (SubscriptValue j{0}; j < extent[0]; ++j) {
-        Accumulator<RCAT, RKIND, XT, YT> accumulator{x, y};
-        for (SubscriptValue k{0}; k < n; ++k) {
-          xAt[1] = x1 + k;
-          yAt[0] = y0 + k;
-          accumulator.Accumulate(xAt, yAt);
-        }
-        *result.template Element<WriteResult>(resAt) = accumulator.GetResult();
-        ++resAt[0];
-        ++xAt[0];
+  } else { // V*M -> V
+    SubscriptValue x0{xAt[0]}, y0{yAt[0]};
+    for (SubscriptValue j{0}; j < extent[0]; ++j) {
+      Accumulator<RCAT, RKIND, XT, YT> accumulator{x, y};
+      for (SubscriptValue k{0}; k < n; ++k) {
+        xAt[0] = x0 + k;
+        yAt[0] = y0 + k;
+        accumulator.Accumulate(xAt, yAt);
       }
-    } else { // V*M -> V
-      SubscriptValue x0{xAt[0]}, y0{yAt[0]};
-      for (SubscriptValue j{0}; j < extent[0]; ++j) {
-        Accumulator<RCAT, RKIND, XT, YT> accumulator{x, y};
-        for (SubscriptValue k{0}; k < n; ++k) {
-          xAt[0] = x0 + k;
-          yAt[0] = y0 + k;
-          accumulator.Accumulate(xAt, yAt);
-        }
-        *result.template Element<WriteResult>(resAt) = accumulator.GetResult();
-        ++resAt[0];
-        ++yAt[1];
-      }
+      *result.template Element<WriteResult>(resAt) = accumulator.GetResult();
+      ++resAt[0];
+      ++yAt[1];
     }
   }
 }
