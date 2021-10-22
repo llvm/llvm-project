@@ -315,15 +315,10 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     return false;
   }
 
-  if (!DWARFContext::isAddressSizeSupported(getAddressByteSize())) {
-    SmallVector<std::string, 3> Sizes;
-    for (auto Size : DWARFContext::getSupportedAddressSizes())
-      Sizes.push_back(std::to_string(Size));
-    Context.getWarningHandler()(createStringError(
-        errc::invalid_argument,
-        "DWARF unit at offset 0x%8.8" PRIx64 " "
-        "has unsupported address size %" PRIu8 ", supported are %s",
-        Offset, getAddressByteSize(), llvm::join(Sizes, ", ").c_str()));
+  if (Error SizeErr = DWARFContext::checkAddressSizeSupported(
+          getAddressByteSize(), errc::invalid_argument,
+          "DWARF unit at offset 0x%8.8" PRIx64, Offset)) {
+    Context.getWarningHandler()(std::move(SizeErr));
     return false;
   }
 
