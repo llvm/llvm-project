@@ -810,6 +810,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       // Copy extra operands not present in the instruction definition.
       copyExtraImplicitOps(*Inst32, MF, MI);
 
+      // Copy deadness from the old explicit vcc def to the new implicit def.
+      if (SDst && SDst->isDead())
+        Inst32->findRegisterDefOperand(VCCReg)->setIsDead();
+
       MI.eraseFromParent();
       foldImmediates(*Inst32, TII, MRI);
 
