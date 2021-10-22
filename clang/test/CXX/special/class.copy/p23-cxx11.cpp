@@ -78,7 +78,7 @@ struct B1 {
   const int a; // expected-note 2{{field 'a' is of const-qualified type}}
 };
 struct B2 {
-  const void *const a[3][9][2]; // expected-note 2{{field 'a' is of const-qualified type 'const void *const [3][9][2]'}}
+  const void *const a[3][9][2]; // expected-note 2{{field 'a' is of const-qualified type 'const void *const[3][9][2]'}}
 };
 struct B3 {
   const void *a[3];

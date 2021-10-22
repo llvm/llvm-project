@@ -494,24 +494,16 @@ def system(commands, **kwargs):
     'ls: non_existent_file: No such file or directory\n'
     """
 
-    # Assign the sender object to variable 'test' and remove it from kwargs.
-    test = kwargs.pop('sender', None)
-
-    # [['make', 'clean', 'foo'], ['make', 'foo']] -> ['make clean foo', 'make foo']
-    commandList = [' '.join(x) for x in commands]
     output = ""
     error = ""
-    for shellCommand in commandList:
+    for shellCommand in commands:
         if 'stdout' in kwargs:
             raise ValueError(
                 'stdout argument not allowed, it will be overridden.')
-        if 'shell' in kwargs and kwargs['shell'] == False:
-            raise ValueError('shell=False not allowed')
         process = Popen(
             shellCommand,
             stdout=PIPE,
             stderr=STDOUT,
-            shell=True,
             **kwargs)
         pid = process.pid
         this_output, this_error = process.communicate()
@@ -1454,6 +1446,29 @@ class Base(unittest2.TestCase):
         method = getattr(self, self.testMethodName)
         return getattr(method, "debug_info", None)
 
+    def build(
+            self,
+            debug_info=None,
+            architecture=None,
+            compiler=None,
+            dictionary=None):
+        """Platform specific way to build binaries."""
+        if not architecture and configuration.arch:
+            architecture = configuration.arch
+
+        if debug_info is None:
+            debug_info = self.getDebugInfo()
+
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
+
+        testdir = self.mydir
+        testname = self.getBuildDirBasename()
+
+        module = builder_module()
+        if not module.build(debug_info, architecture, compiler, dictionary,
+                testdir, testname):
+            raise Exception("Don't know how to build binary")
+
     # ==================================================
     # Build methods supported through a plugin interface
     # ==================================================
@@ -1514,7 +1529,7 @@ class Base(unittest2.TestCase):
                 "Building LLDB Driver (%s) from sources %s" %
                 (exe_name, sources))
 
-        self.buildDefault(dictionary=d)
+        self.build(dictionary=d)
 
     def buildLibrary(self, sources, lib_name):
         """Platform specific way to build a default library. """
@@ -1552,101 +1567,13 @@ class Base(unittest2.TestCase):
                 "Building LLDB Library (%s) from sources %s" %
                 (lib_name, sources))
 
-        self.buildDefault(dictionary=d)
+        self.build(dictionary=d)
 
     def buildProgram(self, sources, exe_name):
         """ Platform specific way to build an executable from C/C++ sources. """
         d = {'CXX_SOURCES': sources,
              'EXE': exe_name}
-        self.buildDefault(dictionary=d)
-
-    def buildDefault(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build the default binaries."""
-        testdir = self.mydir
-        testname = self.getBuildDirBasename()
-
-        if not architecture and configuration.arch:
-            architecture = configuration.arch
-
-        if self.getDebugInfo():
-            raise Exception("buildDefault tests must set NO_DEBUG_INFO_TESTCASE")
-        module = builder_module()
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDefault(self, architecture, compiler,
-                                   dictionary, testdir, testname):
-            raise Exception("Don't know how to build default binary")
-
-    def buildDsym(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build binaries with dsym info."""
-        testdir = self.mydir
-        testname = self.getBuildDirBasename()
-        if self.getDebugInfo() != "dsym":
-            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
-
-        module = builder_module()
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDsym(self, architecture, compiler,
-                                dictionary, testdir, testname):
-            raise Exception("Don't know how to build binary with dsym")
-
-    def buildDwarf(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build binaries with dwarf maps."""
-        testdir = self.mydir
-        testname = self.getBuildDirBasename()
-        if self.getDebugInfo() != "dwarf":
-            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
-
-        module = builder_module()
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDwarf(self, architecture, compiler,
-                                   dictionary, testdir, testname):
-            raise Exception("Don't know how to build binary with dwarf")
-
-    def buildDwo(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build binaries with dwarf maps."""
-        testdir = self.mydir
-        testname = self.getBuildDirBasename()
-        if self.getDebugInfo() != "dwo":
-            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
-
-        module = builder_module()
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDwo(self, architecture, compiler,
-                                   dictionary, testdir, testname):
-            raise Exception("Don't know how to build binary with dwo")
-
-    def buildGModules(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build binaries with gmodules info."""
-        testdir = self.mydir
-        testname = self.getBuildDirBasename()
-        if self.getDebugInfo() != "gmodules":
-            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
-
-        module = builder_module()
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildGModules(self, architecture, compiler,
-                                    dictionary, testdir, testname):
-            raise Exception("Don't know how to build binary with gmodules")
+        self.build(dictionary=d)
 
     def signBinary(self, binary_path):
         if sys.platform.startswith("darwin"):
@@ -1738,7 +1665,7 @@ class Base(unittest2.TestCase):
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()
-        if not module.cleanup(self, dictionary):
+        if not module.cleanup(dictionary):
             raise Exception(
                 "Don't know how to do cleanup with dictionary: " +
                 dictionary)
@@ -1888,10 +1815,10 @@ class TestBase(Base):
           expect method also provides a mode to peform string/pattern matching
           without running a command.
 
-        - The build methods buildDefault, buildDsym, and buildDwarf are used to
-          build the binaries used during a particular test scenario.  A plugin
-          should be provided for the sys.platform running the test suite.  The
-          Mac OS X implementation is located in builders/darwin.py.
+        - The build method is used to build the binaries used during a
+          particular test scenario.  A plugin should be provided for the
+          sys.platform running the test suite.  The Mac OS X implementation is
+          located in builders/darwin.py.
     """
 
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
@@ -2613,31 +2540,6 @@ FileCheck output:
                                  summary=summary, children=children)
         value_check.check_value(self, eval_result, str(eval_result))
         return eval_result
-
-    def build(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build the default binaries."""
-        module = builder_module()
-
-        if not architecture and configuration.arch:
-            architecture = configuration.arch
-
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if self.getDebugInfo() is None:
-            return self.buildDefault(architecture, compiler, dictionary)
-        elif self.getDebugInfo() == "dsym":
-            return self.buildDsym(architecture, compiler, dictionary)
-        elif self.getDebugInfo() == "dwarf":
-            return self.buildDwarf(architecture, compiler, dictionary)
-        elif self.getDebugInfo() == "dwo":
-            return self.buildDwo(architecture, compiler, dictionary)
-        elif self.getDebugInfo() == "gmodules":
-            return self.buildGModules(architecture, compiler, dictionary)
-        else:
-            self.fail("Can't build for debug info: %s" % self.getDebugInfo())
 
     """Assert that an lldb.SBError is in the "success" state."""
     def assertSuccess(self, obj, msg=None):

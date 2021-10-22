@@ -274,13 +274,13 @@ typedef int INTS[4];
 @interface ArraysInMethods
 - (void)simple:(int [_Nonnull 2])x;
 - (void)nested:(void *_Nullable [_Nonnull 2])x;
-- (void)nestedBad:(int [2][_Nonnull 2])x; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [2]'}}
+- (void)nestedBad:(int [2][_Nonnull 2])x; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[2]'}}
 
 - (void)withTypedef:(INTS _Nonnull)x;
-- (void)withTypedefBad:(INTS _Nonnull[2])x; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+- (void)withTypedefBad:(INTS _Nonnull[2])x; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
 
 - (void)simpleSugar:(nonnull int [2])x;
-- (void)nestedSugar:(nonnull void *_Nullable [2])x; // expected-error {{nullability keyword 'nonnull' cannot be applied to multi-level pointer type 'void * _Nullable [2]'}} expected-note {{use nullability type specifier '_Nonnull' to affect the innermost pointer type of 'void * _Nullable [2]'}}
+- (void)nestedSugar:(nonnull void *_Nullable [2])x; // expected-error {{nullability keyword 'nonnull' cannot be applied to multi-level pointer type 'void * _Nullable[2]'}} expected-note {{use nullability type specifier '_Nonnull' to affect the innermost pointer type of 'void * _Nullable[2]'}}
 - (void)sugarWithTypedef:(nonnull INTS)x;
 @end
 

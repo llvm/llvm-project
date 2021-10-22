@@ -124,18 +124,18 @@ bool R600PassConfig::addInstSelector() {
 void R600PassConfig::addPreRegAlloc() { addPass(createR600VectorRegMerger()); }
 
 void R600PassConfig::addPreSched2() {
-  addPass(createR600EmitClauseMarkers(), false);
+  addPass(createR600EmitClauseMarkers());
   if (EnableR600IfConvert)
-    addPass(&IfConverterID, false);
-  addPass(createR600ClauseMergePass(), false);
+    addPass(&IfConverterID);
+  addPass(createR600ClauseMergePass());
 }
 
 void R600PassConfig::addPreEmitPass() {
-  addPass(createAMDGPUCFGStructurizerPass(), false);
-  addPass(createR600ExpandSpecialInstrsPass(), false);
-  addPass(&FinalizeMachineBundlesID, false);
-  addPass(createR600Packetizer(), false);
-  addPass(createR600ControlFlowFinalizer(), false);
+  addPass(createAMDGPUCFGStructurizerPass());
+  addPass(createR600ExpandSpecialInstrsPass());
+  addPass(&FinalizeMachineBundlesID);
+  addPass(createR600Packetizer());
+  addPass(createR600ControlFlowFinalizer());
 }
 
 TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {

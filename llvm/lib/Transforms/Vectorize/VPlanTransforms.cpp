@@ -61,12 +61,12 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
               *Load, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
-              nullptr /*Mask*/);
+              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
               *Store, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
-              Plan->getOrAddVPValue(Store->getValueOperand()),
-              nullptr /*Mask*/);
+              Plan->getOrAddVPValue(Store->getValueOperand()), nullptr /*Mask*/,
+              false /*Consecutive*/, false /*Reverse*/);
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(
               GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);

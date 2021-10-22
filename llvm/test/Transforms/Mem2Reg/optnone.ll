@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
 
 ; This function is optnone, so the allocas should not be eliminated.
 

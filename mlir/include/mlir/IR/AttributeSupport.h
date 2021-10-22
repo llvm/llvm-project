@@ -179,10 +179,11 @@ public:
 #ifndef NDEBUG
     if (!ctx->getAttributeUniquer().isParametricStorageInitialized(
             T::getTypeID()))
-      llvm::report_fatal_error(llvm::Twine("can't create Attribute '") +
-                               llvm::getTypeName<T>() +
-                               "' because storage uniquer isn't initialized: "
-                               "the dialect was likely not loaded.");
+      llvm::report_fatal_error(
+          llvm::Twine("can't create Attribute '") + llvm::getTypeName<T>() +
+          "' because storage uniquer isn't initialized: the dialect was likely "
+          "not loaded, or the attribute wasn't added with addAttributes<...>() "
+          "in the Dialect::initialize() method.");
 #endif
     return ctx->getAttributeUniquer().get<typename T::ImplType>(
         [ctx](AttributeStorage *storage) {
@@ -198,10 +199,11 @@ public:
 #ifndef NDEBUG
     if (!ctx->getAttributeUniquer().isSingletonStorageInitialized(
             T::getTypeID()))
-      llvm::report_fatal_error(llvm::Twine("can't create Attribute '") +
-                               llvm::getTypeName<T>() +
-                               "' because storage uniquer isn't initialized: "
-                               "the dialect was likely not loaded.");
+      llvm::report_fatal_error(
+          llvm::Twine("can't create Attribute '") + llvm::getTypeName<T>() +
+          "' because storage uniquer isn't initialized: the dialect was likely "
+          "not loaded, or the attribute wasn't added with addAttributes<...>() "
+          "in the Dialect::initialize() method.");
 #endif
     return ctx->getAttributeUniquer().get<typename T::ImplType>(T::getTypeID());
   }

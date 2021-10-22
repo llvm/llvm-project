@@ -193,8 +193,7 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
-; SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; SDAG-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v0, v0, v0
 ; SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
 ; SDAG-NEXT:    v_maxmin_f32 v0, v0, v1, v2
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -203,8 +202,7 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GISEL-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GISEL-NEXT:    v_maxmin_f32 v0, v0, v1, v2
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -254,8 +252,7 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
-; SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; SDAG-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v0, v0, v0
 ; SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
 ; SDAG-NEXT:    v_minmax_f32 v0, v0, v1, v2
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -264,8 +261,7 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
-; GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GISEL-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GISEL-NEXT:    v_minmax_f32 v0, v0, v1, v2
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]

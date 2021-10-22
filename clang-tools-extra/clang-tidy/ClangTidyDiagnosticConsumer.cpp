@@ -35,6 +35,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include <tuple>
+#include <utility>
 #include <vector>
 using namespace clang;
 using namespace tidy;
@@ -321,11 +322,11 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
 
 static bool isNOLINTFound(StringRef NolintDirectiveText, StringRef CheckName,
                           StringRef Line, size_t *FoundNolintIndex = nullptr,
-                          bool *SuppressionIsSpecific = nullptr) {
+                          StringRef *FoundNolintChecksStr = nullptr) {
   if (FoundNolintIndex)
     *FoundNolintIndex = StringRef::npos;
-  if (SuppressionIsSpecific)
-    *SuppressionIsSpecific = false;
+  if (FoundNolintChecksStr)
+    *FoundNolintChecksStr = StringRef();
 
   size_t NolintIndex = Line.find(NolintDirectiveText);
   if (NolintIndex == StringRef::npos)
@@ -345,18 +346,13 @@ static bool isNOLINTFound(StringRef NolintDirectiveText, StringRef CheckName,
     if (BracketEndIndex != StringRef::npos) {
       StringRef ChecksStr =
           Line.substr(BracketIndex, BracketEndIndex - BracketIndex);
-      // Allow disabling all the checks with "*".
-      if (ChecksStr != "*") {
-        // Allow specifying a few check names, delimited with comma.
-        SmallVector<StringRef, 1> Checks;
-        ChecksStr.split(Checks, ',', -1, false);
-        llvm::transform(Checks, Checks.begin(),
-                        [](StringRef S) { return S.trim(); });
-        if (llvm::find(Checks, CheckName) == Checks.end())
-          return false;
-        if (SuppressionIsSpecific)
-          *SuppressionIsSpecific = true;
-      }
+      if (FoundNolintChecksStr)
+        *FoundNolintChecksStr = ChecksStr;
+      // Allow specifying a few checks with a glob expression, ignoring
+      // negative globs (which would effectively disable the suppression).
+      GlobList Globs(ChecksStr, /*KeepNegativeGlobs=*/false);
+      if (!Globs.contains(CheckName))
+        return false;
     }
   }
 
@@ -388,28 +384,27 @@ static ClangTidyError createNolintError(const ClangTidyContext &Context,
   return Error;
 }
 
-static Optional<ClangTidyError>
-tallyNolintBegins(const ClangTidyContext &Context, const SourceManager &SM,
-                  StringRef CheckName, SmallVector<StringRef> Lines,
-                  SourceLocation LinesLoc,
-                  SmallVector<SourceLocation> &SpecificNolintBegins,
-                  SmallVector<SourceLocation> &GlobalNolintBegins) {
-  // Keep a running total of how many NOLINT(BEGIN...END) blocks are active.
+static Optional<ClangTidyError> tallyNolintBegins(
+    const ClangTidyContext &Context, const SourceManager &SM,
+    StringRef CheckName, SmallVector<StringRef> Lines, SourceLocation LinesLoc,
+    SmallVector<std::pair<SourceLocation, StringRef>> &NolintBegins) {
+  // Keep a running total of how many NOLINT(BEGIN...END) blocks are active, as
+  // well as the bracket expression (if any) that was used in the NOLINT
+  // expression.
   size_t NolintIndex;
-  bool SuppressionIsSpecific;
-  auto List = [&]() -> SmallVector<SourceLocation> * {
-    return SuppressionIsSpecific ? &SpecificNolintBegins : &GlobalNolintBegins;
-  };
+  StringRef NolintChecksStr;
   for (const auto &Line : Lines) {
     if (isNOLINTFound("NOLINTBEGIN", CheckName, Line, &NolintIndex,
-                      &SuppressionIsSpecific)) {
+                      &NolintChecksStr)) {
       // Check if a new block is being started.
-      List()->emplace_back(LinesLoc.getLocWithOffset(NolintIndex));
+      NolintBegins.emplace_back(std::make_pair(
+          LinesLoc.getLocWithOffset(NolintIndex), NolintChecksStr));
     } else if (isNOLINTFound("NOLINTEND", CheckName, Line, &NolintIndex,
-                             &SuppressionIsSpecific)) {
+                             &NolintChecksStr)) {
       // Check if the previous block is being closed.
-      if (!List()->empty()) {
-        List()->pop_back();
+      if (!NolintBegins.empty() &&
+          NolintBegins.back().second == NolintChecksStr) {
+        NolintBegins.pop_back();
       } else {
         // Trying to close a nonexistent block. Return a diagnostic about this
         // misuse that can be displayed along with the original clang-tidy check
@@ -432,42 +427,33 @@ lineIsWithinNolintBegin(const ClangTidyContext &Context,
                         StringRef TextAfterDiag) {
   Loc = SM.getExpansionRange(Loc).getBegin();
   SourceLocation FileStartLoc = SM.getLocForStartOfFile(SM.getFileID(Loc));
+  SmallVector<std::pair<SourceLocation, StringRef>> NolintBegins;
 
   // Check if there's an open NOLINT(BEGIN...END) block on the previous lines.
   SmallVector<StringRef> PrevLines;
   TextBeforeDiag.split(PrevLines, '\n');
-  SmallVector<SourceLocation> SpecificNolintBegins;
-  SmallVector<SourceLocation> GlobalNolintBegins;
-  auto Error =
-      tallyNolintBegins(Context, SM, CheckName, PrevLines, FileStartLoc,
-                        SpecificNolintBegins, GlobalNolintBegins);
+  auto Error = tallyNolintBegins(Context, SM, CheckName, PrevLines,
+                                 FileStartLoc, NolintBegins);
   if (Error) {
     SuppressionErrors.emplace_back(Error.getValue());
-    return false;
   }
-  bool WithinNolintBegin =
-      !SpecificNolintBegins.empty() || !GlobalNolintBegins.empty();
+  bool WithinNolintBegin = !NolintBegins.empty();
 
   // Check that every block is terminated correctly on the following lines.
   SmallVector<StringRef> FollowingLines;
   TextAfterDiag.split(FollowingLines, '\n');
   Error = tallyNolintBegins(Context, SM, CheckName, FollowingLines, Loc,
-                            SpecificNolintBegins, GlobalNolintBegins);
+                            NolintBegins);
   if (Error) {
     SuppressionErrors.emplace_back(Error.getValue());
-    return false;
   }
 
   // The following blocks were never closed. Return diagnostics for each
   // instance that can be displayed along with the original clang-tidy check
   // that the user was attempting to suppress.
-  for (const auto NolintBegin : SpecificNolintBegins) {
-    auto Error = createNolintError(Context, SM, NolintBegin, true);
-    SuppressionErrors.emplace_back(Error);
-  }
-  for (const auto NolintBegin : GlobalNolintBegins) {
-    auto Error = createNolintError(Context, SM, NolintBegin, true);
-    SuppressionErrors.emplace_back(Error);
+  for (const auto &NolintBegin : NolintBegins) {
+    SuppressionErrors.emplace_back(
+        createNolintError(Context, SM, NolintBegin.first, true));
   }
 
   return WithinNolintBegin && SuppressionErrors.empty();

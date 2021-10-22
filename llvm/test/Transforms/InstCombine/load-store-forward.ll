@@ -18,6 +18,20 @@ define i8 @load_smaller_int(i16* %p) {
   ret i8 %load
 }
 
+; This case can *not* be forwarded, as we only see part of the stored value.
+define i32 @load_larger_int(i16* %p) {
+; CHECK-LABEL: @load_larger_int(
+; CHECK-NEXT:    store i16 258, i16* [[P:%.*]], align 2
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i16* [[P]] to i32*
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P2]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  store i16 258, i16* %p
+  %p2 = bitcast i16* %p to i32*
+  %load = load i32, i32* %p2
+  ret i32 %load
+}
+
 define i32 @vec_store_load_first(i32* %p) {
 ; CHECK-LABEL: @vec_store_load_first(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*

@@ -312,6 +312,14 @@ llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
   llvm.return
 }
 
+// CHECK-LABEL: @memset_test
+llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: i8) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* %{{.*}}, i8 %{{.*}}, i32 %{{.*}}, i1 {{.*}})
+  "llvm.intr.memset"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, i8, i32, i1) -> ()
+  llvm.return
+}
+
 // CHECK-LABEL: @sadd_with_overflow_test
 llvm.func @sadd_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
   // CHECK: call { i32, i1 } @llvm.sadd.with.overflow.i32

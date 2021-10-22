@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX6 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=fiji -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8PLUS,GFX8 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8PLUS,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8PLUS,GFX11 %s
 
 ; GCN-LABEL: name:            s_shl_i32
 ; GCN: S_LSHL_B32
@@ -13,7 +13,8 @@ define amdgpu_kernel void @s_shl_i32(i32 addrspace(1)* %out, i32 %lhs, i32 %rhs)
 
 ; GCN-LABEL: name:            v_shl_i32
 ; GFX6: V_LSHL_B32_e32
-; GFX8PLUS: V_LSHLREV_B32_e32
+; GFX8,GFX10: V_LSHLREV_B32_e32
+; GFX11: V_DUAL_MOV_B32_e32_X_LSHLREV_B32_e32
 define amdgpu_kernel void @v_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid

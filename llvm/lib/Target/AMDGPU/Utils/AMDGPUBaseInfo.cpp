@@ -221,6 +221,18 @@ struct VOPInfo {
   bool IsSingle;
 };
 
+struct VOPDComponentInfo {
+  uint16_t BaseVOP;
+  uint16_t VOPDOp;
+  bool CanBeVOPDX;
+};
+
+struct VOPDInfo {
+  uint16_t Opcode;
+  uint16_t OpX;
+  uint16_t OpY;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -233,6 +245,10 @@ struct VOPInfo {
 #define GET_VOP2InfoTable_IMPL
 #define GET_VOP3InfoTable_DECL
 #define GET_VOP3InfoTable_IMPL
+#define GET_VOPDComponentTable_DECL
+#define GET_VOPDComponentTable_IMPL
+#define GET_VOPDPairs_DECL
+#define GET_VOPDPairs_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -320,11 +336,29 @@ bool getVOP3IsSingle(unsigned Opc) {
   return Info ? Info->IsSingle : false;
 }
 
+CanBeVOPD getCanBeVOPD (unsigned Opc) {
+  const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
+  if (Info)
+    return {Info->CanBeVOPDX, 1};
+  else
+    return {0, 0};
+}
+
+unsigned getVOPDOpcode(unsigned Opc) {
+  const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
+  return Info ? Info->VOPDOp : ~0u;
+}
+
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.
 int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
+}
+
+int getVOPDFull(unsigned OpX, unsigned OpY) {
+  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(OpX, OpY);
+  return Info ? Info->Opcode : -1;
 }
 
 namespace IsaInfo {
@@ -1550,6 +1584,10 @@ bool isGFX90A(const MCSubtargetInfo &STI) {
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+}
+
+bool hasVOPD(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureVOPD];
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {

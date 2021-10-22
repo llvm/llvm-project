@@ -17,10 +17,10 @@ body:             |
     ; CHECK: liveins: $v0, $v1, $v2, $v3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: renamable $v25 = PseudoVMERGE_VIM_M1 killed renamable $v2, 1, killed renamable $v0, 1, 3, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v8 = PseudoVMERGE_VIM_M1 killed renamable $v2, 1, killed renamable $v0, 1, 3, implicit $vl, implicit $vtype
     ; CHECK-NEXT: renamable $v0 = COPY killed renamable $v1
-    ; CHECK-NEXT: renamable $v26 = PseudoVMERGE_VIM_M1 killed renamable $v3, 1, killed renamable $v0, 1, 3, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: renamable $v0 = PseudoVADD_VV_M1 killed renamable $v25, killed renamable $v26, 1, 3, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v9 = PseudoVMERGE_VIM_M1 killed renamable $v3, 1, killed renamable $v0, 1, 3, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v0 = PseudoVADD_VV_M1 killed renamable $v8, killed renamable $v9, 1, 3, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:vr = COPY $v0
     %1:vr = COPY $v1

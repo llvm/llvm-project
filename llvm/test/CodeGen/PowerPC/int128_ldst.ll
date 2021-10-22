@@ -420,8 +420,8 @@ define dso_local i128 @ld_disjoint_unalign64___int128___int128(i64 %ptr) {
 ; CHECK-P10-NEXT:    rldicr 4, 3, 0, 23
 ; CHECK-P10-NEXT:    pli 5, 232
 ; CHECK-P10-NEXT:    pli 3, 3567587329
-; CHECK-P10-NEXT:    pli 6, 3567587337
 ; CHECK-P10-NEXT:    rldimi 3, 5, 32, 0
+; CHECK-P10-NEXT:    pli 6, 3567587337
 ; CHECK-P10-NEXT:    rldimi 6, 5, 32, 0
 ; CHECK-P10-NEXT:    ldx 3, 4, 3
 ; CHECK-P10-NEXT:    ldx 4, 4, 6
@@ -465,8 +465,8 @@ define dso_local i128 @ld_disjoint_align64___int128___int128(i64 %ptr) {
 ; CHECK-P10-NEXT:    rldicr 4, 3, 0, 23
 ; CHECK-P10-NEXT:    pli 3, 244140625
 ; CHECK-P10-NEXT:    pli 5, 232
-; CHECK-P10-NEXT:    pli 6, 3567587336
 ; CHECK-P10-NEXT:    rldic 3, 3, 12, 24
+; CHECK-P10-NEXT:    pli 6, 3567587336
 ; CHECK-P10-NEXT:    rldimi 6, 5, 32, 0
 ; CHECK-P10-NEXT:    ldx 3, 4, 3
 ; CHECK-P10-NEXT:    ldx 4, 4, 6
@@ -584,8 +584,8 @@ define dso_local i128 @ld_cst_unalign64___int128___int128() {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    pli 4, 232
 ; CHECK-P10-NEXT:    pli 3, 3567587329
-; CHECK-P10-NEXT:    pli 5, 3567587337
 ; CHECK-P10-NEXT:    rldimi 3, 4, 32, 0
+; CHECK-P10-NEXT:    pli 5, 3567587337
 ; CHECK-P10-NEXT:    rldimi 5, 4, 32, 0
 ; CHECK-P10-NEXT:    ld 3, 0(3)
 ; CHECK-P10-NEXT:    ld 4, 0(5)

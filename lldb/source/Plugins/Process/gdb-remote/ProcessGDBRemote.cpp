@@ -324,9 +324,6 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   KillDebugserverProcess();
 }
 
-// PluginInterface
-ConstString ProcessGDBRemote::GetPluginName() { return GetPluginNameStatic(); }
-
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =
@@ -874,9 +871,6 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
       while (!m_gdb_comm.IsConnected()) {
         if (conn_up->Connect(connect_url, &error) == eConnectionStatusSuccess) {
           m_gdb_comm.SetConnection(std::move(conn_up));
-          break;
-        } else if (error.WasInterrupted()) {
-          // If we were interrupted, don't keep retrying.
           break;
         }
 
@@ -4317,7 +4311,9 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             reg_info.encoding = eEncodingIEEE754;
           } else if (gdb_type == "aarch64v" ||
                      llvm::StringRef(gdb_type).startswith("vec") ||
-                     gdb_type == "i387_ext") {
+                     gdb_type == "i387_ext" || gdb_type == "uint128") {
+            // lldb doesn't handle 128-bit uints correctly (for ymm*h), so treat
+            // them as vector (similarly to xmm/ymm)
             reg_info.format = eFormatVectorOfUInt8;
             reg_info.encoding = eEncodingVector;
           }

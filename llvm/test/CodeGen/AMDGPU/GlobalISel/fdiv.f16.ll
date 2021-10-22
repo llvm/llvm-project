@@ -738,8 +738,7 @@ define <2 x half> @v_fdiv_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v5
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    v_mul_f32_e32 v4, v7, v4
-; GFX11-NEXT:    v_mul_f32_e32 v3, v6, v3
+; GFX11-NEXT:    v_dual_mul_f32 v4, v7, v4 :: v_dual_mul_f32 v3, v6, v3
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v4, v1, v0
@@ -968,8 +967,7 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v5
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    v_mul_f32_e32 v4, v7, v4
-; GFX11-NEXT:    v_mul_f32_e32 v3, v6, v3
+; GFX11-NEXT:    v_dual_mul_f32 v4, v7, v4 :: v_dual_mul_f32 v3, v6, v3
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v4, v1, v0
@@ -1679,8 +1677,7 @@ define <2 x half> @v_fdiv_v2f16_arcp_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v6, v5
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    v_mul_f32_e32 v4, v7, v4
-; GFX11-NEXT:    v_mul_f32_e32 v3, v6, v3
+; GFX11-NEXT:    v_dual_mul_f32 v4, v7, v4 :: v_dual_mul_f32 v3, v6, v3
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v4, v1, v0

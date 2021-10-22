@@ -104,7 +104,7 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v64, 8, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0x8
 ; GFX11-NEXT:    global_load_b128 v[32:35], v64, s[0:1]
 ; GFX11-NEXT:    global_load_b128 v[36:39], v64, s[0:1] offset:16
 ; GFX11-NEXT:    global_load_b128 v[40:43], v64, s[0:1] offset:32
@@ -114,6 +114,9 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    global_load_b128 v[56:59], v64, s[0:1] offset:96
 ; GFX11-NEXT:    global_load_b128 v[60:63], v64, s[0:1] offset:112
 ; GFX11-NEXT:    global_load_b128 v[4:7], v64, s[0:1] offset:144
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v5, 0x3e7
+; GFX11-NEXT:    s_clause 0x6
 ; GFX11-NEXT:    global_load_b128 v[0:3], v64, s[0:1] offset:128
 ; GFX11-NEXT:    global_load_b128 v[8:11], v64, s[0:1] offset:160
 ; GFX11-NEXT:    global_load_b128 v[12:15], v64, s[0:1] offset:176
@@ -121,8 +124,6 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    global_load_b128 v[20:23], v64, s[0:1] offset:208
 ; GFX11-NEXT:    global_load_b128 v[24:27], v64, s[0:1] offset:224
 ; GFX11-NEXT:    global_load_b128 v[28:31], v64, s[0:1] offset:240
-; GFX11-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-NEXT:    v_mov_b32_e32 v5, 0x3e7
 ; GFX11-NEXT:    s_waitcnt vmcnt(6)
 ; GFX11-NEXT:    global_store_b128 v64, v[0:3], s[2:3] offset:128
 ; GFX11-NEXT:    global_store_b128 v64, v[4:7], s[2:3] offset:144

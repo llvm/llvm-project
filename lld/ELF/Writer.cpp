@@ -221,8 +221,7 @@ void elf::combineEhSections() {
     }
   }
 
-  std::vector<InputSectionBase *> &v = inputSections;
-  v.erase(std::remove(v.begin(), v.end(), nullptr), v.end());
+  llvm::erase_value(inputSections, nullptr);
 }
 
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
@@ -1256,15 +1255,24 @@ findOrphanPos(std::vector<BaseCommand *>::iterator b,
   });
   if (i == e)
     return e;
+  auto foundSec = dyn_cast<OutputSection>(*i);
+  if (!foundSec)
+    return e;
 
   // Consider all existing sections with the same proximity.
   int proximity = getRankProximity(sec, *i);
+  unsigned sortRank = sec->sortRank;
+  if (script->hasPhdrsCommands())
+    // Prevent the orphan section to be placed before the found section because
+    // that can result in adding it to a previous segment and changing flags of
+    // that segment, for example, making a read-only segment writable.
+    sortRank = std::max(sortRank, foundSec->sortRank);
   for (; i != e; ++i) {
     auto *curSec = dyn_cast<OutputSection>(*i);
     if (!curSec || !curSec->hasInputSections)
       continue;
     if (getRankProximity(sec, curSec) != proximity ||
-        sec->sortRank < curSec->sortRank)
+        sortRank < curSec->sortRank)
       break;
   }
 

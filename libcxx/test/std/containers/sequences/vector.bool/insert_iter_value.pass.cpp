@@ -63,6 +63,14 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 11
     {
+        std::vector<bool, explicit_allocator<bool>> v(10);
+        std::vector<bool, explicit_allocator<bool>>::iterator i
+            = v.insert(v.cbegin() + 10, 1);
+        assert(v.size() == 11);
+        assert(i == v.begin() + 10);
+        assert(*i == 1);
+    }
+    {
         std::vector<bool, min_allocator<bool>> v(100);
         std::vector<bool, min_allocator<bool>>::iterator i = v.insert(v.cbegin() + 10, 1);
         assert(v.size() == 101);

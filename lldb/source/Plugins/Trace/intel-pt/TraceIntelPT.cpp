@@ -58,12 +58,6 @@ StringRef TraceIntelPT::GetSchema() {
   return TraceIntelPTSessionFileParser::GetSchema();
 }
 
-//------------------------------------------------------------------
-// PluginInterface protocol
-//------------------------------------------------------------------
-
-ConstString TraceIntelPT::GetPluginName() { return GetPluginNameStatic(); }
-
 void TraceIntelPT::Dump(Stream *s) const {}
 
 llvm::Error TraceIntelPT::SaveLiveTraceToDisk(FileSpec directory) {
@@ -284,7 +278,7 @@ Error TraceIntelPT::Start(size_t thread_buffer_size,
   request.processBufferSizeLimit = total_buffer_size_limit;
   request.enableTsc = enable_tsc;
   request.psbPeriod = psb_period.map([](size_t val) { return (int64_t)val; });
-  request.type = GetPluginName().AsCString();
+  request.type = GetPluginName().str();
   return Trace::Start(toJSON(request));
 }
 
@@ -318,7 +312,7 @@ llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
   request.threadBufferSize = thread_buffer_size;
   request.enableTsc = enable_tsc;
   request.psbPeriod = psb_period.map([](size_t val) { return (int64_t)val; });
-  request.type = GetPluginName().AsCString();
+  request.type = GetPluginName().str();
   request.tids.emplace();
   for (lldb::tid_t tid : tids)
     request.tids->push_back(tid);

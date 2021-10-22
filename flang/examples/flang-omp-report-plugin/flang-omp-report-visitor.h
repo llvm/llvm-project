@@ -13,10 +13,11 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/parsing.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <deque>
-#include <map>
 #include <string>
 
 namespace Fortran {
@@ -48,7 +49,7 @@ using OmpWrapperType =
 
 struct OpenMPCounterVisitor {
   std::string normalize_construct_name(std::string s);
-  ClauseInfo normalize_clause_name(const std::string &s);
+  ClauseInfo normalize_clause_name(const llvm::StringRef s);
   SourcePosition getLocation(const OmpWrapperType &w);
   SourcePosition getLocation(const OpenMPDeclarativeConstruct &c);
   SourcePosition getLocation(const OpenMPConstruct &c);
@@ -85,7 +86,6 @@ struct OpenMPCounterVisitor {
   void Post(const DoConstruct &);
 
   std::string clauseDetails{""};
-  std::map<std::pair<std::string, std::string>, int> constructClauseCount;
 
   // curLoopLogRecord and loopLogRecordStack store
   // pointers to this datastructure's entries. Hence a
@@ -98,7 +98,7 @@ struct OpenMPCounterVisitor {
   LogRecord *curLoopLogRecord{nullptr};
   llvm::SmallVector<LogRecord *> loopLogRecordStack;
   llvm::SmallVector<OmpWrapperType *> ompWrapperStack;
-  std::map<OmpWrapperType *, llvm::SmallVector<ClauseInfo>> clauseStrings;
+  llvm::DenseMap<OmpWrapperType *, llvm::SmallVector<ClauseInfo>> clauseStrings;
   Parsing *parsing{nullptr};
 };
 } // namespace parser

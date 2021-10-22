@@ -28,7 +28,9 @@ public:
 
   /// PluginInterface protocol
   /// \{
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   static void Initialize();
 

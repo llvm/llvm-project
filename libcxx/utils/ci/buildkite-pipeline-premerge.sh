@@ -17,8 +17,8 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-if ! git diff --name-only HEAD~1 | grep -q -E "libcxx/|libcxxabi/"; then
-  # libcxx is not affected
+if ! git diff --name-only HEAD~1 | grep -q -E "libcxx/|libcxxabi/|libunwind/"; then
+  # libcxx/, libcxxabi/ or libunwind/ are not affected
   exit 0
 fi
 
@@ -38,5 +38,3 @@ steps:
       commit: "${BUILDKITE_COMMIT}"
       branch: "${BUILDKITE_BRANCH}"
 EOF
-
-

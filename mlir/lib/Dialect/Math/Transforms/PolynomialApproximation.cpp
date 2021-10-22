@@ -209,8 +209,8 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   };
 
   // Clamp operand into [plusClamp, minusClamp] range.
-  Value minusClamp = bcast(f32Cst(builder, -7.9053111076354980f));
-  Value plusClamp = bcast(f32Cst(builder, 7.90531110763549805f));
+  Value minusClamp = bcast(f32Cst(builder, -7.99881172180175781f));
+  Value plusClamp = bcast(f32Cst(builder, 7.99881172180175781f));
   Value x = clamp(builder, op.operand(), minusClamp, plusClamp);
 
   // Mask for tiny values that are approximated with `operand`.
@@ -567,15 +567,20 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 
   Value isNegInfinityX = builder.create<arith::CmpFOp>(
       arith::CmpFPredicate::OEQ, x, constNegIfinity);
+  Value isPosInfinityX = builder.create<arith::CmpFOp>(
+      arith::CmpFPredicate::OEQ, x, constPosInfinity);
   Value isPostiveX =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zerof32Const);
   Value isComputable = builder.create<arith::AndIOp>(rightBound, leftBound);
 
   expY = builder.create<SelectOp>(
-      isComputable, expY,
+      isNegInfinityX, zerof32Const,
       builder.create<SelectOp>(
-          isPostiveX, constPosInfinity,
-          builder.create<SelectOp>(isNegInfinityX, zerof32Const, underflow)));
+          isPosInfinityX, constPosInfinity,
+          builder.create<SelectOp>(isComputable, expY,
+                                   builder.create<SelectOp>(isPostiveX,
+                                                            constPosInfinity,
+                                                            underflow))));
 
   rewriter.replaceOp(op, expY);
 

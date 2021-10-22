@@ -380,11 +380,9 @@ void Resolver::deadStripOptimize() {
     markLive(dsrAtom);
 
   // now remove all non-live atoms from _atoms
-  _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(),
-                              [&](OwningAtomPtr<Atom> &a) {
-                 return _liveAtoms.count(a.get()) == 0;
-               }),
-               _atoms.end());
+  llvm::erase_if(_atoms, [&](OwningAtomPtr<Atom> &a) {
+    return _liveAtoms.count(a.get()) == 0;
+  });
 }
 
 // error out if some undefines remain
@@ -396,10 +394,8 @@ bool Resolver::checkUndefines() {
   std::vector<const UndefinedAtom *> undefinedAtoms = _symbolTable.undefines();
   if (_ctx.deadStrip()) {
     // When dead code stripping, we don't care if dead atoms are undefined.
-    undefinedAtoms.erase(
-        std::remove_if(undefinedAtoms.begin(), undefinedAtoms.end(),
-                       [&](const Atom *a) { return _liveAtoms.count(a) == 0; }),
-        undefinedAtoms.end());
+    llvm::erase_if(undefinedAtoms,
+                   [&](const Atom *a) { return _liveAtoms.count(a) == 0; });
   }
 
   if (undefinedAtoms.empty())
@@ -440,12 +436,9 @@ void Resolver::removeCoalescedAwayAtoms() {
   DEBUG_WITH_TYPE("resolver",
                   llvm::dbgs() << "******** Removing coalesced away atoms:\n");
   ScopedTask task(getDefaultDomain(), "removeCoalescedAwayAtoms");
-  _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(),
-                              [&](OwningAtomPtr<Atom> &a) {
-                 return _symbolTable.isCoalescedAway(a.get()) ||
-                        _deadAtoms.count(a.get());
-               }),
-               _atoms.end());
+  llvm::erase_if(_atoms, [&](OwningAtomPtr<Atom> &a) {
+    return _symbolTable.isCoalescedAway(a.get()) || _deadAtoms.count(a.get());
+  });
 }
 
 bool Resolver::resolve() {

@@ -16,10 +16,10 @@
 # CHECK: (unsigned long) data8 = 4742474247424742
 ## Variables specified using string forms. This behavior purely speculative -- I
 ## don't know of any compiler that would represent character strings this way.
-# CHECK: (char [7]) string = "string"
-# CHECK: (char [7]) strp = "strp\0\0"
+# CHECK: (char[7]) string = "string"
+# CHECK: (char[7]) strp = "strp\0\0"
 ## Bogus attribute form. Let's make sure we don't crash at least.
-# CHECK: (char [7]) ref4 = <empty constant data>
+# CHECK: (char[7]) ref4 = <empty constant data>
 ## A variable of pointer type.
 # CHECK: (unsigned long *) udata_ptr = 0xdeadbeefbaadf00d
 

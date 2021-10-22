@@ -464,3 +464,42 @@ body: |
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
   bb.2:
 ...
+
+# No VALU delay across s_sendmsg_rtn because it waits for all outstanding VALU
+# to complete.
+---
+name: sendmsg_rtn
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}sendmsg_rtn:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_mov_b32_e32 v0, 0
+    ; CHECK-NEXT: s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_DOORBELL)
+    ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
+    ; CHECK-NEXT: s_add_u32 s0, s0, s0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_SENDMSG_RTN_B32 128
+    $sgpr0 = S_ADD_U32 $sgpr0, $sgpr0, implicit-def $scc
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# No VALU delay before or across FLAT because it waits for all outstanding VALU
+# to complete.
+---
+name: flat_load
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}flat_load:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_mov_b32_e32 v0, 0
+    ; CHECK-NEXT: v_mov_b32_e32 v1, 0
+    ; CHECK-NEXT: v_mov_b32_e32 v2, 0
+    ; CHECK-NEXT: flat_load_b32 v0, v[0:1]
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v2, v2
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+...

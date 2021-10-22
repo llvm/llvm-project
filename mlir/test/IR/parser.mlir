@@ -12,9 +12,6 @@
 // CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 
-// CHECK-DAG: #map{{[0-9]+}} = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
-#map4 = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
-
 // CHECK-DAG: #map{{[0-9]+}} = affine_map<()[s0] -> (0, s0 - 1)>
 #inline_map_minmax_loop1 = affine_map<()[s0] -> (0, s0 - 1)>
 
@@ -80,27 +77,14 @@ func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
 // CHECK: func private @tensor_encoding(tensor<16x32xf64, "sparse">)
 func private @tensor_encoding(tensor<16x32xf64, "sparse">)
 
-// CHECK: func private @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
-func private @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
-
-// Test memref affine map compositions.
+// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
+func private @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
 
 // CHECK: func private @memrefs2(memref<2x4x8xi8, 1>)
 func private @memrefs2(memref<2x4x8xi8, #map2, 1>)
 
-// CHECK: func private @memrefs23(memref<2x4x8xi8, #map{{[0-9]+}}>)
-func private @memrefs23(memref<2x4x8xi8, #map2, #map3, 0>)
-
-// CHECK: func private @memrefs234(memref<2x4x8xi8, #map{{[0-9]+}}, #map{{[0-9]+}}, 3>)
-func private @memrefs234(memref<2x4x8xi8, #map2, #map3, #map4, 3>)
-
-// Test memref inline affine map compositions, minding that identity maps are removed.
-
 // CHECK: func private @memrefs3(memref<2x4x8xi8>)
 func private @memrefs3(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>>)
-
-// CHECK: func private @memrefs33(memref<2x4x8xi8, #map{{[0-9]+}}, 1>)
-func private @memrefs33(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>, 1>)
 
 // CHECK: func private @memrefs_drop_triv_id_inline(memref<2xi8>)
 func private @memrefs_drop_triv_id_inline(memref<2xi8, affine_map<(d0) -> (d0)>>)
@@ -110,35 +94,6 @@ func private @memrefs_drop_triv_id_inline0(memref<2xi8, affine_map<(d0) -> (d0)>
 
 // CHECK: func private @memrefs_drop_triv_id_inline1(memref<2xi8, 1>)
 func private @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> (d0)>, 1>)
-
-// Identity maps should be dropped from the composition, but not the pair of
-// "interchange" maps that, if composed, would be also an identity.
-// CHECK: func private @memrefs_drop_triv_id_composition(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
-func private @memrefs_drop_triv_id_composition(memref<2x2xi8,
-                                                affine_map<(d0, d1) -> (d1, d0)>,
-                                                affine_map<(d0, d1) -> (d0, d1)>,
-                                                affine_map<(d0, d1) -> (d1, d0)>,
-                                                affine_map<(d0, d1) -> (d0, d1)>,
-                                                affine_map<(d0, d1) -> (d0, d1)>>)
-
-// CHECK: func private @memrefs_drop_triv_id_trailing(memref<2x2xi8, #map{{[0-9]+}}>)
-func private @memrefs_drop_triv_id_trailing(memref<2x2xi8, affine_map<(d0, d1) -> (d1, d0)>,
-                                                   affine_map<(d0, d1) -> (d0, d1)>>)
-
-// CHECK: func private @memrefs_drop_triv_id_middle(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
-func private @memrefs_drop_triv_id_middle(memref<2x2xi8,
-                                         affine_map<(d0, d1) -> (d0, d1 + 1)>,
-                                         affine_map<(d0, d1) -> (d0, d1)>,
-                                         affine_map<(d0, d1) -> (d0 + 1, d1)>>)
-
-// CHECK: func private @memrefs_drop_triv_id_multiple(memref<2xi8>)
-func private @memrefs_drop_triv_id_multiple(memref<2xi8, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>>)
-
-// These maps appeared before, so they must be uniqued and hoisted to the beginning.
-// Identity map should be removed.
-// CHECK: func private @memrefs_compose_with_id(memref<2x2xi8, #map{{[0-9]+}}>)
-func private @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
-                                             affine_map<(d0, d1) -> (d1, d0)>>)
 
 // Test memref with custom memory space
 
@@ -201,9 +156,6 @@ func private @unranked_memref_with_index_elems(memref<*xindex>)
 
 // CHECK: func private @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
 func private @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
-
-// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
-func private @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
 
 // CHECK-LABEL: func @simpleCFG(%{{.*}}: i32, %{{.*}}: f32) -> i1 {
 func @simpleCFG(%arg0: i32, %f: f32) -> i1 {

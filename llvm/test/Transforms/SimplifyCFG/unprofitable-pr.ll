@@ -232,3 +232,63 @@ false2:                                           ; preds = %true1
   store volatile i64 3, i64* %ptr, align 8
   ret void
 }
+
+; The load, icmp and assume should not count towards the limit, they are
+; ephemeral.
+define void @test_non_speculatable(i1 %c, i64* align 1 %ptr, i8* %ptr2) local_unnamed_addr #0 {
+; CHECK-LABEL: @test_non_speculatable(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
+; CHECK:       false1:
+; CHECK-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[PTR2:%.*]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 42
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
+; CHECK-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       true2.critedge:
+; CHECK-NEXT:    [[V_C:%.*]] = load i8, i8* [[PTR2]], align 1
+; CHECK-NEXT:    [[C2_C:%.*]] = icmp eq i8 [[V_C]], 42
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2_C]])
+; CHECK-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  br i1 %c, label %true1, label %false1
+
+true1:                                            ; preds = %false1, %0
+  %v = load i8, i8* %ptr2
+  %c2 = icmp eq i8 %v, 42
+  call void @llvm.assume(i1 %c2)
+  store volatile i64 0, i64* %ptr, align 8
+  store volatile i64 -1, i64* %ptr, align 8
+  store volatile i64 -1, i64* %ptr, align 8
+  store volatile i64 -1, i64* %ptr, align 8
+  store volatile i64 -1, i64* %ptr, align 8
+  store volatile i64 -1, i64* %ptr, align 8
+  br i1 %c, label %true2, label %false2
+
+false1:                                           ; preds = %0
+  store volatile i64 1, i64* %ptr, align 4
+  br label %true1
+
+true2:                                            ; preds = %true1
+  store volatile i64 2, i64* %ptr, align 8
+  ret void
+
+false2:                                           ; preds = %true1
+  store volatile i64 3, i64* %ptr, align 8
+  ret void
+}

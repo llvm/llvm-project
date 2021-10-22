@@ -23,10 +23,6 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ArchitectureMips)
 
-ConstString ArchitectureMips::GetPluginNameStatic() {
-  return ConstString("mips");
-}
-
 void ArchitectureMips::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Mips-specific algorithms",
@@ -41,8 +37,6 @@ std::unique_ptr<Architecture> ArchitectureMips::Create(const ArchSpec &arch) {
   return arch.IsMIPS() ?
       std::unique_ptr<Architecture>(new ArchitectureMips(arch)) : nullptr;
 }
-
-ConstString ArchitectureMips::GetPluginName() { return GetPluginNameStatic(); }
 
 addr_t ArchitectureMips::GetCallableLoadAddress(addr_t code_addr,
                                                 AddressClass addr_class) const {

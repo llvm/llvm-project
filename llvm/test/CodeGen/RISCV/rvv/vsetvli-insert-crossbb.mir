@@ -91,6 +91,10 @@
     ret <vscale x 1 x i64> %d
   }
 
+  define void @vsetvli_vpopc() {
+    ret void
+  }
+
   ; Function Attrs: nounwind readnone
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
@@ -436,4 +440,90 @@ body:             |
     $v8 = COPY %3
     PseudoRET implicit $v8
 
+...
+---
+name:            vsetvli_vpopc
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+  - { id: 2, class: gpr, preferred-register: '' }
+  - { id: 3, class: vr, preferred-register: '' }
+  - { id: 4, class: vrnov0, preferred-register: '' }
+  - { id: 5, class: vmv0, preferred-register: '' }
+  - { id: 6, class: vrnov0, preferred-register: '' }
+  - { id: 7, class: gpr, preferred-register: '' }
+  - { id: 8, class: gpr, preferred-register: '' }
+  - { id: 9, class: gpr, preferred-register: '' }
+  - { id: 10, class: gpr, preferred-register: '' }
+  - { id: 11, class: vr, preferred-register: '' }
+body:             |
+  ; CHECK-LABEL: name: vsetvli_vpopc
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead %12:gpr = PseudoVSETVLIX0 $x0, 95, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVID_V_MF2_:%[0-9]+]]:vr = PseudoVID_V_MF2 -1, 6, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead %13:gpr = PseudoVSETVLIX0 $x0, 87, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vrnov0 = PseudoVMV_V_I_MF2 0, -1, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PseudoVMSEQ_VI_MF2_:%[0-9]+]]:vmv0 = PseudoVMSEQ_VI_MF2 killed [[PseudoVID_V_MF2_]], 0, -1, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   $v0 = COPY [[PseudoVMSEQ_VI_MF2_]]
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 23, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVLE32_V_MF2_MASK:%[0-9]+]]:vrnov0 = PseudoVLE32_V_MF2_MASK [[PseudoVMV_V_I_MF2_]], killed [[COPY]], $v0, -1, 5, 0, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 69, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVPOPC_M_B1_:%[0-9]+]]:gpr = PseudoVPOPC_M_B1 [[PseudoVMSEQ_VI_MF2_]], -1, 0, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   BEQ killed [[PseudoVPOPC_M_B1_]], [[COPY2]], %bb.3
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LWU:%[0-9]+]]:gpr = LWU [[COPY1]], 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[DEF]], %bb.1, [[LWU]], %bb.2
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 87, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVADD_VX_MF2_:%[0-9]+]]:vr = nsw PseudoVADD_VX_MF2 [[PseudoVLE32_V_MF2_MASK]], [[PHI]], -1, 5, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   $v0 = COPY [[PseudoVADD_VX_MF2_]]
+  ; CHECK-NEXT:   PseudoRET implicit $v0
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x10, $x11
+
+    %0:gpr = COPY $x11
+    %1:gpr = COPY $x10
+    %2:gpr = IMPLICIT_DEF
+    %3:vr = PseudoVID_V_MF2 -1, 6
+    %4:vrnov0 = PseudoVMV_V_I_MF2 0, -1, 5
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %5:vmv0 = PseudoVMSEQ_VI_MF2 killed %3, 0, -1, 5
+    $v0 = COPY %5
+    %6:vrnov0 = PseudoVLE32_V_MF2_MASK %4, killed %0, $v0, -1, 5, 0
+    %7:gpr = PseudoVPOPC_M_B1 %5, -1, 0
+    %8:gpr = COPY $x0
+    BEQ killed %7, %8, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %9:gpr = LWU %1, 0
+
+  bb.3:
+    %10:gpr = PHI %2, %bb.1, %9, %bb.2
+    %11:vr = nsw PseudoVADD_VX_MF2 %6, %10, -1, 5
+    $v0 = COPY %11
+    PseudoRET implicit $v0
 ...

@@ -189,6 +189,7 @@ protected:
   bool HasImageStoreD16Bug;
   bool HasImageGather4D16Bug;
   bool HasGFX11ExtraVGPRs;
+  bool HasVOPDInsts;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable;
@@ -1012,6 +1013,8 @@ public:
   bool hasNullExportTarget() const { return !GFX11Insts; }
 
   bool hasGFX11ExtraVGPRs() const { return HasGFX11ExtraVGPRs; }
+
+  bool hasVOPDInsts() const { return HasVOPDInsts; }
 
   /// Return true if the target has the S_DELAY_ALU instruction.
   bool hasDelayAlu() const { return GFX11Insts; }

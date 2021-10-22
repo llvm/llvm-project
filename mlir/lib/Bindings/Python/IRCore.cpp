@@ -1976,7 +1976,7 @@ void mlir::python::populateIRCore(py::module &m) {
             if (frames.empty())
               throw py::value_error("No caller frames provided");
             MlirLocation caller = frames.back().get();
-            for (PyLocation frame :
+            for (const PyLocation &frame :
                  llvm::reverse(llvm::makeArrayRef(frames).drop_back()))
               caller = mlirLocationCallSiteGet(frame.get(), caller);
             return PyLocation(context->getRef(),
@@ -2143,6 +2143,15 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           "Shortcut to get an op result if it has only one (throws an error "
           "otherwise).")
+      .def_property_readonly(
+          "location",
+          [](PyOperationBase &self) {
+            PyOperation &operation = self.getOperation();
+            return PyLocation(operation.getContext(),
+                              mlirOperationGetLocation(operation.get()));
+          },
+          "Returns the source location the operation was defined or derived "
+          "from.")
       .def("__iter__",
            [](PyOperationBase &self) {
              return PyRegionIterator(self.getOperation().getRef());

@@ -54,8 +54,8 @@ define <vscale x 8 x i8> @add_stepvector_nxv8i8() {
 ; CHECK-LABEL: add_stepvector_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vid.v v25
-; CHECK-NEXT:    vsll.vi v8, v25, 1
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
@@ -68,9 +68,9 @@ define <vscale x 8 x i8> @mul_stepvector_nxv8i8() {
 ; CHECK-LABEL: mul_stepvector_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vid.v v25
+; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    addi a0, zero, 3
-; CHECK-NEXT:    vmul.vx v8, v25, a0
+; CHECK-NEXT:    vmul.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <vscale x 8 x i8> poison, i8 3, i32 0
@@ -84,8 +84,8 @@ define <vscale x 8 x i8> @shl_stepvector_nxv8i8() {
 ; CHECK-LABEL: shl_stepvector_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vid.v v25
-; CHECK-NEXT:    vsll.vi v8, v25, 2
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 2
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
@@ -195,8 +195,8 @@ define <vscale x 16 x i16> @add_stepvector_nxv16i16() {
 ; CHECK-LABEL: add_stepvector_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vid.v v28
-; CHECK-NEXT:    vsll.vi v8, v28, 1
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i16> @llvm.experimental.stepvector.nxv16i16()
@@ -209,9 +209,9 @@ define <vscale x 16 x i16> @mul_stepvector_nxv16i16() {
 ; CHECK-LABEL: mul_stepvector_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vid.v v28
+; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    addi a0, zero, 3
-; CHECK-NEXT:    vmul.vx v8, v28, a0
+; CHECK-NEXT:    vmul.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <vscale x 16 x i16> poison, i16 3, i32 0
@@ -225,8 +225,8 @@ define <vscale x 16 x i16> @shl_stepvector_nxv16i16() {
 ; CHECK-LABEL: shl_stepvector_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
-; CHECK-NEXT:    vid.v v28
-; CHECK-NEXT:    vsll.vi v8, v28, 2
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 2
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <vscale x 16 x i16> poison, i16 2, i32 0

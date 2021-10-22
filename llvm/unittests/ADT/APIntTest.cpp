@@ -1765,6 +1765,52 @@ TEST(APIntTest, isShiftedMask) {
   }
 }
 
+TEST(APIntTest, isPowerOf2) {
+  EXPECT_FALSE(APInt(5, 0x00).isPowerOf2());
+  EXPECT_FALSE(APInt(32, 0x11).isPowerOf2());
+  EXPECT_TRUE(APInt(17, 0x01).isPowerOf2());
+  EXPECT_TRUE(APInt(32, (unsigned)(0xffu << 31)).isPowerOf2());
+
+  for (int N : {1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256}) {
+    EXPECT_FALSE(APInt(N, 0).isPowerOf2());
+    EXPECT_TRUE(APInt::getSignedMinValue(N).isPowerOf2());
+
+    APInt One(N, 1);
+    for (int I = 1; I < N - 1; ++I) {
+      EXPECT_TRUE(APInt::getOneBitSet(N, I).isPowerOf2());
+
+      APInt MaskVal = One.shl(I);
+      EXPECT_TRUE(MaskVal.isPowerOf2());
+    }
+  }
+}
+
+TEST(APIntTest, isNegatedPowerOf2) {
+  EXPECT_FALSE(APInt(5, 0x00).isNegatedPowerOf2());
+  EXPECT_TRUE(APInt(15, 0x7ffe).isNegatedPowerOf2());
+  EXPECT_TRUE(APInt(16, 0xfffc).isNegatedPowerOf2());
+  EXPECT_TRUE(APInt(32, 0xffffffff).isNegatedPowerOf2());
+
+  for (int N : {1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256}) {
+    EXPECT_FALSE(APInt(N, 0).isNegatedPowerOf2());
+    EXPECT_TRUE(APInt::getAllOnes(N).isNegatedPowerOf2());
+    EXPECT_TRUE(APInt::getSignedMinValue(N).isNegatedPowerOf2());
+    EXPECT_TRUE((-APInt::getSignedMinValue(N)).isNegatedPowerOf2());
+
+    APInt One(N, 1);
+    for (int I = 1; I < N - 1; ++I) {
+      EXPECT_FALSE(APInt::getOneBitSet(N, I).isNegatedPowerOf2());
+      EXPECT_TRUE((-APInt::getOneBitSet(N, I)).isNegatedPowerOf2());
+
+      APInt MaskVal = One.shl(I);
+      EXPECT_TRUE((-MaskVal).isNegatedPowerOf2());
+
+      APInt ShiftMaskVal = One.getHighBitsSet(N, I);
+      EXPECT_TRUE(ShiftMaskVal.isNegatedPowerOf2());
+    }
+  }
+}
+
 // Test that self-move works with EXPENSIVE_CHECKS. It calls std::shuffle which
 // does self-move on some platforms.
 #ifdef EXPENSIVE_CHECKS
@@ -2729,9 +2775,24 @@ TEST(APIntTest, umul_ov) {
   for (unsigned Bits = 1; Bits <= 5; ++Bits)
     for (unsigned A = 0; A != 1u << Bits; ++A)
       for (unsigned B = 0; B != 1u << Bits; ++B) {
-        APInt C = APInt(Bits, A).umul_ov(APInt(Bits, B), Overflow);
-        APInt D = APInt(2 * Bits, A) * APInt(2 * Bits, B);
-        EXPECT_TRUE(D.getHiBits(Bits).isNullValue() != Overflow);
+        APInt N1 = APInt(Bits, A), N2 = APInt(Bits, B);
+        APInt Narrow = N1.umul_ov(N2, Overflow);
+        APInt Wide = N1.zext(2 * Bits) * N2.zext(2 * Bits);
+        EXPECT_EQ(Wide.trunc(Bits), Narrow);
+        EXPECT_EQ(Narrow.zext(2 * Bits) != Wide, Overflow);
+      }
+}
+
+TEST(APIntTest, smul_ov) {
+  for (unsigned Bits = 1; Bits <= 5; ++Bits)
+    for (unsigned A = 0; A != 1u << Bits; ++A)
+      for (unsigned B = 0; B != 1u << Bits; ++B) {
+        bool Overflow;
+        APInt N1 = APInt(Bits, A), N2 = APInt(Bits, B);
+        APInt Narrow = N1.smul_ov(N2, Overflow);
+        APInt Wide = N1.sext(2 * Bits) * N2.sext(2 * Bits);
+        EXPECT_EQ(Wide.trunc(Bits), Narrow);
+        EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
       }
 }
 

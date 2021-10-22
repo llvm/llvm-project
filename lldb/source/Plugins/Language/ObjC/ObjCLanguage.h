@@ -156,7 +156,9 @@ public:
   }
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 };
 
 } // namespace lldb_private

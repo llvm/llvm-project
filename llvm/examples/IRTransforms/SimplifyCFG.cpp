@@ -354,17 +354,17 @@ static bool mergeIntoSinglePredecessor_v2(Function &F, DominatorTree &DT) {
 }
 
 static bool doSimplify_v1(Function &F) {
-  return eliminateCondBranches_v1(F) | mergeIntoSinglePredecessor_v1(F) |
+  return (int)eliminateCondBranches_v1(F) | mergeIntoSinglePredecessor_v1(F) |
          removeDeadBlocks_v1(F);
 }
 
 static bool doSimplify_v2(Function &F, DominatorTree &DT) {
-  return eliminateCondBranches_v2(F, DT) |
+  return (int)eliminateCondBranches_v2(F, DT) |
          mergeIntoSinglePredecessor_v2(F, DT) | removeDeadBlocks_v2(F, DT);
 }
 
 static bool doSimplify_v3(Function &F, DominatorTree &DT) {
-  return eliminateCondBranches_v3(F, DT) |
+  return (int)eliminateCondBranches_v3(F, DT) |
          mergeIntoSinglePredecessor_v2(F, DT) | removeDeadBlocks_v2(F, DT);
 }
 

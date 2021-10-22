@@ -236,11 +236,19 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     }
   }
 
-  if ((ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
-       ISD == ISD::UREM) &&
+  if ((ISD == ISD::MUL || ISD == ISD::SDIV || ISD == ISD::SREM ||
+       ISD == ISD::UDIV || ISD == ISD::UREM) &&
       (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
        Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
+    // Vector multiply by pow2 will be simplified to shifts.
+    if (ISD == ISD::MUL) {
+      InstructionCost Cost = getArithmeticInstrCost(
+          Instruction::Shl, Ty, CostKind, Op1Info, Op2Info,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+      return Cost;
+    }
+
     if (ISD == ISD::SDIV || ISD == ISD::SREM) {
       // On X86, vector signed division by constants power-of-two are
       // normally expanded to the sequence SRA + SRL + ADD + SRA.
@@ -314,7 +322,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,   MVT::v2i64, 4  },
   };
 
-  if (ST->isSLM()) {
+  if (ST->useSLMArithCosts()) {
     if (Args.size() == 2 && ISD == ISD::MUL && LT.second == MVT::v4i32) {
       // Check if the operands can be shrinked into a smaller datatype.
       // TODO: Merge this into generiic vXi32 MUL patterns above.
@@ -2572,7 +2580,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SELECT,  MVT::v4f32,   3 }, // andps + andnps + orps
   };
 
-  if (ST->isSLM())
+  if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
       return LT.first * (ExtraCost + Entry->Cost);
 
@@ -3195,7 +3203,7 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
         return adjustTableCost(*Entry, LT.first, ICA.getFlags());
 
-    if (ST->isSLM())
+    if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
         return adjustTableCost(*Entry, LT.first, ICA.getFlags());
 
@@ -3422,7 +3430,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (Index == -1U && (Opcode == Instruction::ExtractElement ||
                        Opcode == Instruction::InsertElement)) {
     // TODO: On some SSE41+ targets, we expand to cmp+splat+select patterns:
-    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0. 
+    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0.
 
     // TODO: Move this to BasicTTIImpl.h? We'd need better gep + index handling.
     assert(isa<FixedVectorType>(Val) && "Fixed vector type expected");
@@ -3488,7 +3496,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Unexpected vector opcode");
     MVT MScalarTy = LT.second.getScalarType();
-    if (ST->isSLM())
+    if (ST->useSLMArithCosts())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
         return Entry->Cost + RegisterFileMoveCost;
 
@@ -3905,7 +3913,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   EVT VT = TLI->getValueType(DL, ValTy);
   if (VT.isSimple()) {
     MVT MTy = VT.getSimpleVT();
-    if (ST->isSLM())
+    if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
         return Entry->Cost;
 
@@ -3944,7 +3952,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     ArithmeticCost *= LT.first - 1;
   }
 
-  if (ST->isSLM())
+  if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
       return ArithmeticCost + Entry->Cost;
 
@@ -4878,11 +4886,15 @@ bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
   return isLegalMaskedExpandLoad(DataTy);
 }
 
-bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+bool X86TTIImpl::supportsGather() const {
   // Some CPUs have better gather performance than others.
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
   // enable gather with a -march.
-  if (!(ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2())))
+  return ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2());
+}
+
+bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
+  if (!supportsGather())
     return false;
 
   // This function is called now in two cases: from the Loop Vectorizer
@@ -5004,6 +5016,14 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.LoadSizes.push_back(2);
   Options.LoadSizes.push_back(1);
   return Options;
+}
+
+bool X86TTIImpl::prefersVectorizedAddressing() const {
+  return supportsGather();
+}
+
+bool X86TTIImpl::supportsEfficientVectorElementLoadStore() const {
+  return false;
 }
 
 bool X86TTIImpl::enableInterleavedAccessVectorization() {
@@ -5208,22 +5228,18 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {2, MVT::v16i8, 4}, // (load 32i8 and) deinterleave into 2 x 16i8
       {2, MVT::v32i8, 6}, // (load 64i8 and) deinterleave into 2 x 32i8
 
-      {2, MVT::v2i16, 2},   // (load 4i16 and) deinterleave into 2 x 2i16
-      {2, MVT::v4i16, 2},   // (load 8i16 and) deinterleave into 2 x 4i16
       {2, MVT::v8i16, 6},   // (load 16i16 and) deinterleave into 2 x 8i16
       {2, MVT::v16i16, 9},  // (load 32i16 and) deinterleave into 2 x 16i16
       {2, MVT::v32i16, 18}, // (load 64i16 and) deinterleave into 2 x 32i16
 
-      {2, MVT::v2i32, 2},   // (load 4i32 and) deinterleave into 2 x 2i32
-      {2, MVT::v4i32, 2},   // (load 8i32 and) deinterleave into 2 x 4i32
       {2, MVT::v8i32, 4},   // (load 16i32 and) deinterleave into 2 x 8i32
       {2, MVT::v16i32, 8},  // (load 32i32 and) deinterleave into 2 x 16i32
       {2, MVT::v32i32, 16}, // (load 64i32 and) deinterleave into 2 x 32i32
 
-      {2, MVT::v2i64, 2},   // (load 4i64 and) deinterleave into 2 x 2i64
       {2, MVT::v4i64, 4},   // (load 8i64 and) deinterleave into 2 x 4i64
       {2, MVT::v8i64, 8},   // (load 16i64 and) deinterleave into 2 x 8i64
       {2, MVT::v16i64, 16}, // (load 32i64 and) deinterleave into 2 x 16i64
+      {2, MVT::v32i64, 32}, // (load 64i64 and) deinterleave into 2 x 32i64
 
       {3, MVT::v2i8, 3},   // (load 6i8 and) deinterleave into 3 x 2i8
       {3, MVT::v4i8, 3},   // (load 12i8 and) deinterleave into 3 x 4i8
@@ -5241,6 +5257,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {3, MVT::v4i32, 3},   // (load 12i32 and) deinterleave into 3 x 4i32
       {3, MVT::v8i32, 7},   // (load 24i32 and) deinterleave into 3 x 8i32
       {3, MVT::v16i32, 14}, // (load 48i32 and) deinterleave into 3 x 16i32
+      {3, MVT::v32i32, 32}, // (load 96i32 and) deinterleave into 3 x 32i32
 
       {3, MVT::v2i64, 1},   // (load 6i64 and) deinterleave into 3 x 2i64
       {3, MVT::v4i64, 5},   // (load 12i64 and) deinterleave into 3 x 4i64
@@ -5263,10 +5280,12 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {4, MVT::v4i32, 8},   // (load 16i32 and) deinterleave into 4 x 4i32
       {4, MVT::v8i32, 16},  // (load 32i32 and) deinterleave into 4 x 8i32
       {4, MVT::v16i32, 32}, // (load 64i32 and) deinterleave into 4 x 16i32
+      {4, MVT::v32i32, 68}, // (load 128i32 and) deinterleave into 4 x 32i32
 
       {4, MVT::v2i64, 6},  // (load 8i64 and) deinterleave into 4 x 2i64
       {4, MVT::v4i64, 8},  // (load 16i64 and) deinterleave into 4 x 4i64
       {4, MVT::v8i64, 20}, // (load 32i64 and) deinterleave into 4 x 8i64
+      {4, MVT::v16i64, 40}, // (load 64i64 and) deinterleave into 4 x 16i64
 
       {6, MVT::v2i8, 6},   // (load 12i8 and) deinterleave into 6 x 2i8
       {6, MVT::v4i8, 14},  // (load 24i8 and) deinterleave into 6 x 4i8
@@ -5278,6 +5297,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {6, MVT::v4i16, 9},    // (load 24i16 and) deinterleave into 6 x 4i16
       {6, MVT::v8i16, 39},   // (load 48i16 and) deinterleave into 6 x 8i16
       {6, MVT::v16i16, 106}, // (load 96i16 and) deinterleave into 6 x 16i16
+      {6, MVT::v32i16, 212}, // (load 192i16 and) deinterleave into 6 x 32i16
 
       {6, MVT::v2i32, 6},   // (load 12i32 and) deinterleave into 6 x 2i32
       {6, MVT::v4i32, 15},  // (load 24i32 and) deinterleave into 6 x 4i32
@@ -5291,20 +5311,28 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {8, MVT::v8i32, 40} // (load 64i32 and) deinterleave into 8 x 8i32
   };
 
+  static const CostTblEntry SSSE3InterleavedLoadTbl[] = {
+      {2, MVT::v4i16, 2},   // (load 8i16 and) deinterleave into 2 x 4i16
+  };
+
+  static const CostTblEntry SSE2InterleavedLoadTbl[] = {
+      {2, MVT::v2i16, 2},   // (load 4i16 and) deinterleave into 2 x 2i16
+      {2, MVT::v4i16, 7},   // (load 8i16 and) deinterleave into 2 x 4i16
+
+      {2, MVT::v2i32, 2},   // (load 4i32 and) deinterleave into 2 x 2i32
+      {2, MVT::v4i32, 2},   // (load 8i32 and) deinterleave into 2 x 4i32
+
+      {2, MVT::v2i64, 2},   // (load 4i64 and) deinterleave into 2 x 2i64
+  };
+
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
-      {2, MVT::v2i8, 1},  // interleave 2 x 2i8 into 4i8 (and store)
-      {2, MVT::v4i8, 1},  // interleave 2 x 4i8 into 8i8 (and store)
-      {2, MVT::v8i8, 1},  // interleave 2 x 8i8 into 16i8 (and store)
       {2, MVT::v16i8, 3}, // interleave 2 x 16i8 into 32i8 (and store)
       {2, MVT::v32i8, 4}, // interleave 2 x 32i8 into 64i8 (and store)
 
-      {2, MVT::v2i16, 1},  // interleave 2 x 2i16 into 4i16 (and store)
-      {2, MVT::v4i16, 1},  // interleave 2 x 4i16 into 8i16 (and store)
       {2, MVT::v8i16, 3},  // interleave 2 x 8i16 into 16i16 (and store)
       {2, MVT::v16i16, 4}, // interleave 2 x 16i16 into 32i16 (and store)
       {2, MVT::v32i16, 8}, // interleave 2 x 32i16 into 64i16 (and store)
 
-      {2, MVT::v2i32, 1},   // interleave 2 x 2i32 into 4i32 (and store)
       {2, MVT::v4i32, 2},   // interleave 2 x 4i32 into 8i32 (and store)
       {2, MVT::v8i32, 4},   // interleave 2 x 8i32 into 16i32 (and store)
       {2, MVT::v16i32, 8},  // interleave 2 x 16i32 into 32i32 (and store)
@@ -5314,6 +5342,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {2, MVT::v4i64, 4},   // interleave 2 x 4i64 into 8i64 (and store)
       {2, MVT::v8i64, 8},   // interleave 2 x 8i64 into 16i64 (and store)
       {2, MVT::v16i64, 16}, // interleave 2 x 16i64 into 32i64 (and store)
+      {2, MVT::v32i64, 32}, // interleave 2 x 32i64 into 64i64 (and store)
 
       {3, MVT::v2i8, 4},   // interleave 3 x 2i8 into 6i8 (and store)
       {3, MVT::v4i8, 4},   // interleave 3 x 4i8 into 12i8 (and store)
@@ -5331,6 +5360,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {3, MVT::v4i32, 5},   // interleave 3 x 4i32 into 12i32 (and store)
       {3, MVT::v8i32, 11},  // interleave 3 x 8i32 into 24i32 (and store)
       {3, MVT::v16i32, 22}, // interleave 3 x 16i32 into 48i32 (and store)
+      {3, MVT::v32i32, 48}, // interleave 3 x 32i32 into 96i32 (and store)
 
       {3, MVT::v2i64, 4},   // interleave 3 x 2i64 into 6i64 (and store)
       {3, MVT::v4i64, 6},   // interleave 3 x 4i64 into 12i64 (and store)
@@ -5353,10 +5383,12 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {4, MVT::v4i32, 6},   // interleave 4 x 4i32 into 16i32 (and store)
       {4, MVT::v8i32, 16},  // interleave 4 x 8i32 into 32i32 (and store)
       {4, MVT::v16i32, 32}, // interleave 4 x 16i32 into 64i32 (and store)
+      {4, MVT::v32i32, 64}, // interleave 4 x 32i32 into 128i32 (and store)
 
       {4, MVT::v2i64, 6},  // interleave 4 x 2i64 into 8i64 (and store)
       {4, MVT::v4i64, 8},  // interleave 4 x 4i64 into 16i64 (and store)
       {4, MVT::v8i64, 20}, // interleave 4 x 8i64 into 32i64 (and store)
+      {4, MVT::v16i64, 40}, // interleave 4 x 16i64 into 64i64 (and store)
 
       {6, MVT::v2i8, 7},   // interleave 6 x 2i8 into 12i8 (and store)
       {6, MVT::v4i8, 9},   // interleave 6 x 4i8 into 24i8 (and store)
@@ -5368,6 +5400,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {6, MVT::v4i16, 15},  // interleave 6 x 4i16 into 24i16 (and store)
       {6, MVT::v8i16, 21},  // interleave 6 x 8i16 into 48i16 (and store)
       {6, MVT::v16i16, 58}, // interleave 6 x 16i16 into 96i16 (and store)
+      {6, MVT::v32i16, 90}, // interleave 6 x 32i16 into 192i16 (and store)
 
       {6, MVT::v2i32, 9},   // interleave 6 x 2i32 into 12i32 (and store)
       {6, MVT::v4i32, 12},  // interleave 6 x 4i32 into 24i32 (and store)
@@ -5379,11 +5412,32 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
       {6, MVT::v8i64, 30}, // interleave 6 x 8i64 into 48i64 (and store)
   };
 
+  static const CostTblEntry SSE2InterleavedStoreTbl[] = {
+      {2, MVT::v2i8, 1},   // interleave 2 x 2i8 into 4i8 (and store)
+      {2, MVT::v4i8, 1},   // interleave 2 x 4i8 into 8i8 (and store)
+      {2, MVT::v8i8, 1},   // interleave 2 x 8i8 into 16i8 (and store)
+
+      {2, MVT::v2i16, 1},  // interleave 2 x 2i16 into 4i16 (and store)
+      {2, MVT::v4i16, 1},  // interleave 2 x 4i16 into 8i16 (and store)
+
+      {2, MVT::v2i32, 1},  // interleave 2 x 2i32 into 4i32 (and store)
+  };
+
   if (Opcode == Instruction::Load) {
     // FIXME: if we have a partially-interleaved groups, with gaps,
     //        should we discount the not-demanded indicies?
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedLoadTbl, Factor,
+                                              ETy.getSimpleVT()))
+        return MemOpCosts + Entry->Cost;
+
+    if (ST->hasSSSE3())
+      if (const auto *Entry = CostTableLookup(SSSE3InterleavedLoadTbl, Factor,
+                                              ETy.getSimpleVT()))
+        return MemOpCosts + Entry->Cost;
+
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2InterleavedLoadTbl, Factor,
                                               ETy.getSimpleVT()))
         return MemOpCosts + Entry->Cost;
   } else {
@@ -5393,6 +5447,11 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
            "Interleaved store only supports fully-interleaved groups.");
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedStoreTbl, Factor,
+                                              ETy.getSimpleVT()))
+        return MemOpCosts + Entry->Cost;
+
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2InterleavedStoreTbl, Factor,
                                               ETy.getSimpleVT()))
         return MemOpCosts + Entry->Cost;
   }

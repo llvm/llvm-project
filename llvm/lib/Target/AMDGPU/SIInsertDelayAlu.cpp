@@ -309,6 +309,15 @@ public:
       if (MI.isBundle() || MI.isMetaInstruction())
         continue;
 
+      // Ignore some more instructions that do not generate any code.
+      // FIXME: should these be marked as isMetaInstruction?
+      switch (MI.getOpcode()) {
+      case AMDGPU::SI_MASKED_UNREACHABLE:
+      case AMDGPU::SI_RETURN_TO_EPILOG:
+      case AMDGPU::WAVE_BARRIER:
+        continue;
+      }
+
       auto TSFlags = MI.getDesc().TSFlags;
       DelayType Type =
           (TSFlags & SIInstrFlags::TRANS)
@@ -317,7 +326,15 @@ public:
                     ? VALU
                     : (TSFlags & SIInstrFlags::SALU) ? SALU : OTHER;
 
-      if (Type != OTHER) {
+      if (TSFlags & (SIInstrFlags::DS | SIInstrFlags::EXP | SIInstrFlags::FLAT |
+                     SIInstrFlags::MIMG | SIInstrFlags::MTBUF |
+                     SIInstrFlags::MUBUF) ||
+          MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
+          MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64) {
+        // These instructions wait for all outstanding VALU instructions to
+        // complete.
+        State = DelayState();
+      } else if (Type != OTHER) {
         DelayInfo Delay;
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
@@ -336,7 +353,9 @@ public:
           // just ignore them?
           LastDelayAlu = emitDelayAlu(MI, Delay, LastDelayAlu);
         }
+      }
 
+      if (Type != OTHER) {
         // TODO: Scan implicit defs too?
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel.computeOperandLatency(
@@ -345,11 +364,6 @@ public:
             State[*UI] = DelayInfo(Type, Latency);
         }
       }
-
-      // TODO: Account for instructions which wait for outstanding register
-      // writes to complete including:
-      // VMEM and FLAT wait for SA_SDST==0 && VA_VDST==0 && VA_SDST==0
-      // EXP and DS wait for VA_VDST==0
 
       // Advance by the number of cycles it takes to issue this instruction.
       // TODO: Use a more advanced model that accounts for instructions that

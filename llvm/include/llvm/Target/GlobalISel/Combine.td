@@ -671,6 +671,12 @@ def icmp_to_lhs_known_bits : GICombineRule<
          [{ return Helper.matchICmpToLHSKnownBits(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def and_or_disjoint_mask : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_AND):$root,
+         [{ return Helper.matchAndOrDisjointMask(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${info}); }])>;
+
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -691,9 +697,16 @@ def bitfield_extract_from_shr : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def bitfield_extract_from_shr_and : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_ASHR, G_LSHR):$root,
+    [{ return Helper.matchBitfieldExtractFromShrAnd(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
                                             bitfield_extract_from_and,
-                                            bitfield_extract_from_shr]>;
+                                            bitfield_extract_from_shr,
+                                            bitfield_extract_from_shr_and]>;
 
 def udiv_by_const : GICombineRule<
   (defs root:$root),
@@ -785,7 +798,8 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
-    intdiv_combines, mulh_combines, redundant_neg_operands]>;
+    intdiv_combines, mulh_combines, redundant_neg_operands,
+    and_or_disjoint_mask ]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

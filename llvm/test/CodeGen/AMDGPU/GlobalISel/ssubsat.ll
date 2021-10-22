@@ -4654,7 +4654,7 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, v[4:5], v[0:1]
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, v6, 0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s1, 0x80000000, v6, s1
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s1, 0x80000000, v6, s1
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, vcc_lo, s0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
@@ -4870,7 +4870,7 @@ define amdgpu_ps <2 x float> @ssubsat_i64_sv(i64 inreg %lhs, i64 %rhs) {
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; GFX11-NEXT:    v_cmp_gt_i64_e64 s0, s[0:1], v[2:3]
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, v4, 0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s1, 0x80000000, v4, s1
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s1, 0x80000000, v4, s1
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, vcc_lo, s0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
@@ -4951,7 +4951,7 @@ define amdgpu_ps <2 x float> @ssubsat_i64_vs(i64 %lhs, i64 inreg %rhs) {
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; GFX11-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, v4, 0
-; GFX11-NEXT:    v_addc_u32_e64 v1, s0, 0x80000000, v4, s0
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 0x80000000, v4, s0
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
@@ -5080,10 +5080,10 @@ define <2 x i64> @v_ssubsat_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v0, 31, v11
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s2, 0, v[6:7]
 ; GFX11-NEXT:    v_add_co_u32 v1, s1, v12, 0
-; GFX11-NEXT:    v_addc_u32_e64 v4, s1, 0x80000000, v12, s1
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v4, s1, 0x80000000, v12, s1
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s1, v[10:11], v[2:3]
 ; GFX11-NEXT:    v_add_co_u32 v2, s3, v0, 0
-; GFX11-NEXT:    v_addc_u32_e64 v3, s3, 0x80000000, v0, s3
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s3, 0x80000000, v0, s3
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v8, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc_lo

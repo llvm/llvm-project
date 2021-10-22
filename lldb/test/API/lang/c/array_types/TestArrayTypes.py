@@ -71,12 +71,12 @@ class ArrayTypesTestCase(TestBase):
         self.expect(
             "frame variable --show-types ushort_matrix",
             VARIABLES_DISPLAYED_CORRECTLY,
-            startstr='(unsigned short [2][3])')
+            startstr='(unsigned short[2][3])')
 
         self.expect(
             "frame variable --show-types long_6",
             VARIABLES_DISPLAYED_CORRECTLY,
-            startstr='(long [6])')
+            startstr='(long[6])')
 
     @expectedFailureNetBSD
     @add_test_categories(['pyapi'])

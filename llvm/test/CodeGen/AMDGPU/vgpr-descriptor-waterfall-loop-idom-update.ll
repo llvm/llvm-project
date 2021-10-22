@@ -7,15 +7,15 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    v_add_co_u32 v6, vcc_lo, v0, 8
+; GCN-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v1, vcc_lo
 ; GCN-NEXT:  BB0_1: ; %bb0
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
 ; GCN-NEXT:    ; Child Loop BB0_2 Depth 2
-; GCN-NEXT:    v_add_co_u32 v6, vcc_lo, v0, 8
-; GCN-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v1, vcc_lo
-; GCN-NEXT:    s_mov_b32 s5, exec_lo
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    flat_load_dwordx2 v[4:5], v[6:7]
 ; GCN-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; GCN-NEXT:    s_mov_b32 s5, exec_lo
 ; GCN-NEXT:  BB0_2: ; Parent Loop BB0_1 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

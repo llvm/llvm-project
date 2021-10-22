@@ -25,7 +25,7 @@ entry:
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_fdot2_no_clamp
 ; GFX906: v_dot2_f32_f16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX10:  v_dot2c_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX11:  v_dot2acc_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX11: v_dual_mov_b32 v2, 0 :: v_dual_dot2acc_f32_f16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_no_clamp(
     float addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,

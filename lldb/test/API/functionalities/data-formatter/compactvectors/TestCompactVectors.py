@@ -49,8 +49,8 @@ class CompactVectorsFormattingTestCase(TestBase):
             substrs=[
                 '(vFloat) valueFL = (1.25, 0, 0.25, 0)',
                 '(vDouble) valueDL = (1.25, 2.25)',
-                '(int16_t [8]) valueI16 = (1, 0, 4, 0, 0, 1, 0, 4)',
-                '(int32_t [4]) valueI32 = (1, 0, 4, 0)',
+                '(int16_t[8]) valueI16 = (1, 0, 4, 0, 0, 1, 0, 4)',
+                '(int32_t[4]) valueI32 = (1, 0, 4, 0)',
                 '(vUInt8) valueU8 = (0x01, 0x00, 0x04, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)',
                 '(vUInt16) valueU16 = (1, 0, 4, 0, 0, 1, 0, 4)',
                 '(vUInt32) valueU32 = (1, 2, 3, 4)',

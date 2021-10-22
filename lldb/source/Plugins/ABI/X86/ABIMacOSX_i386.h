@@ -75,9 +75,9 @@ public:
 
   // PluginInterface protocol
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "abi.macosx-i386"; }
 
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   lldb::ValueObjectSP

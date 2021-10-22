@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg -S < %s | FileCheck %s -implicit-check-not="call void @llvm.dbg.addr"
+; RUN: opt -passes=mem2reg -S < %s | FileCheck %s -implicit-check-not="call void @llvm.dbg.addr"
 
 ; This example is intended to simulate this pass pipeline, which may not exist
 ; in practice:

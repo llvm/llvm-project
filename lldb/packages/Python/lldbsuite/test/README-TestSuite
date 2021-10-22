@@ -69,19 +69,12 @@ to the Python test suite under the current 'test' directory.
   Python test script.  An example of the latter can be found in
   test/lang/objc/radar-9691614/TestObjCMethodReturningBOOL.py, where:
 
-    def test_method_ret_BOOL_with_dsym(self):
+    def test_method_ret_BOOL(self):
         """Test that objective-c method returning BOOL works correctly."""
         d = {'EXE': self.exe_name}
-        self.buildDsym(dictionary=d)
+        self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        self.objc_method_ret_BOOL(self.exe_name)
-
-    def test_method_ret_BOOL_with_dwarf(self):
-        """Test that objective-c method returning BOOL works correctly."""
-        d = {'EXE': self.exe_name}
-        self.buildDwarf(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        self.objc_method_ret_BOOL(self.exe_name)
+        ...
 
     def setUp(self):
         # Call super's setUp().

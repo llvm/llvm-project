@@ -1,11 +1,14 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,WAVE64 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,WAVE32 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,WAVE32 %s
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo14:
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4
-; GCN: v_and_b32_e32 [[MASKED:v[0-9]+]], 0x3ffc, [[FI]]
-; GCN: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
+; GFX10,WAVE64: v_mov_b32_e32 [[FI:v[0-9]+]], 4
+; GFX11: v_mov_b32_e32 [[FI:v[0-9]+]], 4
+; GFX10,WAVE64: v_and_b32_e32 [[MASKED:v[0-9]+]], 0x3ffc, [[FI]]
+; GFX11: v_dual_and_b32 [[MASKED:v[0-9]+]], 0x3ffc, [[FI]]
+; GFX10,GFX11,WAVE64: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
+; GFX10: {{.*}}
 define amdgpu_kernel void @scratch_buffer_known_high_masklo14() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
@@ -16,9 +19,11 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo14() #0 {
 }
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo16:
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4
-; GCN: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xfffc, [[FI]]
-; GCN: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
+; GFX10,WAVE64: v_mov_b32_e32 [[FI:v[0-9]+]], 4
+; GFX11: v_mov_b32_e32 [[FI:v[0-9]+]], 4
+; GFX10,WAVE64: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xfffc, [[FI]]
+; GFX11: v_dual_and_b32 [[MASKED:v[0-9]+]], 0xfffc, [[FI]]
+; GFX10,GFX11,WAVE64: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 define amdgpu_kernel void @scratch_buffer_known_high_masklo16() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
@@ -33,7 +38,7 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo16() #0 {
 ; WAVE64-NOT: [[FI]]
 ; WAVE64: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[FI]]
 
-; WAVE32: v_and_b32_e32 [[MASKED:v[0-9]+]], 0x1fffc, [[FI]]
+; WAVE32: v_{{(dual_)?}}and_b32{{(_e32)?}} [[MASKED:v[0-9]+]], 0x1fffc, [[FI]]
 ; WAVE32: {{flat|global}}_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 define amdgpu_kernel void @scratch_buffer_known_high_masklo17() #0 {
   %alloca = alloca i32, align 4, addrspace(5)

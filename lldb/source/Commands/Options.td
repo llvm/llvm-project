@@ -787,10 +787,21 @@ let Command = "script add" in {
   Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
   Desc<"The help text to display for this command.">;
+  def script_add_overwrite : Option<"overwrite", "o">, Groups<[1,2]>,
+  Desc<"Overwrite an existing command at this node.">;
   def script_add_synchronicity : Option<"synchronicity", "s">,
     EnumArg<"ScriptedCommandSynchronicity", "ScriptSynchroType()">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
+}
+
+let Command = "container add" in {
+  def container_add_help : Option<"help", "h">, Arg<"HelpText">,
+    Desc<"Help text for this command">;
+  def container_add_long_help : Option<"long-help", "H">, Arg<"HelpText">,
+    Desc<"Long help text for this command">;
+  def container_add_overwrite : Option<"overwrite", "o">, Group<1>,
+  Desc<"Overwrite an existing command at this node.">;
 }
 
 let Command = "script" in {
@@ -1293,4 +1304,9 @@ let Command = "trace dump" in {
 let Command = "trace schema" in {
   def trace_schema_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace schema logging for debugging the plug-in.">;
+}
+
+let Command = "statistics dump" in {
+  def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
+    Desc<"Include statistics for all targets.">;
 }

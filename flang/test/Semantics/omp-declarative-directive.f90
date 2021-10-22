@@ -44,13 +44,20 @@ module m2
 contains
   subroutine foo
     !$omp declare target
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target (foo, N, M)
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target to(Q, S) link(R)
     !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
     !$omp declare target map(from:Q)
     integer, parameter :: N=10000, M=1024
     integer :: i
     real :: Q(N, N), R(N,M), S(M,M)
+    !ERROR: A variable that appears in a THREADPRIVATE directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp threadprivate(i)
   end subroutine foo
 end module m2

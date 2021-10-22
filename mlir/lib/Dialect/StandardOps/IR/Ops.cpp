@@ -940,6 +940,106 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
 }
 
 //===----------------------------------------------------------------------===//
+// MaxSIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MaxSIOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "binary operation takes two operands");
+
+  // maxsi(x,x) -> x
+  if (lhs() == rhs())
+    return rhs();
+
+  APInt intValue;
+  // maxsi(x,MAX_INT) -> MAX_INT
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
+      intValue.isMaxSignedValue())
+    return rhs();
+
+  // maxsi(x, MIN_INT) -> x
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
+      intValue.isMinSignedValue())
+    return lhs();
+
+  return constFoldBinaryOp<IntegerAttr>(
+      operands, [](APInt a, APInt b) { return llvm::APIntOps::smax(a, b); });
+}
+
+//===----------------------------------------------------------------------===//
+// MaxUIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MaxUIOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "binary operation takes two operands");
+
+  // maxui(x,x) -> x
+  if (lhs() == rhs())
+    return rhs();
+
+  APInt intValue;
+  // maxui(x,MAX_INT) -> MAX_INT
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMaxValue())
+    return rhs();
+
+  // maxui(x, MIN_INT) -> x
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMinValue())
+    return lhs();
+
+  return constFoldBinaryOp<IntegerAttr>(
+      operands, [](APInt a, APInt b) { return llvm::APIntOps::umax(a, b); });
+}
+
+//===----------------------------------------------------------------------===//
+// MinSIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MinSIOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "binary operation takes two operands");
+
+  // minsi(x,x) -> x
+  if (lhs() == rhs())
+    return rhs();
+
+  APInt intValue;
+  // minsi(x,MIN_INT) -> MIN_INT
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
+      intValue.isMinSignedValue())
+    return rhs();
+
+  // minsi(x, MAX_INT) -> x
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
+      intValue.isMaxSignedValue())
+    return lhs();
+
+  return constFoldBinaryOp<IntegerAttr>(
+      operands, [](APInt a, APInt b) { return llvm::APIntOps::smin(a, b); });
+}
+
+//===----------------------------------------------------------------------===//
+// MinUIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MinUIOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "binary operation takes two operands");
+
+  // minui(x,x) -> x
+  if (lhs() == rhs())
+    return rhs();
+
+  APInt intValue;
+  // minui(x,MIN_INT) -> MIN_INT
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMinValue())
+    return rhs();
+
+  // minui(x, MAX_INT) -> x
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isMaxValue())
+    return lhs();
+
+  return constFoldBinaryOp<IntegerAttr>(
+      operands, [](APInt a, APInt b) { return llvm::APIntOps::umin(a, b); });
+}
+
+//===----------------------------------------------------------------------===//
 // RankOp
 //===----------------------------------------------------------------------===//
 

@@ -343,31 +343,17 @@ public:
     return success(static_cast<bool>(result));
   }
 
-  /// Parse an optional attribute.
-  template <typename AttrT>
-  OptionalParseResult
-  parseOptionalAttributeAndAddToList(AttrT &result, Type type,
-                                     StringRef attrName, NamedAttrList &attrs) {
-    OptionalParseResult parseResult =
-        parser.parseOptionalAttribute(result, type);
-    if (parseResult.hasValue() && succeeded(*parseResult))
-      attrs.push_back(parser.builder.getNamedAttr(attrName, result));
-    return parseResult;
+  OptionalParseResult parseOptionalAttribute(Attribute &result,
+                                             Type type) override {
+    return parser.parseOptionalAttribute(result, type);
   }
-  OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
-                                             StringRef attrName,
-                                             NamedAttrList &attrs) override {
-    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
+  OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                             Type type) override {
+    return parser.parseOptionalAttribute(result, type);
   }
-  OptionalParseResult parseOptionalAttribute(ArrayAttr &result, Type type,
-                                             StringRef attrName,
-                                             NamedAttrList &attrs) override {
-    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
-  }
-  OptionalParseResult parseOptionalAttribute(StringAttr &result, Type type,
-                                             StringRef attrName,
-                                             NamedAttrList &attrs) override {
-    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
+  OptionalParseResult parseOptionalAttribute(StringAttr &result,
+                                             Type type) override {
+    return parser.parseOptionalAttribute(result, type);
   }
 
   /// Parse a named dictionary into 'result' if it is present.

@@ -300,8 +300,19 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(
       builder.saveIP(), builder.getCurrentDebugLocation());
   llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
-  llvm::Constant *hint = llvm::ConstantInt::get(
-      llvm::Type::getInt32Ty(llvmContext), static_cast<int>(criticalOp.hint()));
+  llvm::Constant *hint = nullptr;
+
+  // If it has a name, it probably has a hint too.
+  if (criticalOp.nameAttr()) {
+    // The verifiers in OpenMP Dialect guarentee that all the pointers are
+    // non-null
+    auto symbolRef = criticalOp.nameAttr().cast<SymbolRefAttr>();
+    auto criticalDeclareOp =
+        SymbolTable::lookupNearestSymbolFrom<omp::CriticalDeclareOp>(criticalOp,
+                                                                     symbolRef);
+    hint = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                                  static_cast<int>(criticalDeclareOp.hint()));
+  }
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createCritical(
       ompLoc, bodyGenCB, finiCB, criticalOp.name().getValueOr(""), hint));
   return success();
@@ -466,6 +477,73 @@ makeAtomicReductionGen(omp::ReductionDeclareOp decl,
         return builder.saveIP();
       };
   return atomicGen;
+}
+
+/// Converts an OpenMP 'ordered' operation into LLVM IR using OpenMPIRBuilder.
+static LogicalResult
+convertOmpOrdered(Operation &opInst, llvm::IRBuilderBase &builder,
+                  LLVM::ModuleTranslation &moduleTranslation) {
+  auto orderedOp = cast<omp::OrderedOp>(opInst);
+
+  omp::ClauseDepend dependType =
+      *omp::symbolizeClauseDepend(orderedOp.depend_type_valAttr().getValue());
+  bool isDependSource = dependType == omp::ClauseDepend::dependsource;
+  unsigned numLoops = orderedOp.num_loops_val().getValue();
+  SmallVector<llvm::Value *> vecValues =
+      moduleTranslation.lookupValues(orderedOp.depend_vec_vars());
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(
+      builder.saveIP(), builder.getCurrentDebugLocation());
+  size_t indexVecValues = 0;
+  while (indexVecValues < vecValues.size()) {
+    SmallVector<llvm::Value *> storeValues;
+    storeValues.reserve(numLoops);
+    for (unsigned i = 0; i < numLoops; i++) {
+      storeValues.push_back(vecValues[indexVecValues]);
+      indexVecValues++;
+    }
+    builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createOrderedDepend(
+        ompLoc, findAllocaInsertPoint(builder, moduleTranslation), numLoops,
+        storeValues, ".cnt.addr", isDependSource));
+  }
+  return success();
+}
+
+/// Converts an OpenMP 'ordered_region' operation into LLVM IR using
+/// OpenMPIRBuilder.
+static LogicalResult
+convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  auto orderedRegionOp = cast<omp::OrderedRegionOp>(opInst);
+
+  // TODO: The code generation for ordered simd directive is not supported yet.
+  if (orderedRegionOp.simd())
+    return failure();
+
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
+
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
+                       llvm::BasicBlock &continuationBlock) {
+    // OrderedOp has only one region associated with it.
+    auto &region = cast<omp::OrderedRegionOp>(opInst).getRegion();
+    convertOmpOpRegions(region, "omp.ordered.region", *codeGenIP.getBlock(),
+                        continuationBlock, builder, moduleTranslation,
+                        bodyGenStatus);
+  };
+
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto finiCB = [&](InsertPointTy codeGenIP) {};
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(
+      builder.saveIP(), builder.getCurrentDebugLocation());
+  builder.restoreIP(
+      moduleTranslation.getOpenMPBuilder()->createOrderedThreadsSimd(
+          ompLoc, bodyGenCB, finiCB, !orderedRegionOp.simd()));
+  return bodyGenStatus;
 }
 
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
@@ -795,6 +873,12 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::CriticalOp) {
         return convertOmpCritical(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::OrderedRegionOp) {
+        return convertOmpOrderedRegion(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::OrderedOp) {
+        return convertOmpOrdered(*op, builder, moduleTranslation);
       })
       .Case([&](omp::WsLoopOp) {
         return convertOmpWsLoop(*op, builder, moduleTranslation);

@@ -270,17 +270,18 @@ public:
                          const std::vector<std::string> &arg) = 0;
 
   enum ActionType {
-    Cmdline,             ///< Action is determined by the cc1 command-line
-    ReplaceAction,       ///< Replace the main action
-    AddBeforeMainAction, ///< Execute the action before the main action
-    AddAfterMainAction   ///< Execute the action after the main action
+    CmdlineBeforeMainAction, ///< Execute the action before the main action if
+                             ///< on the command line
+    CmdlineAfterMainAction,  ///< Execute the action after the main action if on
+                             ///< the command line
+    ReplaceAction,           ///< Replace the main action
+    AddBeforeMainAction,     ///< Execute the action before the main action
+    AddAfterMainAction       ///< Execute the action after the main action
   };
   /// Get the action type for this plugin
   ///
-  /// \return The action type. If the type is Cmdline then by default the
-  /// plugin does nothing and what it does is determined by the cc1
-  /// command-line.
-  virtual ActionType getActionType() { return Cmdline; }
+  /// \return The action type. By default we use CmdlineAfterMainAction.
+  virtual ActionType getActionType() { return CmdlineAfterMainAction; }
 };
 
 /// Abstract base class to use for preprocessor-based frontend actions.

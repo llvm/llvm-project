@@ -32,7 +32,7 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "llvm-mc"; }
 
   static lldb_private::Disassembler *
   CreateInstance(const lldb_private::ArchSpec &arch, const char *flavor);
@@ -43,7 +43,7 @@ public:
                             bool append, bool data_from_file) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   friend class InstructionLLVMC;

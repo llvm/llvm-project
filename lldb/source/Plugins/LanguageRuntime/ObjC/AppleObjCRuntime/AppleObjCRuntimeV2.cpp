@@ -1066,11 +1066,6 @@ lldb_private::ConstString AppleObjCRuntimeV2::GetPluginNameStatic() {
   return g_name;
 }
 
-// PluginInterface protocol
-lldb_private::ConstString AppleObjCRuntimeV2::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 BreakpointResolverSP
 AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp) {
@@ -2000,6 +1995,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   const uint32_t num_classes = 128 * 1024;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
+  if (!get_class_info_code) {
+    // The callee will have already logged a useful error message.
+    return DescriptorMapUpdateResult::Fail();
+  }
+
   FunctionCaller *get_shared_cache_class_info_function =
       get_class_info_code->GetFunctionCaller();
 
@@ -2302,13 +2302,9 @@ static bool DoesProcessHaveSharedCache(Process &process) {
   if (!platform_sp)
     return true; // this should not happen
 
-  ConstString platform_plugin_name = platform_sp->GetPluginName();
-  if (platform_plugin_name) {
-    llvm::StringRef platform_plugin_name_sr =
-        platform_plugin_name.GetStringRef();
-    if (platform_plugin_name_sr.endswith("-simulator"))
-      return false;
-  }
+  llvm::StringRef platform_plugin_name_sr = platform_sp->GetPluginName();
+  if (platform_plugin_name_sr.endswith("-simulator"))
+    return false;
 
   return true;
 }

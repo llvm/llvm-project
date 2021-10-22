@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 namespace clang {
 namespace targets {
@@ -25,26 +26,7 @@ namespace targets {
 class RISCVTargetInfo : public TargetInfo {
 protected:
   std::string ABI, CPU;
-  bool HasM = false;
-  bool HasA = false;
-  bool HasF = false;
-  bool HasD = false;
-  bool HasC = false;
-  bool HasV = false;
-  bool HasZba = false;
-  bool HasZbb = false;
-  bool HasZbc = false;
-  bool HasZbe = false;
-  bool HasZbf = false;
-  bool HasZbm = false;
-  bool HasZbp = false;
-  bool HasZbr = false;
-  bool HasZbs = false;
-  bool HasZbt = false;
-  bool HasZfh = false;
-  bool HasZvamo = false;
-  bool HasZvlsseg = false;
-
+  std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
   static const Builtin::Info BuiltinInfo[];
 
 public:
@@ -141,7 +123,7 @@ public:
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
-    if (HasA)
+    if (ISAInfo->hasExtension("a"))
       MaxAtomicInlineWidth = 32;
   }
 };
@@ -170,7 +152,7 @@ public:
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
-    if (HasA)
+    if (ISAInfo->hasExtension("a"))
       MaxAtomicInlineWidth = 64;
   }
 };

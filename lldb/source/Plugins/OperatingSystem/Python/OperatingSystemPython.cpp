@@ -65,12 +65,7 @@ OperatingSystem *OperatingSystemPython::CreateInstance(Process *process,
   return nullptr;
 }
 
-ConstString OperatingSystemPython::GetPluginNameStatic() {
-  static ConstString g_name("python");
-  return g_name;
-}
-
-const char *OperatingSystemPython::GetPluginDescriptionStatic() {
+llvm::StringRef OperatingSystemPython::GetPluginDescriptionStatic() {
   return "Operating system plug-in that gathers OS information from a python "
          "class that implements the necessary OperatingSystem functionality.";
 }
@@ -138,11 +133,6 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
     assert(m_register_info_up->GetNumRegisterSets() > 0);
   }
   return m_register_info_up.get();
-}
-
-// PluginInterface protocol
-ConstString OperatingSystemPython::GetPluginName() {
-  return GetPluginNameStatic();
 }
 
 bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,

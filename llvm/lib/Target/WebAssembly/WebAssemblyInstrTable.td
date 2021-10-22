@@ -11,9 +11,18 @@
 /// Instructions that handle tables
 //===----------------------------------------------------------------------===//
 
-multiclass TABLE<WebAssemblyRegClass rt> {
+def WebAssemblyTableSet_t : SDTypeProfile<0, 3, [SDTCisPtrTy<1>]>;
+def WebAssemblyTableSet : SDNode<"WebAssemblyISD::TABLE_SET", WebAssemblyTableSet_t,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def WebAssemblyTableGet_t : SDTypeProfile<1, 2, [SDTCisPtrTy<1>]>;
+def WebAssemblyTableGet : SDNode<"WebAssemblyISD::TABLE_GET", WebAssemblyTableGet_t,
+                                 [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+
+multiclass TABLE<WebAssemblyRegClass rc> {
   let mayLoad = 1 in
-  defm TABLE_GET_#rt : I<(outs rt:$res), (ins table32_op:$table, I32:$i),
+  defm TABLE_GET_#rc : I<(outs rc:$res), (ins table32_op:$table, I32:$i),
                          (outs), (ins table32_op:$table),
                          [],
                          "table.get\t$res, $table, $i",
@@ -21,41 +30,43 @@ multiclass TABLE<WebAssemblyRegClass rt> {
                          0x25>;
 
   let mayStore = 1 in
-  defm TABLE_SET_#rt : I<(outs), (ins table32_op:$table, I32:$i, rt:$val),
+  defm TABLE_SET_#rc : I<(outs), (ins table32_op:$table, I32:$i, rc:$val),
                          (outs), (ins table32_op:$table),
                          [],
                          "table.set\t$table, $i, $val",
                          "table.set\t$table",
                          0x26>;
 
-  defm TABLE_GROW_#rt : I<(outs I32:$sz), (ins table32_op:$table, rt:$val, I32:$n),
+  defm TABLE_GROW_#rc : I<(outs I32:$sz), (ins table32_op:$table, rc:$val, I32:$n),
                           (outs), (ins table32_op:$table),
                           [],
                           "table.grow\t$sz, $table, $val, $n",
                           "table.grow\t$table",
                           0xfc0f>;
 
-  defm TABLE_FILL_#rt : I<(outs), (ins table32_op:$table, I32:$i, rt:$val, I32:$n),
+  defm TABLE_FILL_#rc : I<(outs), (ins table32_op:$table, I32:$i, rc:$val, I32:$n),
                           (outs), (ins table32_op:$table),
                           [],
                           "table.fill\t$table, $i, $val, $n",
                           "table.fill\t$table",
                           0xfc11>;
 
+  foreach vt = rc.RegTypes in {
+    def : Pat<(vt (WebAssemblyTableGet (WebAssemblyWrapper tglobaladdr:$table), i32:$idx)),
+              (!cast<NI>("TABLE_GET_" # rc) tglobaladdr:$table, i32:$idx)>;
+    def : Pat<(WebAssemblyTableSet
+               (WebAssemblyWrapper tglobaladdr:$table),
+               i32:$idx,
+               vt:$src),
+              (!cast<NI>("TABLE_SET_" # rc) tglobaladdr:$table, i32:$idx, vt:$src)>;
+  }
 }
 
 defm "" : TABLE<FUNCREF>, Requires<[HasReferenceTypes]>;
 defm "" : TABLE<EXTERNREF>, Requires<[HasReferenceTypes]>;
 
-def wasm_table_set_t : SDTypeProfile<0, 3, []>;
-def wasm_table_set : SDNode<"WebAssemblyISD::TABLE_SET", wasm_table_set_t,
-                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-
-def : Pat<(wasm_table_set i32:$table, i32:$idx, funcref:$r),
-          (TABLE_SET_FUNCREF i32:$table, i32:$idx, funcref:$r)>,
-          Requires<[HasReferenceTypes]>;
-def : Pat<(wasm_table_set i32:$table, i32:$idx, externref:$r),
-          (TABLE_SET_EXTERNREF i32:$table, i32:$idx, externref:$r)>,
+def : Pat<(WebAssemblyTableSet mcsym:$table, i32:$idx, funcref:$r),
+          (TABLE_SET_FUNCREF mcsym:$table, i32:$idx, funcref:$r)>,
           Requires<[HasReferenceTypes]>;
 
 defm TABLE_SIZE : I<(outs I32:$sz), (ins table32_op:$table),

@@ -4745,7 +4745,6 @@ llvm/include/llvm/IR/ReplaceConstant.h
 llvm/include/llvm/IR/StructuralHash.h
 llvm/include/llvm/IR/TrackingMDRef.h
 llvm/include/llvm/IR/UseListOrder.h
-llvm/include/llvm/LTO/Caching.h
 llvm/include/llvm/LTO/SummaryBasedOptimizations.h
 llvm/include/llvm/MC/MCAsmInfoCOFF.h
 llvm/include/llvm/MC/MCAsmInfoDarwin.h
@@ -4852,6 +4851,7 @@ llvm/include/llvm/Support/BinaryStreamRef.h
 llvm/include/llvm/Support/BinaryStreamWriter.h
 llvm/include/llvm/Support/BuryPointer.h
 llvm/include/llvm/Support/CachePruning.h
+llvm/include/llvm/Support/Caching.h
 llvm/include/llvm/Support/CFGDiff.h
 llvm/include/llvm/Support/CFGUpdate.h
 llvm/include/llvm/Support/CodeGenCoverage.h

@@ -34,6 +34,12 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 11
     {
+        std::vector<bool, explicit_allocator<bool>> v;
+        v.resize(10);
+        assert(v.size() == 10);
+        assert(v.capacity() >= 10);
+    }
+    {
         std::vector<bool, min_allocator<bool>> v(100);
         v.resize(50);
         assert(v.size() == 50);

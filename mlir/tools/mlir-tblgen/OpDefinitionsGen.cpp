@@ -151,6 +151,14 @@ static std::string replaceAllSubstrs(std::string str, const std::string &match,
   return str;
 }
 
+// Escape a string using LLVM/MLIR encoding. E.g. foo"bar -> foo\22bar.
+static std::string escapeString(StringRef value) {
+  std::string ret;
+  llvm::raw_string_ostream os(ret);
+  llvm::printEscapedString(value, os);
+  return os.str();
+}
+
 // Returns whether the record has a value of the given name that can be returned
 // via getValueAsString.
 static inline bool hasStringAttribute(const Record &record,
@@ -358,11 +366,8 @@ private:
 
   // The emitter containing all of the locally emitted verification functions.
   const StaticVerifierFunctionEmitter &staticVerifierEmitter;
-
-  // A map of attribute names (including implicit attributes) registered to the
-  // current operation, to the relative order in which they were registered.
-  llvm::MapVector<StringRef, unsigned> attributeNames;
 };
+
 } // end anonymous namespace
 
 // Populate the format context `ctx` with substitutions of attributes, operands
@@ -468,7 +473,7 @@ static void genAttributeVerifier(const Operator &op, const char *attrGet,
     body << tgfmt("    if (!($0)) return $1\"attribute '$2' "
                   "failed to satisfy constraint: $3\");\n",
                   /*ctx=*/nullptr, tgfmt(condition, &ctx.withSelf(varName)),
-                  emitErrorPrefix, attrName, attr.getSummary());
+                  emitErrorPrefix, attrName, escapeString(attr.getSummary()));
     if (allowMissingAttr)
       body << "  }\n";
     body << "  }\n";
@@ -525,62 +530,6 @@ void OpEmitter::emitDecl(raw_ostream &os) { opClass.writeDeclTo(os); }
 
 void OpEmitter::emitDef(raw_ostream &os) { opClass.writeDefTo(os); }
 
-// Helper to return the names for accessor.
-static SmallVector<std::string, 2>
-getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
-  Dialect::EmitPrefix prefixType = op.getDialect().getEmitAccessorPrefix();
-  std::string prefix;
-  if (prefixType != Dialect::EmitPrefix::Raw)
-    prefix = isGetter ? "get" : "set";
-
-  SmallVector<std::string, 2> names;
-  bool rawToo = prefixType == Dialect::EmitPrefix::Both;
-
-  auto skip = [&](StringRef newName) {
-    bool shouldSkip = newName == "getOperands";
-    if (!shouldSkip)
-      return false;
-
-    // This note could be avoided where the final function generated would
-    // have been identical. But preferably in the op definition avoiding using
-    // the generic name and then getting a more specialize type is better.
-    PrintNote(op.getLoc(),
-              "Skipping generation of prefixed accessor `" + newName +
-                  "` as it overlaps with default one; generating raw form (`" +
-                  name + "`) still");
-    return true;
-  };
-
-  if (!prefix.empty()) {
-    names.push_back(prefix + convertToCamelFromSnakeCase(name, true));
-    // Skip cases which would overlap with default ones for now.
-    if (skip(names.back())) {
-      rawToo = true;
-      names.clear();
-    } else {
-      LLVM_DEBUG(llvm::errs() << "WITH_GETTER(\"" << op.getQualCppClassName()
-                              << "::" << names.back() << "\");\n"
-                              << "WITH_GETTER(\"" << op.getQualCppClassName()
-                              << "Adaptor::" << names.back() << "\");\n";);
-    }
-  }
-
-  if (prefix.empty() || rawToo)
-    names.push_back(name.str());
-  return names;
-}
-static SmallVector<std::string, 2> getGetterNames(const Operator &op,
-                                                  StringRef name) {
-  return getGetterOrSetterNames(/*isGetter=*/true, op, name);
-}
-static std::string getGetterName(const Operator &op, StringRef name) {
-  return getGetterOrSetterNames(/*isGetter=*/true, op, name).front();
-}
-static SmallVector<std::string, 2> getSetterNames(const Operator &op,
-                                                  StringRef name) {
-  return getGetterOrSetterNames(/*isGetter=*/false, op, name);
-}
-
 static void errorIfPruned(size_t line, OpMethod *m, const Twine &methodName,
                           const Operator &op) {
   if (m)
@@ -593,6 +542,10 @@ static void errorIfPruned(size_t line, OpMethod *m, const Twine &methodName,
 #define ERROR_IF_PRUNED(M, N, O) errorIfPruned(__LINE__, M, N, O)
 
 void OpEmitter::genAttrNameGetters() {
+  // A map of attribute names (including implicit attributes) registered to the
+  // current operation, to the relative order in which they were registered.
+  llvm::MapVector<StringRef, unsigned> attributeNames;
+
   // Enumerate the attribute names of this op, assigning each a relative
   // ordering.
   auto addAttrName = [&](StringRef name) {
@@ -602,10 +555,12 @@ void OpEmitter::genAttrNameGetters() {
   for (const NamedAttribute &namedAttr : op.getAttributes())
     addAttrName(namedAttr.name);
   // Include key attributes from several traits as implicitly registered.
+  std::string operandSizes = "operand_segment_sizes";
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    addAttrName("operand_segment_sizes");
+    addAttrName(operandSizes);
+  std::string attrSizes = "result_segment_sizes";
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    addAttrName("result_segment_sizes");
+    addAttrName(attrSizes);
 
   // Emit the getAttributeNames method.
   {
@@ -656,7 +611,7 @@ void OpEmitter::genAttrNameGetters() {
   // users.
   const char *attrNameMethodBody = "  return getAttributeNameForIndex({0});";
   for (const std::pair<StringRef, unsigned> &attrIt : attributeNames) {
-    for (StringRef name : getGetterNames(op, attrIt.first)) {
+    for (StringRef name : op.getGetterNames(attrIt.first)) {
       std::string methodName = (name + "AttrName").str();
 
       // Generate the non-static variant.
@@ -734,7 +689,7 @@ void OpEmitter::genAttrGetters() {
   };
 
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
-    for (StringRef name : getGetterNames(op, namedAttr.name)) {
+    for (StringRef name : op.getGetterNames(namedAttr.name)) {
       if (namedAttr.attr.isDerivedAttr()) {
         emitDerivedAttr(name, namedAttr.attr);
       } else {
@@ -777,8 +732,9 @@ void OpEmitter::genAttrGetters() {
       if (!nonMaterializable.empty()) {
         std::string attrs;
         llvm::raw_string_ostream os(attrs);
-        interleaveComma(nonMaterializable, os,
-                        [&](const NamedAttribute &attr) { os << attr.name; });
+        interleaveComma(nonMaterializable, os, [&](const NamedAttribute &attr) {
+          os << op.getGetterName(attr.name);
+        });
         PrintWarning(
             op.getLoc(),
             formatv(
@@ -799,8 +755,9 @@ void OpEmitter::genAttrGetters() {
           derivedAttrs, body,
           [&](const NamedAttribute &namedAttr) {
             auto tmpl = namedAttr.attr.getConvertFromStorageCall();
-            body << "    {" << namedAttr.name << "AttrName(),\n"
-                 << tgfmt(tmpl, &fctx.withSelf(namedAttr.name + "()")
+            std::string name = op.getGetterName(namedAttr.name);
+            body << "    {" << name << "AttrName(),\n"
+                 << tgfmt(tmpl, &fctx.withSelf(name + "()")
                                      .withBuilder("odsBuilder")
                                      .addSubst("_ctx", "ctx"))
                  << "}";
@@ -826,8 +783,8 @@ void OpEmitter::genAttrSetters() {
 
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     if (!namedAttr.attr.isDerivedAttr())
-      for (auto names : llvm::zip(getSetterNames(op, namedAttr.name),
-                                  getGetterNames(op, namedAttr.name)))
+      for (auto names : llvm::zip(op.getSetterNames(namedAttr.name),
+                                  op.getGetterNames(namedAttr.name)))
         emitAttrWithStorageType(std::get<0>(names), std::get<1>(names),
                                 namedAttr.attr);
   }
@@ -843,7 +800,7 @@ void OpEmitter::genOptionalAttrRemovers() {
         "::mlir::Attribute", ("remove" + upperInitial + suffix + "Attr").str());
     if (!method)
       return;
-    method->body() << "  return (*this)->removeAttr(" << getGetterName(op, name)
+    method->body() << "  return (*this)->removeAttr(" << op.getGetterName(name)
                    << "AttrName());";
   };
 
@@ -945,7 +902,7 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
       continue;
-    for (StringRef name : getGetterNames(op, operand.name)) {
+    for (StringRef name : op.getGetterNames(operand.name)) {
       if (operand.isOptional()) {
         m = opClass.addMethodAndPrune("::mlir::Value", name);
         ERROR_IF_PRUNED(m, name, op);
@@ -953,8 +910,8 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
                   << "  return operands.empty() ? ::mlir::Value() : "
                      "*operands.begin();";
       } else if (operand.isVariadicOfVariadic()) {
-        StringRef segmentAttr =
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr();
+        std::string segmentAttr = op.getGetterName(
+            operand.constraint.getVariadicOfVariadicSegmentSizeAttr());
         if (isAdaptor) {
           m = opClass.addMethodAndPrune(
               "::llvm::SmallVector<::mlir::ValueRange>", name);
@@ -982,13 +939,12 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
 }
 
 void OpEmitter::genNamedOperandGetters() {
-  // Build the code snippet used for initializing the operand_segment_sizes
+  // Build the code snippet used for initializing the operand_segment_size)s
   // array.
   std::string attrSizeInitCode;
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    attrSizeInitCode =
-        formatv(opSegmentSizeAttrInitCode, "operand_segment_sizesAttrName()")
-            .str();
+    std::string attr = op.getGetterName("operand_segment_sizes") + "AttrName()";
+    attrSizeInitCode = formatv(opSegmentSizeAttrInitCode, attr).str();
   }
 
   generateNamedOperandGetters(
@@ -1008,7 +964,7 @@ void OpEmitter::genNamedOperandSetters() {
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
       continue;
-    for (StringRef name : getGetterNames(op, operand.name)) {
+    for (StringRef name : op.getGetterNames(operand.name)) {
       auto *m = opClass.addMethodAndPrune(
           operand.isVariadicOfVariadic() ? "::mlir::MutableOperandRangeRange"
                                          : "::mlir::MutableOperandRange",
@@ -1022,7 +978,7 @@ void OpEmitter::genNamedOperandSetters() {
       if (attrSizedOperands)
         body << ", ::mlir::MutableOperandRange::OperandSegment(" << i
              << "u, *getOperation()->getAttrDictionary().getNamed("
-                "operand_segment_sizesAttrName()))";
+             << op.getGetterName("operand_segment_sizes") << "AttrName()))";
       body << ");\n";
 
       // If this operand is a nested variadic, we split the range into a
@@ -1032,8 +988,7 @@ void OpEmitter::genNamedOperandSetters() {
         //
         body << "  return "
                 "mutableRange.split(*(*this)->getAttrDictionary().getNamed("
-             << getGetterName(
-                    op,
+             << op.getGetterName(
                     operand.constraint.getVariadicOfVariadicSegmentSizeAttr())
              << "AttrName()));\n";
       } else {
@@ -1076,9 +1031,8 @@ void OpEmitter::genNamedResultGetters() {
   // Build the initializer string for the result segment size attribute.
   std::string attrSizeInitCode;
   if (attrSizedResults) {
-    attrSizeInitCode =
-        formatv(opSegmentSizeAttrInitCode, "result_segment_sizesAttrName()")
-            .str();
+    std::string attr = op.getGetterName("result_segment_sizes") + "AttrName()";
+    attrSizeInitCode = formatv(opSegmentSizeAttrInitCode, attr).str();
   }
 
   generateValueRangeStartAndEnd(
@@ -1096,7 +1050,7 @@ void OpEmitter::genNamedResultGetters() {
     const auto &result = op.getResult(i);
     if (result.name.empty())
       continue;
-    for (StringRef name : getGetterNames(op, result.name)) {
+    for (StringRef name : op.getGetterNames(result.name)) {
       if (result.isOptional()) {
         m = opClass.addMethodAndPrune("::mlir::Value", name);
         ERROR_IF_PRUNED(m, name, op);
@@ -1123,7 +1077,7 @@ void OpEmitter::genNamedRegionGetters() {
     if (region.name.empty())
       continue;
 
-    for (StringRef name : getGetterNames(op, region.name)) {
+    for (StringRef name : op.getGetterNames(region.name)) {
       // Generate the accessors for a variadic region.
       if (region.isVariadic()) {
         auto *m = opClass.addMethodAndPrune(
@@ -1148,7 +1102,7 @@ void OpEmitter::genNamedSuccessorGetters() {
     if (successor.name.empty())
       continue;
 
-    for (StringRef name : getGetterNames(op, successor.name)) {
+    for (StringRef name : op.getGetterNames(successor.name)) {
       // Generate the accessors for a variadic successor list.
       if (successor.isVariadic()) {
         auto *m = opClass.addMethodAndPrune("::mlir::SuccessorRange", name);
@@ -1430,7 +1384,7 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
   std::string resultType;
   const auto &namedAttr = op.getAttribute(0);
 
-  body << "  auto attrName = " << getGetterName(op, namedAttr.name)
+  body << "  auto attrName = " << op.getGetterName(namedAttr.name)
        << "AttrName(" << builderOpState
        << ".name);\n"
           "  for (auto attr : attributes) {\n"
@@ -1746,8 +1700,8 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
            << "    for (::mlir::ValueRange range : " << argName << ")\n"
            << "      rangeSegments.push_back(range.size());\n"
            << "    " << builderOpState << ".addAttribute("
-           << getGetterName(
-                  op, operand.constraint.getVariadicOfVariadicSegmentSizeAttr())
+           << op.getGetterName(
+                  operand.constraint.getVariadicOfVariadicSegmentSizeAttr())
            << "AttrName(" << builderOpState << ".name), " << odsBuilder
            << ".getI32TensorAttr(rangeSegments));"
            << "  }\n";
@@ -1761,9 +1715,9 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
 
   // If the operation has the operand segment size attribute, add it here.
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    body << "  " << builderOpState
-         << ".addAttribute(operand_segment_sizesAttrName(" << builderOpState
-         << ".name), "
+    std::string sizes = op.getGetterName("operand_segment_sizes");
+    body << "  " << builderOpState << ".addAttribute(" << sizes << "AttrName("
+         << builderOpState << ".name), "
          << "odsBuilder.getI32VectorAttr({";
     interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
       const NamedTypeConstraint &operand = op.getOperand(i);
@@ -1816,10 +1770,10 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
       std::string value =
           std::string(tgfmt(builderTemplate, &fctx, namedAttr.name));
       body << formatv("  {0}.addAttribute({1}AttrName({0}.name), {2});\n",
-                      builderOpState, getGetterName(op, namedAttr.name), value);
+                      builderOpState, op.getGetterName(namedAttr.name), value);
     } else {
       body << formatv("  {0}.addAttribute({1}AttrName({0}.name), {2});\n",
-                      builderOpState, getGetterName(op, namedAttr.name),
+                      builderOpState, op.getGetterName(namedAttr.name),
                       namedAttr.name);
     }
     if (emitNotNullCheck)
@@ -2255,7 +2209,7 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
                         ? "{0}()"
                         : "::mlir::MutableArrayRef<::mlir::Region>((*this)"
                           "->getRegion({1}))",
-                    region.name, i);
+                    op.getGetterName(region.name), i);
     body << ") {\n";
     auto constraint = tgfmt(region.constraint.getConditionTemplate(),
                             &verifyCtx.withSelf("region"))
@@ -2497,8 +2451,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     ERROR_IF_PRUNED(m, "getOperands", op);
     m->body() << "  return odsOperands;";
   }
-  std::string sizeAttrInit =
-      formatv(adapterSegmentSizeAttrInitCode, "operand_segment_sizes");
+  std::string attr = op.getGetterName("operand_segment_sizes");
+  std::string sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode, attr);
   generateNamedOperandGetters(op, adaptor,
                               /*isAdaptor=*/true, sizeAttrInit,
                               /*rangeType=*/"::mlir::ValueRange",
@@ -2542,8 +2496,10 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
   for (auto &namedAttr : op.getAttributes()) {
     const auto &name = namedAttr.name;
     const auto &attr = namedAttr.attr;
-    if (!attr.isDerivedAttr())
-      emitAttr(name, attr);
+    if (!attr.isDerivedAttr()) {
+      for (auto emitName : op.getGetterNames(name))
+        emitAttr(emitName, attr);
+    }
   }
 
   unsigned numRegions = op.getNumRegions();

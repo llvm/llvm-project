@@ -4270,24 +4270,6 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
        ForcedVEXEncoding != VEXEncoding_VEX3))
     return Match_Unsupported;
 
-  // These instructions match ambiguously with their VEX encoded counterparts
-  // and appear first in the matching table. Reject them unless we're forcing
-  // EVEX encoding.
-  // FIXME: We really need a way to break the ambiguity.
-  switch (Opc) {
-  case X86::VCVTSD2SIZrm_Int:
-  case X86::VCVTSD2SI64Zrm_Int:
-  case X86::VCVTSS2SIZrm_Int:
-  case X86::VCVTSS2SI64Zrm_Int:
-  case X86::VCVTTSD2SIZrm:   case X86::VCVTTSD2SIZrm_Int:
-  case X86::VCVTTSD2SI64Zrm: case X86::VCVTTSD2SI64Zrm_Int:
-  case X86::VCVTTSS2SIZrm:   case X86::VCVTTSS2SIZrm_Int:
-  case X86::VCVTTSS2SI64Zrm: case X86::VCVTTSS2SI64Zrm_Int:
-    if (ForcedVEXEncoding != VEXEncoding_EVEX)
-      return Match_Unsupported;
-    break;
-  }
-
   return Match_Success;
 }
 

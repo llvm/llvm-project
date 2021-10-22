@@ -492,8 +492,8 @@ class IRLinker {
 
   void linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src);
   Error linkFunctionBody(Function &Dst, Function &Src);
-  void linkIndirectSymbolBody(GlobalIndirectSymbol &Dst,
-                              GlobalIndirectSymbol &Src);
+  void linkAliasAliasee(GlobalAlias &Dst, GlobalAlias &Src);
+  void linkIFuncResolver(GlobalIFunc &Dst, GlobalIFunc &Src);
   Error linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
 
   /// Replace all types in the source AttributeList with the
@@ -504,7 +504,7 @@ class IRLinker {
   /// into the destination module.
   GlobalVariable *copyGlobalVariableProto(const GlobalVariable *SGVar);
   Function *copyFunctionProto(const Function *SF);
-  GlobalValue *copyGlobalIndirectSymbolProto(const GlobalIndirectSymbol *SGIS);
+  GlobalValue *copyIndirectSymbolProto(const GlobalValue *SGV);
 
   /// Perform "replace all uses with" operations. These work items need to be
   /// performed as part of materialization, but we postpone them to happen after
@@ -606,10 +606,14 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   } else if (auto *V = dyn_cast<GlobalVariable>(New)) {
     if (V->hasInitializer() || V->hasAppendingLinkage())
       return New;
-  } else {
-    auto *IS = cast<GlobalIndirectSymbol>(New);
-    if (IS->getIndirectSymbol())
+  } else if (auto *GA = dyn_cast<GlobalAlias>(New)) {
+    if (GA->getAliasee())
       return New;
+  } else if (auto *GI = dyn_cast<GlobalIFunc>(New)) {
+    if (GI->getResolver())
+      return New;
+  } else {
+    llvm_unreachable("Invalid GlobalValue type");
   }
 
   // If the global is being linked for an indirect symbol, it may have already
@@ -680,22 +684,28 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
 
 /// Set up prototypes for any indirect symbols that come over from the source
 /// module.
-GlobalValue *
-IRLinker::copyGlobalIndirectSymbolProto(const GlobalIndirectSymbol *SGIS) {
+GlobalValue *IRLinker::copyIndirectSymbolProto(const GlobalValue *SGV) {
   // If there is no linkage to be performed or we're linking from the source,
   // bring over SGA.
-  auto *Ty = TypeMap.get(SGIS->getValueType());
-  GlobalIndirectSymbol *GIS;
-  if (isa<GlobalAlias>(SGIS))
-    GIS = GlobalAlias::create(Ty, SGIS->getAddressSpace(),
-                              GlobalValue::ExternalLinkage, SGIS->getName(),
-                              &DstM);
-  else
-    GIS = GlobalIFunc::create(Ty, SGIS->getAddressSpace(),
-                              GlobalValue::ExternalLinkage, SGIS->getName(),
-                              nullptr, &DstM);
-  GIS->copyAttributesFrom(SGIS);
-  return GIS;
+  auto *Ty = TypeMap.get(SGV->getValueType());
+
+  if (auto *GA = dyn_cast<GlobalAlias>(SGV)) {
+    auto *DGA = GlobalAlias::create(Ty, SGV->getAddressSpace(),
+                                    GlobalValue::ExternalLinkage,
+                                    SGV->getName(), &DstM);
+    DGA->copyAttributesFrom(GA);
+    return DGA;
+  }
+
+  if (auto *GI = dyn_cast<GlobalIFunc>(SGV)) {
+    auto *DGI = GlobalIFunc::create(Ty, SGV->getAddressSpace(),
+                                    GlobalValue::ExternalLinkage,
+                                    SGV->getName(), nullptr, &DstM);
+    DGI->copyAttributesFrom(GI);
+    return DGI;
+  }
+
+  llvm_unreachable("Invalid source global value type");
 }
 
 GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
@@ -707,7 +717,7 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV = copyFunctionProto(SF);
   } else {
     if (ForDefinition)
-      NewGV = copyGlobalIndirectSymbolProto(cast<GlobalIndirectSymbol>(SGV));
+      NewGV = copyIndirectSymbolProto(SGV);
     else if (SGV->getValueType()->isFunctionTy())
       NewGV =
           Function::Create(cast<FunctionType>(TypeMap.get(SGV->getValueType())),
@@ -1111,10 +1121,12 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
   return Error::success();
 }
 
-void IRLinker::linkIndirectSymbolBody(GlobalIndirectSymbol &Dst,
-                                      GlobalIndirectSymbol &Src) {
-  Mapper.scheduleMapGlobalIndirectSymbol(Dst, *Src.getIndirectSymbol(),
-                                         IndirectSymbolMCID);
+void IRLinker::linkAliasAliasee(GlobalAlias &Dst, GlobalAlias &Src) {
+  Mapper.scheduleMapGlobalAlias(Dst, *Src.getAliasee(), IndirectSymbolMCID);
+}
+
+void IRLinker::linkIFuncResolver(GlobalIFunc &Dst, GlobalIFunc &Src) {
+  Mapper.scheduleMapGlobalIFunc(Dst, *Src.getResolver(), IndirectSymbolMCID);
 }
 
 Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
@@ -1124,7 +1136,11 @@ Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
     linkGlobalVariable(cast<GlobalVariable>(Dst), *GVar);
     return Error::success();
   }
-  linkIndirectSymbolBody(cast<GlobalIndirectSymbol>(Dst), cast<GlobalIndirectSymbol>(Src));
+  if (auto *GA = dyn_cast<GlobalAlias>(&Src)) {
+    linkAliasAliasee(cast<GlobalAlias>(Dst), *GA);
+    return Error::success();
+  }
+  linkIFuncResolver(cast<GlobalIFunc>(Dst), cast<GlobalIFunc>(Src));
   return Error::success();
 }
 

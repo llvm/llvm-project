@@ -258,7 +258,7 @@ replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
   // leave them unchanged.
   Type actualType = opOperand->get().getType();
   if (auto memref = actualType.dyn_cast<MemRefType>()) {
-    if (!memref.getAffineMaps().empty())
+    if (!memref.getLayout().isIdentity())
       return llvm::None;
   }
 

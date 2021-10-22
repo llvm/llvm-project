@@ -357,6 +357,9 @@ MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
 
+/// Gets the location of the operation.
+MLIR_CAPI_EXPORTED MlirLocation mlirOperationGetLocation(MlirOperation op);
+
 /// Gets the type id of the operation.
 /// Returns null if the operation does not have a registered operation
 /// description.

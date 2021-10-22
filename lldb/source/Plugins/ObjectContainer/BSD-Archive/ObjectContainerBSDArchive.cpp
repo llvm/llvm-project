@@ -274,15 +274,6 @@ void ObjectContainerBSDArchive::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjectContainerBSDArchive::GetPluginNameStatic() {
-  static ConstString g_name("bsd-archive");
-  return g_name;
-}
-
-const char *ObjectContainerBSDArchive::GetPluginDescriptionStatic() {
-  return "BSD Archive object container reader.";
-}
-
 ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,
     lldb::offset_t data_offset, const FileSpec *file,
@@ -431,11 +422,6 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
     }
   }
   return ObjectFileSP();
-}
-
-// PluginInterface protocol
-lldb_private::ConstString ObjectContainerBSDArchive::GetPluginName() {
-  return GetPluginNameStatic();
 }
 
 size_t ObjectContainerBSDArchive::GetModuleSpecifications(

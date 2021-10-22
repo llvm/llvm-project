@@ -670,7 +670,6 @@ define amdgpu_ps float @load_1d_f32_tfe_dmask_x(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX11-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call { float, i32 } @llvm.amdgcn.image.load.1d.sl_f32i32s.i32(i32 1, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -747,7 +746,6 @@ define amdgpu_ps float @load_1d_v2f32_tfe_dmask_xy(<8 x i32> inreg %rsrc, i32 %s
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX11-NEXT:    image_load v[1:3], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call { <2 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v2f32i32s.i32(i32 3, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -827,7 +825,6 @@ define amdgpu_ps float @load_1d_v3f32_tfe_dmask_xyz(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX11-NEXT:    image_load v[1:4], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call { <3 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v3f32i32s.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -901,7 +898,6 @@ define amdgpu_ps float @load_1d_v4f32_tfe_dmask_xyzw(<8 x i32> inreg %rsrc, i32 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX11-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x10 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i32(i32 16, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -975,7 +971,6 @@ define amdgpu_ps float @load_1d_f32_tfe_dmask_0(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX11-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call { float, i32 } @llvm.amdgcn.image.load.1d.sl_f32i32s.i32(i32 0, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)

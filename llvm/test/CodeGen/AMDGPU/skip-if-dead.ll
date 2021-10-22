@@ -1255,7 +1255,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  BB11_3: ; %phibb
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX11-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX11-NEXT:    s_cbranch_vccz BB11_5

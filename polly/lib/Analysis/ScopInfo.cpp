@@ -1303,8 +1303,7 @@ void ScopStmt::removeMemoryAccess(MemoryAccess *MA) {
       Parent.removeAccessData(MA);
     }
   }
-  MemAccs.erase(std::remove_if(MemAccs.begin(), MemAccs.end(), Predicate),
-                MemAccs.end());
+  llvm::erase_if(MemAccs, Predicate);
   InstructionToAccess.erase(MA->getAccessInstruction());
 }
 

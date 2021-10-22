@@ -24,13 +24,6 @@ namespace scf {
 class IfOp;
 } // namespace scf
 
-/// Collect a set of patterns to convert from the Vector dialect to itself.
-/// Should be merged with populateVectorToSCFLoweringPattern.
-void populateVectorToVectorConversionPatterns(
-    MLIRContext *context, RewritePatternSet &patterns,
-    ArrayRef<int64_t> coarseVectorShape = {},
-    ArrayRef<int64_t> fineVectorShape = {});
-
 namespace vector {
 
 /// Options that control the vector unrolling.
@@ -96,6 +89,13 @@ struct UnrollVectorOptions {
 /// to combine the ExtractStridedSlice/InsertStridedSlice.
 void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options);
+
+/// Collect a set of patterns to reduce the rank of the operands of vector
+/// transfer ops to operate on the largest contigious vector.
+/// These patterns are useful when lowering to dialects with 1d vector type
+/// such as llvm and it will result fewer memory reads.
+void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
+    RewritePatternSet &patterns);
 
 /// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
 /// masking) fastpath and a slowpath.

@@ -5,10 +5,11 @@ declare void @llvm.assume(i1)
 
 define void @func(i32* %P, i32 %P1, i32* %P2, i32* %P3) {
 ; CHECK: tags must be valid attribute names
+; CHECK: "adazdazd"
   call void @llvm.assume(i1 true) ["adazdazd"()]
 ; CHECK: the second argument should be a constant integral value
   call void @llvm.assume(i1 true) ["dereferenceable"(i32* %P, i32 %P1)]
-; CHECK: to many arguments
+; CHECK: too many arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(i32* %P, i32 8, i32 8)]
 ; CHECK: this attribute should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(i32* %P)]

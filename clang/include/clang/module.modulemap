@@ -45,6 +45,7 @@ module Clang_Basic {
   textual header "Basic/BuiltinsNVPTX.def"
   textual header "Basic/BuiltinsPPC.def"
   textual header "Basic/BuiltinsRISCV.def"
+  textual header "Basic/BuiltinsRISCVVector.def"
   textual header "Basic/BuiltinsSVE.def"
   textual header "Basic/BuiltinsSystemZ.def"
   textual header "Basic/BuiltinsWebAssembly.def"

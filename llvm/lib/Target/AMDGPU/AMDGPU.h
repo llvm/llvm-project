@@ -350,6 +350,9 @@ extern char &SIFormMemoryClausesID;
 void initializeSIPostRABundlerPass(PassRegistry&);
 extern char &SIPostRABundlerID;
 
+void initializeGCNCreateVOPDPass(PassRegistry &);
+extern char &GCNCreateVOPDID;
+
 void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 

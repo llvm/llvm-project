@@ -24,7 +24,7 @@ public:
   static void Initialize();
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "wasm"; }
   static const char *GetPluginDescriptionStatic() {
     return "WebAssembly object file reader.";
   }
@@ -48,7 +48,7 @@ public:
 
   /// PluginInterface protocol.
   /// \{
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
   /// \}
 
   /// LLVM RTTI support

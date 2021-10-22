@@ -11,9 +11,9 @@ define <8 x i7> @vsll_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroex
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, zero, 127
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vand.vx v25, v9, a1
+; CHECK-NEXT:    vand.vx v9, v9, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
-; CHECK-NEXT:    vsll.vv v8, v8, v25, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.shl.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
   ret <8 x i7> %v

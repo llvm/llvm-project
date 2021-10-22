@@ -1683,8 +1683,7 @@ define i64 @v_shl_i64_63(i64 %value) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 31, v0
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_lshlrev_b32 v1, 31, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i64 %value, 63
   ret i64 %result
@@ -1710,8 +1709,7 @@ define i64 @v_shl_i64_33(i64 %value) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_lshlrev_b32 v1, 1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i64 %value, 33
   ret i64 %result

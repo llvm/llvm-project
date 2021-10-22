@@ -82,6 +82,7 @@ class TwoLevelMap {
       MapUnmapCallback().OnUnmap(reinterpret_cast<uptr>(p), MmapSize());
       UnmapOrDie(p, kSize2);
     }
+    Init();
   }
 
   uptr MemoryUsage() const {

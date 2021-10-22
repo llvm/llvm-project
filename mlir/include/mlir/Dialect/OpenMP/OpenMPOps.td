@@ -211,8 +211,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              Variadic<AnyType>:$linear_vars,
              Variadic<AnyType>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
-             OptionalAttr<TypedArrayAttrBase<SymbolRefAttr,
-                            "array of symbol references">>:$reductions,
+             OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKind>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
@@ -363,9 +362,14 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
     The name can be used in critical constructs in the dialect.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       DefaultValuedAttr<I64Attr, "0">:$hint);
 
-  let assemblyFormat = "$sym_name attr-dict";
+  let assemblyFormat = [{
+    $sym_name custom<SynchronizationHint>($hint) attr-dict
+  }];
+
+  let verifier = "return verifyCriticalDeclareOp(*this);";
 }
 
 
@@ -376,13 +380,12 @@ def CriticalOp : OpenMP_Op<"critical"> {
     block (region) to be executed by only a single thread at a time.
   }];
 
-  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
-                       DefaultValuedAttr<I64Attr, "0">:$hint);
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
-    (`(` $name^ `)`)? custom<SynchronizationHint>($hint) $region attr-dict
+    (`(` $name^ `)`)? $region attr-dict
   }];
 
   let verifier = "return ::verifyCriticalOp(*this);";
@@ -400,6 +403,73 @@ def BarrierOp : OpenMP_Op<"barrier"> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// [5.1] 2.19.9 ordered Construct
+//===----------------------------------------------------------------------===//
+
+def ClauseDependSource : StrEnumAttrCase<"dependsource">;
+def ClauseDependSink : StrEnumAttrCase<"dependsink">;
+
+def ClauseDepend : StrEnumAttr<
+    "ClauseDepend",
+    "depend clause",
+    [ClauseDependSource, ClauseDependSink]> {
+  let cppNamespace = "::mlir::omp";
+}
+
+def OrderedOp : OpenMP_Op<"ordered"> {
+  let summary = "ordered construct without region";
+  let description = [{
+    The ordered construct without region is a stand-alone directive that
+    specifies cross-iteration dependences in a doacross loop nest.
+
+    The `depend_type_val` attribute refers to either the DEPEND(SOURCE) clause
+    or the DEPEND(SINK: vec) clause.
+
+    The `num_loops_val` attribute specifies the number of loops in the doacross
+    nest.
+
+    The `depend_vec_vars` is a variadic list of operands that specifies the index
+    of the loop iterator in the doacross nest for the DEPEND(SOURCE) clause or
+    the index of the element of "vec" for the DEPEND(SINK: vec) clause. It
+    contains the operands in multiple "vec" when multiple DEPEND(SINK: vec)
+    clauses exist in one ORDERED directive.
+  }];
+
+  let arguments = (ins OptionalAttr<ClauseDepend>:$depend_type_val,
+             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
+             Variadic<AnyType>:$depend_vec_vars);
+
+  let assemblyFormat = [{
+    ( `depend_type` `(` $depend_type_val^ `)` )?
+    ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
+    attr-dict
+  }];
+
+  let verifier = "return ::verifyOrderedOp(*this);";
+}
+
+def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
+  let summary = "ordered construct with region";
+  let description = [{
+    The ordered construct with region specifies a structured block in a
+    worksharing-loop, SIMD, or worksharing-loop SIMD region that is executed in
+    the order of the loop iterations.
+
+    The `simd` attribute corresponds to the SIMD clause specified. If it is not
+    present, it behaves as if the THREADS clause is specified or no clause is
+    specified.
+  }];
+
+  let arguments = (ins UnitAttr:$simd);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{ ( `simd` $simd^ )? $region attr-dict}];
+
+  let verifier = "return ::verifyOrderedRegionOp(*this);";
 }
 
 //===----------------------------------------------------------------------===//

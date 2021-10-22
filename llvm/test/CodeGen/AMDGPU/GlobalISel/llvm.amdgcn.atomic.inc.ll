@@ -587,8 +587,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(i32 addrspace
 ; GFX11-LABEL: global_atomic_inc_ret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 42
+; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v1, v0, v1, s[2:3] offset:20 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -655,8 +654,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(i32 addrspa
 ; GFX11-LABEL: global_atomic_inc_noret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 42
+; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v0, v1, s[0:1] offset:20 glc
 ; GFX11-NEXT:    s_endpgm
@@ -732,8 +730,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(i32 addrspace(1)* %out,
 ;
 ; GFX11-LABEL: atomic_inc_shl_base_lds_0_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 9
+; GFX11-NEXT:    v_dual_mov_b32 v2, 9 :: v_dual_lshlrev_b32 v1, 2, v0
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, 2, v0
 ; GFX11-NEXT:    ds_inc_rtn_u32 v1, v1, v2 offset:8
@@ -1360,8 +1357,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(i64 addrspace
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 42
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u64 v[0:1], v3, v[1:2], s[2:3] offset:40 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1432,9 +1428,8 @@ define amdgpu_kernel void @global_atomic_inc_noret_i64_offset_addr64(i64 addrspa
 ; GFX11-LABEL: global_atomic_inc_noret_i64_offset_addr64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 42
+; GFX11-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_lshlrev_b32 v0, 3, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_inc_u64 v[0:1], v0, v[1:2], s[0:1] offset:40 glc
 ; GFX11-NEXT:    s_endpgm
@@ -1731,8 +1726,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(i32* %out, i32*
 ; GFX11-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v3, 42
+; GFX11-NEXT:    v_dual_mov_b32 v3, 42 :: v_dual_lshlrev_b32 v2, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s3
@@ -1903,8 +1897,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; GFX11-LABEL: atomic_inc_shl_base_lds_0_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 9
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 3, v0
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, 2, v0
 ; GFX11-NEXT:    ds_inc_rtn_u64 v[1:2], v3, v[1:2] offset:16

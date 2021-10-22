@@ -86,6 +86,17 @@ class PredConcat<list<Predicate> lst, Predicate pred> {
       !listconcat([pred], !filter(item, lst, !ne(item, pred)));
 }
 
+// Add a Register to the list if does not already exist
+class RegAppend<list<Register> lst, Register reg> {
+  list<Register> ret =
+      !listconcat([reg], !filter(item, lst, !ne(item, reg)));
+}
+// Get the union of two Register lists
+class RegListUnion<list<Register> lstA, list<Register> lstB> {
+  list<Register> ret =
+      !foldl(lstA, lstB, temp, item, RegAppend<temp, item>.ret);
+}
+
 class PredicateControl {
   Predicate SubtargetPredicate = TruePredicate;
   Predicate AssemblerPredicate = TruePredicate;
@@ -419,6 +430,16 @@ def zextloadi8_#as  : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
 
 def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
   let IsLoad = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_16_#as : PatFrag<(ops node:$ptr), (atomic_load_16 node:$ptr)> {
+  let IsAtomic = 1;
   let MemoryVT = i16;
 }
 

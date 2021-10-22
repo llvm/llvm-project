@@ -175,8 +175,9 @@ public:
   /// First 'return' statement in the current function.
   SourceLocation FirstReturnLoc;
 
-  /// First C++ 'try' statement in the current function.
-  SourceLocation FirstCXXTryLoc;
+  /// First C++ 'try' or ObjC @try statement in the current function.
+  SourceLocation FirstCXXOrObjCTryLoc;
+  enum { TryLocIsCXX, TryLocIsObjC, Unknown } FirstTryType = Unknown;
 
   /// First SEH '__try' statement in the current function.
   SourceLocation FirstSEHTryLoc;
@@ -446,7 +447,14 @@ public:
 
   void setHasCXXTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
-    FirstCXXTryLoc = TryLoc;
+    FirstCXXOrObjCTryLoc = TryLoc;
+    FirstTryType = TryLocIsCXX;
+  }
+
+  void setHasObjCTry(SourceLocation TryLoc) {
+    setHasBranchProtectedScope();
+    FirstCXXOrObjCTryLoc = TryLoc;
+    FirstTryType = TryLocIsObjC;
   }
 
   void setHasSEHTry(SourceLocation TryLoc) {
@@ -1001,10 +1009,7 @@ public:
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
-    PotentiallyCapturingExprs.erase(
-        std::remove(PotentiallyCapturingExprs.begin(),
-            PotentiallyCapturingExprs.end(), E),
-        PotentiallyCapturingExprs.end());
+    llvm::erase_value(PotentiallyCapturingExprs, E);
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();

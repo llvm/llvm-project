@@ -110,6 +110,13 @@ Attribute Changes in Clang
   attribute is handled instead, e.g. in ``handleDeclAttribute``.
   (This was changed in order to better support attributes in code completion).
 
+- __has_cpp_attribute, __has_c_attribute, __has_attribute, and __has_declspec
+  will now macro expand their argument. This causes a change in behavior for
+  code using ``__has_cpp_attribute(__clang__::attr)`` (and same for
+  ``__has_c_attribute``) where it would previously expand to ``0`` for all
+  attributes, but will now issue an error due to the expansion of the
+  predefined ``__clang__`` macro.
+
 Windows Support
 ---------------
 
@@ -122,6 +129,9 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
+- The value of ``__STDC_VERSION__`` has been bumped to ``202000L`` when passing
+  ``-std=c2x`` so that it can be distinguished from C17 mode. This value is
+  expected to change again when C23 is published.
 - Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
   are now ill-formed in all language modes. The motivation for this change is outlined in
   `P2362 <wg21.link/P2362>`_.
@@ -182,6 +192,13 @@ Arm and AArch64 Support in Clang
 
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A510 (``cortex-a510``)
+- The -mtune flag is no longer ignored for AArch64. It is now possible to
+  tune code generation for a particular CPU with -mtune without setting any
+  architectural features. For example, compiling with
+  "-mcpu=generic -mtune=cortex-a57" will not enable any Cortex-A57 specific
+  architecture features, but will enable certain optimizations specific to
+  Cortex-A57 CPUs and enable the use of a more accurate scheduling model.
+
 
 Internal API Changes
 --------------------

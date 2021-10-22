@@ -1,6 +1,6 @@
 ; REQUIRES: x86
 ; RUN: rm -rf %t; split-file %s %t
-;
+
 ; RUN: llvm-as %t/framework.ll -o %t/framework.o
 ; RUN: %lld -lSystem %t/framework.o -o %t/frame
 ; RUN: llvm-otool -l %t/frame | FileCheck --check-prefix=FRAME %s \
@@ -48,6 +48,20 @@
 ; RUN: not %lld %t/invalid.o -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID %s
 ; INVALID: error: -why_load is not allowed in LC_LINKER_OPTION
 
+;; This is a regression test for a dangling string reference issue that occurred
+;; when loading an archive-based framework via LC_LINKER_OPTION (see
+;; D111706). Prior to the fix, this would trigger a heap-use-after-free when run
+;; under ASAN.
+; RUN: llc %t/foo.ll -o %t/foo.o -filetype=obj
+; RUN: mkdir -p %t/Foo.framework
+;; In a proper framework, this is technically supposed to be a symlink to the
+;; actual archive at Foo.framework/Versions/Current, but we skip that here so
+;; that this test can run on Windows.
+; RUN: llvm-ar rcs %t/Foo.framework/Foo %t/foo.o
+; RUN: llc %t/objfile1.ll -o %t/objfile1.o -filetype=obj
+; RUN: llc %t/main.ll -o %t/main.o -filetype=obj
+; RUN: %lld %t/objfile1.o %t/main.o -o /dev/null -F%t
+
 ;--- framework.ll
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -88,5 +102,31 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 !llvm.linker.options = !{!0}
 
 define void @main() {
+  ret void
+}
+
+;--- objfile1.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+!0 = !{!"-framework", !"Foo"}
+!llvm.linker.options = !{!0}
+
+;--- main.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @main() {
+  ret void
+}
+
+!0 = !{!"-framework", !"Foo"}
+!llvm.linker.options = !{!0}
+
+;--- foo.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @foo() {
   ret void
 }

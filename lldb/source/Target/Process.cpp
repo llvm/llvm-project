@@ -1297,6 +1297,17 @@ StateType Process::GetState() {
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
+  const bool new_state_is_stopped = StateIsStoppedState(new_state, false);
+  if (new_state_is_stopped) {
+    // This will only set the time if the public stop time has no value, so
+    // it is ok to call this multiple times. With a public stop we can't look
+    // at the stop ID because many private stops might have happened, so we
+    // can't check for a stop ID of zero. This allows the "statistics" command
+    // to dump the time it takes to reach somewhere in your code, like a
+    // breakpoint you set.
+    GetTarget().GetStatistics().SetFirstPublicStopTime();
+  }
+
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
   LLDB_LOGF(log, "Process::SetPublicState (state = %s, restarted = %i)",
@@ -1315,7 +1326,6 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
       m_public_run_lock.SetStopped();
     } else {
       const bool old_state_is_stopped = StateIsStoppedState(old_state, false);
-      const bool new_state_is_stopped = StateIsStoppedState(new_state, false);
       if ((old_state_is_stopped != new_state_is_stopped)) {
         if (new_state_is_stopped && !restarted) {
           LLDB_LOGF(log, "Process::SetPublicState (%s) -- unlocking run lock",
@@ -1446,7 +1456,9 @@ void Process::SetPrivateState(StateType new_state) {
       // before we get here.
       m_thread_list.DidStop();
 
-      m_mod_id.BumpStopID();
+      if (m_mod_id.BumpStopID() == 0)
+        GetTarget().GetStatistics().SetFirstPrivateStopTime();
+
       if (!m_mod_id.IsLastResumeForUserExpression())
         m_mod_id.SetStopEventForLastNaturalStopID(event_sp);
       m_memory_cache.Clear();
@@ -2939,13 +2951,11 @@ void Process::CompleteAttach() {
     dyld->DidAttach();
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
-      LLDB_LOGF(log,
-                "Process::%s after DynamicLoader::DidAttach(), target "
-                "executable is %s (using %s plugin)",
-                __FUNCTION__,
-                exe_module_sp ? exe_module_sp->GetFileSpec().GetPath().c_str()
-                              : "<none>",
-                dyld->GetPluginName().AsCString("<unnamed>"));
+      LLDB_LOG(log,
+               "after DynamicLoader::DidAttach(), target "
+               "executable is {0} (using {1} plugin)",
+               exe_module_sp ? exe_module_sp->GetFileSpec() : FileSpec(),
+               dyld->GetPluginName());
     }
   }
 
@@ -2956,13 +2966,11 @@ void Process::CompleteAttach() {
     system_runtime->DidAttach();
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
-      LLDB_LOGF(log,
-                "Process::%s after SystemRuntime::DidAttach(), target "
-                "executable is %s (using %s plugin)",
-                __FUNCTION__,
-                exe_module_sp ? exe_module_sp->GetFileSpec().GetPath().c_str()
-                              : "<none>",
-                system_runtime->GetPluginName().AsCString("<unnamed>"));
+      LLDB_LOG(log,
+               "after SystemRuntime::DidAttach(), target "
+               "executable is {0} (using {1} plugin)",
+               exe_module_sp ? exe_module_sp->GetFileSpec() : FileSpec(),
+               system_runtime->GetPluginName());
     }
   }
 
@@ -4353,8 +4361,9 @@ public:
     const int read_fd = m_read_file.GetDescriptor();
     Terminal terminal(read_fd);
     TerminalState terminal_state(terminal, false);
-    terminal.SetCanonical(false);
-    terminal.SetEcho(false);
+    // FIXME: error handling?
+    llvm::consumeError(terminal.SetCanonical(false));
+    llvm::consumeError(terminal.SetEcho(false));
 // FD_ZERO, FD_SET are not supported on windows
 #ifndef _WIN32
     const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
@@ -5984,11 +5993,8 @@ void Process::MapSupportedStructuredDataPlugins(
         m_structured_data_plugin_map.insert(
             std::make_pair(type_name, plugin_sp));
         names_to_remove.push_back(type_name);
-        LLDB_LOGF(log,
-                  "Process::%s(): using plugin %s for type name "
-                  "%s",
-                  __FUNCTION__, plugin_sp->GetPluginName().GetCString(),
-                  type_name.GetCString());
+        LLDB_LOG(log, "using plugin {0} for type name {1}",
+                 plugin_sp->GetPluginName(), type_name);
       }
     }
 
@@ -6112,8 +6118,7 @@ llvm::Expected<const MemoryTagManager *> Process::GetMemoryTagManager() {
   if (!arch || !tag_manager) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "This architecture does not support memory tagging",
-        GetPluginName().GetCString());
+        "This architecture does not support memory tagging");
   }
 
   if (!SupportsMemoryTagging()) {

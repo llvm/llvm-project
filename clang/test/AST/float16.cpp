@@ -33,9 +33,9 @@ namespace {
 //CHECK-NEXT: | |-VarDecl {{.*}} f1n '_Float16'
 //CHECK-NEXT: | |-VarDecl {{.*}} f2n '_Float16' cinit
 //CHECK-NEXT: | | `-FloatingLiteral {{.*}} '_Float16' 3.300000e+01
-//CHECK-NEXT: | |-VarDecl {{.*}} arr1n '_Float16 [10]'
-//CHECK-NEXT: | |-VarDecl {{.*}} arr2n '_Float16 [3]' cinit
-//CHECK-NEXT: | | `-InitListExpr {{.*}} '_Float16 [3]'
+//CHECK-NEXT: | |-VarDecl {{.*}} arr1n '_Float16[10]'
+//CHECK-NEXT: | |-VarDecl {{.*}} arr2n '_Float16[3]' cinit
+//CHECK-NEXT: | | `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT: | |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: | |   | `-FloatingLiteral {{.*}} 'double' 1.200000e+00
 //CHECK-NEXT: | |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
@@ -55,9 +55,9 @@ _Float16 func1f(_Float16 arg);
 //CHECK-NEXT: |-VarDecl {{.*}} f2f '_Float16' cinit
 //CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: |   `-FloatingLiteral {{.*}} 'double' 3.240000e+01
-//CHECK-NEXT: |-VarDecl {{.*}} arr1f '_Float16 [10]'
-//CHECK-NEXT: |-VarDecl {{.*}} arr2f '_Float16 [3]' cinit
-//CHECK-NEXT: | `-InitListExpr {{.*}} '_Float16 [3]'
+//CHECK-NEXT: |-VarDecl {{.*}} arr1f '_Float16[10]'
+//CHECK-NEXT: |-VarDecl {{.*}} arr2f '_Float16[3]' cinit
+//CHECK-NEXT: | `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT: |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: |   | `-UnaryOperator {{.*}} 'double' prefix '-'
 //CHECK-NEXT: |   |   `-FloatingLiteral {{.*}} 'double' 1.200000e+00
@@ -297,8 +297,8 @@ int main(void) {
 //CHECK-NEXT:  |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f4l' '_Float16'
 
   _Float16 arr1l[] = { -1.f16, -0.f16, -11.f16 };
-//CHECK:       `-VarDecl {{.*}} arr1l '_Float16 [3]' cinit
-//CHECK-NEXT:    `-InitListExpr {{.*}} '_Float16 [3]'
+//CHECK:       `-VarDecl {{.*}} arr1l '_Float16[3]' cinit
+//CHECK-NEXT:    `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT:      |-UnaryOperator {{.*}} '_Float16' prefix '-'
 //CHECK-NEXT:      | `-FloatingLiteral {{.*}} '_Float16' 1.000000e+00
 //CHECK-NEXT:      |-UnaryOperator {{.*}} '_Float16' prefix '-'

@@ -81,9 +81,12 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Type type = signedFloorDivIOp.getType();
     Value a = signedFloorDivIOp.lhs();
     Value b = signedFloorDivIOp.rhs();
-    Value plusOne = rewriter.create<arith::ConstantIntOp>(loc, 1, type);
-    Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, type);
-    Value minusOne = rewriter.create<arith::ConstantIntOp>(loc, -1, type);
+    Value plusOne = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(type, 1));
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(type, 0));
+    Value minusOne = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(type, -1));
     // Compute x = (b<0) ? 1 : -1.
     Value compare =
         rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, b, zero);

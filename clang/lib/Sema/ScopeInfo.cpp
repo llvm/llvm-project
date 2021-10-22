@@ -37,7 +37,7 @@ void FunctionScopeInfo::Clear() {
   ObjCIsSecondaryInit = false;
   ObjCWarnForNoInitDelegation = false;
   FirstReturnLoc = SourceLocation();
-  FirstCXXTryLoc = SourceLocation();
+  FirstCXXOrObjCTryLoc = SourceLocation();
   FirstSEHTryLoc = SourceLocation();
 
   // Coroutine state
