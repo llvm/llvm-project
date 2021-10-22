@@ -10,6 +10,7 @@
 #include "descriptor-io.h"
 #include "io-stmt.h"
 #include "flang/Runtime/io-api.h"
+#include <algorithm>
 #include <cstring>
 #include <limits>
 
@@ -133,7 +134,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   // ambiguous within the parentheses.
   SubscriptValue lower[maxRank], upper[maxRank], stride[maxRank];
   int j{0};
-  std::size_t elemLen{source.ElementBytes()};
+  std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::optional<char32_t> ch{io.GetNextNonBlank()};
   for (; ch && *ch != ')'; ++j) {
@@ -142,7 +143,9 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
       const Dimension &dim{source.GetDimension(j)};
       dimLower = dim.LowerBound();
       dimUpper = dim.UpperBound();
-      dimStride = elemLen ? dim.ByteStride() / elemLen : 1;
+      dimStride =
+          dim.ByteStride() / std::max<SubscriptValue>(contiguousStride, 1);
+      contiguousStride *= dim.Extent();
     } else if (ok) {
       handler.SignalError(
           "Too many subscripts for rank-%d NAMELIST group item '%s'",
