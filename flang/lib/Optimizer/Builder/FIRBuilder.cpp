@@ -8,6 +8,8 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -277,6 +279,54 @@ fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,
                                   llvm::None, attrs);
 }
 
+mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
+                                        llvm::ArrayRef<mlir::Value> exts) {
+  auto shapeType = fir::ShapeType::get(getContext(), exts.size());
+  return create<fir::ShapeOp>(loc, shapeType, exts);
+}
+
+mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
+                                        llvm::ArrayRef<mlir::Value> shift,
+                                        llvm::ArrayRef<mlir::Value> exts) {
+  auto shapeType = fir::ShapeShiftType::get(getContext(), exts.size());
+  llvm::SmallVector<mlir::Value> shapeArgs;
+  auto idxTy = getIndexType();
+  for (auto [lbnd, ext] : llvm::zip(shift, exts)) {
+    auto lb = createConvert(loc, idxTy, lbnd);
+    shapeArgs.push_back(lb);
+    shapeArgs.push_back(ext);
+  }
+  return create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
+}
+
+mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
+                                        const fir::AbstractArrayBox &arr) {
+  if (arr.lboundsAllOne())
+    return genShape(loc, arr.getExtents());
+  return genShape(loc, arr.getLBounds(), arr.getExtents());
+}
+
+mlir::Value fir::FirOpBuilder::createShape(mlir::Location loc,
+                                           const fir::ExtendedValue &exv) {
+  return exv.match(
+      [&](const fir::ArrayBoxValue &box) { return genShape(loc, box); },
+      [&](const fir::CharArrayBoxValue &box) { return genShape(loc, box); },
+      [&](const fir::BoxValue &box) -> mlir::Value {
+        if (!box.getLBounds().empty()) {
+          auto shiftType =
+              fir::ShiftType::get(getContext(), box.getLBounds().size());
+          return create<fir::ShiftOp>(loc, shiftType, box.getLBounds());
+        }
+        return {};
+      },
+      [&](const fir::MutableBoxValue &) -> mlir::Value {
+        // MutableBoxValue must be read into another category to work with them
+        // outside of allocation/assignment contexts.
+        fir::emitFatalError(loc, "createShape on MutableBoxValue");
+      },
+      [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
+}
+
 static mlir::Value genNullPointerComparison(fir::FirOpBuilder &builder,
                                             mlir::Location loc,
                                             mlir::Value addr,
@@ -294,6 +344,76 @@ mlir::Value fir::FirOpBuilder::genIsNotNull(mlir::Location loc,
 
 mlir::Value fir::FirOpBuilder::genIsNull(mlir::Location loc, mlir::Value addr) {
   return genNullPointerComparison(*this, loc, addr, arith::CmpIPredicate::eq);
+}
+
+//===--------------------------------------------------------------------===//
+// ExtendedValue inquiry helper implementation
+//===--------------------------------------------------------------------===//
+
+mlir::Value fir::factory::readCharLen(fir::FirOpBuilder &builder,
+                                      mlir::Location loc,
+                                      const fir::ExtendedValue &box) {
+  return box.match(
+      [&](const fir::CharBoxValue &x) -> mlir::Value { return x.getLen(); },
+      [&](const fir::CharArrayBoxValue &x) -> mlir::Value {
+        return x.getLen();
+      },
+      [&](const fir::BoxValue &x) -> mlir::Value {
+        assert(x.isCharacter());
+        if (!x.getExplicitParameters().empty())
+          return x.getExplicitParameters()[0];
+        return fir::factory::CharacterExprHelper{builder, loc}
+            .readLengthFromBox(x.getAddr());
+      },
+      [&](const fir::MutableBoxValue &) -> mlir::Value {
+        // MutableBoxValue must be read into another category to work with them
+        // outside of allocation/assignment contexts.
+        fir::emitFatalError(loc, "readCharLen on MutableBoxValue");
+      },
+      [&](const auto &) -> mlir::Value {
+        fir::emitFatalError(
+            loc, "Character length inquiry on a non-character entity");
+      });
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::readExtents(fir::FirOpBuilder &builder, mlir::Location loc,
+                          const fir::BoxValue &box) {
+  llvm::SmallVector<mlir::Value> result;
+  auto explicitExtents = box.getExplicitExtents();
+  if (!explicitExtents.empty()) {
+    result.append(explicitExtents.begin(), explicitExtents.end());
+    return result;
+  }
+  auto rank = box.rank();
+  auto idxTy = builder.getIndexType();
+  for (decltype(rank) dim = 0; dim < rank; ++dim) {
+    auto dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+    auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
+                                                  box.getAddr(), dimVal);
+    result.emplace_back(dimInfo.getResult(1));
+  }
+  return result;
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::getExtents(fir::FirOpBuilder &builder, mlir::Location loc,
+                         const fir::ExtendedValue &box) {
+  return box.match(
+      [&](const fir::ArrayBoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return {x.getExtents().begin(), x.getExtents().end()};
+      },
+      [&](const fir::CharArrayBoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return {x.getExtents().begin(), x.getExtents().end()};
+      },
+      [&](const fir::BoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return fir::factory::readExtents(builder, loc, x);
+      },
+      [&](const fir::MutableBoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        auto load = fir::factory::genMutableBoxRead(builder, loc, x);
+        return fir::factory::getExtents(builder, loc, load);
+      },
+      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
 }
 
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
