@@ -9,7 +9,7 @@
 // REQUIRES: locale.en_US.UTF-8
 
 // https://llvm.org/PR41018
-// XFAIL: windows-dll
+// XFAIL: windows-dll && msvc
 
 // <locale>
 
