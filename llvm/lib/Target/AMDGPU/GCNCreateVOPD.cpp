@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Support/Casting.h"
@@ -131,28 +132,32 @@ public:
     SmallVector<std::pair<MachineInstr *, MachineInstr *>> ReplaceCandidates;
 
     for (auto &MBB : MF) {
-      for (auto FirstMII = MBB.begin(), E = MBB.end(); FirstMII != E;
-           ++FirstMII) {
-        MachineInstr *SecondMI = FirstMII->getNextNode();
-        if (FirstMII->isDebugInstr() || !SecondMI || SecondMI->isDebugInstr())
+      auto MII = MBB.begin(), E = MBB.end();
+      while (MII != E) {
+        auto *FirstMI = &*MII;
+        MII = next_nodbg(MII, MBB.end());
+        if (MII == MBB.end())
+          break;
+        if (FirstMI->isDebugInstr())
           continue;
-        unsigned Opc = FirstMII->getOpcode();
+        auto *SecondMI = &*MII;
+        unsigned Opc = FirstMI->getOpcode();
         unsigned Opc2 = SecondMI->getOpcode();
         auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
         auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
         std::pair<MachineInstr *, MachineInstr *> Pair;
 
         if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
-          Pair = {&*FirstMII, SecondMI};
+          Pair = {FirstMI, SecondMI};
         else if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)
-          Pair = {SecondMI, &*FirstMII};
+          Pair = {SecondMI, FirstMI};
         else
           continue;
         // checkVOPDRegConstraints cares about program order, but doReplace
         // cares about X-Y order in the constituted VOPD
-        if (llvm::checkVOPDRegConstraints(*SII, *FirstMII, *SecondMI)) {
+        if (llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI)) {
           ReplaceCandidates.push_back(Pair);
-          ++FirstMII;
+          ++MII;
         }
       }
     }

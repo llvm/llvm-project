@@ -254,9 +254,8 @@ body:             |
     ; PAIR-LABEL: name: vopd_debug
     ; PAIR: $vgpr0 = IMPLICIT_DEF
     ; PAIR-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; PAIR-NEXT: $vgpr3 = V_SUB_F32_e32 killed $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; PAIR-NEXT: $vgpr3, $vgpr6 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32 killed $vgpr1, $vgpr1, killed $vgpr0, $vgpr0, implicit $exec, implicit $mode
     ; PAIR-NEXT: DBG_VALUE 0
-    ; PAIR-NEXT: $vgpr6 = V_MUL_F32_e32 killed $vgpr0, $vgpr0, implicit $mode, implicit $exec
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
     ; TODO Debug values disable VOPD creation
