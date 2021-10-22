@@ -333,7 +333,8 @@ DIDerivedType *DIBuilder::createReferenceType(
 DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DIFile *File, unsigned LineNo,
                                         DIScope *Context,
-                                        uint32_t AlignInBits) {
+                                        uint32_t AlignInBits,
+                                        DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
                             LineNo, getNonCompileUnitScope(Context), Ty, 0,
                             AlignInBits, 0, None, None, DINode::FlagZero);
