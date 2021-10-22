@@ -26,7 +26,7 @@ config.substitutions.append(('%{exec}',
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
+import libcxx.test.params, libcxx.test.newconfig
 libcxx.test.newconfig.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
