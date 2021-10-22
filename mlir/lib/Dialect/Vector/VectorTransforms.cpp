@@ -1034,10 +1034,11 @@ public:
 };
 
 /// ShapeOp 1D -> 2D upcast serves the purpose of unflattening 2-D from 1-D
-/// vectors progressively on the way from targeting llvm.matrix intrinsics.
+/// vectors progressively.
 /// This iterates over the most major dimension of the 2-D vector and performs
 /// rewrites into:
-///   vector.strided_slice from 1-D + vector.insert into 2-D
+///   vector.extract_strided_slice from 1-D + vector.insert into 2-D
+/// Note that 1-D extract_strided_slice are lowered to efficient vector.shuffle.
 class ShapeCastOp2DUpCastRewritePattern
     : public OpRewritePattern<vector::ShapeCastOp> {
 public:
