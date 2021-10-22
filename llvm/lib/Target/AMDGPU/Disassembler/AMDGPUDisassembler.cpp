@@ -18,6 +18,8 @@
 
 #include "Disassembler/AMDGPUDisassembler.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
+#include "SIRegisterInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm-c/DisassemblerTypes.h"
@@ -116,6 +118,8 @@ static DecodeStatus StaticDecoderName(MCInst &Inst, \
 #define DECODE_OPERAND_REG(RegClass) \
 DECODE_OPERAND(Decode##RegClass##RegisterClass, decodeOperand_##RegClass)
 
+DECODE_OPERAND_REG(VGPR_16)
+DECODE_OPERAND_REG(VGPR_16_F128)
 DECODE_OPERAND_REG(VGPR_32)
 DECODE_OPERAND_REG(VRegOrLds_32)
 DECODE_OPERAND_REG(VS_32)
@@ -156,6 +160,19 @@ static DecodeStatus decodeOperand_VSrc16(MCInst &Inst,
                                          const void *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
   return addOperand(Inst, DAsm->decodeOperand_VSrc16(Imm));
+}
+
+static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
+                                          uint64_t Addr, const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeOperand_VSrcT16(Imm));
+}
+
+static DecodeStatus decodeOperand_VSrcT16_F128(MCInst &Inst, unsigned Imm,
+                                               uint64_t Addr,
+                                               const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeOperand_VSrcT16_F128(Imm));
 }
 
 static DecodeStatus decodeOperand_VSrcV216(MCInst &Inst,
@@ -1099,6 +1116,26 @@ MCOperand AMDGPUDisassembler::decodeOperand_VSrc16(unsigned Val) const {
   return decodeSrcOp(OPW16, Val);
 }
 
+MCOperand AMDGPUDisassembler::decodeOperand_VSrcT16(unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  // Ignore the suffix bit when determining if the decoded value is in range to
+  // be a VGPR
+  unsigned Reg32 = Val >> 1;
+  if (VGPR_MIN <= Reg32 && Reg32 <= VGPR_MAX) {
+    return createRegOperand(AMDGPU::VGPR_16RegClassID, Val & 511);
+  }
+  return decodeNonVGPRSrcOp(OPW16, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_VSrcT16_F128(unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  unsigned Reg32 = Val >> 1;
+  if (VGPR_MIN <= Reg32 && Reg32 <= VGPR_MAX) {
+    return createRegOperand(AMDGPU::VGPR_16_F128RegClassID, Val & 255);
+  }
+  return decodeNonVGPRSrcOp(OPW16, Val);
+}
+
 MCOperand AMDGPUDisassembler::decodeOperand_VSrcV216(unsigned Val) const {
   return decodeSrcOp(OPWV216, Val);
 }
@@ -1106,7 +1143,14 @@ MCOperand AMDGPUDisassembler::decodeOperand_VSrcV216(unsigned Val) const {
 MCOperand AMDGPUDisassembler::decodeOperand_VSrcV232(unsigned Val) const {
   return decodeSrcOp(OPWV232, Val);
 }
-// TODO-GFX11 decodeOperand_VGPR_16
+
+MCOperand AMDGPUDisassembler::decodeOperand_VGPR_16(unsigned Val) const {
+  return createRegOperand(AMDGPU::VGPR_16RegClassID, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_VGPR_16_F128(unsigned Val) const {
+  return createRegOperand(AMDGPU::VGPR_16_F128RegClassID, Val);
+}
 
 MCOperand AMDGPUDisassembler::decodeOperand_VGPR_32(unsigned Val) const {
   // Some instructions have operand restrictions beyond what the encoding
@@ -1377,6 +1421,9 @@ unsigned AMDGPUDisassembler::getVgprClassId(const OpWidthTy Width) const {
   default: // fall
   case OPW32:
   case OPW16:
+    // TODO-GFX11_16bit T16 operands should always use their special decoder
+    // method, so we never hit this for fully implemented T16 instructions. Fake
+    // 16 bit instructions use this case
   case OPWV216:
     return VGPR_32RegClassID;
   case OPW64:
@@ -1459,19 +1506,11 @@ int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
   return (TTmpMin <= Val && Val <= TTmpMax)? Val - TTmpMin : -1;
 }
 
-MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                                          bool MandatoryLiteral) const {
+MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
+                                              unsigned Val,
+                                              bool MandatoryLiteral) const {
   using namespace AMDGPU::EncValues;
 
-  assert(Val < 1024); // enum10
-
-  bool IsAGPR = Val & 512;
-  Val &= 511;
-
-  if (VGPR_MIN <= Val && Val <= VGPR_MAX) {
-    return createRegOperand(IsAGPR ? getAgprClassId(Width)
-                                   : getVgprClassId(Width), Val - VGPR_MIN);
-  }
   if (Val <= SGPR_MAX) {
     // "SGPR_MIN <= Val" is always true and causes compilation warning.
     static_assert(SGPR_MIN == 0, "");
@@ -1510,6 +1549,22 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
   }
 }
 
+MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
+                                          bool MandatoryLiteral) const {
+  using namespace AMDGPU::EncValues;
+
+  assert(Val < 1024); // enum10
+
+  bool IsAGPR = Val & 512;
+  Val &= 511;
+
+  if (VGPR_MIN <= Val && Val <= VGPR_MAX) {
+    return createRegOperand(
+        IsAGPR ? getAgprClassId(Width) : getVgprClassId(Width), Val - VGPR_MIN);
+  }
+  return decodeNonVGPRSrcOp(Width, Val, MandatoryLiteral);
+}
+
 MCOperand AMDGPUDisassembler::decodeDstOp(const OpWidthTy Width, unsigned Val) const {
   using namespace AMDGPU::EncValues;
 
@@ -1539,7 +1594,7 @@ MCOperand AMDGPUDisassembler::decodeVOPDDstYOp(MCInst &Inst,
   assert(VDstXInd != -1);
   assert(Inst.getOperand(VDstXInd).isReg());
   unsigned XDstReg = MRI.getEncodingValue(Inst.getOperand(VDstXInd).getReg());
-  Val |= ~XDstReg & 1;
+  Val |= ~(XDstReg >> 1) & 1;
   auto Width = llvm::AMDGPUDisassembler::OPW32;
   return createRegOperand(getVgprClassId(Width), Val);
 }

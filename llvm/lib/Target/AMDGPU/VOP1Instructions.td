@@ -539,6 +539,14 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
   let isAsCheapAsAMove = 1;
 }
 
+// TODO-GFX11_16BIT Temporary profile because functions to set these fields are TBD
+class MOV_16_Profile<VOPProfile P> :  VOPProfile<P.ArgVT> {
+  let DstRC = VOPDstOperandT16<VGPR_16_F128>;
+  let DstRC64 = VOPDstOperandT16<VGPR_16>;
+  let Src0RC32 = VSrcT_f16_F128;
+  let Src0RC64 = VSrcT_f16;
+}
+
 let SubtargetPredicate = isGFX11Plus in {
   // TODO-GFX11 new inst
   /*def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], 1> {*/
@@ -547,7 +555,7 @@ let SubtargetPredicate = isGFX11Plus in {
     /*let SchedRW = [Write64Bit, Write64Bit];*/
   /*}*/
   // TODO-GFX11 select new insts
-  defm V_MOV_B16        : VOP1Inst<"v_mov_b16", VOP_I16_I16>;
+  defm V_MOV_B16        : VOP1Inst<"v_mov_b16", MOV_16_Profile<VOP_I16_I16>>;
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
                                       getVOP1Pat64<int_amdgcn_permlane64,

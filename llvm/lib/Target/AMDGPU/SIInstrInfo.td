@@ -1320,6 +1320,10 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
 }
 
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
+def TFP16InputModsMatchClass : FPInputModsMatchClass<16> {
+  let Name = "RegOrImmWithTFP16InputMods";
+  let PredicateMethod = "isRegOrImmWithTFP16InputMods";
+}
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -1337,6 +1341,7 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 }
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
+def TFP16InputMods : FPInputMods<TFP16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
@@ -1766,7 +1771,7 @@ class getSrcModSDWA <ValueType VT> {
 }
 
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.
-class getIns32 <RegisterOperand Src0RC, RegisterClass Src1RC, int NumSrcArgs> {
+class getIns32 <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs> {
   dag ret = !if(!eq(NumSrcArgs, 1), (ins Src0RC:$src0),               // VOP1
             !if(!eq(NumSrcArgs, 2), (ins Src0RC:$src0, Src1RC:$src1), // VOP2
                                     (ins)));
@@ -2381,10 +2386,11 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field ValueType Src1VT = ArgVT[2];
   field ValueType Src2VT = ArgVT[3];
   field RegisterOperand DstRC = getVALUDstForVT<DstVT>.ret;
+  field RegisterOperand DstRC64 = DstRC;
   field RegisterOperand DstRCDPP = getVALUDstForVT<DstVT>.ret;
   field RegisterOperand DstRCSDWA = getSDWADstForVT<DstVT>.ret;
   field RegisterOperand Src0RC32 = getVOPSrc0ForVT<Src0VT>.ret;
-  field RegisterClass Src1RC32 = getVregSrcForVT<Src1VT>.ret;
+  field RegisterOperand Src1RC32 = RegisterOperand<getVregSrcForVT<Src1VT>.ret>;
   field RegisterOperand Src0RC64 = getVOP3SrcForVT<Src0VT>.ret;
   field RegisterOperand Src1RC64 = getVOP3SrcForVT<Src1VT>.ret;
   field RegisterOperand Src2RC64 = getVOP3SrcForVT<Src2VT>.ret;
@@ -2478,7 +2484,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   // VOP3b instructions are a special case with a second explicit
   // output. This is manually overridden for them.
   field dag Outs32 = Outs;
-  field dag Outs64 = Outs;
+  field dag Outs64 = !if(HasDst,(outs DstRC64:$vdst),(outs));
   field dag OutsDPP = getOutsDPP<HasDst, DstVT, DstRCDPP>.ret;
   field dag OutsDPP8 = getOutsDPP<HasDst, DstVT, DstRCDPP>.ret;
   field dag OutsVOP3DPP = OutsDPP;

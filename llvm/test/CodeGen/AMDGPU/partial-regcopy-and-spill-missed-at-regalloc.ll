@@ -7,7 +7,7 @@
 define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-LABEL: name: partial_copy
   ; REGALLOC-GFX908: bb.0 (%ir-block.0):
-  ; REGALLOC-GFX908:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2949130 /* regdef:VReg_64 */, def [[VREG_64:%[0-9]+]]
+  ; REGALLOC-GFX908:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3932170 /* regdef:VReg_64 */, def [[VREG_64:%[0-9]+]]
   ; REGALLOC-GFX908:  SI_SPILL_V64_SAVE [[VREG_64]], %stack.0
   ; REGALLOC-GFX908:  [[V_MFMA_I32_4X4X4I8_A128:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64
   ; REGALLOC-GFX908:  [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0
@@ -17,7 +17,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ;
   ; PEI-GFX908-LABEL: name: partial_copy
   ; PEI-GFX908: bb.0 (%ir-block.0):
-  ; PEI-GFX908:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2949130 /* regdef:VReg_64 */, def renamable $vgpr0_vgpr1
+  ; PEI-GFX908:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3932170 /* regdef:VReg_64 */, def renamable $vgpr0_vgpr1
   ; PEI-GFX908:  BUFFER_STORE_DWORD_OFFSET killed $vgpr0
   ; PEI-GFX908:  $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1
   ; PEI-GFX908:  renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64
@@ -29,7 +29,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ;
   ; REGALLOC-GFX90A-LABEL: name: partial_copy
   ; REGALLOC-GFX90A: bb.0 (%ir-block.0):
-  ; REGALLOC-GFX90A:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3080202 /* regdef:VReg_64_Align2 */, def [[VREG_64:%[0-9]+]]
+  ; REGALLOC-GFX90A:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 4128778 /* regdef:VReg_64_Align2 */, def [[VREG_64:%[0-9]+]]
   ; REGALLOC-GFX90A:  SI_SPILL_V64_SAVE [[VREG_64]], %stack.0
   ; REGALLOC-GFX90A:  [[V_MFMA_I32_4X4X4I8_A128:%[0-9]+]]:areg_128_align2 = V_MFMA_I32_4X4X4I8_e64
   ; REGALLOC-GFX90A:  [[SI_SPILL_AV64_RESTORE:%[0-9]+]]:av_64_align2 = SI_SPILL_AV64_RESTORE %stack.0
@@ -38,7 +38,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ;
   ; PEI-GFX90A-LABEL: name: partial_copy
   ; PEI-GFX90A: bb.0 (%ir-block.0):
-  ; PEI-GFX90A:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3080202 /* regdef:VReg_64_Align2 */, def renamable $vgpr0_vgpr1
+  ; PEI-GFX90A:  INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 4128778 /* regdef:VReg_64_Align2 */, def renamable $vgpr0_vgpr1
   ; PEI-GFX90A:  BUFFER_STORE_DWORD_OFFSET killed $vgpr0
   ; PEI-GFX90A:  $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1
   ; PEI-GFX90A:  renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64

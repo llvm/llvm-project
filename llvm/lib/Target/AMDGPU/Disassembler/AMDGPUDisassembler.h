@@ -159,6 +159,8 @@ public:
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
 
+  MCOperand decodeOperand_VGPR_16(unsigned Val) const;
+  MCOperand decodeOperand_VGPR_16_F128(unsigned Val) const;
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
   MCOperand decodeOperand_VRegOrLds_32(unsigned Val) const;
 
@@ -166,6 +168,8 @@ public:
   MCOperand decodeOperand_VS_64(unsigned Val) const;
   MCOperand decodeOperand_VS_128(unsigned Val) const;
   MCOperand decodeOperand_VSrc16(unsigned Val) const;
+  MCOperand decodeOperand_VSrcT16(unsigned Val) const;
+  MCOperand decodeOperand_VSrcT16_F128(unsigned Val) const;
   MCOperand decodeOperand_VSrcV216(unsigned Val) const;
   MCOperand decodeOperand_VSrcV232(unsigned Val) const;
 
@@ -225,6 +229,8 @@ public:
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
                         bool MandatoryLiteral = false) const;
+  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
+                            bool MandatoryLiteral = false) const;
   MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
