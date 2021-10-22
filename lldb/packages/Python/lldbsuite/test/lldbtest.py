@@ -1351,15 +1351,18 @@ class Base(unittest2.TestCase):
             return str(configuration.dwarf_version)
         if 'clang' in self.getCompiler():
             try:
+                triple = builder_module().getTriple(self.getArchitecture())
+                target = ['-target', triple] if triple else []
                 driver_output = check_output(
-                    [self.getCompiler()] + '-g -c -x c - -o - -###'.split(),
+                    [self.getCompiler()] + target + '-g -c -x c - -o - -###'.split(),
                     stderr=STDOUT)
                 driver_output = driver_output.decode("utf-8")
                 for line in driver_output.split(os.linesep):
                     m = re.search('dwarf-version=([0-9])', line)
                     if m:
                         return m.group(1)
-            except: pass
+            except CalledProcessError:
+                pass
         return '0'
 
     def platformIsDarwin(self):
