@@ -508,7 +508,7 @@ static OpResult getInplaceableOpResult(VectorTransferOpInterface op,
 /// when the op is bufferized inplace.
 /// Return null if no such result exists.
 static OpResult getInplaceableOpResult(InsertSliceOp op, OpOperand &opOperand) {
-  if (opOperand.get() != op.dest())
+  if (&opOperand != &op->getOpOperand(1) /*dest*/)
     return OpResult();
   return op->getResult(0);
 }
