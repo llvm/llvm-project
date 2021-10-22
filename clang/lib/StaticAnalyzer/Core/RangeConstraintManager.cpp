@@ -1614,14 +1614,14 @@ public:
   bool handleRemainderOp(const SymT *Sym, RangeSet Constraint) {
     if (Sym->getOpcode() != BO_Rem)
       return true;
-    const SymbolRef LHS = Sym->getLHS();
-    const llvm::APSInt &Zero =
-        Builder.getBasicValueFactory().getValue(0, Sym->getType());
     // a % b != 0 implies that a != 0.
     if (!Constraint.containsZero()) {
-      State = RCM.assumeSymNE(State, LHS, Zero, Zero);
-      if (!State)
-        return false;
+      SVal SymSVal = Builder.makeSymbolVal(Sym->getLHS());
+      if (auto NonLocSymSVal = SymSVal.getAs<nonloc::SymbolVal>()) {
+        State = State->assume(*NonLocSymSVal, true);
+        if (!State)
+          return false;
+      }
     }
     return true;
   }
