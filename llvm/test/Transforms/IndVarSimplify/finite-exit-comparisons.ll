@@ -105,7 +105,7 @@ define void @slt_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -391,7 +391,7 @@ define void @sgt_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -445,7 +445,7 @@ define void @sle_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -499,7 +499,7 @@ define void @sge_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

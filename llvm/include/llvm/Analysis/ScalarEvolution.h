@@ -1162,6 +1162,18 @@ public:
   /// Try to apply information from loop guards for \p L to \p Expr.
   const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
 
+  /// Return true if the loop has no abnormal exits. That is, if the loop
+  /// is not infinite, it must exit through an explicit edge in the CFG.
+  /// (As opposed to either a) throwing out of the function or b) entering a
+  /// well defined infinite loop in some callee.)
+  bool loopHasNoAbnormalExits(const Loop *L) {
+    return getLoopProperties(L).HasNoAbnormalExits;
+  }
+
+  /// Return true if this loop is finite by assumption.  That is,
+  /// to be infinite, it must also be undefined.
+  bool loopIsFiniteByAssumption(const Loop *L);
+
 private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
@@ -1481,14 +1493,6 @@ private:
   bool loopHasNoSideEffects(const Loop *L) {
     return getLoopProperties(L).HasNoSideEffects;
   }
-
-  bool loopHasNoAbnormalExits(const Loop *L) {
-    return getLoopProperties(L).HasNoAbnormalExits;
-  }
-
-  /// Return true if this loop is finite by assumption.  That is,
-  /// to be infinite, it must also be undefined.
-  bool loopIsFiniteByAssumption(const Loop *L);
 
   /// Compute a LoopDisposition value.
   LoopDisposition computeLoopDisposition(const SCEV *S, const Loop *L);
