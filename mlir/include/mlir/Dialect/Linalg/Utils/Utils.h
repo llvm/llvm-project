@@ -164,25 +164,25 @@ struct FusionInfo {
 /// Implements the fusion part of the "tileAndFuse on buffers" transformation
 /// and thus requires the `consumerOpOperand` to be a `subview` op (generally
 /// obtained by applying the tiling transformation).
-Optional<FusionInfo> fuseProducerOfBuffer(OpBuilder &b,
-                                          OpOperand &consumerOpOperand,
-                                          const LinalgDependenceGraph &graph);
+FailureOr<FusionInfo> fuseProducerOfBuffer(OpBuilder &b,
+                                           OpOperand &consumerOpOperand,
+                                           const LinalgDependenceGraph &graph);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling
 /// transformation).
-Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
-                                          OpOperand &consumerOpOperand);
+FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
+                                           OpOperand &consumerOpOperand);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling
 /// transformation). Assumes `producerOfTensor` is a Linalg op that produces
 /// `consumerOpOperand`.
-Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
-                                          OpResult producerOpResult,
-                                          OpOperand &consumerOpOperand);
+FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
+                                           OpResult producerOpResult,
+                                           OpOperand &consumerOpOperand);
 
 //===----------------------------------------------------------------------===//
 // Fusion on tensor utilities
