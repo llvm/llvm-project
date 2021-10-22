@@ -20501,9 +20501,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Extract->getOperand(0));
-  auto *ExtIdx = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
-  if (!Ld || Ld->getExtensionType() || !Ld->isSimple() ||
-      !ExtIdx)
+  if (!Ld || Ld->getExtensionType() || !Ld->isSimple())
     return SDValue();
 
   // Allow targets to opt-out.
@@ -20513,7 +20511,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   if (!VT.isByteSized())
     return SDValue();
 
-  unsigned Index = ExtIdx->getZExtValue();
+  unsigned Index = Extract->getConstantOperandVal(1);
   unsigned NumElts = VT.getVectorMinNumElements();
 
   // The definition of EXTRACT_SUBVECTOR states that the index must be a
