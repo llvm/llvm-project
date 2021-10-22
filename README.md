@@ -74,8 +74,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
         * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
           sub-projects you'd like to additionally build. Can include any of: clang,
           clang-tools-extra, compiler-rt,cross-project-tests, flang, libc, libclc,
-          libcxx, libcxxabi, libunwind, lld, lldb, mlir, openmp, parallel-libs,
-          polly, or pstl.
+          libcxx, libcxxabi, libunwind, lld, lldb, mlir, openmp, polly, or pstl.
 
           For example, to build LLVM, Clang, libcxx, and libcxxabi, use
           ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
