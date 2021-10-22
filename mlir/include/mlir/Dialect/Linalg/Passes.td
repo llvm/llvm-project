@@ -315,4 +315,15 @@ def LinalgStrategyLowerVectorsPass
   ];
 }
 
+def LinalgStrategyRemoveMarkersPass
+    : FunctionPass<"linalg-strategy-remove-markers-pass"> {
+  let summary = "Cleanup pass that drops markers.";
+  let constructor = "mlir::createLinalgStrategyRemoveMarkersPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+  ];
+}
+
 #endif // MLIR_DIALECT_LINALG_PASSES
