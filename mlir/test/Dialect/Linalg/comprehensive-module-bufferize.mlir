@@ -861,3 +861,25 @@ func @buffer_forwarding_no_conflict(
   return %r1: tensor<?xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @scf_if_inplace(
+//  CHECK-SAME:     %[[cond:.*]]: i1, %[[t1:.*]]: memref<?xf32{{.*}}>, %[[v:.*]]: vector
+func @scf_if_inplace(%cond: i1,
+                     %t1: tensor<?xf32> {linalg.inplaceable = true},
+                     %v: vector<5xf32>, %idx: index) -> tensor<?xf32> {
+
+  //      CHECK: scf.if %[[cond]] {
+  // CHECK-NEXT: } else {
+  // CHECK-NEXT:   vector.transfer_write %[[v]], %[[t1]]
+  // CHECK-NEXT: }
+  // CHECK-NEXT: return
+  %r = scf.if %cond -> (tensor<?xf32>) {
+    scf.yield %t1 : tensor<?xf32>
+  } else {
+    %t2 = vector.transfer_write %v, %t1[%idx] : vector<5xf32>, tensor<?xf32>
+    scf.yield %t2 : tensor<?xf32>
+  }
+  return %r : tensor<?xf32>
+}
+
