@@ -10,24 +10,16 @@
 
 // unique_ptr
 
-// test op->()
+// test op*()
 
 #include <memory>
 #include <cassert>
 
-struct V {
-  int member;
-};
-
 int main(int, char**) {
-  std::unique_ptr<V[]> p;
-  std::unique_ptr<V[]> const& cp = p;
-
-  p->member; // expected-error {{member reference type 'std::unique_ptr<V[]>' is not a pointer}}
-  // expected-error@-1 {{no member named 'member'}}
-
-  cp->member; // expected-error {{member reference type 'const std::unique_ptr<V[]>' is not a pointer}}
-              // expected-error@-1 {{no member named 'member'}}
+  std::unique_ptr<int[]> p(new int(3));
+  const std::unique_ptr<int[]>& cp = p;
+  TEST_IGNORE_NODISCARD(*p);  // expected-error-re {{indirection requires pointer operand ('std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
+  TEST_IGNORE_NODISCARD(*cp); // expected-error-re {{indirection requires pointer operand ('const std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
 
   return 0;
 }
