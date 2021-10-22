@@ -3805,7 +3805,7 @@ SymbolFileDWARF::MergeBlockAbstractParameters(const DWARFDIE &block_die,
     }
     merged.push_back(*concrete_it);
   }
-  return std::move(merged);
+  return merged;
 }
 
 size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
