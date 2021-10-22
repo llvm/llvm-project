@@ -1431,6 +1431,17 @@ StateType Process::GetState() {
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
+  const bool new_state_is_stopped = StateIsStoppedState(new_state, false);
+  if (new_state_is_stopped) {
+    // This will only set the time if the public stop time has no value, so
+    // it is ok to call this multiple times. With a public stop we can't look
+    // at the stop ID because many private stops might have happened, so we
+    // can't check for a stop ID of zero. This allows the "statistics" command
+    // to dump the time it takes to reach somewhere in your code, like a
+    // breakpoint you set.
+    GetTarget().GetStatistics().SetFirstPublicStopTime();
+  }
+
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
   LLDB_LOGF(log, "Process::SetPublicState (state = %s, restarted = %i)",
@@ -1449,7 +1460,6 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
       m_public_run_lock.SetStopped();
     } else {
       const bool old_state_is_stopped = StateIsStoppedState(old_state, false);
-      const bool new_state_is_stopped = StateIsStoppedState(new_state, false);
       if ((old_state_is_stopped != new_state_is_stopped)) {
         if (new_state_is_stopped && !restarted) {
           LLDB_LOGF(log, "Process::SetPublicState (%s) -- unlocking run lock",
@@ -1580,7 +1590,9 @@ void Process::SetPrivateState(StateType new_state) {
       // before we get here.
       m_thread_list.DidStop();
 
-      m_mod_id.BumpStopID();
+      if (m_mod_id.BumpStopID() == 0)
+        GetTarget().GetStatistics().SetFirstPrivateStopTime();
+
       if (!m_mod_id.IsLastResumeForUserExpression())
         m_mod_id.SetStopEventForLastNaturalStopID(event_sp);
       m_memory_cache.Clear();

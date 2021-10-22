@@ -241,10 +241,11 @@ public:
 
   ~ProcessModID() = default;
 
-  void BumpStopID() {
-    m_stop_id++;
+  uint32_t BumpStopID() {
+    const uint32_t prev_stop_id = m_stop_id++;
     if (!IsLastResumeForUserExpression())
       m_last_natural_stop_id++;
+    return prev_stop_id;
   }
 
   void BumpMemoryID() { m_memory_id++; }

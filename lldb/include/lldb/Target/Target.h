@@ -35,6 +35,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
@@ -1562,23 +1563,22 @@ protected:
 
   // Utilities for `statistics` command.
 private:
-  std::vector<uint32_t> m_stats_storage;
-  bool m_collecting_stats = false;
+  // Target metrics storage.
+  TargetStats m_stats;
 
 public:
-  void SetCollectingStats(bool v) { m_collecting_stats = v; }
+  /// Get metrics associated with this target in JSON format.
+  ///
+  /// Target metrics help measure timings and information that is contained in
+  /// a target. These are designed to help measure performance of a debug
+  /// session as well as represent the current state of the target, like
+  /// information on the currently modules, currently set breakpoints and more.
+  ///
+  /// \return
+  ///     Returns a JSON value that contains all target metrics.
+  llvm::json::Value ReportStatistics();
 
-  bool GetCollectingStats() { return m_collecting_stats; }
-
-  void IncrementStats(lldb_private::StatisticKind key) {
-    if (!GetCollectingStats())
-      return;
-    lldbassert(key < lldb_private::StatisticKind::StatisticMax &&
-               "invalid statistics!");
-    m_stats_storage[key] += 1;
-  }
-
-  std::vector<uint32_t> GetStatistics() { return m_stats_storage; }
+  TargetStats &GetStatistics() { return m_stats; }
 
 private:
   /// Construct with optional file and arch.
