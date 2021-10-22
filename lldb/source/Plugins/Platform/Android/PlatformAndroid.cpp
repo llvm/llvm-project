@@ -155,7 +155,7 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
   if (!m_remote_platform_sp)
     m_remote_platform_sp = PlatformSP(new PlatformAndroidRemoteGDBServer());
 
-  int port;
+  llvm::Optional<uint16_t> port;
   llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
