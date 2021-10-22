@@ -380,12 +380,6 @@ public:
     return (isSpill) ? RegOrSpill.id() + NumRegs - 1 : RegOrSpill.id();
   }
 
-  /// Accessor for reading the value at Idx.
-  ValueIDNum getNumAtPos(LocIdx Idx) const {
-    assert(Idx.asU64() < LocIdxToIDNum.size());
-    return LocIdxToIDNum[Idx];
-  }
-
   unsigned getNumLocs(void) const { return LocIdxToIDNum.size(); }
 
   /// Reset all locations to contain a PHI value at the designated block. Used
@@ -433,6 +427,12 @@ public:
   void setMLoc(LocIdx L, ValueIDNum Num) {
     assert(L.asU64() < LocIdxToIDNum.size());
     LocIdxToIDNum[L] = Num;
+  }
+
+  /// Read the value of a particular location
+  ValueIDNum readMLoc(LocIdx L) {
+    assert(L.asU64() < LocIdxToIDNum.size());
+    return LocIdxToIDNum[L];
   }
 
   /// Create a LocIdx for an untracked register ID. Initialize it to either an
@@ -664,7 +664,7 @@ private:
 
   /// Object to track machine locations as we step through a block. Could
   /// probably be a field rather than a pointer, as it's always used.
-  MLocTracker *MTracker;
+  MLocTracker *MTracker = nullptr;
 
   /// Number of the current block LiveDebugValues is stepping through.
   unsigned CurBB;
@@ -675,12 +675,12 @@ private:
   /// Variable tracker -- listens to DBG_VALUEs occurring as InstrRefBasedImpl
   /// steps through a block. Reads the values at each location from the
   /// MLocTracker object.
-  VLocTracker *VTracker;
+  VLocTracker *VTracker = nullptr;
 
   /// Tracker for transfers, listens to DBG_VALUEs and transfers of values
   /// between locations during stepping, creates new DBG_VALUEs when values move
   /// location.
-  TransferTracker *TTracker;
+  TransferTracker *TTracker = nullptr;
 
   /// Blocks which are artificial, i.e. blocks which exclusively contain
   /// instructions without DebugLocs, or with line 0 locations.
