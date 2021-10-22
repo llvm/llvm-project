@@ -113,7 +113,7 @@ MetadataStreamerV2::getAddressSpaceQualifier(
 
 ValueKind MetadataStreamerV2::getValueKind(Type *Ty, StringRef TypeQual,
                                            StringRef BaseTypeName) const {
-  if (TypeQual.find("pipe") != StringRef::npos)
+  if (TypeQual.contains("pipe"))
     return ValueKind::Pipe;
 
   return StringSwitch<ValueKind>(BaseTypeName)
@@ -533,7 +533,7 @@ MetadataStreamerV3::getAddressSpaceQualifier(unsigned AddressSpace) const {
 
 StringRef MetadataStreamerV3::getValueKind(Type *Ty, StringRef TypeQual,
                                            StringRef BaseTypeName) const {
-  if (TypeQual.find("pipe") != StringRef::npos)
+  if (TypeQual.contains("pipe"))
     return "pipe";
 
   return StringSwitch<StringRef>(BaseTypeName)

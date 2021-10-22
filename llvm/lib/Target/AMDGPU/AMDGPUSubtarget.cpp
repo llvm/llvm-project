@@ -82,12 +82,12 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   FullFS += "+enable-prt-strict-null,"; // This is overridden by a disable in FS
 
   // Disable mutually exclusive bits.
-  if (FS.find_insensitive("+wavefrontsize") != StringRef::npos) {
-    if (FS.find_insensitive("wavefrontsize16") == StringRef::npos)
+  if (FS.contains_insensitive("+wavefrontsize")) {
+    if (!FS.contains_insensitive("wavefrontsize16"))
       FullFS += "-wavefrontsize16,";
-    if (FS.find_insensitive("wavefrontsize32") == StringRef::npos)
+    if (!FS.contains_insensitive("wavefrontsize32"))
       FullFS += "-wavefrontsize32,";
-    if (FS.find_insensitive("wavefrontsize64") == StringRef::npos)
+    if (!FS.contains_insensitive("wavefrontsize64"))
       FullFS += "-wavefrontsize64,";
   }
 
