@@ -204,6 +204,25 @@ llvm::cl::opt<std::string> ModuleName(
     llvm::cl::desc("the module of which the dependencies are to be computed"),
     llvm::cl::cat(DependencyScannerCategory));
 
+enum ResourceDirRecipeKind {
+  RDRK_ModifyCompilerPath,
+  RDRK_InvokeCompiler,
+};
+
+static llvm::cl::opt<ResourceDirRecipeKind> ResourceDirRecipe(
+    "resource-dir-recipe",
+    llvm::cl::desc("How to produce missing '-resource-dir' argument"),
+    llvm::cl::values(
+        clEnumValN(RDRK_ModifyCompilerPath, "modify-compiler-path",
+                   "Construct the resource directory from the compiler path in "
+                   "the compilation database. This assumes it's part of the "
+                   "same toolchain as this clang-scan-deps. (default)"),
+        clEnumValN(RDRK_InvokeCompiler, "invoke-compiler",
+                   "Invoke the compiler with '-print-resource-dir' and use the "
+                   "reported path as the resource directory. (deprecated)")),
+    llvm::cl::init(RDRK_ModifyCompilerPath),
+    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
                             llvm::cl::desc("Use verbose output."),
                             llvm::cl::init(false),
@@ -495,7 +514,7 @@ int main(int argc, const char **argv) {
           AdjustedArgs.push_back("/clang:" + LastO);
         }
 
-        if (!HasResourceDir) {
+        if (!HasResourceDir && ResourceDirRecipe == RDRK_InvokeCompiler) {
           StringRef ResourceDir =
               ResourceDirCache.findResourceDir(Args, ClangCLMode);
           if (!ResourceDir.empty()) {
