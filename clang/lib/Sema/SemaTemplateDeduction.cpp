@@ -2169,11 +2169,10 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
               }
 
               Expr *ArgExpr = (ArgDepMatrix->*GetArgDimensionExpr)();
-              if (!ArgExpr->isValueDependent())
-                if (Optional<llvm::APSInt> ArgConst =
-                        ArgExpr->getIntegerConstantExpr(S.Context))
-                  if (*ArgConst == *ParamConst)
-                    return Sema::TDK_Success;
+              if (Optional<llvm::APSInt> ArgConst =
+                      ArgExpr->getIntegerConstantExpr(S.Context))
+                if (*ArgConst == *ParamConst)
+                  return Sema::TDK_Success;
               return Sema::TDK_NonDeducedMismatch;
             }
 

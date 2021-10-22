@@ -56,11 +56,6 @@ void ObjectFileBreakpad::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFileBreakpad::GetPluginNameStatic() {
-  static ConstString g_name("breakpad");
-  return g_name;
-}
-
 ObjectFile *ObjectFileBreakpad::CreateInstance(
     const ModuleSP &module_sp, DataBufferSP &data_sp, offset_t data_offset,
     const FileSpec *file, offset_t file_offset, offset_t length) {

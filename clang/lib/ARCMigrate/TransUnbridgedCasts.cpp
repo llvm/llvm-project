@@ -146,9 +146,8 @@ private:
             ento::cocoa::isRefType(E->getSubExpr()->getType(), "CF",
                                    FD->getIdentifier()->getName())) {
           StringRef fname = FD->getIdentifier()->getName();
-          if (fname.endswith("Retain") ||
-              fname.find("Create") != StringRef::npos ||
-              fname.find("Copy") != StringRef::npos) {
+          if (fname.endswith("Retain") || fname.contains("Create") ||
+              fname.contains("Copy")) {
             // Do not migrate to couple of bridge transfer casts which
             // cancel each other out. Leave it unchanged so error gets user
             // attention instead.
@@ -168,7 +167,7 @@ private:
             return;
           }
 
-          if (fname.find("Get") != StringRef::npos) {
+          if (fname.contains("Get")) {
             castToObjCObject(E, /*retained=*/false);
             return;
           }

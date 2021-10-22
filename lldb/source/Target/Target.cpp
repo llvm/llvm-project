@@ -96,14 +96,10 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_watchpoint_list(), m_process_sp(), m_search_filter_sp(),
       m_image_search_paths(ImageSearchPathsChanged, this),
       m_source_manager_up(), m_stop_hooks(), m_stop_hook_next_id(0),
-      m_latest_stop_hook_id(0),
-      m_valid(true), m_suppress_stop_hooks(false),
+      m_latest_stop_hook_id(0), m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target),
       m_frame_recognizer_manager_up(
-          std::make_unique<StackFrameRecognizerManager>()),
-      m_stats_storage(static_cast<int>(StatisticKind::StatisticMax))
-
-{
+          std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
   SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
@@ -1401,6 +1397,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   ClearModules(false);
 
   if (executable_sp) {
+    ElapsedTime elapsed(m_stats.GetCreateTime());
     LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
 
@@ -2390,8 +2387,10 @@ ExpressionResults Target::EvaluateExpression(
 
   ExpressionResults execution_results = eExpressionSetupError;
 
-  if (expr.empty())
+  if (expr.empty()) {
+    m_stats.GetExpressionStats().NotifyFailure();
     return execution_results;
+  }
 
   // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
@@ -2436,6 +2435,10 @@ ExpressionResults Target::EvaluateExpression(
                                                  fixed_expression, ctx_obj);
   }
 
+  if (execution_results == eExpressionCompleted)
+    m_stats.GetExpressionStats().NotifySuccess();
+  else
+    m_stats.GetExpressionStats().NotifyFailure();
   return execution_results;
 }
 
@@ -2899,6 +2902,7 @@ bool Target::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
 
 Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
+  m_stats.SetLaunchOrAttachTime();
   Status error;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
 
@@ -3102,6 +3106,7 @@ llvm::Expected<TraceSP> Target::GetTraceOrCreate() {
 }
 
 Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
+  m_stats.SetLaunchOrAttachTime();
   auto state = eStateInvalid;
   auto process_sp = GetProcessSP();
   if (process_sp) {
@@ -4447,3 +4452,6 @@ std::recursive_mutex &Target::GetAPIMutex() {
   else
     return m_mutex;
 }
+
+/// Get metrics associated with this target in JSON format.
+llvm::json::Value Target::ReportStatistics() { return m_stats.ToJSON(); }

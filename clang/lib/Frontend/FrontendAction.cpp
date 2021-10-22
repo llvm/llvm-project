@@ -217,8 +217,13 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
 
   // Add to Consumers the main consumer, then all the plugins that go after it
   Consumers.push_back(std::move(Consumer));
-  for (auto &C : AfterConsumers) {
-    Consumers.push_back(std::move(C));
+  if (!AfterConsumers.empty()) {
+    // If we have plugins after the main consumer, which may be the codegen
+    // action, they likely will need the ASTContext, so don't clear it in the
+    // codegen action.
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
+    for (auto &C : AfterConsumers)
+      Consumers.push_back(std::move(C));
   }
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));

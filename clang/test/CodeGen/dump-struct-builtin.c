@@ -91,7 +91,7 @@
 
 // CHECK: @__const.unit15.a = private unnamed_addr constant %struct.U15A { [3 x i32] [i32 1, i32 2, i32 3] }, align 4
 // CHECK-NEXT: [[STRUCT_STR_U15:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U15A {\0A\00"
-// CHECK-NEXT: [[FIELD_U15:@[0-9]+]] = private unnamed_addr constant [13 x i8] c"int [3] a : \00"
+// CHECK-NEXT: [[FIELD_U15:@[0-9]+]] = private unnamed_addr constant [12 x i8] c"int[3] a : \00"
 // CHECK-NEXT: [[FORMAT_U15:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%p\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U15:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
@@ -380,7 +380,7 @@ void unit15() {
 
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* [[STRUCT_STR_U15]], i32 0, i32 0))
   // CHECK: [[RES1:%[0-9]+]] = getelementptr inbounds %struct.U15A, %struct.U15A* %a, i32 0, i32 0
-  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* [[FIELD_U15]], i32 0, i32 0))
+  // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* [[FIELD_U15]], i32 0, i32 0))
   // CHECK: [[LOAD1:%[0-9]+]] = load [3 x i32], [3 x i32]* [[RES1]],
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* [[FORMAT_U15]], i32 0, i32 0), [3 x i32] [[LOAD1]])
   // CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* [[END_STRUCT_U15]], i32 0, i32 0)

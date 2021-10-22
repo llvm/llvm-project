@@ -10,9 +10,6 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext    \
 // RUN: | FileCheck %s
 
-// XFAIL: s390x
-// (see https://bugs.llvm.org/show_bug.cgi?id=51204)
-
 // -------------------------------------------------------------------------- //
 // Tanh.
 // -------------------------------------------------------------------------- //

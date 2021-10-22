@@ -508,7 +508,7 @@ static OpResult getInplaceableOpResult(VectorTransferOpInterface op,
 /// when the op is bufferized inplace.
 /// Return null if no such result exists.
 static OpResult getInplaceableOpResult(InsertSliceOp op, OpOperand &opOperand) {
-  if (opOperand.get() != op.dest())
+  if (&opOperand != &op->getOpOperand(1) /*dest*/)
     return OpResult();
   return op->getResult(0);
 }
@@ -615,11 +615,12 @@ static OpResult getAliasingOpResult(OpOperand &opOperand) {
 // Predeclaration of function.
 static bool bufferizesToMemoryRead(OpOperand &opOperand);
 
-/// scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
-/// matching bbArg may.
-static bool bufferizesToMemoryRead(scf::ForOp forOp, OpOperand &opOperand) {
+/// Return true if the given value is read by an op that bufferizes to a memory
+/// read. Also takes into account ops that create an alias but do not read by
+/// themselves (e.g., ExtractSliceOp).
+static bool isValueRead(Value value) {
   SmallVector<OpOperand *> workingSet;
-  for (OpOperand &use : forOp.getRegionIterArgForOpOperand(opOperand).getUses())
+  for (OpOperand &use : value.getUses())
     workingSet.push_back(&use);
 
   while (!workingSet.empty()) {
@@ -647,16 +648,14 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // may.
   if (isa<ExtractSliceOp>(opOperand.getOwner()))
     return false;
+  // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
+  // matching bbArg may.
   if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner()))
-    return bufferizesToMemoryRead(forOp, opOperand);
+    return isValueRead(forOp.getRegionIterArgForOpOperand(opOperand));
   // TiledLoop alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
-  if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner())) {
-    for (OpOperand &use : tiledLoopOp.getTiedBlockArgument(opOperand).getUses())
-      if (bufferizesToMemoryRead(use))
-        return true;
-    return false;
-  }
+  if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner()))
+    return isValueRead(tiledLoopOp.getTiedBlockArgument(opOperand));
   // CallOpInterface alone doesn't bufferize to a memory read, one of the uses
   // of the matching bbArg may. It is the responsibility of the caller to
   // inspect bbArgs. In the absence of a BufferizationAliasInfo, we need to be
@@ -1437,7 +1436,13 @@ static Value getResultBuffer(OpBuilder &b, OpResult result,
     // Allocate the result buffer.
     Value resultBuffer =
         createNewAllocDeallocPairForShapedValue(b, loc, operand, aliasInfo);
-    if (!skipCopy && !isInitTensorOp(operand)) {
+    // Do not copy the result of an InitTensorOp.
+    if (isInitTensorOp(operand))
+      skipCopy = true;
+    // Do not copy if the copied data is never read.
+    if (!isValueRead(result))
+      skipCopy = true;
+    if (!skipCopy) {
       // Set insertion point now that potential alloc/dealloc are introduced.
       b.setInsertionPoint(op);
       b.create<CopyOp>(loc, operandBuffer, resultBuffer);
@@ -1791,11 +1796,15 @@ static LogicalResult bufferize(OpBuilder &b, FuncOp funcOp,
   return success();
 }
 
-/// InitTensor always allocates.
+/// InitTensor always allocates (unless it was eliminated).
 /// TODO: consider hoisting across function boundaries prior to bufferization.
 static LogicalResult bufferize(OpBuilder &b, InitTensorOp initTensorOp,
                                BlockAndValueMapping &bvm,
                                BufferizationAliasInfo &aliasInfo) {
+  // The InitTensorOp may have been eliminated.
+  if (initTensorOp->getUses().empty())
+    return success();
+
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(initTensorOp);
@@ -1998,7 +2007,9 @@ static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
 
   /// If not inplaceable, copy.
   if (alloc) {
-    b.create<CopyOp>(extractSliceOp.getLoc(), subView, alloc);
+    // Do not copy if the copied data is never read.
+    if (isValueRead(extractSliceOp.result()))
+      b.create<CopyOp>(extractSliceOp.getLoc(), subView, alloc);
     subView = alloc;
   }
 
@@ -2761,6 +2772,89 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
   }
 }
 
+/// Try to eliminate InitTensorOps inside funcOp. An InitTensorOp can be
+/// eliminated if it is eventually inserted into another tensor (and some other
+/// conditions are met).
+///
+/// E.g.:
+/// %0 = linalg.init_tensor
+/// %1 = linalg.fill(%cst, %0) {inplace = [true]}
+/// %2 = tensor.insert_slice %1 into %t[10][20][1]
+///
+/// InitTensorOp elimination will try to fill %t inplace instead of filling a
+/// new allocation %0 and inserting it into %t. This is done by replacing the
+/// InitTensorOp with:
+///
+/// %0 = tensor.extract_slice %t[10][20][1]
+///
+/// The analysis looks for matching ExtractSliceOp/InsertSliceOp pairs and lets
+/// those bufferize inplace in the absence of other conflicts.
+///
+/// Starting from an InsertSliceOp, an InitTensorOp at the end of the insert
+/// source's reverse use-def chain is eliminated if:
+/// * The InsertSliceOp was decided to bufferize inplace.
+/// * On the reverse use-def chain path from the InsertSliceOp to the
+///   InitTensorOp, all ops were decided to bufferize inplace and the buffer
+///   relation is "equivalent" (TODO: can be relaxed if needed).
+/// * The reverse use-def chain has exactly one end, which is the InitTensorOp.
+///
+/// Note that the newly inserted ExtractSliceOp may have to bufferize
+/// out-of-place due to RaW conflicts.
+static LogicalResult runInitTensorElimination(FuncOp funcOp,
+                                              BufferizationAliasInfo &aliasInfo,
+                                              DominanceInfo &domInfo) {
+  OpBuilder b(funcOp->getContext());
+
+  WalkResult status = funcOp->walk([&](tensor::InsertSliceOp insertOp) {
+    // Only inplace bufferized InsertSliceOps are eligible.
+    if (getInPlace(insertOp->getOpResult(0)) != InPlaceSpec::True)
+      return WalkResult::skip();
+
+    SetVector<Value> maybeInitTensor =
+        findValueInReverseUseDefChain(insertOp.source(), [](Value val) {
+          // Continue traversal until this function returns true.
+          OpResult opResult = val.dyn_cast<OpResult>();
+          if (!opResult)
+            return true;
+          if (getInPlace(opResult) != InPlaceSpec::True)
+            return true;
+          // Only equivalent tensors are supported at the moment. E.g., when
+          // taking a tensor.extract_slice of an init_tensor, we can currently
+          // not eliminate the init_tensor.
+          SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
+          if (!llvm::all_of(opOperands, [](OpOperand *operand) {
+                return bufferRelation(*operand) == BufferRelation::Equivalent;
+              }))
+            return true;
+          return false;
+        });
+    // Replace only if the InsertSliceOp source originates from exactly one
+    // InitTensorOp.
+    if (maybeInitTensor.size() != 1 ||
+        !maybeInitTensor.front().getDefiningOp<InitTensorOp>())
+      return WalkResult::skip();
+    Value initTensor = maybeInitTensor.front();
+
+    b.setInsertionPoint(initTensor.getDefiningOp());
+    auto extractOp = b.create<tensor::ExtractSliceOp>(
+        initTensor.getLoc(), insertOp.dest(), insertOp.getMixedOffsets(),
+        insertOp.getMixedSizes(), insertOp.getMixedStrides());
+    // Uses of the InitTensorOp are replaced here, but the op is not deleted.
+    // InitTensorOps without uses are ignored by the bufferization.
+    initTensor.replaceAllUsesWith(extractOp.result());
+    aliasInfo.createAliasInfoEntry(extractOp.result());
+
+    // Run analysis on the ExtractSliceOp.
+    if (failed(bufferizableInPlaceAnalysis(extractOp, aliasInfo, domInfo)))
+      return WalkResult::interrupt();
+
+    // Advance to the next operation.
+    return WalkResult::advance();
+  });
+
+  return failure(status.wasInterrupted());
+}
+
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
@@ -2796,6 +2890,13 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
 
     // If the analysis fails, just return.
     if (failed(inPlaceAnalysisFuncOpBody(funcOp, aliasInfo, domInfo))) {
+      signalPassFailure();
+      return;
+    }
+
+    // Try to eliminate InitTensorOps to avoid new allocations during the
+    // bufferization phase.
+    if (failed(runInitTensorElimination(funcOp, aliasInfo, domInfo))) {
       signalPassFailure();
       return;
     }

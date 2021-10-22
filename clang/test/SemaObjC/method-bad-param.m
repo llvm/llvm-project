@@ -49,7 +49,7 @@ enum bogus; // expected-note {{forward declaration of 'enum bogus'}}
 @end
 
 @interface arrayfun
-- (int[6])arrayRet; // expected-error {{function cannot return array type 'int [6]'}}
+- (int[6])arrayRet; // expected-error {{function cannot return array type 'int[6]'}}
 - (int())funcRet; // expected-error {{function cannot return function type 'int ()'}}
 @end
 

@@ -71,12 +71,7 @@ void ObjectFilePECOFF::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjectFilePECOFF::GetPluginNameStatic() {
-  static ConstString g_name("pe-coff");
-  return g_name;
-}
-
-const char *ObjectFilePECOFF::GetPluginDescriptionStatic() {
+llvm::StringRef ObjectFilePECOFF::GetPluginDescriptionStatic() {
   return "Portable Executable and Common Object File Format object file reader "
          "(32 and 64 bit)";
 }
