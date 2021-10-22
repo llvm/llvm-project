@@ -51,7 +51,7 @@ class TestVLA(TestBase):
             self.expect("fr v vla", substrs=array)
             self.expect("expr vla", error=True, substrs=["incomplete"])
 
-        test(2, ["int []", "[0] = 2, [1] = 1"])
+        test(2, ["int[]", "[0] = 2, [1] = 1"])
         process.Continue()
-        test(4, ["int []", "[0] = 4, [1] = 3, [2] = 2, [3] = 1"])
+        test(4, ["int[]", "[0] = 4, [1] = 3, [2] = 2, [3] = 1"])
 

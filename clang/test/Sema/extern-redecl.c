@@ -26,12 +26,12 @@ extern int test1_a[];
 // rdar://13535367
 void test2declarer() { extern int test2_array[100]; }
 extern int test2_array[];
-int test2v = sizeof(test2_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+int test2v = sizeof(test2_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 
 void test3declarer() {
   { extern int test3_array[100]; }
   extern int test3_array[];
-  int x = sizeof(test3_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int x = sizeof(test3_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 void test4() {
@@ -40,7 +40,7 @@ void test4() {
     extern int test4_array[100];
     int x = sizeof(test4_array); // fine
   }
-  int x = sizeof(test4_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int x = sizeof(test4_array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 // Test that invalid local extern declarations of library

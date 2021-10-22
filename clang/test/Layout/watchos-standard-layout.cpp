@@ -20,7 +20,7 @@ static_assert(!__is_standard_layout(B));
 // CHECK-NEXT:     0 |     struct A (base) (empty)
 // CHECK-NEXT:   0:- |       int 
 // CHECK-NEXT:     0 |     int n
-// CHECK-NEXT:     4 |     char [3] c
+// CHECK-NEXT:     4 |     char[3] c
 // CHECK-NEXT:     8 |   char d
 // CHECK-NEXT:       | [sizeof=12, dsize=9, align=4,
 // CHECK-NEXT:       |  nvsize=9, nvalign=4]
@@ -41,7 +41,7 @@ static_assert(!__is_standard_layout(F));
 // CHECK-NEXT:     1 |     struct E (base) (empty)
 // CHECK-NEXT:     1 |       struct D (base) (empty)
 // CHECK-NEXT:     0 |     int n
-// CHECK-NEXT:     4 |     char [3] c
+// CHECK-NEXT:     4 |     char[3] c
 // CHECK-NEXT:     8 |   char d
 // CHECK-NEXT:       | [sizeof=12, dsize=9, align=4,
 // CHECK-NEXT:       |  nvsize=9, nvalign=4]

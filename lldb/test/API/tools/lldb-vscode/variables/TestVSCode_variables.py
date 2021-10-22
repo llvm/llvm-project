@@ -178,8 +178,8 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                 'hasVariablesReference': True
             },
             'pt.buffer': {
-                'equals': {'type': 'int [32]'},
-                'startswith': {'result': 'int [32] @ 0x'},
+                'equals': {'type': 'int[32]'},
+                'startswith': {'result': 'int[32] @ 0x'},
                 'hasVariablesReference': True
             },
             'argv': {
