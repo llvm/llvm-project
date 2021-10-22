@@ -89,6 +89,10 @@ static void __kmpc_generic_kernel_deinit() {
 #endif
   // Done with work.  Kill the workers.
   omptarget_nvptx_workFn = 0;
+#ifdef __AMDGCN__
+  omptarget_master_ready = true;
+  __kmpc_impl_syncthreads();
+#endif
 }
 
 static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
@@ -204,6 +208,32 @@ NOINLINE EXTERN int8_t __kmpc_is_generic_main_thread_id(kmp_int32 Tid) {
   return GetMasterThreadID() == Tid;
 }
 
+EXTERN
+void __kmpc_workers_start_barriers(ident_t *Ident, int TId) {
+#ifdef __AMDGCN__
+  omptarget_workers_done = true;
+  __kmpc_barrier_simple_spmd(Ident, TId);
+  while (!omptarget_master_ready)
+    __kmpc_barrier_simple_spmd(Ident, TId);
+
+  omptarget_workers_done = false;
+#else
+  __kmpc_barrier_simple_spmd(Ident, TId);
+#endif
+}
+
+EXTERN
+void __kmpc_workers_done_barriers(ident_t *Ident, int TId) {
+  // This worker termination logic permits full barriers in reductions
+  // by keeping the master thread waiting at another barrier till
+  // all workers are finished.
+#ifdef __AMDGCN__
+  if (TId == 0)
+    omptarget_workers_done = true;
+#endif
+  __kmpc_barrier_simple_spmd(Ident, TId);
+}
+
 EXTERN bool __kmpc_kernel_parallel(void**WorkFn);
 
 static void __kmpc_target_region_state_machine(ident_t *Ident) {
@@ -213,8 +243,7 @@ static void __kmpc_target_region_state_machine(ident_t *Ident) {
     void* WorkFn = 0;
 
     // Wait for the signal that we have a new work function.
-    __kmpc_barrier_simple_spmd(Ident, TId);
-
+    __kmpc_workers_start_barriers(Ident, TId);
 
     // Retrieve the work function from the runtime.
     bool IsActive = __kmpc_kernel_parallel(&WorkFn);
@@ -225,11 +254,11 @@ static void __kmpc_target_region_state_machine(ident_t *Ident) {
       return;
 
     if (IsActive) {
-      ((void(*)(uint32_t,uint32_t))WorkFn)(0, TId);
+      ((void (*)(uint16_t, uint32_t))WorkFn)(0, TId);
       __kmpc_kernel_end_parallel();
     }
 
-    __kmpc_barrier_simple_spmd(Ident, TId);
+    __kmpc_workers_done_barriers(Ident, TId);
 
   } while (true);
 }
@@ -238,6 +267,11 @@ EXTERN
 int32_t __kmpc_target_init(ident_t *Ident, int8_t Mode,
                            bool UseGenericStateMachine,
                            bool RequiresFullRuntime) {
+#ifdef __AMDGCN__
+  omptarget_workers_done = false;
+  omptarget_master_ready = false;
+#endif
+
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
   int TId = __kmpc_get_hardware_thread_id_in_block();
   if (IsSPMD)

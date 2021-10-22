@@ -42,6 +42,9 @@ EXTERN int32_t __kmpc_cancel_barrier(kmp_Ident *loc_ref, int32_t tid) {
 }
 
 EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
+#ifdef __AMDGCN__
+  __kmpc_barrier_simple_spmd(loc_ref, tid);
+#else
   if (isRuntimeUninitialized()) {
     ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode with uninitialized runtime.");
@@ -69,6 +72,7 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
     } // numberOfActiveOMPThreads > 1
     PRINT0(LD_SYNC, "completed kmpc_barrier\n");
   }
+#endif
 }
 
 // Emit a simple barrier call in SPMD mode.  Assumes the caller is in an L0

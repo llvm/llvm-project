@@ -3532,7 +3532,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     FunctionCallee BarrierFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
-            M, OMPRTL___kmpc_barrier_simple_spmd);
+            M, OMPRTL___kmpc_workers_start_barriers);
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB)
         ->setDebugLoc(DLoc);
 
@@ -3638,7 +3638,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     BranchInst::Create(StateMachineDoneBarrierBB, StateMachineEndParallelBB)
         ->setDebugLoc(DLoc);
 
-    CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineDoneBarrierBB)
+    FunctionCallee WorkersDoneBarriersFn =
+        OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
+            M, OMPRTL___kmpc_workers_done_barriers);
+    CallInst::Create(WorkersDoneBarriersFn, {Ident, GTid}, "",
+                     StateMachineDoneBarrierBB)
         ->setDebugLoc(DLoc);
     BranchInst::Create(StateMachineBeginBB, StateMachineDoneBarrierBB)
         ->setDebugLoc(DLoc);
