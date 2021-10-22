@@ -157,9 +157,9 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
         uint64_t log_pc = arm_thread_state64_get_pc(m_state.context.gpr);
 #else
         uint64_t log_fp = m_state.context.gpr.__fp;
-        uint64_t log_fp = m_state.context.gpr.__lr;
-        uint64_t log_fp = m_state.context.gpr.__sp;
-        uint64_t log_fp = m_state.context.gpr.__pc,
+        uint64_t log_lr = m_state.context.gpr.__lr;
+        uint64_t log_sp = m_state.context.gpr.__sp;
+        uint64_t log_pc = m_state.context.gpr.__pc,
 #endif
     DNBLogThreaded(
         "thread_get_state(0x%4.4x, %u, &gpr, %u) => 0x%8.8x (count = %u) regs"
