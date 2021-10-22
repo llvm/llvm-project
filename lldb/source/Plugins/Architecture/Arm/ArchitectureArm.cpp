@@ -19,10 +19,6 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ArchitectureArm)
 
-ConstString ArchitectureArm::GetPluginNameStatic() {
-  return ConstString("arm");
-}
-
 void ArchitectureArm::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Arm-specific algorithms",

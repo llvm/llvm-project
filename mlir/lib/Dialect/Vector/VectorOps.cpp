@@ -2204,20 +2204,6 @@ public:
   }
 };
 
-// Helper that returns a subset of `arrayAttr` as a vector of int64_t.
-static SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
-                                              unsigned dropFront = 0,
-                                              unsigned dropBack = 0) {
-  assert(arrayAttr.size() > dropFront + dropBack && "Out of bounds");
-  auto range = arrayAttr.getAsRange<IntegerAttr>();
-  SmallVector<int64_t, 4> res;
-  res.reserve(arrayAttr.size() - dropFront - dropBack);
-  for (auto it = range.begin() + dropFront, eit = range.end() - dropBack;
-       it != eit; ++it)
-    res.push_back((*it).getValue().getSExtValue());
-  return res;
-}
-
 // Pattern to rewrite an ExtractStridedSliceOp(BroadcastOp) to
 // BroadcastOp(ExtractStrideSliceOp).
 class StridedSliceBroadcast final
