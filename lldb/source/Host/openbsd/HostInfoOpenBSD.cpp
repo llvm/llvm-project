@@ -29,20 +29,16 @@ llvm::VersionTuple HostInfoOpenBSD::GetOSVersion() {
   return llvm::VersionTuple();
 }
 
-bool HostInfoOpenBSD::GetOSBuildString(std::string &s) {
+llvm::Optional<std::string> HostInfoOpenBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
   char osrev_str[12];
   uint32_t osrev = 0;
   size_t osrev_len = sizeof(osrev);
 
-  if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0) {
-    ::snprintf(osrev_str, sizeof(osrev_str), "%-8.8u", osrev);
-    s.assign(osrev_str);
-    return true;
-  }
+  if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0)
+    return llvm::formatv("{0,8:8}", osrev).str();
 
-  s.clear();
-  return false;
+  return llvm::None;
 }
 
 bool HostInfoOpenBSD::GetOSKernelDescription(std::string &s) {
