@@ -1097,7 +1097,8 @@ bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
   const Procedure *p1{Characterize(f1)};
   const Procedure *p2{Characterize(f2)};
   if (p1 && p2) {
-    if (characteristics::Distinguishable(*p1, *p2)) {
+    if (characteristics::Distinguishable(
+            context_.languageFeatures(), *p1, *p2)) {
       return true;
     }
     if (auto *msg{messages_.Say(f1Name,
@@ -2290,7 +2291,8 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
-        if (!distinguishable(proc, info[i2].procedure)) {
+        if (!distinguishable(
+                context_.languageFeatures(), proc, info[i2].procedure)) {
           SayNotDistinguishable(GetTopLevelUnitContaining(scope), name, kind,
               symbol, info[i2].symbol);
         }
