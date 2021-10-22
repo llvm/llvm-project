@@ -431,10 +431,10 @@ public:
 
   bool checkForP2AlignIfLoadStore(OperandVector &Operands, StringRef InstName) {
     // FIXME: there is probably a cleaner way to do this.
-    auto IsLoadStore = InstName.find(".load") != StringRef::npos ||
-                       InstName.find(".store") != StringRef::npos ||
-                       InstName.find("prefetch") != StringRef::npos;
-    auto IsAtomic = InstName.find("atomic.") != StringRef::npos;
+    auto IsLoadStore = InstName.contains(".load") ||
+                       InstName.contains(".store") ||
+                       InstName.contains("prefetch");
+    auto IsAtomic = InstName.contains("atomic.");
     if (IsLoadStore || IsAtomic) {
       // Parse load/store operands of the form: offset:p2align=align
       if (IsLoadStore && isNext(AsmToken::Colon)) {
@@ -450,7 +450,7 @@ public:
         // v128.{load,store}{8,16,32,64}_lane has both a memarg and a lane
         // index. We need to avoid parsing an extra alignment operand for the
         // lane index.
-        auto IsLoadStoreLane = InstName.find("_lane") != StringRef::npos;
+        auto IsLoadStoreLane = InstName.contains("_lane");
         if (IsLoadStoreLane && Operands.size() == 4)
           return false;
         // Alignment not specified (or atomics, must use default alignment).

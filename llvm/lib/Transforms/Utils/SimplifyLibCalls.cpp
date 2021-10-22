@@ -2351,7 +2351,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
 
   // printf("foo\n") --> puts("foo")
   if (FormatStr.back() == '\n' &&
-      FormatStr.find('%') == StringRef::npos) { // No format characters.
+      !FormatStr.contains('%')) { // No format characters.
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
@@ -2421,7 +2421,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
   if (CI->arg_size() == 2) {
     // Make sure there's no % in the constant array.  We could try to handle
     // %% -> % in the future if we cared.
-    if (FormatStr.find('%') != StringRef::npos)
+    if (FormatStr.contains('%'))
       return nullptr; // we found a format specifier, bail out.
 
     // sprintf(str, fmt) -> llvm.memcpy(align 1 str, align 1 fmt, strlen(fmt)+1)
@@ -2548,7 +2548,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
   if (CI->arg_size() == 3) {
     // Make sure there's no % in the constant array.  We could try to handle
     // %% -> % in the future if we cared.
-    if (FormatStr.find('%') != StringRef::npos)
+    if (FormatStr.contains('%'))
       return nullptr; // we found a format specifier, bail out.
 
     if (N == 0)
@@ -2637,7 +2637,7 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
   // fprintf(F, "foo") --> fwrite("foo", 3, 1, F)
   if (CI->arg_size() == 2) {
     // Could handle %% -> % if we cared.
-    if (FormatStr.find('%') != StringRef::npos)
+    if (FormatStr.contains('%'))
       return nullptr; // We found a format specifier.
 
     return emitFWrite(
