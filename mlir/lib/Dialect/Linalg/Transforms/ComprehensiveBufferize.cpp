@@ -615,11 +615,12 @@ static OpResult getAliasingOpResult(OpOperand &opOperand) {
 // Predeclaration of function.
 static bool bufferizesToMemoryRead(OpOperand &opOperand);
 
-/// scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
-/// matching bbArg may.
-static bool bufferizesToMemoryRead(scf::ForOp forOp, OpOperand &opOperand) {
+/// Return true if the given value is read by an op that bufferizes to a memory
+/// read. Also takes into account ops that create an alias but do not read by
+/// themselves (e.g., ExtractSliceOp).
+static bool isValueRead(Value value) {
   SmallVector<OpOperand *> workingSet;
-  for (OpOperand &use : forOp.getRegionIterArgForOpOperand(opOperand).getUses())
+  for (OpOperand &use : value.getUses())
     workingSet.push_back(&use);
 
   while (!workingSet.empty()) {
@@ -647,8 +648,10 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // may.
   if (isa<ExtractSliceOp>(opOperand.getOwner()))
     return false;
+  // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
+  // matching bbArg may.
   if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner()))
-    return bufferizesToMemoryRead(forOp, opOperand);
+    return isValueRead(forOp.getRegionIterArgForOpOperand(opOperand));
   // TiledLoop alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
   if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner())) {
@@ -1437,7 +1440,13 @@ static Value getResultBuffer(OpBuilder &b, OpResult result,
     // Allocate the result buffer.
     Value resultBuffer =
         createNewAllocDeallocPairForShapedValue(b, loc, operand, aliasInfo);
-    if (!skipCopy && !isInitTensorOp(operand)) {
+    // Do not copy the result of an InitTensorOp.
+    if (isInitTensorOp(operand))
+      skipCopy = true;
+    // Do not copy if the copied data is never read.
+    if (!isValueRead(result))
+      skipCopy = true;
+    if (!skipCopy) {
       // Set insertion point now that potential alloc/dealloc are introduced.
       b.setInsertionPoint(op);
       b.create<CopyOp>(loc, operandBuffer, resultBuffer);
@@ -2002,7 +2011,9 @@ static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
 
   /// If not inplaceable, copy.
   if (alloc) {
-    b.create<CopyOp>(extractSliceOp.getLoc(), subView, alloc);
+    // Do not copy if the copied data is never read.
+    if (isValueRead(extractSliceOp.result()))
+      b.create<CopyOp>(extractSliceOp.getLoc(), subView, alloc);
     subView = alloc;
   }
 
