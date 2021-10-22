@@ -128,6 +128,17 @@ Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                ArrayRef<int> Mask);
 
+/// Extract value of C at the given Offset reinterpreted as Ty. If bits past
+/// the end of C are accessed, they are assumed to be poison and may take any
+/// value.
+Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
+                                    const DataLayout &DL);
+
+/// Extract value of C reinterpreted as Ty. Same as previous API with zero
+/// offset.
+Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                    const DataLayout &DL);
+
 /// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
 /// produce if it is constant and determinable.  If this is not determinable,
 /// return null.

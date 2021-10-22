@@ -511,8 +511,11 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL))
       return Val;
 
-    if (auto *C = dyn_cast<Constant>(Val))
-      return ConstantFoldLoadThroughBitcast(C, AccessTy, DL);
+    TypeSize StoreSize = DL.getTypeStoreSize(Val->getType());
+    TypeSize LoadSize = DL.getTypeStoreSize(AccessTy);
+    if (TypeSize::isKnownLE(LoadSize, StoreSize))
+      if (auto *C = dyn_cast<Constant>(Val))
+        return ConstantFoldLoadFromConst(C, AccessTy, DL);
   }
 
   return nullptr;

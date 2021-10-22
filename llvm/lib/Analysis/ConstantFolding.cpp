@@ -668,8 +668,11 @@ Constant *getConstantAtOffset(Constant *Base, APInt Offset,
   return C;
 }
 
-Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
-                                    const DataLayout &DL) {
+} // end anonymous namespace
+
+Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                          const APInt &Offset,
+                                          const DataLayout &DL) {
   if (Constant *AtOffset = getConstantAtOffset(C, Offset, DL))
     if (Constant *Result = ConstantFoldLoadThroughBitcast(AtOffset, Ty, DL))
       return Result;
@@ -681,7 +684,10 @@ Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
   return nullptr;
 }
 
-} // end anonymous namespace
+Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                          const DataLayout &DL) {
+  return ConstantFoldLoadFromConst(C, Ty, APInt(64, 0), DL);
+}
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              const DataLayout &DL) {
