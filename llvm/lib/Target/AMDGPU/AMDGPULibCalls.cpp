@@ -1371,8 +1371,7 @@ bool AMDGPULibCalls::fold_wavefrontsize(CallInst *CI, IRBuilder<> &B) {
   StringRef CPU = TM->getTargetCPU();
   StringRef Features = TM->getTargetFeatureString();
   if ((CPU.empty() || CPU.equals_insensitive("generic")) &&
-      (Features.empty() ||
-       Features.find_insensitive("wavefrontsize") == StringRef::npos))
+      (Features.empty() || !Features.contains_insensitive("wavefrontsize")))
     return false;
 
   Function *F = CI->getParent()->getParent();

@@ -3351,7 +3351,7 @@ void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands
 /// the SYS instruction. Parse them specially so that we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
                                    OperandVector &Operands) {
-  if (Name.find('.') != StringRef::npos)
+  if (Name.contains('.'))
     return TokError("invalid operand");
 
   Mnemonic = Name;

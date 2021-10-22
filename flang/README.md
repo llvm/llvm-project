@@ -145,14 +145,6 @@ cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ~/flang/src
 make
 ```
 
-### Disable The New Flang Driver
-The new Flang compiler driver, `flang-new`, is implemented in terms of
-`clangDriver` and hence it introduces a dependency on Clang. This dependency is
-otherwise not required. If you do not require the new driver, you can disable
-it by adding `-DFLANG_BUILD_NEW_DRIVER=OFF` to your CMake invocation. With the
-new driver disabled, you no longer need to add `clang` to
-`LLVM_ENABLE_PROJECTS` (or to specify `CLANG_DIR` when building out-of-tree).
-
 # How to Run Tests
 
 Flang supports 2 different categories of tests
