@@ -365,7 +365,8 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    bl may_throw_neon
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; GISEL-NEXT:  .Ltmp4:
-; GISEL-NEXT:  // %bb.1: // %.Lcontinue
+; GISEL-NEXT:    b .LBB1_1 
+; GISEL-NEXT:  .LBB1_1: // %.Lcontinue
 ; GISEL-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload

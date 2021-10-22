@@ -55,8 +55,9 @@ define i32 @mod4_0_to_11(i32 %a) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB0_6: # %sw.default
-; MIPS32-NEXT:    .insn
-; MIPS32-NEXT:  # %bb.7: # %sw.epilog
+; MIPS32-NEXT:    j $BB0_7
+; MIPS32-NEXT:    nop
+; MIPS32-NEXT:  $BB0_7: # %sw.epilog
 ; MIPS32-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    ori $3, $zero, 8
@@ -158,8 +159,9 @@ define i32 @mod4_0_to_11(i32 %a) {
 ; MIPS32_PIC-NEXT:    jr $ra
 ; MIPS32_PIC-NEXT:    nop
 ; MIPS32_PIC-NEXT:  $BB0_6: # %sw.default
-; MIPS32_PIC-NEXT:    .insn
-; MIPS32_PIC-NEXT:  # %bb.7: # %sw.epilog
+; MIPS32_PIC-NEXT:    b $BB0_7
+; MIPS32_PIC-NEXT:    nop
+; MIPS32_PIC-NEXT:  $BB0_7: # %sw.epilog
 ; MIPS32_PIC-NEXT:    lw $1, 16($sp) # 4-byte Folded Reload
 ; MIPS32_PIC-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
 ; MIPS32_PIC-NEXT:    ori $3, $zero, 8
