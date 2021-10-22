@@ -473,11 +473,12 @@ static OperatingSystemInstances &GetOperatingSystemInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     OperatingSystemCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
   return GetOperatingSystemInstances().RegisterPlugin(
-      name, description, create_callback, debugger_init_callback);
+      ConstString(name), description.str().c_str(), create_callback,
+      debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -491,8 +492,9 @@ PluginManager::GetOperatingSystemCreateCallbackAtIndex(uint32_t idx) {
 }
 
 OperatingSystemCreateInstance
-PluginManager::GetOperatingSystemCreateCallbackForPluginName(ConstString name) {
-  return GetOperatingSystemInstances().GetCallbackForName(name);
+PluginManager::GetOperatingSystemCreateCallbackForPluginName(
+    llvm::StringRef name) {
+  return GetOperatingSystemInstances().GetCallbackForName(ConstString(name));
 }
 
 #pragma mark Language
@@ -635,14 +637,14 @@ static ObjectFileInstances &GetObjectFileInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     ObjectFileCreateInstance create_callback,
     ObjectFileCreateMemoryInstance create_memory_callback,
     ObjectFileGetModuleSpecifications get_module_specifications,
     ObjectFileSaveCore save_core) {
   return GetObjectFileInstances().RegisterPlugin(
-      name, description, create_callback, create_memory_callback,
-      get_module_specifications, save_core);
+      ConstString(name), description.str().c_str(), create_callback,
+      create_memory_callback, get_module_specifications, save_core);
 }
 
 bool PluginManager::UnregisterPlugin(ObjectFileCreateInstance create_callback) {
@@ -673,12 +675,10 @@ PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex(
 
 ObjectFileCreateMemoryInstance
 PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
-    ConstString name) {
-  if (!name)
-    return nullptr;
+    llvm::StringRef name) {
   const auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
-    if (instance.name == name)
+    if (instance.name.GetStringRef() == name)
       return instance.create_memory_callback;
   }
   return nullptr;
@@ -687,8 +687,8 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
                                const FileSpec &outfile,
                                lldb::SaveCoreStyle &core_style,
-                               const ConstString plugin_name) {
-  if (!plugin_name) {
+                               llvm::StringRef plugin_name) {
+  if (plugin_name.empty()) {
     // Try saving core directly from the process plugin first.
     llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
     if (!ret)
@@ -701,7 +701,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
-    if (plugin_name && instance.name != plugin_name)
+    if (instance.name.GetStringRef() != plugin_name)
       continue;
     if (instance.save_core &&
         instance.save_core(process_sp, outfile, core_style, error))
@@ -733,11 +733,12 @@ static ObjectContainerInstances &GetObjectContainerInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     ObjectContainerCreateInstance create_callback,
     ObjectFileGetModuleSpecifications get_module_specifications) {
   return GetObjectContainerInstances().RegisterPlugin(
-      name, description, create_callback, get_module_specifications);
+      ConstString(name), description.str().c_str(), create_callback,
+      get_module_specifications);
 }
 
 bool PluginManager::UnregisterPlugin(

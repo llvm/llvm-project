@@ -1216,7 +1216,7 @@ public:
 
       switch (short_option) {
       case 'p':
-        m_requested_plugin_name.SetString(option_arg);
+        m_requested_plugin_name = option_arg.str();
         break;
       case 's':
         m_requested_save_core_style =
@@ -1233,12 +1233,12 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_requested_save_core_style = eSaveCoreUnspecified;
-      m_requested_plugin_name.Clear();
+      m_requested_plugin_name.clear();
     }
 
     // Instance variables to hold the values for command options.
     SaveCoreStyle m_requested_save_core_style;
-    ConstString m_requested_plugin_name;
+    std::string m_requested_plugin_name;
   };
 
 protected:
