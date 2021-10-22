@@ -9,56 +9,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo(i64* %p, i64* %p.last) unnamed_addr #0 {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P4:%.*]] = ptrtoint i64* [[P:%.*]] to i64
-; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoint i64* [[P_LAST:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_LAST1]], -32
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 5
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 16
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 16, i64 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i64, i64* [[P]], i64 [[TMP6]]
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi i64* [ [[P]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 16, i64 20, i64 24, i64 28>
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 32, i64 36, i64 40, i64 44>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 48, i64 52, i64 56, i64 60>
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i64*> [[TMP7]] to <4 x %0**>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i64*> [[TMP8]] to <4 x %0**>
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i64*> [[TMP9]] to <4 x %0**>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i64*> [[TMP10]] to <4 x %0**>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP11]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP12]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP13]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP14]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i64, i64* [[POINTER_PHI]], i64 64
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[P]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[P2:%.*]] = phi i64* [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[P_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i64, i64* [[P2]], i64 4
-; CHECK-NEXT:    [[P3:%.*]] = bitcast i64* [[P2]] to %0**
-; CHECK-NEXT:    [[V:%.*]] = load %0*, %0** [[P3]], align 8
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i64* [[P_INC]], [[P_LAST]]
-; CHECK-NEXT:    br i1 [[B]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret void
+; CHECK: vector.body:
+; CHECK:         [[WIDE_MASKED_GATHER:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP11:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP12:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP13:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x %0*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.0(<4 x %0**> [[TMP14:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %0*> undef)
 ;
 entry:
   br label %loop
@@ -77,56 +32,11 @@ exit:
 
 define void @bar(i64* %p, i64* %p.last) unnamed_addr #0 {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P4:%.*]] = ptrtoint i64* [[P:%.*]] to i64
-; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoint i64* [[P_LAST:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_LAST1]], -32
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 5
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 16
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 16, i64 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i64, i64* [[P]], i64 [[TMP6]]
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi i64* [ [[P]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 16, i64 20, i64 24, i64 28>
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 32, i64 36, i64 40, i64 44>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, i64* [[POINTER_PHI]], <4 x i64> <i64 48, i64 52, i64 56, i64 60>
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i64*> [[TMP7]] to <4 x %1**>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i64*> [[TMP8]] to <4 x %1**>
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i64*> [[TMP9]] to <4 x %1**>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i64*> [[TMP10]] to <4 x %1**>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP11]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP12]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP13]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP14]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i64, i64* [[POINTER_PHI]], i64 64
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[P]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[P2:%.*]] = phi i64* [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[P_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i64, i64* [[P2]], i64 4
-; CHECK-NEXT:    [[P3:%.*]] = bitcast i64* [[P2]] to %1**
-; CHECK-NEXT:    [[V:%.*]] = load %1*, %1** [[P3]], align 8
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i64* [[P_INC]], [[P_LAST]]
-; CHECK-NEXT:    br i1 [[B]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret void
+; CHECK: vector.body:
+; CHECK:         [[WIDE_MASKED_GATHER:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP11:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP12:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP13:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x %1*> @llvm.masked.gather.v4p0s_s.v4p0p0s_s.1(<4 x %1**> [[TMP14:%.*]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x %1*> undef)
 ;
 entry:
   br label %loop
