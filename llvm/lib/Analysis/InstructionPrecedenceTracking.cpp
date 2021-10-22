@@ -47,29 +47,11 @@ const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     validate(BB);
 #endif
 
-  if (!FirstSpecialInsts.count(BB))
-    // Seed the lazy scan
-    FirstSpecialInsts[BB] = &*BB->begin();
-
-  auto *CurI = FirstSpecialInsts[BB];
-  if (!CurI || isSpecialInstruction(CurI))
-    // We found a cached definite result
-    return CurI;
-
-  // Otherwise, scan forward until we find a definite result, then cache that.
-  auto *Res = [&]() -> const Instruction * {
-    for (auto &I : make_range(CurI->getIterator(), BB->end())) {
-      NumInstScanned++;
-      if (isSpecialInstruction(&I))
-        // Found next special instruction
-        return &I;
-    }
-    // Mark this block as having no special instructions.
-    return nullptr;
-  }();
-
-  FirstSpecialInsts[BB] = Res;
-  return Res;
+  if (FirstSpecialInsts.find(BB) == FirstSpecialInsts.end()) {
+    fill(BB);
+    assert(FirstSpecialInsts.find(BB) != FirstSpecialInsts.end() && "Must be!");
+  }
+  return FirstSpecialInsts[BB];
 }
 
 bool InstructionPrecedenceTracking::hasSpecialInstructions(
@@ -84,6 +66,20 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
   return MaybeFirstSpecial && MaybeFirstSpecial->comesBefore(Insn);
 }
 
+void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
+  FirstSpecialInsts.erase(BB);
+  for (auto &I : *BB) {
+    NumInstScanned++;
+    if (isSpecialInstruction(&I)) {
+      FirstSpecialInsts[BB] = &I;
+      return;
+    }
+  }
+
+  // Mark this block as having no special instructions.
+  FirstSpecialInsts[BB] = nullptr;
+}
+
 #ifndef NDEBUG
 void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
   auto It = FirstSpecialInsts.find(BB);
@@ -91,13 +87,12 @@ void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
   if (It == FirstSpecialInsts.end())
     return;
 
-  for (const Instruction &I : *BB) {
-    if (&I == It->second)
-      // No special instruction before cached result
+  for (const Instruction &Insn : *BB)
+    if (isSpecialInstruction(&Insn)) {
+      assert(It->second == &Insn &&
+             "Cached first special instruction is wrong!");
       return;
-    assert(!isSpecialInstruction(&I) &&
-           "Cached first special instruction is wrong!");
-  }
+    }
 
   assert(It->second == nullptr &&
          "Block is marked as having special instructions but in fact it  has "
@@ -120,12 +115,8 @@ void InstructionPrecedenceTracking::insertInstructionTo(const Instruction *Inst,
 void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
   auto *BB = Inst->getParent();
   assert(BB && "must be called before instruction is actually removed");
-  if (FirstSpecialInsts.count(BB) && FirstSpecialInsts[BB] == Inst) {
-    if (Inst->isTerminator())
-      FirstSpecialInsts[BB] = nullptr;
-    else
-      FirstSpecialInsts[BB] = &*std::next(Inst->getIterator());
-  }
+  if (FirstSpecialInsts.count(BB) && FirstSpecialInsts[BB] == Inst)
+    FirstSpecialInsts.erase(BB);
 }
 
 void InstructionPrecedenceTracking::removeUsersOf(const Instruction *Inst) {
