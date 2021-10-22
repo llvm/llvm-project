@@ -109,25 +109,25 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
     return Status(
         "\"platform connect\" takes a single argument: <connect-url>");
 
-  llvm::Optional<uint16_t> remote_port;
-  llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
     return Status("URL is null.");
-  if (!UriParser::Parse(url, scheme, host, remote_port, path))
+  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  if (!parsed_url)
     return Status("Invalid URL: %s", url);
-  if (host != "localhost")
-    m_device_id = std::string(host);
+  if (parsed_url->hostname != "localhost")
+    m_device_id = parsed_url->hostname.str();
 
   m_socket_namespace.reset();
-  if (scheme == "unix-connect")
+  if (parsed_url->scheme == "unix-connect")
     m_socket_namespace = AdbClient::UnixSocketNamespaceFileSystem;
-  else if (scheme == "unix-abstract-connect")
+  else if (parsed_url->scheme == "unix-abstract-connect")
     m_socket_namespace = AdbClient::UnixSocketNamespaceAbstract;
 
   std::string connect_url;
-  auto error = MakeConnectURL(g_remote_platform_pid, remote_port.getValueOr(0),
-                              path, connect_url);
+  auto error =
+      MakeConnectURL(g_remote_platform_pid, parsed_url->port.getValueOr(0),
+                     parsed_url->path, connect_url);
 
   if (error.Fail())
     return error;
@@ -206,9 +206,8 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
   // any other valid pid on android.
   static lldb::pid_t s_remote_gdbserver_fake_pid = 0xffffffffffffffffULL;
 
-  llvm::Optional<uint16_t> remote_port;
-  llvm::StringRef scheme, host, path;
-  if (!UriParser::Parse(connect_url, scheme, host, remote_port, path)) {
+  llvm::Optional<URI> parsed_url = URI::Parse(connect_url);
+  if (!parsed_url) {
     error.SetErrorStringWithFormat("Invalid URL: %s",
                                    connect_url.str().c_str());
     return nullptr;
@@ -216,7 +215,8 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
 
   std::string new_connect_url;
   error = MakeConnectURL(s_remote_gdbserver_fake_pid--,
-                         remote_port.getValueOr(0), path, new_connect_url);
+                         parsed_url->port.getValueOr(0), parsed_url->path,
+                         new_connect_url);
   if (error.Fail())
     return nullptr;
 
