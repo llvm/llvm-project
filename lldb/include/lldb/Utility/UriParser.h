@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_URIPARSER_H
 #define LLDB_UTILITY_URIPARSER_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
@@ -18,12 +19,12 @@ public:
   // RETURN VALUE
   //   if url is valid, function returns true and
   //   scheme/hostname/port/path are set to the parsed values
-  //   port it set to -1 if it is not included in the URL
+  //   port it set to llvm::None if it is not included in the URL
   //
   //   if the url is invalid, function returns false and
   //   output parameters remain unchanged
   static bool Parse(llvm::StringRef uri, llvm::StringRef &scheme,
-                    llvm::StringRef &hostname, int &port,
+                    llvm::StringRef &hostname, llvm::Optional<uint16_t> &port,
                     llvm::StringRef &path);
 };
 }

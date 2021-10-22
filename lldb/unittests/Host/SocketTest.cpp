@@ -173,7 +173,7 @@ TEST_P(SocketTest, TCPGetConnectURI) {
 
   llvm::StringRef scheme;
   llvm::StringRef hostname;
-  int port;
+  llvm::Optional<uint16_t> port;
   llvm::StringRef path;
   std::string uri(socket_a_up->GetRemoteConnectionURI());
   EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
@@ -191,7 +191,7 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 
   llvm::StringRef scheme;
   llvm::StringRef hostname;
-  int port;
+  llvm::Optional<uint16_t> port;
   llvm::StringRef path;
   std::string uri = socket.get()->GetRemoteConnectionURI();
   EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
@@ -216,7 +216,7 @@ TEST_P(SocketTest, DomainGetConnectURI) {
 
   llvm::StringRef scheme;
   llvm::StringRef hostname;
-  int port;
+  llvm::Optional<uint16_t> port;
   llvm::StringRef path;
   std::string uri(socket_a_up->GetRemoteConnectionURI());
   EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));

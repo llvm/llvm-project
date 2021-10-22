@@ -199,7 +199,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   if (m_socket_protocol == Socket::ProtocolTcp) {
     llvm::StringRef platform_scheme;
     llvm::StringRef platform_ip;
-    int platform_port;
+    llvm::Optional<uint16_t> platform_port;
     llvm::StringRef platform_path;
     std::string platform_uri = GetConnection()->GetURI();
     bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
