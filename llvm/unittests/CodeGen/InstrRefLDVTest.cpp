@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -13,6 +14,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -33,10 +35,11 @@ public:
   using MLocTransferMap = InstrRefBasedLDV::MLocTransferMap;
 
   LLVMContext Ctx;
-  Module Mod;
+  std::unique_ptr<Module> Mod;
   std::unique_ptr<TargetMachine> Machine;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<MachineDominatorTree> DomTree;
+  std::unique_ptr<MachineModuleInfo> MMI;
   DICompileUnit *OurCU;
   DIFile *OurFile;
   DISubprogram *OurFunc;
@@ -55,13 +58,15 @@ public:
   std::unique_ptr<MLocTracker> MTracker;
   std::unique_ptr<VLocTracker> VTracker;
 
-  InstrRefLDVTest() : Ctx(), Mod("beehives", Ctx) {
-  }
+  SmallString<256> MIRStr;
+
+  InstrRefLDVTest() : Ctx(), Mod(std::make_unique<Module>("beehives", Ctx)) {}
 
   void SetUp() {
     // Boilerplate that creates a MachineFunction and associated blocks.
 
-    Mod.setDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128");
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
+                       "n8:16:32:64-S128");
     Triple TargetTriple("x86_64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -69,21 +74,24 @@ public:
       GTEST_SKIP();
 
     TargetOptions Options;
-    Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "X86", "", "", Options, None, None, CodeGenOpt::Aggressive));
+    Machine = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(Triple::normalize("x86_64--"), "", "", Options,
+                               None, None, CodeGenOpt::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-    auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &Mod);
+    auto F =
+        Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MachineModuleInfo MMI((LLVMTargetMachine*)&*Machine);
+    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
-    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine&)*Machine, STI, FunctionNum, MMI);
+    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
+                                           STI, FunctionNum, *MMI);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.
-    DIBuilder DIB(Mod);
+    DIBuilder DIB(*Mod);
     OurFile = DIB.createFile("xyzzy.c", "/cave");
     OurCU =
         DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
@@ -126,7 +134,7 @@ public:
     llvm_unreachable("Can't find register by name");
   }
 
-  InstrRefBasedLDV *setupLDVObj() {
+  InstrRefBasedLDV *setupLDVObj(MachineFunction *MF) {
     // Create a new LDV object, and plug some relevant object ptrs into it.
     LDV = std::make_unique<InstrRefBasedLDV>();
     const TargetSubtargetInfo &STI = MF->getSubtarget();
@@ -144,12 +152,11 @@ public:
     // mappings.
     LDV->initialSetup(*MF);
     LDV->LS.initialize(*MF);
-    addMTracker();
-    addVTracker();
+    addMTracker(MF);
     return &*LDV;
   }
 
-  void addMTracker() {
+  void addMTracker(MachineFunction *MF) {
     ASSERT_TRUE(LDV);
     // Add a machine-location-tracking object to LDV. Don't initialize any
     // register locations within it though.
@@ -212,7 +219,7 @@ public:
     MF->insert(MF->end(), MBB0);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupDiamondBlocks() {
@@ -245,7 +252,7 @@ public:
     MBB2->addSuccessor(MBB3);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupSimpleLoop() {
@@ -275,7 +282,7 @@ public:
     MBB1->addSuccessor(MBB1);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupNestedLoops() {
@@ -320,7 +327,7 @@ public:
     MBB3->addSuccessor(MBB4);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupNoDominatingLoop() {
@@ -365,7 +372,7 @@ public:
     MBB3->addSuccessor(MBB4);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
   }
 
   void setupBadlyNestedLoops() {
@@ -416,9 +423,306 @@ public:
     MBB3->addSuccessor(MBB4);
     MF->RenumberBlocks();
 
-    setupLDVObj();
+    setupLDVObj(&*MF);
+  }
+
+  MachineFunction *readMIRBlock(const char *Input) {
+    MIRStr.clear();
+    StringRef S = Twine(Twine(R"MIR(
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+  define void @test() { ret void }
+...
+---
+name: test
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:  |
+   bb.0:
+    liveins: $rdi, $rsi
+)MIR") + Twine(Input) + Twine("...\n"))
+                      .toNullTerminatedStringRef(MIRStr);
+    ;
+
+    // Clear the "test" function from MMI if it's still present.
+    if (Function *Fn = Mod->getFunction("test"))
+      MMI->deleteMachineFunctionFor(*Fn);
+
+    auto MemBuf = MemoryBuffer::getMemBuffer(S, "<input>");
+    auto MIRParse = createMIRParser(std::move(MemBuf), Ctx);
+    Mod = MIRParse->parseIRModule();
+    assert(Mod);
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
+                       "n8:16:32:64-S128");
+
+    bool Result = MIRParse->parseMachineFunctions(*Mod, *MMI);
+    assert(!Result && "Failed to parse unit test machine function?");
+    (void)Result;
+
+    Function *Fn = Mod->getFunction("test");
+    assert(Fn && "Failed to parse a unit test module string?");
+    Fn->setSubprogram(OurFunc);
+    return MMI->getMachineFunction(*Fn);
+  }
+
+  void
+  produceMLocTransferFunction(MachineFunction &MF,
+                              SmallVectorImpl<MLocTransferMap> &MLocTransfer,
+                              unsigned MaxNumBlocks) {
+    LDV->produceMLocTransferFunction(MF, MLocTransfer, MaxNumBlocks);
   }
 };
+
+TEST_F(InstrRefLDVTest, MTransferDefs) {
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+
+  // We should start with only SP tracked.
+  EXPECT_TRUE(MTracker->getNumLocs() == 1);
+
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Code contains only one register write: that should assign to each of the
+  // aliasing registers. Test that all of them get locations, and have a
+  // corresponding def at the first instr in the function.
+  const char *RegNames[] = {"RAX", "HAX", "EAX", "AX", "AH", "AL"};
+  EXPECT_TRUE(MTracker->getNumLocs() == 7);
+  for (const char *RegName : RegNames) {
+    Register R = getRegByName(RegName);
+    ASSERT_TRUE(MTracker->isRegisterTracked(R));
+    LocIdx L = MTracker->getRegMLoc(R);
+    ValueIDNum V = MTracker->readReg(R);
+    // Value of this register should be: block zero, instruction 1, and the
+    // location it's defined in is itself.
+    ValueIDNum ToCmp(0, 1, L);
+    EXPECT_EQ(V, ToCmp);
+  }
+
+  // Do the same again, but with an aliasing write. This should write to all
+  // the same registers again, except $ah and $hax (the upper 8 bits of $ax
+  // and 32 bits of $rax resp.).
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $al = MOV8ri 0\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  auto TestRegSetSite = [&](const char *Name, unsigned InstrNum) {
+    Register R = getRegByName(Name);
+    ASSERT_TRUE(MTracker->isRegisterTracked(R));
+    LocIdx L = MTracker->getRegMLoc(R);
+    ValueIDNum V = MTracker->readMLoc(L);
+    ValueIDNum ToCmp(0, InstrNum, L);
+    EXPECT_EQ(V, ToCmp);
+  };
+
+  TestRegSetSite("AL", 2);
+  TestRegSetSite("AH", 1);
+  TestRegSetSite("AX", 2);
+  TestRegSetSite("EAX", 2);
+  TestRegSetSite("HAX", 1);
+  TestRegSetSite("RAX", 2);
+
+  // This call should:
+  //  * Def rax via the implicit-def,
+  //  * Clobber rsi/rdi and all their subregs, via the register mask
+  //  * Same for rcx, despite it not being a use in the instr, it's in the mask
+  //  * NOT clobber $rsp / $esp $ sp, LiveDebugValues deliberately ignores
+  //    these.
+  //  * NOT clobber $rbx, because it's non-volatile
+  //  * Not track every other register in the machine, only those needed.
+ MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n" // instr 1
+   "    $rbx = MOV64ri 0\n" // instr 2
+   "    $rcx = MOV64ri 0\n" // instr 3
+   "    $rdi = MOV64ri 0\n" // instr 4
+   "    $rsi = MOV64ri 0\n" // instr 5
+   "    CALL64r $rax, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $esp, implicit-def $sp\n\n\n\n" // instr 6
+   "    RETQ $rax\n"); // instr 7
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  const char *RegsSetInCall[] = {"AL",  "AH",  "AX", "EAX", "HAX", "RAX",
+                                 "DIL", "DIH", "DI", "EDI", "HDI", "RDI",
+                                 "SIL", "SIH", "SI", "ESI", "HSI", "RSI",
+                                 "CL",  "CH",  "CX", "ECX", "HCX", "RCX"};
+  for (const char *RegSetInCall : RegsSetInCall)
+    TestRegSetSite(RegSetInCall, 6);
+
+  const char *RegsLeftAlone[] = {"BL", "BH", "BX", "EBX", "HBX", "RBX"};
+  for (const char *RegLeftAlone : RegsLeftAlone)
+    TestRegSetSite(RegLeftAlone, 2);
+
+  // Stack pointer should be the live-in to the function, instruction zero.
+  TestRegSetSite("RSP", 0);
+  // These stack regs should not be tracked either. Nor the (fake) subregs.
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("ESP")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("SP")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("SPL")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("SPH")));
+  EXPECT_FALSE(MTracker->isRegisterTracked(getRegByName("HSP")));
+
+  // Should only be tracking: 6 x {A, B, C, DI, SI} registers = 30,
+  // Plus RSP, SSP = 32.
+  EXPECT_EQ(32u, MTracker->getNumLocs());
+
+
+  // When we DBG_PHI something, we should track all its subregs.
+  MF = readMIRBlock(
+   "    DBG_PHI $rdi, 0\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // All DI regs and RSP tracked.
+  EXPECT_EQ(7u, MTracker->getNumLocs());
+
+  // All the DI registers should have block live-in values, i.e. the argument
+  // to the function.
+  const char *DIRegs[] = {"DIL", "DIH", "DI", "EDI", "HDI", "RDI"};
+  for (const char *DIReg : DIRegs)
+    TestRegSetSite(DIReg, 0);
+}
+
+TEST_F(InstrRefLDVTest, MTransferMeta) {
+  // Meta instructions should not have any effect on register values.
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $rax = IMPLICIT_DEF\n"
+   "    $rax = KILL killed $rax\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  LocIdx RaxLoc = MTracker->getRegMLoc(getRegByName("RAX"));
+  ValueIDNum V = MTracker->readMLoc(RaxLoc);
+  // Def of rax should be from instruction 1, i.e., unmodified.
+  ValueIDNum Cmp(0, 1, RaxLoc);
+  EXPECT_EQ(Cmp, V);
+}
+
+TEST_F(InstrRefLDVTest, MTransferCopies) {
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  // This memory spill should be recognised, and a spill slot created.
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    RETQ $rax\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Check that the spill location contains the value defined in rax by
+  // instruction 1. The MIR header says -16 offset, but it's stored as -8;
+  // it's not completely clear why, but here we only care about correctly
+  // identifying the slot, not that all the surrounding data is correct.
+  SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+  Optional<ValueIDNum> V = MTracker->readSpill(L);
+  ASSERT_TRUE(V);
+  Register RAX = getRegByName("RAX");
+  LocIdx RaxLoc = MTracker->getRegMLoc(RAX);
+  ValueIDNum Cmp(0, 1, RaxLoc);
+  EXPECT_EQ(*V, Cmp);
+
+  // A spill and restore should be recognised.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Test that rbx contains rax from instruction 1.
+  RAX = getRegByName("RAX");
+  RaxLoc = MTracker->getRegMLoc(RAX);
+  Register RBX = getRegByName("RBX");
+  LocIdx RbxLoc = MTracker->getRegMLoc(RBX);
+  Cmp = ValueIDNum(0, 1, RaxLoc);
+  ValueIDNum RbxVal = MTracker->readMLoc(RbxLoc);
+  EXPECT_EQ(RbxVal, Cmp);
+
+  // FIXME: future work, make sure all the subregisters are transferred too.
+
+  // Copies and x86 movs should be recognised and honoured. In addition, all
+  // of the subregisters should be copied across too.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $rcx = COPY $rax\n"
+   "    $rbx = MOV64rr $rcx\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  const char *ARegs[] = {"AL", "AH", "AX", "EAX", "HAX", "RAX"};
+  const char *BRegs[] = {"BL", "BH", "BX", "EBX", "HBX", "RBX"};
+  const char *CRegs[] = {"CL", "CH", "CX", "ECX", "HCX", "RCX"};
+  auto CheckReg = [&](unsigned int I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx B = MTracker->getRegMLoc(getRegByName(BRegs[I]));
+    LocIdx C = MTracker->getRegMLoc(getRegByName(CRegs[I]));
+    ValueIDNum ARefVal(0, 1, A);
+    ValueIDNum AVal = MTracker->readMLoc(A);
+    ValueIDNum BVal = MTracker->readMLoc(B);
+    ValueIDNum CVal = MTracker->readMLoc(C);
+    EXPECT_EQ(ARefVal, AVal);
+    EXPECT_EQ(ARefVal, BVal);
+    EXPECT_EQ(ARefVal, CVal);
+  };
+
+  for (unsigned int I = 0; I < 6; ++I)
+    CheckReg(I);
+
+  // When we copy to a subregister, the super-register should be def'd too: it's
+  // value will have changed.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    $ecx = COPY $eax\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // First four regs [al, ah, ax, eax] should be copied to *cx.
+  for (unsigned int I = 0; I < 4; ++I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx C = MTracker->getRegMLoc(getRegByName(CRegs[I]));
+    ValueIDNum ARefVal(0, 1, A);
+    ValueIDNum AVal = MTracker->readMLoc(A);
+    ValueIDNum CVal = MTracker->readMLoc(C);
+    EXPECT_EQ(ARefVal, AVal);
+    EXPECT_EQ(ARefVal, CVal);
+  }
+
+  // But rcx should contain a value defined by the COPY.
+  LocIdx RcxLoc = MTracker->getRegMLoc(getRegByName("RCX"));
+  ValueIDNum RcxVal = MTracker->readMLoc(RcxLoc);
+  ValueIDNum RcxDefVal(0, 2, RcxLoc); // instr 2 -> the copy
+  EXPECT_EQ(RcxVal, RcxDefVal);
+}
 
 TEST_F(InstrRefLDVTest, MLocSingleBlock) {
   // Test some very simple properties about interpreting the transfer function.

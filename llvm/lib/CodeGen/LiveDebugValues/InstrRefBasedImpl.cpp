@@ -362,7 +362,7 @@ public:
       // instruction or similar with an instruction number, where it doesn't
       // actually define a new value, instead it moves a value. In case this
       // happens, discard.
-      if (MTracker->LocIdxToIDNum[L] != Use.ID)
+      if (MTracker->readMLoc(L) != Use.ID)
         continue;
 
       // If a different debug instruction defined the variable value / location
@@ -493,12 +493,12 @@ public:
     // Check whether our local copy of values-by-location in #VarLocs is out of
     // date. Wipe old tracking data for the location if it's been clobbered in
     // the meantime.
-    if (MTracker->getNumAtPos(NewLoc) != VarLocs[NewLoc.asU64()]) {
+    if (MTracker->readMLoc(NewLoc) != VarLocs[NewLoc.asU64()]) {
       for (auto &P : ActiveMLocs[NewLoc]) {
         ActiveVLocs.erase(P);
       }
       ActiveMLocs[NewLoc.asU64()].clear();
-      VarLocs[NewLoc.asU64()] = MTracker->getNumAtPos(NewLoc);
+      VarLocs[NewLoc.asU64()] = MTracker->readMLoc(NewLoc);
     }
 
     ActiveMLocs[NewLoc].insert(Var);
@@ -586,7 +586,7 @@ public:
   void transferMlocs(LocIdx Src, LocIdx Dst, MachineBasicBlock::iterator Pos) {
     // Does Src still contain the value num we expect? If not, it's been
     // clobbered in the meantime, and our variable locations are stale.
-    if (VarLocs[Src.asU64()] != MTracker->getNumAtPos(Src))
+    if (VarLocs[Src.asU64()] != MTracker->readMLoc(Src))
       return;
 
     // assert(ActiveMLocs[Dst].size() == 0);
@@ -1066,7 +1066,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   Optional<LocIdx> FoundLoc = None;
   for (auto Location : MTracker->locations()) {
     LocIdx CurL = Location.Idx;
-    ValueIDNum ID = MTracker->LocIdxToIDNum[CurL];
+    ValueIDNum ID = MTracker->readMLoc(CurL);
     if (NewID && ID == NewID) {
       // If this is the first location with that value, pick it. Otherwise,
       // consider whether it's a "longer term" location.
@@ -1176,10 +1176,6 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   } else if (MI.isMetaInstruction())
     return;
 
-  MachineFunction *MF = MI.getMF();
-  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  Register SP = TLI->getStackPointerRegisterToSaveRestore();
-
   // Find the regs killed by MI, and find regmasks of preserved regs.
   // Max out the number of statically allocated elements in `DeadRegs`, as this
   // prevents fallback to std::set::count() operations.
@@ -1190,7 +1186,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
     // Determine whether the operand is a register def.
     if (MO.isReg() && MO.isDef() && MO.getReg() &&
         Register::isPhysicalRegister(MO.getReg()) &&
-        !(MI.isCall() && MO.getReg() == SP)) {
+        !(MI.isCall() && MTracker->SPAliases.count(MO.getReg()))) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
@@ -1236,29 +1232,14 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 }
 
 void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
-  ValueIDNum SrcValue = MTracker->readReg(SrcRegNum);
+  // In all circumstances, re-def all aliases. It's definitely a new value now.
+  for (MCRegAliasIterator RAI(DstRegNum, TRI, true); RAI.isValid(); ++RAI)
+    MTracker->defReg(*RAI, CurBB, CurInst);
 
+  ValueIDNum SrcValue = MTracker->readReg(SrcRegNum);
   MTracker->setReg(DstRegNum, SrcValue);
 
-  // In all circumstances, re-def the super registers. It's definitely a new
-  // value now. This doesn't uniquely identify the composition of subregs, for
-  // example, two identical values in subregisters composed in different
-  // places would not get equal value numbers.
-  for (MCSuperRegIterator SRI(DstRegNum, TRI); SRI.isValid(); ++SRI)
-    MTracker->defReg(*SRI, CurBB, CurInst);
-
-  // If we're emulating VarLocBasedImpl, just define all the subregisters.
-  // DBG_VALUEs of them will expect to be tracked from the DBG_VALUE, not
-  // through prior copies.
-  if (EmulateOldLDV) {
-    for (MCSubRegIndexIterator DRI(DstRegNum, TRI); DRI.isValid(); ++DRI)
-      MTracker->defReg(DRI.getSubReg(), CurBB, CurInst);
-    return;
-  }
-
-  // Otherwise, actually copy subregisters from one location to another.
-  // XXX: in addition, any subregisters of DstRegNum that don't line up with
-  // the source register should be def'd.
+  // Copy subregisters from one location to another.
   for (MCSubRegIndexIterator SRI(SrcRegNum, TRI); SRI.isValid(); ++SRI) {
     unsigned SrcSubReg = SRI.getSubReg();
     unsigned SubRegIdx = SRI.getSubRegIndex();
@@ -1269,15 +1250,13 @@ void InstrRefBasedLDV::performCopy(Register SrcRegNum, Register DstRegNum) {
     // Do copy. There are two matching subregisters, the source value should
     // have been def'd when the super-reg was, the latter might not be tracked
     // yet.
-    // This will force SrcSubReg to be tracked, if it isn't yet.
-    (void)MTracker->readReg(SrcSubReg);
-    LocIdx SrcL = MTracker->getRegMLoc(SrcSubReg);
-    assert(SrcL.asU64());
-    (void)MTracker->readReg(DstSubReg);
-    LocIdx DstL = MTracker->getRegMLoc(DstSubReg);
-    assert(DstL.asU64());
+    // This will force SrcSubReg to be tracked, if it isn't yet. Will read
+    // mphi values if it wasn't tracked.
+    LocIdx SrcL = MTracker->lookupOrTrackRegister(SrcSubReg);
+    LocIdx DstL = MTracker->lookupOrTrackRegister(DstSubReg);
+    (void)SrcL;
     (void)DstL;
-    ValueIDNum CpyValue = {SrcValue.getBlock(), SrcValue.getInst(), SrcL};
+    ValueIDNum CpyValue = MTracker->readReg(SrcSubReg);
 
     MTracker->setReg(DstSubReg, CpyValue);
   }
@@ -1911,7 +1890,7 @@ void InstrRefBasedLDV::buildMLocValueMap(
       for (auto &P : MLocTransfer[CurBB]) {
         if (P.second.getBlock() == CurBB && P.second.isPHI()) {
           // This is a movement of whatever was live in. Read it.
-          ValueIDNum NewID = MTracker->getNumAtPos(P.second.getLoc());
+          ValueIDNum NewID = MTracker->readMLoc(P.second.getLoc());
           ToRemap.push_back(std::make_pair(P.first, NewID));
         } else {
           // It's a def. Just set it.
