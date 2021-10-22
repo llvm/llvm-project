@@ -696,7 +696,7 @@ define <5 x float> @insert_undemanded_element_unequal_length_op0(<4 x float> %x,
 ; CHECK-LABEL: @insert_undemanded_element_unequal_length_op0(
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[X:%.*]], float 4.200000e+01, i32 3
 ; CHECK-NEXT:    call void @use(<4 x float> [[INS]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[INS]], <4 x float> [[Y:%.*]], <5 x i32> <i32 undef, i32 0, i32 7, i32 1, i32 4>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y:%.*]], <5 x i32> <i32 undef, i32 0, i32 7, i32 1, i32 4>
 ; CHECK-NEXT:    ret <5 x float> [[S]]
 ;
   %ins = insertelement <4 x float> %x, float 42.0, i32 3
@@ -709,7 +709,7 @@ define <5 x float> @insert_undemanded_element_unequal_length_op1(<4 x float> %x,
 ; CHECK-LABEL: @insert_undemanded_element_unequal_length_op1(
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> [[X:%.*]], float 4.200000e+01, i32 3
 ; CHECK-NEXT:    call void @use(<4 x float> [[INS]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[INS]], <5 x i32> <i32 undef, i32 3, i32 2, i32 1, i32 4>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[X]], <5 x i32> <i32 undef, i32 3, i32 2, i32 1, i32 4>
 ; CHECK-NEXT:    ret <5 x float> [[S]]
 ;
   %ins = insertelement <4 x float> %x, float 42.0, i32 3
