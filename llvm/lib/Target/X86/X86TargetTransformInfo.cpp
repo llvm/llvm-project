@@ -5205,6 +5205,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
         Type::getIntNTy(ScalarTy->getContext(), DL.getTypeSizeInBits(ScalarTy));
 
   // Get the cost of all the memory operations.
+  // FIXME: discount dead loads.
   InstructionCost MemOpCosts = getMemoryOpCost(
       Opcode, VecTy, MaybeAlign(Alignment), AddressSpace, CostKind);
 
@@ -5424,22 +5425,27 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   };
 
   if (Opcode == Instruction::Load) {
-    // FIXME: if we have a partially-interleaved groups, with gaps,
-    //        should we discount the not-demanded indicies?
+    auto GetDiscountedCost = [Factor, NumMembers = Indices.size(),
+                              MemOpCosts](const CostTblEntry *Entry) {
+      // NOTE: this is just an approximation!
+      //       It can over/under -estimate the cost!
+      return MemOpCosts + divideCeil(NumMembers * Entry->Cost, Factor);
+    };
+
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2InterleavedLoadTbl, Factor,
                                               ETy.getSimpleVT()))
-        return MemOpCosts + Entry->Cost;
+        return GetDiscountedCost(Entry);
 
     if (ST->hasSSSE3())
       if (const auto *Entry = CostTableLookup(SSSE3InterleavedLoadTbl, Factor,
                                               ETy.getSimpleVT()))
-        return MemOpCosts + Entry->Cost;
+        return GetDiscountedCost(Entry);
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2InterleavedLoadTbl, Factor,
                                               ETy.getSimpleVT()))
-        return MemOpCosts + Entry->Cost;
+        return GetDiscountedCost(Entry);
   } else {
     assert(Opcode == Instruction::Store &&
            "Expected Store Instruction at this point");
