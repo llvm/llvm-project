@@ -4466,23 +4466,20 @@ public:
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandCTPOP(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTLZ/CTLZ_ZERO_UNDEF nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandCTLZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTTZ/CTTZ_ZERO_UNDEF nodes. Expands vector/scalar CTTZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandCTTZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
