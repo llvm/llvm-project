@@ -129,8 +129,7 @@ Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                ArrayRef<int> Mask);
 
 /// Extract value of C at the given Offset reinterpreted as Ty. If bits past
-/// the end of C are accessed, they are assumed to be poison and may take any
-/// value.
+/// the end of C are accessed, they are assumed to be poison.
 Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
                                     const DataLayout &DL);
 
