@@ -170,6 +170,11 @@ static llvm::cl::opt<std::string> ModuleFilesDir(
                    "specified directory instead the module cache directory."),
     llvm::cl::cat(DependencyScannerCategory));
 
+static llvm::cl::opt<bool> OptimizeArgs(
+    "optimize-args",
+    llvm::cl::desc("Whether to optimize command-line arguments of modules."),
+    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
                llvm::cl::desc("Number of worker threads to use (default: use "
@@ -197,6 +202,25 @@ llvm::cl::opt<bool> SkipExcludedPPRanges(
 llvm::cl::opt<std::string> ModuleName(
     "module-name", llvm::cl::Optional,
     llvm::cl::desc("the module of which the dependencies are to be computed"),
+    llvm::cl::cat(DependencyScannerCategory));
+
+enum ResourceDirRecipeKind {
+  RDRK_ModifyCompilerPath,
+  RDRK_InvokeCompiler,
+};
+
+static llvm::cl::opt<ResourceDirRecipeKind> ResourceDirRecipe(
+    "resource-dir-recipe",
+    llvm::cl::desc("How to produce missing '-resource-dir' argument"),
+    llvm::cl::values(
+        clEnumValN(RDRK_ModifyCompilerPath, "modify-compiler-path",
+                   "Construct the resource directory from the compiler path in "
+                   "the compilation database. This assumes it's part of the "
+                   "same toolchain as this clang-scan-deps. (default)"),
+        clEnumValN(RDRK_InvokeCompiler, "invoke-compiler",
+                   "Invoke the compiler with '-print-resource-dir' and use the "
+                   "reported path as the resource directory. (deprecated)")),
+    llvm::cl::init(RDRK_ModifyCompilerPath),
     llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
@@ -357,7 +381,7 @@ private:
     SmallString<256> ExplicitPCMPath(
         !ModuleFilesDir.empty()
             ? ModuleFilesDir
-            : MD.Invocation.getHeaderSearchOpts().ModuleCachePath);
+            : MD.BuildInvocation.getHeaderSearchOpts().ModuleCachePath);
     llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
     return std::string(ExplicitPCMPath);
   }
@@ -490,7 +514,7 @@ int main(int argc, const char **argv) {
           AdjustedArgs.push_back("/clang:" + LastO);
         }
 
-        if (!HasResourceDir) {
+        if (!HasResourceDir && ResourceDirRecipe == RDRK_InvokeCompiler) {
           StringRef ResourceDir =
               ResourceDirCache.findResourceDir(Args, ClangCLMode);
           if (!ResourceDir.empty()) {
@@ -507,7 +531,7 @@ int main(int argc, const char **argv) {
   SharedStream DependencyOS(llvm::outs());
 
   DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
-                                    SkipExcludedPPRanges);
+                                    SkipExcludedPPRanges, OptimizeArgs);
   llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I)

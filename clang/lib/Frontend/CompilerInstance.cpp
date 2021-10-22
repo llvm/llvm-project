@@ -560,6 +560,54 @@ void CompilerInstance::createASTContext() {
 
 // ExternalASTSource
 
+namespace {
+// Helper to recursively read the module names for all modules we're adding.
+// We mark these as known and redirect any attempt to load that module to
+// the files we were handed.
+struct ReadModuleNames : ASTReaderListener {
+  Preprocessor &PP;
+  llvm::SmallVector<std::string, 8> LoadedModules;
+
+  ReadModuleNames(Preprocessor &PP) : PP(PP) {}
+
+  void ReadModuleName(StringRef ModuleName) override {
+    // Keep the module name as a string for now. It's not safe to create a new
+    // IdentifierInfo from an ASTReader callback.
+    LoadedModules.push_back(ModuleName.str());
+  }
+
+  void registerAll() {
+    ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
+    for (const std::string &LoadedModule : LoadedModules)
+      MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
+                         MM.findModule(LoadedModule));
+    LoadedModules.clear();
+  }
+
+  void markAllUnavailable() {
+    for (const std::string &LoadedModule : LoadedModules) {
+      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
+              LoadedModule)) {
+        M->HasIncompatibleModuleFile = true;
+
+        // Mark module as available if the only reason it was unavailable
+        // was missing headers.
+        SmallVector<Module *, 2> Stack;
+        Stack.push_back(M);
+        while (!Stack.empty()) {
+          Module *Current = Stack.pop_back_val();
+          if (Current->IsUnimportable) continue;
+          Current->IsAvailable = true;
+          Stack.insert(Stack.end(),
+                       Current->submodule_begin(), Current->submodule_end());
+        }
+      }
+    }
+    LoadedModules.clear();
+  }
+};
+} // namespace
+
 void CompilerInstance::createPCHExternalASTSource(
     StringRef Path, DisableValidationForModuleKind DisableValidation,
     bool AllowPCHWithCompilerErrors, void *DeserializationListener,
@@ -604,6 +652,11 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   for (auto &Listener : DependencyCollectors)
     Listener->attachToASTReader(*Reader);
 
+  auto Listener = std::make_unique<ReadModuleNames>(PP);
+  auto &ListenerRef = *Listener;
+  ASTReader::ListenerScope ReadModuleNamesListener(*Reader,
+                                                   std::move(Listener));
+
   switch (Reader->ReadAST(Path,
                           Preamble ? serialization::MK_Preamble
                                    : serialization::MK_PCH,
@@ -613,6 +666,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     // Set the predefines buffer as suggested by the PCH reader. Typically, the
     // predefines buffer will be empty.
     PP.setPredefines(Reader->getSuggestedPredefines());
+    ListenerRef.registerAll();
     return Reader;
 
   case ASTReader::Failure:
@@ -628,6 +682,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     break;
   }
 
+  ListenerRef.markAllUnavailable();
   Context.setExternalSource(nullptr);
   return nullptr;
 }
@@ -1647,52 +1702,6 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
                *FrontendTimerGroup);
   llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
 
-  // Helper to recursively read the module names for all modules we're adding.
-  // We mark these as known and redirect any attempt to load that module to
-  // the files we were handed.
-  struct ReadModuleNames : ASTReaderListener {
-    CompilerInstance &CI;
-    llvm::SmallVector<IdentifierInfo*, 8> LoadedModules;
-
-    ReadModuleNames(CompilerInstance &CI) : CI(CI) {}
-
-    void ReadModuleName(StringRef ModuleName) override {
-      LoadedModules.push_back(
-          CI.getPreprocessor().getIdentifierInfo(ModuleName));
-    }
-
-    void registerAll() {
-      ModuleMap &MM = CI.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-      for (auto *II : LoadedModules)
-        MM.cacheModuleLoad(*II, MM.findModule(II->getName()));
-      LoadedModules.clear();
-    }
-
-    void markAllUnavailable() {
-      for (auto *II : LoadedModules) {
-        if (Module *M = CI.getPreprocessor()
-                            .getHeaderSearchInfo()
-                            .getModuleMap()
-                            .findModule(II->getName())) {
-          M->HasIncompatibleModuleFile = true;
-
-          // Mark module as available if the only reason it was unavailable
-          // was missing headers.
-          SmallVector<Module *, 2> Stack;
-          Stack.push_back(M);
-          while (!Stack.empty()) {
-            Module *Current = Stack.pop_back_val();
-            if (Current->IsUnimportable) continue;
-            Current->IsAvailable = true;
-            Stack.insert(Stack.end(),
-                         Current->submodule_begin(), Current->submodule_end());
-          }
-        }
-      }
-      LoadedModules.clear();
-    }
-  };
-
   // If we don't already have an ASTReader, create one now.
   if (!TheASTReader)
     createASTReader();
@@ -1704,7 +1713,7 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
                                           SourceLocation())
         <= DiagnosticsEngine::Warning;
 
-  auto Listener = std::make_unique<ReadModuleNames>(*this);
+  auto Listener = std::make_unique<ReadModuleNames>(*PP);
   auto &ListenerRef = *Listener;
   ASTReader::ListenerScope ReadModuleNamesListener(*TheASTReader,
                                                    std::move(Listener));
@@ -1783,7 +1792,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     SourceLocation ModuleNameLoc, bool IsInclusionDirective) {
   // Search for a module with the given name.
   HeaderSearch &HS = PP->getHeaderSearchInfo();
-  Module *M = HS.lookupModule(ModuleName, true, !IsInclusionDirective);
+  Module *M =
+      HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
@@ -1842,7 +1852,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // A prebuilt module is indexed as a ModuleFile; the Module does not exist
     // until the first call to ReadAST.  Look it up now.
-    M = HS.lookupModule(ModuleName, true, !IsInclusionDirective);
+    M = HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFile())
@@ -1965,7 +1975,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   } else if (ModuleName == getLangOpts().CurrentModule) {
     // This is the module we're building.
     Module = PP->getHeaderSearchInfo().lookupModule(
-        ModuleName, /*AllowSearch*/ true,
+        ModuleName, ImportLoc, /*AllowSearch*/ true,
         /*AllowExtraModuleMapSearch*/ !IsInclusionDirective);
     /// FIXME: perhaps we should (a) look for a module using the module name
     //  to file map (PrebuiltModuleFiles) and (b) diagnose if still not found?
@@ -2014,8 +2024,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
             PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
         PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
-        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, true,
-                                                   !IsInclusionDirective))
+        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc,
+                                                   true, !IsInclusionDirective))
           Sub =
               loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
         if (Sub) {

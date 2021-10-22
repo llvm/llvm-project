@@ -102,7 +102,7 @@ struct ModuleDeps {
   bool ImportedByMainFile = false;
 
   /// Compiler invocation that can be used to build this module (without paths).
-  CompilerInvocation Invocation;
+  CompilerInvocation BuildInvocation;
 
   /// Gets the canonical command line suitable for passing to clang.
   ///
@@ -147,8 +147,7 @@ class ModuleDepCollector;
 /// \c DependencyConsumer of the parent \c ModuleDepCollector.
 class ModuleDepCollectorPP final : public PPCallbacks {
 public:
-  ModuleDepCollectorPP(CompilerInstance &I, ModuleDepCollector &MDC)
-      : Instance(I), MDC(MDC) {}
+  ModuleDepCollectorPP(ModuleDepCollector &MDC) : MDC(MDC) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -165,8 +164,6 @@ public:
   void EndOfMainFile() override;
 
 private:
-  /// The compiler instance for the current translation unit.
-  CompilerInstance &Instance;
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
   /// Working set of direct modular dependencies.
@@ -199,8 +196,8 @@ private:
 class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
-                     CompilerInstance &I, DependencyConsumer &C,
-                     CompilerInvocation &&OriginalCI);
+                     CompilerInstance &ScanInstance, DependencyConsumer &C,
+                     CompilerInvocation &&OriginalCI, bool OptimizeArgs);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -208,8 +205,8 @@ public:
 private:
   friend ModuleDepCollectorPP;
 
-  /// The compiler instance for the current translation unit.
-  CompilerInstance &Instance;
+  /// The compiler instance for scanning the current translation unit.
+  CompilerInstance &ScanInstance;
   /// The consumer of collected dependency information.
   DependencyConsumer &Consumer;
   /// Path to the main source file.
@@ -225,6 +222,8 @@ private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
   CompilerInvocation OriginalInvocation;
+  /// Whether to optimize the modules' command-line arguments.
+  bool OptimizeArgs;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
@@ -232,8 +231,9 @@ private:
   /// Constructs a CompilerInvocation that can be used to build the given
   /// module, excluding paths to discovered modular dependencies that are yet to
   /// be built.
-  CompilerInvocation
-  makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps) const;
+  CompilerInvocation makeInvocationForModuleBuildWithoutPaths(
+      const ModuleDeps &Deps,
+      llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
 };
 
 } // end namespace dependencies
