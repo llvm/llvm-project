@@ -128,7 +128,6 @@
 ; GCN-O0-NEXT:        SI post-RA bundler
 ; GCN-O0-NEXT:        Insert fentry calls
 ; GCN-O0-NEXT:        Insert XRay ops
-; GCN-O0-NEXT:        GCN Create VOPD Instructions
 ; GCN-O0-NEXT:        SI Memory Legalizer
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O0-NEXT:        SI insert wait instructions

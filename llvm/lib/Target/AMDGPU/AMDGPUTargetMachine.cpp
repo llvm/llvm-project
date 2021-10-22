@@ -1375,7 +1375,7 @@ void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
-  if (EnableVOPD)
+  if (isPassEnabled(EnableVOPD, CodeGenOpt::Less))
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
