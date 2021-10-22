@@ -43,12 +43,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_oeq_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_EQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_EQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_oeq_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_EQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -69,12 +69,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ogt_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_GT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_GT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ogt_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_GT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_GT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -95,12 +95,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_oge_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_GE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_GE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_oge_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_GE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_GE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -121,12 +121,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_olt_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_LT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_LT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_olt_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_LT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -147,12 +147,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ole_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_LE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_LE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ole_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_LE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_LE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -172,12 +172,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_one_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_one_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -198,12 +198,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ord_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ord_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -224,12 +224,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_uno_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_U_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_U_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_uno_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_U_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -250,12 +250,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ueq_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_NLG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_NLG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ueq_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_NLG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_NLG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -276,12 +276,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ugt_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_NLE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_NLE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ugt_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_NLE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_NLE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -302,12 +302,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_uge_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_NLT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_NLT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_uge_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_NLT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_NLT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -328,12 +328,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ult_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_NGE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_NGE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ult_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_NGE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_NGE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -354,12 +354,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_ule_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_NGT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_NGT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_ule_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_NGT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_NGT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -380,12 +380,12 @@ body: |
     ; WAVE64-LABEL: name: fcmp_une_s16_vv
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64: %4:sreg_64 = nofpexcept V_CMP_NEQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64: %4:sreg_64_xexec = nofpexcept V_CMP_NEQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit %4
     ; WAVE32-LABEL: name: fcmp_une_s16_vv
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: %4:sreg_32 = nofpexcept V_CMP_NEQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32: %4:sreg_32_xm0_xexec = nofpexcept V_CMP_NEQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
