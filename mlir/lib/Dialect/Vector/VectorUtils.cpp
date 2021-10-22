@@ -362,3 +362,16 @@ bool mlir::checkSameValueWAW(vector::TransferWriteOp write,
          priorWrite.getVectorType() == write.getVectorType() &&
          priorWrite.permutation_map() == write.permutation_map();
 }
+
+SmallVector<int64_t, 4> mlir::getI64SubArray(ArrayAttr arrayAttr,
+                                             unsigned dropFront,
+                                             unsigned dropBack) {
+  assert(arrayAttr.size() > dropFront + dropBack && "Out of bounds");
+  auto range = arrayAttr.getAsRange<IntegerAttr>();
+  SmallVector<int64_t, 4> res;
+  res.reserve(arrayAttr.size() - dropFront - dropBack);
+  for (auto it = range.begin() + dropFront, eit = range.end() - dropBack;
+       it != eit; ++it)
+    res.push_back((*it).getValue().getSExtValue());
+  return res;
+}

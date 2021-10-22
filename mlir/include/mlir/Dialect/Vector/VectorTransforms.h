@@ -24,13 +24,6 @@ namespace scf {
 class IfOp;
 } // namespace scf
 
-/// Collect a set of patterns to convert from the Vector dialect to itself.
-/// Should be merged with populateVectorToSCFLoweringPattern.
-void populateVectorToVectorConversionPatterns(
-    MLIRContext *context, RewritePatternSet &patterns,
-    ArrayRef<int64_t> coarseVectorShape = {},
-    ArrayRef<int64_t> fineVectorShape = {});
-
 namespace vector {
 
 /// Options that control the vector unrolling.
