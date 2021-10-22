@@ -1941,6 +1941,34 @@ struct DSEState {
 
     return false;
   }
+
+  /// Eliminates writes to locations where the value that is being written
+  /// is already stored at the same location.
+  bool eliminateRedundantStoresOfExistingValues() {
+    bool MadeChange = false;
+    LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs that write the "
+                         "already existing value\n");
+    for (auto *Def : MemDefs) {
+      if (SkipStores.contains(Def) || MSSA.isLiveOnEntryDef(Def) ||
+          !isRemovable(Def->getMemoryInst()))
+        continue;
+      auto *UpperDef = dyn_cast<MemoryDef>(Def->getDefiningAccess());
+      if (!UpperDef || MSSA.isLiveOnEntryDef(UpperDef))
+        continue;
+      auto *DefInst = Def->getMemoryInst();
+      auto *UpperInst = UpperDef->getMemoryInst();
+      auto MaybeUpperLoc = getLocForWriteEx(UpperInst);
+      if (!MaybeUpperLoc || !DefInst->isIdenticalTo(UpperInst) ||
+          isReadClobber(*MaybeUpperLoc, DefInst))
+        continue;
+      LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *DefInst
+                        << '\n');
+      deleteDeadInstruction(DefInst);
+      NumRedundantStores++;
+      MadeChange = true;
+    }
+    return MadeChange;
+  }
 };
 
 static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
@@ -2106,6 +2134,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     for (auto &KV : State.IOLs)
       MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second, TLI);
 
+  MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
   return MadeChange;
 }
