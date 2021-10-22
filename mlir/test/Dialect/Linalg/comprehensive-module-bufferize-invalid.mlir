@@ -113,8 +113,8 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
 
 func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
 {
+  // expected-error @+1 {{result buffer is ambiguous}}
   %r = scf.if %b -> (tensor<4xf32>) {
-    // expected-error @+1 {{expected scf::ForOp parent for scf::YieldOp}}
     scf.yield %A : tensor<4xf32>
   } else {
     scf.yield %B : tensor<4xf32>
