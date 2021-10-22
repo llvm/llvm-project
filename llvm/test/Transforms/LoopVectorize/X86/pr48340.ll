@@ -20,7 +20,7 @@ entry:
 
 loop:
   %p2 = phi i64* [ %p, %entry ], [ %p.inc, %loop ]
-  %p.inc = getelementptr inbounds i64, i64* %p2, i64 4
+  %p.inc = getelementptr inbounds i64, i64* %p2, i64 128
   %p3 = bitcast i64* %p2 to %0**
   %v = load %0*, %0** %p3, align 8
   %b = icmp eq i64* %p.inc, %p.last
@@ -43,7 +43,7 @@ entry:
 
 loop:
   %p2 = phi i64* [ %p, %entry ], [ %p.inc, %loop ]
-  %p.inc = getelementptr inbounds i64, i64* %p2, i64 4
+  %p.inc = getelementptr inbounds i64, i64* %p2, i64 128
   %p3 = bitcast i64* %p2 to %1**
   %v = load %1*, %1** %p3, align 8
   %b = icmp eq i64* %p.inc, %p.last
