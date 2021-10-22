@@ -235,7 +235,7 @@ bb3:
 }
 
 ; Make sure the store in %bb3 won't be eliminated because it may be clobbered before.
-define void @test8(i32* noalias %P) {
+define void @test8(i32* %P) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
@@ -287,6 +287,197 @@ bb3:
   ret void
 }
 
+; The store in bb3 can be eliminated, because the store in bb1 cannot alias it.
+define void @test10(i32* noalias %P, i32* %Q, i1 %c) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    store i32 10, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %P
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  store i32 10, i32* %Q
+  br label %bb3
+
+bb2:
+  ret void
+
+bb3:
+  store i32 0, i32* %P
+  ret void
+}
+
+define void @test11_smaller_later_store(i32* noalias %P, i32* %Q, i1 %c) {
+; CHECK-LABEL: @test11_smaller_later_store(
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[P]] to i8*
+; CHECK-NEXT:    store i8 0, i8* [[BC]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %P
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  br label %bb3
+
+bb2:
+  ret void
+
+bb3:
+  %bc = bitcast i32* %P to i8*
+  store i8 0, i8* %bc
+  ret void
+}
+
+define void @test11_smaller_earlier_store(i32* noalias %P, i32* %Q, i1 %c) {
+; CHECK-LABEL: @test11_smaller_earlier_store(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    store i8 0, i8* [[BC]], align 1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %bc = bitcast i32* %P to i8*
+  store i8 0, i8* %bc
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  br label %bb3
+
+bb2:
+  ret void
+
+bb3:
+  store i32 0, i32* %P
+  ret void
+}
+
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+
+define void @test12_memset_simple(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_simple(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 4
+  store i8 0, i8* %ptr.5
+  ret void
+}
+
+define void @test12_memset_other_store_in_between(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_other_store_in_between(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 8, i8* [[PTR_4]], align 1
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 5
+; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 5
+  store i8 0, i8* %ptr.5
+  ret void
+}
+
+define void @test12_memset_other_store_in_between_partial_overlap(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_other_store_in_between_partial_overlap(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    [[BC_4:%.*]] = bitcast i8* [[PTR_4]] to i16*
+; CHECK-NEXT:    store i16 8, i16* [[BC_4]], align 2
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 5
+; CHECK-NEXT:    [[BC_5:%.*]] = bitcast i8* [[PTR_5]] to i16*
+; CHECK-NEXT:    store i16 0, i16* [[BC_5]], align 2
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  %bc.4 = bitcast i8* %ptr.4 to i16*
+  store i16 8, i16* %bc.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 5
+  %bc.5 = bitcast i8* %ptr.5 to i16*
+  store i16 0, i16* %bc.5
+  ret void
+}
+
+define void @test12_memset_later_store_exceeds_memset(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_later_store_exceeds_memset(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR:%.*]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 8, i8* [[PTR_4]], align 1
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 8
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[PTR_5]] to i64*
+; CHECK-NEXT:    store i64 0, i64* [[BC]], align 8
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 8
+  %bc = bitcast i8* %ptr.5 to i64*
+  store i64 0, i64* %bc
+  ret void
+}
+
+define void @test12_memset_later_store_before_memset(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_later_store_before_memset(
+; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[PTR_1]], i64 7
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[PTR]] to i64*
+; CHECK-NEXT:    store i64 0, i64* [[BC]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr.1 = getelementptr i8, i8* %ptr, i64 1
+  call void @llvm.memset.p0i8.i64(i8* %ptr.1, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %bc = bitcast i8* %ptr to i64*
+  store i64 0, i64* %bc
+  ret void
+}
+
+; The memset will be shortened and the store will not be redundant afterwards.
+; It cannot be eliminated.
+define void @test13_memset_shortened(i64* %ptr) {
+; CHECK-LABEL: @test13_memset_shortened(
+; CHECK-NEXT:    [[PTR_I8:%.*]] = bitcast i64* [[PTR:%.*]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[PTR_I8]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr.i8 = bitcast i64* %ptr to i8*
+  call void @llvm.memset.p0i8.i64(i8* %ptr.i8, i8 0, i64 24, i1 false)
+  store i64 0, i64* %ptr
+  ret void
+}
+
 define void @pr49927(i32* %q, i32* %p) {
 ; CHECK-LABEL: @pr49927(
 ; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
@@ -300,7 +491,6 @@ define void @pr49927(i32* %q, i32* %p) {
   store i32 %v, i32* %p, align 4
   ret void
 }
-
 
 define void @pr50339(i8* nocapture readonly %0) {
 ; CHECK-LABEL: @pr50339(
