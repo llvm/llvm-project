@@ -49,6 +49,7 @@ inline bool FormattedIntegerIO(
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
   using IntType = CppTypeFor<TypeCategory::Integer, KIND>;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     if (auto edit{io.GetNextDataEdit()}) {
       IntType &x{ExtractElement<IntType>(io, descriptor, subscripts)};
@@ -57,8 +58,10 @@ inline bool FormattedIntegerIO(
           return false;
         }
       } else if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-        if (!EditIntegerInput(io, *edit, reinterpret_cast<void *>(&x), KIND)) {
-          return false;
+        if (EditIntegerInput(io, *edit, reinterpret_cast<void *>(&x), KIND)) {
+          anyInput = true;
+        } else {
+          return anyInput && edit->IsNamelist();
         }
       }
       if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
@@ -79,6 +82,7 @@ inline bool FormattedRealIO(
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
   using RawType = typename RealOutputEditing<KIND>::BinaryFloatingPoint;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     if (auto edit{io.GetNextDataEdit()}) {
       RawType &x{ExtractElement<RawType>(io, descriptor, subscripts)};
@@ -87,8 +91,10 @@ inline bool FormattedRealIO(
           return false;
         }
       } else if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-        if (!EditRealInput<KIND>(io, *edit, reinterpret_cast<void *>(&x))) {
-          return false;
+        if (EditRealInput<KIND>(io, *edit, reinterpret_cast<void *>(&x))) {
+          anyInput = true;
+        } else {
+          return anyInput && edit->IsNamelist();
         }
       }
       if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
@@ -111,6 +117,7 @@ inline bool FormattedComplexIO(
   bool isListOutput{
       io.get_if<ListDirectedStatementState<Direction::Output>>() != nullptr};
   using RawType = typename RealOutputEditing<KIND>::BinaryFloatingPoint;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     RawType *x{&ExtractElement<RawType>(io, descriptor, subscripts)};
     if (isListOutput) {
@@ -132,9 +139,11 @@ inline bool FormattedComplexIO(
           }
         } else if (edit->descriptor == DataEdit::ListDirectedNullValue) {
           break;
-        } else if (!EditRealInput<KIND>(
+        } else if (EditRealInput<KIND>(
                        io, *edit, reinterpret_cast<void *>(x))) {
-          return false;
+          anyInput = true;
+        } else {
+          return anyInput && edit->IsNamelist();
         }
       }
     }
@@ -154,6 +163,7 @@ inline bool FormattedCharacterIO(
   descriptor.GetLowerBounds(subscripts);
   std::size_t length{descriptor.ElementBytes() / sizeof(A)};
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     A *x{&ExtractElement<A>(io, descriptor, subscripts)};
     if (listOutput) {
@@ -167,8 +177,10 @@ inline bool FormattedCharacterIO(
         }
       } else {
         if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-          if (!EditDefaultCharacterInput(io, *edit, x, length)) {
-            return false;
+          if (EditDefaultCharacterInput(io, *edit, x, length)) {
+            anyInput = true;
+          } else {
+            return anyInput && edit->IsNamelist();
           }
         }
       }
@@ -191,6 +203,7 @@ inline bool FormattedLogicalIO(
   descriptor.GetLowerBounds(subscripts);
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
   using IntType = CppTypeFor<TypeCategory::Integer, KIND>;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     IntType &x{ExtractElement<IntType>(io, descriptor, subscripts)};
     if (listOutput) {
@@ -207,8 +220,9 @@ inline bool FormattedLogicalIO(
           bool truth{};
           if (EditLogicalInput(io, *edit, truth)) {
             x = truth;
+            anyInput = true;
           } else {
-            return false;
+            return anyInput && edit->IsNamelist();
           }
         }
       }
