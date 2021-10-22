@@ -789,9 +789,8 @@ bool PPCLoopInstrFormPrep::updateFormPrep(Loop *L,
       MadeChange |= rewriteLoadStores(L, Bucket, BBChanged, UpdateForm);
 
   if (MadeChange)
-    for (auto &BB : L->blocks())
-      if (BBChanged.count(BB))
-        DeleteDeadPHIs(BB);
+    for (auto *BB : BBChanged)
+      DeleteDeadPHIs(BB);
   return MadeChange;
 }
 
@@ -811,9 +810,8 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Bucket
   }
 
   if (MadeChange)
-    for (auto &BB : L->blocks())
-      if (BBChanged.count(BB))
-        DeleteDeadPHIs(BB);
+    for (auto *BB : BBChanged)
+      DeleteDeadPHIs(BB);
   return MadeChange;
 }
 
