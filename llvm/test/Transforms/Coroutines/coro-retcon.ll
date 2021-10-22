@@ -72,7 +72,7 @@ entry:
 define hidden { i8*, i8* } @g(i8* %buffer, i16* %ptr) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  coro.return:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8* @allocate(i32 8) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i8* @allocate(i32 8)
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUFFER:%.*]] to i8**
 ; CHECK-NEXT:    store i8* [[TMP0]], i8** [[TMP1]], align 8
 ; CHECK-NEXT:    [[PTR_SPILL_ADDR:%.*]] = bitcast i8* [[TMP0]] to i16**

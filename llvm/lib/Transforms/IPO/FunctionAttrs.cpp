@@ -1752,7 +1752,8 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
   Res.HasUnknownCall = false;
   for (Function *F : Functions) {
-    if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked)) {
+    if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked) ||
+        F->isPresplitCoroutine()) {
       // Treat any function we're trying not to optimize as if it were an
       // indirect call and omit it from the node set used below.
       Res.HasUnknownCall = true;
