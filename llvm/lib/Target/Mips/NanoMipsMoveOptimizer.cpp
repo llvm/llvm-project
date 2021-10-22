@@ -26,6 +26,7 @@ using namespace llvm;
 namespace {
 struct NMMoveOpt : public MachineFunctionPass {
   using MBBIter = MachineBasicBlock::iterator;
+  SmallVector<unsigned> GPR1 = {Mips::A0_NM, Mips::A1_NM};
   SmallVector<unsigned> GPR2REG1 = {Mips::A0_NM, Mips::A1_NM, Mips::A2_NM,
                                     Mips::A3_NM};
   SmallVector<unsigned> GPR2REG2 = {Mips::A1_NM, Mips::A2_NM, Mips::A3_NM,
@@ -47,6 +48,7 @@ struct NMMoveOpt : public MachineFunctionPass {
   StringRef getPassName() const override { return NM_MOVE_OPT_NAME; }
   bool runOnMachineFunction(MachineFunction &) override;
   bool generateMoveP(MachineBasicBlock &);
+  bool generateMoveBalc(MachineBasicBlock &);
   bool areMovePCompatibleMoves(MachineInstr *, MachineInstr *, bool &);
   bool areMovePRevCompatibleMoves(MachineInstr *, MachineInstr *, bool &);
 };
@@ -62,6 +64,7 @@ bool NMMoveOpt::runOnMachineFunction(MachineFunction &Fn) {
        ++MFI) {
     MachineBasicBlock &MBB = *MFI;
     Modified |= generateMoveP(MBB);
+    Modified |= generateMoveBalc(MBB);
   }
 
   return Modified;
@@ -176,6 +179,7 @@ bool NMMoveOpt::areMovePRevCompatibleMoves(MachineInstr *Move1,
 bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
   SmallVector<std::pair<MachineInstr *, MachineInstr *>> MovePairs;
   MachineInstr *PrevMove = nullptr;
+  bool Modified = false;
 
   auto IsMovePCandidate = [this](MachineInstr *MI) -> bool {
     Register Dst = MI->getOperand(0).getReg();
@@ -225,7 +229,49 @@ bool NMMoveOpt::generateMoveP(MachineBasicBlock &MBB) {
     MBB.erase(Pair.second);
   }
 
-  return false;
+  if (MovePairs.size())
+    Modified = true;
+
+  return Modified;
+}
+
+bool NMMoveOpt::generateMoveBalc(MachineBasicBlock &MBB) {
+  SmallVector<std::pair<MachineInstr *, MachineInstr *>> MoveBalcPairs;
+  MachineInstr *Balc = nullptr;
+  bool Modified = false;
+  for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
+    unsigned Opcode = MI.getOpcode();
+    if (Opcode == Mips::BALC_NM) {
+      Balc = &MI;
+    } else if (Balc && Opcode == Mips::MOVE_NM &&
+               isInSet(GPR1, MI.getOperand(0).getReg()) &&
+               isInSet(GPR4ZERO, MI.getOperand(1).getReg())) {
+      MoveBalcPairs.push_back({&MI, Balc});
+      Balc = nullptr;
+    } else {
+      Balc = nullptr;
+    }
+  }
+  for (const auto &Pair : MoveBalcPairs) {
+    auto *Move = Pair.first, *Balc = Pair.second;
+    auto InsertBefore = MBBIter(Move);
+    auto DL = Move->getDebugLoc();
+    auto New = BuildMI(MBB, InsertBefore, DL, TII->get(Mips::MOVEBALC_NM))
+                   .addReg(Move->getOperand(0).getReg(), RegState::Define)
+                   .addReg(Move->getOperand(1).getReg());
+    assert(Balc->getOperand(0).isGlobal() || Balc->getOperand(0).isSymbol());
+    if (Balc->getOperand(0).isGlobal())
+      New.addGlobalAddress(Balc->getOperand(0).getGlobal());
+    else
+      New.addExternalSymbol(Balc->getOperand(0).getSymbolName());
+    MBB.erase(Move);
+    MBB.erase(Balc);
+  }
+
+  if (MoveBalcPairs.size())
+    Modified = true;
+
+  return Modified;
 }
 
 namespace llvm {

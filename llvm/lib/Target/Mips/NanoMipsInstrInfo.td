@@ -166,6 +166,14 @@ class CallNM<string opstr,
   let Defs = [RA_NM];
 }
 
+class MoveBalcBase : InstNM<(outs GPR32NMOpnd:$rd),
+                            (ins GPR32NMOpnd:$rt, calltarget:$addr),
+                            "move.balc\t$rd, $rt, $addr", []>, InstSize32 {
+  let isCall = 1;
+  let isCTI = 1;
+  let Defs = [RA_NM];
+}
+
 // Indirect branch instruction.
 class IndirectBranchNM<string opstr, RegisterOperand RO,
                        SDPatternOperator operator = null_frag>:
@@ -314,6 +322,7 @@ def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
+def MOVEBALC_NM : MoveBalcBase;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
