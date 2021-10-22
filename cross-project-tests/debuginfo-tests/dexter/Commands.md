@@ -10,6 +10,7 @@
 * [DexLabel](Commands.md#DexLabel)
 * [DexWatch](Commands.md#DexWatch)
 * [DexDeclareFile](Commands.md#DexDeclareFile)
+* [DexFinishTest](Commands.md#DexFinishTest)
 
 ---
 ## DexExpectProgramState
@@ -246,6 +247,35 @@ The new path holds until the end of the test file or until a new DexDeclareFile
 command is encountered. Used in conjunction with .dex files, DexDeclareFile can
 be used to write your dexter commands in a separate test file avoiding inlined
 Dexter commands mixed with test source.
+
+### Heuristic
+This command does not contribute to the heuristic score.
+
+----
+## DexFinishTest
+    DexFinishTest([expr, *values], **on_line[, **hit_count=0])
+
+    Args:
+        expr (str): variable or value to compare.
+
+    Arg list:
+        values (str): At least one potential value the expr may evaluate to.
+
+    Keyword args:
+        on_line (int): Define the line on which this command will be triggered.
+        hit_count (int): If provided, triggers this command only after the line
+                         and condition have been hit the given number of times.
+
+### Description
+Defines a point at which Dexter will exit out of the debugger without waiting
+for the program to finish. This is primarily useful for testing a program that
+either does not automatically terminate or would otherwise continue for a long
+time after all test commands have finished.
+
+The command will trigger when the line 'on_line' is stepped on and either the
+condition '(expr) == (values[n])' is true or there are no conditions. If the
+optional argument 'hit_count' is provided, then the command will not trigger
+for the first 'hit_count' times the line and condition are hit.
 
 ### Heuristic
 This command does not contribute to the heuristic score.
