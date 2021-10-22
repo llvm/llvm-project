@@ -1693,12 +1693,6 @@ private:
                                                  BasicBlock *ExitingBB,
                                                  bool IsSubExpr);
 
-  /// Given an exit condition of 'icmp op load X, cst', try to see if we can
-  /// compute the backedge-taken count.
-  ExitLimit computeLoadConstantCompareExitLimit(LoadInst *LI, Constant *RHS,
-                                                const Loop *L,
-                                                ICmpInst::Predicate p);
-
   /// Compute the exit limit of a loop that is controlled by a
   /// "(IV >> 1) != 0" type comparison.  We cannot compute the exact trip
   /// count in these cases (since SCEV has no way of expressing them), but we
