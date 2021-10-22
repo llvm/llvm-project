@@ -45,9 +45,6 @@ using llvm::dbgs;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
-// Forward declarations.
-static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
-                                          SmallVectorImpl<Value> &newResults);
 static FailureOr<Operation *>
 vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp);
 
@@ -495,10 +492,9 @@ static bool isElementwise(Operation *op) {
 /// the absence of good canonicalizations, the amount of work increases.
 /// This is not deemed a problem as we expect canonicalizations and foldings to
 /// aggressively clean up the useless work.
-LogicalResult vectorizeAsLinalgGeneric(
-    OpBuilder &b, LinalgOp linalgOp, SmallVectorImpl<Value> &newResults,
-    bool broadcastToMaximalCommonShape = false,
-    ArrayRef<CustomVectorizationHook> customVectorizationHooks = {}) {
+static LogicalResult
+vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
+                         SmallVectorImpl<Value> &newResults) {
   Block *block = linalgOp.getBlock();
 
   // 2. Values defined above the region can only be broadcast for now. Make them
@@ -530,8 +526,7 @@ LogicalResult vectorizeAsLinalgGeneric(
     if (linalgOp.getShape(opOperand).empty()) {
       readType = bbarg.getType();
     } else {
-      if (broadcastToMaximalCommonShape &&
-          opOperand->getOperandNumber() < linalgOp.getNumInputs()) {
+      if (opOperand->getOperandNumber() < linalgOp.getNumInputs()) {
         map = inverseAndBroadcastProjectedPermuation(
             linalgOp.getTiedIndexingMap(opOperand));
         readType = VectorType::get(commonVectorShape,
@@ -549,7 +544,7 @@ LogicalResult vectorizeAsLinalgGeneric(
     bvm.map(opOperand->get(), readValue);
   }
 
-  auto hooks = llvm::to_vector<4>(customVectorizationHooks);
+  SmallVector<CustomVectorizationHook> hooks;
   // 4a. Register CustomVectorizationHook for yieldOp.
   CustomVectorizationHook vectorizeYield =
       [&](Operation *op,
@@ -587,61 +582,6 @@ LogicalResult vectorizeAsLinalgGeneric(
 /// This helper is needed atm because the truly generic implementation requires
 /// good vector.multi_reduce folding patterns that are currently NYI.
 // TODO: drop reliance on a specific pattern.
-static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
-                                          SmallVectorImpl<Value> &newResults) {
-  assert(isaContractionOpInterface(linalgOp) &&
-         "expected vectorizeContraction preconditions to be met");
-  Location loc = linalgOp.getLoc();
-  // Vectorize other ops as vector contraction.
-  // TODO: interface.
-  LDBG(""
-           << "Rewrite linalg op as vector.contract: ";
-       linalgOp.dump());
-  // Special function that describes how to vectorize the multiplication op in a
-  // linalg contraction.
-  CustomVectorizationHook vectorizeContraction =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
-    if (!isa<arith::MulIOp, arith::MulFOp>(op))
-      return VectorizationResult{VectorizationStatus::Failure, nullptr};
-    ArrayRef<int64_t> outShape =
-        linalgOp.getShape(linalgOp.getOutputOperand(0));
-    Type vType;
-    if (outShape.empty()) {
-      vType = op->getResult(0).getType();
-    } else {
-      SmallVector<int64_t> resultShape = applyPermutationMap(
-          inversePermutation(reindexIndexingMap(
-              linalgOp.getTiedIndexingMap(linalgOp.getOutputOperand(0)))),
-          outShape);
-      vType = VectorType::get(resultShape, op->getResult(0).getType());
-    }
-    auto zero = b.create<arith::ConstantOp>(loc, vType, b.getZeroAttr(vType));
-    // Indexing maps at the time of vector.transfer_read are adjusted to order
-    // vector dimensions in the same order as the canonical linalg op iteration
-    // space order.
-    // The indexings for the contraction therefore need to be adjusted.
-    // TODO: consider dropping contraction special casing altogether, this will
-    // require more advanced canonicalizations involving vector.multi_reduction
-    // that are not yet available.
-    SmallVector<AffineMap> indexingMaps;
-    indexingMaps.reserve(linalgOp.getNumInputsAndOutputs());
-    llvm::transform(linalgOp.getIndexingMaps(),
-                    std::back_inserter(indexingMaps),
-                    [](AffineMap indexingMap) {
-                      return inversePermutation(reindexIndexingMap(indexingMap))
-                          .compose(indexingMap);
-                    });
-    Operation *contract = b.create<vector::ContractionOp>(
-        loc, bvm.lookup(op->getOperand(0)), bvm.lookup(op->getOperand(1)), zero,
-        b.getAffineMapArrayAttr(indexingMaps), linalgOp.iterator_types());
-    return VectorizationResult{VectorizationStatus::NewOp, contract};
-  };
-  return vectorizeAsLinalgGeneric(b, linalgOp, newResults,
-                                  /*broadcastToMaximalCommonShape=*/false,
-                                  {vectorizeContraction});
-}
-
 static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
   return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
     return m.isProjectedPermutation(/*allowZerosInResults=*/true);
@@ -674,8 +614,6 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   }
   if (isElementwise(op))
     return success();
-  if (isaContractionOpInterface(linalgOp))
-    return success();
   // TODO: isaConvolutionOpInterface that can also infer from generic features.
   // But we will still need stride/dilation attributes that will be annoying to
   // reverse-engineer...
@@ -702,8 +640,6 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
     return failure();
 
   auto linalgOp = cast<LinalgOp>(op);
-  if (isaContractionOpInterface(linalgOp))
-    return vectorizeContraction(b, linalgOp, newResults);
 
   // TODO: isaConvolutionOpInterface that can also infer from generic features.
   // But we will still need stride/dilation attributes that will be annoying to
@@ -721,8 +657,7 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
        << "Vectorize linalg op as a generic by broadcasting to "
           "maximal common shape: "
        << *op);
-  return vectorizeAsLinalgGeneric(b, linalgOp, newResults,
-                                  /*broadcastToMaximalCommonShape=*/true);
+  return vectorizeAsLinalgGeneric(b, linalgOp, newResults);
 }
 
 //----------------------------------------------------------------------------//

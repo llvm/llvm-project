@@ -189,6 +189,9 @@ struct LinalgStrategyVectorizePass
       vectorizationPatterns.add<LinalgVectorizationPattern>(funcOp.getContext(),
                                                             filter, options);
     }
+    vector::populateVectorTransferPermutationMapLoweringPatterns(
+        vectorizationPatterns);
+    vector::populateVetorReductionToContractPatterns(vectorizationPatterns);
     vectorizationPatterns.add<linalg::LinalgCopyVTRForwardingPattern,
                               linalg::LinalgCopyVTWForwardingPattern>(
         funcOp.getContext(), /*benefit=*/2);
