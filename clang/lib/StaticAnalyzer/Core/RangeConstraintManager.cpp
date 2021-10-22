@@ -1600,12 +1600,13 @@ class ConstraintAssignor : public ConstraintAssignorBase<ConstraintAssignor> {
 public:
   template <class ClassOrSymbol>
   LLVM_NODISCARD static ProgramStateRef
-  assign(ProgramStateRef State, SValBuilder &Builder, RangeSet::Factory &F,
-         ClassOrSymbol CoS, RangeSet NewConstraint) {
+  assign(ProgramStateRef State, RangeConstraintManager &RCM,
+         SValBuilder &Builder, RangeSet::Factory &F, ClassOrSymbol CoS,
+         RangeSet NewConstraint) {
     if (!State || NewConstraint.isEmpty())
       return nullptr;
 
-    ConstraintAssignor Assignor{State, Builder, F};
+    ConstraintAssignor Assignor{State, RCM, Builder, F};
     return Assignor.assign(CoS, NewConstraint);
   }
 
@@ -1614,9 +1615,9 @@ public:
                                          RangeSet Constraint);
 
 private:
-  ConstraintAssignor(ProgramStateRef State, SValBuilder &Builder,
-                     RangeSet::Factory &F)
-      : State(State), Builder(Builder), RangeFactory(F) {}
+  ConstraintAssignor(ProgramStateRef State, RangeConstraintManager &RCM,
+                     SValBuilder &Builder, RangeSet::Factory &F)
+      : State(State), RCM(RCM), Builder(Builder), RangeFactory(F) {}
   using Base = ConstraintAssignorBase<ConstraintAssignor>;
 
   /// Base method for handling new constraints for symbols.
@@ -1696,6 +1697,7 @@ private:
   }
 
   ProgramStateRef State;
+  RangeConstraintManager &RCM;
   SValBuilder &Builder;
   RangeSet::Factory &RangeFactory;
 };
@@ -2420,7 +2422,8 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
 ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
                                                  SymbolRef Sym,
                                                  RangeSet Range) {
-  return ConstraintAssignor::assign(State, getSValBuilder(), F, Sym, Range);
+  return ConstraintAssignor::assign(State, *this, getSValBuilder(), F, Sym,
+                                    Range);
 }
 
 //===------------------------------------------------------------------------===
