@@ -635,12 +635,14 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   // it's not completely clear why, but here we only care about correctly
   // identifying the slot, not that all the surrounding data is correct.
   SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
-  Optional<ValueIDNum> V = MTracker->readSpill(L);
-  ASSERT_TRUE(V);
+  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+  unsigned SpillLocID = MTracker->getLocID(SpillNo, {64, 0});
+  LocIdx SpillLoc = MTracker->getSpillMLoc(SpillLocID);
+  ValueIDNum V = MTracker->readMLoc(SpillLoc);
   Register RAX = getRegByName("RAX");
   LocIdx RaxLoc = MTracker->getRegMLoc(RAX);
   ValueIDNum Cmp(0, 1, RaxLoc);
-  EXPECT_EQ(*V, Cmp);
+  EXPECT_EQ(V, Cmp);
 
   // A spill and restore should be recognised.
   MF = readMIRBlock(
@@ -662,7 +664,8 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   ValueIDNum RbxVal = MTracker->readMLoc(RbxLoc);
   EXPECT_EQ(RbxVal, Cmp);
 
-  // FIXME: future work, make sure all the subregisters are transferred too.
+  // Testing that all the subregisters are transferred happens in
+  // MTransferSubregSpills.
 
   // Copies and x86 movs should be recognised and honoured. In addition, all
   // of the subregisters should be copied across too.
@@ -722,6 +725,160 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   ValueIDNum RcxVal = MTracker->readMLoc(RcxLoc);
   ValueIDNum RcxDefVal(0, 2, RcxLoc); // instr 2 -> the copy
   EXPECT_EQ(RcxVal, RcxDefVal);
+}
+
+TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
+  SmallVector<MLocTransferMap, 1> TransferMap;
+  MachineFunction *MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Check that all the subregs of rax and rbx contain the same values. One
+  // should completely transfer to the other.
+  const char *ARegs[] = {"AL", "AH", "AX", "EAX", "HAX", "RAX"};
+  const char *BRegs[] = {"BL", "BH", "BX", "EBX", "HBX", "RBX"};
+  for (unsigned int I = 0; I < 6; ++I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx B = MTracker->getRegMLoc(getRegByName(BRegs[I]));
+    EXPECT_EQ(MTracker->readMLoc(A), MTracker->readMLoc(B));
+  }
+
+  // Explicitly check what's in the different subreg slots, on the stack.
+  // Pair up subreg idx fields with the corresponding subregister in $rax.
+  MLocTracker::StackSlotPos SubRegIdxes[] = {{8, 0}, {8, 8}, {16, 0}, {32, 0}, {64, 0}};
+  const char *SubRegNames[] = {"AL", "AH", "AX", "EAX", "RAX"};
+  for (unsigned int I = 0; I < 5; ++I) {
+    // Value number where it's defined,
+    LocIdx RegLoc = MTracker->getRegMLoc(getRegByName(SubRegNames[I]));
+    ValueIDNum DefNum(0, 1, RegLoc);
+    // Read the corresponding subreg field from the stack.
+    SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+    unsigned SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
+    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
+    ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
+    EXPECT_EQ(DefNum, SpillValue);
+  }
+
+  // If we have exactly the same code, but we write $eax to the stack slot after
+  // $rax, then we should still have exactly the same output in the lower five
+  // subregisters. Storing $eax to the start of the slot will overwrite with the
+  // same values. $rax, as an aliasing register, should be reset to something
+  // else by that write.
+  // In theory, we could try and recognise that we're writing the _same_ values
+  // to the stack again, and so $rax doesn't need to be reset to something else.
+  // It seems vanishingly unlikely that LLVM would generate such code though,
+  // so the benefits would be small.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    MOV32mr $rsp, 1, $noreg, 16, $noreg, $eax :: (store 4 into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  // Check lower five registers up to and include $eax == $ebx,
+  for (unsigned int I = 0; I < 5; ++I) {
+    LocIdx A = MTracker->getRegMLoc(getRegByName(ARegs[I]));
+    LocIdx B = MTracker->getRegMLoc(getRegByName(BRegs[I]));
+    EXPECT_EQ(MTracker->readMLoc(A), MTracker->readMLoc(B));
+  }
+
+  // $rbx should contain something else; today it's a def at the spill point
+  // of the 4 byte value.
+  SpillLoc L = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+  unsigned SpillID = MTracker->getLocID(SpillNo, {64, 0});
+  LocIdx Spill64Loc = MTracker->getSpillMLoc(SpillID);
+  ValueIDNum DefAtSpill64(0, 3, Spill64Loc);
+  LocIdx RbxLoc = MTracker->getRegMLoc(getRegByName("RBX"));
+  EXPECT_EQ(MTracker->readMLoc(RbxLoc), DefAtSpill64);
+
+  // Same again, test that the lower four subreg slots on the stack are the
+  // value defined by $rax in instruction 1.
+  for (unsigned int I = 0; I < 4; ++I) {
+    // Value number where it's defined,
+    LocIdx RegLoc = MTracker->getRegMLoc(getRegByName(SubRegNames[I]));
+    ValueIDNum DefNum(0, 1, RegLoc);
+    // Read the corresponding subreg field from the stack.
+    SpillNo = MTracker->getOrTrackSpillLoc(L);
+    SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
+    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
+    ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
+    EXPECT_EQ(DefNum, SpillValue);
+  }
+
+  // Stack slot for $rax should be a different value, today it's EmptyValue.
+  ValueIDNum SpillValue = MTracker->readMLoc(Spill64Loc);
+  EXPECT_EQ(SpillValue, DefAtSpill64);
+
+  // If we write something to the stack, then over-write with some register
+  // from a completely different hierarchy, none of the "old" values should be
+  // readable.
+  // NB: slight hack, store 16 in to a 8 byte stack slot.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
+   "    $xmm0 = IMPLICIT_DEF\n"
+   "    MOVUPDmr $rsp, 1, $noreg, 16, $noreg, killed $xmm0 :: (store (s128) into %stack.0)\n"
+   "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  for (unsigned int I = 0; I < 5; ++I) {
+    // Read subreg fields from the stack.
+    SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(L);
+    unsigned SpillID = MTracker->getLocID(SpillNo, SubRegIdxes[I]);
+    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
+    ValueIDNum SpillValue = MTracker->readMLoc(SpillLoc);
+
+    // Value should be defined by the spill-to-xmm0 instr, get value of a def
+    // at the point of the spill.
+    ValueIDNum SpillDef(0, 4, SpillLoc);
+    EXPECT_EQ(SpillValue, SpillDef);
+  }
+
+  // Read xmm0's position and ensure it has a value. Should be the live-in
+  // value to the block, as IMPLICIT_DEF isn't a real def.
+  SpillNo = MTracker->getOrTrackSpillLoc(L);
+  SpillID = MTracker->getLocID(SpillNo, {128, 0});
+  LocIdx Spill128Loc = MTracker->getSpillMLoc(SpillID);
+  SpillValue = MTracker->readMLoc(Spill128Loc);
+  Register XMM0 = getRegByName("XMM0");
+  LocIdx Xmm0Loc = MTracker->getRegMLoc(XMM0);
+  EXPECT_EQ(ValueIDNum(0, 0, Xmm0Loc), SpillValue);
+
+  // What happens if we spill ah to the stack, then load al? It should find
+  // the same value.
+  MF = readMIRBlock(
+   "    $rax = MOV64ri 0\n"
+   "    MOV8mr $rsp, 1, $noreg, 16, $noreg, $ah :: (store 1 into %stack.0)\n"
+   "    $al = MOV8rm $rsp, 1, $noreg, 0, $noreg :: (load 1 from %stack.0)\n"
+   "    RETQ\n");
+  setupLDVObj(MF);
+  TransferMap.clear();
+  TransferMap.resize(1);
+  produceMLocTransferFunction(*MF, TransferMap, 1);
+
+  Register AL = getRegByName("AL");
+  Register AH = getRegByName("AH");
+  LocIdx AlLoc = MTracker->getRegMLoc(AL);
+  LocIdx AhLoc = MTracker->getRegMLoc(AH);
+  ValueIDNum AHDef(0, 1, AhLoc);
+  ValueIDNum ALValue = MTracker->readMLoc(AlLoc);
+  EXPECT_EQ(ALValue, AHDef);
 }
 
 TEST_F(InstrRefLDVTest, MLocSingleBlock) {
