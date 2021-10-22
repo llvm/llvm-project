@@ -55,6 +55,14 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
 
   Optimize(CI);
 
+  // The original invocation probably didn't have strict context hash enabled.
+  // We will use the context hash of this invocation to distinguish between
+  // multiple incompatible versions of the same module and will use it when
+  // reporting dependencies to the clients. Let's make sure we're using
+  // **strict** context hash in order to prevent accidental sharing of
+  // incompatible modules (e.g. with differences in search paths).
+  CI.getHeaderSearchOpts().ModulesStrictContextHash = true;
+
   return CI;
 }
 
