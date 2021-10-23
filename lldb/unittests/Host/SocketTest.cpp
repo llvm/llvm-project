@@ -154,10 +154,8 @@ TEST_P(SocketTest, UDPConnect) {
 TEST_P(SocketTest, TCPListen0GetPort) {
   if (!HostSupportsIPv4())
     return;
-  Predicate<uint16_t> port_predicate;
-  port_predicate.SetValue(0, eBroadcastNever);
   llvm::Expected<std::unique_ptr<TCPSocket>> sock =
-      Socket::TcpListen("10.10.12.3:0", false, &port_predicate);
+      Socket::TcpListen("10.10.12.3:0", false);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_TRUE(sock.get()->IsValid());
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
