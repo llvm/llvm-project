@@ -1,4 +1,6 @@
 // RUN: mlir-opt %s -test-math-polynomial-approximation | FileCheck %s
+// RUN: mlir-opt %s -test-math-polynomial-approximation=enable-avx2 \
+// RUN: | FileCheck --check-prefix=AVX2 %s
 
 // Check that all math functions lowered to approximations built from
 // standard operations (add, mul, fma, shift, etc...).
@@ -298,5 +300,39 @@ func @tanh_scalar(%arg0: f32) -> f32 {
 // CHECK:         }
 func @tanh_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.tanh %arg0 : vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// We only approximate rsqrt for vectors and when the AVX2 option is enabled.
+// CHECK-LABEL:   func @rsqrt_scalar
+// AVX2-LABEL:    func @rsqrt_scalar
+// CHECK:           math.rsqrt
+// AVX2:            math.rsqrt
+func @rsqrt_scalar(%arg0: f32) -> f32 {
+  %0 = math.rsqrt %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func @rsqrt_vector
+// CHECK:           math.rsqrt
+// AVX2-LABEL:    func @rsqrt_vector(
+// AVX2-SAME:       %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
+// AVX2:   %[[VAL_1:.*]] = arith.constant dense<0x7F800000> : vector<8xf32>
+// AVX2:   %[[VAL_2:.*]] = arith.constant dense<1.500000e+00> : vector<8xf32>
+// AVX2:   %[[VAL_3:.*]] = arith.constant dense<-5.000000e-01> : vector<8xf32>
+// AVX2:   %[[VAL_4:.*]] = arith.constant dense<1.17549435E-38> : vector<8xf32>
+// AVX2:   %[[VAL_5:.*]] = arith.mulf %[[VAL_0]], %[[VAL_3]] : vector<8xf32>
+// AVX2:   %[[VAL_6:.*]] = arith.cmpf olt, %[[VAL_0]], %[[VAL_4]] : vector<8xf32>
+// AVX2:   %[[VAL_7:.*]] = arith.cmpf oeq, %[[VAL_0]], %[[VAL_1]] : vector<8xf32>
+// AVX2:   %[[VAL_8:.*]] = arith.ori %[[VAL_6]], %[[VAL_7]] : vector<8xi1>
+// AVX2:   %[[VAL_9:.*]] = x86vector.avx.rsqrt %[[VAL_0]] : vector<8xf32>
+// AVX2:   %[[VAL_10:.*]] = arith.mulf %[[VAL_5]], %[[VAL_9]] : vector<8xf32>
+// AVX2:   %[[VAL_11:.*]] = math.fma %[[VAL_9]], %[[VAL_10]], %[[VAL_2]] : vector<8xf32>
+// AVX2:   %[[VAL_12:.*]] = arith.mulf %[[VAL_9]], %[[VAL_11]] : vector<8xf32>
+// AVX2:   %[[VAL_13:.*]] = select %[[VAL_8]], %[[VAL_9]], %[[VAL_12]] : vector<8xi1>, vector<8xf32>
+// AVX2:   return %[[VAL_13]] : vector<8xf32>
+// AVX2: }
+func @rsqrt_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
+  %0 = math.rsqrt %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
 }
