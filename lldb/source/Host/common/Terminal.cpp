@@ -335,6 +335,26 @@ llvm::Error Terminal::SetParity(Terminal::Parity parity) {
 #endif // #if LLDB_ENABLE_TERMIOS
 }
 
+llvm::Error Terminal::SetParityCheck(Terminal::ParityCheck parity_check) {
+  llvm::Expected<Data> data = GetData();
+  if (!data)
+    return data.takeError();
+
+#if LLDB_ENABLE_TERMIOS
+  struct termios &fd_termios = data->m_termios;
+  fd_termios.c_iflag &= ~(IGNPAR | PARMRK | INPCK);
+
+  if (parity_check != ParityCheck::No) {
+    fd_termios.c_iflag |= INPCK;
+    if (parity_check == ParityCheck::Ignore)
+      fd_termios.c_iflag |= IGNPAR;
+    else if (parity_check == ParityCheck::Mark)
+      fd_termios.c_iflag |= PARMRK;
+  }
+  return SetData(data.get());
+#endif // #if LLDB_ENABLE_TERMIOS
+}
+
 llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
   llvm::Expected<Data> data = GetData();
   if (!data)
