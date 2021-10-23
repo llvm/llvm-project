@@ -410,6 +410,7 @@ const Value *stripAndAccumulateMinimalOffsets(
   };
 
   return Val->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds,
+                                                /* AllowInvariant */ false,
                                                 AttributorAnalysis);
 }
 

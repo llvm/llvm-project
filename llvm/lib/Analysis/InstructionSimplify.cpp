@@ -6089,73 +6089,27 @@ Value *llvm::SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   return ::SimplifyFreezeInst(Op0, Q);
 }
 
-static Constant *ConstructLoadOperandConstant(Value *Op) {
-  SmallVector<Value *, 4> Worklist;
-  // Invalid IR in unreachable code may contain self-referential values. Don't infinitely loop.
-  SmallPtrSet<Value *, 4> Visited;
-  Worklist.push_back(Op);
-  while (true) {
-    Value *CurOp = Worklist.back();
-    if (!Visited.insert(CurOp).second)
-      return nullptr;
-    if (isa<Constant>(CurOp))
-      break;
-    if (auto *BC = dyn_cast<BitCastOperator>(CurOp)) {
-      Worklist.push_back(BC->getOperand(0));
-    } else if (auto *GEP = dyn_cast<GEPOperator>(CurOp)) {
-      for (unsigned I = 1; I != GEP->getNumOperands(); ++I) {
-        if (!isa<Constant>(GEP->getOperand(I)))
-          return nullptr;
-      }
-      Worklist.push_back(GEP->getOperand(0));
-    } else if (auto *II = dyn_cast<IntrinsicInst>(CurOp)) {
-      if (II->isLaunderOrStripInvariantGroup())
-        Worklist.push_back(II->getOperand(0));
-      else
-        return nullptr;
-    } else {
-      return nullptr;
-    }
-  }
-
-  Constant *NewOp = cast<Constant>(Worklist.pop_back_val());
-  while (!Worklist.empty()) {
-    Value *CurOp = Worklist.pop_back_val();
-    if (isa<BitCastOperator>(CurOp)) {
-      NewOp = ConstantExpr::getBitCast(NewOp, CurOp->getType());
-    } else if (auto *GEP = dyn_cast<GEPOperator>(CurOp)) {
-      SmallVector<Constant *> Idxs;
-      Idxs.reserve(GEP->getNumOperands() - 1);
-      for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
-        Idxs.push_back(cast<Constant>(GEP->getOperand(I)));
-      }
-      NewOp = ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), NewOp,
-                                             Idxs, GEP->isInBounds(),
-                                             GEP->getInRangeIndex());
-    } else {
-      assert(isa<IntrinsicInst>(CurOp) &&
-             cast<IntrinsicInst>(CurOp)->isLaunderOrStripInvariantGroup() &&
-             "expected invariant group intrinsic");
-      NewOp = ConstantExpr::getBitCast(NewOp, CurOp->getType());
-    }
-  }
-  return NewOp;
-}
-
 static Value *SimplifyLoadInst(LoadInst *LI, Value *PtrOp,
                                const SimplifyQuery &Q) {
   if (LI->isVolatile())
     return nullptr;
 
-  // Try to make the load operand a constant, specifically handle
-  // invariant.group intrinsics.
+  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
   auto *PtrOpC = dyn_cast<Constant>(PtrOp);
-  if (!PtrOpC)
-    PtrOpC = ConstructLoadOperandConstant(PtrOp);
+  // Try to convert operand into a constant by stripping offsets while looking
+  // through invariant.group intrinsics. Don't bother if the underlying object
+  // is not constant, as calculating GEP offsets is expensive.
+  if (!PtrOpC && isa<Constant>(getUnderlyingObject(PtrOp))) {
+    PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
+        Q.DL, Offset, /* AllowNonInbounts */ true,
+        /* AllowInvariantGroup */ true);
+    // Index size may have changed due to address space casts.
+    Offset = Offset.sextOrTrunc(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()));
+    PtrOpC = dyn_cast<Constant>(PtrOp);
+  }
 
   if (PtrOpC)
-    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Q.DL);
-
+    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Offset, Q.DL);
   return nullptr;
 }
 

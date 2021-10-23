@@ -693,6 +693,9 @@ public:
   /// If \p AllowNonInbounds is true, offsets in GEPs are stripped and
   /// accumulated even if the GEP is not "inbounds".
   ///
+  /// If \p AllowInvariantGroup is true then this method also looks through
+  /// strip.invariant.group and launder.invariant.group intrinsics.
+  ///
   /// If \p ExternalAnalysis is provided it will be used to calculate a offset
   /// when a operand of GEP is not constant.
   /// For example, for a value \p ExternalAnalysis might try to calculate a
@@ -708,13 +711,15 @@ public:
   /// is unchanged.
   const Value *stripAndAccumulateConstantOffsets(
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
           nullptr) const;
   Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
-                                           bool AllowNonInbounds) {
+                                           bool AllowNonInbounds,
+                                           bool AllowInvariantGroup = false) {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds));
+            DL, Offset, AllowNonInbounds, AllowInvariantGroup));
   }
 
   /// This is a wrapper around stripAndAccumulateConstantOffsets with the
