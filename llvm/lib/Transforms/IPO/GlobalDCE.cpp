@@ -127,11 +127,12 @@ void GlobalDCEPass::UpdateGVDependencies(GlobalValue &GV) {
     ComputeDependencies(User, Deps);
   Deps.erase(&GV); // Remove self-reference.
   for (GlobalValue *GVU : Deps) {
-    // If this is a dep from a vtable to a virtual function, and we have
-    // complete information about all virtual call sites which could call
-    // though this vtable, then skip it, because the call site information will
-    // be more precise.
-    if (VFESafeVTables.count(GVU) && isa<Function>(&GV)) {
+    // If this is a dep from a vtable to a virtual function, and it's within the
+    // range specified in !vcall_visibility, and we have complete information
+    // about all virtual call sites which could call though this vtable, then
+    // skip it, because the call site information will be more precise.
+    if (isa<Function>(&GV) && VFESafeVTablesAndFns.count(GVU) &&
+        VFESafeVTablesAndFns[GVU].contains(&GV)) {
       LLVM_DEBUG(dbgs() << "Ignoring dep " << GVU->getName() << " -> "
                         << GV.getName() << "\n");
       continue;
@@ -153,6 +154,47 @@ void GlobalDCEPass::MarkLive(GlobalValue &GV,
     for (auto &&CM : make_range(ComdatMembers.equal_range(C))) {
       MarkLive(*CM.second, Updates); // Recursion depth is only two because only
                                      // globals in the same comdat are visited.
+    }
+  }
+}
+
+/// Recursively iterate over the (sub-)constants in the vtable and look for
+/// vptrs, if their offset is within [RangeStart..RangeEnd), add them to VFuncs.
+static void FindVirtualFunctionsInVTable(Module &M, Constant *C,
+                                         uint64_t RangeStart, uint64_t RangeEnd,
+                                         SmallPtrSet<GlobalValue *, 8> *VFuncs,
+                                         uint64_t BaseOffset = 0) {
+  if (auto *GV = dyn_cast<GlobalValue>(C)) {
+    if (auto *F = dyn_cast<Function>(GV))
+      if (RangeStart <= BaseOffset && BaseOffset < RangeEnd)
+        VFuncs->insert(F);
+
+    // Do not recurse outside of the current global.
+    return;
+  }
+
+  if (auto *S = dyn_cast<ConstantStruct>(C)) {
+    StructType *STy = dyn_cast<StructType>(S->getType());
+    const StructLayout *SL = M.getDataLayout().getStructLayout(STy);
+    for (auto EI : llvm::enumerate(STy->elements())) {
+      auto Offset = SL->getElementOffset(EI.index());
+      unsigned Op = SL->getElementContainingOffset(Offset);
+      FindVirtualFunctionsInVTable(M, cast<Constant>(S->getOperand(Op)),
+                                   RangeStart, RangeEnd, VFuncs,
+                                   BaseOffset + Offset);
+    }
+  } else if (auto *A = dyn_cast<ConstantArray>(C)) {
+    ArrayType *ATy = A->getType();
+    auto EltSize = M.getDataLayout().getTypeAllocSize(ATy->getElementType());
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
+      FindVirtualFunctionsInVTable(M, cast<Constant>(A->getOperand(i)),
+                                   RangeStart, RangeEnd, VFuncs,
+                                   BaseOffset + EltSize * i);
+    }
+  } else {
+    for (auto &Op : C->operands()) {
+      FindVirtualFunctionsInVTable(M, cast<Constant>(Op), RangeStart, RangeEnd,
+                                   VFuncs, BaseOffset);
     }
   }
 }
@@ -196,7 +238,14 @@ void GlobalDCEPass::ScanVTables(Module &M) {
           (LTOPostLink &&
            TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
         LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
-        VFESafeVTables.insert(&GV);
+
+        // Find and record all the vfunctions that are within the offset range
+        // specified in the !vcall_visibility attribute.
+        auto Range = GO->getVTableOffsetRange();
+        SmallPtrSet<GlobalValue *, 8> VFuncs;
+        FindVirtualFunctionsInVTable(M, GV.getInitializer(), std::get<0>(Range),
+                                     std::get<1>(Range), &VFuncs);
+        VFESafeVTablesAndFns[&GV] = VFuncs;
       }
     }
   }
@@ -213,14 +262,14 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
                            *Caller->getParent(), VTable);
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
-      VFESafeVTables.erase(VTable);
+      VFESafeVTablesAndFns.erase(VTable);
       return;
     }
 
     auto Callee = dyn_cast<Function>(Ptr->stripPointerCasts());
     if (!Callee) {
       LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
-      VFESafeVTables.erase(VTable);
+      VFESafeVTablesAndFns.erase(VTable);
       return;
     }
 
@@ -253,7 +302,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
       // type.checked.load with a non-constant offset, so assume every entry in
       // every matching vtable is used.
       for (auto &VTableInfo : TypeIdMap[TypeId]) {
-        VFESafeVTables.erase(VTableInfo.first);
+        VFESafeVTablesAndFns.erase(VTableInfo.first);
       }
     }
   }
@@ -274,16 +323,15 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 
   ScanVTables(M);
 
-  if (VFESafeVTables.empty())
+  if (VFESafeVTablesAndFns.empty())
     return;
 
   ScanTypeCheckedLoadIntrinsics(M);
 
-  LLVM_DEBUG(
-    dbgs() << "VFE safe vtables:\n";
-    for (auto *VTable : VFESafeVTables)
-      dbgs() << "  " << VTable->getName() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "VFE safe vtables:\n";
+             for (auto &Entry
+                  : VFESafeVTablesAndFns) dbgs()
+             << "  " << Entry.first->getName() << "\n";);
 }
 
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
@@ -449,7 +497,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   GVDependencies.clear();
   ComdatMembers.clear();
   TypeIdMap.clear();
-  VFESafeVTables.clear();
+  VFESafeVTablesAndFns.clear();
 
   if (Changed)
     return PreservedAnalyses::none();
