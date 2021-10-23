@@ -73,7 +73,7 @@ public:
 
     // Split the op's region before the op. This way, we have a clear insertion
     // point in which the op can be inlined.
-    Block *newBlock = originalBlock->splitBlock(op);
+    Block *newBlock = rewriter.splitBlock(originalBlock, Block::iterator(op));
     rewriter.inlineRegionBefore(op.region(), newBlock);
     // Now that op's region is inlined, the operands of its YieldOp are mapped
     // to the materialized target values. Therefore, we can replace the op's
