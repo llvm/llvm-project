@@ -707,12 +707,12 @@ unsigned DataLayout::getPointerSize(unsigned AS) const {
   return getPointerAlignElem(AS).TypeByteWidth;
 }
 
-unsigned DataLayout::getMaxPointerSize() const {
-  unsigned MaxPointerSize = 0;
+unsigned DataLayout::getMaxIndexSize() const {
+  unsigned MaxIndexSize = 0;
   for (auto &P : Pointers)
-    MaxPointerSize = std::max(MaxPointerSize, P.TypeByteWidth);
+    MaxIndexSize = std::max(MaxIndexSize, P.IndexWidth);
 
-  return MaxPointerSize;
+  return MaxIndexSize;
 }
 
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {
