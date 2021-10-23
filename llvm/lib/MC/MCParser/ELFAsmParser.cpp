@@ -830,7 +830,7 @@ bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
   if (getParser().parseIdentifier(Name))
     return TokError("expected identifier in directive");
 
-  if (Name.find('@') == StringRef::npos)
+  if (!Name.contains('@'))
     return TokError("expected a '@' in the name");
   bool KeepOriginalSym = !Name.contains("@@@");
   if (parseOptionalToken(AsmToken::Comma)) {
