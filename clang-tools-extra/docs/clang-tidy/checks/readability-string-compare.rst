@@ -49,6 +49,6 @@ Examples:
   if (str1.compare("foo") == 0) {
   }
 
-The above code examples shows the list of if-statements that this check will
+The above code examples show the list of if-statements that this check will
 give a warning for. All of them uses ``compare`` to check if equality or 
 inequality of two strings instead of using the correct operators.

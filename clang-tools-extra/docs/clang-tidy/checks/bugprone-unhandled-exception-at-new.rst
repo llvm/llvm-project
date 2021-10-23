@@ -21,5 +21,5 @@ is allowed to propagate out of the function (exception handler is checked for
 types ``std::bad_alloc``, ``std::exception``, and catch-all handler).
 The check assumes that any user-defined ``operator new`` is either
 ``noexcept`` or may throw an exception of type ``std::bad_alloc`` (or derived
-from it). Other exception types or exceptions occurring in the objects's
+from it). Other exception types or exceptions occurring in the object's
 constructor are not taken into account.

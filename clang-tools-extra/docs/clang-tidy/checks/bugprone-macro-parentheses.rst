@@ -4,10 +4,10 @@ bugprone-macro-parentheses
 ==========================
 
 
-Finds macros that can have unexpected behaviour due to missing parentheses.
+Finds macros that can have unexpected behavior due to missing parentheses.
 
 Macros are expanded by the preprocessor as-is. As a result, there can be
-unexpected behaviour; operators may be evaluated in unexpected order and
+unexpected behavior; operators may be evaluated in unexpected order and
 unary operators may become binary operators, etc.
 
 When the replacement list has an expression, it is recommended to surround

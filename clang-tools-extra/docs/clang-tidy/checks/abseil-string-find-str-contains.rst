@@ -10,7 +10,7 @@ This improves readability and reduces the likelihood of accidentally mixing
 ``find()`` and ``npos`` from different string-like types.
 
 By default, "string-like types" includes ``::std::basic_string``,
-``::std::basic_string_view``, and ``::absl::string_view``.  See the
+``::std::basic_string_view``, and ``::absl::string_view``. See the
 StringLikeClasses option to change this.
 
 .. code-block:: c++

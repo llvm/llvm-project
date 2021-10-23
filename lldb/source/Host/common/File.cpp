@@ -837,7 +837,7 @@ SerialPort::Create(int fd, OpenOptions options, Options serial_options,
       return std::move(error);
   }
 
-  return out;
+  return std::move(out);
 }
 
 SerialPort::SerialPort(int fd, OpenOptions options,

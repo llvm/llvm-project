@@ -131,8 +131,8 @@ are located in subdirectories of `clang-tidy/
 <https://github.com/llvm/llvm-project/tree/main/clang-tools-extra/clang-tidy/>`_
 and contain checks targeting a certain aspect of code quality (performance,
 readability, etc.), certain coding style or standard (Google, LLVM, CERT, etc.)
-or a widely used API (e.g. MPI). Their names are same as user-facing check
-groups names described :ref:`above <checks-groups-table>`.
+or a widely used API (e.g. MPI). Their names are the same as the user-facing
+check group names described :ref:`above <checks-groups-table>`.
 
 After choosing the module and the name for the check, run the
 ``clang-tidy/add_new_check.py`` script to create the skeleton of the check and
@@ -441,8 +441,8 @@ warnings and errors. The script provides multiple configuration flags.
 * To restrict the files examined you can provide one or more regex arguments
   that the file names are matched against.
   ``run-clang-tidy.py clang-tidy/.*Check\.cpp`` will only analyze clang-tidy
-  checks. It may also be necessary to restrict the header files warnings are
-  displayed from using the ``-header-filter`` flag. It has the same behavior
+  checks. It may also be necessary to restrict the header files that warnings
+  are displayed from using the ``-header-filter`` flag. It has the same behavior
   as the corresponding :program:`clang-tidy` flag.
 
 * To apply suggested fixes ``-fix`` can be passed as an argument. This gathers
@@ -475,7 +475,7 @@ It can also store that data as JSON files for further processing. Example output
 
 .. code-block:: console
 
-  $ clang-tidy -enable-check-profile -store-check-profile=.  -checks=-*,readability-function-size source.cpp
+  $ clang-tidy -enable-check-profile -store-check-profile=. -checks=-*,readability-function-size source.cpp
   $ # Note that there won't be timings table printed to the console.
   $ ls /tmp/out/
   20180516161318717446360-source.cpp.json

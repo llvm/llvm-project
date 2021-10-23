@@ -109,10 +109,10 @@ This heuristic can be configured with :ref:`bounds<opt_Bounds>`.
 The default bounds are: below `50`\% dissimilar and above `66`\% similar.
 This heuristic is case-sensitive.
 
-Jaro–Winkler distance (as `JaroWinkler`)
+Jaro-Winkler distance (as `JaroWinkler`)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The `Jaro–Winkler distance <http://en.wikipedia.org/wiki/Jaro–Winkler_distance>`_
+The `Jaro-Winkler distance <http://en.wikipedia.org/wiki/Jaro–Winkler_distance>`_
 is an edit distance like the Levenshtein distance.
 It is calculated from the amount of common characters that are sufficiently
 close to each other in position, and to-be-changed characters.
@@ -125,10 +125,10 @@ This heuristic can be configured with :ref:`bounds<opt_Bounds>`.
 The default bounds are: below `75`\% dissimilar and above `85`\% similar.
 This heuristic is case-insensitive.
 
-Sørensen–Dice coefficient (as `Dice`)
+Sørensen-Dice coefficient (as `Dice`)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The `Sørensen–Dice coefficient <http://en.wikipedia.org/wiki/Sørensen–Dice_coefficient>`_
+The `Sørensen-Dice coefficient <http://en.wikipedia.org/wiki/Sørensen–Dice_coefficient>`_
 was originally defined to measure the similarity of two sets.
 Formally, the coefficient is calculated by dividing `2 * #(intersection)` with
 `#(set1) + #(set2)`, where `#()` is the cardinality function of sets.
