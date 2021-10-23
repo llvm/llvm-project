@@ -158,8 +158,8 @@ struct TiledLinalgOp {
   SmallVector<Operation *, 8> loops;
   SmallVector<Value, 4> tensorResults;
 };
-Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     const LinalgTilingOptions &options);
+FailureOr<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
+                                      const LinalgTilingOptions &options);
 
 /// Fuse a sequence of linalg operations (`ops`) using tile-and-fuse. This
 /// proceeds as follows:
@@ -221,7 +221,7 @@ struct TiledAndFusedLinalgOps {
   /// The fused loop generated.
   SmallVector<Operation *, 4> fusedLoops;
 };
-Optional<TiledAndFusedLinalgOps>
+FailureOr<TiledAndFusedLinalgOps>
 tileAndFuseLinalgOps(OpBuilder &builder, ArrayRef<LinalgOp> ops,
                      const LinalgDependenceGraph &dependenceGraph,
                      const LinalgTilingOptions &tilingOptions);
@@ -344,7 +344,7 @@ struct PromotionInfo {
   Value fullLocalView;
   Value partialLocalView;
 };
-Optional<PromotionInfo>
+FailureOr<PromotionInfo>
 promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
                           AllocBufferCallbackFn allocationFn,
                           DataLayout &layout);
@@ -359,24 +359,24 @@ promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
 ///
 /// Returns the modified linalg op (the modification happens in place) as well
 /// as all the copy ops created.
-Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
-                                   LinalgPromotionOptions options);
+FailureOr<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
+                                    LinalgPromotionOptions options);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,
                                 SmallVectorImpl<Value> &newResults);
 
 /// Emits a loop nest of `scf.for` with the proper body for `linalgOp`.
-Optional<LinalgLoops> linalgOpToLoops(PatternRewriter &rewriter,
-                                      LinalgOp linalgOp);
+FailureOr<LinalgLoops> linalgOpToLoops(PatternRewriter &rewriter,
+                                       LinalgOp linalgOp);
 
 /// Emits a loop nest of `scf.parallel` with the proper body for `linalgOp`.
-Optional<LinalgLoops> linalgOpToParallelLoops(PatternRewriter &rewriter,
-                                              LinalgOp linalgOp);
+FailureOr<LinalgLoops> linalgOpToParallelLoops(PatternRewriter &rewriter,
+                                               LinalgOp linalgOp);
 
 /// Emits a loop nest of `affine.for` with the proper body for `linalgOp`.
-Optional<LinalgLoops> linalgOpToAffineLoops(PatternRewriter &rewriter,
-                                            LinalgOp linalgOp);
+FailureOr<LinalgLoops> linalgOpToAffineLoops(PatternRewriter &rewriter,
+                                             LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // Preconditions that ensure the corresponding transformation succeeds and can
@@ -961,15 +961,15 @@ struct LinalgLoweringPattern : public RewritePattern {
       // TODO: Move lowering to library calls here.
       return failure();
     case LinalgLoweringType::Loops:
-      if (!linalgOpToLoops(rewriter, op))
+      if (failed(linalgOpToLoops(rewriter, op)))
         return failure();
       break;
     case LinalgLoweringType::AffineLoops:
-      if (!linalgOpToAffineLoops(rewriter, op))
+      if (failed(linalgOpToAffineLoops(rewriter, op)))
         return failure();
       break;
     case LinalgLoweringType::ParallelLoops:
-      if (!linalgOpToParallelLoops(rewriter, op))
+      if (failed(linalgOpToParallelLoops(rewriter, op)))
         return failure();
       break;
     }

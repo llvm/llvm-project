@@ -862,10 +862,13 @@ llvm::raw_ostream &Procedure::Dump(llvm::raw_ostream &o) const {
 // Utility class to determine if Procedures, etc. are distinguishable
 class DistinguishUtils {
 public:
+  explicit DistinguishUtils(const common::LanguageFeatureControl &features)
+      : features_{features} {}
+
   // Are these procedures distinguishable for a generic name?
-  static bool Distinguishable(const Procedure &, const Procedure &);
+  bool Distinguishable(const Procedure &, const Procedure &) const;
   // Are these procedures distinguishable for a generic operator or assignment?
-  static bool DistinguishableOpOrAssign(const Procedure &, const Procedure &);
+  bool DistinguishableOpOrAssign(const Procedure &, const Procedure &) const;
 
 private:
   struct CountDummyProcedures {
@@ -881,31 +884,33 @@ private:
     int notOptional{0};
   };
 
-  static bool Rule3Distinguishable(const Procedure &, const Procedure &);
-  static const DummyArgument *Rule1DistinguishingArg(
-      const DummyArguments &, const DummyArguments &);
-  static int FindFirstToDistinguishByPosition(
-      const DummyArguments &, const DummyArguments &);
-  static int FindLastToDistinguishByName(
-      const DummyArguments &, const DummyArguments &);
-  static int CountCompatibleWith(const DummyArgument &, const DummyArguments &);
-  static int CountNotDistinguishableFrom(
-      const DummyArgument &, const DummyArguments &);
-  static bool Distinguishable(const DummyArgument &, const DummyArgument &);
-  static bool Distinguishable(const DummyDataObject &, const DummyDataObject &);
-  static bool Distinguishable(const DummyProcedure &, const DummyProcedure &);
-  static bool Distinguishable(const FunctionResult &, const FunctionResult &);
-  static bool Distinguishable(const TypeAndShape &, const TypeAndShape &);
-  static bool IsTkrCompatible(const DummyArgument &, const DummyArgument &);
-  static bool IsTkrCompatible(const TypeAndShape &, const TypeAndShape &);
-  static const DummyArgument *GetAtEffectivePosition(
-      const DummyArguments &, int);
-  static const DummyArgument *GetPassArg(const Procedure &);
+  bool Rule3Distinguishable(const Procedure &, const Procedure &) const;
+  const DummyArgument *Rule1DistinguishingArg(
+      const DummyArguments &, const DummyArguments &) const;
+  int FindFirstToDistinguishByPosition(
+      const DummyArguments &, const DummyArguments &) const;
+  int FindLastToDistinguishByName(
+      const DummyArguments &, const DummyArguments &) const;
+  int CountCompatibleWith(const DummyArgument &, const DummyArguments &) const;
+  int CountNotDistinguishableFrom(
+      const DummyArgument &, const DummyArguments &) const;
+  bool Distinguishable(const DummyArgument &, const DummyArgument &) const;
+  bool Distinguishable(const DummyDataObject &, const DummyDataObject &) const;
+  bool Distinguishable(const DummyProcedure &, const DummyProcedure &) const;
+  bool Distinguishable(const FunctionResult &, const FunctionResult &) const;
+  bool Distinguishable(const TypeAndShape &, const TypeAndShape &) const;
+  bool IsTkrCompatible(const DummyArgument &, const DummyArgument &) const;
+  bool IsTkrCompatible(const TypeAndShape &, const TypeAndShape &) const;
+  const DummyArgument *GetAtEffectivePosition(
+      const DummyArguments &, int) const;
+  const DummyArgument *GetPassArg(const Procedure &) const;
+
+  const common::LanguageFeatureControl &features_;
 };
 
 // Simpler distinguishability rules for operators and assignment
 bool DistinguishUtils::DistinguishableOpOrAssign(
-    const Procedure &proc1, const Procedure &proc2) {
+    const Procedure &proc1, const Procedure &proc2) const {
   auto &args1{proc1.dummyArguments};
   auto &args2{proc2.dummyArguments};
   if (args1.size() != args2.size()) {
@@ -920,7 +925,7 @@ bool DistinguishUtils::DistinguishableOpOrAssign(
 }
 
 bool DistinguishUtils::Distinguishable(
-    const Procedure &proc1, const Procedure &proc2) {
+    const Procedure &proc1, const Procedure &proc2) const {
   auto &args1{proc1.dummyArguments};
   auto &args2{proc2.dummyArguments};
   auto count1{CountDummyProcedures(args1)};
@@ -950,7 +955,7 @@ bool DistinguishUtils::Distinguishable(
 // C1514 rule 3: Procedures are distinguishable if both have a passed-object
 // dummy argument and those are distinguishable.
 bool DistinguishUtils::Rule3Distinguishable(
-    const Procedure &proc1, const Procedure &proc2) {
+    const Procedure &proc1, const Procedure &proc2) const {
   const DummyArgument *pass1{GetPassArg(proc1)};
   const DummyArgument *pass2{GetPassArg(proc2)};
   return pass1 && pass2 && Distinguishable(*pass1, *pass2);
@@ -964,7 +969,7 @@ bool DistinguishUtils::Rule3Distinguishable(
 //   that are not distinguishable from x
 // - m is greater than n
 const DummyArgument *DistinguishUtils::Rule1DistinguishingArg(
-    const DummyArguments &args1, const DummyArguments &args2) {
+    const DummyArguments &args1, const DummyArguments &args2) const {
   auto size1{args1.size()};
   auto size2{args2.size()};
   for (std::size_t i{0}; i < size1 + size2; ++i) {
@@ -986,7 +991,7 @@ const DummyArgument *DistinguishUtils::Rule1DistinguishingArg(
 // - args2 has no dummy argument at that effective position
 // - the dummy argument at that position is distinguishable from it
 int DistinguishUtils::FindFirstToDistinguishByPosition(
-    const DummyArguments &args1, const DummyArguments &args2) {
+    const DummyArguments &args1, const DummyArguments &args2) const {
   int effective{0}; // position of arg1 in list, ignoring passed arg
   for (std::size_t i{0}; i < args1.size(); ++i) {
     const DummyArgument &arg1{args1.at(i)};
@@ -1006,7 +1011,7 @@ int DistinguishUtils::FindFirstToDistinguishByPosition(
 // - args2 has no dummy argument with that name
 // - the dummy argument with that name is distinguishable from it
 int DistinguishUtils::FindLastToDistinguishByName(
-    const DummyArguments &args1, const DummyArguments &args2) {
+    const DummyArguments &args1, const DummyArguments &args2) const {
   std::map<std::string, const DummyArgument *> nameToArg;
   for (const auto &arg2 : args2) {
     nameToArg.emplace(arg2.name, &arg2);
@@ -1026,7 +1031,7 @@ int DistinguishUtils::FindLastToDistinguishByName(
 // Count the dummy data objects in args that are nonoptional, are not
 // passed-object, and that x is TKR compatible with
 int DistinguishUtils::CountCompatibleWith(
-    const DummyArgument &x, const DummyArguments &args) {
+    const DummyArgument &x, const DummyArguments &args) const {
   return std::count_if(args.begin(), args.end(), [&](const DummyArgument &y) {
     return !y.pass && !y.IsOptional() && IsTkrCompatible(x, y);
   });
@@ -1035,7 +1040,7 @@ int DistinguishUtils::CountCompatibleWith(
 // Return the number of dummy data objects in args that are not
 // distinguishable from x and not passed-object.
 int DistinguishUtils::CountNotDistinguishableFrom(
-    const DummyArgument &x, const DummyArguments &args) {
+    const DummyArgument &x, const DummyArguments &args) const {
   return std::count_if(args.begin(), args.end(), [&](const DummyArgument &y) {
     return !y.pass && std::holds_alternative<DummyDataObject>(y.u) &&
         !Distinguishable(y, x);
@@ -1043,7 +1048,7 @@ int DistinguishUtils::CountNotDistinguishableFrom(
 }
 
 bool DistinguishUtils::Distinguishable(
-    const DummyArgument &x, const DummyArgument &y) {
+    const DummyArgument &x, const DummyArgument &y) const {
   if (x.u.index() != y.u.index()) {
     return true; // different kind: data/proc/alt-return
   }
@@ -1061,7 +1066,7 @@ bool DistinguishUtils::Distinguishable(
 }
 
 bool DistinguishUtils::Distinguishable(
-    const DummyDataObject &x, const DummyDataObject &y) {
+    const DummyDataObject &x, const DummyDataObject &y) const {
   using Attr = DummyDataObject::Attr;
   if (Distinguishable(x.type, y.type)) {
     return true;
@@ -1071,13 +1076,27 @@ bool DistinguishUtils::Distinguishable(
   } else if (y.attrs.test(Attr::Allocatable) && x.attrs.test(Attr::Pointer) &&
       x.intent != common::Intent::In) {
     return true;
+  } else if (features_.IsEnabled(
+                 common::LanguageFeature::DistinguishableSpecifics) &&
+      (x.attrs.test(Attr::Allocatable) || x.attrs.test(Attr::Pointer)) &&
+      (y.attrs.test(Attr::Allocatable) || y.attrs.test(Attr::Pointer)) &&
+      (x.type.type().IsUnlimitedPolymorphic() !=
+              y.type.type().IsUnlimitedPolymorphic() ||
+          x.type.type().IsPolymorphic() != y.type.type().IsPolymorphic())) {
+    // Extension: Per 15.5.2.5(2), an allocatable/pointer dummy and its
+    // corresponding actual argument must both or neither be polymorphic,
+    // and must both or neither be unlimited polymorphic.  So when exactly
+    // one of two dummy arguments is polymorphic or unlimited polymorphic,
+    // any actual argument that is admissible to one of them cannot also match
+    // the other one.
+    return true;
   } else {
     return false;
   }
 }
 
 bool DistinguishUtils::Distinguishable(
-    const DummyProcedure &x, const DummyProcedure &y) {
+    const DummyProcedure &x, const DummyProcedure &y) const {
   const Procedure &xProc{x.procedure.value()};
   const Procedure &yProc{y.procedure.value()};
   if (Distinguishable(xProc, yProc)) {
@@ -1091,7 +1110,7 @@ bool DistinguishUtils::Distinguishable(
 }
 
 bool DistinguishUtils::Distinguishable(
-    const FunctionResult &x, const FunctionResult &y) {
+    const FunctionResult &x, const FunctionResult &y) const {
   if (x.u.index() != y.u.index()) {
     return true; // one is data object, one is procedure
   }
@@ -1109,19 +1128,19 @@ bool DistinguishUtils::Distinguishable(
 }
 
 bool DistinguishUtils::Distinguishable(
-    const TypeAndShape &x, const TypeAndShape &y) {
+    const TypeAndShape &x, const TypeAndShape &y) const {
   return !IsTkrCompatible(x, y) && !IsTkrCompatible(y, x);
 }
 
 // Compatibility based on type, kind, and rank
 bool DistinguishUtils::IsTkrCompatible(
-    const DummyArgument &x, const DummyArgument &y) {
+    const DummyArgument &x, const DummyArgument &y) const {
   const auto *obj1{std::get_if<DummyDataObject>(&x.u)};
   const auto *obj2{std::get_if<DummyDataObject>(&y.u)};
   return obj1 && obj2 && IsTkrCompatible(obj1->type, obj2->type);
 }
 bool DistinguishUtils::IsTkrCompatible(
-    const TypeAndShape &x, const TypeAndShape &y) {
+    const TypeAndShape &x, const TypeAndShape &y) const {
   return x.type().IsTkCompatibleWith(y.type()) &&
       (x.attrs().test(TypeAndShape::Attr::AssumedRank) ||
           y.attrs().test(TypeAndShape::Attr::AssumedRank) ||
@@ -1130,7 +1149,7 @@ bool DistinguishUtils::IsTkrCompatible(
 
 // Return the argument at the given index, ignoring the passed arg
 const DummyArgument *DistinguishUtils::GetAtEffectivePosition(
-    const DummyArguments &args, int index) {
+    const DummyArguments &args, int index) const {
   for (const DummyArgument &arg : args) {
     if (!arg.pass) {
       if (index == 0) {
@@ -1143,7 +1162,7 @@ const DummyArgument *DistinguishUtils::GetAtEffectivePosition(
 }
 
 // Return the passed-object dummy argument of this procedure, if any
-const DummyArgument *DistinguishUtils::GetPassArg(const Procedure &proc) {
+const DummyArgument *DistinguishUtils::GetPassArg(const Procedure &proc) const {
   for (const auto &arg : proc.dummyArguments) {
     if (arg.pass) {
       return &arg;
@@ -1152,12 +1171,14 @@ const DummyArgument *DistinguishUtils::GetPassArg(const Procedure &proc) {
   return nullptr;
 }
 
-bool Distinguishable(const Procedure &x, const Procedure &y) {
-  return DistinguishUtils::Distinguishable(x, y);
+bool Distinguishable(const common::LanguageFeatureControl &features,
+    const Procedure &x, const Procedure &y) {
+  return DistinguishUtils{features}.Distinguishable(x, y);
 }
 
-bool DistinguishableOpOrAssign(const Procedure &x, const Procedure &y) {
-  return DistinguishUtils::DistinguishableOpOrAssign(x, y);
+bool DistinguishableOpOrAssign(const common::LanguageFeatureControl &features,
+    const Procedure &x, const Procedure &y) {
+  return DistinguishUtils{features}.DistinguishableOpOrAssign(x, y);
 }
 
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyArgument)

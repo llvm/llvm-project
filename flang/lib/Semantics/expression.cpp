@@ -235,7 +235,7 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
       for (const auto &expr : ref.subscript()) {
         subscriptRank += expr.Rank();
       }
-      if (subscriptRank > 0) {
+      if (subscriptRank > 0) { // C919a
         Say("Subscripts of component '%s' of rank-%d derived type "
             "array have rank %d but must all be scalar"_err_en_US,
             symbol.name(), baseRank, subscriptRank);
@@ -292,7 +292,7 @@ MaybeExpr ExpressionAnalyzer::TopLevelChecks(DataRef &&dataRef) {
     int componentRank{symbol.Rank()};
     if (componentRank > 0) {
       int baseRank{component->base().Rank()};
-      if (baseRank > 0) {
+      if (baseRank > 0) { // C919a
         Say("Reference to whole rank-%d component '%%%s' of "
             "rank-%d array of derived type is not allowed"_err_en_US,
             componentRank, symbol.name(), baseRank);
@@ -972,8 +972,11 @@ static NamedEntity IgnoreAnySubscripts(Designator<SomeDerived> &&designator) {
 }
 
 // Components of parent derived types are explicitly represented as such.
-static std::optional<Component> CreateComponent(
+std::optional<Component> ExpressionAnalyzer::CreateComponent(
     DataRef &&base, const Symbol &component, const semantics::Scope &scope) {
+  if (IsAllocatableOrPointer(component) && base.Rank() > 0) { // C919b
+    Say("An allocatable or pointer component reference must be applied to a scalar base"_err_en_US);
+  }
   if (&component.owner() == &scope) {
     return Component{std::move(base), component};
   }
@@ -2018,8 +2021,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           continue;
         }
       }
-      if (semantics::CheckInterfaceForGeneric(
-              *procedure, localActuals, GetFoldingContext()) &&
+      if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+              GetFoldingContext(), false /* no integer conversions */) &&
           CheckCompatibleArguments(*procedure, localActuals)) {
         if ((procedure->IsElemental() && elemental) ||
             (!procedure->IsElemental() && nonElemental)) {

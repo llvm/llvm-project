@@ -13092,19 +13092,15 @@ static SDValue PerformVSELECTCombine(SDNode *N,
 }
 
 static SDValue PerformABSCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  const ARMSubtarget *Subtarget) {
-  SDValue res;
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const ARMSubtarget *Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (TLI.isOperationLegal(N->getOpcode(), N->getValueType(0)))
     return SDValue();
 
-  if (!TLI.expandABS(N, res, DAG))
-      return SDValue();
-
-  return res;
+  return TLI.expandABS(N, DAG);
 }
 
 /// PerformADDECombine - Target-specific dag combine transform from

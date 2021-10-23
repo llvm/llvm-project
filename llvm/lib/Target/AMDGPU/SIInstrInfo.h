@@ -1149,6 +1149,8 @@ public:
   }
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
+
+  const TargetSchedModel &getSchedModel() const { return SchedModel; }
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

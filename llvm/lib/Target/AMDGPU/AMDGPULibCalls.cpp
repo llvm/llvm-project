@@ -86,9 +86,9 @@ private:
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
 
   // evaluate calls if calls' arguments are constants.
-  bool evaluateScalarMathFunc(FuncInfo &FInfo, double& Res0,
+  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double& Res0,
     double& Res1, Constant *copr0, Constant *copr1, Constant *copr2);
-  bool evaluateCall(CallInst *aCI, FuncInfo &FInfo);
+  bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
   // exp
   bool fold_exp(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
@@ -115,7 +115,8 @@ private:
   bool fold_sincos(CallInst * CI, IRBuilder<> &B, AliasAnalysis * AA);
 
   // __read_pipe/__write_pipe
-  bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B, FuncInfo &FInfo);
+  bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
+                            const FuncInfo &FInfo);
 
   // llvm.amdgcn.wavefrontsize
   bool fold_wavefrontsize(CallInst *CI, IRBuilder<> &B);
@@ -557,7 +558,7 @@ bool AMDGPULibCalls::useNative(CallInst *aCI) {
 // for such cases where N is the size in bytes of the type (N = 1, 2, 4, 8, ...,
 // 128). The same for __read_pipe_4, write_pipe_2, and write_pipe_4.
 bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
-                                          FuncInfo &FInfo) {
+                                          const FuncInfo &FInfo) {
   auto *Callee = CI->getCalledFunction();
   if (!Callee->isDeclaration())
     return false;
@@ -1370,8 +1371,7 @@ bool AMDGPULibCalls::fold_wavefrontsize(CallInst *CI, IRBuilder<> &B) {
   StringRef CPU = TM->getTargetCPU();
   StringRef Features = TM->getTargetFeatureString();
   if ((CPU.empty() || CPU.equals_insensitive("generic")) &&
-      (Features.empty() ||
-       Features.find_insensitive("wavefrontsize") == StringRef::npos))
+      (Features.empty() || !Features.contains_insensitive("wavefrontsize")))
     return false;
 
   Function *F = CI->getParent()->getParent();
@@ -1409,7 +1409,7 @@ AllocaInst* AMDGPULibCalls::insertAlloca(CallInst *UI, IRBuilder<> &B,
   return Alloc;
 }
 
-bool AMDGPULibCalls::evaluateScalarMathFunc(FuncInfo &FInfo,
+bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
                                             double& Res0, double& Res1,
                                             Constant *copr0, Constant *copr1,
                                             Constant *copr2) {
@@ -1604,7 +1604,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(FuncInfo &FInfo,
   return false;
 }
 
-bool AMDGPULibCalls::evaluateCall(CallInst *aCI, FuncInfo &FInfo) {
+bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   int numArgs = (int)aCI->arg_size();
   if (numArgs > 3)
     return false;

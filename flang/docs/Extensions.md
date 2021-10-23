@@ -31,7 +31,8 @@ accepted if enabled by command-line options.
   This conversion allows the results of the intrinsics like
   `SIZE` that (as mentioned below) may return non-default
   `INTEGER` results by default to be passed.  A warning is
-  emitted when truncation is possible.
+  emitted when truncation is possible.  These conversions
+  are not applied in calls to non-intrinsic generic procedures.
 * We are not strict on the contents of `BLOCK DATA` subprograms
   so long as they contain no executable code, no internal subprograms,
   and allocate no storage outside a named `COMMON` block.  (C1415)
@@ -179,6 +180,13 @@ end
   we also treat scalars as being trivially contiguous, so that they
   can be used in contexts like data targets in pointer assignments
   with bounds remapping.
+* We support some combinations of specific procedures in generic
+  interfaces that a strict reading of the standard would preclude
+  when their calls must nonetheless be distinguishable.
+  Specifically, `ALLOCATABLE` dummy arguments are distinguishing
+  if an actual argument acceptable to one could not be passed to
+  the other & vice versa because exactly one is polymorphic or
+  exactly one is unlimited polymorphic).
 
 ### Extensions supported when enabled by options
 

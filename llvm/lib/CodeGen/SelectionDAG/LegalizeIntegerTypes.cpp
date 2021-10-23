@@ -579,11 +579,24 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Constant(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDLoc dl(N);
+
+  // If the larger CTLZ isn't supported by the target, try to expand now.
+  // If we expand later we'll end up with more operations since we lost the
+  // original type.
+  if (!OVT.isVector() && TLI.isTypeLegal(NVT) &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTLZ, NVT) &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTLZ_ZERO_UNDEF, NVT)) {
+    if (SDValue Result = TLI.expandCTLZ(N, DAG)) {
+      Result = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Result);
+      return Result;
+    }
+  }
+
   // Zero extend to the promoted type and do the count there.
   SDValue Op = ZExtPromotedInteger(N->getOperand(0));
-  SDLoc dl(N);
-  EVT OVT = N->getValueType(0);
-  EVT NVT = Op.getValueType();
   Op = DAG.getNode(N->getOpcode(), dl, NVT, Op);
   // Subtract off the extra leading bits in the bigger type.
   return DAG.getNode(
@@ -593,6 +606,22 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+
+  // If the larger CTPOP isn't supported by the target, try to expand now.
+  // If we expand later we'll end up with more operations since we lost the
+  // original type.
+  // TODO: Expand ISD::PARITY. Need to move ExpandPARITY from LegalizeDAG to
+  // TargetLowering.
+  if (N->getOpcode() == ISD::CTPOP && !OVT.isVector() && TLI.isTypeLegal(NVT) &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTPOP, NVT)) {
+    if (SDValue Result = TLI.expandCTPOP(N, DAG)) {
+      Result = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Result);
+      return Result;
+    }
+  }
+
   // Zero extend to the promoted type and do the count or parity there.
   SDValue Op = ZExtPromotedInteger(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op);
@@ -603,6 +632,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = Op.getValueType();
   SDLoc dl(N);
+
+  // If the larger CTTZ isn't supported by the target, try to expand now.
+  // If we expand later we'll end up with more operations since we lost the
+  // original type.
+  if (!OVT.isVector() && TLI.isTypeLegal(NVT) &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ, NVT) &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::CTTZ_ZERO_UNDEF, NVT)) {
+    if (SDValue Result = TLI.expandCTTZ(N, DAG)) {
+      Result = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Result);
+      return Result;
+    }
+  }
+
   if (N->getOpcode() == ISD::CTTZ) {
     // The count is the same in the promoted type except if the original
     // value was zero.  This can be handled by setting the bit just off

@@ -1095,8 +1095,8 @@ Status
 ======
 
 .. table:: Current Status
-     :name: feature-status-table
-     :widths: auto
+    :name: feature-status-table
+    :widths: auto
 
 {status_tables}
 

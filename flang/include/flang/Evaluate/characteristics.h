@@ -17,6 +17,7 @@
 #include "expression.h"
 #include "shape.h"
 #include "type.h"
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
@@ -43,9 +44,11 @@ namespace Fortran::evaluate::characteristics {
 using common::CopyableIndirection;
 
 // Are these procedures distinguishable for a generic name or FINAL?
-bool Distinguishable(const Procedure &, const Procedure &);
+bool Distinguishable(const common::LanguageFeatureControl &, const Procedure &,
+    const Procedure &);
 // Are these procedures distinguishable for a generic operator or assignment?
-bool DistinguishableOpOrAssign(const Procedure &, const Procedure &);
+bool DistinguishableOpOrAssign(const common::LanguageFeatureControl &,
+    const Procedure &, const Procedure &);
 
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same

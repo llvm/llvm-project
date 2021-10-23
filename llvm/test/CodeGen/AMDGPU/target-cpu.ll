@@ -107,5 +107,5 @@ attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "target-cpu"="tahiti" }
 attributes #3 = { nounwind "target-cpu"="bonaire" }
 attributes #4 = { nounwind "target-cpu"="fiji" }
-attributes #5 = { nounwind "target-features"="+promote-alloca" "amdgpu-waves-per-eu"="1,3" }
-attributes #6 = { nounwind "target-features"="-promote-alloca" "amdgpu-waves-per-eu"="1,3" }
+attributes #5 = { nounwind "target-features"="+promote-alloca" "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="1,256" }
+attributes #6 = { nounwind "target-features"="-promote-alloca" "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="1,256" }

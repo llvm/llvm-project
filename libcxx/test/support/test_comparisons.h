@@ -19,12 +19,14 @@
 #define TEST_COMPARISONS_H
 
 #include <type_traits>
+#include <cassert>
 #include "test_macros.h"
 
 //  Test all six comparison operations for sanity
 template <class T, class U = T>
 TEST_CONSTEXPR_CXX14 bool testComparisons6(const T& t1, const U& t2, bool isEqual, bool isLess)
 {
+    assert(!(isEqual && isLess) && "isEqual and isLess cannot be both true");
     if (isEqual)
         {
         if (!(t1 == t2)) return false;
@@ -171,4 +173,17 @@ void AssertComparisons2ConvertibleToBool()
     static_assert((std::is_convertible<decltype(std::declval<const T&>() != std::declval<const U&>()), bool>::value), "");
 }
 
+struct LessAndEqComp {
+  int value;
+
+  LessAndEqComp(int v) : value(v) {}
+
+  friend bool operator<(const LessAndEqComp& lhs, const LessAndEqComp& rhs) {
+    return lhs.value < rhs.value;
+  }
+
+  friend bool operator==(const LessAndEqComp& lhs, const LessAndEqComp& rhs) {
+    return lhs.value == rhs.value;
+  }
+};
 #endif // TEST_COMPARISONS_H

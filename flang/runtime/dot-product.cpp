@@ -15,21 +15,29 @@
 
 namespace Fortran::runtime {
 
-template <typename RESULT, TypeCategory XCAT, typename XT, typename YT>
+// Beware: DOT_PRODUCT of COMPLEX data uses the complex conjugate of the first
+// argument; MATMUL does not.
+
+// General accumulator for any type and stride; this is not used for
+// contiguous numeric vectors.
+template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 class Accumulator {
 public:
-  using Result = RESULT;
+  using Result = AccumulationType<RCAT, RKIND>;
   Accumulator(const Descriptor &x, const Descriptor &y) : x_{x}, y_{y} {}
-  void Accumulate(SubscriptValue xAt, SubscriptValue yAt) {
-    if constexpr (XCAT == TypeCategory::Complex) {
-      sum_ += std::conj(static_cast<Result>(*x_.Element<XT>(&xAt))) *
-          static_cast<Result>(*y_.Element<YT>(&yAt));
-    } else if constexpr (XCAT == TypeCategory::Logical) {
+  void AccumulateIndexed(SubscriptValue xAt, SubscriptValue yAt) {
+    if constexpr (RCAT == TypeCategory::Logical) {
       sum_ = sum_ ||
           (IsLogicalElementTrue(x_, &xAt) && IsLogicalElementTrue(y_, &yAt));
     } else {
-      sum_ += static_cast<Result>(*x_.Element<XT>(&xAt)) *
-          static_cast<Result>(*y_.Element<YT>(&yAt));
+      const XT &xElement{*x_.Element<XT>(&xAt)};
+      const YT &yElement{*y_.Element<YT>(&yAt)};
+      if constexpr (RCAT == TypeCategory::Complex) {
+        sum_ += std::conj(static_cast<Result>(xElement)) *
+            static_cast<Result>(yElement);
+      } else {
+        sum_ += static_cast<Result>(xElement) * static_cast<Result>(yElement);
+      }
     }
   }
   Result GetResult() const { return sum_; }
@@ -39,9 +47,10 @@ private:
   Result sum_{};
 };
 
-template <typename RESULT, TypeCategory XCAT, typename XT, typename YT>
-static inline RESULT DoDotProduct(
+template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
+static inline CppTypeFor<RCAT, RKIND> DoDotProduct(
     const Descriptor &x, const Descriptor &y, Terminator &terminator) {
+  using Result = CppTypeFor<RCAT, RKIND>;
   RUNTIME_CHECK(terminator, x.rank() == 1 && y.rank() == 1);
   SubscriptValue n{x.GetDimension(0).Extent()};
   if (SubscriptValue yN{y.GetDimension(0).Extent()}; yN != n) {
@@ -49,24 +58,48 @@ static inline RESULT DoDotProduct(
         "DOT_PRODUCT: SIZE(VECTOR_A) is %jd but SIZE(VECTOR_B) is %jd",
         static_cast<std::intmax_t>(n), static_cast<std::intmax_t>(yN));
   }
-  if constexpr (std::is_same_v<XT, YT>) {
-    if constexpr (std::is_same_v<XT, float>) {
-      // TODO: call BLAS-1 SDOT or SDSDOT
-    } else if constexpr (std::is_same_v<XT, double>) {
-      // TODO: call BLAS-1 DDOT
-    } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
-      // TODO: call BLAS-1 CDOTC
-    } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
-      // TODO: call BLAS-1 ZDOTC
+  if constexpr (RCAT != TypeCategory::Logical) {
+    if (x.GetDimension(0).ByteStride() == sizeof(XT) &&
+        y.GetDimension(0).ByteStride() == sizeof(YT)) {
+      // Contiguous numeric vectors
+      if constexpr (std::is_same_v<XT, YT>) {
+        // Contiguous homogeneous numeric vectors
+        if constexpr (std::is_same_v<XT, float>) {
+          // TODO: call BLAS-1 SDOT or SDSDOT
+        } else if constexpr (std::is_same_v<XT, double>) {
+          // TODO: call BLAS-1 DDOT
+        } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+          // TODO: call BLAS-1 CDOTC
+        } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+          // TODO: call BLAS-1 ZDOTC
+        }
+      }
+      XT *xp{x.OffsetElement<XT>(0)};
+      YT *yp{y.OffsetElement<YT>(0)};
+      using AccumType = AccumulationType<RCAT, RKIND>;
+      AccumType accum{};
+      if constexpr (RCAT == TypeCategory::Complex) {
+        for (SubscriptValue j{0}; j < n; ++j) {
+          accum += std::conj(static_cast<AccumType>(*xp++)) *
+              static_cast<AccumType>(*yp++);
+        }
+      } else {
+        for (SubscriptValue j{0}; j < n; ++j) {
+          accum +=
+              static_cast<AccumType>(*xp++) * static_cast<AccumType>(*yp++);
+        }
+      }
+      return static_cast<Result>(accum);
     }
   }
+  // Non-contiguous, heterogeneous, & LOGICAL cases
   SubscriptValue xAt{x.GetDimension(0).LowerBound()};
   SubscriptValue yAt{y.GetDimension(0).LowerBound()};
-  Accumulator<RESULT, XCAT, XT, YT> accumulator{x, y};
+  Accumulator<RCAT, RKIND, XT, YT> accumulator{x, y};
   for (SubscriptValue j{0}; j < n; ++j) {
-    accumulator.Accumulate(xAt++, yAt++);
+    accumulator.AccumulateIndexed(xAt++, yAt++);
   }
-  return accumulator.GetResult();
+  return static_cast<Result>(accumulator.GetResult());
 }
 
 template <TypeCategory RCAT, int RKIND> struct DotProduct {
@@ -79,7 +112,7 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
                           GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
           if constexpr (resultType->first == RCAT &&
               resultType->second <= RKIND) {
-            return DoDotProduct<Result, XCAT, CppTypeFor<XCAT, XKIND>,
+            return DoDotProduct<RCAT, RKIND, CppTypeFor<XCAT, XKIND>,
                 CppTypeFor<YCAT, YKIND>>(x, y, terminator);
           }
         }
@@ -97,26 +130,32 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
   Result operator()(const Descriptor &x, const Descriptor &y,
       const char *source, int line) const {
     Terminator terminator{source, line};
-    auto xCatKind{x.type().GetCategoryAndKind()};
-    auto yCatKind{y.type().GetCategoryAndKind()};
-    RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
-    return ApplyType<DP1, Result>(xCatKind->first, xCatKind->second, terminator,
-        x, y, terminator, yCatKind->first, yCatKind->second);
+    if (RCAT != TypeCategory::Logical && x.type() == y.type()) {
+      // No conversions needed, operands and result have same known type
+      return typename DP1<RCAT, RKIND>::template DP2<RCAT, RKIND>{}(
+          x, y, terminator);
+    } else {
+      auto xCatKind{x.type().GetCategoryAndKind()};
+      auto yCatKind{y.type().GetCategoryAndKind()};
+      RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
+      return ApplyType<DP1, Result>(xCatKind->first, xCatKind->second,
+          terminator, x, y, terminator, yCatKind->first, yCatKind->second);
+    }
   }
 };
 
 extern "C" {
 std::int8_t RTNAME(DotProductInteger1)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 8>{}(x, y, source, line);
+  return DotProduct<TypeCategory::Integer, 1>{}(x, y, source, line);
 }
 std::int16_t RTNAME(DotProductInteger2)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 8>{}(x, y, source, line);
+  return DotProduct<TypeCategory::Integer, 2>{}(x, y, source, line);
 }
 std::int32_t RTNAME(DotProductInteger4)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Integer, 8>{}(x, y, source, line);
+  return DotProduct<TypeCategory::Integer, 4>{}(x, y, source, line);
 }
 std::int64_t RTNAME(DotProductInteger8)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
@@ -130,9 +169,10 @@ common::int128_t RTNAME(DotProductInteger16)(
 #endif
 
 // TODO: REAL/COMPLEX(2 & 3)
+// Intermediate results and operations are at least 64 bits
 float RTNAME(DotProductReal4)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  return DotProduct<TypeCategory::Real, 8>{}(x, y, source, line);
+  return DotProduct<TypeCategory::Real, 4>{}(x, y, source, line);
 }
 double RTNAME(DotProductReal8)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
@@ -152,7 +192,7 @@ long double RTNAME(DotProductReal16)(
 
 void RTNAME(CppDotProductComplex4)(std::complex<float> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
-  auto z{DotProduct<TypeCategory::Complex, 8>{}(x, y, source, line)};
+  auto z{DotProduct<TypeCategory::Complex, 4>{}(x, y, source, line)};
   result = std::complex<float>{
       static_cast<float>(z.real()), static_cast<float>(z.imag())};
 }

@@ -1095,6 +1095,29 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
 
+  config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
+  if (!config->osoPrefix.empty()) {
+    // Expand special characters, such as ".", "..", or  "~", if present.
+    // Note: LD64 only expands "." and not other special characters.
+    // That seems silly to imitate so we will not try to follow it, but rather
+    // just use real_path() to do it.
+
+    // The max path length is 4096, in theory. However that seems quite long
+    // and seems unlikely that any one would want to strip everything from the
+    // path. Hence we've picked a reasonably large number here.
+    SmallString<1024> expanded;
+    if (!fs::real_path(config->osoPrefix, expanded,
+                       /*expand_tilde=*/true)) {
+      // Note: LD64 expands "." to be `<current_dir>/`
+      // (ie., it has a slash suffix) whereas real_path() doesn't.
+      // So we have to append '/' to be consistent.
+      StringRef sep = sys::path::get_separator();
+      if (config->osoPrefix.equals(".") && !expanded.endswith(sep))
+        expanded += sep;
+      config->osoPrefix = saver.save(expanded.str());
+    }
+  }
+
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
 

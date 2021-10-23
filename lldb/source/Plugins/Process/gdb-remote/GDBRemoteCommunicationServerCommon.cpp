@@ -267,12 +267,12 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   }
 #endif
 
-  std::string s;
-  if (HostInfo::GetOSBuildString(s)) {
+  if (llvm::Optional<std::string> s = HostInfo::GetOSBuildString()) {
     response.PutCString("os_build:");
-    response.PutStringAsRawHex8(s);
+    response.PutStringAsRawHex8(*s);
     response.PutChar(';');
   }
+  std::string s;
   if (HostInfo::GetOSKernelDescription(s)) {
     response.PutCString("os_kernel:");
     response.PutStringAsRawHex8(s);
