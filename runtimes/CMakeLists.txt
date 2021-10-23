@@ -32,6 +32,8 @@ find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
@@ -84,14 +86,29 @@ set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 set(LLVM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
 
 include(CheckLibraryExists)
+include(CheckLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+
+
+check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
+if (NOT LLVM_RUNTIMES_LINKING_WORKS)
+  # The compiler driver may be implicitly trying to link against libunwind, which
+  # might not work if libunwind doesn't exist yet. Try to check if
+  # --unwindlib=none is supported, and use that if possible.
+  # Don't add this if not necessary to fix linking, as it can break using
+  # e.g. ASAN/TSAN.
+  llvm_check_linker_flag("--unwindlib=none" LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+  if (LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+  endif()
+endif()
 
 # Disable use of the installed C++ standard library when building runtimes.
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-check_c_compiler_flag(-nostdlib++ LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
+llvm_check_linker_flag(-nostdlib++ LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
 if (LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
