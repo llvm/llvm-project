@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv32 -target-feature +d -target-abi ilp32d \
+// RUN: %clang_cc1 -triple riscv32 -target-feature +d -target-feature +f -target-abi ilp32d \
 // RUN:     -Wno-missing-declarations -emit-llvm %s -o - | FileCheck %s
 
 struct empty_float2 { struct {}; float f; float g; };

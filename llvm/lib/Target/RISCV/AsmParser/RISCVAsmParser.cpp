@@ -2066,7 +2066,11 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
                         "unexpected token in '.attribute' directive"))
     return true;
 
-  if (Tag == RISCVAttrs::ARCH) {
+  if (IsIntegerValue)
+    getTargetStreamer().emitAttribute(Tag, IntegerValue);
+  else if (Tag != RISCVAttrs::ARCH)
+    getTargetStreamer().emitTextAttribute(Tag, StringValue);
+  else {
     StringRef Arch = StringValue;
     for (auto Feature : RISCVFeatureKV)
       if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
@@ -2074,7 +2078,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
 
     auto ParseResult = llvm::RISCVISAInfo::parseArchString(
         StringValue, /*EnableExperimentalExtension=*/true,
-        /*ExperimentalExtensionVersionCheck=*/false);
+        /*ExperimentalExtensionVersionCheck=*/true);
     if (!ParseResult) {
       std::string Buffer;
       raw_string_ostream OutputErrMsg(Buffer);
@@ -2097,35 +2101,9 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
       setFeatureBits(RISCV::Feature64Bit, "64bit");
     else
       return Error(ValueExprLoc, "bad arch string " + Arch);
-  }
 
-  if (IsIntegerValue)
-    getTargetStreamer().emitAttribute(Tag, IntegerValue);
-  else {
-    if (Tag != RISCVAttrs::ARCH) {
-      getTargetStreamer().emitTextAttribute(Tag, StringValue);
-    } else {
-      std::vector<std::string> FeatureVector;
-      RISCVFeatures::toFeatureVector(FeatureVector, getSTI().getFeatureBits());
-
-      // Parse that by RISCVISAInfo->
-      unsigned XLen = getFeatureBits(RISCV::Feature64Bit) ? 64 : 32;
-      auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
-      if (!ParseResult) {
-        std::string Buffer;
-        raw_string_ostream OutputErrMsg(Buffer);
-        handleAllErrors(ParseResult.takeError(),
-                        [&](llvm::StringError &ErrMsg) {
-                          OutputErrMsg << ErrMsg.getMessage();
-                        });
-
-        return Error(ValueExprLoc, OutputErrMsg.str());
-      }
-      auto &ISAInfo = *ParseResult;
-
-      // Then emit the arch string.
-      getTargetStreamer().emitTextAttribute(Tag, ISAInfo->toString());
-    }
+    // Then emit the arch string.
+    getTargetStreamer().emitTextAttribute(Tag, ISAInfo->toString());
   }
 
   return false;
