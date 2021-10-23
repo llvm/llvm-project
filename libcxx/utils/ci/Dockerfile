@@ -55,7 +55,7 @@ RUN printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" >> /usr/local/share/i1en/SUPPORT
 RUN locale-gen
 
 # Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
-ENV LLVM_LATEST_VERSION=12
+ENV LLVM_LATEST_VERSION=13
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release

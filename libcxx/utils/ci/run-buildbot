@@ -288,17 +288,17 @@ generic-32bit)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
 ;;
-generic-clang-11)
-    export CC=clang-11
-    export CXX=clang++-11
+generic-clang-12)
+    export CC=clang-12
+    export CXX=clang++-12
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
     check-runtimes
 ;;
-generic-clang-12)
-    export CC=clang-12
-    export CXX=clang++-12
+generic-clang-13)
+    export CC=clang-13
+    export CXX=clang++-13
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
