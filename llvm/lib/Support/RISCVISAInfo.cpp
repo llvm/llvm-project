@@ -9,6 +9,7 @@
 #include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
@@ -66,6 +67,18 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zbt", RISCVExtensionVersion{0, 93}},
 
     {"zvlsseg", RISCVExtensionVersion{0, 10}},
+    {"zvl32b", RISCVExtensionVersion{0, 10}},
+    {"zvl64b", RISCVExtensionVersion{0, 10}},
+    {"zvl128b", RISCVExtensionVersion{0, 10}},
+    {"zvl256b", RISCVExtensionVersion{0, 10}},
+    {"zvl512b", RISCVExtensionVersion{0, 10}},
+    {"zvl1024b", RISCVExtensionVersion{0, 10}},
+    {"zvl2048b", RISCVExtensionVersion{0, 10}},
+    {"zvl4096b", RISCVExtensionVersion{0, 10}},
+    {"zvl8192b", RISCVExtensionVersion{0, 10}},
+    {"zvl16384b", RISCVExtensionVersion{0, 10}},
+    {"zvl32768b", RISCVExtensionVersion{0, 10}},
+    {"zvl65536b", RISCVExtensionVersion{0, 10}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
@@ -435,6 +448,7 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
   ISAInfo->updateImplication();
   ISAInfo->updateFLen();
+  ISAInfo->updateMinVLen();
 
   if (Error Result = ISAInfo->checkDependency())
     return std::move(Result);
@@ -658,6 +672,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   ISAInfo->updateImplication();
   ISAInfo->updateFLen();
+  ISAInfo->updateMinVLen();
 
   if (Error Result = ISAInfo->checkDependency())
     return std::move(Result);
@@ -691,8 +706,19 @@ Error RISCVISAInfo::checkDependency() {
   return Error::success();
 }
 
-static const char *ImpliedExtsV[] = {"zvlsseg"};
+static const char *ImpliedExtsV[] = {"zvlsseg", "zvl128b"};
 static const char *ImpliedExtsZfh[] = {"zfhmin"};
+static const char *ImpliedExtsZvl65536b[] = {"zvl32768b"};
+static const char *ImpliedExtsZvl32768b[] = {"zvl16384b"};
+static const char *ImpliedExtsZvl16384b[] = {"zvl8192b"};
+static const char *ImpliedExtsZvl8192b[] = {"zvl4096b"};
+static const char *ImpliedExtsZvl4096b[] = {"zvl2048b"};
+static const char *ImpliedExtsZvl2048b[] = {"zvl1024b"};
+static const char *ImpliedExtsZvl1024b[] = {"zvl512b"};
+static const char *ImpliedExtsZvl512b[] = {"zvl256b"};
+static const char *ImpliedExtsZvl256b[] = {"zvl128b"};
+static const char *ImpliedExtsZvl128b[] = {"zvl64b"};
+static const char *ImpliedExtsZvl64b[] = {"zvl32b"};
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
@@ -708,6 +734,17 @@ struct ImpliedExtsEntry {
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"v"}, {ImpliedExtsV}},
     {{"zfh"}, {ImpliedExtsZfh}},
+    {{"zvl1024b"}, {ImpliedExtsZvl1024b}},
+    {{"zvl128b"}, {ImpliedExtsZvl128b}},
+    {{"zvl16384b"}, {ImpliedExtsZvl16384b}},
+    {{"zvl2048b"}, {ImpliedExtsZvl2048b}},
+    {{"zvl256b"}, {ImpliedExtsZvl256b}},
+    {{"zvl32768b"}, {ImpliedExtsZvl32768b}},
+    {{"zvl4096b"}, {ImpliedExtsZvl4096b}},
+    {{"zvl512b"}, {ImpliedExtsZvl512b}},
+    {{"zvl64b"}, {ImpliedExtsZvl64b}},
+    {{"zvl65536b"}, {ImpliedExtsZvl65536b}},
+    {{"zvl8192b"}, {ImpliedExtsZvl8192b}},
 };
 
 void RISCVISAInfo::updateImplication() {
@@ -722,12 +759,25 @@ void RISCVISAInfo::updateImplication() {
   }
 
   assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
-  for (auto &Ext : Exts) {
-    auto I = llvm::lower_bound(ImpliedExts, Ext.first);
-    if (I != std::end(ImpliedExts) && I->Name == Ext.first) {
-      for (auto &ImpliedExt : I->Exts) {
+
+  // This loop may execute over 1 iteration since implication can be layered
+  // Exits loop if no more implication is applied
+  SmallSetVector<StringRef, 16> WorkList;
+  for (auto &Ext : Exts)
+    WorkList.insert(Ext.first);
+
+  while (!WorkList.empty()) {
+    StringRef ExtName = WorkList.pop_back_val();
+    auto I = llvm::lower_bound(ImpliedExts, ExtName);
+    if (I != std::end(ImpliedExts) && I->Name == ExtName) {
+      for (const char *ImpliedExt : I->Exts) {
+        if (WorkList.count(ImpliedExt))
+          continue;
+        if (Exts.count(ImpliedExt))
+          continue;
         auto Version = findDefaultVersion(ImpliedExt);
         addExtension(ImpliedExt, Version->Major, Version->Minor);
+        WorkList.insert(ImpliedExt);
       }
     }
   }
@@ -740,6 +790,18 @@ void RISCVISAInfo::updateFLen() {
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;
+}
+
+void RISCVISAInfo::updateMinVLen() {
+  for (auto Ext : Exts) {
+    StringRef ExtName = Ext.first;
+    bool IsZvlExt = ExtName.consume_front("zvl") && ExtName.consume_back("b");
+    if (IsZvlExt) {
+      unsigned ZvlLen;
+      if (!ExtName.getAsInteger(10, ZvlLen))
+        MinVLen = std::max(MinVLen, ZvlLen);
+    }
+  }
 }
 
 std::string RISCVISAInfo::toString() const {

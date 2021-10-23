@@ -125,6 +125,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__riscv_xlen", Is64Bit ? "64" : "32");
   StringRef CodeModel = getTargetOpts().CodeModel;
   unsigned FLen = ISAInfo->getFLen();
+  unsigned MinVLen = ISAInfo->getMinVLen();
   if (CodeModel == "default")
     CodeModel = "small";
 
@@ -175,6 +176,9 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_fdiv");
     Builder.defineMacro("__riscv_fsqrt");
   }
+
+  if (MinVLen)
+    Builder.defineMacro("__riscv_v_min_vlen", Twine(MinVLen));
 
   if (ISAInfo->hasExtension("c"))
     Builder.defineMacro("__riscv_compressed");

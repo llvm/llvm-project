@@ -34,6 +34,22 @@ class StringRef;
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
+  enum ExtZvl : unsigned {
+    NotSet = 0,
+    Zvl32b = 32,
+    Zvl64b = 64,
+    Zvl128b = 128,
+    Zvl256b = 256,
+    Zvl512b = 512,
+    Zvl1024b = 1024,
+    Zvl2048b = 2048,
+    Zvl4096b = 4096,
+    Zvl8192b = 8192,
+    Zvl16384b = 16384,
+    Zvl32768b = 32768,
+    Zvl65536b = 65536
+  };
+
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
@@ -69,6 +85,7 @@ private:
   bool EnableRVCHintInstrs = true;
   bool EnableSaveRestore = false;
   unsigned XLen = 32;
+  ExtZvl ZvlLen = ExtZvl::NotSet;
   MVT XLenVT = MVT::i32;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
@@ -134,6 +151,7 @@ public:
   bool hasStdExtZbt() const { return HasStdExtZbt; }
   bool hasStdExtV() const { return HasStdExtV; }
   bool hasStdExtZvlsseg() const { return HasStdExtZvlsseg; }
+  bool hasStdExtZvl() const { return ZvlLen != ExtZvl::NotSet; }
   bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
   bool hasStdExtZfh() const { return HasStdExtZfh; }
   bool is64Bit() const { return HasRV64; }
