@@ -57,7 +57,7 @@ improving readability and maintainability.
 The check will only replace iterator type-specifiers when all of the following
 conditions are satisfied:
 
-* The iterator is for one of the standard container in ``std`` namespace:
+* The iterator is for one of the standard containers in ``std`` namespace:
 
   * ``array``
   * ``deque``
@@ -115,7 +115,7 @@ New expressions
 
 Frequently, when a pointer is declared and initialized with ``new``, the
 pointee type is written twice: in the declaration type and in the
-``new`` expression. In this cases, the declaration type can be replaced with
+``new`` expression. In this case, the declaration type can be replaced with
 ``auto`` improving readability and maintainability.
 
 .. code-block:: c++
@@ -148,7 +148,7 @@ Cast expressions
 
 Frequently, when a variable is declared and initialized with a cast, the
 variable type is written twice: in the declaration type and in the
-cast expression. In this cases, the declaration type can be replaced with
+cast expression. In this case, the declaration type can be replaced with
 ``auto`` improving readability and maintainability.
 
 .. code-block:: c++
@@ -162,7 +162,7 @@ cast expression. In this cases, the declaration type can be replaced with
 The check handles ``static_cast``, ``dynamic_cast``, ``const_cast``,
 ``reinterpret_cast``, functional casts, C-style casts and function templates
 that behave as casts, such as ``llvm::dyn_cast``, ``boost::lexical_cast`` and
-``gsl::narrow_cast``.  Calls to function templates are considered to behave as
+``gsl::narrow_cast``. Calls to function templates are considered to behave as
 casts if the first template argument is explicit and is a type, and the function
 returns that type, or a pointer or reference to it.
 

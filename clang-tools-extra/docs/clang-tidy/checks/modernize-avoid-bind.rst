@@ -72,7 +72,7 @@ simply ignored. Without ``PermissiveParameterList``, this would be transformed i
     return ignore_args(3, 3);
   }
 
-which will *not* compile, since the lambda does not contain an ``operator()`` that
+which will *not* compile, since the lambda does not contain an ``operator()``
 that accepts 2 arguments. With permissive parameter list, it instead generates
 
 .. code-block:: c++

@@ -16,7 +16,7 @@ becomes
 
   extern int X;
 
-Such redundant declarations can be removed without changing program behaviour.
+Such redundant declarations can be removed without changing program behavior.
 They can for instance be unintentional left overs from previous refactorings
 when code has been moved around. Having redundant declarations could in worst
 case mean that there are typos in the code that cause bugs.

@@ -33,7 +33,7 @@ This also applies for pseudo-override patterns like CRTP.
 Options
 -------
 
-The following options are describe below:
+The following options are described below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
  - :option:`AggressiveDependentMemberLookup`

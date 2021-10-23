@@ -116,7 +116,7 @@ noisiness.
     The value is a `;`-separated list of names.
     To ignore unnamed parameters, add `""` to the list verbatim (not the
     empty string, but the two quotes, potentially escaped!).
-    **This options is case-sensitive!**
+    **This option is case-sensitive!**
 
     By default, the following parameter names, and their Uppercase-initial
     variants are ignored:
@@ -154,7 +154,7 @@ noisiness.
       ``a < b``.
     * The parameters are further passed to the same function to the same
       parameter of that function, of the same overload.
-      E.g. ``f(a, 1)`` and ``f(b, 2)`` to some ``f(T, int)``.
+      e.g. ``f(a, 1)`` and ``f(b, 2)`` to some ``f(T, int)``.
 
       .. note::
 
@@ -202,7 +202,7 @@ an argument list, and C++ template instantiations.
 Most of these cases, which are otherwise swappable from a caller's standpoint,
 have no way of getting "fixed" at the definition point.
 In the case of C++ templates, only primary template definitions and explicit
-specialisations are matched and analysed.
+specializations are matched and analyzed.
 
 None of the following cases produce a diagnostic:
 
@@ -241,7 +241,7 @@ not diagnosed.
     void exact(typename Vector<T>::element_type A,
                typename Vector<T>::element_type B) { /* ... */ }
 
-    // Skipped: The two parameters are both 'T' but we can not prove this
+    // Skipped: The two parameters are both 'T' but we cannot prove this
     // without actually instantiating.
     template <typename T>
     void falseNegative(T A, typename Vector<T>::element_type B) { /* ... */ }

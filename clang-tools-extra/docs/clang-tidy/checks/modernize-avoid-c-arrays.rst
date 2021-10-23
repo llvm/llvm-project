@@ -56,5 +56,5 @@ such headers between C code, and C++ code.
   }
 
 Similarly, the ``main()`` function is ignored. Its second and third parameters
-can be either ``char* argv[]`` or ``char** argv``, but can not be
+can be either ``char* argv[]`` or ``char** argv``, but cannot be
 ``std::array<>``.
