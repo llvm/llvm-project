@@ -449,7 +449,7 @@ bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
   // Skip the leading instruction pointer.
   size_t Index = 0;
   uint64_t LeadingAddr;
-  if (!Records.empty() && Records[0].find('/') == StringRef::npos) {
+  if (!Records.empty() && !Records[0].contains('/')) {
     if (Records[0].getAsInteger(16, LeadingAddr)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
@@ -862,7 +862,7 @@ bool PerfReaderBase::isLBRSample(StringRef Line) {
   Line.trim().split(Records, " ", 2, false);
   if (Records.size() < 2)
     return false;
-  if (Records[1].startswith("0x") && Records[1].find('/') != StringRef::npos)
+  if (Records[1].startswith("0x") && Records[1].contains('/'))
     return true;
   return false;
 }
@@ -877,7 +877,7 @@ bool PerfReaderBase::isMMap2Event(StringRef Line) {
 
   // PERF_RECORD_MMAP2 does not appear at the beginning of the line
   // for ` perf script  --show-mmap-events  -i ...`
-  return Line.find("PERF_RECORD_MMAP2") != StringRef::npos;
+  return Line.contains("PERF_RECORD_MMAP2");
 }
 
 // The raw hybird sample is like

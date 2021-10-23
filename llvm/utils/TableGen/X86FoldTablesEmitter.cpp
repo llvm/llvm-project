@@ -79,13 +79,13 @@ const ManualMapEntry ManualMapSet[] = {
 
 static bool isExplicitAlign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitAlign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().find(InstStr) != StringRef::npos;
+    return Inst->TheDef->getName().contains(InstStr);
   });
 }
 
 static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitUnalign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().find(InstStr) != StringRef::npos;
+    return Inst->TheDef->getName().contains(InstStr);
   });
 }
 
@@ -278,7 +278,7 @@ static inline bool hasMemoryFormat(const Record *Inst) {
 }
 
 static inline bool isNOREXRegClass(const Record *Op) {
-  return Op->getName().find("_NOREX") != StringRef::npos;
+  return Op->getName().contains("_NOREX");
 }
 
 static inline bool isRegisterOperand(const Record *Rec) {

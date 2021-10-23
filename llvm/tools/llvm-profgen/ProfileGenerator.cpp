@@ -403,8 +403,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
 
 static bool isOutlinedFunction(StringRef CalleeName) {
   // Check whether it's from hot-cold func split or coro split.
-  return CalleeName.find(".resume") != StringRef::npos ||
-         CalleeName.find(".cold") != StringRef::npos;
+  return CalleeName.contains(".resume") || CalleeName.contains(".cold");
 }
 
 StringRef ProfileGeneratorBase::getCalleeNameForOffset(uint64_t TargetOffset) {

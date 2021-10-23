@@ -21,7 +21,7 @@ bool NameCoverageFilter::matches(
     const coverage::CoverageMapping &,
     const coverage::FunctionRecord &Function) const {
   StringRef FuncName = Function.Name;
-  return FuncName.find(Name) != StringRef::npos;
+  return FuncName.contains(Name);
 }
 
 bool NameRegexCoverageFilter::matches(
