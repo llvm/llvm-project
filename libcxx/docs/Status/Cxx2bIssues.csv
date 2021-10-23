@@ -86,7 +86,7 @@
 `3539 <https://wg21.link/LWG3539>`__,"``format_to`` must not copy models of ``output_iterator<const charT&>``","June 2021","","","|format|"
 `3540 <https://wg21.link/LWG3540>`__,"§[format.arg] There should be no const in ``basic_format_arg(const T* p)``","June 2021","","","|format|"
 `3541 <https://wg21.link/LWG3541>`__,"``indirectly_readable_traits`` should be SFINAE-friendly for all types","June 2021","","","|ranges|"
-`3542 <https://wg21.link/LWG3542>`__,"``basic_format_arg`` mishandles ``basic_string_view`` with custom traits","June 2021","","","|format|"
+`3542 <https://wg21.link/LWG3542>`__,"``basic_format_arg`` mishandles ``basic_string_view`` with custom traits","June 2021","|Complete|","14.0","|format|"
 `3543 <https://wg21.link/LWG3543>`__,"Definition of when ``counted_iterators`` refer to the same sequence isn't quite right","June 2021","","","|ranges|"
 `3544 <https://wg21.link/LWG3544>`__,"``format-arg-store::args`` is unintentionally not exposition-only","June 2021","","","|format|"
 `3546 <https://wg21.link/LWG3546>`__,"``common_iterator``'s postfix-proxy is not quite right","June 2021","","","|ranges|"
