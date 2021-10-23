@@ -1354,19 +1354,6 @@ Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
   return ConstantFoldLoadThroughBitcast(C, Ty, DL);
 }
 
-Constant *
-llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                        ArrayRef<Constant *> Indices) {
-  // Loop over all of the operands, tracking down which value we are
-  // addressing.
-  for (Constant *Index : Indices) {
-    C = C->getAggregateElement(Index);
-    if (!C)
-      return nullptr;
-  }
-  return C;
-}
-
 //===----------------------------------------------------------------------===//
 //  Constant Folding for Calls
 //
