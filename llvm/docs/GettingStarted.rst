@@ -627,7 +627,7 @@ used by people developing LLVM.
 |                         | include: clang, clang-tools-extra, compiler-rt,    |
 |                         | cross-project-tests, flang, libc, libclc, libcxx,  |
 |                         | libcxxabi, libunwind, lld, lldb, mlir, openmp,     |
-|                         | parallel-libs, polly, or pstl.                     |
+|                         | polly, or pstl.                                    |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
