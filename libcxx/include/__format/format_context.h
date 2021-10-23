@@ -70,9 +70,28 @@ __format_context_create(
 }
 #endif
 
+// TODO FMT Implement [format.context]/4
+// [Note 1: For a given type charT, implementations are encouraged to provide a
+// single instantiation of basic_format_context for appending to
+// basic_string<charT>, vector<charT>, or any other container with contiguous
+// storage by wrapping those in temporary objects with a uniform interface
+// (such as a span<charT>) and polymorphic reallocation. - end note]
+
+using format_context = basic_format_context<back_insert_iterator<string>, char>;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wformat_context = basic_format_context<back_insert_iterator<wstring>, wchar_t>;
+#endif
+
 template <class _OutIt, class _CharT>
 requires output_iterator<_OutIt, const _CharT&>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_context {
+class
+    // clang-format off
+    _LIBCPP_TEMPLATE_VIS
+    _LIBCPP_AVAILABILITY_FORMAT
+    _LIBCPP_PREFERRED_NAME(format_context)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context))
+    // clang-format on
+    basic_format_context {
 public:
   using iterator = _OutIt;
   using char_type = _CharT;
@@ -137,18 +156,6 @@ private:
       : __out_it_(_VSTD::move(__out_it)), __args_(__args) {}
 #endif
 };
-
-// TODO FMT Implement [format.context]/4
-// [Note 1: For a given type charT, implementations are encouraged to provide a
-// single instantiation of basic_format_context for appending to
-// basic_string<charT>, vector<charT>, or any other container with contiguous
-// storage by wrapping those in temporary objects with a uniform interface
-// (such as a span<charT>) and polymorphic reallocation. - end note]
-
-using format_context = basic_format_context<back_insert_iterator<string>, char>;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wformat_context = basic_format_context<back_insert_iterator<wstring>, wchar_t>;
-#endif
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
