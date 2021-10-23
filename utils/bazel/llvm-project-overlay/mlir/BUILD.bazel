@@ -7057,6 +7057,7 @@ cc_library(
         ":Support",
         ":Transforms",
         ":VectorOps",
+        ":X86Vector",
         "//llvm:Support",
     ],
 )

@@ -406,6 +406,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
+        "//mlir:X86Vector",
     ],
 )
 

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/Bufferize.h"
@@ -779,12 +780,78 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
 }
 
 //----------------------------------------------------------------------------//
+// Rsqrt approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct RsqrtApproximation : public OpRewritePattern<math::RsqrtOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::RsqrtOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+LogicalResult
+RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
+                                    PatternRewriter &rewriter) const {
+  auto width = vectorWidth(op.operand().getType(), isF32);
+  // Only support already-vectorized rsqrt's.
+  if (!width.hasValue() || *width != 8)
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, *width);
+  };
+
+  Value cstPosInf = bcast(f32FromBits(builder, 0x7f800000u));
+  Value cstOnePointFive = bcast(f32Cst(builder, 1.5f));
+  Value cstNegHalf = bcast(f32Cst(builder, -0.5f));
+  Value cstMinNormPos = bcast(f32FromBits(builder, 0x00800000u));
+
+  Value negHalf = builder.create<arith::MulFOp>(op.operand(), cstNegHalf);
+
+  // Select only the inverse sqrt of positive normals (denormals are
+  // flushed to zero).
+  Value ltMinMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT,
+                                                  op.operand(), cstMinNormPos);
+  Value infMask = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ,
+                                                op.operand(), cstPosInf);
+  Value notNormalFiniteMask = builder.create<arith::OrIOp>(ltMinMask, infMask);
+
+  // Compute an approximate result.
+  Value yApprox = builder.create<x86vector::RsqrtOp>(op.operand());
+
+  // Do a single step of Newton-Raphson iteration to improve the approximation.
+  // This uses the formula y_{n+1} = y_n * (1.5 - y_n * (0.5 * x) * y_n).
+  // It is essential to evaluate the inner term like this because forming
+  // y_n^2 may over- or underflow.
+  Value inner = builder.create<arith::MulFOp>(negHalf, yApprox);
+  Value fma = builder.create<math::FmaOp>(yApprox, inner, cstOnePointFive);
+  Value yNewton = builder.create<arith::MulFOp>(yApprox, fma);
+
+  // Select the result of the Newton-Raphson step for positive normal arguments.
+  // For other arguments, choose the output of the intrinsic. This will
+  // return rsqrt(+inf) = 0, rsqrt(x) = NaN if x < 0, and rsqrt(x) = +inf if
+  // x is zero or a positive denormalized float (equivalent to flushing positive
+  // denormalized inputs to zero).
+  Value res = builder.create<SelectOp>(notNormalFiniteMask, yApprox, yNewton);
+  rewriter.replaceOp(op, res);
+
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 
 void mlir::populateMathPolynomialApproximationPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns,
+    const MathPolynomialApproximationOptions &options) {
   patterns.add<TanhApproximation, LogApproximation, Log2Approximation,
                Log1pApproximation, ExpApproximation, ExpM1Approximation,
                SinAndCosApproximation<true, math::SinOp>,
                SinAndCosApproximation<false, math::CosOp>>(
       patterns.getContext());
+  if (options.enableAvx2)
+    patterns.add<RsqrtApproximation>(patterns.getContext());
 }
