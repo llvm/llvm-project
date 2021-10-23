@@ -3,7 +3,7 @@
 @GV1 = internal global i64 1, align 8
 @GV2 = internal global i32 0, align 4
 
-; CHECK: @GV1 = internal unnamed_addr global i64 1, align 8
+; CHECK-NOT: @GV1 =
 ; CHECK: @GV2 = internal unnamed_addr global i32 0, align 4
 
 define void @test1() {
