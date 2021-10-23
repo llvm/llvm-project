@@ -138,6 +138,7 @@ public:
   void addTypeMetadata(unsigned Offset, Metadata *TypeID);
   void setVCallVisibilityMetadata(VCallVisibility Visibility);
   VCallVisibility getVCallVisibility() const;
+  std::pair<uint64_t, uint64_t> getVTableOffsetRange() const;
 
   /// Returns true if the alignment of the value can be unilaterally
   /// increased.

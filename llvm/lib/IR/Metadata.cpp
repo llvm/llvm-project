@@ -1525,6 +1525,23 @@ GlobalObject::VCallVisibility GlobalObject::getVCallVisibility() const {
   return VCallVisibility::VCallVisibilityPublic;
 }
 
+std::pair<uint64_t, uint64_t> GlobalObject::getVTableOffsetRange() const {
+  if (MDNode *MD = getMetadata(LLVMContext::MD_vcall_visibility)) {
+    if (MD->getNumOperands() >= 3) {
+      uint64_t RangeStart =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MD->getOperand(1))->getValue())
+              ->getZExtValue();
+      uint64_t RangeEnd =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MD->getOperand(2))->getValue())
+              ->getZExtValue();
+      return std::make_pair(RangeStart, RangeEnd);
+    }
+  }
+  return std::make_pair(0, std::numeric_limits<uint64_t>::max());
+}
+
 void Function::setSubprogram(DISubprogram *SP) {
   setMetadata(LLVMContext::MD_dbg, SP);
 }

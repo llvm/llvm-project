@@ -288,3 +288,11 @@ In addition, all function pointer loads from a vtable marked with the
 calls sites can be correlated with the vtables which they might load from.
 Other parts of the vtable (RTTI, offset-to-top, ...) can still be accessed with
 normal loads.
+
+Alternatively, the ``!vcall_visibility`` metadata attachment can have an
+extended format of a tuple with two additional integer values representing the
+begin and end offset (a half-open range, the begin offset is included, the end
+offset is excluded) within the vtable that the visibility applies to. When the
+range is missing, the meaning is the same as a range covering the entire vtable.
+Any part of the vtable that is not covered by the specified range is not
+eligible for elimination of virtual functions.

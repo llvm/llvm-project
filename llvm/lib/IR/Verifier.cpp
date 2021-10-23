@@ -749,6 +749,40 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
                       "DIGlobalVariableExpression");
   }
 
+  MDs.clear();
+  GV.getMetadata(LLVMContext::MD_vcall_visibility, MDs);
+  for (auto *MD : MDs) {
+    Assert(MD->getNumOperands() >= 1, "bad !vcall_visibility attachment");
+    Assert(isa<ConstantAsMetadata>(MD->getOperand(0)),
+           "bad !vcall_visibility attachment");
+    auto *Op0Val = cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+    Assert(isa<ConstantInt>(Op0Val), "bad !vcall_visibility attachment");
+    auto Op0Int = cast<ConstantInt>(Op0Val)->getValue();
+    Assert(Op0Int.uge(0) && Op0Int.ult(std::numeric_limits<uint64_t>::max()),
+           "bad !vcall_visibility attachment");
+    if (MD->getNumOperands() == 3) {
+      Assert(isa<ConstantAsMetadata>(MD->getOperand(1)),
+             "bad !vcall_visibility attachment");
+      auto *Op1Val = cast<ConstantAsMetadata>(MD->getOperand(1))->getValue();
+      Assert(isa<ConstantInt>(Op1Val), "bad !vcall_visibility attachment");
+      auto Op1Int = cast<ConstantInt>(Op1Val)->getValue();
+      Assert(Op1Int.uge(0) && Op1Int.ult(std::numeric_limits<uint64_t>::max()),
+             "bad !vcall_visibility attachment");
+
+      Assert(isa<ConstantAsMetadata>(MD->getOperand(2)),
+             "bad !vcall_visibility attachment");
+      auto *Op2Val = cast<ConstantAsMetadata>(MD->getOperand(2))->getValue();
+      Assert(isa<ConstantInt>(Op2Val), "bad !vcall_visibility attachment");
+      auto Op2Int = cast<ConstantInt>(Op2Val)->getValue();
+      Assert(Op2Int.uge(0) && Op2Int.ult(std::numeric_limits<uint64_t>::max()),
+             "bad !vcall_visibility attachment");
+
+      Assert(Op1Int.ule(Op2Int), "bad !vcall_visibility attachment");
+    } else {
+      Assert(MD->getNumOperands() == 1, "bad !vcall_visibility attachment");
+    }
+  }
+
   // Scalable vectors cannot be global variables, since we don't know
   // the runtime size. If the global is an array containing scalable vectors,
   // that will be caught by the isValidElementType methods in StructType or
