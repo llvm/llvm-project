@@ -13,7 +13,7 @@ module  {
     %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
     %1 = cir.cst(3 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
-    %2 = cir.load %0 : cir.ptr <i32>, i32
+    %2 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
     cir.return %2 : i32
   }
 }
@@ -30,7 +30,7 @@ module  {
 // CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
 // CHECK-NEXT:     %1 = cir.cst(3 : i32) : i32
 // CHECK-NEXT:     cir.store %1, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT:     %2 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %2 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
 // CHECK-NEXT:     cir.return %2 : i32
 // CHECK-NEXT:   }
 

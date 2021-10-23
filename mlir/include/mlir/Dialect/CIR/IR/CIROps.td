@@ -112,6 +112,7 @@ def AllocaOp : CIR_Op<"alloca", [
 
   let arguments = (ins
     TypeAttr:$type,
+    // FIXME: add "uninitialzed" as default mode
     Arg<InitStyle, "initialization style">:$init
   );
 
@@ -148,11 +149,13 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr);
+                           [MemRead]>:$addr,
+                       UnitAttr:$conv);
   let results = (outs AnyType:$result);
 
-  let assemblyFormat =
-      "$addr attr-dict `:` `cir.ptr` type($addr) `,` type($result)";
+  let assemblyFormat = [{
+    $addr (`lvalue_to_rvalue` $conv^)? attr-dict `:` `cir.ptr` type($addr) `,` type($result)
+  }];
 }
 
 //===----------------------------------------------------------------------===//

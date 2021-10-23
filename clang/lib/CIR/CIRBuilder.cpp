@@ -443,7 +443,7 @@ public:
       LValue LV = EmitLValue(E);
       auto load = Builder.builder.create<mlir::cir::LoadOp>(
           Builder.getLoc(E->getExprLoc()), Builder.getCIRType(E->getType()),
-          LV.getPointer());
+          LV.getPointer(), mlir::UnitAttr::get(Builder.builder.getContext()));
       // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
       return load;
     }
