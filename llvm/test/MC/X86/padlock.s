@@ -1,8 +1,11 @@
 // RUN: llvm-mc -triple i386-unknown-unknown --show-encoding %s | FileCheck %s
 
+/// Check xstore does not get an implicit REP prefix but all other PadLock
+/// instructions do.
+
 	xstore
 // CHECK: xstore
-// CHECK: encoding: [0xf3,0x0f,0xa7,0xc0]
+// CHECK: encoding: [0x0f,0xa7,0xc0]
 	xcryptecb
 // CHECK: xcryptecb
 // CHECK: encoding: [0xf3,0x0f,0xa7,0xc8]
