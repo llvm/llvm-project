@@ -7,7 +7,7 @@ Finds macro expansions of ``DISALLOW_COPY_AND_ASSIGN(Type)`` and replaces them
 with a deleted copy constructor and a deleted assignment operator.
 
 Before the ``delete`` keyword was introduced in C++11 it was common practice to
-declare a copy constructor and an assignment operator as a private members. This
+declare a copy constructor and an assignment operator as private members. This
 effectively makes them unusable to the public API of a class.
 
 With the advent of the ``delete`` keyword in C++11 we can abandon the

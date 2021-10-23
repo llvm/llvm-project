@@ -109,7 +109,7 @@ The following options are described below:
 .. option:: IgnoredExceptionVariableNames
 
     Specifies a regular expression for exception variable names that are to
-    be ignored.  The default value is `^[e]$` mainly for historical reasons.
+    be ignored. The default value is `^[e]$` mainly for historical reasons.
 
     .. code-block:: c++
 

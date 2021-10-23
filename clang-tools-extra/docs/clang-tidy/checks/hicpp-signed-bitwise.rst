@@ -4,7 +4,7 @@ hicpp-signed-bitwise
 ====================
 
 Finds uses of bitwise operations on signed integer types, which may lead to 
-undefined or implementation defined behaviour.
+undefined or implementation defined behavior.
 
 The according rule is defined in the `High Integrity C++ Standard, Section 5.6.1 <http://www.codingstandard.com/section/5-6-shift-operators/>`_.
 

@@ -27,5 +27,5 @@ Examples:
 
 
 Note: In the second example, the suggested fix could yield a different result,
-as the conversion to integer could truncate.  In practice, this is very rare,
+as the conversion to integer could truncate. In practice, this is very rare,
 and you should use ``absl::Trunc`` to perform this operation explicitly instead.

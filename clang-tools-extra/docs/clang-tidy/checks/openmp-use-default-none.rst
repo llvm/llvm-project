@@ -18,7 +18,7 @@ Example
 
 .. code-block:: c++
 
-  // ``for`` directive can not have ``default`` clause, no diagnostics.
+  // ``for`` directive cannot have ``default`` clause, no diagnostics.
   void n0(const int a) {
   #pragma omp for
     for (int b = 0; b < a; b++)

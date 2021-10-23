@@ -8,7 +8,7 @@ This check finds conversion from integer type like ``int`` to ``std::string`` or
 ``std::to_string`` and ``std::to_wstring``.
 
 It doesn't replace conversion from floating points despite the ``to_string``
-overloads, because it would change the behaviour.
+overloads, because it would change the behavior.
 
 
 .. code-block:: c++

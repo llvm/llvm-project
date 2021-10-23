@@ -74,7 +74,7 @@ Options
    When `true`, the check will attempt to refactor a variable defined inside
    the condition of the ``if`` statement that is used in the ``else`` branch
    defining them just before the ``if`` statement. This can only be done if 
-   the ``if`` statement is the last statement in its parents scope.
+   the ``if`` statement is the last statement in its parent's scope.
    Default value is `true`.
 
 

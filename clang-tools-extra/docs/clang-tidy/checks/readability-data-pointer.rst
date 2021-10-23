@@ -4,8 +4,8 @@ readability-data-pointer
 ========================
 
 Finds cases where code could use ``data()`` rather than the address of the
-element at index 0 in a container.  This pattern is commonly used to materialize
-a pointer to the backing data of a container.  ``std::vector`` and
+element at index 0 in a container. This pattern is commonly used to materialize
+a pointer to the backing data of a container. ``std::vector`` and
 ``std::string`` provide a ``data()`` accessor to retrieve the data pointer which
 should be preferred.
 

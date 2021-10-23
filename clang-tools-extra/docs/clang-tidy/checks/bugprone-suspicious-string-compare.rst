@@ -14,7 +14,7 @@ Checks for calls with implicit comparator and proposed to explicitly add it.
     if (!strcmp(...))      // Won't warn
     if (strcmp(...) != 0)  // Won't warn
 
-Checks that compare function results (i,e, ``strcmp``) are compared to valid
+Checks that compare function results (i.e., ``strcmp``) are compared to valid
 constant. The resulting value is
 
 .. code::

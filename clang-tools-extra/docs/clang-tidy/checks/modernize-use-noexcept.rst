@@ -4,7 +4,7 @@ modernize-use-noexcept
 ======================
 
 This check replaces deprecated dynamic exception specifications with
-the appropriate noexcept specification (introduced in C++11).  By
+the appropriate noexcept specification (introduced in C++11). By
 default this check will replace ``throw()`` with ``noexcept``,
 and ``throw(<exception>[,...])`` or ``throw(...)`` with
 ``noexcept(false)``.
@@ -30,9 +30,9 @@ Options
 .. option:: ReplacementString
 
   Users can use :option:`ReplacementString` to specify a macro to use
-  instead of ``noexcept``.  This is useful when maintaining source code
+  instead of ``noexcept``. This is useful when maintaining source code
   that uses custom exception specification marking other than
-  ``noexcept``.  Fix-it hints will only be generated for non-throwing
+  ``noexcept``. Fix-it hints will only be generated for non-throwing
   specifications.
 
 Example
