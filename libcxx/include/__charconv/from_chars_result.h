@@ -25,6 +25,9 @@ struct _LIBCPP_TYPE_VIS from_chars_result
 {
     const char* ptr;
     errc ec;
+#  if _LIBCPP_STD_VER > 17
+    _LIBCPP_HIDE_FROM_ABI friend bool operator==(const from_chars_result&, const from_chars_result&) = default;
+#  endif
 };
 
 #endif // _LIBCPP_CXX03_LANG

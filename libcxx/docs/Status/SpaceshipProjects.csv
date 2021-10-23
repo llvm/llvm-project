@@ -25,6 +25,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| unique_ptr,[comparisons.three.way],Unassigned,|Not Started|
 | `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| shared_ptr,[comparisons.three.way],Unassigned,|Not Started|
 | `[type.index.members] <https://wg21.link/type.index.members>`_,| type_index,None,Unassigned,|Not Started|
+| `[charconv.syn] <https://wg21.link/charconv.syn>`_,| to_chars_result,None,Mark de Wever,|Complete|
+| `[charconv.syn] <https://wg21.link/charconv.syn>`_,| from_chars_result,None,Mark de Wever,|Complete|
 | `[stacktrace.entry.cmp] <https://wg21.link/stacktrace.entry.cmp>`_,| stacktrace_entry,None,Unassigned,|Not Started|
 | `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| basic_stacktrace,[alg.three.way],Unassigned,|Not Started|
 | `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D80895>`_,None,Christopher Di Bella,|In Progress|
