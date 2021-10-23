@@ -1535,6 +1535,16 @@ def int_amdgcn_mul_u24 : Intrinsic<[llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn]
 >;
 
+def int_amdgcn_mulhi_i24 : Intrinsic<[llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+>;
+
+def int_amdgcn_mulhi_u24 : Intrinsic<[llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+>;
+
 // llvm.amdgcn.ds.gws.init(i32 bar_val, i32 resource_id)
 //
 // bar_val is the total number of waves that will wait on this

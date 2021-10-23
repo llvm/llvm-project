@@ -279,11 +279,18 @@ def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", SDTIntBinOp,
   [SDNPCommutative, SDNPAssociative]
 >;
 
-def AMDGPUmulhi_u24 : SDNode<"AMDGPUISD::MULHI_U24", SDTIntBinOp,
-  [SDNPCommutative, SDNPAssociative]
+// mulhi24 yields the high-order 16 bits of the 48-bit result. Here's an example
+// that shows mulhi24 is not associative:
+//
+// Given a = 0x10002, b = c = 0xffffff:
+// mulhi24(mulhi24(a, b), c) = mulhi24(0x100, 0xffffff) = 0
+// Which is not equal to:
+// mulhi24(a, mulhi24(b, c)) = mulhi24(0x10002, 0xffff) = 1
+def AMDGPUmulhi_u24_impl : SDNode<"AMDGPUISD::MULHI_U24", SDTIntBinOp,
+  [SDNPCommutative]
 >;
-def AMDGPUmulhi_i24 : SDNode<"AMDGPUISD::MULHI_I24", SDTIntBinOp,
-  [SDNPCommutative, SDNPAssociative]
+def AMDGPUmulhi_i24_impl : SDNode<"AMDGPUISD::MULHI_I24", SDTIntBinOp,
+  [SDNPCommutative]
 >;
 
 def AMDGPUmad_u24 : SDNode<"AMDGPUISD::MAD_U24", AMDGPUDTIntTernaryOp,
@@ -434,6 +441,14 @@ def AMDGPUmul_u24 : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUmul_i24 : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_mul_i24 node:$src0, node:$src1),
    (AMDGPUmul_i24_impl node:$src0, node:$src1)]>;
+
+def AMDGPUmulhi_u24 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_mulhi_u24 node:$src0, node:$src1),
+   (AMDGPUmulhi_u24_impl node:$src0, node:$src1)]>;
+
+def AMDGPUmulhi_i24 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_mulhi_i24 node:$src0, node:$src1),
+   (AMDGPUmulhi_i24_impl node:$src0, node:$src1)]>;
 
 def AMDGPUbfe_i32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_sbfe node:$src0, node:$src1, node:$src2),
