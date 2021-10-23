@@ -403,19 +403,10 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   if (Offset == -1)
     return Offset;
 
-  unsigned AS = Src->getType()->getPointerAddressSpace();
   // Otherwise, see if we can constant fold a load from the constant with the
   // offset applied as appropriate.
-  if (Offset) {
-    Src = ConstantExpr::getBitCast(Src,
-                                   Type::getInt8PtrTy(Src->getContext(), AS));
-    Constant *OffsetCst =
-        ConstantInt::get(Type::getInt64Ty(Src->getContext()), (unsigned)Offset);
-    Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()),
-                                         Src, OffsetCst);
-  }
-  Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  if (ConstantFoldLoadFromConstPtr(Src, LoadTy, DL))
+  unsigned IndexSize = DL.getIndexTypeSizeInBits(Src->getType());
+  if (ConstantFoldLoadFromConstPtr(Src, LoadTy, APInt(IndexSize, Offset), DL))
     return Offset;
   return -1;
 }
@@ -584,19 +575,11 @@ T *getMemInstValueForLoadHelper(MemIntrinsic *SrcInst, unsigned Offset,
   MemTransferInst *MTI = cast<MemTransferInst>(SrcInst);
   Constant *Src = cast<Constant>(MTI->getSource());
 
-  unsigned AS = Src->getType()->getPointerAddressSpace();
   // Otherwise, see if we can constant fold a load from the constant with the
   // offset applied as appropriate.
-  if (Offset) {
-    Src = ConstantExpr::getBitCast(Src,
-                                   Type::getInt8PtrTy(Src->getContext(), AS));
-    Constant *OffsetCst =
-        ConstantInt::get(Type::getInt64Ty(Src->getContext()), (unsigned)Offset);
-    Src = ConstantExpr::getGetElementPtr(Type::getInt8Ty(Src->getContext()),
-                                         Src, OffsetCst);
-  }
-  Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
-  return ConstantFoldLoadFromConstPtr(Src, LoadTy, DL);
+  unsigned IndexSize = DL.getIndexTypeSizeInBits(Src->getType());
+  return ConstantFoldLoadFromConstPtr(
+      Src, LoadTy, APInt(IndexSize, Offset), DL);
 }
 
 /// This function is called when we have a
