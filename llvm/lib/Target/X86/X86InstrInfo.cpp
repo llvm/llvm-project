@@ -4275,93 +4275,84 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   }
   }
 
-  // Get the unique definition of SrcReg.
-  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
-  if (!MI) return false;
+  // The following code tries to remove the comparison by re-using EFLAGS
+  // from earlier instructions.
 
-  // CmpInstr is the first instruction of the BB.
-  MachineBasicBlock::iterator I = CmpInstr, Def = MI;
-
-  // If we are comparing against zero, check whether we can use MI to update
-  // EFLAGS. If MI is not in the same BB as CmpInstr, do not optimize.
   bool IsCmpZero = (CmpMask != 0 && CmpValue == 0);
-  if (IsCmpZero && MI->getParent() != CmpInstr.getParent())
-    return false;
 
-  // If we have a use of the source register between the def and our compare
-  // instruction we can eliminate the compare iff the use sets EFLAGS in the
-  // right way.
-  bool ShouldUpdateCC = false;
+  MachineInstr *MI = nullptr;
+  MachineInstr *Sub = nullptr;
+  MachineInstr *Movr0Inst = nullptr;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
+  bool ShouldUpdateCC = false;
   X86::CondCode NewCC = X86::COND_INVALID;
-  if (IsCmpZero && !isDefConvertible(*MI, NoSignFlag, ClearsOverflowFlag)) {
-    // Scan forward from the use until we hit the use we're looking for or the
-    // compare instruction.
-    for (MachineBasicBlock::iterator J = MI;; ++J) {
-      // Do we have a convertible instruction?
-      NewCC = isUseDefConvertible(*J);
-      if (NewCC != X86::COND_INVALID && J->getOperand(1).isReg() &&
-          J->getOperand(1).getReg() == SrcReg) {
-        assert(J->definesRegister(X86::EFLAGS) && "Must be an EFLAGS def!");
-        ShouldUpdateCC = true; // Update CC later on.
-        // This is not a def of SrcReg, but still a def of EFLAGS. Keep going
-        // with the new def.
-        Def = J;
-        MI = &*Def;
+
+  // Search backward from CmpInstr for the next instruction defining EFLAGS.
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  MachineBasicBlock &CmpMBB = *CmpInstr.getParent();
+  MachineBasicBlock::reverse_iterator From =
+      std::next(MachineBasicBlock::reverse_iterator(CmpInstr));
+  MachineInstr *SrcRegDef = MRI->getVRegDef(SrcReg);
+  assert(SrcRegDef && "Must have a definition (SSA)");
+  for (MachineInstr &Inst : make_range(From, CmpMBB.rend())) {
+    // Try to use EFLAGS from the instruction defining %SrcReg. Example:
+    //     %eax = addl ...
+    //     ...                // EFLAGS not changed
+    //     testl %eax, %eax   // <-- can be removed
+    if (&Inst == SrcRegDef) {
+      if (IsCmpZero && isDefConvertible(Inst, NoSignFlag, ClearsOverflowFlag)) {
+        MI = &Inst;
+        break;
+      }
+      // Cannot find other candidates before definition of SrcReg.
+      return false;
+    }
+
+    if (Inst.modifiesRegister(X86::EFLAGS, TRI)) {
+      // Try to use EFLAGS produced by an instruction reading %SrcReg. Example:
+      //      %eax = ...
+      //      ...
+      //      popcntl %eax
+      //      ...                 // EFLAGS not changed
+      //      testl %eax, %eax    // <-- can be removed
+      if (IsCmpZero) {
+        NewCC = isUseDefConvertible(Inst);
+        if (NewCC != X86::COND_INVALID && Inst.getOperand(1).isReg() &&
+            Inst.getOperand(1).getReg() == SrcReg) {
+          ShouldUpdateCC = true;
+          MI = &Inst;
+          break;
+        }
+      }
+
+      // Try to use EFLAGS from an instruction with similar flag results.
+      // Example:
+      //     sub x, y  or  cmp x, y
+      //     ...           // EFLAGS not changed
+      //     cmp x, y      // <-- can be removed
+      if (!IsCmpZero && isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpMask,
+                                             CmpValue, Inst)) {
+        Sub = &Inst;
         break;
       }
 
-      if (J == I)
-        return false;
-    }
-  }
-
-  // We are searching for an earlier instruction that can make CmpInstr
-  // redundant and that instruction will be saved in Sub.
-  MachineInstr *Sub = nullptr;
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
-
-  // We iterate backward, starting from the instruction before CmpInstr and
-  // stop when reaching the definition of a source register or done with the BB.
-  // RI points to the instruction before CmpInstr.
-  // If the definition is in this basic block, RE points to the definition;
-  // otherwise, RE is the rend of the basic block.
-  MachineBasicBlock::reverse_iterator
-      RI = ++I.getReverse(),
-      RE = CmpInstr.getParent() == MI->getParent()
-               ? Def.getReverse() /* points to MI */
-               : CmpInstr.getParent()->rend();
-  MachineInstr *Movr0Inst = nullptr;
-  for (; RI != RE; ++RI) {
-    MachineInstr &Instr = *RI;
-    // Check whether CmpInstr can be made redundant by the current instruction.
-    if (!IsCmpZero && isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpMask,
-                                           CmpValue, Instr)) {
-      Sub = &Instr;
-      break;
-    }
-
-    if (Instr.modifiesRegister(X86::EFLAGS, TRI) ||
-        Instr.readsRegister(X86::EFLAGS, TRI)) {
-      // This instruction modifies or uses EFLAGS.
-
-      // MOV32r0 etc. are implemented with xor which clobbers condition code.
-      // They are safe to move up, if the definition to EFLAGS is dead and
-      // earlier instructions do not read or write EFLAGS.
-      if (!Movr0Inst && Instr.getOpcode() == X86::MOV32r0 &&
-          Instr.registerDefIsDead(X86::EFLAGS, TRI)) {
-        Movr0Inst = &Instr;
+      // MOV32r0 is implemented with xor which clobbers condition code. It is
+      // safe to move up, if the definition to EFLAGS is dead and earlier
+      // instructions do not read or write EFLAGS.
+      if (!Movr0Inst && Inst.getOpcode() == X86::MOV32r0 &&
+          Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        Movr0Inst = &Inst;
         continue;
       }
 
-      // We can't remove CmpInstr.
+      // Cannot do anything for any other EFLAG changes.
       return false;
     }
   }
 
   // Return false if no candidates exist.
-  if (!IsCmpZero && !Sub)
+  if (!MI && !Sub)
     return false;
 
   bool IsSwapped =
@@ -4374,9 +4365,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // live-out.
   bool IsSafe = false;
   SmallVector<std::pair<MachineInstr*, X86::CondCode>, 4> OpsToUpdate;
-  MachineBasicBlock::iterator E = CmpInstr.getParent()->end();
-  for (++I; I != E; ++I) {
-    const MachineInstr &Instr = *I;
+  MachineBasicBlock::iterator AfterCmpInstr =
+      std::next(MachineBasicBlock::iterator(CmpInstr));
+  for (MachineInstr &Instr : make_range(AfterCmpInstr, CmpMBB.end())) {
     bool ModifyEFLAGS = Instr.modifiesRegister(X86::EFLAGS, TRI);
     bool UseEFLAGS = Instr.readsRegister(X86::EFLAGS, TRI);
     // We should check the usage if this instruction uses and updates EFLAGS.
@@ -4449,7 +4440,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       // Push the MachineInstr to OpsToUpdate.
       // If it is safe to remove CmpInstr, the condition code of these
       // instructions will be modified.
-      OpsToUpdate.push_back(std::make_pair(&*I, ReplacementCC));
+      OpsToUpdate.push_back(std::make_pair(&Instr, ReplacementCC));
     }
     if (ModifyEFLAGS || Instr.killsRegister(X86::EFLAGS, TRI)) {
       // It is safe to remove CmpInstr if EFLAGS is updated again or killed.
@@ -4461,8 +4452,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // If EFLAGS is not killed nor re-defined, we should check whether it is
   // live-out. If it is live-out, do not optimize.
   if ((IsCmpZero || IsSwapped) && !IsSafe) {
-    MachineBasicBlock *MBB = CmpInstr.getParent();
-    for (MachineBasicBlock *Successor : MBB->successors())
+    for (MachineBasicBlock *Successor : CmpMBB.successors())
       if (Successor->isLiveIn(X86::EFLAGS))
         return false;
   }
@@ -4472,8 +4462,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // Move Movr0Inst to the appropriate place before Sub.
   if (Movr0Inst) {
     // Look backwards until we find a def that doesn't use the current EFLAGS.
-    Def = Sub;
-    MachineBasicBlock::reverse_iterator InsertI = Def.getReverse(),
+    MachineBasicBlock::reverse_iterator InsertI = Sub,
                                         InsertE = Sub->getParent()->rend();
     for (; InsertI != InsertE; ++InsertI) {
       MachineInstr *Instr = &*InsertI;
