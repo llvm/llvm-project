@@ -698,13 +698,12 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
                                                 bool AllowNonInbounds = false) {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
-  Type *IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
-  APInt Offset = APInt::getZero(IntIdxTy->getIntegerBitWidth());
+  APInt Offset = APInt::getZero(DL.getIndexTypeSizeInBits(V->getType()));
 
   V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
   // the offset calculated.
-  IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
+  Type *IntIdxTy = DL.getIndexType(V->getType())->getScalarType();
   Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
 
   Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
