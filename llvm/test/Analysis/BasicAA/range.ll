@@ -178,6 +178,25 @@ define void @zeroext_index([256 x i32]* %s, i8* %q) {
   ret void
 }
 
+; CHECK-LABEL: Function: multiple
+; CHECK: MayAlias: i32* %p, i32* %p.01
+; CHECK: MayAlias: i32* %p, i32* %p.02
+; CHECK: MayAlias: i32* %p.01, i32* %p.02
+; CHECK: NoAlias:  i32* %p.01, i32* %p.2
+; CHECK: MayAlias: i32* %p.02, i32* %p.2
+; CHECK: NoAlias:  i32* %p.01, i32* %p.3
+; TODO: This can be NoAlias.
+; CHECK: MayAlias: i32* %p.02, i32* %p.3
+define void @multiple(i32* %p, i32* %o1_ptr, i32* %o2_ptr) {
+  %o1 = load i32, i32* %o1_ptr, !range !0
+  %o2 = load i32, i32* %o2_ptr, !range !0
+  %p.01 = getelementptr i32, i32* %p, i32 %o1  ; p + [0, 1]
+  %p.02 = getelementptr i32, i32* %p.01, i32 %o2 ; p + [0, 2]
+  %p.2 = getelementptr i32, i32* %p, i32 2
+  %p.3 = getelementptr i32, i32* %p, i32 3
+  ret void
+}
+
 
 !0 = !{ i32 0, i32 2 }
 !1 = !{ i32 0, i32 1 }
