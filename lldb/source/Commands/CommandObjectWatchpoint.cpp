@@ -56,7 +56,7 @@ static int32_t WithRSAIndex(llvm::StringRef Arg) {
 
   uint32_t i;
   for (i = 0; i < 4; ++i)
-    if (Arg.find(RSA[i]) != llvm::StringRef::npos)
+    if (Arg.contains(RSA[i]))
       return i;
   return -1;
 }

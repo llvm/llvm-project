@@ -1347,8 +1347,8 @@ static std::string quote(ArrayRef<StringRef> args) {
   for (StringRef a : args) {
     if (!r.empty())
       r.push_back(' ');
-    bool hasWS = a.find(' ') != StringRef::npos;
-    bool hasQ = a.find('"') != StringRef::npos;
+    bool hasWS = a.contains(' ');
+    bool hasQ = a.contains('"');
     if (hasWS || hasQ)
       r.push_back('"');
     if (hasQ) {
