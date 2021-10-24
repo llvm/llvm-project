@@ -884,8 +884,9 @@ public:
   }
 
   /// Merge and align symbols of `this` and `other` such that both get union of
-  /// of symbols that are unique. Symbols with Value as `None` are considered
-  /// to be inequal to all other symbols.
+  /// of symbols that are unique. Symbols in `this` and `other` should be
+  /// unique. Symbols with Value as `None` are considered to be inequal to all
+  /// other symbols.
   void mergeSymbolIds(FlatAffineValueConstraints &other);
 
 protected:
