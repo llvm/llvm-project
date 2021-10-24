@@ -204,11 +204,10 @@ inline bool IsObjCIdentifiedObject(const Value *V) {
         return true;
 
       StringRef Section = GV->getSection();
-      if (Section.find("__message_refs") != StringRef::npos ||
-          Section.find("__objc_classrefs") != StringRef::npos ||
-          Section.find("__objc_superrefs") != StringRef::npos ||
-          Section.find("__objc_methname") != StringRef::npos ||
-          Section.find("__cstring") != StringRef::npos)
+      if (Section.contains("__message_refs") ||
+          Section.contains("__objc_classrefs") ||
+          Section.contains("__objc_superrefs") ||
+          Section.contains("__objc_methname") || Section.contains("__cstring"))
         return true;
     }
   }
