@@ -4,8 +4,7 @@
 define i32 @zext_lshr(i1 %t0) {
 ; CHECK-LABEL: @zext_lshr(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i1 [[T0:%.*]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1]], 1
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    ret i32 0
 ;
   %t1 = zext i1 %t0 to i32
   %t2 = lshr i32 %t1, 1
@@ -15,13 +14,14 @@ define i32 @zext_lshr(i1 %t0) {
 define i1 @zext_icmp(i1 %t0) {
 ; CHECK-LABEL: @zext_icmp(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i1 [[T0:%.*]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 2
-; CHECK-NEXT:    ret i1 [[T2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %t1 = zext i1 %t0 to i32
   %t2 = icmp eq i32 %t1, 2
   ret i1 %t2
 }
+
+; negative test. SCCP operates poorly with vector ranges
 
 define <2 x i1> @zext_vector(<2 x i1> %t0) {
 ; CHECK-LABEL: @zext_vector(
@@ -33,6 +33,8 @@ define <2 x i1> @zext_vector(<2 x i1> %t0) {
   %t2 = icmp eq <2 x i32> %t1, <i32 2, i32 2>
   ret <2 x i1> %t2
 }
+
+; negative test. SCCP operates poorly with vector ranges
 
 define <2 x i1> @zext_vector2(<2 x i1> %t0) {
 ; CHECK-LABEL: @zext_vector2(
@@ -46,6 +48,8 @@ define <2 x i1> @zext_vector2(<2 x i1> %t0) {
   %t3 = icmp eq <2 x i32> %t1, %t2
   ret <2 x i1> %t3
 }
+
+; negative test: %t2 can be replaced by %t1, but SCCP operates by ranges only
 
 define i32 @sext_ashr(i1 %t0) {
 ; CHECK-LABEL: @sext_ashr(
@@ -61,13 +65,14 @@ define i32 @sext_ashr(i1 %t0) {
 define i1 @sext_icmp(i1 %t0) {
 ; CHECK-LABEL: @sext_icmp(
 ; CHECK-NEXT:    [[T1:%.*]] = sext i1 [[T0:%.*]] to i32
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 2
-; CHECK-NEXT:    ret i1 [[T2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %t1 = sext i1 %t0 to i32
   %t2 = icmp eq i32 %t1, 2
   ret i1 %t2
 }
+
+; negative test. SCCP operates poorly with vector ranges
 
 define <2 x i1> @sext_vector(<2 x i1> %t0) {
 ; CHECK-LABEL: @sext_vector(
@@ -79,6 +84,8 @@ define <2 x i1> @sext_vector(<2 x i1> %t0) {
   %t2 = icmp eq <2 x i32> %t1, <i32 2, i32 2>
   ret <2 x i1> %t2
 }
+
+; negative test. SCCP operates poorly with vector ranges
 
 define <2 x i1> @sext_vector2(<2 x i1> %t0) {
 ; CHECK-LABEL: @sext_vector2(

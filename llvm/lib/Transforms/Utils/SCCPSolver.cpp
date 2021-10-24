@@ -808,6 +808,9 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
     return;
 
   ValueLatticeElement OpSt = getValueState(I.getOperand(0));
+  if (OpSt.isUnknownOrUndef())
+    return;
+
   if (Constant *OpC = getConstant(OpSt)) {
     // Fold the constant as we build.
     Constant *C = ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL);
@@ -815,9 +818,14 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
       return;
     // Propagate constant value
     markConstant(&I, C);
-  } else if (OpSt.isConstantRange() && I.getDestTy()->isIntegerTy()) {
+  } else if (I.getDestTy()->isIntegerTy()) {
     auto &LV = getValueState(&I);
-    ConstantRange OpRange = OpSt.getConstantRange();
+    ConstantRange OpRange =
+        OpSt.isConstantRange()
+            ? OpSt.getConstantRange()
+            : ConstantRange::getFull(
+                  I.getOperand(0)->getType()->getScalarSizeInBits());
+
     Type *DestTy = I.getDestTy();
     // Vectors where all elements have the same known constant range are treated
     // as a single constant range in the lattice. When bitcasting such vectors,
@@ -832,7 +840,7 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
     ConstantRange Res =
         OpRange.castOp(I.getOpcode(), DL.getTypeSizeInBits(DestTy));
     mergeInValue(LV, &I, ValueLatticeElement::getRange(Res));
-  } else if (!OpSt.isUnknownOrUndef())
+  } else
     markOverdefined(&I);
 }
 
