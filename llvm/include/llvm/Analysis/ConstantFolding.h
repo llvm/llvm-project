@@ -150,13 +150,6 @@ Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
                                                  Type *Ty,
                                                  const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPIndices - Given a constant and getelementptr
-/// indices (with an *implied* zero pointer index that is not in the list),
-/// return the constant value being addressed by a virtual load, or null if
-/// something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                            ArrayRef<Constant *> Indices);
-
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
 bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
