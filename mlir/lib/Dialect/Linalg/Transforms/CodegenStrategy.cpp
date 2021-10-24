@@ -46,6 +46,19 @@ void mlir::linalg::CodegenStrategy::configurePassPipeline(
     t->addToPassPipeline(pm, filter);
     pm.addPass(createLinalgStrategyEnablePass());
   }
-  pm.addPass(createLinalgStrategyLowerVectorsPass(lateVectorLoweringOptions));
+  LinalgVectorLoweringOptions vectorLoweringOptions;
+  vectorLoweringOptions.maxTransferRank =
+      lateCodegenStrategyOptions.maxTransferRank;
+  vectorLoweringOptions.enableVectorTransferLowering =
+      lateCodegenStrategyOptions.enableVectorTransferLowering;
+  vectorLoweringOptions.enableVectorTransferPartialRewrite =
+      lateCodegenStrategyOptions.enableVectorTransferPartialRewrite;
+  vectorLoweringOptions.enableVectorContractLowering =
+      lateCodegenStrategyOptions.enableVectorContractLowering;
+  vectorLoweringOptions.enableVectorToSCFConversion =
+      lateCodegenStrategyOptions.enableVectorToSCFConversion;
+  vectorLoweringOptions.vectorTransformOptions = vectorTransformOptions;
+  vectorLoweringOptions.vectorTransferToSCFOptions = vectorToSCFOptions;
+  pm.addPass(createLinalgStrategyLowerVectorsPass(vectorLoweringOptions));
   pm.addPass(createLinalgStrategyRemoveMarkersPass());
 }

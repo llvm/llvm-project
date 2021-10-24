@@ -195,16 +195,53 @@ struct CodegenStrategy {
     return b ? vectorize(opName, f) : *this;
     return *this;
   }
-  /// Configure the post staged-patterns late vector lowering options.
+  /// Configure the post staged-patterns late vector transformations.
   CodegenStrategy &
-  setLinalgVectorLoweringOptions(LinalgVectorLoweringOptions options) {
-    lateVectorLoweringOptions = options;
+  setVectorTransformsOptions(vector::VectorTransformsOptions options) {
+    vectorTransformOptions = options;
     return *this;
   }
-  /// Configure the post staged-patterns global enabling passes options.
+  /// Configure the post staged-patterns late vector.transfer to scf
+  /// conversion.
   CodegenStrategy &
-  setVectorTransferToSCFOptions(LinalgEnablingOptions options) {
-    linalgEnablingOptions = options;
+  setVectorTransferToSCFOptions(VectorTransferToSCFOptions options) {
+    vectorToSCFOptions = options;
+    return *this;
+  }
+  ///
+  /// Configure the application of late transformations.
+  ///
+  CodegenStrategy &setEnableLICM(bool val) {
+    this->lateCodegenStrategyOptions.enableLICM = val;
+    return *this;
+  }
+  CodegenStrategy &setEnableHoistRedundantVectorTransfers(bool val) {
+    this->lateCodegenStrategyOptions.enableHoistRedundantVectorTransfers = val;
+    return *this;
+  }
+  CodegenStrategy &setEnableHoistRedundantVectorTransfersOnTensor(bool val) {
+    this->lateCodegenStrategyOptions
+        .enableHoistRedundantVectorTransfersOnTensor = val;
+    return *this;
+  }
+  CodegenStrategy &setMaxTransferRank(int64_t val) {
+    this->lateCodegenStrategyOptions.maxTransferRank = val;
+    return *this;
+  }
+  CodegenStrategy &setEnableVectorTransferLowering(bool val) {
+    this->lateCodegenStrategyOptions.enableVectorTransferLowering = val;
+    return *this;
+  }
+  CodegenStrategy &setEnableVectorTransferPartialRewrite(bool val) {
+    this->lateCodegenStrategyOptions.enableVectorTransferPartialRewrite = val;
+    return *this;
+  }
+  CodegenStrategy &setEnableVectorContractLowering(bool val) {
+    this->lateCodegenStrategyOptions.enableVectorContractLowering = val;
+    return *this;
+  }
+  CodegenStrategy &setEnableVectorToSCFConversion(bool val) {
+    this->lateCodegenStrategyOptions.enableVectorToSCFConversion = val;
     return *this;
   }
 
@@ -215,9 +252,10 @@ struct CodegenStrategy {
 private:
   LogicalResult postPatternTransforms(Operation *func) const;
 
-  LinalgEnablingOptions linalgEnablingOptions;
-  LinalgVectorLoweringOptions lateVectorLoweringOptions;
+  vector::VectorTransformsOptions vectorTransformOptions;
+  VectorTransferToSCFOptions vectorToSCFOptions;
   SmallVector<std::unique_ptr<Transformation>, 4> transformationSequence;
+  LateCodegenStrategyOptions lateCodegenStrategyOptions;
 };
 
 } // namespace linalg
