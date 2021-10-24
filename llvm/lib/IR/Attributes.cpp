@@ -1599,9 +1599,7 @@ AttrBuilder &AttrBuilder::removeAttributes(AttributeList A, uint64_t Index) {
 }
 
 AttrBuilder &AttrBuilder::removeAttribute(StringRef A) {
-  auto I = TargetDepAttrs.find(A);
-  if (I != TargetDepAttrs.end())
-    TargetDepAttrs.erase(I);
+  TargetDepAttrs.erase(A);
   return *this;
 }
 
