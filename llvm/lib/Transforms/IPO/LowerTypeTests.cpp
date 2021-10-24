@@ -1192,7 +1192,8 @@ void LowerTypeTestsModule::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
 
   if (GO->isThreadLocal())
     report_fatal_error("Bit set element may not be thread-local");
-  if (isa<GlobalVariable>(GO) && GO->hasSection())
+  if (isa<GlobalVariable>(GO) && GO->hasSection() &&
+       !GO->hasMetadata("typed_global_not_for_cfi"))
     report_fatal_error(
         "A member of a type identifier may not have an explicit section");
 
