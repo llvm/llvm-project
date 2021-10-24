@@ -315,3 +315,25 @@ entry:
   %1 = trunc i128 %0 to i16
   ret i16 %1
 }
+
+define internal i64 @f.sext_to_zext(i32 %t) {
+; CHECK-LABEL: @f.sext_to_zext(
+; CHECK-NEXT:    [[A:%.*]] = sext i32 [[T:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  %a = sext i32 %t to i64
+  ret i64 %a
+}
+
+define i64 @caller.sext_to_zext(i32 %i) {
+; CHECK-LABEL: @caller.sext_to_zext(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[I:%.*]], 9
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[T:%.*]] = call i64 @f.sext_to_zext(i32 [[CONV]])
+; CHECK-NEXT:    ret i64 [[T]]
+;
+  %cmp = icmp sle i32 %i, 9
+  %conv = zext i1 %cmp to i32
+  %t = call i64 @f.sext_to_zext(i32 %conv)
+  ret i64 %t
+}
