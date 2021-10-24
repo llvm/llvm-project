@@ -25,9 +25,9 @@ struct StackDepotNode {
   using hash_type = u64;
   hash_type stack_hash;
   u32 link;
-  u32 tag;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
+  static const u32 kStackSizeBits = 16;
 
   typedef StackTrace args_type;
   bool eq(hash_type hash, const args_type &args) const {
@@ -78,10 +78,10 @@ uptr StackDepotNode::allocated() {
 }
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
-  tag = args.tag;
   stack_hash = hash;
   uptr *stack_trace = traceAllocator.alloc(args.size + 1);
-  *stack_trace = args.size;
+  CHECK_LT(args.size, 1 << kStackSizeBits);
+  *stack_trace = args.size + (args.tag << kStackSizeBits);
   internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
   tracePtrs[id] = stack_trace;
 }
@@ -90,7 +90,9 @@ StackDepotNode::args_type StackDepotNode::load(u32 id) const {
   const uptr *stack_trace = tracePtrs[id];
   if (!stack_trace)
     return {};
-  return args_type(stack_trace + 1, *stack_trace, tag);
+  uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
+  uptr tag = *stack_trace >> kStackSizeBits;
+  return args_type(stack_trace + 1, size, tag);
 }
 
 StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
