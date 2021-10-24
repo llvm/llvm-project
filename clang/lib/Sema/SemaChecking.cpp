@@ -2688,12 +2688,7 @@ static bool isValidBPFPreserveEnumValueArg(Expr *Arg) {
     return false;
 
   // The enum value must be supported.
-  for (auto *EDI : ET->getDecl()->enumerators()) {
-    if (EDI == Enumerator)
-      return true;
-  }
-
-  return false;
+  return llvm::is_contained(ET->getDecl()->enumerators(), Enumerator);
 }
 
 bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
