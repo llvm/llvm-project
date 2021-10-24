@@ -690,8 +690,8 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
 }
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                             APInt Offset,
                                              const DataLayout &DL) {
-  APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
   C = cast<Constant>(C->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true));
 
@@ -713,6 +713,12 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   }
 
   return nullptr;
+}
+
+Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                             const DataLayout &DL) {
+  APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
+  return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
 }
 
 namespace {
@@ -1352,19 +1358,6 @@ Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
       return nullptr;
   }
   return ConstantFoldLoadThroughBitcast(C, Ty, DL);
-}
-
-Constant *
-llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                        ArrayRef<Constant *> Indices) {
-  // Loop over all of the operands, tracking down which value we are
-  // addressing.
-  for (Constant *Index : Indices) {
-    C = C->getAggregateElement(Index);
-    if (!C)
-      return nullptr;
-  }
-  return C;
 }
 
 //===----------------------------------------------------------------------===//
