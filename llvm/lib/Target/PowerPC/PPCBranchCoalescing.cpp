@@ -291,7 +291,7 @@ bool PPCBranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
     return false;
   }
 
-  // Sanity check - the block must be able to fall through
+  // The block must be able to fall through.
   assert(Cand.BranchBlock->canFallThrough() &&
          "Expecting the block to fall through!");
 
@@ -751,9 +751,8 @@ bool PPCBranchCoalescing::runOnMachineFunction(MachineFunction &MF) {
       if (!canCoalesceBranch(Cand2))
         break;
 
-      // Sanity check
       // The branch-taken block of the second candidate should post-dominate the
-      // first candidate
+      // first candidate.
       assert(MPDT->dominates(Cand2.BranchTargetBlock, Cand1.BranchBlock) &&
              "Branch-taken block should post-dominate first candidate");
 
