@@ -1,4 +1,4 @@
-// RUN: %libomp-compile-and-run
+// RUN: %libomp-c99-compile-and-run
 //
 #include <stdlib.h>
 #include <stdio.h>
