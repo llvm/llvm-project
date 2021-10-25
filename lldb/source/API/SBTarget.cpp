@@ -219,7 +219,9 @@ SBStructuredData SBTarget::GetStatistics() {
   if (!target_sp)
     return LLDB_RECORD_RESULT(data);
   std::string json_str =
-      llvm::formatv("{0:2}", target_sp->ReportStatistics()).str();
+      llvm::formatv("{0:2}", 
+          DebuggerStats::ReportStatistics(target_sp->GetDebugger(), 
+                                          target_sp.get())).str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
   return LLDB_RECORD_RESULT(data);
 }
