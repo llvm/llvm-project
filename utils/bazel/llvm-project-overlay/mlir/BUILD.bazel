@@ -6314,6 +6314,7 @@ cc_library(
         ":ComplexDialect",
         ":DialectUtils",
         ":IR",
+        ":InferTypeOpInterface",
         ":LinalgOps",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
