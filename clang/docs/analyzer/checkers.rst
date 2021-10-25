@@ -313,6 +313,22 @@ cplusplus.SelfAssignment (C++)
 """"""""""""""""""""""""""""""
 Checks C++ copy and move assignment operators for self assignment.
 
+.. _cplusplus-StringChecker:
+
+cplusplus.StringChecker (C++)
+"""""""""""""""""""""""""""""
+Checks std::string operations.
+
+.. code-block:: cpp
+
+ #include <string>
+
+ void f(const char *p) {
+   if (!p) {
+     std::string msg(p); // warn: p is NULL
+   }
+ }
+
 .. _deadcode-checkers:
 
 deadcode
