@@ -203,3 +203,187 @@ body: |
     CMP32rr %0, %1, implicit-def $eflags
     $bl = SETCCr 2, implicit $eflags
 ...
+---
+name: opt_redundant_flags_cmp_cmp
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_cmp
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: CMP32rr [[COPY1]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr32 = COPY $esi
+    %1:gr32 = COPY $edi
+    CMP32rr %0, %1, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; 2nd CMP should be removed.
+    CMP32rr %1, %0, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_cmp_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_cmp_2
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: CMP64ri8 [[COPY]], 15, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: CMP64ri8 [[COPY]], 15, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr64 = COPY $rsi
+    %1:gr64 = COPY $rdi
+    CMP64ri8 %0, 15, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; 2nd CMP should be removed.
+    CMP64ri8 %0, 15, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_test_test
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_test_test
+    ; CHECK: [[COPY:%[0-9]+]]:gr16 = COPY $ax
+    ; CHECK-NEXT: TEST16rr [[COPY]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: TEST16rr [[COPY]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr16 = COPY $ax
+    TEST16rr %0, %0, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; 2nd CMP should be removed.
+    TEST16rr %0, %0, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_sub
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: CMP32rr [[COPY1]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr32 = COPY $esi
+    %1:gr32 = COPY $edi
+    CMP32rr %0, %1, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; SUB should be removed.
+    dead %2:gr32 = SUB32rr %1, %0, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_sub_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub_2
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: CMP32ri [[COPY]], -12345, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], -12345, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr32 = COPY $esi
+    CMP32ri %0, -12345, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; SUB should be removed
+    dead %2:gr32 = SUB32ri %0, -12345, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_sub_noopt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub_noopt
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; CHECK-NEXT: $rdx = COPY [[SUB32rr]]
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr32 = COPY $esi
+    %1:gr32 = COPY $edi
+    CMP32rr %0, %1, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; cannot optimize the SUB because the result value is used.
+    %2:gr32 = SUB32rr %0, %1, implicit-def $eflags
+    $rdx = COPY %2
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_test
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_test
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: CMP32ri8 [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: TEST32rr [[COPY]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr32 = COPY $esi
+    CMP32ri8 %0, 0, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; TEST should be removed
+    TEST32rr %0, %0, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_test_cmp
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_test_cmp
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: TEST32rr [[COPY]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: CMP32ri8 [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr32 = COPY $esi
+    TEST32rr %0, %0, implicit-def $eflags
+    $cl = SETCCr 2, implicit $eflags
+    ; TEST should be removed
+    CMP32ri8 %0, 0, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_addr
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_addr
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 3, implicit $eflags
+    %0:gr64 = COPY $rsi
+    CMP64ri32 %0, @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
+    $cl = SETCCr 7, implicit $eflags
+    ; CMP should be removed
+    CMP64ri32 %0, @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
+    $cl = SETCCr 3, implicit $eflags
+...
+---
+name: opt_redundant_flags_cmp_addr_noopt
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_cmp_addr_noopt
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr_noopt + 24, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], 24, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 3, implicit $eflags
+    %0:gr64 = COPY $rsi
+    CMP64ri32 %0, @opt_redundant_flags_cmp_addr_noopt + 24, implicit-def $eflags
+    $cl = SETCCr 7, implicit $eflags
+    ; CMP should not be removed
+    CMP64ri32 %0, 24, implicit-def $eflags
+    $cl = SETCCr 3, implicit $eflags
+...
