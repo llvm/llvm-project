@@ -1,5 +1,6 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
 # RUN:     -start-before=phi-node-elimination -stop-after=virtregrewriter \
+# RUN:    -mtriple x86_64-unknown-unknown \
 # RUN:  | FileCheck %s
 #
 # Test that when a load gets folded into an instruction (the CVTTSS2SIrr below)
