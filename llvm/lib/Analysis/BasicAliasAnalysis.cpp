@@ -1252,7 +1252,7 @@ AliasResult BasicAAResult::aliasGEP(
     APInt GCD;
     bool AllNonNegative = DecompGEP1.Offset.isNonNegative();
     bool AllNonPositive = DecompGEP1.Offset.isNonPositive();
-    ConstantRange Range = ConstantRange(DecompGEP1.Offset);
+    ConstantRange OffsetRange = ConstantRange(DecompGEP1.Offset);
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
       const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
       const APInt &Scale = Index.Scale;
@@ -1277,12 +1277,12 @@ AliasResult BasicAAResult::aliasGEP(
                           (SignKnownOne && Scale.isNonNegative());
       }
 
-      assert(Range.getBitWidth() == Scale.getBitWidth() &&
+      assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
              "Bit widths are normalized to MaxPointerSize");
-      Range = Range.add(Index.Val
+      OffsetRange = OffsetRange.add(Index.Val
                             .evaluateWith(computeConstantRange(
                                 Index.Val.V, true, &AC, Index.CxtI))
-                            .sextOrTrunc(Range.getBitWidth())
+                            .sextOrTrunc(OffsetRange.getBitWidth())
                             .smul_fast(ConstantRange(Scale)));
     }
 
@@ -1315,15 +1315,15 @@ AliasResult BasicAAResult::aliasGEP(
         (-DecompGEP1.Offset).uge(V1Size.getValue()))
       return AliasResult::NoAlias;
 
-    if (!Range.isEmptySet()) {
-      // We know that Offset >= MinOffset.
-      // (MinOffset >= V2Size) => (Offset >= V2Size) => NoAlias.
-      if (V2Size.hasValue() && Range.getSignedMin().sge(V2Size.getValue()))
-        return AliasResult::NoAlias;
-
-      // We know that Offset <= MaxOffset.
-      // (MaxOffset <= -V1Size) => (Offset <= -V1Size) => NoAlias.
-      if (V1Size.hasValue() && Range.getSignedMax().sle(-V1Size.getValue()))
+    if (V1Size.hasValue() && V2Size.hasValue()) {
+      // Compute ranges of potentially accessed bytes for both accesses. If the
+      // interseciton is empty, there can be no overlap.
+      unsigned BW = OffsetRange.getBitWidth();
+      ConstantRange Range1 = OffsetRange.add(
+          ConstantRange(APInt(BW, 0), APInt(BW, V1Size.getValue())));
+      ConstantRange Range2 =
+          ConstantRange(APInt(BW, 0), APInt(BW, V2Size.getValue()));
+      if (Range1.intersectWith(Range2).isEmptySet())
         return AliasResult::NoAlias;
     }
 
