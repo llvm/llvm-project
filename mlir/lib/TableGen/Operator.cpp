@@ -655,8 +655,25 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
   SmallVector<std::string, 2> names;
   bool rawToo = prefixType == Dialect::EmitPrefix::Both;
 
+  // Whether to skip generating prefixed form for argument. This just does some
+  // basic checks.
+  //
+  // There are a little bit more invasive checks possible for cases where not
+  // all ops have the trait that would cause overlap. For many cases here,
+  // renaming would be better (e.g., we can only guard in limited manner against
+  // methods from traits and interfaces here, so avoiding these in op definition
+  // is safer).
   auto skip = [&](StringRef newName) {
-    bool shouldSkip = newName == "getOperands";
+    bool shouldSkip = newName == "getAttributeNames" ||
+                      newName == "getAttributes" || newName == "getOperation" ||
+                      newName == "getType";
+    if (newName == "getOperands") {
+      // To reduce noise, skip generating the prefixed form and the warning if
+      // $operands correspond to single variadic argument.
+      if (op.getNumOperands() == 1 && op.getNumVariableLengthOperands() == 1)
+        return true;
+      shouldSkip = true;
+    }
     if (!shouldSkip)
       return false;
 
@@ -677,11 +694,11 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
     if (skip(names.back())) {
       rawToo = true;
       names.clear();
-    } else {
+    } else if (rawToo) {
       LLVM_DEBUG(llvm::errs() << "WITH_GETTER(\"" << op.getQualCppClassName()
-                              << "::" << names.back() << "\");\n"
+                              << "::" << name << "\")\n"
                               << "WITH_GETTER(\"" << op.getQualCppClassName()
-                              << "Adaptor::" << names.back() << "\");\n";);
+                              << "Adaptor::" << name << "\")\n";);
     }
   }
 

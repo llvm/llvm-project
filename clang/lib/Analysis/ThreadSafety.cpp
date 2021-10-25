@@ -86,11 +86,9 @@ class CapExprSet : public SmallVector<CapabilityExpr, 4> {
 public:
   /// Push M onto list, but discard duplicates.
   void push_back_nodup(const CapabilityExpr &CapE) {
-    iterator It = std::find_if(begin(), end(),
-                               [=](const CapabilityExpr &CapE2) {
-      return CapE.equals(CapE2);
-    });
-    if (It == end())
+    if (llvm::none_of(*this, [=](const CapabilityExpr &CapE2) {
+          return CapE.equals(CapE2);
+        }))
       push_back(CapE);
   }
 };

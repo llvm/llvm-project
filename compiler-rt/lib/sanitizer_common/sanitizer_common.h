@@ -419,9 +419,7 @@ inline uptr LeastSignificantSetBitIndex(uptr x) {
   return up;
 }
 
-inline bool IsPowerOfTwo(uptr x) {
-  return (x & (x - 1)) == 0;
-}
+inline constexpr bool IsPowerOfTwo(uptr x) { return (x & (x - 1)) == 0; }
 
 inline uptr RoundUpToPowerOfTwo(uptr size) {
   CHECK(size);
@@ -433,16 +431,16 @@ inline uptr RoundUpToPowerOfTwo(uptr size) {
   return 1ULL << (up + 1);
 }
 
-inline uptr RoundUpTo(uptr size, uptr boundary) {
+inline constexpr uptr RoundUpTo(uptr size, uptr boundary) {
   RAW_CHECK(IsPowerOfTwo(boundary));
   return (size + boundary - 1) & ~(boundary - 1);
 }
 
-inline uptr RoundDownTo(uptr x, uptr boundary) {
+inline constexpr uptr RoundDownTo(uptr x, uptr boundary) {
   return x & ~(boundary - 1);
 }
 
-inline bool IsAligned(uptr a, uptr alignment) {
+inline constexpr bool IsAligned(uptr a, uptr alignment) {
   return (a & (alignment - 1)) == 0;
 }
 

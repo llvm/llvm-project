@@ -274,7 +274,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
   if (!dstType)
     return failure();
 
-  auto dstElementsAttr = constOp.value().dyn_cast<DenseElementsAttr>();
+  auto dstElementsAttr = constOp.getValue().dyn_cast<DenseElementsAttr>();
   ShapedType dstAttrType = dstElementsAttr.getType();
   if (!dstElementsAttr)
     return failure();
@@ -358,7 +358,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // Floating-point types.
   if (srcType.isa<FloatType>()) {
-    auto srcAttr = constOp.value().cast<FloatAttr>();
+    auto srcAttr = constOp.getValue().cast<FloatAttr>();
     auto dstAttr = srcAttr;
 
     // Floating-point types not supported in the target environment are all
@@ -377,7 +377,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
   if (srcType.isInteger(1)) {
     // arith.constant can use 0/1 instead of true/false for i1 values. We need
     // to handle that here.
-    auto dstAttr = convertBoolAttr(constOp.value(), rewriter);
+    auto dstAttr = convertBoolAttr(constOp.getValue(), rewriter);
     if (!dstAttr)
       return failure();
     rewriter.replaceOpWithNewOp<spirv::ConstantOp>(constOp, dstType, dstAttr);
@@ -386,7 +386,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 
   // IndexType or IntegerType. Index values are converted to 32-bit integer
   // values when converting to SPIR-V.
-  auto srcAttr = constOp.value().cast<IntegerAttr>();
+  auto srcAttr = constOp.getValue().cast<IntegerAttr>();
   auto dstAttr =
       convertIntegerAttr(srcAttr, dstType.cast<IntegerType>(), rewriter);
   if (!dstAttr)
@@ -604,7 +604,7 @@ LogicalResult TypeCastingOpPattern<Op, SPIRVOp>::matchAndRewrite(
 LogicalResult CmpIOpBooleanPattern::matchAndRewrite(
     arith::CmpIOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  Type operandType = op.lhs().getType();
+  Type operandType = op.getLhs().getType();
   if (!isBoolScalarOrVector(operandType))
     return failure();
 
@@ -631,7 +631,7 @@ LogicalResult CmpIOpBooleanPattern::matchAndRewrite(
 LogicalResult
 CmpIOpPattern::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
                                ConversionPatternRewriter &rewriter) const {
-  Type operandType = op.lhs().getType();
+  Type operandType = op.getLhs().getType();
   if (isBoolScalarOrVector(operandType))
     return failure();
 
@@ -708,14 +708,14 @@ LogicalResult CmpFOpNanKernelPattern::matchAndRewrite(
     arith::CmpFOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   if (op.getPredicate() == arith::CmpFPredicate::ORD) {
-    rewriter.replaceOpWithNewOp<spirv::OrderedOp>(op, adaptor.lhs(),
-                                                  adaptor.rhs());
+    rewriter.replaceOpWithNewOp<spirv::OrderedOp>(op, adaptor.getLhs(),
+                                                  adaptor.getRhs());
     return success();
   }
 
   if (op.getPredicate() == arith::CmpFPredicate::UNO) {
-    rewriter.replaceOpWithNewOp<spirv::UnorderedOp>(op, adaptor.lhs(),
-                                                    adaptor.rhs());
+    rewriter.replaceOpWithNewOp<spirv::UnorderedOp>(op, adaptor.getLhs(),
+                                                    adaptor.getRhs());
     return success();
   }
 
@@ -735,8 +735,8 @@ LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
 
   Location loc = op.getLoc();
 
-  Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.lhs());
-  Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.rhs());
+  Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getLhs());
+  Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getRhs());
 
   Value replace = rewriter.create<spirv::LogicalOrOp>(loc, lhsIsNan, rhsIsNan);
   if (op.getPredicate() == arith::CmpFPredicate::ORD)

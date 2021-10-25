@@ -9,10 +9,11 @@ from typing import List, Tuple
 
 def main():
     settings, rest = parse_arguments()
+    cmake_opts = ['-D' + cmd for cmd in settings.D]
     if settings.wait:
         wait()
     if settings.build_llvm or settings.build_llvm_only:
-        build_llvm()
+        build_llvm(cmake_opts)
     if settings.build_llvm_only:
         return
     sys.exit(test(rest))
@@ -30,14 +31,15 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument('--wait', action='store_true')
     parser.add_argument('--build-llvm', action='store_true')
     parser.add_argument('--build-llvm-only', action='store_true')
+    parser.add_argument('-D', action='append', default=[])
     return parser.parse_known_args()
 
 
-def build_llvm():
+def build_llvm(cmake_options):
     os.chdir('/build')
     try:
         if is_cmake_needed():
-            cmake()
+            cmake(cmake_options)
         ninja()
     except CalledProcessError:
         print("Build failed!")
@@ -55,8 +57,9 @@ CMAKE_COMMAND = "cmake -G Ninja -DCMAKE_BUILD_TYPE=Release " \
     "-DCLANG_ENABLE_STATIC_ANALYZER=ON"
 
 
-def cmake():
-    check_call(CMAKE_COMMAND + ' /llvm-project/llvm', shell=True)
+def cmake(cmake_options):
+    check_call(CMAKE_COMMAND + ' '.join(cmake_options) + ' /llvm-project/llvm',
+            shell=True)
 
 
 def ninja():

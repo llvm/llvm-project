@@ -521,10 +521,9 @@ void CacheCost::calculateCacheFootprint() {
 
   LLVM_DEBUG(dbgs() << "COMPUTING LOOP CACHE COSTS\n");
   for (const Loop *L : Loops) {
-    assert((std::find_if(LoopCosts.begin(), LoopCosts.end(),
-                         [L](const LoopCacheCostTy &LCC) {
-                           return LCC.first == L;
-                         }) == LoopCosts.end()) &&
+    assert(llvm::none_of(
+               LoopCosts,
+               [L](const LoopCacheCostTy &LCC) { return LCC.first == L; }) &&
            "Should not add duplicate element");
     CacheCostTy LoopCost = computeLoopCacheCost(*L, RefGroups);
     LoopCosts.push_back(std::make_pair(L, LoopCost));

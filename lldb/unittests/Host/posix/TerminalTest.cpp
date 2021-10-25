@@ -190,6 +190,36 @@ TEST_F(TerminalTest, SetParity) {
 #endif
 }
 
+TEST_F(TerminalTest, SetParityCheck) {
+  struct termios terminfo;
+
+  ASSERT_THAT_ERROR(m_term.SetParityCheck(Terminal::ParityCheck::No),
+                    llvm::Succeeded());
+  ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
+  EXPECT_EQ(terminfo.c_iflag & (IGNPAR | PARMRK | INPCK), 0U);
+
+  ASSERT_THAT_ERROR(
+      m_term.SetParityCheck(Terminal::ParityCheck::ReplaceWithNUL),
+      llvm::Succeeded());
+  ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
+  EXPECT_NE(terminfo.c_iflag & INPCK, 0U);
+  EXPECT_EQ(terminfo.c_iflag & (IGNPAR | PARMRK), 0U);
+
+  ASSERT_THAT_ERROR(m_term.SetParityCheck(Terminal::ParityCheck::Ignore),
+                    llvm::Succeeded());
+  ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
+  EXPECT_NE(terminfo.c_iflag & IGNPAR, 0U);
+  EXPECT_EQ(terminfo.c_iflag & PARMRK, 0U);
+  EXPECT_NE(terminfo.c_iflag & INPCK, 0U);
+
+  ASSERT_THAT_ERROR(m_term.SetParityCheck(Terminal::ParityCheck::Mark),
+                    llvm::Succeeded());
+  ASSERT_EQ(tcgetattr(m_fd, &terminfo), 0);
+  EXPECT_EQ(terminfo.c_iflag & IGNPAR, 0U);
+  EXPECT_NE(terminfo.c_iflag & PARMRK, 0U);
+  EXPECT_NE(terminfo.c_iflag & INPCK, 0U);
+}
+
 TEST_F(TerminalTest, SetHardwareFlowControl) {
 #if defined(CRTSCTS)
   struct termios terminfo;

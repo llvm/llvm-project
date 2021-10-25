@@ -78,8 +78,7 @@ class StoredDeclsList {
     }
     Data.setPointer(NewHead);
 
-    assert(llvm::find_if(getLookupResult(), ShouldErase) ==
-           getLookupResult().end() && "Still exists!");
+    assert(llvm::none_of(getLookupResult(), ShouldErase) && "Still exists!");
   }
 
   void erase(NamedDecl *ND) {

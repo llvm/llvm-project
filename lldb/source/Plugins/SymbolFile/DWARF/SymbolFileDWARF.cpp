@@ -856,7 +856,32 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!dwarf_ast)
     return nullptr;
 
-  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
+  DWARFRangeList ranges;
+  if (die.GetDIE()->GetAttributeAddressRanges(die.GetCU(), ranges,
+                                              /*check_hi_lo_pc=*/true) == 0)
+    return nullptr;
+
+  // Union of all ranges in the function DIE (if the function is
+  // discontiguous)
+  AddressRange func_range;
+  lldb::addr_t lowest_func_addr = ranges.GetMinRangeBase(0);
+  lldb::addr_t highest_func_addr = ranges.GetMaxRangeEnd(0);
+  if (lowest_func_addr == LLDB_INVALID_ADDRESS ||
+      lowest_func_addr >= highest_func_addr ||
+      lowest_func_addr < m_first_code_address)
+    return nullptr;
+
+  ModuleSP module_sp(die.GetModule());
+  func_range.GetBaseAddress().ResolveAddressUsingFileSections(
+      lowest_func_addr, module_sp->GetSectionList());
+  if (!func_range.GetBaseAddress().IsValid())
+    return nullptr;
+
+  func_range.SetByteSize(highest_func_addr - lowest_func_addr);
+  if (!FixupAddress(func_range.GetBaseAddress()))
+    return nullptr;
+
+  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, func_range);
 }
 
 lldb::addr_t SymbolFileDWARF::FixupAddress(lldb::addr_t file_addr) {
@@ -2263,10 +2288,8 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
       addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
-    if (addr.IsValid() && addr.GetFileAddress() >= m_first_code_address) {
-      sc_list.Append(sc);
-      return true;
-    }
+    sc_list.Append(sc);
+    return true;
   }
 
   return false;
