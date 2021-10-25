@@ -14,11 +14,7 @@
 #ifndef FORTRAN_DIALECT_FIR_OPS
 #define FORTRAN_DIALECT_FIR_OPS
 
-include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Interfaces/CallInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/LoopLikeInterface.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
+include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 
 // Base class for FIR operations.
