@@ -472,6 +472,54 @@ __amd_fillBufferAligned(
 }
 
 __attribute__((always_inline)) void
+__amd_fillBufferAligned2D(__global uchar* bufUChar,
+                          __global ushort* bufUShort,
+                          __global uint* bufUInt,
+                          __global ulong* bufULong,
+                          __constant uchar* pattern,
+                          uint patternSize,
+                          ulong origin,
+                          ulong width,
+                          ulong height,
+                          ulong pitch)
+{
+  ulong tid_x = get_global_id(0);
+  ulong tid_y = get_global_id(1);
+
+  if (tid_x >= width || tid_y >= height) {
+    return;
+  }
+
+  ulong offset = (tid_y * pitch + tid_x);
+
+  if (bufULong) {
+    __global ulong* element = &bufULong[origin + offset];
+    __constant ulong* pt = (__constant ulong*)pattern;
+    for (uint i = 0; i < patternSize; ++i) {
+      element[i] = pt[i];
+    }
+  } else if (bufUInt) {
+    __global uint* element = &bufUInt[origin + offset];
+    __constant uint* pt = (__constant uint*)pattern;
+    for (uint i = 0; i < patternSize; ++i) {
+      element[i] = pt[i];
+    }
+  } else if (bufUShort) {
+    __global ushort* element = &bufUShort[origin + offset];
+    __constant ushort* pt = (__constant ushort*)pattern;
+    for (uint i = 0; i < patternSize; ++i) {
+      element[i] = pt[i];
+    }
+  } else if (bufUChar) {
+    __global uchar* element = &bufUChar[origin + offset];
+    __constant uchar* pt = (__constant uchar*)pattern;
+    for (uint i = 0; i < patternSize; ++i) {
+      element[i] = pt[i];
+    }
+  }
+}
+
+__attribute__((always_inline)) void
 __amd_fillImage(
     __write_only image2d_array_t image,
     float4 patternFLOAT4,
