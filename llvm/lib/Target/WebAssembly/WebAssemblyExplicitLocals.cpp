@@ -379,8 +379,13 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
         Register NewReg = MRI.createVirtualRegister(RC);
         unsigned Opc = getLocalGetOpcode(RC);
+        // Use a blank DebugLoc, because InsertPt may be discontinuous from
+        // the usage of this value, causing non-linear stepping in the
+        // debugger or function entry points where variables aren't live yet.
+        // See crbug.com/1251909, crbug.com/1249745
+        DebugLoc DL;
         InsertPt =
-            BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc), NewReg)
+            BuildMI(MBB, InsertPt, DL, TII->get(Opc), NewReg)
                 .addImm(LocalId);
         MO.setReg(NewReg);
         MFI.stackifyVReg(MRI, NewReg);
