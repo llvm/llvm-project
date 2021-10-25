@@ -6,8 +6,10 @@ import mlir.dialects.python_test as test
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  return f
 
 # CHECK-LABEL: TEST: testAttributes
+@run
 def testAttributes():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
@@ -127,4 +129,47 @@ def testAttributes():
     del op.unit
     print(f"Unit: {op.unit}")
 
-run(testAttributes)
+
+# CHECK-LABEL: TEST: inferReturnTypes
+@run
+def inferReturnTypes():
+  with Context() as ctx, Location.unknown(ctx):
+    test.register_python_test_dialect(ctx)
+    module = Module.create()
+    with InsertionPoint(module.body):
+      op = test.InferResultsOp(
+          IntegerType.get_signless(32), IntegerType.get_signless(64))
+      dummy = test.DummyOp()
+
+    # CHECK: [Type(i32), Type(i64)]
+    iface = InferTypeOpInterface(op)
+    print(iface.inferReturnTypes())
+
+    # CHECK: [Type(i32), Type(i64)]
+    iface_static = InferTypeOpInterface(test.InferResultsOp)
+    print(iface.inferReturnTypes())
+
+    assert isinstance(iface.opview, test.InferResultsOp)
+    assert iface.opview == iface.operation.opview
+
+    try:
+      iface_static.opview
+    except TypeError:
+      pass
+    else:
+      assert False, ("not expected to be able to obtain an opview from a static"
+                     " interface")
+
+    try:
+      InferTypeOpInterface(dummy)
+    except ValueError:
+      pass
+    else:
+      assert False, "not expected dummy op to implement the interface"
+
+    try:
+      InferTypeOpInterface(test.DummyOp)
+    except ValueError:
+      pass
+    else:
+      assert False, "not expected dummy op class to implement the interface"
