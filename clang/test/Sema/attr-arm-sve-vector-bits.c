@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=128 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=256 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=512 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=1024 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=2048 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -mvscale-min=1 -mvscale-max=1 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -mvscale-min=2 -mvscale-max=2 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -mvscale-min=4 -mvscale-max=4 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -mvscale-min=8 -mvscale-max=8 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -mvscale-min=16 -mvscale-max=16 -fallow-half-arguments-and-returns %s
 
 #include <stdint.h>
 

@@ -8780,8 +8780,8 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
 static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isVLSTBuiltinType() && "Invalid SVE Type");
   return Ty->getKind() == BuiltinType::SveBool
-             ? Context.getLangOpts().ArmSveVectorBits / Context.getCharWidth()
-             : Context.getLangOpts().ArmSveVectorBits;
+             ? (Context.getLangOpts().VScaleMin * 128) / Context.getCharWidth()
+             : Context.getLangOpts().VScaleMin * 128;
 }
 
 bool ASTContext::areCompatibleSveTypes(QualType FirstType,

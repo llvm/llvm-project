@@ -435,7 +435,8 @@ LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 LANGOPT(RelativeCXXABIVTables, 1, 0,
         "Use an ABI-incompatible v-table layout that uses relative references")
 
-LANGOPT(ArmSveVectorBits, 32, 0, "SVE vector size in bits")
+LANGOPT(VScaleMin, 32, 0, "Minimum vscale value")
+LANGOPT(VScaleMax, 32, 0, "Maximum vscale value")
 
 ENUM_LANGOPT(ExtendIntArgs, ExtendArgsKind, 1, ExtendArgsKind::ExtendTo32,
              "Controls how scalar integer arguments are extended in calls "
