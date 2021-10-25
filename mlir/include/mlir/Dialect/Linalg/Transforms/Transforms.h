@@ -899,6 +899,12 @@ struct LinalgVectorLoweringOptions {
     contractionLowering = val;
     return *this;
   }
+  /// Enable lowering of vector.multi_reduce.
+  bool multiReductionLowering = false;
+  LinalgVectorLoweringOptions &enableMultiReductionLowering(bool val = true) {
+    multiReductionLowering = val;
+    return *this;
+  }
   /// Enable lowering of vector.transfer to scf.
   bool transferToSCFConversion = false;
   LinalgVectorLoweringOptions &enableTransferToSCFConversion(bool val = true) {

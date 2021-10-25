@@ -94,7 +94,8 @@ void TestConvVectorization::runOnOperation() {
   //===--------------------------------------------------------------------===//
 
   VectorTransformsOptions vectorTransformOptions{
-      VectorContractLowering::Dot, VectorTransposeLowering::EltWise};
+      VectorContractLowering::Dot, VectorMultiReductionLowering::InnerParallel,
+      VectorTransposeLowering::EltWise};
 
   RewritePatternSet vectorTransferPatterns(context);
   // Pattern is not applied because rank-reducing vector transfer is not yet

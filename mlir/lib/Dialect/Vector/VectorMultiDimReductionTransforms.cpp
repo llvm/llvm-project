@@ -35,10 +35,11 @@ class InnerOuterDimReductionConversion
 public:
   using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
 
-  explicit InnerOuterDimReductionConversion(MLIRContext *context,
-                                            bool useInnerDimsForReduction)
+  explicit InnerOuterDimReductionConversion(
+      MLIRContext *context, vector::VectorMultiReductionLowering options)
       : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context),
-        useInnerDimsForReduction(useInnerDimsForReduction) {}
+        useInnerDimsForReduction(
+            options == vector::VectorMultiReductionLowering::InnerReduction) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -103,10 +104,11 @@ class ReduceMultiDimReductionRank
 public:
   using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
 
-  explicit ReduceMultiDimReductionRank(MLIRContext *context,
-                                       bool useInnerDimsForReduction)
+  explicit ReduceMultiDimReductionRank(
+      MLIRContext *context, vector::VectorMultiReductionLowering options)
       : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context),
-        useInnerDimsForReduction(useInnerDimsForReduction) {}
+        useInnerDimsForReduction(
+            options == vector::VectorMultiReductionLowering::InnerReduction) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -398,11 +400,11 @@ struct OneDimMultiReductionToTwoDim
 };
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, bool useInnerDimsForReduction) {
-  patterns.add<InnerOuterDimReductionConversion, ReduceMultiDimReductionRank,
-               OneDimMultiReductionToTwoDim>(patterns.getContext(),
-                                             useInnerDimsForReduction);
-  if (useInnerDimsForReduction)
+    RewritePatternSet &patterns, VectorMultiReductionLowering options) {
+  patterns.add<InnerOuterDimReductionConversion, ReduceMultiDimReductionRank>(
+      patterns.getContext(), options);
+  patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext());
+  if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext());
   else
     patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext());
