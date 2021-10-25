@@ -663,7 +663,7 @@ define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v6, s0, s3, v6, s0
 ; GFX11-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
-; GFX11-NEXT:    v_fma_f32 v7, -v0, v2
+; GFX11-NEXT:    v_fma_f32 v7, -v0, v2, v7
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s0, |v7|, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v0, s0, 0, v0, s0
@@ -918,7 +918,7 @@ define amdgpu_kernel void @sdiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    v_or_b32_e32 v8, 1, v8
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v6, s0, s3, v6, s0
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
-; GFX11-NEXT:    v_fma_f32 v7, -v0, v2
+; GFX11-NEXT:    v_fma_f32 v7, -v0, v2, v7
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s1, |v7|, |v2|
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, 0, v8, s1
