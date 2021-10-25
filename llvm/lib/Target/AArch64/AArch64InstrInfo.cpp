@@ -4304,6 +4304,10 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   case AArch64::ST1Twov1d:
   case AArch64::ST1Threev1d:
   case AArch64::ST1Fourv1d:
+  case AArch64::ST1i8:
+  case AArch64::ST1i16:
+  case AArch64::ST1i32:
+  case AArch64::ST1i64:
   case AArch64::IRG:
   case AArch64::IRGstack:
   case AArch64::STGloop:
