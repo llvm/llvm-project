@@ -241,8 +241,8 @@ bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
   return !m_os_version.empty();
 }
 
-bool PlatformRemoteGDBServer::GetRemoteOSBuildString(std::string &s) {
-  return m_gdb_client.GetOSBuildString(s);
+llvm::Optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
+  return m_gdb_client.GetOSBuildString();
 }
 
 bool PlatformRemoteGDBServer::GetRemoteOSKernelDescription(std::string &s) {
