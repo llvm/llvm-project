@@ -209,10 +209,24 @@ void SystemZLongBranch::skipTerminator(BlockPosition &Position,
     Position.Address += Terminator.ExtraRelaxSize;
 }
 
+static unsigned getInstSizeInBytes(const MachineInstr &MI,
+                                   const SystemZInstrInfo *TII) {
+  unsigned Size = TII->getInstSizeInBytes(MI);
+  assert((Size ||
+          // These do not have a size:
+          MI.isDebugOrPseudoInstr() || MI.isPosition() || MI.isKill() ||
+          MI.isImplicitDef() || MI.getOpcode() == SystemZ::MemBarrier ||
+          // These have a size that may be zero:
+          MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
+          MI.getOpcode() == SystemZ::PATCHPOINT) &&
+         "Missing size value for instruction.");
+  return Size;
+}
+
 // Return a description of terminator instruction MI.
 TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
   TerminatorInfo Terminator;
-  Terminator.Size = TII->getInstSizeInBytes(MI);
+  Terminator.Size = getInstSizeInBytes(MI, TII);
   if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
     switch (MI.getOpcode()) {
     case SystemZ::J:
@@ -287,7 +301,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
     MachineBasicBlock::iterator MI = MBB->begin();
     MachineBasicBlock::iterator End = MBB->end();
     while (MI != End && !MI->isTerminator()) {
-      Block.Size += TII->getInstSizeInBytes(*MI);
+      Block.Size += getInstSizeInBytes(*MI, TII);
       ++MI;
     }
     skipNonTerminators(Position, Block);

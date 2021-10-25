@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -1515,6 +1516,13 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
+  else if (MI.getOpcode() == SystemZ::PATCHPOINT)
+    return PatchPointOpers(&MI).getNumPatchBytes();
+  else if (MI.getOpcode() == SystemZ::STACKMAP)
+    return MI.getOperand(1).getImm();
+  else if (MI.getOpcode() == SystemZ::FENTRY_CALL)
+    return 6;
+
   return MI.getDesc().getSize();
 }
 
