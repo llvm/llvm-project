@@ -1748,7 +1748,7 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
   Operation *newCallOp = b.create<CallOp>(callOp.getLoc(), funcOp.sym_name(),
                                           resultTypes, newOperands);
   newCallOp->setAttrs(callOp->getAttrs());
-  callOp->erase();
+  // Delete the op at the end of bufferization.
   return success();
 }
 
@@ -2496,6 +2496,8 @@ static LogicalResult bufferizeFuncOpInternals(
   if (failed(bufferize(b, funcOp, bvm, aliasInfo)))
     return failure();
 
+  // Cannot erase ops during the traversal. Do that afterwards.
+  SmallVector<Operation *> toErase;
   // Bufferize the function body. `bufferizedOps` keeps track ops that were
   // already bufferized with pre-order traversal.
   DenseSet<Operation *> bufferizedOps;
@@ -2522,12 +2524,22 @@ static LogicalResult bufferizeFuncOpInternals(
         failed(bufferizeOp(op, bvm, aliasInfo, &bufferizedFunctionTypes,
                            &globalCreator)))
       return failure();
+
+    // Register post-walk erasure, if necessary.
+    if (isa<CallOpInterface>(op))
+      if (llvm::any_of(op->getOperandTypes(), isaTensor) ||
+          llvm::any_of(op->getResultTypes(), isaTensor))
+        toErase.push_back(op);
+
     return success();
   };
   if (funcOp.walk(walkFunc).wasInterrupted())
     return failure();
 
   LDBG("End BufferizeFuncOpInternals:\n" << funcOp << '\n');
+
+  for (Operation *op : toErase)
+    op->erase();
 
   return success();
 }

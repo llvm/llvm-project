@@ -90,6 +90,11 @@ public:
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
+    // Return `false` if we have no information about `v1` or `v2`.
+    if (equivalentInfo.findValue(v1) == equivalentInfo.end() ||
+        equivalentInfo.findValue(v2) == equivalentInfo.end())
+      return false;
+
     return equivalentInfo.getLeaderValue(v1) ==
            equivalentInfo.getLeaderValue(v2);
   }
