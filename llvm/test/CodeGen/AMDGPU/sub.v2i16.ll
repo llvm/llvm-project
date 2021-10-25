@@ -801,8 +801,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    v_pk_sub_i16 v2, v1, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0xffff, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[4:7], 0

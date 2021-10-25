@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9PLUS,GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10PLUS,GFX11PLUS %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_add_v2i16:
@@ -205,7 +205,9 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)
 ; GFX9PLUS: global_load_{{dword|b32}} [[B:v[0-9]+]]
 
 ; GFX9PLUS: v_pk_add_u16 [[ADD:v[0-9]+]], [[A]], [[B]]
-; GFX9PLUS-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
+; GFX9-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
+; GFX10-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
+; GFX11PLUS-DAG: v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
 ; GFX9PLUS-DAG: v_lshrrev_b32_e32 v[[ELT1:[0-9]+]], 16, [[ADD]]
 ; GFX9PLUS: buffer_store_{{dwordx4|b128}}
 

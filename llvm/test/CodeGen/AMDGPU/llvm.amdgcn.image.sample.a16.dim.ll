@@ -1354,15 +1354,15 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX11-LABEL: sample_c_d_o_2darray_V1:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    v_mov_b32_e32 v13, v8
-; GFX11-NEXT:    v_mov_b32_e32 v8, v0
+; GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_and_b32 v4, v0, v4
 ; GFX11-NEXT:    v_and_b32_e32 v1, v0, v6
+; GFX11-NEXT:    v_and_b32_e32 v4, v0, v4
 ; GFX11-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX11-NEXT:    v_lshl_or_b32 v11, v5, 16, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_lshl_or_b32 v12, v7, 16, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_lshl_or_b32 v11, v5, 16, v4
 ; GFX11-NEXT:    v_lshl_or_b32 v10, v3, 16, v0
 ; GFX11-NEXT:    image_sample_c_d_o_g16 v0, v[8:13], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1408,15 +1408,15 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GFX11-LABEL: sample_c_d_o_2darray_V2:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    v_mov_b32_e32 v13, v8
-; GFX11-NEXT:    v_mov_b32_e32 v8, v0
+; GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_and_b32 v4, v0, v4
 ; GFX11-NEXT:    v_and_b32_e32 v1, v0, v6
+; GFX11-NEXT:    v_and_b32_e32 v4, v0, v4
 ; GFX11-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX11-NEXT:    v_lshl_or_b32 v11, v5, 16, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_lshl_or_b32 v12, v7, 16, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_lshl_or_b32 v11, v5, 16, v4
 ; GFX11-NEXT:    v_lshl_or_b32 v10, v3, 16, v0
 ; GFX11-NEXT:    image_sample_c_d_o_g16 v[0:1], v[8:13], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

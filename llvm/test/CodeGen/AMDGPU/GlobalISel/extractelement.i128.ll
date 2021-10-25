@@ -138,11 +138,10 @@ define amdgpu_ps i128 @extractelement_vgpr_v4i128_sgpr_idx(<4 x i128> addrspace(
 ; GFX11-NEXT:    s_lshl_b32 s0, s2, 1
 ; GFX11-NEXT:    s_lshl_b32 m0, s0, 1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_movrels_b32_e32 v1, v3
 ; GFX11-NEXT:    v_movrels_b32_e32 v0, v2
-; GFX11-NEXT:    v_mov_b32_e32 v3, v1
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    v_movrels_b32_e32 v1, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
@@ -1002,10 +1001,8 @@ define i128 @extractelement_vgpr_v4i128_idx1(<4 x i128> addrspace(1)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v4
-; GFX11-NEXT:    v_mov_b32_e32 v1, v5
-; GFX11-NEXT:    v_mov_b32_e32 v2, v6
-; GFX11-NEXT:    v_mov_b32_e32 v3, v7
+; GFX11-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-NEXT:    v_dual_mov_b32 v2, v6 :: v_dual_mov_b32 v3, v7
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <4 x i128>, <4 x i128> addrspace(1)* %ptr
   %element = extractelement <4 x i128> %vector, i32 1
@@ -1069,10 +1066,8 @@ define i128 @extractelement_vgpr_v4i128_idx2(<4 x i128> addrspace(1)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v8
-; GFX11-NEXT:    v_mov_b32_e32 v1, v9
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mov_b32_e32 v3, v11
+; GFX11-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
+; GFX11-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <4 x i128>, <4 x i128> addrspace(1)* %ptr
   %element = extractelement <4 x i128> %vector, i32 2
@@ -1136,10 +1131,8 @@ define i128 @extractelement_vgpr_v4i128_idx3(<4 x i128> addrspace(1)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, v12
-; GFX11-NEXT:    v_mov_b32_e32 v1, v13
-; GFX11-NEXT:    v_mov_b32_e32 v2, v14
-; GFX11-NEXT:    v_mov_b32_e32 v3, v15
+; GFX11-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
+; GFX11-NEXT:    v_dual_mov_b32 v2, v14 :: v_dual_mov_b32 v3, v15
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <4 x i128>, <4 x i128> addrspace(1)* %ptr
   %element = extractelement <4 x i128> %vector, i32 3

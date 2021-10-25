@@ -109,6 +109,9 @@ public:
       break;
     }
 
+    VOPDInst.copyImplicitOps(*FirstMI);
+    VOPDInst.copyImplicitOps(*SecondMI);
+
     LLVM_DEBUG(dbgs() << "VOPD Fused: "; VOPDInst->dump();
                dbgs() << " from\tX: "; Pair.first->dump();
                dbgs() << "\tY: "; Pair.second->dump(); dbgs() << "\n");

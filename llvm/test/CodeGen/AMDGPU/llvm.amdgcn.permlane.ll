@@ -211,7 +211,7 @@ define amdgpu_kernel void @v_permlane16_b32_undef_tid(i32 addrspace(1)* %out, i3
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_i_tid:
-; GFX10PLUS: v_mov_b32_e32 [[OLD:v[0-9]+]], 0x3039
+; GFX10PLUS: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[OLD:v[0-9]+]], 0x3039
 ; GFX10PLUS: v_permlane16_b32 [[OLD]], v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
 define amdgpu_kernel void @v_permlane16_b32_i_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -269,7 +269,7 @@ define amdgpu_kernel void @v_permlanex16_b32_undef_tid(i32 addrspace(1)* %out, i
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_i_tid:
-; GFX10PLUS: v_mov_b32_e32 [[OLD:v[0-9]+]], 0x3039
+; GFX10PLUS: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[OLD:v[0-9]+]], 0x3039
 ; GFX10PLUS: v_permlanex16_b32 [[OLD]], v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
 define amdgpu_kernel void @v_permlanex16_b32_i_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()

@@ -1064,11 +1064,10 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_cbranch_execz BB3_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s5, s5
-; GFX1132-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1132-NEXT:    s_mul_i32 s5, s5, 5
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1132-NEXT:    v_mov_b32_e32 v0, s5
+; GFX1132-NEXT:    s_mul_i32 s5, s5, 5
 ; GFX1132-NEXT:    s_mov_b32 s10, -1
+; GFX1132-NEXT:    v_dual_mov_b32 v0, s5 :: v_dual_mov_b32 v1, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    s_mov_b32 s8, s2
 ; GFX1132-NEXT:    s_mov_b32 s9, s3
@@ -1392,8 +1391,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_mul_hi_u32 s9, s0, s3
 ; GFX1132-NEXT:    s_mul_i32 s3, s0, s3
 ; GFX1132-NEXT:    s_add_i32 s9, s9, s8
-; GFX1132-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1132-NEXT:    v_mov_b32_e32 v1, s9
+; GFX1132-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s9
 ; GFX1132-NEXT:    s_mov_b32 s10, -1
 ; GFX1132-NEXT:    s_mov_b32 s8, s6
 ; GFX1132-NEXT:    s_mov_b32 s9, s7
@@ -2658,11 +2656,10 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_cbranch_execz BB9_2
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s5, s5
-; GFX1132-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1132-NEXT:    s_mul_i32 s5, s5, 5
 ; GFX1132-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1132-NEXT:    v_mov_b32_e32 v0, s5
+; GFX1132-NEXT:    s_mul_i32 s5, s5, 5
 ; GFX1132-NEXT:    s_mov_b32 s10, -1
+; GFX1132-NEXT:    v_dual_mov_b32 v0, s5 :: v_dual_mov_b32 v1, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    s_mov_b32 s8, s2
 ; GFX1132-NEXT:    s_mov_b32 s9, s3
@@ -2989,8 +2986,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_mul_hi_u32 s9, s0, s3
 ; GFX1132-NEXT:    s_mul_i32 s3, s0, s3
 ; GFX1132-NEXT:    s_add_i32 s9, s9, s8
-; GFX1132-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1132-NEXT:    v_mov_b32_e32 v1, s9
+; GFX1132-NEXT:    v_dual_mov_b32 v0, s3 :: v_dual_mov_b32 v1, s9
 ; GFX1132-NEXT:    s_mov_b32 s10, -1
 ; GFX1132-NEXT:    s_mov_b32 s8, s6
 ; GFX1132-NEXT:    s_mov_b32 s9, s7

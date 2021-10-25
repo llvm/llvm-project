@@ -347,8 +347,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(float addrspace(1)* %ptr
 ; GFX11-LABEL: global_atomic_fadd_noret_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
@@ -436,8 +435,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(float addrspace(1)*
 ; GFX11-LABEL: global_atomic_fadd_noret_f32_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
@@ -963,8 +961,7 @@ define amdgpu_kernel void @infer_as_before_atomic(float* addrspace(4)* %arg) #0 
 ; GFX11-LABEL: infer_as_before_atomic:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 1.0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

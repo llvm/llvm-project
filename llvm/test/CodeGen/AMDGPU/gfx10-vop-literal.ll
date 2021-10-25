@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
 
 ; GCN-LABEL: {{^}}test_add_lit:
@@ -35,7 +35,7 @@ define amdgpu_kernel void @test_cndmask_lit(i32 addrspace(1)* %p) {
 }
 
 ; GCN-LABEL: {{^}}test_bfe_2lit_s:
-; GFX10PLUS: v_mov_b32_e32 [[C1:v[0-9]+]], 0xddd5
+; GFX10PLUS: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[C1:v[0-9]+]], 0xddd5
 ; GFX10PLUS: v_bfe_u32 v{{[0-9]+}}, 0x3039, s{{[0-9]+}}, [[C1]]
 ; GFX9-DAG: v_mov_b32_e32 [[C2:v[0-9]+]], 0xddd5
 ; GFX9-DAG: s_movk_i32 [[C1:s[0-9]+]], 0x3039

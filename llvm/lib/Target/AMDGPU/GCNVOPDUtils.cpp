@@ -94,6 +94,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
       UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
       Comp.Reg1 = Comp.MI.getOperand(2).getReg();
       break;
+    case AMDGPU::V_MOV_B32_e32:
+      break;
     default:
       Comp.Reg1 = Comp.MI.getOperand(2).getReg();
       break;

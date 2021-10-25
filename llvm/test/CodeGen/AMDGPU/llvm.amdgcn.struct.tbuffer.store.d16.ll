@@ -8,7 +8,7 @@
 ; GCN-LABEL: {{^}}tbuffer_store_d16_x:
 ; GCN-DAG: s_load_{{dwordx4|b128}}
 ; GCN-DAG: s_load_{{dword[x0-2]*|b64}} s{{\[}}[[S_LO:[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[S_LO]]
+; GCN-DAG: v_{{(dual_)?}}mov_b32{{(_e32)?}} v[[V_LO:[0-9]+]], s[[S_LO]]
 ; PREGFX10: tbuffer_store_format_d16_x v[[V_LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 ; GFX10: tbuffer_store_format_d16_x v[[V_LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED] idxen
 ; GFX11: tbuffer_store_d16_format_x v[[V_LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM] idxen
@@ -48,8 +48,11 @@ main_body:
 ; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 
 ; PACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
-; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
-; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+; GFX10-PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; GFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+; GFX11-DAG: v_dual_mov_b32 v[[LO:[0-9]+]], s[[S_DATA_0]] :: v_dual_mov_b32 v[[HI:[0-9]+]], [[MASKED0]]
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 ; GFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED] idxen
 ; GFX11: tbuffer_store_d16_format_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM] idxen
@@ -73,8 +76,11 @@ main_body:
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR1]]
 ; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 
-; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
-; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+; GFX10-PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; GFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+; GFX11-DAG: v_dual_mov_b32 v[[LO:[0-9]+]], s[[S_DATA_0]] :: v_dual_mov_b32 v[[HI:[0-9]+]], s[[S_DATA_1]]
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 ; GFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED] idxen
 ; GFX11: tbuffer_store_d16_format_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM] idxen

@@ -643,8 +643,7 @@ define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    s_load_b32 s4, s[0:1], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
 ; GFX11-NEXT:    s_mov_b32 s1, 0xffff
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_and_b32 s0, s1, s4
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v2, s0
@@ -765,8 +764,7 @@ define amdgpu_kernel void @urem16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    s_load_b32 s4, s[0:1], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
 ; GFX11-NEXT:    s_mov_b32 s1, 0xffff
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_and_b32 s4, s1, s4
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v2, s4
@@ -893,8 +891,7 @@ define amdgpu_kernel void @sdiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s4, s[0:1], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_sext_i32_i16 s4, s4
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v2, s4
@@ -1027,8 +1024,7 @@ define amdgpu_kernel void @srem16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s4, s[0:1], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_sext_i32_i16 s1, s4
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v2, s1

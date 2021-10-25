@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_writelane_imm(i32 addrspace(1)* %out, i32 %src0)
 }
 
 ; CHECK-LABEL: {{^}}test_writelane_sreg_oldval:
-; CHECK: v_mov_b32_e32 [[OLDVAL:v[0-9]+]], s{{[0-9]+}}
+; CHECK: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[OLDVAL:v[0-9]+]], s{{[0-9]+}}
 ; CIGFX9: v_writelane_b32 [[OLDVAL]], s{{[0-9]+}}, m0
 ; GFX10PLUS: v_writelane_b32 [[OLDVAL]], s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_writelane_sreg_oldval(i32 inreg %oldval, i32 addrspace(1)* %out, i32 %src0, i32 %src1) #1 {
@@ -71,7 +71,7 @@ define amdgpu_kernel void @test_writelane_sreg_oldval(i32 inreg %oldval, i32 add
 }
 
 ; CHECK-LABEL: {{^}}test_writelane_imm_oldval:
-; CHECK: v_mov_b32_e32 [[OLDVAL:v[0-9]+]], 42
+; CHECK: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[OLDVAL:v[0-9]+]], 42
 ; CIGFX9: v_writelane_b32 [[OLDVAL]], s{{[0-9]+}}, m0
 ; GFX10PLUS: v_writelane_b32 [[OLDVAL]], s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_writelane_imm_oldval(i32 addrspace(1)* %out, i32 %src0, i32 %src1) #1 {

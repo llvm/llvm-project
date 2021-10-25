@@ -6,9 +6,8 @@ define amdgpu_kernel void @test_get_doorbell(i32 addrspace(1)* %out) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_GET_DOORBELL)
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 128)
@@ -21,9 +20,8 @@ define amdgpu_kernel void @test_get_ddid(i32 addrspace(1)* %out) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_GET_DDID)
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 129)
@@ -38,8 +36,7 @@ define amdgpu_kernel void @test_get_tma(i64 addrspace(1)* %out) {
 ; GCN-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_GET_TMA)
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 130)
@@ -54,8 +51,7 @@ define amdgpu_kernel void @test_get_realtime(i64 addrspace(1)* %out) {
 ; GCN-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_GET_REALTIME)
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 131)
@@ -68,9 +64,8 @@ define amdgpu_kernel void @test_savewave(i32 addrspace(1)* %out) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_SAVEWAVE)
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 132)
@@ -85,8 +80,7 @@ define amdgpu_kernel void @test_get_tba(i64 addrspace(1)* %out) {
 ; GCN-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_GET_TBA)
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GCN-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 133)

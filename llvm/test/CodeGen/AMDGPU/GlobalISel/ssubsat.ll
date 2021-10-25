@@ -4775,14 +4775,13 @@ define amdgpu_ps i64 @s_ssubsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_sub_u32 s4, s0, s2
 ; GFX11-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    s_and_b32 s5, s5, 1
 ; GFX11-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX11-NEXT:    s_subb_u32 s5, s1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, s[4:5], s[0:1]
 ; GFX11-NEXT:    v_cmp_gt_i64_e64 s1, s[2:3], 0
 ; GFX11-NEXT:    s_ashr_i32 s2, s5, 31
-; GFX11-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX11-NEXT:    s_xor_b32 s3, s1, s0
 ; GFX11-NEXT:    s_add_u32 s0, s2, 0
 ; GFX11-NEXT:    s_cselect_b32 s1, 1, 0
@@ -5301,13 +5300,12 @@ define amdgpu_ps <2 x i64> @s_ssubsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX11-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX11-NEXT:    v_cmp_gt_i64_e64 s4, s[4:5], 0
 ; GFX11-NEXT:    s_and_b32 s9, s9, 1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s8
-; GFX11-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX11-NEXT:    s_brev_b32 s10, 1
+; GFX11-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX11-NEXT:    s_subb_u32 s9, s1, s5
+; GFX11-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s9
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, s[8:9], s[0:1]
 ; GFX11-NEXT:    s_ashr_i32 s1, s9, 31
-; GFX11-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX11-NEXT:    s_xor_b32 s8, s4, s0
 ; GFX11-NEXT:    s_add_u32 s0, s1, 0
 ; GFX11-NEXT:    s_cselect_b32 s4, 1, 0

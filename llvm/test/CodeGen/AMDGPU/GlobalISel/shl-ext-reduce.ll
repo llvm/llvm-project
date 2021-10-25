@@ -338,8 +338,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ; GFX11-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[0:1]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v5, s1
-; GFX11-NEXT:    v_mov_b32_e32 v4, s0
+; GFX11-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[2:3], v1, off
