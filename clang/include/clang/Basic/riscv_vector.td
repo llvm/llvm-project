@@ -1838,7 +1838,7 @@ let HasMask = false, HasPolicy = false,
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
       IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
     }] in {
-  defm vmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
+  defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
                                     [["vvm", "v", "vmvv"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
                                     [["vfm", "v", "vmve"]]>;
@@ -2098,7 +2098,12 @@ let HasMask = false, HasVL = false, IRName = "" in {
       ManualCodegen = [{
       {
         ID = Intrinsic::experimental_vector_extract;
-        ScalableVectorType *VecTy = cast<ScalableVectorType>(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(ResultType);
+        auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
+        // Mask to only valid indices.
+        unsigned MaxIndex = OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
+        assert(isPowerOf2_32(MaxIndex));
+        Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
                                                     VecTy->getMinNumElements()));
@@ -2117,7 +2122,12 @@ let HasMask = false, HasVL = false, IRName = "" in {
       {
         ID = Intrinsic::experimental_vector_insert;
         IntrinsicTypes = {ResultType, Ops[2]->getType()};
-        ScalableVectorType *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+        auto *ResVecTy = cast<ScalableVectorType>(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+        // Mask to only valid indices.
+        unsigned MaxIndex = ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
+        assert(isPowerOf2_32(MaxIndex));
+        Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
                                                     VecTy->getMinNumElements()));
