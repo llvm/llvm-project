@@ -84,6 +84,7 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
   }
   if (CheckUnwindCallback)
     CheckUnwindCallback();
+  Trap();
   Die();
 }
 
