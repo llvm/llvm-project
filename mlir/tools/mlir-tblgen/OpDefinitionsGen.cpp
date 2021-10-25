@@ -151,14 +151,6 @@ static std::string replaceAllSubstrs(std::string str, const std::string &match,
   return str;
 }
 
-// Escape a string using LLVM/MLIR encoding. E.g. foo"bar -> foo\22bar.
-static std::string escapeString(StringRef value) {
-  std::string ret;
-  llvm::raw_string_ostream os(ret);
-  llvm::printEscapedString(value, os);
-  return os.str();
-}
-
 // Returns whether the record has a value of the given name that can be returned
 // via getValueAsString.
 static inline bool hasStringAttribute(const Record &record,

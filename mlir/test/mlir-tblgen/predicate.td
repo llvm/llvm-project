@@ -111,3 +111,14 @@ def OpK : NS_Op<"op_for_AnyTensorOf", []> {
 // CHECK: auto valueGroup0 = getODSOperands(0);
 // CHECK: for (::mlir::Value v : valueGroup0) {
 // CHECK: if (::mlir::failed([[$TENSOR_INTEGER_FLOAT_CONSTRAINT]]
+
+def OpL : NS_Op<"op_for_StringEscaping", []> {
+  let arguments = (ins
+    StringBasedAttr<CPred<"$_self.cast<StringAttr>().getValue() == \"foo\"">,
+                    "only value \"foo\" is allowed">:$s
+  );
+}
+
+// CHECK-LABEL: OpLAdaptor::verify
+// CHECK: getValue() == "foo"
+// CHECK-SAME: only value \"foo\" is allowed
