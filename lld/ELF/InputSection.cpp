@@ -795,6 +795,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_PLT_PC:
   case R_PPC64_CALL_PLT:
     return sym.getPltVA() + a - p;
+  case R_PLT_GOTPLT:
+    return sym.getPltVA() + a - in.gotPlt->getVA();
   case R_PPC32_PLTREL:
     // R_PPC_PLTREL24 uses the addend (usually 0 or 0x8000) to indicate r30
     // stores _GLOBAL_OFFSET_TABLE_ or .got2+0x8000. The addend is ignored for

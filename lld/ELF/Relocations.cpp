@@ -188,7 +188,8 @@ static bool isAbsoluteValue(const Symbol &sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr expr) {
-  return oneof<R_PLT_PC, R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PLT>(expr);
+  return oneof<R_PLT, R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT>(
+      expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -224,11 +225,10 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
             R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC32_PLTREL,
-            R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD, R_TLSDESC_CALL,
-            R_TLSDESC_PC, R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT,
-            R_AARCH64_GOT_PAGE>(
-          e))
+            R_PLT_PC, R_PLT_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
+            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
+            R_TLSDESC_CALL, R_TLSDESC_PC, R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT,
+            R_TLSIE_HINT, R_AARCH64_GOT_PAGE>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -300,6 +300,8 @@ static RelExpr fromPlt(RelExpr expr) {
     return R_PPC64_CALL;
   case R_PLT:
     return R_ABS;
+  case R_PLT_GOTPLT:
+    return R_GOTPLTREL;
   default:
     return expr;
   }
@@ -1394,8 +1396,9 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   // If the relocation does not emit a GOT or GOTPLT entry but its computation
   // uses their addresses, we need GOT or GOTPLT to be created.
   //
-  // The 4 types that relative GOTPLT are all x86 and x86-64 specific.
-  if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
+  // The 5 types that relative GOTPLT are all x86 and x86-64 specific.
+  if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_PLT_GOTPLT,
+            R_TLSGD_GOTPLT>(expr)) {
     in.gotPlt->hasGotPltOffRel = true;
   } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC64_TOCBASE, R_PPC64_RELAX_TOC>(
                  expr)) {
