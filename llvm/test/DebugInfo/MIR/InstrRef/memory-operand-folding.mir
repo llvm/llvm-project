@@ -1,5 +1,6 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
 # RUN:    -start-before=x86-flags-copy-lowering -stop-after=virtregrewriter \
+# RUN:    -mtriple x86_64-unknown-unknown \
 # RUN: | FileCheck %s
 #
 # This test is for stack spill folding -- the SETCC near the start of the MIR
