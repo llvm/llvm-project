@@ -541,16 +541,42 @@ constexpr const char *initSuccessorsTemplate = R"Py(_ods_successors = {0})Py";
 ///   {1} is the value to add.
 constexpr const char *addSuccessorTemplate = R"Py(_ods_successors.{0}({1}))Py";
 
-/// Populates `builderArgs` with the Python-compatible names of builder function
-/// arguments, first the results, then the intermixed attributes and operands in
-/// the same order as they appear in the `arguments` field of the op definition.
-/// Additionally, `operandNames` is populated with names of operands in their
-/// order of appearance.
+/// Returns true if the SameArgumentAndResultTypes trait can be used to infer
+/// result types of the given operation.
+static bool hasSameArgumentAndResultTypes(const Operator &op) {
+  return op.getTrait("::mlir::OpTrait::SameOperandsAndResultType") &&
+         op.getNumVariableLengthResults() == 0;
+}
+
+/// Returns true if the FirstAttrDerivedResultType trait can be used to infer
+/// result types of the given operation.
+static bool hasFirstAttrDerivedResultTypes(const Operator &op) {
+  return op.getTrait("::mlir::OpTrait::FirstAttrDerivedResultType") &&
+         op.getNumVariableLengthResults() == 0;
+}
+
+/// Returns true if the InferTypeOpInterface can be used to infer result types
+/// of the given operation.
+static bool hasInferTypeInterface(const Operator &op) {
+  return op.getTrait("::mlir::InferTypeOpInterface::Trait") &&
+         op.getNumRegions() == 0;
+}
+
+/// Returns true if there is a trait or interface that can be used to infer
+/// result types of the given operation.
+static bool canInferType(const Operator &op) {
+  return hasSameArgumentAndResultTypes(op) ||
+         hasFirstAttrDerivedResultTypes(op) || hasInferTypeInterface(op);
+}
+
+/// Populates `builderArgs` with result names if the builder is expected to
+/// accept them as arguments.
 static void
-populateBuilderArgs(const Operator &op,
-                    llvm::SmallVectorImpl<std::string> &builderArgs,
-                    llvm::SmallVectorImpl<std::string> &operandNames,
-                    llvm::SmallVectorImpl<std::string> &successorArgNames) {
+populateBuilderArgsResults(const Operator &op,
+                           llvm::SmallVectorImpl<std::string> &builderArgs) {
+  if (canInferType(op))
+    return;
+
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     std::string name = op.getResultName(i).str();
     if (name.empty()) {
@@ -565,6 +591,19 @@ populateBuilderArgs(const Operator &op,
     name = sanitizeName(name);
     builderArgs.push_back(name);
   }
+}
+
+/// Populates `builderArgs` with the Python-compatible names of builder function
+/// arguments using intermixed attributes and operands in the same order as they
+/// appear in the `arguments` field of the op definition. Additionally,
+/// `operandNames` is populated with names of operands in their order of
+/// appearance.
+static void
+populateBuilderArgs(const Operator &op,
+                    llvm::SmallVectorImpl<std::string> &builderArgs,
+                    llvm::SmallVectorImpl<std::string> &operandNames,
+                    llvm::SmallVectorImpl<std::string> &successorArgNames) {
+
   for (int i = 0, e = op.getNumArgs(); i < e; ++i) {
     std::string name = op.getArgName(i).str();
     if (name.empty())
@@ -670,6 +709,43 @@ populateBuilderLinesOperand(const Operator &op,
   }
 }
 
+/// Python code template for deriving the operation result types from its
+/// attribute:
+///   - {0} is the name of the attribute from which to derive the types.
+constexpr const char *deriveTypeFromAttrTemplate =
+    R"PY(_ods_result_type_source_attr = attributes["{0}"]
+_ods_derived_result_type = (
+    _ods_ir.TypeAttr(_ods_result_type_source_attr).value
+    if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
+    _ods_result_type_source_attr.type))PY";
+
+/// Python code template appending {0} type {1} times to the results list.
+constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
+
+/// Python code template for inferring the operation results using the
+/// corresponding interface:
+///   - {0} is the name of the class for which the types are inferred.
+constexpr const char *inferTypeInterfaceTemplate =
+    R"PY(_ods_context = _ods_get_default_loc_context(loc)
+results = _ods_ir.InferTypeOpInterface({0}).inferReturnTypes(
+    operands=operands,
+    attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
+    context=_ods_context,
+    loc=loc)
+)PY";
+
+/// Appends the given multiline string as individual strings into
+/// `builderLines`.
+static void appendLineByLine(StringRef string,
+                             llvm::SmallVectorImpl<std::string> &builderLines) {
+
+  std::pair<StringRef, StringRef> split = std::make_pair(string, string);
+  do {
+    split = split.second.split('\n');
+    builderLines.push_back(split.first.str());
+  } while (!split.second.empty());
+}
+
 /// Populates `builderLines` with additional lines that are required in the
 /// builder to set up op results.
 static void
@@ -677,6 +753,32 @@ populateBuilderLinesResult(const Operator &op,
                            llvm::ArrayRef<std::string> names,
                            llvm::SmallVectorImpl<std::string> &builderLines) {
   bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
+
+  if (hasSameArgumentAndResultTypes(op)) {
+    builderLines.push_back(llvm::formatv(
+        appendSameResultsTemplate, "operands[0].type", op.getNumResults()));
+    return;
+  }
+
+  if (hasFirstAttrDerivedResultTypes(op)) {
+    const NamedAttribute &firstAttr = op.getAttribute(0);
+    assert(!firstAttr.name.empty() && "unexpected empty name for the attribute "
+                                      "from which the type is derived");
+    appendLineByLine(
+        llvm::formatv(deriveTypeFromAttrTemplate, firstAttr.name).str(),
+        builderLines);
+    builderLines.push_back(llvm::formatv(appendSameResultsTemplate,
+                                         "_ods_derived_result_type",
+                                         op.getNumResults()));
+    return;
+  }
+
+  if (hasInferTypeInterface(op)) {
+    appendLineByLine(
+        llvm::formatv(inferTypeInterfaceTemplate, op.getCppClassName()).str(),
+        builderLines);
+    return;
+  }
 
   // For each element, find or generate a name.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
@@ -741,14 +843,16 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   llvm::SmallVector<std::string> successorArgNames;
   builderArgs.reserve(op.getNumOperands() + op.getNumResults() +
                       op.getNumNativeAttributes() + op.getNumSuccessors());
+  populateBuilderArgsResults(op, builderArgs);
+  size_t numResultArgs = builderArgs.size();
   populateBuilderArgs(op, builderArgs, operandArgNames, successorArgNames);
 
-  populateBuilderLinesResult(
-      op, llvm::makeArrayRef(builderArgs).take_front(op.getNumResults()),
-      builderLines);
   populateBuilderLinesOperand(op, operandArgNames, builderLines);
   populateBuilderLinesAttr(
-      op, llvm::makeArrayRef(builderArgs).drop_front(op.getNumResults()),
+      op, llvm::makeArrayRef(builderArgs).drop_front(numResultArgs),
+      builderLines);
+  populateBuilderLinesResult(
+      op, llvm::makeArrayRef(builderArgs).take_front(numResultArgs),
       builderLines);
   populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
   populateBuilderRegions(op, builderArgs, builderLines);
