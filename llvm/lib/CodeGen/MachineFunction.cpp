@@ -974,6 +974,9 @@ void MachineFunction::makeDebugValueSubstitution(DebugInstrOperandPair A,
                                                  unsigned Subreg) {
   // Catch any accidental self-loops.
   assert(A.first != B.first);
+  // Don't allow any substitutions _from_ the memory operand number.
+  assert(A.second != DebugOperandMemNumber);
+
   DebugValueSubstitutions.push_back({A, B, Subreg});
 }
 
@@ -1238,6 +1241,9 @@ bool MachineFunction::useDebugInstrRef() const {
 
   return false;
 }
+
+// Use one million as a high / reserved number.
+const unsigned MachineFunction::DebugOperandMemNumber = 1000000;
 
 /// \}
 

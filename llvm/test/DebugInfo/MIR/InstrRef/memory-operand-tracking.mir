@@ -1,0 +1,82 @@
+# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -experimental-debug-variable-locations -o - 2>&1 | FileCheck %s
+#
+# Test that memory operands of instructions are interpreted by LiveDebugValues:
+# if an instruction reference is substituted to a memory operand, we should be
+# able to emit a DBG_VALUE referring to its slot.
+#
+# In addition, further instructions that write to the same stack slot should
+# be recognised as clobbering the value in that slot.
+--- |
+  define i8 @test(i32 %bar) local_unnamed_addr !dbg !7 {
+  entry:
+    ret i8 0, !dbg !12
+  }
+
+  declare dso_local void @ext(i64)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "foo.cpp", directory: ".")
+  !2 = !DIBasicType(name: "int", size: 8, encoding: DW_ATE_signed)
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 2}
+  !6 = !{i32 7, !"PIC Level", i32 2}
+  !7 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 6, type: !8, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !10)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{!2, !2}
+  !10 = !{!11}
+  !11 = !DILocalVariable(name: "baz", scope: !7, file: !1, line: 7, type: !2)
+  !12 = !DILocation(line: 10, scope: !7)
+...
+---
+name: test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+debugValueSubstitutions:
+- { srcinst: 2, srcop: 0, dstinst: 3, dstop: 1000000, subreg: 0 }
+- { srcinst: 4, srcop: 0, dstinst: 5, dstop: 1000000, subreg: 0 }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:  |
+  bb.0:
+  liveins: $rdi, $rax
+    DBG_PHI $rax, 1
+    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rdi :: (store 8 into %stack.0)
+    $rax = MOV64ri 0, debug-location !12
+    INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-instr-number 3, debug-location !DILocation(line: 0, scope: !7) :: (store (s32) into %stack.0)
+    DBG_INSTR_REF 2, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK:      DBG_INSTR_REF 2, 0
+    ; CHECK-NEXT: DBG_VALUE $rsp
+    ;; Test that the old value (from the DBG_PHI) is not tracked anywhere. It
+    ;; should not be considered as being on the stack any more.
+    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK:      DBG_INSTR_REF 1, 0
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-location !12 :: (store (s32) into %stack.0)
+    ;; The above INC32m should be detected as clobbering the stack location,
+    ;; even though it isn't debug labelled.
+    DBG_INSTR_REF 2, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK:      DBG_INSTR_REF 2, 0
+    ; CHECK-NEXT: DBG_VALUE $noreg
+
+    ;; Store another debug-labelled value to the stack,
+    INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-instr-number 5, debug-location !DILocation(line: 0, scope: !7) :: (store (s32) into %stack.0)
+    ;; Point the variable at that value.
+    DBG_INSTR_REF 4, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK:      DBG_INSTR_REF 4, 0,
+    ; CHECK-NEXT: DBG_VALUE $rsp
+    ;; Overwrite the stack: LiveDebugValues should explicitly undef the stack
+    ;; location with DBG_VALUE $noreg, as DbgEntityHistoryCalculator doesn't
+    ;; look at the stack.
+    INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-location !DILocation(line: 0, scope: !7) :: (store (s32) into %stack.0)
+    ; CHECK:      INC32m $rsp
+    ; CHECK-NEXT: DBG_VALUE $noreg
+
+    $rax = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
+    RETQ $rax, debug-location !12
+...
