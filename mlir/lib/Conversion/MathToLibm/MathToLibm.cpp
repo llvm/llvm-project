@@ -116,6 +116,8 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
                VecOpToScalarOp<math::TanhOp>>(patterns.getContext(), benefit);
   patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
                                                   "atan2f", "atan2", benefit);
+  patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
+                                                "erf", benefit);
   patterns.add<ScalarOpToLibmCall<math::ExpM1Op>>(patterns.getContext(),
                                                   "expm1f", "expm1", benefit);
   patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
