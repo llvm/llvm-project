@@ -3694,6 +3694,8 @@ void __kmpc_atomic_end(void) {
   __kmp_release_atomic_lock(&__kmp_atomic_lock, gtid);
 }
 
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+
 // OpenMP 5.1 compare and swap
 
 /*!
@@ -3855,6 +3857,7 @@ kmp_int64 __kmpc_atomic_val_8_cas_cpt(ident_t *loc, int gtid, kmp_int64 *x,
 }
 
 // End OpenMP 5.1 compare + capture
+#endif // KMP_ARCH_X86 || KMP_ARCH_X86_64
 
 /*!
 @}
