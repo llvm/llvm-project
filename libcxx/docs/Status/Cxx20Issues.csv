@@ -37,7 +37,7 @@
 "`2988 <https://wg21.link/LWG2988>`__","Clause 32 cleanup missed one typename","Albuquerque","|Complete|","13.0"
 "`2993 <https://wg21.link/LWG2993>`__","reference_wrapper<T> conversion from T&&","Albuquerque","|Complete|","13.0"
 "`2998 <https://wg21.link/LWG2998>`__","Requirements on function objects passed to {``forward_``,}list-specific algorithms","Albuquerque","|Nothing To Do|",""
-"`3001 <https://wg21.link/LWG3001>`__","weak_ptr::element_type needs remove_extent_t","Albuquerque","",""
+"`3001 <https://wg21.link/LWG3001>`__","weak_ptr::element_type needs remove_extent_t","Albuquerque","|Complete|","14.0"
 "`3024 <https://wg21.link/LWG3024>`__","variant's copies must be deleted instead of disabled via SFINAE","Albuquerque","|Complete|",""
 "","","","",""
 "`2164 <https://wg21.link/LWG2164>`__","What are the semantics of ``vector.emplace(vector.begin(), vector.back())``\ ?","Jacksonville","|Complete|",""
