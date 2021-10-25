@@ -1163,7 +1163,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
           // llvm::Value of the correct type (and still remain pure).
           // This will remove the need to add bitcasts.
           assert(Base->stripPointerCasts() == OldBase->stripPointerCasts() &&
-                 "Sanity -- findBaseOrBDV should be pure!");
+                 "findBaseOrBDV should be pure!");
 #endif
         }
         Value *Base = BlockToValue[InBB];
@@ -1854,7 +1854,7 @@ makeStatepointExplicit(DominatorTree &DT, CallBase *Call,
 // It receives iterator to the statepoint gc relocates and emits a store to the
 // assigned location (via allocaMap) for the each one of them.  It adds the
 // visited values into the visitedLiveValues set, which we will later use them
-// for sanity checking.
+// for validation checking.
 static void
 insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
                        DenseMap<Value *, AllocaInst *> &AllocaMap,
@@ -2453,7 +2453,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
                               SmallVectorImpl<CallBase *> &ToUpdate,
                               DefiningValueMapTy &DVCache) {
 #ifndef NDEBUG
-  // sanity check the input
+  // Validate the input
   std::set<CallBase *> Uniqued;
   Uniqued.insert(ToUpdate.begin(), ToUpdate.end());
   assert(Uniqued.size() == ToUpdate.size() && "no duplicates please!");
@@ -2619,9 +2619,9 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // we just grab that.
     llvm::append_range(Live, Info.StatepointToken->gc_args());
 #ifndef NDEBUG
-    // Do some basic sanity checks on our liveness results before performing
-    // relocation.  Relocation can and will turn mistakes in liveness results
-    // into non-sensical code which is must harder to debug.
+    // Do some basic validation checking on our liveness results before
+    // performing relocation.  Relocation can and will turn mistakes in liveness
+    // results into non-sensical code which is must harder to debug.
     // TODO: It would be nice to test consistency as well
     assert(DT.isReachableFromEntry(Info.StatepointToken->getParent()) &&
            "statepoint must be reachable or liveness is meaningless");
@@ -2640,7 +2640,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   unique_unsorted(Live);
 
 #ifndef NDEBUG
-  // sanity check
+  // Validation check
   for (auto *Ptr : Live)
     assert(isHandledGCPointerType(Ptr->getType()) &&
            "must be a gc pointer type");
@@ -3016,7 +3016,7 @@ static SetVector<Value *> computeKillSet(BasicBlock *BB) {
 
 #ifndef NDEBUG
 /// Check that the items in 'Live' dominate 'TI'.  This is used as a basic
-/// sanity check for the liveness computation.
+/// validation check for the liveness computation.
 static void checkBasicSSA(DominatorTree &DT, SetVector<Value *> &Live,
                           Instruction *TI, bool TermOkay = false) {
   for (Value *V : Live) {
@@ -3103,7 +3103,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
   } // while (!Worklist.empty())
 
 #ifndef NDEBUG
-  // Sanity check our output against SSA properties.  This helps catch any
+  // Verify our output against SSA properties.  This helps catch any
   // missing kills during the above iteration.
   for (BasicBlock &BB : F)
     checkBasicSSA(DT, Data, BB);
