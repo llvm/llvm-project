@@ -780,6 +780,16 @@ sizeof...($TemplateParameter[[Elements]]);
             $LocalVariable_decl[[d]]($LocalVariable[[b]]) ]() {}();
         }
       )cpp",
+      // Enum base specifier
+      R"cpp(
+        using $Primitive_decl[[MyTypedef]] = int;
+        enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
+      )cpp",
+      // Enum base specifier
+      R"cpp(
+        typedef int $Primitive_decl[[MyTypedef]];
+        enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
+      )cpp",
   };
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
