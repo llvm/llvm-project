@@ -1489,9 +1489,9 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       StringRef to;
       std::tie(from, to) = StringRef(arg->getValue()).split('=');
       if (from.empty() || to.empty())
-        error("-defsym: syntax error: " + StringRef(arg->getValue()));
+        error("--defsym: syntax error: " + StringRef(arg->getValue()));
       else
-        readDefsym(from, MemoryBufferRef(to, "-defsym"));
+        readDefsym(from, MemoryBufferRef(to, "--defsym"));
       break;
     }
     case OPT_script:
@@ -1636,11 +1636,11 @@ static Optional<uint64_t> getImageBase(opt::InputArgList &args) {
   StringRef s = arg->getValue();
   uint64_t v;
   if (!to_integer(s, v)) {
-    error("-image-base: number expected, but got " + s);
+    error("--image-base: number expected, but got " + s);
     return 0;
   }
   if ((v % config->maxPageSize) != 0)
-    warn("-image-base: address isn't multiple of page size: " + s);
+    warn("--image-base: address isn't multiple of page size: " + s);
   return v;
 }
 

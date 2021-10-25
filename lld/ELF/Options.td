@@ -256,7 +256,7 @@ def ignore_function_address_equality: F<"ignore-function-address-equality">,
 def ignore_data_address_equality: F<"ignore-data-address-equality">,
   HelpText<"lld can break the address equality of data">;
 
-defm image_base: Eq<"image-base", "Set the base address">;
+defm image_base: EEq<"image-base", "Set the base address">;
 
 defm init: Eq<"init", "Specify an initializer function">,
   MetaVarName<"<symbol>">;
