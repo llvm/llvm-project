@@ -66,7 +66,7 @@ private:
   }
 
   template <uint8_t Bits> static bool fitsRangeSignedInt(int64_t Value) {
-    return Value >= -(1 << Bits) && Value < (1 << Bits);
+    return Value >= -(1ll << Bits) && Value < (1ll << Bits);
   }
 };
 
