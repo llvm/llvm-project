@@ -1,4 +1,7 @@
 // RUN: %libomp-compile-and-run
+// Linking fails for icc 18
+// UNSUPPORTED: icc-18
+
 #include <stdio.h>
 #include "omp_testsuite.h"
 
