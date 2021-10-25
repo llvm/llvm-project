@@ -121,7 +121,7 @@ static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
   auto vecType = constantOp.getType().dyn_cast<VectorType>();
   if (!vecType || vecType.getRank() != 2)
     return false;
-  return constantOp.value().isa<SplatElementsAttr>();
+  return constantOp.getValue().isa<SplatElementsAttr>();
 }
 
 /// Return true if this is a broadcast from scalar to a 2D vector.
@@ -329,7 +329,7 @@ static void convertConstantOp(arith::ConstantOp op,
                               llvm::DenseMap<Value, Value> &valueMapping) {
   assert(constantSupportsMMAMatrixType(op));
   OpBuilder b(op);
-  Attribute splat = op.value().cast<SplatElementsAttr>().getSplatValue();
+  Attribute splat = op.getValue().cast<SplatElementsAttr>().getSplatValue();
   auto scalarConstant =
       b.create<arith::ConstantOp>(op.getLoc(), splat.getType(), splat);
   const char *fragType = inferFragType(op);

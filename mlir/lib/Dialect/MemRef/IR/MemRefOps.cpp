@@ -691,7 +691,7 @@ void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
 
 Optional<int64_t> DimOp::getConstantIndex() {
   if (auto constantOp = index().getDefiningOp<arith::ConstantOp>())
-    return constantOp.value().cast<IntegerAttr>().getInt();
+    return constantOp.getValue().cast<IntegerAttr>().getInt();
   return {};
 }
 

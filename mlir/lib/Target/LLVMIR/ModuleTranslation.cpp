@@ -366,8 +366,8 @@ static Value getPHISourceValue(Block *current, Block *pred,
     // For conditional branches, we take the operands from either the "true" or
     // the "false" branch.
     return condBranchOp.getSuccessor(0) == current
-               ? condBranchOp.trueDestOperands()[index]
-               : condBranchOp.falseDestOperands()[index];
+               ? condBranchOp.getTrueDestOperands()[index]
+               : condBranchOp.getFalseDestOperands()[index];
   }
 
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(terminator)) {
@@ -574,8 +574,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
       }
     }
 
-    auto linkage = convertLinkageToLLVM(op.linkage());
-    auto addrSpace = op.addr_space();
+    auto linkage = convertLinkageToLLVM(op.getLinkage());
+    auto addrSpace = op.getAddrSpace();
 
     // LLVM IR requires constant with linkage other than external or weak
     // external to have initializers. If MLIR does not provide an initializer,
@@ -587,18 +587,18 @@ LogicalResult ModuleTranslation::convertGlobals() {
       cst = nullptr;
 
     auto *var = new llvm::GlobalVariable(
-        *llvmModule, type, op.constant(), linkage, cst, op.sym_name(),
+        *llvmModule, type, op.getConstant(), linkage, cst, op.getSymName(),
         /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, addrSpace);
 
-    if (op.unnamed_addr().hasValue())
-      var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.unnamed_addr()));
+    if (op.getUnnamedAddr().hasValue())
+      var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
 
-    if (op.section().hasValue())
-      var->setSection(*op.section());
+    if (op.getSection().hasValue())
+      var->setSection(*op.getSection());
 
-    addRuntimePreemptionSpecifier(op.dso_local(), var);
+    addRuntimePreemptionSpecifier(op.getDsoLocal(), var);
 
-    Optional<uint64_t> alignment = op.alignment();
+    Optional<uint64_t> alignment = op.getAlignment();
     if (alignment.hasValue())
       var->setAlignment(llvm::MaybeAlign(alignment.getValue()));
 
@@ -895,7 +895,7 @@ LogicalResult ModuleTranslation::createAliasScopeMetadata() {
       llvm::LLVMContext &ctx = llvmModule->getContext();
       llvm::SmallVector<llvm::Metadata *, 2> operands;
       operands.push_back({}); // Placeholder for self-reference
-      if (Optional<StringRef> description = op.description())
+      if (Optional<StringRef> description = op.getDescription())
         operands.push_back(llvm::MDString::get(ctx, description.getValue()));
       llvm::MDNode *domain = llvm::MDNode::get(ctx, operands);
       domain->replaceOperandWith(0, domain); // Self-reference for uniqueness
@@ -908,13 +908,13 @@ LogicalResult ModuleTranslation::createAliasScopeMetadata() {
       assert(isa<LLVM::MetadataOp>(op->getParentOp()));
       auto metadataOp = dyn_cast<LLVM::MetadataOp>(op->getParentOp());
       Operation *domainOp =
-          SymbolTable::lookupNearestSymbolFrom(metadataOp, op.domainAttr());
+          SymbolTable::lookupNearestSymbolFrom(metadataOp, op.getDomainAttr());
       llvm::MDNode *domain = aliasScopeDomainMetadataMapping.lookup(domainOp);
       assert(domain && "Scope's domain should already be valid");
       llvm::SmallVector<llvm::Metadata *, 3> operands;
       operands.push_back({}); // Placeholder for self-reference
       operands.push_back(domain);
-      if (Optional<StringRef> description = op.description())
+      if (Optional<StringRef> description = op.getDescription())
         operands.push_back(llvm::MDString::get(ctx, description.getValue()));
       llvm::MDNode *scope = llvm::MDNode::get(ctx, operands);
       scope->replaceOperandWith(0, scope); // Self-reference for uniqueness

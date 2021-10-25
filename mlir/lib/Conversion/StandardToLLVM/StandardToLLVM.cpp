@@ -427,7 +427,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<AssertOp> {
     // Generate assertion test.
     rewriter.setInsertionPointToEnd(opBlock);
     rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.arg(), continuationBlock, failureBlock);
+        op, adaptor.getArg(), continuationBlock, failureBlock);
 
     return success();
   }
@@ -573,9 +573,9 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<RankOp> {
   matchAndRewrite(RankOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    Type operandType = op.memrefOrTensor().getType();
+    Type operandType = op.getMemrefOrTensor().getType();
     if (auto unrankedMemRefType = operandType.dyn_cast<UnrankedMemRefType>()) {
-      UnrankedMemRefDescriptor desc(adaptor.memrefOrTensor());
+      UnrankedMemRefDescriptor desc(adaptor.getMemrefOrTensor());
       rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
       return success();
     }
@@ -722,7 +722,7 @@ struct SplatOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
 
     auto v = rewriter.create<LLVM::InsertElementOp>(
-        splatOp.getLoc(), vectorType, undef, adaptor.input(), zero);
+        splatOp.getLoc(), vectorType, undef, adaptor.getInput(), zero);
 
     int64_t width = splatOp.getType().cast<VectorType>().getDimSize(0);
     SmallVector<int32_t, 4> zeroValues(width, 0);
@@ -767,7 +767,7 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
         loc, typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
     Value v = rewriter.create<LLVM::InsertElementOp>(loc, llvm1DVectorTy, vdesc,
-                                                     adaptor.input(), zero);
+                                                     adaptor.getInput(), zero);
 
     // Shuffle the value across the desired number of elements.
     int64_t width = resultType.getDimSize(resultType.getRank() - 1);
@@ -791,7 +791,7 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
 /// Try to match the kind of a std.atomic_rmw to determine whether to use a
 /// lowering to llvm.atomicrmw or fallback to llvm.cmpxchg.
 static Optional<LLVM::AtomicBinOp> matchSimpleAtomicOp(AtomicRMWOp atomicOp) {
-  switch (atomicOp.kind()) {
+  switch (atomicOp.getKind()) {
   case AtomicRMWKind::addf:
     return LLVM::AtomicBinOp::fadd;
   case AtomicRMWKind::addi:
@@ -825,13 +825,13 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
     auto maybeKind = matchSimpleAtomicOp(atomicOp);
     if (!maybeKind)
       return failure();
-    auto resultType = adaptor.value().getType();
+    auto resultType = adaptor.getValue().getType();
     auto memRefType = atomicOp.getMemRefType();
     auto dataPtr =
-        getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.memref(),
-                             adaptor.indices(), rewriter);
+        getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.getMemref(),
+                             adaptor.getIndices(), rewriter);
     rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
-        atomicOp, resultType, *maybeKind, dataPtr, adaptor.value(),
+        atomicOp, resultType, *maybeKind, dataPtr, adaptor.getValue(),
         LLVM::AtomicOrdering::acq_rel);
     return success();
   }
@@ -889,9 +889,9 @@ struct GenericAtomicRMWOpLowering
 
     // Compute the loaded value and branch to the loop block.
     rewriter.setInsertionPointToEnd(initBlock);
-    auto memRefType = atomicOp.memref().getType().cast<MemRefType>();
-    auto dataPtr = getStridedElementPtr(loc, memRefType, adaptor.memref(),
-                                        adaptor.indices(), rewriter);
+    auto memRefType = atomicOp.getMemref().getType().cast<MemRefType>();
+    auto dataPtr = getStridedElementPtr(loc, memRefType, adaptor.getMemref(),
+                                        adaptor.getIndices(), rewriter);
     Value init = rewriter.create<LLVM::LoadOp>(loc, dataPtr);
     rewriter.create<LLVM::BrOp>(loc, init, loopBlock);
 

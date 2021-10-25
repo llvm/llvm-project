@@ -351,7 +351,7 @@ static Optional<std::pair<Value, Value>>
 genSplitSparseConstant(ConversionPatternRewriter &rewriter, Location loc,
                        Value tensor) {
   if (auto constOp = tensor.getDefiningOp<arith::ConstantOp>()) {
-    if (auto attr = constOp.value().dyn_cast<SparseElementsAttr>()) {
+    if (auto attr = constOp.getValue().dyn_cast<SparseElementsAttr>()) {
       DenseElementsAttr indicesAttr = attr.getIndices();
       Value indices = rewriter.create<arith::ConstantOp>(loc, indicesAttr);
       DenseElementsAttr valuesAttr = attr.getValues();

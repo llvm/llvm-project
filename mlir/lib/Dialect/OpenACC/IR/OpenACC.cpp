@@ -173,7 +173,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
       return success();
 
     auto constOp = op.ifCond().template getDefiningOp<arith::ConstantOp>();
-    if (constOp && constOp.value().template cast<IntegerAttr>().getInt())
+    if (constOp && constOp.getValue().template cast<IntegerAttr>().getInt())
       rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });
     else if (constOp)
       rewriter.eraseOp(op);

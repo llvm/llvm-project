@@ -187,7 +187,7 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
                             : cst.getValue();
   } else if (auto constIndexOp = size.getDefiningOp<arith::ConstantOp>()) {
     if (constIndexOp.getType().isa<IndexType>())
-      boundingConst = constIndexOp.value().cast<IntegerAttr>().getInt();
+      boundingConst = constIndexOp.getValue().cast<IntegerAttr>().getInt();
   } else if (auto affineApplyOp = size.getDefiningOp<AffineApplyOp>()) {
     if (auto cExpr = affineApplyOp.getAffineMap()
                          .getResult(0)
@@ -196,7 +196,7 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
   } else if (auto dimOp = size.getDefiningOp<tensor::DimOp>()) {
     auto shape = dimOp.source().getType().dyn_cast<ShapedType>();
     if (auto constOp = dimOp.index().getDefiningOp<arith::ConstantOp>()) {
-      if (auto indexAttr = constOp.value().dyn_cast<IntegerAttr>()) {
+      if (auto indexAttr = constOp.getValue().dyn_cast<IntegerAttr>()) {
         auto dimIndex = indexAttr.getInt();
         if (!shape.isDynamicDim(dimIndex)) {
           boundingConst = shape.getShape()[dimIndex];

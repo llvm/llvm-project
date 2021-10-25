@@ -39,7 +39,7 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
                    ->materializeConstant(rewriter, rewriter.getIndexAttr(1),
                                          valueType, loc)
                    ->getResult(0);
-  ReduceOp reduce = rewriter.create<ReduceOp>(loc, op.shape(), init);
+  ReduceOp reduce = rewriter.create<ReduceOp>(loc, op.getShape(), init);
 
   // Generate reduce operator.
   Block *body = reduce.getBody();
@@ -48,7 +48,7 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
                                   body->getArgument(2));
   b.create<shape::YieldOp>(loc, product);
 
-  rewriter.replaceOp(op, reduce.result());
+  rewriter.replaceOp(op, reduce.getResult());
   return success();
 }
 

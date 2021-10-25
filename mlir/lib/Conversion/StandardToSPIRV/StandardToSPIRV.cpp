@@ -154,8 +154,9 @@ ReturnOpPattern::matchAndRewrite(ReturnOp returnOp, OpAdaptor adaptor,
 LogicalResult
 SelectOpPattern::matchAndRewrite(SelectOp op, OpAdaptor adaptor,
                                  ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<spirv::SelectOp>(
-      op, adaptor.condition(), adaptor.true_value(), adaptor.false_value());
+  rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, adaptor.getCondition(),
+                                               adaptor.getTrueValue(),
+                                               adaptor.getFalseValue());
   return success();
 }
 
@@ -169,7 +170,7 @@ SplatPattern::matchAndRewrite(SplatOp op, OpAdaptor adaptor,
   auto dstVecType = op.getType().dyn_cast<VectorType>();
   if (!dstVecType || !spirv::CompositeType::isValid(dstVecType))
     return failure();
-  SmallVector<Value, 4> source(dstVecType.getNumElements(), adaptor.input());
+  SmallVector<Value, 4> source(dstVecType.getNumElements(), adaptor.getInput());
   rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstVecType,
                                                            source);
   return success();

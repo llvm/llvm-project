@@ -93,7 +93,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
       auto elementType =
           global.getType().cast<LLVM::LLVMArrayType>().getElementType();
       Value memory = rewriter.create<LLVM::GEPOp>(
-          loc, LLVM::LLVMPointerType::get(elementType, global.addr_space()),
+          loc, LLVM::LLVMPointerType::get(elementType, global.getAddrSpace()),
           address, ArrayRef<Value>{zero, zero});
 
       // Build a memref descriptor pointing to the buffer to plug with the

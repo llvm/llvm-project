@@ -28,7 +28,7 @@ memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
 
   // If we already have a global for this constant value, no need to do
   // anything else.
-  auto it = globals.find(constantOp.value());
+  auto it = globals.find(constantOp.getValue());
   if (it != globals.end())
     return cast<memref::GlobalOp>(it->second);
 
@@ -52,14 +52,14 @@ memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
       /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
-      /*initial_value=*/constantOp.value().cast<ElementsAttr>(),
+      /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true,
       /*alignment=*/memrefAlignment);
   symbolTable.insert(global);
   // The symbol table inserts at the end of the module, but globals are a bit
   // nicer if they are at the beginning.
   global->moveBefore(&moduleOp.front());
-  globals[constantOp.value()] = global;
+  globals[constantOp.getValue()] = global;
   return global;
 }
 
