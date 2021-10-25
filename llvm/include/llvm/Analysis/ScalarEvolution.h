@@ -537,6 +537,9 @@ public:
   std::pair<SCEV::NoWrapFlags, bool /*Deduced*/>
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
+  /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
+  void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
+
   /// Return a SCEV expression for the full generality of the specified
   /// expression.
   const SCEV *getSCEV(Value *V);
@@ -1505,6 +1508,9 @@ private:
 
   /// Compute a BlockDisposition value.
   BlockDisposition computeBlockDisposition(const SCEV *S, const BasicBlock *BB);
+
+  /// Stores all SCEV that use a given SCEV as its direct operand.
+  DenseMap<const SCEV *, SmallPtrSet<const SCEV *, 8> > SCEVUsers;
 
   /// Memoized results from getRange
   DenseMap<const SCEV *, ConstantRange> UnsignedRanges;
