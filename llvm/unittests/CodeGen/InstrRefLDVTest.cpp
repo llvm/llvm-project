@@ -178,6 +178,13 @@ public:
     LDV->buildMLocValueMap(*MF, MInLocs, MOutLocs, MLocTransfer);
   }
 
+  void placeMLocPHIs(MachineFunction &MF,
+                     SmallPtrSetImpl<MachineBasicBlock *> &AllBlocks,
+                     ValueIDNum **MInLocs,
+                     SmallVectorImpl<MLocTransferMap> &MLocTransfer) {
+    LDV->placeMLocPHIs(MF, AllBlocks, MInLocs, MLocTransfer);
+  }
+
   Optional<ValueIDNum>
   pickVPHILoc(const MachineBasicBlock &MBB, const DebugVariable &Var,
               const InstrRefBasedLDV::LiveIdxT &LiveOuts, ValueIDNum **MOutLocs,
@@ -1071,6 +1078,92 @@ TEST_F(InstrRefLDVTest, MLocDiamondBlocks) {
   TransferFunc[0].clear();
   TransferFunc[1].clear();
   TransferFunc[2].clear();
+}
+
+TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
+  // Test that defs in stack locations that require PHIs, cause PHIs to be
+  // installed in aliasing locations. i.e., if there's a PHI in the lower
+  // 8 bits of the stack, there should be PHIs for 16/32/64 bit locations
+  // on the stack too.
+  // Technically this isn't needed for accuracy: we should calculate PHIs
+  // independently for each location. However, because there's an optimisation
+  // that only places PHIs for the lower "interfering" parts of stack slots,
+  // test for this behaviour.
+  setupDiamondBlocks();
+
+  ASSERT_TRUE(MTracker->getNumLocs() == 1);
+  LocIdx RspLoc(0);
+
+  // Create a stack location and ensure it's tracked.
+  SpillLoc SL = {getRegByName("RSP"), StackOffset::getFixed(-8)};
+  SpillLocationNo SpillNo = MTracker->getOrTrackSpillLoc(SL);
+  ASSERT_EQ(MTracker->getNumLocs(), 10u); // Tracks all possible stack locs.
+  // Locations are: RSP, stack slots from 2^3 bits wide up to 2^9 for zmm regs,
+  // then slots for sub_8bit_hi and sub_16bit_hi ({8, 8} and {16, 16}).
+
+  // Pick out the locations on the stack that various x86 regs would be written
+  // to. HAX is the upper 16 bits of EAX.
+  unsigned ALID = MTracker->getLocID(SpillNo, {8, 0});
+  unsigned AHID = MTracker->getLocID(SpillNo, {8, 8});
+  unsigned AXID = MTracker->getLocID(SpillNo, {16, 0});
+  unsigned EAXID = MTracker->getLocID(SpillNo, {32, 0});
+  unsigned HAXID = MTracker->getLocID(SpillNo, {16, 16});
+  unsigned RAXID = MTracker->getLocID(SpillNo, {64, 0});
+  LocIdx ALStackLoc = MTracker->getSpillMLoc(ALID);
+  LocIdx AHStackLoc = MTracker->getSpillMLoc(AHID);
+  LocIdx AXStackLoc = MTracker->getSpillMLoc(AXID);
+  LocIdx EAXStackLoc = MTracker->getSpillMLoc(EAXID);
+  LocIdx HAXStackLoc = MTracker->getSpillMLoc(HAXID);
+  LocIdx RAXStackLoc = MTracker->getSpillMLoc(RAXID);
+  // There are other locations, for things like xmm0, which we're going to
+  // ignore here.
+
+  ValueIDNum InLocs[4][10];
+  ValueIDNum *InLocsPtr[4] = {InLocs[0], InLocs[1], InLocs[2], InLocs[3]};
+
+  // Transfer function: start with nothing.
+  SmallVector<MLocTransferMap, 1> TransferFunc;
+  TransferFunc.resize(4);
+
+  // Name some values.
+  unsigned EntryBlk = 0, Blk1 = 1, RetBlk = 3;
+
+  ValueIDNum LiveInRsp(EntryBlk, 0, RspLoc);
+  ValueIDNum ALLiveIn(EntryBlk, 0, ALStackLoc);
+  ValueIDNum AHLiveIn(EntryBlk, 0, AHStackLoc);
+  ValueIDNum HAXLiveIn(EntryBlk, 0, HAXStackLoc);
+  ValueIDNum ALPHI(RetBlk, 0, ALStackLoc);
+  ValueIDNum AXPHI(RetBlk, 0, AXStackLoc);
+  ValueIDNum EAXPHI(RetBlk, 0, EAXStackLoc);
+  ValueIDNum HAXPHI(RetBlk, 0, HAXStackLoc);
+  ValueIDNum RAXPHI(RetBlk, 0, RAXStackLoc);
+
+  ValueIDNum ALDefInBlk1(Blk1, 1, ALStackLoc);
+  ValueIDNum HAXDefInBlk1(Blk1, 1, HAXStackLoc);
+
+  SmallPtrSet<MachineBasicBlock *, 4> AllBlocks{MBB0, MBB1, MBB2, MBB3};
+
+  // If we put defs into one side of the diamond, for AL and HAX, then we should
+  // find all aliasing positions have PHIs placed. This isn't technically what
+  // the transfer function says to do: but we're testing that the optimisation
+  // to reduce IDF calculation does the right thing.
+  // AH should not be def'd: it don't alias AL or HAX.
+  //
+  // NB: we don't call buildMLocValueMap, because it will try to eliminate the
+  // upper-slot PHIs, and succeed because of our slightly cooked transfer
+  // function.
+  TransferFunc[1].insert({ALStackLoc, ALDefInBlk1});
+  TransferFunc[1].insert({HAXStackLoc, HAXDefInBlk1});
+  initValueArray(InLocsPtr, 4, 10);
+  placeMLocPHIs(*MF, AllBlocks, InLocsPtr, TransferFunc);
+  EXPECT_EQ(InLocs[3][ALStackLoc.asU64()], ALPHI);
+  EXPECT_EQ(InLocs[3][AXStackLoc.asU64()], AXPHI);
+  EXPECT_EQ(InLocs[3][EAXStackLoc.asU64()], EAXPHI);
+  EXPECT_EQ(InLocs[3][HAXStackLoc.asU64()], HAXPHI);
+  EXPECT_EQ(InLocs[3][RAXStackLoc.asU64()], RAXPHI);
+  // AH should be left untouched,
+  EXPECT_EQ(InLocs[3][AHStackLoc.asU64()], ValueIDNum::EmptyValue);
+
 }
 
 TEST_F(InstrRefLDVTest, MLocSimpleLoop) {

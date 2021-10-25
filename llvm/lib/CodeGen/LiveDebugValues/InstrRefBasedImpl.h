@@ -889,6 +889,10 @@ private:
                          ValueIDNum **MOutLocs,
                          SmallVectorImpl<MLocTransferMap> &MLocTransfer);
 
+  /// Examine the stack indexes (i.e. offsets within the stack) to find the
+  /// basic units of interference -- like reg units, but for the stack.
+  void findStackIndexInterference(SmallVectorImpl<unsigned> &Slots);
+
   /// Install PHI values into the live-in array for each block, according to
   /// the IDF of each register.
   void placeMLocPHIs(MachineFunction &MF,
