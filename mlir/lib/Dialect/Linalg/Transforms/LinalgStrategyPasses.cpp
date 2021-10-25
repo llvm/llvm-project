@@ -263,6 +263,7 @@ struct LinalgStrategyLowerVectorsPass
 
     MLIRContext *context = funcOp.getContext();
     RewritePatternSet patterns(context);
+    vector::populateVectorToVectorCanonicalizationPatterns(patterns);
     if (options.transferLowering) {
       vector::populateVectorTransferLoweringPatterns(patterns,
                                                      options.maxTransferRank);
@@ -276,6 +277,11 @@ struct LinalgStrategyLowerVectorsPass
                    ContractionOpToMatmulOpLowering, ContractionOpLowering>(
           options.vectorTransformOptions, context);
       vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+    }
+    if (options.multiReductionLowering) {
+      vector::populateVectorMultiReductionLoweringPatterns(
+          patterns,
+          options.vectorTransformOptions.vectorMultiReductionLowering);
     }
     if (options.transferToSCFConversion) {
       populateVectorToSCFConversionPatterns(patterns,
