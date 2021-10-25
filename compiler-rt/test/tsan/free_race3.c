@@ -24,6 +24,6 @@ int main() {
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 8 at {{.*}} by main thread{{.*}}:
 // CHECK:     #0 free
-// CHECK:     #1 main
+// CHECK:     #{{(1|2)}} main
 // CHECK:   Previous write of size 4 at {{.*}} by thread T1{{.*}}:
 // CHECK:     #0 Thread
