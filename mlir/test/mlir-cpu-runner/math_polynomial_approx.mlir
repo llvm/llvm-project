@@ -153,6 +153,78 @@ func @log1p() {
 }
 
 // -------------------------------------------------------------------------- //
+// Erf.
+// -------------------------------------------------------------------------- //
+func @erf() {
+  // CHECK: -0.000274406
+  %val1 = arith.constant -2.431864e-4 : f32
+  %erfVal1 = math.erf %val1 : f32
+  vector.print %erfVal1 : f32
+
+  // CHECK: 0.742095
+  %val2 = arith.constant 0.79999 : f32
+  %erfVal2 = math.erf %val2 : f32
+  vector.print %erfVal2 : f32
+
+  // CHECK: 0.742101
+  %val3 = arith.constant 0.8 : f32
+  %erfVal3 = math.erf %val3 : f32
+  vector.print %erfVal3 : f32
+
+  // CHECK: 0.995322
+  %val4 = arith.constant 1.99999 : f32
+  %erfVal4 = math.erf %val4 : f32
+  vector.print %erfVal4 : f32
+
+  // CHECK: 0.995322
+  %val5 = arith.constant 2.0 : f32
+  %erfVal5 = math.erf %val5 : f32
+  vector.print %erfVal5 : f32
+
+  // CHECK: 1
+  %val6 = arith.constant 3.74999 : f32
+  %erfVal6 = math.erf %val6 : f32
+  vector.print %erfVal6 : f32
+
+  // CHECK: 1
+  %val7 = arith.constant 3.75 : f32
+  %erfVal7 = math.erf %val7 : f32
+  vector.print %erfVal7 : f32
+
+  // CHECK: -1
+  %negativeInf = arith.constant 0xff800000 : f32
+  %erfNegativeInf = math.erf %negativeInf : f32
+  vector.print %erfNegativeInf : f32
+
+  // CHECK: -1, -1, -0.913759, -0.731446
+  %vecVals1 = arith.constant dense<[-3.4028235e+38, -4.54318, -1.2130899, -7.8234202e-01]> : vector<4xf32>
+  %erfVecVals1 = math.erf %vecVals1 : vector<4xf32>
+  vector.print %erfVecVals1 : vector<4xf32>
+
+  // CHECK: -1.3264e-38, 0, 1.3264e-38, 0.121319
+  %vecVals2 = arith.constant dense<[-1.1754944e-38, 0.0, 1.1754944e-38, 1.0793410e-01]> : vector<4xf32>
+  %erfVecVals2 = math.erf %vecVals2 : vector<4xf32>
+  vector.print %erfVecVals2 : vector<4xf32>
+
+  // CHECK: 0.919477, 0.999069, 1, 1
+  %vecVals3 = arith.constant dense<[1.23578, 2.34093, 3.82342, 3.4028235e+38]> : vector<4xf32>
+  %erfVecVals3 = math.erf %vecVals3 : vector<4xf32>
+  vector.print %erfVecVals3 : vector<4xf32>
+
+  // CHECK: 1
+  %inf = arith.constant 0x7f800000 : f32
+  %erfInf = math.erf %inf : f32
+  vector.print %erfInf : f32
+
+  // CHECK: nan
+  %nan = arith.constant 0x7fc00000 : f32
+  %erfNan = math.erf %nan : f32
+  vector.print %erfNan : f32
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
 // Exp.
 // -------------------------------------------------------------------------- //
 func @exp() {
@@ -305,6 +377,7 @@ func @main() {
   call @log(): () -> ()
   call @log2(): () -> ()
   call @log1p(): () -> ()
+  call @erf(): () -> ()
   call @exp(): () -> ()
   call @expm1(): () -> ()
   call @sin(): () -> ()
