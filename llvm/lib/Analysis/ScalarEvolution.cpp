@@ -1099,6 +1099,7 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
         SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Op);
     return S;
   }
 
@@ -1219,6 +1220,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
         new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator), Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Op);
     return S;
   }
 
@@ -1273,6 +1275,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
                                                  Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
+  registerUser(S, Op);
   return S;
 }
 
@@ -1602,6 +1605,7 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Op);
     return S;
   }
 
@@ -1871,6 +1875,7 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
+  registerUser(S, Op);
   return S;
 }
 
@@ -1910,6 +1915,7 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Op);
     return S;
   }
 
@@ -2107,6 +2113,7 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
+  registerUser(S, { Op });
   return S;
 }
 
@@ -2892,6 +2899,7 @@ ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
         SCEVAddExpr(ID.Intern(SCEVAllocator), O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
   return S;
@@ -2915,6 +2923,7 @@ ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
         SCEVAddRecExpr(ID.Intern(SCEVAllocator), O, Ops.size(), L);
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Ops);
   }
   setNoWrapFlags(S, Flags);
   return S;
@@ -2937,6 +2946,7 @@ ScalarEvolution::getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
                                         O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
+    registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
   return S;
@@ -3446,6 +3456,7 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
                                              LHS, RHS);
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
+  registerUser(S, {LHS, RHS});
   return S;
 }
 
@@ -3840,6 +3851,7 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
 
   UniqueSCEVs.InsertNode(S, IP);
   addToLoopUseLists(S);
+  registerUser(S, Ops);
   return S;
 }
 
@@ -12325,6 +12337,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       LoopDispositions(std::move(Arg.LoopDispositions)),
       LoopPropertiesCache(std::move(Arg.LoopPropertiesCache)),
       BlockDispositions(std::move(Arg.BlockDispositions)),
+      SCEVUsers(std::move(Arg.SCEVUsers)),
       UnsignedRanges(std::move(Arg.UnsignedRanges)),
       SignedRanges(std::move(Arg.SignedRanges)),
       UniqueSCEVs(std::move(Arg.UniqueSCEVs)),
@@ -13287,6 +13300,12 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N) {
 PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
                                                      Loop &L)
     : SE(SE), L(L) {}
+
+void ScalarEvolution::registerUser(const SCEV *User,
+                                   ArrayRef<const SCEV *> Ops) {
+  for (auto *Op : Ops)
+    SCEVUsers[Op].insert(User);
+}
 
 const SCEV *PredicatedScalarEvolution::getSCEV(Value *V) {
   const SCEV *Expr = SE.getSCEV(V);
