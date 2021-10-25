@@ -1641,8 +1641,18 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
       (!B.isMainAnalysis() || !VD->hasGlobalStorage()))
     return None;
 
-  // Array's declaration should have an initializer.
-  const Expr *Init = VD->getAnyInitializer();
+  // Array's declaration should have `ConstantArrayType` type, because only this
+  // type contains an array extent. It may happen that array type can be of
+  // `IncompleteArrayType` type. To get the declaration of `ConstantArrayType`
+  // type, we should find the declaration in the redeclarations chain that has
+  // the initialization expression.
+  // NOTE: `getAnyInitializer` has an out-parameter, which returns a new `VD`
+  // from which an initializer is obtained. We replace current `VD` with the new
+  // `VD`. If the return value of the function is null than `VD` won't be
+  // replaced.
+  const Expr *Init = VD->getAnyInitializer(VD);
+  // NOTE: If `Init` is non-null, then a new `VD` is non-null for sure. So check
+  // `Init` for null only and don't worry about the replaced `VD`.
   if (!Init)
     return None;
 

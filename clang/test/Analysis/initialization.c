@@ -103,3 +103,42 @@ void glob_arr_index4() {
   // FIXME: Should warn {{FALSE}}, since the array has a static storage.
   clang_analyzer_eval(glob_arr_no_init[2]); // expected-warning{{UNKNOWN}}
 }
+
+const int glob_arr3[];              // IncompleteArrayType
+const int glob_arr3[4] = {1, 2, 3}; // ConstantArrayType
+void glob_arr_index5() {
+  clang_analyzer_eval(glob_arr3[0] == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr3[1] == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr3[2] == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr3[3] == 0); // expected-warning{{TRUE}}
+}
+
+void glob_invalid_index5() {
+  int x = 42;
+  int res = glob_arr3[x]; // expected-warning{{garbage or undefined}}
+}
+
+void glob_invalid_index6() {
+  int x = -42;
+  int res = glob_arr3[x]; // expected-warning{{garbage or undefined}}
+}
+
+const int glob_arr4[];              // IncompleteArrayType
+const int glob_arr4[4] = {1, 2, 3}; // ConstantArrayType
+const int glob_arr4[];              // ConstantArrayType (according to AST)
+void glob_arr_index6() {
+  clang_analyzer_eval(glob_arr4[0] == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr4[1] == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr4[2] == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr4[3] == 0); // expected-warning{{TRUE}}
+}
+
+void glob_invalid_index7() {
+  int x = 42;
+  int res = glob_arr4[x]; // expected-warning{{garbage or undefined}}
+}
+
+void glob_invalid_index8() {
+  int x = -42;
+  int res = glob_arr4[x]; // expected-warning{{garbage or undefined}}
+}
