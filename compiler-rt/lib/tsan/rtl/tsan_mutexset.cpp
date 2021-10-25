@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "tsan_mutexset.h"
+
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "tsan_rtl.h"
 
 namespace __tsan {
@@ -123,5 +125,8 @@ MutexSet::Desc MutexSet::Get(uptr i) const {
   CHECK_LT(i, size_);
   return descs_[i];
 }
+
+DynamicMutexSet::DynamicMutexSet() : ptr_(New<MutexSet>()) {}
+DynamicMutexSet::~DynamicMutexSet() { DestroyAndFree(ptr_); }
 
 }  // namespace __tsan
