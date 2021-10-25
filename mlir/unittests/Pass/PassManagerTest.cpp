@@ -118,6 +118,11 @@ TEST(PassManagerTest, InvalidPass) {
       diagnostic->str(),
       "'invalid_op' op trying to schedule a pass on an unregistered operation");
 
+  // Check that clearing the pass manager effectively removed the pass.
+  pm.clear();
+  result = pm.run(module.get());
+  EXPECT_TRUE(succeeded(result));
+
   // Check that adding the pass at the top-level triggers a fatal error.
   ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()), "");
 }

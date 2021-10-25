@@ -85,6 +85,9 @@ public:
   /// operation type, it must be the same type as this pass manager.
   void addPass(std::unique_ptr<Pass> pass);
 
+  /// Clear the pipeline, but not the other options set on this OpPassManager.
+  void clear();
+
   /// Add the given pass to a nested pass manager for the given operation kind
   /// `OpT`.
   template <typename OpT> void addNestedPass(std::unique_ptr<Pass> pass) {
