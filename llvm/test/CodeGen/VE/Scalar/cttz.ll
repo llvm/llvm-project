@@ -64,7 +64,7 @@ define signext i16 @func16s(i16 signext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.cttz.i16(i16 %p, i1 true)
@@ -76,7 +76,7 @@ define zeroext i16 @func16z(i16 zeroext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.cttz.i16(i16 %p, i1 true)
@@ -88,7 +88,7 @@ define signext i8 @func8s(i8 signext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.cttz.i8(i8 %p, i1 true)
@@ -100,7 +100,7 @@ define zeroext i8 @func8z(i8 zeroext %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.w.sx %s1, -1, %s0
 ; CHECK-NEXT:    nnd %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.cttz.i8(i8 %p, i1 true)
