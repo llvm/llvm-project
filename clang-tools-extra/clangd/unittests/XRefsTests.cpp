@@ -1966,6 +1966,20 @@ TEST(FindReferences, WithinAST) {
           [[f^oo]](s);
         }
       )cpp",
+
+      // Enum base
+      R"cpp(
+        typedef int $def[[MyTypeD^ef]];
+        enum MyEnum : [[MyTy^peDef]] { };
+      )cpp",
+      R"cpp(
+        typedef int $def[[MyType^Def]];
+        enum MyEnum : [[MyTypeD^ef]];
+      )cpp",
+      R"cpp(
+        using $def[[MyTypeD^ef]] = int;
+        enum MyEnum : [[MyTy^peDef]] { };
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
