@@ -5,54 +5,28 @@
 
 target triple = "aarch64-linux-gnu"
 
+; The original loop had an unconditional uniform load. Let's make sure
+; we don't artificially create new predicated blocks for the load.
 define void @uniform_load(i32* noalias %dst, i32* noalias readonly %src, i64 %n) #0 {
 ; CHECK-LABEL: @uniform_load(
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.load.continue8 ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[INDUCTION]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label %pred.load.continue
-; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i32 0
-; CHECK-NEXT:    br label %pred.load.continue
-; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ poison, %vector.body ], [ [[TMP4]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
-; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_LOAD_IF3:%.*]], label %pred.load.continue4
-; CHECK:       pred.load.if3:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[SRC]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP7]], i32 1
-; CHECK-NEXT:    br label %pred.load.continue4
-; CHECK:       pred.load.continue4:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i32> [ [[TMP5]], %pred.load.continue ], [ [[TMP8]], %pred.load.if3 ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
-; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF5:%.*]], label %pred.load.continue6
-; CHECK:       pred.load.if5:
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[SRC]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP11]], i32 2
-; CHECK-NEXT:    br label %pred.load.continue6
-; CHECK:       pred.load.continue6:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i32> [ [[TMP9]], %pred.load.continue4 ], [ [[TMP12]], %pred.load.if5 ]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
-; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_LOAD_IF7:%.*]], label %pred.load.continue8
-; CHECK:       pred.load.if7:
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* [[SRC]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP15]], i32 3
-; CHECK-NEXT:    br label %pred.load.continue8
-; CHECK:       pred.load.continue8:
-; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i32> [ [[TMP13]], %pred.load.continue6 ], [ [[TMP16]], [[PRED_LOAD_IF7]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i32* [[TMP19]] to <4 x i32>*
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[TMP17]], <4 x i32>* [[TMP20]], i32 4, <4 x i1> [[TMP1]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
-; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label %vector.body
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[IDX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[IDX]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[TMP2]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IDX]], 0
+; CHECK-NEXT:    [[LOOP_PRED:%.*]] = icmp ule <4 x i64> [[INDUCTION]]
+; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, i32* %src, align 4
+; CHECK-NOT:     load i32, i32* %src, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[LOAD_VAL]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* %dst, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[TMP6]], i32 0
+; CHECK-NEXT:    [[STORE_PTR:%.*]] = bitcast i32* [[TMP7]] to <4 x i32>*
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[TMP5]], <4 x i32>* [[STORE_PTR]], i32 4, <4 x i1> [[LOOP_PRED]])
+; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX_NEXT]], %n.vec
+; CHECK-NEXT:    br i1 [[CMP]], label %middle.block, label %vector.body
 
 entry:
   br label %for.body
