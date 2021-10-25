@@ -129,7 +129,16 @@ class TwoLevelMap {
   }
 
   T *GetOrCreate(uptr idx) const {
-    T *res = Get(idx);
+    DCHECK_LT(idx, kSize1);
+    // This code needs to use memory_order_acquire/consume, but we use
+    // memory_order_relaxed for performance reasons (matters for arm64). We
+    // expect memory_order_relaxed to be effectively equivalent to
+    // memory_order_consume in this case for all relevant architectures: all
+    // dependent data is reachable only by dereferencing the resulting pointer.
+    // If relaxed load fails to see stored ptr, the code will fall back to
+    // Create() and reload the value again with locked mutex as a memory
+    // barrier.
+    T *res = reinterpret_cast<T *>(atomic_load_relaxed(&map1_[idx]));
     if (LIKELY(res))
       return res;
     return Create(idx);
