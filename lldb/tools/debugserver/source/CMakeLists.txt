@@ -88,21 +88,21 @@ include(CheckCSourceCompiles)
 check_c_source_compiles(
     "
     #include <TargetConditionals.h>
-    #if TARGET_CPU_ARM
+    #if TARGET_CPU_ARM64
     #if TARGET_OS_OSX
     #warning Building for macOS
     #else
     #error Not building for macOS
     #endif
     #else
-    #error Not building for ARM
+    #error Not building for ARM64
     #endif
     int main() { return 0; }
     "
-    BUILDING_FOR_ARM_OSX
+    BUILDING_FOR_ARM64_OSX
 )
 
-if (BUILDING_FOR_ARM_OSX)
+if (BUILDING_FOR_ARM64_OSX)
   set(CMAKE_OSX_ARCHITECTURES "arm64;arm64e")
 endif ()
 
