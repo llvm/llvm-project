@@ -624,7 +624,7 @@ lldb::addr_t ProcessWindows::GetImageInfoAddress() {
 DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
   if (m_dyld_up.get() == NULL)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderWindowsDYLD::GetPluginNameStatic().GetCString()));
+        this, DynamicLoaderWindowsDYLD::GetPluginNameStatic()));
   return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_up.get());
 }
 
