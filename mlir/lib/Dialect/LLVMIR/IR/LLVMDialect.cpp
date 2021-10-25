@@ -1386,7 +1386,7 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool dsoLocal, ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
-  result.addAttribute("type", TypeAttr::get(type));
+  result.addAttribute("global_type", TypeAttr::get(type));
   if (isConstant)
     result.addAttribute("constant", builder.getUnitAttr());
   if (value)
@@ -1426,14 +1426,14 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
   p.printOptionalAttrDict(op->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(), "type", "constant",
-                           "value", getLinkageAttrName(),
+                          {SymbolTable::getSymbolAttrName(), "global_type",
+                           "constant", "value", getLinkageAttrName(),
                            getUnnamedAddrAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (op.getValueOrNull().dyn_cast_or_null<StringAttr>())
     return;
-  p << " : " << op.type();
+  p << " : " << op.global_type();
 
   Region &initializer = op.getInitializerRegion();
   if (!initializer.empty())
@@ -1546,7 +1546,7 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
-  result.addAttribute("type", TypeAttr::get(types[0]));
+  result.addAttribute("global_type", TypeAttr::get(types[0]));
   return success();
 }
 
