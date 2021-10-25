@@ -196,6 +196,25 @@ define void @multiple(i32* %p, i32* %o1_ptr, i32* %o2_ptr) {
   ret void
 }
 
+; TODO: p.neg1 and p.o.1 don't alias, even though the addition o+1 may overflow.
+; While it makes INT_MIN a possible offset, offset -1 is not possible.
+; CHECK-LABEL: Function: benign_overflow
+; CHECK: MayAlias: i8* %p, i8* %p.o
+; CHECK: MayAlias: i8* %p.neg1, i8* %p.o
+; CHECK: MayAlias: i8* %p, i8* %p.o.1
+; CHECK: MayAlias: i8* %p.neg1, i8* %p.o.1
+; CHECK: NoAlias:  i8* %p.o, i8* %p.o.1
+define void @benign_overflow(i8* %p, i64 %o) {
+  %c = icmp sge i64 %o, -1
+  call void @llvm.assume(i1 %c)
+  %p.neg1 = getelementptr i8, i8* %p, i64 -1
+  %p.o = getelementptr i8, i8* %p, i64 %o
+  %p.o.1 = getelementptr i8, i8* %p.o, i64 1
+  ret void
+}
+
+declare void @llvm.assume(i1)
+
 
 !0 = !{ i32 0, i32 2 }
 !1 = !{ i32 0, i32 1 }
