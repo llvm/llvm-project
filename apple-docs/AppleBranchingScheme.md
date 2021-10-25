@@ -40,17 +40,17 @@ through upstream LLVM are those that are either directly related to upstreaming
 content or that are needed because of the existing differences (e.g., resolving
 merge conflicts or fixing build errors).
 
-- [apple/main](https://github.com/apple/llvm-project/tree/apple/main) is
+- [next](https://github.com/apple/llvm-project/tree/next) is
   directly downstream of
   [llvm.org/master](https://github.com/apple/llvm-project/tree/llvm.org/master).
   There is a gated automerger that does testing before merging in.  Most
   changes to this branch should be redirected to <https://reviews.llvm.org/>
   (see also <http://llvm.org/docs/Contributing.html>).
-- `apple/stable/*`: These branches are periodic stabilization branches, where
+- `stable/*`: These branches are periodic stabilization branches, where
   fixes are cherry-picked from LLVM.  At time of writing:
-    - [apple/stable/20210107](https://github.com/apple/llvm-project/tree/apple/stable/20210107)
-      is the current stabilization branch for
-      [swift/main](https://github.com/apple/llvm-project/tree/swift/main)
+    - [stable/20210726](https://github.com/apple/llvm-project/tree/stable/20210726)
+      is the current stabilization branch for Swift's main branch
+      (https://github.com/apple/swift/tree/main)
       (see below).
 
 ## Downstream branches that depend on [Swift](https://github.com/apple/swift)
