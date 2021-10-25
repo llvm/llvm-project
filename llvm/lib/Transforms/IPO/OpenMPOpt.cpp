@@ -2610,15 +2610,14 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   // Merge all the predecessor states into the current basic block. A basic
   // block is executed by a single thread if all of its predecessors are.
   auto MergePredecessorStates = [&](BasicBlock *BB) {
-    if (pred_begin(BB) == pred_end(BB))
+    if (pred_empty(BB))
       return SingleThreadedBBs.contains(BB);
 
     bool IsInitialThread = true;
-    for (auto PredBB = pred_begin(BB), PredEndBB = pred_end(BB);
-         PredBB != PredEndBB; ++PredBB) {
-      if (!IsInitialThreadOnly(dyn_cast<BranchInst>((*PredBB)->getTerminator()),
+    for (BasicBlock *PredBB : predecessors(BB)) {
+      if (!IsInitialThreadOnly(dyn_cast<BranchInst>(PredBB->getTerminator()),
                                BB))
-        IsInitialThread &= SingleThreadedBBs.contains(*PredBB);
+        IsInitialThread &= SingleThreadedBBs.contains(PredBB);
     }
 
     return IsInitialThread;
