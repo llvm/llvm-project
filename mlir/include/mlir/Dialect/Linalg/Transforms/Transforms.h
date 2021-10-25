@@ -15,7 +15,7 @@
 #include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/Bufferize.h"
@@ -846,6 +846,9 @@ struct LinalgVectorizationPattern : public LinalgBaseVectorizationPattern {
       : LinalgBaseVectorizationPattern(opName, context, filter, benefit) {}
 };
 
+//===----------------------------------------------------------------------===//
+// Transformation and lowering options exposed as auxiliary structs.
+//===----------------------------------------------------------------------===//
 /// Options to control the application of enabling transformations.
 /// Hoisting transformations are always deemed beneficial and must be disabled
 /// explicitly.
@@ -887,16 +890,10 @@ struct LinalgVectorLoweringOptions {
     transferLowering = val;
     return *this;
   }
-  /// Trigger full / partial vector.transfer splits.
-  bool transferPartialRewrite = false;
-  LinalgVectorLoweringOptions &enableTransferPartialRewrite(bool val = true) {
-    transferPartialRewrite = val;
-    return *this;
-  }
-  /// Enable lowering of vector.contract.
-  bool contractionLowering = false;
-  LinalgVectorLoweringOptions &enableContractionLowering(bool val = true) {
-    contractionLowering = val;
+  /// Enable lowering of vector.transpose.
+  bool transposeLowering = false;
+  LinalgVectorLoweringOptions &enableVectorTransposeLowering(bool val = true) {
+    transposeLowering = val;
     return *this;
   }
   /// Enable lowering of vector.multi_reduce.
@@ -905,17 +902,22 @@ struct LinalgVectorLoweringOptions {
     multiReductionLowering = val;
     return *this;
   }
+  /// Enable lowering of vector.contract.
+  bool contractionLowering = false;
+  LinalgVectorLoweringOptions &enableContractionLowering(bool val = true) {
+    contractionLowering = val;
+    return *this;
+  }
+  /// Trigger full / partial vector.transfer splits.
+  bool transferPartialRewrite = false;
+  LinalgVectorLoweringOptions &enableTransferPartialRewrite(bool val = true) {
+    transferPartialRewrite = val;
+    return *this;
+  }
   /// Enable lowering of vector.transfer to scf.
   bool transferToSCFConversion = false;
   LinalgVectorLoweringOptions &enableTransferToSCFConversion(bool val = true) {
     transferToSCFConversion = val;
-    return *this;
-  }
-  /// Configure late vector transformations.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  LinalgVectorLoweringOptions &
-  setVectorTransformsOptions(vector::VectorTransformsOptions options) {
-    vectorTransformOptions = options;
     return *this;
   }
   /// Configure the post staged-patterns late vector.transfer to scf
@@ -926,8 +928,18 @@ struct LinalgVectorLoweringOptions {
     vectorTransferToSCFOptions = options;
     return *this;
   }
+  /// Configure late vector transformations.
+  vector::VectorTransformsOptions vectorTransformOptions;
+  LinalgVectorLoweringOptions &
+  setVectorTransformsOptions(vector::VectorTransformsOptions options) {
+    vectorTransformOptions = options;
+    return *this;
+  }
 };
 
+//===----------------------------------------------------------------------===//
+// Transformations exposed as rewrite patterns.
+//===----------------------------------------------------------------------===//
 /// Trait to check if T provides a `getOperationName` method.
 template <typename T, typename... Args>
 using has_get_operation_name = decltype(T::getOperationName());

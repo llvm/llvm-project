@@ -21,21 +21,10 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/TypeUtilities.h"
-#include "mlir/IR/Types.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -48,6 +37,7 @@
 #define DEBUG_TYPE "vector-to-vector"
 
 using namespace mlir;
+using namespace mlir::vector;
 
 // Helper to find an index in an affine map.
 static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
@@ -1978,9 +1968,41 @@ static Value createInBoundsCond(OpBuilder &b,
   });
   return inBoundsCond;
 }
-
-LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
-    VectorTransferOpInterface xferOp) {
+/// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
+/// masking) fastpath and a slowpath.
+/// If `ifOp` is not null and the result is `success, the `ifOp` points to the
+/// newly created conditional upon function return.
+/// To accomodate for the fact that the original vector.transfer indexing may be
+/// arbitrary and the slow path indexes @[0...0] in the temporary buffer, the
+/// scf.if op returns a view and values of type index.
+/// At this time, only vector.transfer_read case is implemented.
+///
+/// Example (a 2-D vector.transfer_read):
+/// ```
+///    %1 = vector.transfer_read %0[...], %pad : memref<A...>, vector<...>
+/// ```
+/// is transformed into:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      // fastpath, direct cast
+///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view : compatibleMemRefType, index, index
+///    } else {
+///      // slowpath, not in-bounds vector.transfer or linalg.copy.
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4 : compatibleMemRefType, index, index
+//     }
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {in_bounds = [true ... true]}
+/// ```
+/// where `alloc` is a top of the function alloca'ed buffer of one vector.
+///
+/// Preconditions:
+///  1. `xferOp.permutation_map()` must be a minor identity map
+///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
+///  must be equal. This will be relaxed in the future but requires
+///  rank-reducing subviews.
+static LogicalResult
+splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp) {
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
@@ -3863,7 +3885,7 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
   patterns.add<TransposeOpLowering>(options, patterns.getContext());
 }
 
-void mlir::vector::populateVetorReductionToContractPatterns(
+void mlir::vector::populateVectorReductionToContractPatterns(
     RewritePatternSet &patterns) {
   patterns.add<MultiReduceToContract, CombineContractBroadcast,
                CombineContractTranspose>(patterns.getContext());
