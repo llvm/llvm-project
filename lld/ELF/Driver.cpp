@@ -262,16 +262,11 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       return;
     }
 
-    // DSOs usually have DT_SONAME tags in their ELF headers, and the
-    // sonames are used to identify DSOs. But if they are missing,
-    // they are identified by filenames. We don't know whether the new
-    // file has a DT_SONAME or not because we haven't parsed it yet.
-    // Here, we set the default soname for the file because we might
-    // need it later.
-    //
-    // If a file was specified by -lfoo, the directory part is not
-    // significant, as a user did not specify it. This behavior is
-    // compatible with GNU.
+    // Shared objects are identified by soname. soname is (if specified)
+    // DT_SONAME and falls back to filename. If a file was specified by -lfoo,
+    // the directory part is ignored. Note that path may be a temporary and
+    // cannot be stored into SharedFile::soName.
+    path = mbref.getBufferIdentifier();
     files.push_back(
         make<SharedFile>(mbref, withLOption ? path::filename(path) : path));
     return;
