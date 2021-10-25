@@ -296,7 +296,7 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   let results = (outs
       AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
 
-  let regions = (region AnyRegion);
+  let regions = (region AnyRegion:$atomic_body);
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "Value":$memref, "ValueRange":$ivs)>];
