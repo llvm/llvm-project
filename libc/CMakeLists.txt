@@ -95,7 +95,7 @@ include(${entrypoint_file})
 if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
   include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
 elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}//headers.txt")
+  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
 endif()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
