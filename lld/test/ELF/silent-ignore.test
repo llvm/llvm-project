@@ -2,14 +2,11 @@ RUN: ld.lld --version \
 RUN:   -detect-odr-violations \
 RUN:   -g \
 RUN:   -long-plt \
-RUN:   -no-add-needed \
 RUN:   -no-copy-dt-needed-entries \
 RUN:   -no-ctors-in-init-array \
 RUN:   -no-keep-memory \
-RUN:   -no-pipeline-knowledge \
 RUN:   --no-relax \
 RUN:   -no-warn-mismatch \
-RUN:   -p \
 RUN:   -rpath-link . \
 RUN:   -secure-plt \
 RUN:   -sort-common \
@@ -19,6 +16,5 @@ RUN:   -warn-once \
 RUN:   -warn-shared-textrel \
 RUN:   -EB \
 RUN:   -EL \
-RUN:   -G 0 \
-RUN:   -Qy
+RUN:   -G 0
 RUN: not ld.lld --version --not-an-ignored-argument
