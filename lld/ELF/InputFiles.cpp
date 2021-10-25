@@ -426,18 +426,7 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
   if (sec.sh_info >= symbols.size())
     fatal(toString(this) + ": invalid symbol index");
   const typename ELFT::Sym &sym = symbols[sec.sh_info];
-  StringRef signature = CHECK(sym.getName(this->stringTable), this);
-
-  // As a special case, if a symbol is a section symbol and has no name,
-  // we use a section name as a signature.
-  //
-  // Such SHT_GROUP sections are invalid from the perspective of the ELF
-  // standard, but GNU gold 1.14 (the newest version as of July 2017) or
-  // older produce such sections as outputs for the -r option, so we need
-  // a bug-compatibility.
-  if (signature.empty() && sym.getType() == STT_SECTION)
-    return getSectionName(sec);
-  return signature;
+  return CHECK(sym.getName(this->stringTable), this);
 }
 
 template <class ELFT>
@@ -565,10 +554,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
   const ELFFile<ELFT> &obj = this->getObj();
 
   ArrayRef<Elf_Shdr> objSections = CHECK(obj.sections(), this);
+  StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   this->sections.resize(size);
-  this->sectionStringTable =
-      CHECK(obj.getSectionStringTable(objSections), this);
 
   std::vector<ArrayRef<Elf_Word>> selectedGroups;
 
@@ -624,7 +612,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
               .second;
       if (keepGroup) {
         if (config->relocatable)
-          this->sections[i] = createInputSection(sec);
+          this->sections[i] = createInputSection(sec, shstrtab);
         selectedGroups.push_back(entries);
         continue;
       }
@@ -648,7 +636,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     case SHT_NULL:
       break;
     default:
-      this->sections[i] = createInputSection(sec);
+      this->sections[i] = createInputSection(sec, shstrtab);
     }
   }
 
@@ -665,7 +653,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     const Elf_Shdr &sec = objSections[i];
 
     if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
-      this->sections[i] = createInputSection(sec);
+      this->sections[i] = createInputSection(sec, shstrtab);
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.
@@ -874,8 +862,9 @@ static InputSection *toRegularSection(MergeInputSection *sec) {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
-  StringRef name = getSectionName(sec);
+InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec,
+                                                    StringRef shstrtab) {
+  StringRef name = CHECK(getObj().getSectionName(sec, shstrtab), this);
 
   if (config->emachine == EM_ARM && sec.sh_type == SHT_ARM_ATTRIBUTES) {
     ARMAttributeParser attributes;
@@ -1070,11 +1059,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
   if (shouldMerge(sec, name))
     return make<MergeInputSection>(*this, sec, name);
   return make<InputSection>(*this, sec, name);
-}
-
-template <class ELFT>
-StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &sec) {
-  return CHECK(getObj().getSectionName(sec, sectionStringTable), this);
 }
 
 // Initialize this->Symbols. this->Symbols is a parallel array as
