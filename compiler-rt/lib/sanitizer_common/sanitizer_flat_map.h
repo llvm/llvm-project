@@ -65,6 +65,10 @@ template <typename T, u64 kSize1, u64 kSize2,
           typename AddressSpaceViewTy = LocalAddressSpaceView,
           class MapUnmapCallback = NoOpMapUnmapCallback>
 class TwoLevelMap {
+  static_assert(IsPowerOfTwo(kSize2), "");
+  static constexpr uptr kSize2Shift = Log2(kSize2);
+  static constexpr uptr kSize2Mask = kSize2 - 1;
+
  public:
   using AddressSpaceView = AddressSpaceViewTy;
   void Init() {
@@ -100,19 +104,19 @@ class TwoLevelMap {
 
   bool contains(uptr idx) const {
     CHECK_LT(idx, kSize1 * kSize2);
-    return Get(idx / kSize2);
+    return Get(idx >> kSize2Shift);
   }
 
   const T &operator[](uptr idx) const {
     DCHECK_LT(idx, kSize1 * kSize2);
-    T *map2 = GetOrCreate(idx / kSize2);
-    return *AddressSpaceView::Load(&map2[idx % kSize2]);
+    T *map2 = GetOrCreate(idx >> kSize2Shift);
+    return *AddressSpaceView::Load(&map2[idx & kSize2Mask]);
   }
 
   T &operator[](uptr idx) {
     DCHECK_LT(idx, kSize1 * kSize2);
-    T *map2 = GetOrCreate(idx / kSize2);
-    return *AddressSpaceView::LoadWritable(&map2[idx % kSize2]);
+    T *map2 = GetOrCreate(idx >> kSize2Shift);
+    return *AddressSpaceView::LoadWritable(&map2[idx & kSize2Mask]);
   }
 
  private:
