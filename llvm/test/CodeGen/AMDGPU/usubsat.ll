@@ -122,26 +122,22 @@ define i16 @usubsat_as_bithack2_i16(i16 %x) {
 ; GFX8-LABEL: usubsat_as_bithack2_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_ashrrev_i16_e32 v1, 15, v0
-; GFX8-NEXT:    v_add_u16_e32 v0, 0x8000, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX8-NEXT:    s_movk_i32 s4, 0x8000
+; GFX8-NEXT:    v_sub_u16_e64 v0, v0, s4 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: usubsat_as_bithack2_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_ashrrev_i16_e32 v1, 15, v0
-; GFX9-NEXT:    v_add_u16_e32 v0, 0x8000, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX9-NEXT:    s_movk_i32 s4, 0x8000
+; GFX9-NEXT:    v_sub_u16_e64 v0, v0, s4 clamp
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: usubsat_as_bithack2_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_ashrrev_i16 v1, 15, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, 0x8000, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX10-NEXT:    v_sub_nc_u16 v0, v0, 0x8000 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %signsplat = ashr i16 %x, 15
   %flipsign = add i16 %x, 32768
@@ -162,26 +158,22 @@ define i16 @usubsat_as_bithack_commute_i16(i16 %x) {
 ; GFX8-LABEL: usubsat_as_bithack_commute_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_ashrrev_i16_e32 v1, 15, v0
-; GFX8-NEXT:    v_add_u16_e32 v0, 0x8000, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX8-NEXT:    s_movk_i32 s4, 0x8000
+; GFX8-NEXT:    v_sub_u16_e64 v0, v0, s4 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: usubsat_as_bithack_commute_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_ashrrev_i16_e32 v1, 15, v0
-; GFX9-NEXT:    v_add_u16_e32 v0, 0x8000, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x8000
+; GFX9-NEXT:    v_sub_u16_e64 v0, v0, s4 clamp
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: usubsat_as_bithack_commute_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_ashrrev_i16 v1, 15, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, 0x8000, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX10-NEXT:    v_sub_nc_u16 v0, v0, 0x8000 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %signsplat = ashr i16 %x, 15
   %flipsign = add i16 %x, 32768

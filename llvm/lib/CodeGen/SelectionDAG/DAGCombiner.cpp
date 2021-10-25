@@ -5633,12 +5633,15 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
 
-  // Canonicalize xor as operand 0.
-  if (N1.getOpcode() == ISD::XOR)
+  // Canonicalize SRA as operand 1.
+  if (N0.getOpcode() == ISD::SRA)
     std::swap(N0, N1);
 
-  if (N0.getOpcode() != ISD::XOR || N1.getOpcode() != ISD::SRA ||
-      !N0.hasOneUse() || !N1.hasOneUse() ||
+  // xor/add with SMIN (signmask) are logically equivalent.
+  if (N0.getOpcode() != ISD::XOR && N0.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  if (N1.getOpcode() != ISD::SRA || !N0.hasOneUse() || !N1.hasOneUse() ||
       N0.getOperand(0) != N1.getOperand(0))
     return SDValue();
 
@@ -5650,6 +5653,7 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // (i8 X ^ 128) & (i8 X s>> 7) --> usubsat X, 128
+  // (i8 X + 128) & (i8 X s>> 7) --> usubsat X, 128
   SDLoc DL(N);
   SDValue SignMask = DAG.getConstant(XorC->getAPIntValue(), DL, VT);
   return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0), SignMask);
