@@ -2730,7 +2730,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; GPRIDX-NEXT:     workitem_private_segment_byte_size = 0
 ; GPRIDX-NEXT:     workgroup_group_segment_byte_size = 0
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
-; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
+; GPRIDX-NEXT:     kernarg_segment_byte_size = 12
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
 ; GPRIDX-NEXT:     wavefront_sgpr_count = 9
 ; GPRIDX-NEXT:     workitem_vgpr_count = 3
@@ -2821,7 +2821,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; MOVREL-NEXT:     workitem_private_segment_byte_size = 0
 ; MOVREL-NEXT:     workgroup_group_segment_byte_size = 0
 ; MOVREL-NEXT:     gds_segment_byte_size = 0
-; MOVREL-NEXT:     kernarg_segment_byte_size = 28
+; MOVREL-NEXT:     kernarg_segment_byte_size = 12
 ; MOVREL-NEXT:     workgroup_fbarrier_count = 0
 ; MOVREL-NEXT:     wavefront_sgpr_count = 9
 ; MOVREL-NEXT:     workitem_vgpr_count = 4
@@ -2913,7 +2913,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; GFX10-NEXT:     workitem_private_segment_byte_size = 0
 ; GFX10-NEXT:     workgroup_group_segment_byte_size = 0
 ; GFX10-NEXT:     gds_segment_byte_size = 0
-; GFX10-NEXT:     kernarg_segment_byte_size = 28
+; GFX10-NEXT:     kernarg_segment_byte_size = 12
 ; GFX10-NEXT:     workgroup_fbarrier_count = 0
 ; GFX10-NEXT:     wavefront_sgpr_count = 9
 ; GFX10-NEXT:     workitem_vgpr_count = 3
@@ -3559,7 +3559,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; GPRIDX-NEXT:     workitem_private_segment_byte_size = 0
 ; GPRIDX-NEXT:     workgroup_group_segment_byte_size = 0
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
-; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
+; GPRIDX-NEXT:     kernarg_segment_byte_size = 12
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
 ; GPRIDX-NEXT:     wavefront_sgpr_count = 6
 ; GPRIDX-NEXT:     workitem_vgpr_count = 2
@@ -3643,7 +3643,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; MOVREL-NEXT:     workitem_private_segment_byte_size = 0
 ; MOVREL-NEXT:     workgroup_group_segment_byte_size = 0
 ; MOVREL-NEXT:     gds_segment_byte_size = 0
-; MOVREL-NEXT:     kernarg_segment_byte_size = 28
+; MOVREL-NEXT:     kernarg_segment_byte_size = 12
 ; MOVREL-NEXT:     workgroup_fbarrier_count = 0
 ; MOVREL-NEXT:     wavefront_sgpr_count = 6
 ; MOVREL-NEXT:     workitem_vgpr_count = 3
@@ -3728,7 +3728,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; GFX10-NEXT:     workitem_private_segment_byte_size = 0
 ; GFX10-NEXT:     workgroup_group_segment_byte_size = 0
 ; GFX10-NEXT:     gds_segment_byte_size = 0
-; GFX10-NEXT:     kernarg_segment_byte_size = 28
+; GFX10-NEXT:     kernarg_segment_byte_size = 12
 ; GFX10-NEXT:     workgroup_fbarrier_count = 0
 ; GFX10-NEXT:     wavefront_sgpr_count = 6
 ; GFX10-NEXT:     workitem_vgpr_count = 2
@@ -3819,7 +3819,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GPRIDX-NEXT:     workitem_private_segment_byte_size = 0
 ; GPRIDX-NEXT:     workgroup_group_segment_byte_size = 0
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
-; GPRIDX-NEXT:     kernarg_segment_byte_size = 28
+; GPRIDX-NEXT:     kernarg_segment_byte_size = 12
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
 ; GPRIDX-NEXT:     wavefront_sgpr_count = 7
 ; GPRIDX-NEXT:     workitem_vgpr_count = 3
@@ -3906,7 +3906,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; MOVREL-NEXT:     workitem_private_segment_byte_size = 0
 ; MOVREL-NEXT:     workgroup_group_segment_byte_size = 0
 ; MOVREL-NEXT:     gds_segment_byte_size = 0
-; MOVREL-NEXT:     kernarg_segment_byte_size = 28
+; MOVREL-NEXT:     kernarg_segment_byte_size = 12
 ; MOVREL-NEXT:     workgroup_fbarrier_count = 0
 ; MOVREL-NEXT:     wavefront_sgpr_count = 7
 ; MOVREL-NEXT:     workitem_vgpr_count = 4
@@ -3994,7 +3994,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GFX10-NEXT:     workitem_private_segment_byte_size = 0
 ; GFX10-NEXT:     workgroup_group_segment_byte_size = 0
 ; GFX10-NEXT:     gds_segment_byte_size = 0
-; GFX10-NEXT:     kernarg_segment_byte_size = 28
+; GFX10-NEXT:     kernarg_segment_byte_size = 12
 ; GFX10-NEXT:     workgroup_fbarrier_count = 0
 ; GFX10-NEXT:     wavefront_sgpr_count = 7
 ; GFX10-NEXT:     workitem_vgpr_count = 3
