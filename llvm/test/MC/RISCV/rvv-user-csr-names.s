@@ -56,6 +56,20 @@ csrrs t1, vxrm, zero
 # uimm12
 csrrs t2, 0x00a, zero
 
+# vcsr
+# name
+# CHECK-INST: csrrs t1, vcsr, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0xf0,0x00]
+# CHECK-INST-ALIAS: csrr t1, vcsr
+# uimm12
+# CHECK-INST: csrrs t2, vcsr, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0xf0,0x00]
+# CHECK-INST-ALIAS: csrr t2, vcsr
+# name
+csrrs t1, vcsr, zero
+# uimm12
+csrrs t2, 0x00f, zero
+
 # vl
 # name
 # CHECK-INST: csrrs t1, vl, zero
