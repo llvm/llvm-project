@@ -3252,7 +3252,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     auto LoopInpEq = [G] (const PhiInfo &P) -> bool {
       return G.Out.Reg == P.LR.Reg;
     };
-    if (llvm::find_if(Phis, LoopInpEq) == Phis.end())
+    if (llvm::none_of(Phis, LoopInpEq))
       continue;
 
     G.Inp.Reg = Inputs.find_first();

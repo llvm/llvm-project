@@ -468,8 +468,7 @@ void Writer::populateTargetFeatures() {
     auto isTLS = [](InputChunk *segment) {
       return segment->live && segment->isTLS();
     };
-    tlsUsed = tlsUsed ||
-              std::any_of(file->segments.begin(), file->segments.end(), isTLS);
+    tlsUsed = tlsUsed || llvm::any_of(file->segments, isTLS);
   }
 
   if (inferFeatures)
@@ -950,10 +949,9 @@ bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
 }
 
 bool Writer::hasPassiveInitializedSegments() {
-  return std::find_if(segments.begin(), segments.end(),
-                      [this](const OutputSegment *s) {
-                        return this->needsPassiveInitialization(s);
-                      }) != segments.end();
+  return llvm::any_of(segments, [this](const OutputSegment *s) {
+    return this->needsPassiveInitialization(s);
+  });
 }
 
 void Writer::createSyntheticInitFunctions() {

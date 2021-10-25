@@ -5912,7 +5912,7 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   // at least for now, but once we have better support for exceptions,
   // we'd need to carefully handle the case when the throw is being
   // immediately caught.
-  if (std::any_of(Blk->begin(), Blk->end(), [](const CFGElement &Elm) {
+  if (llvm::any_of(*Blk, [](const CFGElement &Elm) {
         if (Optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
           if (isa<CXXThrowExpr>(StmtElm->getStmt()))
             return true;
