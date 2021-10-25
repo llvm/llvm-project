@@ -603,6 +603,10 @@ def SmartPtrModeling: Checker<"SmartPtrModeling">,
   ]>,
   Hidden;
 
+def StringChecker: Checker<"StringChecker">,
+  HelpText<"Checks C++ std::string bugs">,
+  Documentation<HasDocumentation>;
+
 def MoveChecker: Checker<"Move">,
   HelpText<"Find use-after-move bugs in C++">,
   CheckerOptions<[
