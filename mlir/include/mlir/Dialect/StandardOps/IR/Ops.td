@@ -295,12 +295,15 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   let results = (outs
       AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
 
-  let regions = (region AnyRegion:$body);
+  let regions = (region AnyRegion);
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "Value":$memref, "ValueRange":$ivs)>];
 
   let extraClassDeclaration = [{
+    // TODO: remove post migrating callers.
+    Region &body() { return getRegion(); }
+
     // The value stored in memref[ivs].
     Value getCurrentValue() {
       return body().getArgument(0);
