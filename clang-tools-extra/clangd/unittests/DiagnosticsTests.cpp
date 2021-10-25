@@ -449,6 +449,21 @@ TEST(DiagnosticTest, RespectsDiagnosticConfig) {
                                "use of undeclared identifier 'unknown'")));
 }
 
+TEST(DiagnosticTest, RespectsDiagnosticConfigInHeader) {
+  Annotations Header(R"cpp(
+    int x = "42";  // error-ok
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+  )cpp");
+  auto TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles["header.hpp"] = std::string(Header.code());
+  Config Cfg;
+  Cfg.Diagnostics.Suppress.insert("init_conversion_failed");
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 TEST(DiagnosticTest, ClangTidySuppressionComment) {
   Annotations Main(R"cpp(
     int main() {
