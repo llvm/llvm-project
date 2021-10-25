@@ -97,3 +97,9 @@ void glob_invalid_index4() {
   // FIXME: Should warn {{garbage or undefined}}.
   int res = glob_arr2[x][y]; // no-warning
 }
+
+const int glob_arr_no_init[10];
+void glob_arr_index4() {
+  // FIXME: Should warn {{FALSE}}, since the array has a static storage.
+  clang_analyzer_eval(glob_arr_no_init[2]); // expected-warning{{UNKNOWN}}
+}
