@@ -154,6 +154,63 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; Fact holds for exiting branch, but not for earlier use
+; We could recognize the unreachable loop here, but don't currently.  Its
+; also not terribly interesting, because EarlyCSE will fold condition.
+define void @slt_neg_multiple_use(i8 %start) mustprogress {
+; CHECK-LABEL: @slt_neg_multiple_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[START:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], 254
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %zext = zext i8 %start to i16
+  %cmp = icmp slt i16 %zext, 254
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @slt_neg_multiple_use2(i8 %start, i16 %n) mustprogress {
+; CHECK-LABEL: @slt_neg_multiple_use2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[START:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %zext = zext i8 %start to i16
+  %cmp = icmp slt i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 @G = external global i8
 
 ; Negative case where the loop could be infinite and make progress
