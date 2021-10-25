@@ -166,7 +166,7 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
        CArg<"mlir::ValueRange", "{}">:$shape,
        CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     mlir::Type getAllocatedType();
@@ -224,7 +224,7 @@ def fir_AllocMemOp : fir_Op<"allocmem",
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 
   let extraClassDeclaration = [{
     mlir::Type getAllocatedType();
@@ -409,7 +409,7 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
     attr-dict `:` type(operands)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
@@ -602,7 +602,8 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     p << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases =
+        (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumConditions();
     for (decltype(count) i = 0; i != count; ++i) {
       if (i)
@@ -616,8 +617,9 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       printSuccessorAtIndex(p, i);
     }
     p << ']';
-    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
-        getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
+    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(),
+        getCompareOffsetAttr(), getTargetOffsetAttr(),
+        getOperandSegmentSizeAttr()});
   }];
 
   let verifier = [{
@@ -625,7 +627,8 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
           getSelector().getType().isa<mlir::IndexType>() ||
           getSelector().getType().isa<fir::IntegerType>()))
       return emitOpError("must be an integer");
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases =
+        (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumDest();
     if (count == 0)
       return emitOpError("must have at least one successor");
@@ -822,9 +825,9 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
   let assemblyFormat = "$resval attr-dict `:` type($resval)";
 }
 
-//===------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // Operations on !fir.box<T> type objects
-//===------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   let summary = "boxes a given reference and (optional) dimension information";
@@ -887,26 +890,27 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
 }
 
 def fir_ReboxOp : fir_Op<"rebox", [NoSideEffect, AttrSizedOperandSegments]> {
-  let summary = "create a box given another box and (optional) dimension information";
+  let summary =
+      "create a box given another box and (optional) dimension information";
 
   let description = [{
-    Create a new boxed reference value from another box. This is meant to be used
-    when the taking a reference to part of a boxed value, or to an entire boxed value with
-    new shape or type information.
+    Create a new boxed reference value from another box. This is meant to be
+    used when the taking a reference to part of a boxed value, or to an entire
+    boxed value with new shape or type information.
 
     The new extra information can be:
       - new shape information (new lower bounds, new rank, or new extents.
         New rank/extents can only be provided if the original fir.box is
-        contiguous in all dimension but maybe the first one). The shape
+        contiguous in all dimension but maybe the first row). The shape
         operand must be provided to set new shape information.
-      - new type (only for derived types). It is possible to set the dynamic type
-        of the new box to one of the parent types of the input box dynamic type.
-        Type parameters cannot be changed. This change is reflected in the requested
-        result type of the new box.
+      - new type (only for derived types). It is possible to set the dynamic
+        type of the new box to one of the parent types of the input box dynamic
+        type. Type parameters cannot be changed. This change is reflected in
+        the requested result type of the new box.
 
-    A slice argument can be provided to build a reference to part of a boxed value.
-    In this case, the shape operand must be absent or be a fir.shift that can be
-    used to provide a non default origin for the slice.
+    A slice argument can be provided to build a reference to part of a boxed
+    value. In this case, the shape operand must be absent or be a fir.shift
+    that can be used to provide a non default origin for the slice.
 
     The following example illustrates creating a fir.box for x(10:33:2)
     where x is described by a fir.box and has non default lower bounds,
@@ -1338,6 +1342,16 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   let summary = "Load an array as a value.";
 
   let description = [{
+    This operation taken with array_merge_store captures Fortran's
+    copy-in/copy-out semantics. One way to think of this is that array_load
+    creates a snapshot copy of the entire array. This copy can then be used
+    as the "original value" of the array while the array's new value is
+    computed. The array_merge_store operation is the copy-out semantics, which
+    merge the updates with the original array value to produce the final array
+    result. This abstracts the copy operations as opposed to always creating
+    copies or requiring dependence analysis be performed on the syntax trees
+    and before lowering to the IR.
+
     Load an entire array as a single SSA value.
 
     ```fortran
@@ -1538,7 +1552,7 @@ def fir_ArrayModifyOp : fir_Op<"array_modify", [AttrSizedOperandSegments,
       `:` functional-type(operands, results)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
@@ -1985,7 +1999,7 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
       "llvm::ArrayRef<mlir::Value>":$vcoor)>
   ];
 
-  let verifier = [{ return ::verify(*this); }];
+  let verifier = "return ::verify(*this);";
 }
 
 def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
@@ -2464,22 +2478,18 @@ class fir_ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     fir_Op<mnemonic,
            !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
     Results<(outs AnyType)> {
-  let parser = [{
-    return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
+  let parser = "return impl::parseOneResultSameOperandTypeOp(parser, result);";
 
-  let printer = [{ return printBinaryOp(this->getOperation(), p); }];
+  let printer = "return printBinaryOp(this->getOperation(), p);";
 }
 
 class fir_UnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
       fir_Op<mnemonic,
              !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])>,
       Results<(outs AnyType)> {
-  let parser = [{
-    return impl::parseOneResultSameOperandTypeOp(parser, result);
-  }];
+  let parser = "return impl::parseOneResultSameOperandTypeOp(parser, result);";
 
-  let printer = [{ return printUnaryOp(this->getOperation(), p); }];
+  let printer = "return printUnaryOp(this->getOperation(), p);";
 }
 
 def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
@@ -2831,7 +2841,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     A dispatch table is an untyped symbol that contains a list of associations
     between method identifiers and corresponding `FuncOp` symbols.
 
-    The ordering of associations in the map is determined by the front-end.
+    The ordering of associations in the map is determined by the front end.
 
     ```mlir
       fir.dispatch_table @_QDTMquuzTfoo {
