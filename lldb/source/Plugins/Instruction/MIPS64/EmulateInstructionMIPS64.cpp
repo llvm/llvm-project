@@ -180,12 +180,7 @@ void EmulateInstructionMIPS64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString EmulateInstructionMIPS64::GetPluginNameStatic() {
-  ConstString g_plugin_name("lldb.emulate-instruction.mips64");
-  return g_plugin_name;
-}
-
-const char *EmulateInstructionMIPS64::GetPluginDescriptionStatic() {
+llvm::StringRef EmulateInstructionMIPS64::GetPluginDescriptionStatic() {
   return "Emulate instructions for the MIPS64 architecture.";
 }
 

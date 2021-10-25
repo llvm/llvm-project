@@ -39,6 +39,40 @@
 //    T *p = array[-1];
 //    for (int i = 0; i < n; ++i)
 //      *++p = c;
+//
+// 3: common multiple chains for the load/stores with same offsets in the loop,
+//    so that we can reuse the offsets and reduce the register pressure in the
+//    loop. This transformation can also increase the loop ILP as now each chain
+//    uses its own loop induction add/addi. But this will increase the number of
+//    add/addi in the loop.
+//
+//    Generically, this means transforming loops like this:
+//
+//    char *p;
+//    A1 = p + base1
+//    A2 = p + base1 + offset
+//    B1 = p + base2
+//    B2 = p + base2 + offset
+//
+//    for (int i = 0; i < n; i++)
+//      unsigned long x1 = *(unsigned long *)(A1 + i);
+//      unsigned long x2 = *(unsigned long *)(A2 + i)
+//      unsigned long x3 = *(unsigned long *)(B1 + i);
+//      unsigned long x4 = *(unsigned long *)(B2 + i);
+//    }
+//
+//    to look like this:
+//
+//    A1_new = p + base1 // chain 1
+//    B1_new = p + base2 // chain 2, now inside the loop, common offset is
+//                       // reused.
+//
+//    for (long long i = 0; i < n; i+=count) {
+//      unsigned long x1 = *(unsigned long *)(A1_new + i);
+//      unsigned long x2 = *(unsigned long *)((A1_new + i) + offset);
+//      unsigned long x3 = *(unsigned long *)(B1_new + i);
+//      unsigned long x4 = *(unsigned long *)((B1_new + i) + offset);
+//    }
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
@@ -90,6 +124,10 @@ static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
                                  cl::init(true), cl::Hidden,
   cl::desc("prefer update form when ds form is also a update form"));
 
+static cl::opt<bool> EnableChainCommoning(
+    "ppc-formprep-chain-commoning", cl::init(true), cl::Hidden,
+    cl::desc("Enable chain commoning in PPC loop prepare pass."));
+
 // Sum of following 3 per loop thresholds for all loops can not be larger
 // than MaxVarsPrep.
 // now the thresholds for each kind prep are exterimental values on Power9.
@@ -106,6 +144,16 @@ static cl::opt<unsigned> MaxVarsDQForm("ppc-dqprep-max-vars",
                                  cl::Hidden, cl::init(8),
   cl::desc("Potential PHI threshold per loop for PPC loop prep of DQ form"));
 
+// Commoning chain will reduce the register pressure, so we don't consider about
+// the PHI nodes number.
+// But commoning chain will increase the addi/add number in the loop and also
+// increase loop ILP. Maximum chain number should be same with hardware
+// IssueWidth, because we won't benefit from ILP if the parallel chains number
+// is bigger than IssueWidth. We assume there are 2 chains in one bucket, so
+// there would be 4 buckets at most on P9(IssueWidth is 8).
+static cl::opt<unsigned> MaxVarsChainCommon(
+    "ppc-chaincommon-max-vars", cl::Hidden, cl::init(4),
+    cl::desc("Bucket number per loop for PPC loop chain common"));
 
 // If would not be profitable if the common base has only one load/store, ISEL
 // should already be able to choose best load/store form based on offset for
@@ -116,12 +164,18 @@ static cl::opt<unsigned> DispFormPrepMinThreshold("ppc-dispprep-min-threshold",
   cl::desc("Minimal common base load/store instructions triggering DS/DQ form "
            "preparation"));
 
+static cl::opt<unsigned> ChainCommonPrepMinThreshold(
+    "ppc-chaincommon-min-threshold", cl::Hidden, cl::init(4),
+    cl::desc("Minimal common base load/store instructions triggering chain "
+             "commoning preparation. Must be not smaller than 4"));
+
 STATISTIC(PHINodeAlreadyExistsUpdate, "PHI node already in pre-increment form");
 STATISTIC(PHINodeAlreadyExistsDS, "PHI node already in DS form");
 STATISTIC(PHINodeAlreadyExistsDQ, "PHI node already in DQ form");
 STATISTIC(DSFormChainRewritten, "Num of DS form chain rewritten");
 STATISTIC(DQFormChainRewritten, "Num of DQ form chain rewritten");
 STATISTIC(UpdFormChainRewritten, "Num of update form chain rewritten");
+STATISTIC(ChainCommoningRewritten, "Num of commoning chains");
 
 namespace {
   struct BucketElement {
@@ -133,11 +187,24 @@ namespace {
   };
 
   struct Bucket {
-    Bucket(const SCEV *B, Instruction *I) : BaseSCEV(B),
-                                            Elements(1, BucketElement(I)) {}
+    Bucket(const SCEV *B, Instruction *I)
+        : BaseSCEV(B), Elements(1, BucketElement(I)) {
+      ChainSize = 0;
+    }
 
+    // The base of the whole bucket.
     const SCEV *BaseSCEV;
+
+    // All elements in the bucket. In the bucket, the element with the BaseSCEV
+    // has no offset and all other elements are stored as offsets to the
+    // BaseSCEV.
     SmallVector<BucketElement, 16> Elements;
+
+    // The potential chains size. This is used for chain commoning only.
+    unsigned ChainSize;
+
+    // The base for each potential chain. This is used for chain commoning only.
+    SmallVector<BucketElement, 16> ChainBases;
   };
 
   // "UpdateForm" is not a real PPC instruction form, it stands for dform
@@ -193,17 +260,31 @@ namespace {
     Value *getNodeForInc(Loop *L, Instruction *MemI,
                          const SCEV *BasePtrIncSCEV);
 
+    /// Common chains to reuse offsets for a loop to reduce register pressure.
+    bool chainCommoning(Loop *L, SmallVector<Bucket, 16> &Buckets);
+
+    /// Find out the potential commoning chains and their bases.
+    bool prepareBasesForCommoningChains(Bucket &BucketChain);
+
+    /// Rewrite load/store according to the common chains.
+    bool
+    rewriteLoadStoresForCommoningChains(Loop *L, Bucket &Bucket,
+                                        SmallSet<BasicBlock *, 16> &BBChanged);
+
     /// Collect condition matched(\p isValidCandidate() returns true)
     /// candidates in Loop \p L.
     SmallVector<Bucket, 16> collectCandidates(
         Loop *L,
-        std::function<bool(const Instruction *, const Value *, const Type *)>
+        std::function<bool(const Instruction *, Value *, const Type *)>
             isValidCandidate,
+        std::function<bool(const SCEV *)> isValidDiff,
         unsigned MaxCandidateNum);
 
-    /// Add a candidate to candidates \p Buckets.
+    /// Add a candidate to candidates \p Buckets if diff between candidate and
+    /// one base in \p Buckets matches \p isValidDiff.
     void addOneCandidate(Instruction *MemI, const SCEV *LSCEV,
                          SmallVector<Bucket, 16> &Buckets,
+                         std::function<bool(const SCEV *)> isValidDiff,
                          unsigned MaxCandidateNum);
 
     /// Prepare all candidates in \p Buckets for update form.
@@ -332,6 +413,221 @@ bool PPCLoopInstrFormPrep::runOnFunction(Function &F) {
     for (auto L = df_begin(*I), LE = df_end(*I); L != LE; ++L)
       MadeChange |= runOnLoop(*L);
 
+  return MadeChange;
+}
+
+// Finding the minimal(chain_number + reusable_offset_number) is a complicated
+// algorithmic problem.
+// For now, the algorithm used here is simply adjusted to handle the case for
+// manually unrolling cases.
+// FIXME: use a more powerful algorithm to find minimal sum of chain_number and
+// reusable_offset_number for one base with multiple offsets.
+bool PPCLoopInstrFormPrep::prepareBasesForCommoningChains(Bucket &CBucket) {
+  // The minimal size for profitable chain commoning:
+  // A1 = base + offset1
+  // A2 = base + offset2 (offset2 - offset1 = X)
+  // A3 = base + offset3
+  // A4 = base + offset4 (offset4 - offset3 = X)
+  // ======>
+  // base1 = base + offset1
+  // base2 = base + offset3
+  // A1 = base1
+  // A2 = base1 + X
+  // A3 = base2
+  // A4 = base2 + X
+  //
+  // There is benefit because of reuse of offest 'X'.
+
+  assert(ChainCommonPrepMinThreshold >= 4 &&
+         "Thredhold can not be smaller than 4!\n");
+  if (CBucket.Elements.size() < ChainCommonPrepMinThreshold)
+    return false;
+
+  // We simply select the FirstOffset as the first reusable offset between each
+  // chain element 1 and element 0.
+  const SCEV *FirstOffset = CBucket.Elements[1].Offset;
+
+  // Figure out how many times above FirstOffset is used in the chain.
+  // For a success commoning chain candidate, offset difference between each
+  // chain element 1 and element 0 must be also FirstOffset.
+  unsigned FirstOffsetReusedCount = 1;
+
+  // Figure out how many times above FirstOffset is used in the first chain.
+  // Chain number is FirstOffsetReusedCount / FirstOffsetReusedCountInFirstChain
+  unsigned FirstOffsetReusedCountInFirstChain = 1;
+
+  unsigned EleNum = CBucket.Elements.size();
+  bool SawChainSeparater = false;
+  for (unsigned j = 2; j != EleNum; ++j) {
+    if (SE->getMinusSCEV(CBucket.Elements[j].Offset,
+                         CBucket.Elements[j - 1].Offset) == FirstOffset) {
+      if (!SawChainSeparater)
+        FirstOffsetReusedCountInFirstChain++;
+      FirstOffsetReusedCount++;
+    } else
+      // For now, if we meet any offset which is not FirstOffset, we assume we
+      // find a new Chain.
+      // This makes us miss some opportunities.
+      // For example, we can common:
+      //
+      // {OffsetA, Offset A, OffsetB, OffsetA, OffsetA, OffsetB}
+      //
+      // as two chains:
+      // {{OffsetA, Offset A, OffsetB}, {OffsetA, OffsetA, OffsetB}}
+      // FirstOffsetReusedCount = 4; FirstOffsetReusedCountInFirstChain = 2
+      //
+      // But we fail to common:
+      //
+      // {OffsetA, OffsetB, OffsetA, OffsetA, OffsetB, OffsetA}
+      // FirstOffsetReusedCount = 4; FirstOffsetReusedCountInFirstChain = 1
+
+      SawChainSeparater = true;
+  }
+
+  // FirstOffset is not reused, skip this bucket.
+  if (FirstOffsetReusedCount == 1)
+    return false;
+
+  unsigned ChainNum =
+      FirstOffsetReusedCount / FirstOffsetReusedCountInFirstChain;
+
+  // All elements are increased by FirstOffset.
+  // The number of chains should be sqrt(EleNum).
+  if (!SawChainSeparater)
+    ChainNum = (unsigned)sqrt(EleNum);
+
+  CBucket.ChainSize = (unsigned)(EleNum / ChainNum);
+
+  // If this is not a perfect chain(eg: not all elements can be put inside
+  // commoning chains.), skip now.
+  if (CBucket.ChainSize * ChainNum != EleNum)
+    return false;
+
+  if (SawChainSeparater) {
+    // Check that the offset seqs are the same for all chains.
+    for (unsigned i = 1; i < CBucket.ChainSize; i++)
+      for (unsigned j = 1; j < ChainNum; j++)
+        if (CBucket.Elements[i].Offset !=
+            SE->getMinusSCEV(CBucket.Elements[i + j * CBucket.ChainSize].Offset,
+                             CBucket.Elements[j * CBucket.ChainSize].Offset))
+          return false;
+  }
+
+  for (unsigned i = 0; i < ChainNum; i++)
+    CBucket.ChainBases.push_back(CBucket.Elements[i * CBucket.ChainSize]);
+
+  LLVM_DEBUG(dbgs() << "Bucket has " << ChainNum << " chains.\n");
+
+  return true;
+}
+
+bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
+                                          SmallVector<Bucket, 16> &Buckets) {
+  bool MadeChange = false;
+
+  if (Buckets.empty())
+    return MadeChange;
+
+  SmallSet<BasicBlock *, 16> BBChanged;
+
+  for (auto &Bucket : Buckets) {
+    if (prepareBasesForCommoningChains(Bucket))
+      MadeChange |= rewriteLoadStoresForCommoningChains(L, Bucket, BBChanged);
+  }
+
+  if (MadeChange)
+    for (auto *BB : BBChanged)
+      DeleteDeadPHIs(BB);
+  return MadeChange;
+}
+
+bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
+    Loop *L, Bucket &Bucket, SmallSet<BasicBlock *, 16> &BBChanged) {
+  bool MadeChange = false;
+
+  assert(Bucket.Elements.size() ==
+             Bucket.ChainBases.size() * Bucket.ChainSize &&
+         "invalid bucket for chain commoning!\n");
+  SmallPtrSet<Value *, 16> DeletedPtrs;
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *LoopPredecessor = L->getLoopPredecessor();
+
+  Type *I64Ty = Type::getInt64Ty(Header->getContext());
+
+  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+                     "loopprepare-chaincommon");
+
+  for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
+    unsigned BaseElemIdx = Bucket.ChainSize * ChainIdx;
+    const SCEV *BaseSCEV =
+        ChainIdx ? SE->getAddExpr(Bucket.BaseSCEV,
+                                  Bucket.Elements[BaseElemIdx].Offset)
+                 : Bucket.BaseSCEV;
+    const SCEVAddRecExpr *BasePtrSCEV = cast<SCEVAddRecExpr>(BaseSCEV);
+
+    // Make sure the base is able to expand.
+    if (!isSafeToExpand(BasePtrSCEV->getStart(), *SE))
+      return MadeChange;
+
+    assert(BasePtrSCEV->isAffine() &&
+           "Invalid SCEV type for the base ptr for a candidate chain!\n");
+
+    std::pair<Instruction *, Instruction *> Base =
+        rewriteForBase(L, BasePtrSCEV, Bucket.Elements[BaseElemIdx].Instr,
+                       false /* CanPreInc */, UpdateForm, SCEVE, DeletedPtrs);
+
+    if (!Base.first || !Base.second)
+      return MadeChange;
+
+    // Keep track of the replacement pointer values we've inserted so that we
+    // don't generate more pointer values than necessary.
+    SmallPtrSet<Value *, 16> NewPtrs;
+    NewPtrs.insert(Base.first);
+
+    for (unsigned Idx = BaseElemIdx + 1; Idx < BaseElemIdx + Bucket.ChainSize;
+         ++Idx) {
+      BucketElement &I = Bucket.Elements[Idx];
+      Value *Ptr = getPointerOperandAndType(I.Instr);
+      assert(Ptr && "No pointer operand");
+      if (NewPtrs.count(Ptr))
+        continue;
+
+      const SCEV *OffsetSCEV =
+          BaseElemIdx ? SE->getMinusSCEV(Bucket.Elements[Idx].Offset,
+                                         Bucket.Elements[BaseElemIdx].Offset)
+                      : Bucket.Elements[Idx].Offset;
+
+      // Make sure offset is able to expand. Only need to check one time as the
+      // offsets are reused between different chains.
+      if (!BaseElemIdx)
+        if (!isSafeToExpand(OffsetSCEV, *SE))
+          return false;
+
+      Value *OffsetValue = SCEVE.expandCodeFor(
+          OffsetSCEV, I64Ty, LoopPredecessor->getTerminator());
+
+      Instruction *NewPtr = rewriteForBucketElement(Base, Bucket.Elements[Idx],
+                                                    OffsetValue, DeletedPtrs);
+
+      assert(NewPtr && "Wrong rewrite!\n");
+      NewPtrs.insert(NewPtr);
+    }
+
+    ++ChainCommoningRewritten;
+  }
+
+  // Clear the rewriter cache, because values that are in the rewriter's cache
+  // can be deleted below, causing the AssertingVH in the cache to trigger.
+  SCEVE.clear();
+
+  for (auto *Ptr : DeletedPtrs) {
+    if (Instruction *IDel = dyn_cast<Instruction>(Ptr))
+      BBChanged.insert(IDel->getParent());
+    RecursivelyDeleteTriviallyDeadInstructions(Ptr);
+  }
+
+  MadeChange = true;
   return MadeChange;
 }
 
@@ -522,35 +818,43 @@ Instruction *PPCLoopInstrFormPrep::rewriteForBucketElement(
   return ReplNewPtr;
 }
 
-void PPCLoopInstrFormPrep::addOneCandidate(Instruction *MemI, const SCEV *LSCEV,
-                                        SmallVector<Bucket, 16> &Buckets,
-                                        unsigned MaxCandidateNum) {
+void PPCLoopInstrFormPrep::addOneCandidate(
+    Instruction *MemI, const SCEV *LSCEV, SmallVector<Bucket, 16> &Buckets,
+    std::function<bool(const SCEV *)> isValidDiff, unsigned MaxCandidateNum) {
   assert((MemI && getPointerOperandAndType(MemI)) &&
          "Candidate should be a memory instruction.");
   assert(LSCEV && "Invalid SCEV for Ptr value.");
+
   bool FoundBucket = false;
   for (auto &B : Buckets) {
+    if (cast<SCEVAddRecExpr>(B.BaseSCEV)->getStepRecurrence(*SE) !=
+        cast<SCEVAddRecExpr>(LSCEV)->getStepRecurrence(*SE))
+      continue;
     const SCEV *Diff = SE->getMinusSCEV(LSCEV, B.BaseSCEV);
-    if (const auto *CDiff = dyn_cast<SCEVConstant>(Diff)) {
-      B.Elements.push_back(BucketElement(CDiff, MemI));
+    if (isValidDiff(Diff)) {
+      B.Elements.push_back(BucketElement(Diff, MemI));
       FoundBucket = true;
       break;
     }
   }
 
   if (!FoundBucket) {
-    if (Buckets.size() == MaxCandidateNum)
+    if (Buckets.size() == MaxCandidateNum) {
+      LLVM_DEBUG(dbgs() << "Can not prepare more chains, reach maximum limit "
+                        << MaxCandidateNum << "\n");
       return;
+    }
     Buckets.push_back(Bucket(LSCEV, MemI));
   }
 }
 
 SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
     Loop *L,
-    std::function<bool(const Instruction *, const Value *, const Type *)>
+    std::function<bool(const Instruction *, Value *, const Type *)>
         isValidCandidate,
-    unsigned MaxCandidateNum) {
+    std::function<bool(const SCEV *)> isValidDiff, unsigned MaxCandidateNum) {
   SmallVector<Bucket, 16> Buckets;
+
   for (const auto &BB : L->blocks())
     for (auto &J : *BB) {
       Value *PtrValue = nullptr;
@@ -575,7 +879,7 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
       HasCandidateForPrepare = true;
 
       if (isValidCandidate(&J, PtrValue, PointerElementType))
-        addOneCandidate(&J, LSCEV, Buckets, MaxCandidateNum);
+        addOneCandidate(&J, LSCEV, Buckets, isValidDiff, MaxCandidateNum);
     }
   return Buckets;
 }
@@ -712,7 +1016,8 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
   SmallPtrSet<Value *, 16> DeletedPtrs;
 
   BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(), "pistart");
+  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+                     "loopprepare-formrewrite");
 
   // For some DS form load/store instructions, it can also be an update form,
   // if the stride is constant and is a multipler of 4. Use update form if
@@ -990,7 +1295,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   }
   // Check if a load/store has update form. This lambda is used by function
   // collectCandidates which can collect candidates for types defined by lambda.
-  auto isUpdateFormCandidate = [&](const Instruction *I, const Value *PtrValue,
+  auto isUpdateFormCandidate = [&](const Instruction *I, Value *PtrValue,
                                    const Type *PointerElementType) {
     assert((PtrValue && I) && "Invalid parameter!");
     // There are no update forms for Altivec vector load/stores.
@@ -1022,7 +1327,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   };
 
   // Check if a load/store has DS form.
-  auto isDSFormCandidate = [](const Instruction *I, const Value *PtrValue,
+  auto isDSFormCandidate = [](const Instruction *I, Value *PtrValue,
                               const Type *PointerElementType) {
     assert((PtrValue && I) && "Invalid parameter!");
     if (isa<IntrinsicInst>(I))
@@ -1036,7 +1341,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   };
 
   // Check if a load/store has DQ form.
-  auto isDQFormCandidate = [&](const Instruction *I, const Value *PtrValue,
+  auto isDQFormCandidate = [&](const Instruction *I, Value *PtrValue,
                                const Type *PointerElementType) {
     assert((PtrValue && I) && "Invalid parameter!");
     // Check if it is a P10 lxvp/stxvp intrinsic.
@@ -1048,37 +1353,131 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     return ST && ST->hasP9Vector() && (PointerElementType->isVectorTy());
   };
 
+  // Check if a load/store is candidate for chain commoning.
+  // If the SCEV is only with one ptr operand in its start, we can use that
+  // start as a chain separator. Mark this load/store as a candidate.
+  auto isChainCommoningCandidate = [&](const Instruction *I, Value *PtrValue,
+                                       const Type *PointerElementType) {
+    const SCEVAddRecExpr *ARSCEV =
+        cast<SCEVAddRecExpr>(SE->getSCEVAtScope(PtrValue, L));
+    if (!ARSCEV)
+      return false;
+
+    if (!ARSCEV->isAffine())
+      return false;
+
+    const SCEV *Start = ARSCEV->getStart();
+
+    // A single pointer. We can treat it as offset 0.
+    if (isa<SCEVUnknown>(Start) && Start->getType()->isPointerTy())
+      return true;
+
+    const SCEVAddExpr *ASCEV = dyn_cast<SCEVAddExpr>(Start);
+
+    // We need a SCEVAddExpr to include both base and offset.
+    if (!ASCEV)
+      return false;
+
+    // Make sure there is only one pointer operand(base) and all other operands
+    // are integer type.
+    bool SawPointer = false;
+    for (const SCEV *Op : ASCEV->operands()) {
+      if (Op->getType()->isPointerTy()) {
+        if (SawPointer)
+          return false;
+        SawPointer = true;
+      } else if (!Op->getType()->isIntegerTy())
+        return false;
+    }
+
+    return SawPointer;
+  };
+
+  // Check if the diff is a constant type. This is used for update/DS/DQ form
+  // preparation.
+  auto isValidConstantDiff = [](const SCEV *Diff) {
+    return dyn_cast<SCEVConstant>(Diff) != nullptr;
+  };
+
+  // Make sure the diff between the base and new candidate is required type.
+  // This is used for chain commoning preparation.
+  auto isValidChainCommoningDiff = [](const SCEV *Diff) {
+    assert(Diff && "Invalid Diff!\n");
+
+    // Don't mess up previous dform prepare.
+    if (isa<SCEVConstant>(Diff))
+      return false;
+
+    // A single integer type offset.
+    if (isa<SCEVUnknown>(Diff) && Diff->getType()->isIntegerTy())
+      return true;
+
+    const SCEVNAryExpr *ADiff = dyn_cast<SCEVNAryExpr>(Diff);
+    if (!ADiff)
+      return false;
+
+    for (const SCEV *Op : ADiff->operands())
+      if (!Op->getType()->isIntegerTy())
+        return false;
+
+    return true;
+  };
+
   HasCandidateForPrepare = false;
 
+  LLVM_DEBUG(dbgs() << "Start to prepare for update form.\n");
   // Collect buckets of comparable addresses used by loads and stores for update
   // form.
-  SmallVector<Bucket, 16> UpdateFormBuckets =
-      collectCandidates(L, isUpdateFormCandidate, MaxVarsUpdateForm);
+  SmallVector<Bucket, 16> UpdateFormBuckets = collectCandidates(
+      L, isUpdateFormCandidate, isValidConstantDiff, MaxVarsUpdateForm);
 
   // Prepare for update form.
   if (!UpdateFormBuckets.empty())
     MadeChange |= updateFormPrep(L, UpdateFormBuckets);
-  else if (!HasCandidateForPrepare)
+  else if (!HasCandidateForPrepare) {
+    LLVM_DEBUG(
+        dbgs()
+        << "No prepare candidates found, stop praparation for current loop!\n");
     // If no candidate for preparing, return early.
     return MadeChange;
+  }
 
+  LLVM_DEBUG(dbgs() << "Start to prepare for DS form.\n");
   // Collect buckets of comparable addresses used by loads and stores for DS
   // form.
-  SmallVector<Bucket, 16> DSFormBuckets =
-      collectCandidates(L, isDSFormCandidate, MaxVarsDSForm);
+  SmallVector<Bucket, 16> DSFormBuckets = collectCandidates(
+      L, isDSFormCandidate, isValidConstantDiff, MaxVarsDSForm);
 
   // Prepare for DS form.
   if (!DSFormBuckets.empty())
     MadeChange |= dispFormPrep(L, DSFormBuckets, DSForm);
 
+  LLVM_DEBUG(dbgs() << "Start to prepare for DQ form.\n");
   // Collect buckets of comparable addresses used by loads and stores for DQ
   // form.
-  SmallVector<Bucket, 16> DQFormBuckets =
-      collectCandidates(L, isDQFormCandidate, MaxVarsDQForm);
+  SmallVector<Bucket, 16> DQFormBuckets = collectCandidates(
+      L, isDQFormCandidate, isValidConstantDiff, MaxVarsDQForm);
 
   // Prepare for DQ form.
   if (!DQFormBuckets.empty())
     MadeChange |= dispFormPrep(L, DQFormBuckets, DQForm);
+
+  // Collect buckets of comparable addresses used by loads and stores for chain
+  // commoning. With chain commoning, we reuse offsets between the chains, so
+  // the register pressure will be reduced.
+  if (!EnableChainCommoning) {
+    LLVM_DEBUG(dbgs() << "Chain commoning is not enabled.\n");
+    return MadeChange;
+  }
+
+  LLVM_DEBUG(dbgs() << "Start to prepare for chain commoning.\n");
+  SmallVector<Bucket, 16> Buckets =
+      collectCandidates(L, isChainCommoningCandidate, isValidChainCommoningDiff,
+                        MaxVarsChainCommon);
+
+  // Prepare for chain commoning.
+  if (!Buckets.empty())
+    MadeChange |= chainCommoning(L, Buckets);
 
   return MadeChange;
 }

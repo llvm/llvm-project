@@ -524,7 +524,6 @@ def: Separate<["-"], "F">, Alias<filter>, HelpText<"Alias for --filter">;
 def: Separate<["-"], "b">, Alias<format>, HelpText<"Alias for --format">;
 def: JoinedOrSeparate<["-"], "l">, Alias<library>, HelpText<"Alias for --library">;
 def: JoinedOrSeparate<["-"], "L">, Alias<library_path>, HelpText<"Alias for --library-path">;
-def: F<"no-pic-executable">, Alias<no_pie>, HelpText<"Alias for --no-pie">;
 def: Flag<["-"], "n">, Alias<nmagic>, HelpText<"Alias for --nmagic">;
 def: Flag<["-"], "N">, Alias<omagic>, HelpText<"Alias for --omagic">;
 def: Joined<["--"], "output=">, Alias<o>, HelpText<"Alias for -o">;
@@ -693,14 +692,11 @@ def plugin_opt_eq : J<"plugin-opt=">;
 def: F<"detect-odr-violations">;
 def: Flag<["-"], "g">;
 def: F<"long-plt">;
-def: F<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
-def: F<"no-pipeline-knowledge">;
 def: F<"no-relax">;
 def: F<"no-warn-mismatch">;
-def: Flag<["-"], "p">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
 def: F<"secure-plt">;
@@ -710,7 +706,6 @@ def: F<"warn-execstack">;
 def: F<"warn-once">;
 def: F<"warn-shared-textrel">;
 def: JoinedOrSeparate<["-"], "G">;
-def: F<"Qy">;
 
 // Hidden option used for testing MIPS multi-GOT implementation.
 defm mips_got_size:

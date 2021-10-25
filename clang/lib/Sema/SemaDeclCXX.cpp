@@ -436,7 +436,7 @@ void Sema::CheckExtraCXXDefaultArguments(Declarator &D) {
 }
 
 static bool functionDeclHasDefaultArgument(const FunctionDecl *FD) {
-  return std::any_of(FD->param_begin(), FD->param_end(), [](ParmVarDecl *P) {
+  return llvm::any_of(FD->parameters(), [](ParmVarDecl *P) {
     return P->hasDefaultArg() && !P->hasInheritedDefaultArg();
   });
 }

@@ -2676,9 +2676,9 @@ static void emitAttrList(raw_ostream &OS, StringRef Class,
 // Determines if an attribute has a Pragma spelling.
 static bool AttrHasPragmaSpelling(const Record *R) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*R);
-  return llvm::find_if(Spellings, [](const FlattenedSpelling &S) {
-           return S.variety() == "Pragma";
-         }) != Spellings.end();
+  return llvm::any_of(Spellings, [](const FlattenedSpelling &S) {
+    return S.variety() == "Pragma";
+  });
 }
 
 namespace {

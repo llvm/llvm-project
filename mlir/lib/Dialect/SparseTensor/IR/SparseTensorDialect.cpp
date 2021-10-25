@@ -193,7 +193,7 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 
 static LogicalResult isInBounds(Value dim, Value tensor) {
   if (auto constantOp = dim.getDefiningOp<arith::ConstantOp>()) {
-    unsigned d = constantOp.value().cast<IntegerAttr>().getInt();
+    unsigned d = constantOp.getValue().cast<IntegerAttr>().getInt();
     if (d >= tensor.getType().cast<RankedTensorType>().getRank())
       return failure();
   }
@@ -227,7 +227,7 @@ static LogicalResult verify(InitOp op) {
       continue;
     auto constantOp = op.sizes()[i].getDefiningOp<arith::ConstantOp>();
     if (!constantOp ||
-        constantOp.value().cast<IntegerAttr>().getInt() != shape[i])
+        constantOp.getValue().cast<IntegerAttr>().getInt() != shape[i])
       return op.emitError("unexpected mismatch with static dimension size ")
              << shape[i];
   }

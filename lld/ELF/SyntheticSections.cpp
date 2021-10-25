@@ -3591,9 +3591,8 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
 }
 
 bool ARMExidxSyntheticSection::isNeeded() const {
-  return llvm::find_if(exidxSections, [](InputSection *isec) {
-           return isec->isLive();
-         }) != exidxSections.end();
+  return llvm::any_of(exidxSections,
+                      [](InputSection *isec) { return isec->isLive(); });
 }
 
 bool ARMExidxSyntheticSection::classof(const SectionBase *d) {

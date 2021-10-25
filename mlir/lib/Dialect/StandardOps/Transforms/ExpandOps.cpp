@@ -46,7 +46,7 @@ public:
   LogicalResult matchAndRewrite(AtomicRMWOp op,
                                 PatternRewriter &rewriter) const final {
     arith::CmpFPredicate predicate;
-    switch (op.kind()) {
+    switch (op.getKind()) {
     case AtomicRMWKind::maxf:
       predicate = arith::CmpFPredicate::OGT;
       break;
@@ -58,13 +58,13 @@ public:
     }
 
     auto loc = op.getLoc();
-    auto genericOp =
-        rewriter.create<GenericAtomicRMWOp>(loc, op.memref(), op.indices());
+    auto genericOp = rewriter.create<GenericAtomicRMWOp>(loc, op.getMemref(),
+                                                         op.getIndices());
     OpBuilder bodyBuilder =
         OpBuilder::atBlockEnd(genericOp.getBody(), rewriter.getListener());
 
     Value lhs = genericOp.getCurrentValue();
-    Value rhs = op.value();
+    Value rhs = op.getValue();
     Value cmp = bodyBuilder.create<arith::CmpFOp>(loc, predicate, lhs, rhs);
     Value select = bodyBuilder.create<SelectOp>(loc, cmp, lhs, rhs);
     bodyBuilder.create<AtomicYieldOp>(loc, select);
@@ -126,8 +126,8 @@ public:
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const final {
-    Value lhs = op.lhs();
-    Value rhs = op.rhs();
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
 
     Location loc = op.getLoc();
     Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
@@ -153,8 +153,8 @@ public:
   using OpRewritePattern<OpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const final {
-    Value lhs = op.lhs();
-    Value rhs = op.rhs();
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
 
     Location loc = op.getLoc();
     Value cmp = rewriter.create<arith::CmpIOp>(loc, pred, lhs, rhs);
@@ -177,8 +177,8 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
                            StandardOpsDialect>();
     target.addIllegalOp<arith::CeilDivSIOp, arith::FloorDivSIOp>();
     target.addDynamicallyLegalOp<AtomicRMWOp>([](AtomicRMWOp op) {
-      return op.kind() != AtomicRMWKind::maxf &&
-             op.kind() != AtomicRMWKind::minf;
+      return op.getKind() != AtomicRMWKind::maxf &&
+             op.getKind() != AtomicRMWKind::minf;
     });
     target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
       return !op.shape().getType().cast<MemRefType>().hasStaticShape();

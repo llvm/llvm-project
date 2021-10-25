@@ -31,7 +31,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
     rewriter.replaceOpWithNewOp<CallOp>(
-        callOp, callOp.callee(), convertedResults, adaptor.getOperands());
+        callOp, callOp.getCallee(), convertedResults, adaptor.getOperands());
     return success();
   }
 };

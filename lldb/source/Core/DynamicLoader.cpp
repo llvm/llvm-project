@@ -30,13 +30,11 @@ using namespace lldb;
 using namespace lldb_private;
 
 DynamicLoader *DynamicLoader::FindPlugin(Process *process,
-                                         const char *plugin_name) {
+                                         llvm::StringRef plugin_name) {
   DynamicLoaderCreateInstance create_callback = nullptr;
-  if (plugin_name) {
-    ConstString const_plugin_name(plugin_name);
+  if (!plugin_name.empty()) {
     create_callback =
-        PluginManager::GetDynamicLoaderCreateCallbackForPluginName(
-            const_plugin_name);
+        PluginManager::GetDynamicLoaderCreateCallbackForPluginName(plugin_name);
     if (create_callback) {
       std::unique_ptr<DynamicLoader> instance_up(
           create_callback(process, true));
