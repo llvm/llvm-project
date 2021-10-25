@@ -43,14 +43,12 @@ class FlatMap {
   }
 
   T &operator[](uptr idx) {
-    CHECK_LT(idx, kSize);
-    // FIXME: CHECK may be too expensive here.
+    DCHECK_LT(idx, kSize);
     return map_[idx];
   }
 
   const T &operator[](uptr idx) const {
-    CHECK_LT(idx, kSize);
-    // FIXME: CHECK may be too expensive here.
+    DCHECK_LT(idx, kSize);
     return map_[idx];
   }
 
@@ -106,13 +104,13 @@ class TwoLevelMap {
   }
 
   const T &operator[](uptr idx) const {
-    CHECK_LT(idx, kSize1 * kSize2);
+    DCHECK_LT(idx, kSize1 * kSize2);
     T *map2 = GetOrCreate(idx / kSize2);
     return *AddressSpaceView::Load(&map2[idx % kSize2]);
   }
 
   T &operator[](uptr idx) {
-    CHECK_LT(idx, kSize1 * kSize2);
+    DCHECK_LT(idx, kSize1 * kSize2);
     T *map2 = GetOrCreate(idx / kSize2);
     return *AddressSpaceView::LoadWritable(&map2[idx % kSize2]);
   }
@@ -123,7 +121,7 @@ class TwoLevelMap {
   }
 
   T *Get(uptr idx) const {
-    CHECK_LT(idx, kSize1);
+    DCHECK_LT(idx, kSize1);
     return reinterpret_cast<T *>(
         atomic_load(&map1_[idx], memory_order_acquire));
   }
