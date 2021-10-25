@@ -2367,8 +2367,8 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
             continue;
           if (!ArtificialBlocks.count(succ))
             continue;
-          DFS.push_back(std::make_pair(succ, succ->succ_begin()));
           ToAdd.insert(succ);
+          DFS.push_back(std::make_pair(succ, succ->succ_begin()));
         }
 
         // Search all those blocks, depth first.
@@ -2384,8 +2384,8 @@ void InstrRefBasedLDV::buildVLocValueMap(const DILocation *DILoc,
           // If the current successor is artificial and unexplored, descend into
           // it.
           if (!ToAdd.count(*CurSucc) && ArtificialBlocks.count(*CurSucc)) {
-            DFS.push_back(std::make_pair(*CurSucc, (*CurSucc)->succ_begin()));
             ToAdd.insert(*CurSucc);
+            DFS.push_back(std::make_pair(*CurSucc, (*CurSucc)->succ_begin()));
             continue;
           }
 
