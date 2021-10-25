@@ -6,6 +6,7 @@ unittest("CodeGenTests") {
     "//llvm/lib/AsmParser",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/MIRParser",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/FileCheck",
     "//llvm/lib/IR",
