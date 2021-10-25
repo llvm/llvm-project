@@ -1128,7 +1128,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   let extraClassDeclaration = [{
     /// Return the LLVM type of the global.
     Type getType() {
-      return global_type();
+      return getGlobalType();
     }
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() {

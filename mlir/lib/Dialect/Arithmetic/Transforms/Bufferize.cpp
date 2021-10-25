@@ -24,7 +24,7 @@ struct BufferizeIndexCastOp : public OpConversionPattern<arith::IndexCastOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto tensorType = op.getType().cast<RankedTensorType>();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
-        op, adaptor.in(),
+        op, adaptor.getIn(),
         MemRefType::get(tensorType.getShape(), tensorType.getElementType()));
     return success();
   }
