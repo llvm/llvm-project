@@ -64,7 +64,7 @@ public:
                          FileSpec &local_file) override;
 
   bool GetRemoteOSVersion() override;
-  bool GetRemoteOSBuildString(std::string &s) override;
+  llvm::Optional<std::string> GetRemoteOSBuildString() override;
   bool GetRemoteOSKernelDescription(std::string &s) override;
   ArchSpec GetRemoteSystemArchitecture() override;
 
