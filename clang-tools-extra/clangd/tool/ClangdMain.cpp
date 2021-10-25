@@ -681,7 +681,12 @@ int main(int argc, char *argv[]) {
   llvm::InitializeAllTargetInfos();
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::sys::AddSignalHandler(
-      [](void *) { ThreadCrashReporter::runCrashHandlers(); }, nullptr);
+      [](void *) {
+        ThreadCrashReporter::runCrashHandlers();
+        // Ensure ThreadCrashReporter and PrintStackTrace output is visible.
+        llvm::errs().flush();
+      },
+      nullptr);
   llvm::sys::SetInterruptFunction(&requestShutdown);
   llvm::cl::SetVersionPrinter([](llvm::raw_ostream &OS) {
     OS << versionString() << "\n"
