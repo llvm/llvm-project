@@ -385,9 +385,9 @@ unsigned char _BitScanReverse64(unsigned long *index, unsigned __int64 mask);
 }
 #endif
 
-inline uptr MostSignificantSetBitIndex(uptr x) {
+inline constexpr uptr MostSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
-  unsigned long up;
+  unsigned long up = 0;
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
 # ifdef _WIN64
   up = SANITIZER_WORDSIZE - 1 - __builtin_clzll(x);
@@ -402,9 +402,9 @@ inline uptr MostSignificantSetBitIndex(uptr x) {
   return up;
 }
 
-inline uptr LeastSignificantSetBitIndex(uptr x) {
+inline constexpr uptr LeastSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
-  unsigned long up;
+  unsigned long up = 0;
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
 # ifdef _WIN64
   up = __builtin_ctzll(x);
@@ -419,11 +419,9 @@ inline uptr LeastSignificantSetBitIndex(uptr x) {
   return up;
 }
 
-inline bool IsPowerOfTwo(uptr x) {
-  return (x & (x - 1)) == 0;
-}
+inline constexpr bool IsPowerOfTwo(uptr x) { return (x & (x - 1)) == 0; }
 
-inline uptr RoundUpToPowerOfTwo(uptr size) {
+inline constexpr uptr RoundUpToPowerOfTwo(uptr size) {
   CHECK(size);
   if (IsPowerOfTwo(size)) return size;
 
@@ -433,20 +431,20 @@ inline uptr RoundUpToPowerOfTwo(uptr size) {
   return 1ULL << (up + 1);
 }
 
-inline uptr RoundUpTo(uptr size, uptr boundary) {
+inline constexpr uptr RoundUpTo(uptr size, uptr boundary) {
   RAW_CHECK(IsPowerOfTwo(boundary));
   return (size + boundary - 1) & ~(boundary - 1);
 }
 
-inline uptr RoundDownTo(uptr x, uptr boundary) {
+inline constexpr uptr RoundDownTo(uptr x, uptr boundary) {
   return x & ~(boundary - 1);
 }
 
-inline bool IsAligned(uptr a, uptr alignment) {
+inline constexpr bool IsAligned(uptr a, uptr alignment) {
   return (a & (alignment - 1)) == 0;
 }
 
-inline uptr Log2(uptr x) {
+inline constexpr uptr Log2(uptr x) {
   CHECK(IsPowerOfTwo(x));
   return LeastSignificantSetBitIndex(x);
 }
