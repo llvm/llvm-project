@@ -84,7 +84,7 @@ public:
 
   // DynamicLoader
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  DynamicLoaderCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
@@ -94,11 +94,11 @@ public:
   GetDynamicLoaderCreateCallbackAtIndex(uint32_t idx);
 
   static DynamicLoaderCreateInstance
-  GetDynamicLoaderCreateCallbackForPluginName(ConstString name);
+  GetDynamicLoaderCreateCallbackForPluginName(llvm::StringRef name);
 
   // JITLoader
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  JITLoaderCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
@@ -108,7 +108,7 @@ public:
   GetJITLoaderCreateCallbackAtIndex(uint32_t idx);
 
   // EmulateInstruction
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              EmulateInstructionCreateInstance create_callback);
 
   static bool
@@ -118,7 +118,7 @@ public:
   GetEmulateInstructionCreateCallbackAtIndex(uint32_t idx);
 
   static EmulateInstructionCreateInstance
-  GetEmulateInstructionCreateCallbackForPluginName(ConstString name);
+  GetEmulateInstructionCreateCallbackForPluginName(llvm::StringRef name);
 
   // OperatingSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,

@@ -2794,7 +2794,7 @@ Status Process::LoadCore() {
 
 DynamicLoader *Process::GetDynamicLoader() {
   if (!m_dyld_up)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, nullptr));
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
   return m_dyld_up.get();
 }
 

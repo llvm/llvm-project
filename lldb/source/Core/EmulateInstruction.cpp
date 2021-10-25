@@ -46,10 +46,9 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
                                const char *plugin_name) {
   EmulateInstructionCreateInstance create_callback = nullptr;
   if (plugin_name) {
-    ConstString const_plugin_name(plugin_name);
     create_callback =
         PluginManager::GetEmulateInstructionCreateCallbackForPluginName(
-            const_plugin_name);
+            plugin_name);
     if (create_callback) {
       EmulateInstruction *emulate_insn_ptr =
           create_callback(arch, supported_inst_type);
