@@ -937,7 +937,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
     } else if (baseExpr->Rank() == 0) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {
-          Say("'%s' is not an array"_err_en_US, symbol->name());
+          if (inDataStmtConstant_) {
+            // Better error for NULL(X) with a MOLD= argument
+            Say("'%s' must be an array or structure constructor if used with non-empty parentheses as a DATA statement constant"_err_en_US,
+                symbol->name());
+          } else {
+            Say("'%s' is not an array"_err_en_US, symbol->name());
+          }
           context_.SetError(*symbol);
         }
       }
@@ -2947,6 +2953,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
+  auto restorer{common::ScopedSet(inDataStmtConstant_, true)};
   return ExprOrVariable(x, x.source);
 }
 
