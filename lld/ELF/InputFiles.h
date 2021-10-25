@@ -43,8 +43,7 @@ using llvm::object::Archive;
 
 class Symbol;
 
-// If -reproduce option is given, all input files are written
-// to this tar archive.
+// If --reproduce is specified, all input files are written to this tar archive.
 extern std::unique_ptr<llvm::TarWriter> tar;
 
 // Opens a given file.

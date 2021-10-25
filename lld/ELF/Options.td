@@ -119,8 +119,8 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
     "Reorder sections with call graph profile (default)",
     "Do not reorder sections with call graph profile">;
 
-// -chroot doesn't have a help text because it is an internal option.
-def chroot: Separate<["--", "-"], "chroot">;
+// --chroot doesn't have a help text because it is an internal option.
+def chroot: Separate<["--"], "chroot">;
 
 defm color_diagnostics: B<"color-diagnostics",
   "Alias for --color-diagnostics=always",

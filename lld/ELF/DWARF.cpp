@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The -gdb-index option instructs the linker to emit a .gdb_index section.
+// The --gdb-index option instructs the linker to emit a .gdb_index section.
 // The section contains information to make gdb startup faster.
 // The format of the section is described at
 // https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html.

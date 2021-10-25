@@ -187,7 +187,7 @@ void TargetInfo::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 }
 
 uint64_t TargetInfo::getImageBase() const {
-  // Use -image-base if set. Fall back to the target default if not.
+  // Use --image-base if set. Fall back to the target default if not.
   if (config->imageBase)
     return *config->imageBase;
   return config->isPic ? 0 : defaultImageBase;
