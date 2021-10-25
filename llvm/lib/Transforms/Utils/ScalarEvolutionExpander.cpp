@@ -1835,6 +1835,22 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
   return V;
 }
 
+/// Check whether value has nuw/nsw/exact set but SCEV does not.
+/// TODO: In reality it is better to check the poison recursively
+/// but this is better than nothing.
+static bool SCEVLostPoisonFlags(const SCEV *S, const Instruction *I) {
+  if (isa<OverflowingBinaryOperator>(I)) {
+    if (auto *NS = dyn_cast<SCEVNAryExpr>(S)) {
+      if (I->hasNoSignedWrap() && !NS->hasNoSignedWrap())
+        return true;
+      if (I->hasNoUnsignedWrap() && !NS->hasNoUnsignedWrap())
+        return true;
+    }
+  } else if (isa<PossiblyExactOperator>(I) && I->isExact())
+    return true;
+  return false;
+}
+
 ScalarEvolution::ValueOffsetPair
 SCEVExpander::FindValueInExprValueMap(const SCEV *S,
                                       const Instruction *InsertPt) {
@@ -1858,7 +1874,8 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
         if (S->getType() == V->getType() &&
             SE.DT.dominates(EntInst, InsertPt) &&
             (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)) &&
+            !SCEVLostPoisonFlags(S, EntInst))
           return {V, Offset};
       }
     }
