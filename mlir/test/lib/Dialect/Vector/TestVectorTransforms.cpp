@@ -14,13 +14,13 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::vector;
+
 namespace {
 
 struct TestVectorToVectorConversion
@@ -511,7 +511,7 @@ struct TestVectorReduceToContractPatternsPatterns
   }
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
-    populateVetorReductionToContractPatterns(patterns);
+    populateVectorReductionToContractPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
