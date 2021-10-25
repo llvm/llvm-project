@@ -779,8 +779,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       Lines[i] = Lines[i].ltrim(Blanks);
       StringRef IndentPrefix = getLineCommentIndentPrefix(Lines[i], Style);
       OriginalPrefix[i] = IndentPrefix;
-      const unsigned SpacesInPrefix =
-          std::count(IndentPrefix.begin(), IndentPrefix.end(), ' ');
+      const unsigned SpacesInPrefix = llvm::count(IndentPrefix, ' ');
 
       // On the first line of the comment section we calculate how many spaces
       // are to be added or removed, all lines after that just get only the
