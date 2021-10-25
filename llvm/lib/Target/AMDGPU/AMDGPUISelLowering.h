@@ -343,7 +343,7 @@ namespace AMDGPUISD {
 enum NodeType : unsigned {
   // AMDIL ISD Opcodes
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  UMUL,        // 32bit unsigned multiplication
+  UMUL, // 32bit unsigned multiplication
   BRANCH_COND,
   // End AMDIL ISD Opcodes
 
@@ -365,6 +365,9 @@ enum NodeType : unsigned {
 
   // Return with values from a non-entry function.
   RET_FLAG,
+
+  // Return with values from a non-entry function (AMDGPU_Gfx CC).
+  RET_GFX_FLAG,
 
   DWORDADDR,
   FRACT,
@@ -422,10 +425,10 @@ enum NodeType : unsigned {
   DOT4,
   CARRY,
   BORROW,
-  BFE_U32, // Extract range of bits with zero extension to 32-bits.
-  BFE_I32, // Extract range of bits with sign extension to 32-bits.
-  BFI, // (src0 & src1) | (~src0 & src2)
-  BFM, // Insert a range of bits into a 32-bit word.
+  BFE_U32,  // Extract range of bits with zero extension to 32-bits.
+  BFE_I32,  // Extract range of bits with sign extension to 32-bits.
+  BFI,      // (src0 & src1) | (~src0 & src2)
+  BFM,      // Insert a range of bits into a 32-bit word.
   FFBH_U32, // ctlz with -1 if input is zero.
   FFBH_I32,
   FFBL_B32, // cttz with -1 if input is zero.
@@ -533,7 +536,6 @@ enum NodeType : unsigned {
 
   LAST_AMDGPU_ISD_NUMBER
 };
-
 
 } // End namespace AMDGPUISD
 

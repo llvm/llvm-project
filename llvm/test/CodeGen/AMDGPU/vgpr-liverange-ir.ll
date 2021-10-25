@@ -261,7 +261,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %
   ; SI-NEXT:   [[COPY6:%[0-9]+]]:sgpr_128 = COPY $sgpr100_sgpr101_sgpr102_sgpr103
   ; SI-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY killed [[COPY6]]
   ; SI-NEXT:   $vgpr0 = COPY killed [[PHI5]]
-  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], 0, csr_amdgpu_highregs, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
+  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; SI-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, killed [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
@@ -294,7 +294,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %
   ; SI-NEXT:   [[COPY9:%[0-9]+]]:sgpr_128 = COPY $sgpr100_sgpr101_sgpr102_sgpr103
   ; SI-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY killed [[COPY9]]
   ; SI-NEXT:   $vgpr0 = COPY killed [[PHI7]]
-  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE3]], 0, csr_amdgpu_highregs, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
+  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE3]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; SI-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, killed [[S_AND_SAVEEXEC_B32_1]], implicit-def dead $scc
@@ -374,7 +374,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, float(
   ; SI-NEXT:   [[COPY6:%[0-9]+]]:sgpr_128 = COPY $sgpr100_sgpr101_sgpr102_sgpr103
   ; SI-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY killed [[COPY6]]
   ; SI-NEXT:   $vgpr0 = COPY [[COPY4]]
-  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], 0, csr_amdgpu_highregs, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
+  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; SI-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, killed [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
@@ -406,7 +406,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, float(
   ; SI-NEXT:   [[COPY9:%[0-9]+]]:sgpr_128 = COPY $sgpr100_sgpr101_sgpr102_sgpr103
   ; SI-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY killed [[COPY9]]
   ; SI-NEXT:   $vgpr0 = COPY [[COPY4]]
-  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE3]], 0, csr_amdgpu_highregs, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
+  ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE3]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; SI-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, killed [[S_AND_SAVEEXEC_B32_1]], implicit-def dead $scc

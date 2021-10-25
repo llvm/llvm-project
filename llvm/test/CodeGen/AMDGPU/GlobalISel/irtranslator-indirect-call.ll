@@ -66,10 +66,10 @@ define amdgpu_gfx void @test_gfx_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-  ; CHECK-NEXT:   S_SETPC_B64_return [[COPY4]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gfx_ccr_sgpr_64 = COPY [[COPY2]]
+  ; CHECK-NEXT:   S_SETPC_B64_return_gfx [[COPY4]]
   call amdgpu_gfx void %fptr()
   ret void
 }

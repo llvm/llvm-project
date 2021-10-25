@@ -355,13 +355,22 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
 
   auto const &ST = MF.getSubtarget<GCNSubtarget>();
 
-  unsigned ReturnOpc =
-      IsShader ? AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::S_SETPC_B64_return;
+  unsigned ReturnOpc = 0;
+  if (IsShader)
+    ReturnOpc = AMDGPU::SI_RETURN_TO_EPILOG;
+  else if (CC == CallingConv::AMDGPU_Gfx)
+    ReturnOpc = AMDGPU::S_SETPC_B64_return_gfx;
+  else
+    ReturnOpc = AMDGPU::S_SETPC_B64_return;
 
   auto Ret = B.buildInstrNoInsert(ReturnOpc);
   Register ReturnAddrVReg;
   if (ReturnOpc == AMDGPU::S_SETPC_B64_return) {
     ReturnAddrVReg = MRI.createVirtualRegister(&AMDGPU::CCR_SGPR_64RegClass);
+    Ret.addUse(ReturnAddrVReg);
+  } else if (ReturnOpc == AMDGPU::S_SETPC_B64_return_gfx) {
+    ReturnAddrVReg =
+        MRI.createVirtualRegister(&AMDGPU::Gfx_CCR_SGPR_64RegClass);
     Ret.addUse(ReturnAddrVReg);
   }
 
@@ -370,7 +379,8 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
   else if (!lowerReturnVal(B, Val, VRegs, Ret))
     return false;
 
-  if (ReturnOpc == AMDGPU::S_SETPC_B64_return) {
+  if (ReturnOpc == AMDGPU::S_SETPC_B64_return ||
+      ReturnOpc == AMDGPU::S_SETPC_B64_return_gfx) {
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
     Register LiveInReturn = MF.addLiveIn(TRI->getReturnAddressReg(MF),
                                          &AMDGPU::SGPR_64RegClass);

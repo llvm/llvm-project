@@ -2616,9 +2616,12 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SDValue ReturnAddrReg = CreateLiveInRegister(
       DAG, &AMDGPU::SReg_64RegClass, TRI->getReturnAddressReg(MF), MVT::i64);
 
-    SDValue ReturnAddrVirtualReg = DAG.getRegister(
-        MF.getRegInfo().createVirtualRegister(&AMDGPU::CCR_SGPR_64RegClass),
-        MVT::i64);
+    SDValue ReturnAddrVirtualReg =
+        DAG.getRegister(MF.getRegInfo().createVirtualRegister(
+                            CallConv != CallingConv::AMDGPU_Gfx
+                                ? &AMDGPU::CCR_SGPR_64RegClass
+                                : &AMDGPU::Gfx_CCR_SGPR_64RegClass),
+                        MVT::i64);
     Chain =
         DAG.getCopyToReg(Chain, DL, ReturnAddrVirtualReg, ReturnAddrReg, Flag);
     Flag = Chain.getValue(1);
@@ -2681,8 +2684,15 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(Flag);
 
   unsigned Opc = AMDGPUISD::ENDPGM;
-  if (!IsWaveEnd)
-    Opc = IsShader ? AMDGPUISD::RETURN_TO_EPILOG : AMDGPUISD::RET_FLAG;
+  if (!IsWaveEnd) {
+    if (IsShader)
+      Opc = AMDGPUISD::RETURN_TO_EPILOG;
+    else if (CallConv == CallingConv::AMDGPU_Gfx)
+      Opc = AMDGPUISD::RET_GFX_FLAG;
+    else
+      Opc = AMDGPUISD::RET_FLAG;
+  }
+
   return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
 
