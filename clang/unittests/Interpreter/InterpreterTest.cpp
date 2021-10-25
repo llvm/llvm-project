@@ -17,8 +17,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 
-#include "llvm/ADT/ArrayRef.h"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
