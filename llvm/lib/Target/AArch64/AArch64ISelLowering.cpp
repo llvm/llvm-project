@@ -4138,6 +4138,18 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frecpx:
     return DAG.getNode(AArch64ISD::FRECPX_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frecpe_x:
+    return DAG.getNode(AArch64ISD::FRECPE, dl, Op.getValueType(),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frecps_x:
+    return DAG.getNode(AArch64ISD::FRECPS, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::aarch64_sve_frsqrte_x:
+    return DAG.getNode(AArch64ISD::FRSQRTE, dl, Op.getValueType(),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frsqrts_x:
+    return DAG.getNode(AArch64ISD::FRSQRTS, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::aarch64_sve_fabs:
     return DAG.getNode(AArch64ISD::FABS_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -8433,10 +8445,12 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
                            SDValue Operand, SelectionDAG &DAG,
                            int &ExtraSteps) {
   EVT VT = Operand.getValueType();
-  if (ST->hasNEON() &&
-      (VT == MVT::f64 || VT == MVT::v1f64 || VT == MVT::v2f64 ||
-       VT == MVT::f32 || VT == MVT::v1f32 ||
-       VT == MVT::v2f32 || VT == MVT::v4f32)) {
+  if ((ST->hasNEON() &&
+       (VT == MVT::f64 || VT == MVT::v1f64 || VT == MVT::v2f64 ||
+        VT == MVT::f32 || VT == MVT::v1f32 || VT == MVT::v2f32 ||
+        VT == MVT::v4f32)) ||
+      (ST->hasSVE() &&
+       (VT == MVT::nxv8f16 || VT == MVT::nxv4f32 || VT == MVT::nxv2f64))) {
     if (ExtraSteps == TargetLoweringBase::ReciprocalEstimate::Unspecified)
       // For the reciprocal estimates, convergence is quadratic, so the number
       // of digits is doubled after each iteration.  In ARMv8, the accuracy of
