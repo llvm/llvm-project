@@ -300,11 +300,8 @@ namespace clang {
           auto *ToNamed = cast<NamedDecl>(ToD);
           DeclContextLookupResult FromLookup =
               FromDC->lookup(FromNamed->getDeclName());
-          for (NamedDecl *ND : FromLookup)
-            if (ND == FromNamed) {
-              ToDC->makeDeclVisibleInContext(ToNamed);
-              break;
-            }
+          if (llvm::is_contained(FromLookup, FromNamed))
+            ToDC->makeDeclVisibleInContext(ToNamed);
         }
       }
     }
