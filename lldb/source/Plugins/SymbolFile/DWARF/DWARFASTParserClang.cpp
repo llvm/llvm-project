@@ -2786,7 +2786,7 @@ void DWARFASTParserClang::ParseSingleMember(
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
     if (detect_unnamed_bitfields) {
-      clang::Optional<FieldInfo> unnamed_field_info;
+      llvm::Optional<FieldInfo> unnamed_field_info;
       uint64_t last_field_end = 0;
 
       last_field_end = last_field_info.bit_offset + last_field_info.bit_size;
