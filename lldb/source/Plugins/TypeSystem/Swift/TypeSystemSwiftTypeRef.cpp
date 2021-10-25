@@ -2262,6 +2262,10 @@ TypeSystemSwiftTypeRef::GetFunctionReturnType(opaque_compiler_type_t type) {
 }
 size_t
 TypeSystemSwiftTypeRef::GetNumMemberFunctions(opaque_compiler_type_t type) {
+  // We forward the call to SwiftASTContext because an implementation of
+  // this function would require it to have an execution context being passed
+  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
+  // function will be called much.
   if (auto *swift_ast_context = GetSwiftASTContext())
     return swift_ast_context->GetNumMemberFunctions(ReconstructType(type));
   return {};
@@ -2269,6 +2273,10 @@ TypeSystemSwiftTypeRef::GetNumMemberFunctions(opaque_compiler_type_t type) {
 TypeMemberFunctionImpl
 TypeSystemSwiftTypeRef::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
                                                  size_t idx) {
+  // We forward the call to SwiftASTContext because an implementation of
+  // this function would require it to have an execution context being passed
+  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
+  // function will be called much.
   if (auto *swift_ast_context = GetSwiftASTContext())
     return swift_ast_context->GetMemberFunctionAtIndex(ReconstructType(type),
                                                        idx);
@@ -2562,6 +2570,10 @@ CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
     opaque_compiler_type_t type, size_t idx, std::string &name,
     uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
     bool *is_bitfield_ptr) {
+  // We forward the call to SwiftASTContext because an implementation of
+  // this function would require it to have an execution context being passed
+  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
+  // function will be called much.
   LLDB_SCOPED_TIMER();
   if (auto *swift_ast_context = GetSwiftASTContext())
     return swift_ast_context->GetFieldAtIndex(
@@ -3555,12 +3567,20 @@ TypeSystemSwiftTypeRef::GetRValueReferenceType(opaque_compiler_type_t type) {
 }
 uint32_t
 TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(opaque_compiler_type_t type) {
+  // We forward the call to SwiftASTContext because an implementation of
+  // this function would require it to have an execution context being passed
+  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
+  // function will be called much.
   if (auto *swift_ast_context = GetSwiftASTContext())
     return swift_ast_context->GetNumDirectBaseClasses(ReconstructType(type));
   return {};
 }
 CompilerType TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(
     opaque_compiler_type_t type, size_t idx, uint32_t *bit_offset_ptr) {
+  // We forward the call to SwiftASTContext because an implementation of
+  // this function would require it to have an execution context being passed
+  // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
+  // function will be called much.
   if (auto *swift_ast_context = GetSwiftASTContext())
     return swift_ast_context->GetDirectBaseClassAtIndex(ReconstructType(type),
                                                         idx, bit_offset_ptr);
