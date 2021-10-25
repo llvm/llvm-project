@@ -405,7 +405,8 @@ template<class T>
 class shared_ptr
 {
 public:
-    typedef T element_type;
+    typedef T element_type; // until C++17
+    typedef remove_extent_t<T> element_type; // since C++17
     typedef weak_ptr<T> weak_type; // C++17
 
     // constructors:
@@ -525,7 +526,8 @@ template<class T>
 class weak_ptr
 {
 public:
-    typedef T element_type;
+    typedef T element_type; // until C++17
+    typedef remove_extent_t<T> element_type; // since C++17
 
     // constructors
     constexpr weak_ptr() noexcept;
