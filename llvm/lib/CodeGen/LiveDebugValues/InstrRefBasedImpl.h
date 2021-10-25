@@ -55,6 +55,11 @@ public:
   }
 
   static LocIdx MakeIllegalLoc() { return LocIdx(); }
+  static LocIdx MakeTombstoneLoc() {
+    LocIdx L = LocIdx();
+    --L.Location;
+    return L;
+  }
 
   bool isIllegal() const { return Location == UINT_MAX; }
 
@@ -101,36 +106,43 @@ struct SpillLoc {
 /// problematic; but by that point we should probably have bailed out of
 /// trying to analyse the function.
 class ValueIDNum {
-  uint64_t BlockNo : 20;         /// The block where the def happens.
-  uint64_t InstNo : 20;          /// The Instruction where the def happens.
-                                 /// One based, is distance from start of block.
-  uint64_t LocNo : NUM_LOC_BITS; /// The machine location where the def happens.
+  union {
+    struct {
+      uint64_t BlockNo : 20; /// The block where the def happens.
+      uint64_t InstNo : 20;  /// The Instruction where the def happens.
+                             /// One based, is distance from start of block.
+      uint64_t LocNo
+          : NUM_LOC_BITS; /// The machine location where the def happens.
+    } s;
+    uint64_t Value;
+  } u;
+
+  static_assert(sizeof(u) == 8, "Badly packed ValueIDNum?");
 
 public:
   // Default-initialize to EmptyValue. This is necessary to make IndexedMaps
   // of values to work.
-  ValueIDNum() : BlockNo(0xFFFFF), InstNo(0xFFFFF), LocNo(0xFFFFFF) {}
+  ValueIDNum() { u.Value = EmptyValue.asU64(); }
 
-  ValueIDNum(uint64_t Block, uint64_t Inst, uint64_t Loc)
-      : BlockNo(Block), InstNo(Inst), LocNo(Loc) {}
-
-  ValueIDNum(uint64_t Block, uint64_t Inst, LocIdx Loc)
-      : BlockNo(Block), InstNo(Inst), LocNo(Loc.asU64()) {}
-
-  uint64_t getBlock() const { return BlockNo; }
-  uint64_t getInst() const { return InstNo; }
-  uint64_t getLoc() const { return LocNo; }
-  bool isPHI() const { return InstNo == 0; }
-
-  uint64_t asU64() const {
-    uint64_t TmpBlock = BlockNo;
-    uint64_t TmpInst = InstNo;
-    return TmpBlock << 44ull | TmpInst << NUM_LOC_BITS | LocNo;
+  ValueIDNum(uint64_t Block, uint64_t Inst, uint64_t Loc) {
+    u.s = {Block, Inst, Loc};
   }
 
+  ValueIDNum(uint64_t Block, uint64_t Inst, LocIdx Loc) {
+    u.s = {Block, Inst, Loc.asU64()};
+  }
+
+  uint64_t getBlock() const { return u.s.BlockNo; }
+  uint64_t getInst() const { return u.s.InstNo; }
+  uint64_t getLoc() const { return u.s.LocNo; }
+  bool isPHI() const { return u.s.InstNo == 0; }
+
+  uint64_t asU64() const { return u.Value; }
+
   static ValueIDNum fromU64(uint64_t v) {
-    uint64_t L = (v & 0x3FFF);
-    return {v >> 44ull, ((v >> NUM_LOC_BITS) & 0xFFFFF), L};
+    ValueIDNum Val;
+    Val.u.Value = v;
+    return Val;
   }
 
   bool operator<(const ValueIDNum &Other) const {
@@ -138,23 +150,25 @@ public:
   }
 
   bool operator==(const ValueIDNum &Other) const {
-    return std::tie(BlockNo, InstNo, LocNo) ==
-           std::tie(Other.BlockNo, Other.InstNo, Other.LocNo);
+    return u.Value == Other.u.Value;
   }
 
   bool operator!=(const ValueIDNum &Other) const { return !(*this == Other); }
 
   std::string asString(const std::string &mlocname) const {
     return Twine("Value{bb: ")
-        .concat(Twine(BlockNo).concat(
-            Twine(", inst: ")
-                .concat((InstNo ? Twine(InstNo) : Twine("live-in"))
-                            .concat(Twine(", loc: ").concat(Twine(mlocname)))
-                            .concat(Twine("}")))))
+        .concat(Twine(u.s.BlockNo)
+                    .concat(Twine(", inst: ")
+                                .concat((u.s.InstNo ? Twine(u.s.InstNo)
+                                                    : Twine("live-in"))
+                                            .concat(Twine(", loc: ").concat(
+                                                Twine(mlocname)))
+                                            .concat(Twine("}")))))
         .str();
   }
 
   static ValueIDNum EmptyValue;
+  static ValueIDNum TombstoneValue;
 };
 
 /// Thin wrapper around an integer -- designed to give more type safety to
@@ -716,7 +730,7 @@ public:
 
   /// Machine location/value transfer function, a mapping of which locations
   /// are assigned which new values.
-  using MLocTransferMap = std::map<LocIdx, ValueIDNum>;
+  using MLocTransferMap = SmallDenseMap<LocIdx, ValueIDNum>;
 
   /// Live in/out structure for the variable values: a per-block map of
   /// variables to their values.
@@ -1006,5 +1020,32 @@ public:
 };
 
 } // namespace LiveDebugValues
+
+namespace llvm {
+using namespace LiveDebugValues;
+
+template <> struct DenseMapInfo<LocIdx> {
+  static inline LocIdx getEmptyKey() { return LocIdx::MakeIllegalLoc(); }
+  static inline LocIdx getTombstoneKey() { return LocIdx::MakeTombstoneLoc(); }
+
+  static unsigned getHashValue(const LocIdx &Loc) { return Loc.asU64(); }
+
+  static bool isEqual(const LocIdx &A, const LocIdx &B) { return A == B; }
+};
+
+template <> struct DenseMapInfo<ValueIDNum> {
+  static inline ValueIDNum getEmptyKey() { return ValueIDNum::EmptyValue; }
+  static inline ValueIDNum getTombstoneKey() {
+    return ValueIDNum::TombstoneValue;
+  }
+
+  static unsigned getHashValue(const ValueIDNum &Val) { return Val.asU64(); }
+
+  static bool isEqual(const ValueIDNum &A, const ValueIDNum &B) {
+    return A == B;
+  }
+};
+
+} // end namespace llvm
 
 #endif /* LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_INSTRREFBASEDLDV_H */

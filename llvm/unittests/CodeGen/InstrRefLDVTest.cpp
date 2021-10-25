@@ -903,7 +903,8 @@ TEST_F(InstrRefLDVTest, MLocSingleBlock) {
   ValueIDNum *OutLocsPtr[1] = {&OutLocs[0]};
 
   // Transfer function: nothing.
-  SmallVector<MLocTransferMap, 1> TransferFunc = {{}};
+  SmallVector<MLocTransferMap, 1> TransferFunc;
+  TransferFunc.resize(1);
 
   // Try and build value maps...
   buildMLocValueMap(InLocsPtr, OutLocsPtr, TransferFunc);
