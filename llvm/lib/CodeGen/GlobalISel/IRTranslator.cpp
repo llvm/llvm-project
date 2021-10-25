@@ -3310,7 +3310,7 @@ static bool checkForMustTailInVarArgFn(bool IsVarArg, const BasicBlock &BB) {
 
   // Walk the block backwards, because tail calls usually only appear at the end
   // of a block.
-  return std::any_of(BB.rbegin(), BB.rend(), [](const Instruction &I) {
+  return llvm::any_of(llvm::reverse(BB), [](const Instruction &I) {
     const auto *CI = dyn_cast<CallInst>(&I);
     return CI && CI->isMustTailCall();
   });

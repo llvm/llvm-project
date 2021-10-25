@@ -308,8 +308,7 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
         }
         return declaresSameEntity(Pack.first.get<NamedDecl *>(), LocalPack);
       };
-      if (std::find_if(LSI->LocalPacks.begin(), LSI->LocalPacks.end(),
-                       DeclaresThisPack) != LSI->LocalPacks.end())
+      if (llvm::any_of(LSI->LocalPacks, DeclaresThisPack))
         LambdaParamPackReferences.push_back(Pack);
     }
 
@@ -328,8 +327,8 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
       bool EnclosingStmtExpr = false;
       for (unsigned N = FunctionScopes.size(); N; --N) {
         sema::FunctionScopeInfo *Func = FunctionScopes[N-1];
-        if (std::any_of(
-                Func->CompoundScopes.begin(), Func->CompoundScopes.end(),
+        if (llvm::any_of(
+                Func->CompoundScopes,
                 [](sema::CompoundScopeInfo &CSI) { return CSI.IsStmtExpr; })) {
           EnclosingStmtExpr = true;
           break;

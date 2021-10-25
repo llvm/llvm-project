@@ -50,10 +50,9 @@ public:
 
 private:
   void AddArch(const ArchSpec &spec) {
-    auto iter = std::find_if(
-        m_archs.begin(), m_archs.end(),
-        [spec](const ArchSpec &rhs) { return spec.IsExactMatch(rhs); });
-    if (iter != m_archs.end())
+    if (llvm::any_of(m_archs, [spec](const ArchSpec &rhs) {
+          return spec.IsExactMatch(rhs);
+        }))
       return;
     if (spec.IsValid())
       m_archs.push_back(spec);

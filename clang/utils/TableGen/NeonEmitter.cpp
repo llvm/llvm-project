@@ -417,8 +417,7 @@ public:
 
   /// Return true if the intrinsic takes an immediate operand.
   bool hasImmediate() const {
-    return std::any_of(Types.begin(), Types.end(),
-                       [](const Type &T) { return T.isImmediate(); });
+    return llvm::any_of(Types, [](const Type &T) { return T.isImmediate(); });
   }
 
   /// Return the parameter index of the immediate operand.
@@ -1271,9 +1270,8 @@ void Intrinsic::emitShadowedArgs() {
 }
 
 bool Intrinsic::protoHasScalar() const {
-  return std::any_of(Types.begin(), Types.end(), [](const Type &T) {
-    return T.isScalar() && !T.isImmediate();
-  });
+  return llvm::any_of(
+      Types, [](const Type &T) { return T.isScalar() && !T.isImmediate(); });
 }
 
 void Intrinsic::emitBodyAsBuiltinCall() {
