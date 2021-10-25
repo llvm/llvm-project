@@ -50,10 +50,12 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
 };
 } // end namespace llvm
 
+// Escape a string for use inside a C++ literal.
+// E.g. foo"bar -> foo\x22bar.
 static std::string escapeString(StringRef value) {
   std::string ret;
   llvm::raw_string_ostream os(ret);
-  llvm::printEscapedString(value, os);
+  os.write_escaped(value, /*use_hex_escapes=*/true);
   return os.str();
 }
 

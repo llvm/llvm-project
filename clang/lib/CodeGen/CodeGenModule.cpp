@@ -317,21 +317,21 @@ void CodeGenModule::applyGlobalValReplacements() {
 
 // This is only used in aliases that we created and we know they have a
 // linear structure.
-static const llvm::GlobalObject *getAliasedGlobal(
-    const llvm::GlobalIndirectSymbol &GIS) {
-  llvm::SmallPtrSet<const llvm::GlobalIndirectSymbol*, 4> Visited;
-  const llvm::Constant *C = &GIS;
+static const llvm::GlobalValue *getAliasedGlobal(const llvm::GlobalValue *GV) {
+  llvm::SmallPtrSet<const llvm::GlobalValue *, 4> Visited;
   for (;;) {
-    C = C->stripPointerCasts();
-    if (auto *GO = dyn_cast<llvm::GlobalObject>(C))
-      return GO;
-    // stripPointerCasts will not walk over weak aliases.
-    auto *GIS2 = dyn_cast<llvm::GlobalIndirectSymbol>(C);
-    if (!GIS2)
+    if (!GV || !Visited.insert(GV).second)
       return nullptr;
-    if (!Visited.insert(GIS2).second)
-      return nullptr;
-    C = GIS2->getIndirectSymbol();
+
+    const llvm::Constant *C;
+    if (auto *GA = dyn_cast<llvm::GlobalAlias>(GV))
+      C = GA->getAliasee();
+    else if (auto *GI = dyn_cast<llvm::GlobalIFunc>(GV))
+      C = GI->getResolver();
+    else
+      return GV;
+
+    GV = dyn_cast<llvm::GlobalValue>(C->stripPointerCasts());
   }
 }
 
@@ -350,9 +350,8 @@ void CodeGenModule::checkAliases() {
     else
       llvm_unreachable("Not an alias or ifunc?");
     StringRef MangledName = getMangledName(GD);
-    llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-    auto *Alias  = cast<llvm::GlobalIndirectSymbol>(Entry);
-    const llvm::GlobalValue *GV = getAliasedGlobal(*Alias);
+    llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
+    const llvm::GlobalValue *GV = getAliasedGlobal(Alias);
     if (!GV) {
       Error = true;
       Diags.Report(Location, diag::err_cyclic_alias) << IsIFunc;
@@ -369,7 +368,10 @@ void CodeGenModule::checkAliases() {
         Diags.Report(Location, diag::err_ifunc_resolver_return);
     }
 
-    llvm::Constant *Aliasee = Alias->getIndirectSymbol();
+    llvm::Constant *Aliasee =
+        IsIFunc ? cast<llvm::GlobalIFunc>(Alias)->getResolver()
+                : cast<llvm::GlobalAlias>(Alias)->getAliasee();
+
     llvm::GlobalValue *AliaseeGV;
     if (auto CE = dyn_cast<llvm::ConstantExpr>(Aliasee))
       AliaseeGV = cast<llvm::GlobalValue>(CE->getOperand(0));
@@ -388,13 +390,17 @@ void CodeGenModule::checkAliases() {
     // compatibility with gcc we implement it by just pointing the alias
     // to its aliasee's aliasee. We also warn, since the user is probably
     // expecting the link to be weak.
-    if (auto GA = dyn_cast<llvm::GlobalIndirectSymbol>(AliaseeGV)) {
+    if (auto *GA = dyn_cast<llvm::GlobalAlias>(AliaseeGV)) {
       if (GA->isInterposable()) {
         Diags.Report(Location, diag::warn_alias_to_weak_alias)
             << GV->getName() << GA->getName() << IsIFunc;
         Aliasee = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            GA->getIndirectSymbol(), Alias->getType());
-        Alias->setIndirectSymbol(Aliasee);
+            GA->getAliasee(), Alias->getType());
+
+        if (IsIFunc)
+          cast<llvm::GlobalIFunc>(Alias)->setResolver(Aliasee);
+        else
+          cast<llvm::GlobalAlias>(Alias)->setAliasee(Aliasee);
       }
     }
   }
@@ -403,8 +409,7 @@ void CodeGenModule::checkAliases() {
 
   for (const GlobalDecl &GD : Aliases) {
     StringRef MangledName = getMangledName(GD);
-    llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-    auto *Alias = cast<llvm::GlobalIndirectSymbol>(Entry);
+    llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
     Alias->replaceAllUsesWith(llvm::UndefValue::get(Alias->getType()));
     Alias->eraseFromParent();
   }
@@ -2200,9 +2205,6 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                                CalleeIdx, PayloadIndices,
                                                /* VarArgsArePassed */ false)}));
   }
-
-  if (FD->hasAttr<AnnotateAttr>())
-    AddGlobalAnnotations(FD, F);
 }
 
 void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {
@@ -4900,6 +4902,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
     AddGlobalCtor(Fn, CA->getPriority());
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
     AddGlobalDtor(Fn, DA->getPriority(), true);
+  if (D->hasAttr<AnnotateAttr>())
+    AddGlobalAnnotations(D, Fn);
 }
 
 void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {

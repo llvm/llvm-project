@@ -22,7 +22,7 @@ public:
   static void Initialize();
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "pdb"; }
   static const char *GetPluginDescriptionStatic() {
     return "PDB object file reader.";
   }
@@ -48,9 +48,7 @@ public:
                                         ModuleSpecList &specs);
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // LLVM RTTI support
   static char ID;

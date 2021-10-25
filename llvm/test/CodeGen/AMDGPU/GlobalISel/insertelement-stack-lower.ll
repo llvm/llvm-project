@@ -16,7 +16,6 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    s_load_dwordx16 s[36:51], s[22:23], 0x0
 ; GCN-NEXT:    s_load_dwordx16 s[52:67], s[22:23], 0x40
 ; GCN-NEXT:    s_load_dwordx16 s[4:19], s[22:23], 0x80
-; GCN-NEXT:    v_mov_b32_e32 v64, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s36
 ; GCN-NEXT:    v_mov_b32_e32 v1, s37
@@ -158,10 +157,23 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:260
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], 0 offset:264
 ; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:268
-; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:272
-; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], 0 offset:276
-; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], 0 offset:280
-; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], 0 offset:284
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:512 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:516 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:520 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:524 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:272
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:276
+; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], 0 offset:280
+; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:284
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:528 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:532 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:536 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:540 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], 0 offset:288
 ; GCN-NEXT:    buffer_load_dword v9, off, s[0:3], 0 offset:292
 ; GCN-NEXT:    buffer_load_dword v10, off, s[0:3], 0 offset:296
@@ -218,38 +230,40 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
 ; GCN-NEXT:    buffer_load_dword v61, off, s[0:3], 0 offset:500
 ; GCN-NEXT:    buffer_load_dword v62, off, s[0:3], 0 offset:504
 ; GCN-NEXT:    buffer_load_dword v63, off, s[0:3], 0 offset:508
-; GCN-NEXT:    s_waitcnt vmcnt(60)
-; GCN-NEXT:    global_store_dwordx4 v64, v[0:3], s[20:21]
-; GCN-NEXT:    s_waitcnt vmcnt(57)
-; GCN-NEXT:    global_store_dwordx4 v64, v[4:7], s[20:21] offset:16
-; GCN-NEXT:    s_waitcnt vmcnt(54)
-; GCN-NEXT:    global_store_dwordx4 v64, v[8:11], s[20:21] offset:32
-; GCN-NEXT:    s_waitcnt vmcnt(51)
-; GCN-NEXT:    global_store_dwordx4 v64, v[12:15], s[20:21] offset:48
-; GCN-NEXT:    s_waitcnt vmcnt(48)
-; GCN-NEXT:    global_store_dwordx4 v64, v[16:19], s[20:21] offset:64
-; GCN-NEXT:    s_waitcnt vmcnt(45)
-; GCN-NEXT:    global_store_dwordx4 v64, v[20:23], s[20:21] offset:80
-; GCN-NEXT:    s_waitcnt vmcnt(42)
-; GCN-NEXT:    global_store_dwordx4 v64, v[24:27], s[20:21] offset:96
-; GCN-NEXT:    s_waitcnt vmcnt(39)
-; GCN-NEXT:    global_store_dwordx4 v64, v[28:31], s[20:21] offset:112
-; GCN-NEXT:    s_waitcnt vmcnt(36)
-; GCN-NEXT:    global_store_dwordx4 v64, v[32:35], s[20:21] offset:128
-; GCN-NEXT:    s_waitcnt vmcnt(33)
-; GCN-NEXT:    global_store_dwordx4 v64, v[36:39], s[20:21] offset:144
-; GCN-NEXT:    s_waitcnt vmcnt(30)
-; GCN-NEXT:    global_store_dwordx4 v64, v[40:43], s[20:21] offset:160
-; GCN-NEXT:    s_waitcnt vmcnt(27)
-; GCN-NEXT:    global_store_dwordx4 v64, v[44:47], s[20:21] offset:176
-; GCN-NEXT:    s_waitcnt vmcnt(24)
-; GCN-NEXT:    global_store_dwordx4 v64, v[48:51], s[20:21] offset:192
-; GCN-NEXT:    s_waitcnt vmcnt(21)
-; GCN-NEXT:    global_store_dwordx4 v64, v[52:55], s[20:21] offset:208
-; GCN-NEXT:    s_waitcnt vmcnt(18)
-; GCN-NEXT:    global_store_dwordx4 v64, v[56:59], s[20:21] offset:224
-; GCN-NEXT:    s_waitcnt vmcnt(15)
-; GCN-NEXT:    global_store_dwordx4 v64, v[60:63], s[20:21] offset:240
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:512 ; 4-byte Folded Reload
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], 0 offset:516 ; 4-byte Folded Reload
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:520 ; 4-byte Folded Reload
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:524 ; 4-byte Folded Reload
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dwordx4 v0, v[1:4], s[20:21]
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:528 ; 4-byte Folded Reload
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], 0 offset:532 ; 4-byte Folded Reload
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:536 ; 4-byte Folded Reload
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:540 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dwordx4 v0, v[1:4], s[20:21] offset:16
+; GCN-NEXT:    global_store_dwordx4 v0, v[8:11], s[20:21] offset:32
+; GCN-NEXT:    global_store_dwordx4 v0, v[12:15], s[20:21] offset:48
+; GCN-NEXT:    global_store_dwordx4 v0, v[16:19], s[20:21] offset:64
+; GCN-NEXT:    global_store_dwordx4 v0, v[20:23], s[20:21] offset:80
+; GCN-NEXT:    global_store_dwordx4 v0, v[24:27], s[20:21] offset:96
+; GCN-NEXT:    global_store_dwordx4 v0, v[28:31], s[20:21] offset:112
+; GCN-NEXT:    global_store_dwordx4 v0, v[32:35], s[20:21] offset:128
+; GCN-NEXT:    global_store_dwordx4 v0, v[36:39], s[20:21] offset:144
+; GCN-NEXT:    global_store_dwordx4 v0, v[40:43], s[20:21] offset:160
+; GCN-NEXT:    global_store_dwordx4 v0, v[44:47], s[20:21] offset:176
+; GCN-NEXT:    global_store_dwordx4 v0, v[48:51], s[20:21] offset:192
+; GCN-NEXT:    global_store_dwordx4 v0, v[52:55], s[20:21] offset:208
+; GCN-NEXT:    global_store_dwordx4 v0, v[56:59], s[20:21] offset:224
+; GCN-NEXT:    global_store_dwordx4 v0, v[60:63], s[20:21] offset:240
 ; GCN-NEXT:    s_endpgm
   %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
   %insert = insertelement <64 x i32> %vec, i32 %val, i32 %idx
@@ -257,4 +271,4 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(<64 x i32> addrspace(1)* %out.
   ret void
 }
 
-attributes #0 = { "amdgpu-waves-per-eu"="1,10" }
+attributes #0 = { "amdgpu-flat-workgroup-size"="1,256" "amdgpu-waves-per-eu"="1,10" }

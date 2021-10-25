@@ -254,8 +254,7 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
 }
 
 DefinedSVal SValBuilder::getMemberPointer(const NamedDecl *ND) {
-  assert(!ND || isa<CXXMethodDecl>(ND) || isa<FieldDecl>(ND) ||
-         isa<IndirectFieldDecl>(ND));
+  assert(!ND || (isa<CXXMethodDecl, FieldDecl, IndirectFieldDecl>(ND)));
 
   if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND)) {
     // Sema treats pointers to static member functions as have function pointer

@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
 
 ; This tests that mem2reg preserves the !nonnull metadata on loads
 ; from allocas that get optimized out.

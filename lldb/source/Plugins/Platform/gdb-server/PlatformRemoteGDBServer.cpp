@@ -305,7 +305,7 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   if (!url)
     return Status("URL is null.");
 
-  int port;
+  llvm::Optional<uint16_t> port;
   llvm::StringRef scheme, hostname, pathname;
   if (!UriParser::Parse(url, scheme, hostname, port, pathname))
     return Status("Invalid URL: %s", url);

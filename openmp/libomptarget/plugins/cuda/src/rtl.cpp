@@ -24,10 +24,7 @@
 #include "DeviceEnvironment.h"
 #include "omptargetplugin.h"
 
-#ifndef TARGET_NAME
 #define TARGET_NAME CUDA
-#endif
-
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
 #include "MemoryManager.h"
@@ -36,7 +33,6 @@
 
 // Utility for retrieving and printing CUDA error string.
 #ifdef OMPTARGET_DEBUG
-static int DebugLevel = 0;
 #define CUDA_ERR_STRING(err)                                                   \
   do {                                                                         \
     if (getDebugLevel() > 0) {                                                 \
@@ -71,7 +67,6 @@ static int DebugLevel = 0;
 #define BOOL2TEXT(b) ((b) ? "Yes" : "No")
 
 #include "elf_common.h"
-
 
 /// Keep entries table per device.
 struct FuncOrGblEntryTy {
@@ -177,7 +172,11 @@ int destroyEvent(void *EventPtr) {
 
 // Structure contains per-device data
 struct DeviceDataTy {
+  /// List that contains all the kernels.
+  std::list<KernelTy> KernelsList;
+
   std::list<FuncOrGblEntryTy> FuncGblEntries;
+
   CUcontext Context = nullptr;
   // Device properties
   int ThreadsPerBlock = 0;
@@ -187,20 +186,6 @@ struct DeviceDataTy {
   int NumTeams = 0;
   int NumThreads = 0;
 };
-
-#if OMPD_SUPPORT
-#ifdef __cplusplus
-extern "C" {
-#endif
-  /* TODO - Put these OMPD globals someplace cleaner */
-  uint64_t ompd_num_cuda_devices;
-  DeviceDataTy* ompd_CudaDeviceDataArray;
-  uint64_t ompd_access__DeviceDataTy__Context;
-  uint64_t ompd_sizeof__DeviceDataTy__Context;
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-#endif /* OMPD_SUPPORT */
 
 class StreamManagerTy {
   int NumberOfDevices;
@@ -405,7 +390,7 @@ class DeviceRTLTy {
       return MemAlloc;
     }
 
-    int alloc_free(void *TgtPtr) override {
+    int free(void *TgtPtr) override {
       CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
       if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
         return OFFLOAD_FAIL;
@@ -450,7 +435,7 @@ class DeviceRTLTy {
     E.Entries.push_back(entry);
   }
 
-   // Return a pointer to the entry associated with the pointer
+  // Return a pointer to the entry associated with the pointer
   const __tgt_offload_entry *getOffloadEntry(const int DeviceId,
                                              const void *Addr) const {
     for (const __tgt_offload_entry &Itr :
@@ -523,12 +508,6 @@ public:
       return;
     }
 
-#if OMPD_SUPPORT
-    ompd_access__DeviceDataTy__Context = (uint64_t)&(((DeviceDataTy*)0)->Context);
-    ompd_sizeof__DeviceDataTy__Context = sizeof(((DeviceDataTy*)0)->Context);
-    ompd_num_cuda_devices = NumberOfDevices;
-    ompd_CudaDeviceDataArray = &DeviceData[0];
-#endif /* OMPD_SUPPORT */
     DeviceData.resize(NumberOfDevices);
 
     // Get environment variables regarding teams
@@ -800,6 +779,7 @@ public:
     const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
     const __tgt_offload_entry *HostEnd = Image->EntriesEnd;
 
+    std::list<KernelTy> &KernelsList = DeviceData[DeviceId].KernelsList;
     for (const __tgt_offload_entry *E = HostBegin; E != HostEnd; ++E) {
       if (!E->addr) {
         // We return nullptr when something like this happens, the host should
@@ -912,10 +892,8 @@ public:
                                     static_cast<uint32_t>(DeviceId),
                                     static_cast<uint32_t>(DynamicMemorySize)};
 
-#ifdef OMPTARGET_DEBUG
       if (const char *EnvStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG"))
         DeviceEnv.DebugKind = std::stoi(EnvStr);
-#endif
 
       const char *DeviceEnvName = "omptarget_device_environment";
       CUdeviceptr DeviceEnvPtr;
@@ -1071,13 +1049,12 @@ public:
     if (UseMemoryManager)
       return MemoryManagers[DeviceId]->free(TgtPtr);
 
-    return DeviceAllocators[DeviceId].alloc_free(TgtPtr);
+    return DeviceAllocators[DeviceId].free(TgtPtr);
   }
 
-  int runTargetTeamRegion(const int DeviceId, const void *TgtEntryPtr,
-                          void **TgtArgs, ptrdiff_t *TgtOffsets,
-                          const int ArgNum, const int TeamNum,
-                          const int ThreadLimit,
+  int runTargetTeamRegion(const int DeviceId, void *TgtEntryPtr, void **TgtArgs,
+                          ptrdiff_t *TgtOffsets, const int ArgNum,
+                          const int TeamNum, const int ThreadLimit,
                           const unsigned int LoopTripCount,
                           __tgt_async_info *AsyncInfo) const {
     CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
@@ -1093,8 +1070,7 @@ public:
       Args[I] = &Ptrs[I];
     }
 
-    const KernelTy *KernelInfo =
-        reinterpret_cast<const KernelTy *>(TgtEntryPtr);
+    KernelTy *KernelInfo = reinterpret_cast<KernelTy *>(TgtEntryPtr);
 
     const bool IsSPMDGenericMode =
         KernelInfo->ExecutionMode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD;
@@ -1124,13 +1100,18 @@ public:
       CudaThreadsPerBlock = DeviceData[DeviceId].ThreadsPerBlock;
     }
 
-    int KernelLimit;
-    Err = cuFuncGetAttribute(&KernelLimit,
-                             CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
-                             KernelInfo->Func);
-    if (Err == CUDA_SUCCESS && KernelLimit < CudaThreadsPerBlock) {
-      DP("Threads per block capped at kernel limit %d\n", KernelLimit);
-      CudaThreadsPerBlock = KernelLimit;
+    if (!KernelInfo->MaxThreadsPerBlock) {
+      Err = cuFuncGetAttribute(&KernelInfo->MaxThreadsPerBlock,
+                               CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
+                               KernelInfo->Func);
+      if (!checkResult(Err, "Error returned from cuFuncGetAttribute\n"))
+        return OFFLOAD_FAIL;
+    }
+
+    if (KernelInfo->MaxThreadsPerBlock < CudaThreadsPerBlock) {
+      DP("Threads per block capped at kernel limit %d\n",
+         KernelInfo->MaxThreadsPerBlock);
+      CudaThreadsPerBlock = KernelInfo->MaxThreadsPerBlock;
     }
 
     unsigned int CudaBlocksPerGrid;
@@ -1436,7 +1417,7 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
-  DP("Init requires flags to %ld\n", RequiresFlags);
+  DP("Init requires flags to %" PRId64 "\n", RequiresFlags);
   DeviceRTL.setRequiresFlag(RequiresFlags);
   return RequiresFlags;
 }

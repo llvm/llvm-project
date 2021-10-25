@@ -1097,7 +1097,8 @@ bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
   const Procedure *p1{Characterize(f1)};
   const Procedure *p2{Characterize(f2)};
   if (p1 && p2) {
-    if (characteristics::Distinguishable(*p1, *p2)) {
+    if (characteristics::Distinguishable(
+            context_.languageFeatures(), *p1, *p2)) {
       return true;
     }
     if (auto *msg{messages_.Say(f1Name,
@@ -1322,14 +1323,18 @@ bool CheckHelper::CheckDefinedAssignment(
   } else if (proc.dummyArguments.size() != 2) {
     msg = "Defined assignment subroutine '%s' must have"
           " two dummy arguments"_err_en_US;
-  } else if (!CheckDefinedAssignmentArg(specific, proc.dummyArguments[0], 0) |
-      !CheckDefinedAssignmentArg(specific, proc.dummyArguments[1], 1)) {
-    return false; // error was reported
-  } else if (ConflictsWithIntrinsicAssignment(proc)) {
-    msg = "Defined assignment subroutine '%s' conflicts with"
-          " intrinsic assignment"_err_en_US;
   } else {
-    return true; // OK
+    // Check both arguments even if the first has an error.
+    bool ok0{CheckDefinedAssignmentArg(specific, proc.dummyArguments[0], 0)};
+    bool ok1{CheckDefinedAssignmentArg(specific, proc.dummyArguments[1], 1)};
+    if (!(ok0 && ok1)) {
+      return false; // error was reported
+    } else if (ConflictsWithIntrinsicAssignment(proc)) {
+      msg = "Defined assignment subroutine '%s' conflicts with"
+            " intrinsic assignment"_err_en_US;
+    } else {
+      return true; // OK
+    }
   }
   SayWithDeclaration(specific, std::move(msg.value()), specific.name());
   context_.SetError(specific);
@@ -2290,7 +2295,8 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
-        if (!distinguishable(proc, info[i2].procedure)) {
+        if (!distinguishable(
+                context_.languageFeatures(), proc, info[i2].procedure)) {
           SayNotDistinguishable(GetTopLevelUnitContaining(scope), name, kind,
               symbol, info[i2].symbol);
         }

@@ -174,6 +174,7 @@ namespace {
     LoopInfo *LI;
     ScalarEvolution *SE;
     bool PreserveLCSSA;
+    bool HasCandidateForPrepare;
 
     /// Successful preparation number for Update/DS/DQ form in all inner most
     /// loops. One successful preparation will put one common base out of loop,
@@ -570,6 +571,9 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
       if (!LARSCEV || LARSCEV->getLoop() != L)
         continue;
 
+      // Mark that we have candidates for preparing.
+      HasCandidateForPrepare = true;
+
       if (isValidCandidate(&J, PtrValue, PointerElementType))
         addOneCandidate(&J, LSCEV, Buckets, MaxCandidateNum);
     }
@@ -785,9 +789,8 @@ bool PPCLoopInstrFormPrep::updateFormPrep(Loop *L,
       MadeChange |= rewriteLoadStores(L, Bucket, BBChanged, UpdateForm);
 
   if (MadeChange)
-    for (auto &BB : L->blocks())
-      if (BBChanged.count(BB))
-        DeleteDeadPHIs(BB);
+    for (auto *BB : BBChanged)
+      DeleteDeadPHIs(BB);
   return MadeChange;
 }
 
@@ -807,9 +810,8 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Bucket
   }
 
   if (MadeChange)
-    for (auto &BB : L->blocks())
-      if (BBChanged.count(BB))
-        DeleteDeadPHIs(BB);
+    for (auto *BB : BBChanged)
+      DeleteDeadPHIs(BB);
   return MadeChange;
 }
 
@@ -1046,6 +1048,8 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     return ST && ST->hasP9Vector() && (PointerElementType->isVectorTy());
   };
 
+  HasCandidateForPrepare = false;
+
   // Collect buckets of comparable addresses used by loads and stores for update
   // form.
   SmallVector<Bucket, 16> UpdateFormBuckets =
@@ -1054,6 +1058,9 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   // Prepare for update form.
   if (!UpdateFormBuckets.empty())
     MadeChange |= updateFormPrep(L, UpdateFormBuckets);
+  else if (!HasCandidateForPrepare)
+    // If no candidate for preparing, return early.
+    return MadeChange;
 
   // Collect buckets of comparable addresses used by loads and stores for DS
   // form.

@@ -264,43 +264,55 @@ void EarliestEscapeInfo::removeInstruction(Instruction *I) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Represents zext(sext(V)).
+/// Represents zext(sext(trunc(V))).
 struct CastedValue {
   const Value *V;
   unsigned ZExtBits = 0;
   unsigned SExtBits = 0;
+  unsigned TruncBits = 0;
 
   explicit CastedValue(const Value *V) : V(V) {}
-  explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits)
-      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits) {}
+  explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits,
+                       unsigned TruncBits)
+      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits) {}
 
   unsigned getBitWidth() const {
-    return V->getType()->getPrimitiveSizeInBits() + ZExtBits + SExtBits;
+    return V->getType()->getPrimitiveSizeInBits() - TruncBits + ZExtBits +
+           SExtBits;
   }
 
   CastedValue withValue(const Value *NewV) const {
-    return CastedValue(NewV, ZExtBits, SExtBits);
+    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits);
   }
 
   /// Replace V with zext(NewV)
   CastedValue withZExtOfValue(const Value *NewV) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
+    if (ExtendBy <= TruncBits)
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+
     // zext(sext(zext(NewV))) == zext(zext(zext(NewV)))
-    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0);
+    ExtendBy -= TruncBits;
+    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0);
   }
 
   /// Replace V with sext(NewV)
   CastedValue withSExtOfValue(const Value *NewV) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
+    if (ExtendBy <= TruncBits)
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+
     // zext(sext(sext(NewV)))
-    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy);
+    ExtendBy -= TruncBits;
+    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0);
   }
 
   APInt evaluateWith(APInt N) const {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
+    if (TruncBits) N = N.trunc(N.getBitWidth() - TruncBits);
     if (SExtBits) N = N.sext(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zext(N.getBitWidth() + ZExtBits);
     return N;
@@ -309,6 +321,7 @@ struct CastedValue {
   KnownBits evaluateWith(KnownBits N) const {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
+    if (TruncBits) N = N.trunc(N.getBitWidth() - TruncBits);
     if (SExtBits) N = N.sext(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zext(N.getBitWidth() + ZExtBits);
     return N;
@@ -317,6 +330,7 @@ struct CastedValue {
   ConstantRange evaluateWith(ConstantRange N) const {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
+    if (TruncBits) N = N.truncate(N.getBitWidth() - TruncBits);
     if (SExtBits) N = N.signExtend(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zeroExtend(N.getBitWidth() + ZExtBits);
     return N;
@@ -325,15 +339,17 @@ struct CastedValue {
   bool canDistributeOver(bool NUW, bool NSW) const {
     // zext(x op<nuw> y) == zext(x) op<nuw> zext(y)
     // sext(x op<nsw> y) == sext(x) op<nsw> sext(y)
+    // trunc(x op y) == trunc(x) op trunc(y)
     return (!ZExtBits || NUW) && (!SExtBits || NSW);
   }
 
   bool hasSameCastsAs(const CastedValue &Other) const {
-    return ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits;
+    return ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
+           TruncBits == Other.TruncBits;
   }
 };
 
-/// Represents zext(sext(V)) * Scale + Offset.
+/// Represents zext(sext(trunc(V))) * Scale + Offset.
 struct LinearExpression {
   CastedValue Val;
   APInt Scale;
@@ -379,6 +395,11 @@ static LinearExpression GetLinearExpression(
       }
       if (!Val.canDistributeOver(NUW, NSW))
         return Val;
+
+      // While we can distribute over trunc, we cannot preserve nowrap flags
+      // in that case.
+      if (Val.TruncBits)
+        NUW = NSW = false;
 
       LinearExpression E(Val);
       switch (BOp->getOpcode()) {
@@ -462,7 +483,7 @@ static APInt adjustToPointerSize(const APInt &Offset, unsigned PointerSize) {
 
 namespace {
 // A linear transformation of a Value; this class represents
-// ZExt(SExt(V, SExtBits), ZExtBits) * Scale.
+// ZExt(SExt(Trunc(V, TruncBits), SExtBits), ZExtBits) * Scale.
 struct VariableGEPIndex {
   CastedValue Val;
   APInt Scale;
@@ -481,6 +502,7 @@ struct VariableGEPIndex {
     OS << "(V=" << Val.V->getName()
        << ", zextbits=" << Val.ZExtBits
        << ", sextbits=" << Val.SExtBits
+       << ", truncbits=" << Val.TruncBits
        << ", scale=" << Scale << ")";
   }
 };
@@ -638,8 +660,9 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       // sign extended to pointer size.
       unsigned Width = Index->getType()->getIntegerBitWidth();
       unsigned SExtBits = PointerSize > Width ? PointerSize - Width : 0;
+      unsigned TruncBits = PointerSize < Width ? Width - PointerSize : 0;
       LinearExpression LE = GetLinearExpression(
-          CastedValue(Index, 0, SExtBits), DL, 0, AC, DT);
+          CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
@@ -655,7 +678,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       APInt ScaledOffset = LE.Offset.sextOrTrunc(MaxPointerSize)
                            .smul_ov(Scale, Overflow);
       if (Overflow) {
-        LE = LinearExpression(CastedValue(Index, 0, SExtBits));
+        LE = LinearExpression(CastedValue(Index, 0, SExtBits, TruncBits));
       } else {
         Decomposed.Offset += ScaledOffset;
         Scale *= LE.Scale.sextOrTrunc(MaxPointerSize);
@@ -1245,7 +1268,6 @@ AliasResult BasicAAResult::aliasGEP(
       if (AllNonNegative || AllNonPositive) {
         KnownBits Known = Index.Val.evaluateWith(
             computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT));
-        // TODO: Account for implicit trunc.
         bool SignKnownZero = Known.isNonNegative();
         bool SignKnownOne = Known.isNegative();
         AllNonNegative &= (SignKnownZero && Scale.isNonNegative()) ||
@@ -1294,7 +1316,8 @@ AliasResult BasicAAResult::aliasGEP(
       if (DecompGEP1.VarIndices.size() == 1) {
         // VarIndex = Scale*V.
         const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-        if (isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
+        if (Var.Val.TruncBits == 0 &&
+            isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
           // If V != 0 then abs(VarIndex) >= abs(Scale).
           MinAbsVarIndex = Var.Scale.abs();
         }
@@ -1310,7 +1333,7 @@ AliasResult BasicAAResult::aliasGEP(
         // inequality of values across loop iterations.
         const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
         const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
-        if (Var0.Scale == -Var1.Scale &&
+        if (Var0.Scale == -Var1.Scale && Var0.Val.TruncBits == 0 &&
             Var0.Val.hasSameCastsAs(Var1.Val) && VisitedPhiBBs.empty() &&
             isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
                             DT))
@@ -1835,7 +1858,8 @@ bool BasicAAResult::constantOffsetHeuristic(
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
-  if (!Var0.Val.hasSameCastsAs(Var1.Val) || Var0.Scale != -Var1.Scale ||
+  if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
+      Var0.Scale != -Var1.Scale ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 

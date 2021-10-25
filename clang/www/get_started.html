@@ -206,7 +206,7 @@ second build directory next to it for running the tests with these steps:</p>
   <li><tt>set CC=cl</tt> (necessary to force CMake to choose MSVC over mingw GCC
     if you have it installed)</li>
   <li><tt>set CXX=cl</tt></li>
-  <li><tt>cmake -GNinja ..\llvm</tt></li>
+  <li><tt>cmake -GNinja -DLLVM_ENABLE_PROJECTS=clang ..\llvm</tt></li>
   <li><tt>ninja clang</tt> This will build just clang.</li>
   <li><tt>ninja check-clang</tt> This will run the clang tests.</li>
 </ol>

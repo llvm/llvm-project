@@ -494,24 +494,16 @@ def system(commands, **kwargs):
     'ls: non_existent_file: No such file or directory\n'
     """
 
-    # Assign the sender object to variable 'test' and remove it from kwargs.
-    test = kwargs.pop('sender', None)
-
-    # [['make', 'clean', 'foo'], ['make', 'foo']] -> ['make clean foo', 'make foo']
-    commandList = [' '.join(x) for x in commands]
     output = ""
     error = ""
-    for shellCommand in commandList:
+    for shellCommand in commands:
         if 'stdout' in kwargs:
             raise ValueError(
                 'stdout argument not allowed, it will be overridden.')
-        if 'shell' in kwargs and kwargs['shell'] == False:
-            raise ValueError('shell=False not allowed')
         process = Popen(
             shellCommand,
             stdout=PIPE,
             stderr=STDOUT,
-            shell=True,
             **kwargs)
         pid = process.pid
         this_output, this_error = process.communicate()
@@ -1355,15 +1347,18 @@ class Base(unittest2.TestCase):
             return str(configuration.dwarf_version)
         if 'clang' in self.getCompiler():
             try:
+                triple = builder_module().getTriple(self.getArchitecture())
+                target = ['-target', triple] if triple else []
                 driver_output = check_output(
-                    [self.getCompiler()] + '-g -c -x c - -o - -###'.split(),
+                    [self.getCompiler()] + target + '-g -c -x c - -o - -###'.split(),
                     stderr=STDOUT)
                 driver_output = driver_output.decode("utf-8")
                 for line in driver_output.split(os.linesep):
                     m = re.search('dwarf-version=([0-9])', line)
                     if m:
                         return m.group(1)
-            except: pass
+            except CalledProcessError:
+                pass
         return '0'
 
     def platformIsDarwin(self):
@@ -1473,8 +1468,8 @@ class Base(unittest2.TestCase):
         testname = self.getBuildDirBasename()
 
         module = builder_module()
-        if not module.build(debug_info, self, architecture, compiler,
-                                   dictionary, testdir, testname):
+        if not module.build(debug_info, architecture, compiler, dictionary,
+                testdir, testname):
             raise Exception("Don't know how to build binary")
 
     # ==================================================
@@ -1673,7 +1668,7 @@ class Base(unittest2.TestCase):
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()
-        if not module.cleanup(self, dictionary):
+        if not module.cleanup(dictionary):
             raise Exception(
                 "Don't know how to do cleanup with dictionary: " +
                 dictionary)

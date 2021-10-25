@@ -177,7 +177,7 @@ func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index,
   }
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static)
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) schedule(static) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>) {
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) schedule(static, none) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>) {
     omp.yield
   }
 
@@ -185,6 +185,20 @@ func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index,
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) ordered(2) private(%data_var : memref<i32>)
      firstprivate(%data_var : memref<i32>) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>)
      schedule(static = %chunk_var) collapse(3) {
+    omp.yield
+  }
+
+  // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) private(%{{.*}} : memref<i32>) firstprivate(%{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}, nonmonotonic) collapse(3) ordered(2)
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) ordered(2) private(%data_var : memref<i32>)
+     firstprivate(%data_var : memref<i32>) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>)
+     schedule(dynamic = %chunk_var, nonmonotonic) collapse(3) {
+    omp.yield
+  }
+
+  // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) private(%{{.*}} : memref<i32>) firstprivate(%{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}, monotonic) collapse(3) ordered(2)
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) ordered(2) private(%data_var : memref<i32>)
+     firstprivate(%data_var : memref<i32>) lastprivate(%data_var : memref<i32>) linear(%data_var = %linear_var : memref<i32>)
+     schedule(dynamic = %chunk_var, monotonic) collapse(3) {
     omp.yield
   }
 
@@ -369,9 +383,23 @@ func @reduction2(%lb : index, %ub : index, %step : index) {
   return
 }
 
-// CHECK: omp.critical.declare
-// CHECK-LABEL: @mutex
-omp.critical.declare @mutex
+// CHECK: omp.critical.declare @mutex1 hint(uncontended)
+omp.critical.declare @mutex1 hint(uncontended)
+// CHECK: omp.critical.declare @mutex2 hint(contended)
+omp.critical.declare @mutex2 hint(contended)
+// CHECK: omp.critical.declare @mutex3 hint(nonspeculative)
+omp.critical.declare @mutex3 hint(nonspeculative)
+// CHECK: omp.critical.declare @mutex4 hint(speculative)
+omp.critical.declare @mutex4 hint(speculative)
+// CHECK: omp.critical.declare @mutex5 hint(uncontended, nonspeculative)
+omp.critical.declare @mutex5 hint(uncontended, nonspeculative)
+// CHECK: omp.critical.declare @mutex6 hint(contended, nonspeculative)
+omp.critical.declare @mutex6 hint(contended, nonspeculative)
+// CHECK: omp.critical.declare @mutex7 hint(uncontended, speculative)
+omp.critical.declare @mutex7 hint(uncontended, speculative)
+// CHECK: omp.critical.declare @mutex8 hint(contended, speculative)
+omp.critical.declare @mutex8 hint(contended, speculative)
+
 
 // CHECK-LABEL: omp_critical
 func @omp_critical() -> () {
@@ -380,37 +408,49 @@ func @omp_critical() -> () {
     omp.terminator
   }
 
-  // CHECK: omp.critical(@{{.*}}) hint(uncontended)
-  omp.critical(@mutex) hint(uncontended) {
+  // CHECK: omp.critical(@{{.*}})
+  omp.critical(@mutex1) {
     omp.terminator
   }
-  // CHECK: omp.critical(@{{.*}}) hint(contended)
-  omp.critical(@mutex) hint(contended) {
+  return
+}
+
+func @omp_ordered(%arg1 : i32, %arg2 : i32, %arg3 : i32,
+    %vec0 : i64, %vec1 : i64, %vec2 : i64, %vec3 : i64) -> () {
+  // CHECK: omp.ordered_region
+  omp.ordered_region {
+    // CHECK: omp.terminator
     omp.terminator
   }
-  // CHECK: omp.critical(@{{.*}}) hint(nonspeculative)
-  omp.critical(@mutex) hint(nonspeculative) {
-    omp.terminator
+
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(0) {
+    omp.ordered_region {
+      omp.terminator
+    }
+    omp.yield
   }
-  // CHECK: omp.critical(@{{.*}}) hint(uncontended, nonspeculative)
-  omp.critical(@mutex) hint(uncontended, nonspeculative) {
-    omp.terminator
+
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(1) {
+    // Only one DEPEND(SINK: vec) clause
+    // CHECK: omp.ordered depend_type("dependsink") depend_vec(%{{.*}} : i64) {num_loops_val = 1 : i64}
+    omp.ordered depend_type("dependsink") depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
+
+    // CHECK: omp.ordered depend_type("dependsource") depend_vec(%{{.*}} : i64) {num_loops_val = 1 : i64}
+    omp.ordered depend_type("dependsource") depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
+
+    omp.yield
   }
-  // CHECK: omp.critical(@{{.*}}) hint(contended, nonspeculative)
-  omp.critical(@mutex) hint(nonspeculative, contended) {
-    omp.terminator
+
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(2) {
+    // Multiple DEPEND(SINK: vec) clauses
+    // CHECK: omp.ordered depend_type("dependsink") depend_vec(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+    omp.ordered depend_type("dependsink") depend_vec(%vec0, %vec1, %vec2, %vec3 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+
+    // CHECK: omp.ordered depend_type("dependsource") depend_vec(%{{.*}}, %{{.*}} : i64, i64) {num_loops_val = 2 : i64}
+    omp.ordered depend_type("dependsource") depend_vec(%vec0, %vec1 : i64, i64) {num_loops_val = 2 : i64}
+
+    omp.yield
   }
-  // CHECK: omp.critical(@{{.*}}) hint(speculative)
-  omp.critical(@mutex) hint(speculative) {
-    omp.terminator
-  }
-  // CHECK: omp.critical(@{{.*}}) hint(uncontended, speculative)
-  omp.critical(@mutex) hint(uncontended, speculative) {
-    omp.terminator
-  }
-  // CHECK: omp.critical(@{{.*}}) hint(contended, speculative)
-  omp.critical(@mutex) hint(speculative, contended) {
-    omp.terminator
-  }
+
   return
 }

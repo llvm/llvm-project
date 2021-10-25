@@ -182,27 +182,9 @@ NativeRegisterContextLinux_arm::WriteRegister(const RegisterInfo *reg_info,
     uint32_t fpr_offset = CalculateFprOffset(reg_info);
     assert(fpr_offset < sizeof m_fpr);
     uint8_t *dst = (uint8_t *)&m_fpr + fpr_offset;
-    switch (reg_info->byte_size) {
-    case 2:
-      *(uint16_t *)dst = reg_value.GetAsUInt16();
-      break;
-    case 4:
-      *(uint32_t *)dst = reg_value.GetAsUInt32();
-      break;
-    case 8:
-      *(uint64_t *)dst = reg_value.GetAsUInt64();
-      break;
-    default:
-      assert(false && "Unhandled data size.");
-      return Status("unhandled register data size %" PRIu32,
-                    reg_info->byte_size);
-    }
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
-    Status error = WriteFPR();
-    if (error.Fail())
-      return error;
-
-    return Status();
+    return WriteFPR();
   }
 
   return Status("failed - register wasn't recognized to be a GPR or an FPR, "

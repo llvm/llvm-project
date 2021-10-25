@@ -1392,208 +1392,6 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
 }
 
 //===----------------------------------------------------------------------===//
-//                         Constraint assignment logic
-//===----------------------------------------------------------------------===//
-
-/// ConstraintAssignorBase is a small utility class that unifies visitor
-/// for ranges with a visitor for constraints (rangeset/range/constant).
-///
-/// It is designed to have one derived class, but generally it can have more.
-/// Derived class can control which types we handle by defining methods of the
-/// following form:
-///
-///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
-///                                       CONSTRAINT Constraint);
-///
-/// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)
-///       CONSTRAINT is the type of constraint (RangeSet/Range/Const)
-///       return value signifies whether we should try other handle methods
-///          (i.e. false would mean to stop right after calling this method)
-template <class Derived> class ConstraintAssignorBase {
-public:
-  using Const = const llvm::APSInt &;
-
-#define DISPATCH(CLASS) return assign##CLASS##Impl(cast<CLASS>(Sym), Constraint)
-
-#define ASSIGN(CLASS, TO, SYM, CONSTRAINT)                                     \
-  if (!static_cast<Derived *>(this)->assign##CLASS##To##TO(SYM, CONSTRAINT))   \
-  return false
-
-  void assign(SymbolRef Sym, RangeSet Constraint) {
-    assignImpl(Sym, Constraint);
-  }
-
-  bool assignImpl(SymbolRef Sym, RangeSet Constraint) {
-    switch (Sym->getKind()) {
-#define SYMBOL(Id, Parent)                                                     \
-  case SymExpr::Id##Kind:                                                      \
-    DISPATCH(Id);
-#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
-    }
-    llvm_unreachable("Unknown SymExpr kind!");
-  }
-
-#define DEFAULT_ASSIGN(Id)                                                     \
-  bool assign##Id##To##RangeSet(const Id *Sym, RangeSet Constraint) {          \
-    return true;                                                               \
-  }                                                                            \
-  bool assign##Id##To##Range(const Id *Sym, Range Constraint) { return true; } \
-  bool assign##Id##To##Const(const Id *Sym, Const Constraint) { return true; }
-
-  // When we dispatch for constraint types, we first try to check
-  // if the new constraint is the constant and try the corresponding
-  // assignor methods.  If it didn't interrupt, we can proceed to the
-  // range, and finally to the range set.
-#define CONSTRAINT_DISPATCH(Id)                                                \
-  if (const llvm::APSInt *Const = Constraint.getConcreteValue()) {             \
-    ASSIGN(Id, Const, Sym, *Const);                                            \
-  }                                                                            \
-  if (Constraint.size() == 1) {                                                \
-    ASSIGN(Id, Range, Sym, *Constraint.begin());                               \
-  }                                                                            \
-  ASSIGN(Id, RangeSet, Sym, Constraint)
-
-  // Our internal assign method first tries to call assignor methods for all
-  // constraint types that apply.  And if not interrupted, continues with its
-  // parent class.
-#define SYMBOL(Id, Parent)                                                     \
-  bool assign##Id##Impl(const Id *Sym, RangeSet Constraint) {                  \
-    CONSTRAINT_DISPATCH(Id);                                                   \
-    DISPATCH(Parent);                                                          \
-  }                                                                            \
-  DEFAULT_ASSIGN(Id)
-#define ABSTRACT_SYMBOL(Id, Parent) SYMBOL(Id, Parent)
-#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
-
-  // Default implementations for the top class that doesn't have parents.
-  bool assignSymExprImpl(const SymExpr *Sym, RangeSet Constraint) {
-    CONSTRAINT_DISPATCH(SymExpr);
-    return true;
-  }
-  DEFAULT_ASSIGN(SymExpr);
-
-#undef DISPATCH
-#undef CONSTRAINT_DISPATCH
-#undef DEFAULT_ASSIGN
-#undef ASSIGN
-};
-
-/// A little component aggregating all of the reasoning we have about
-/// assigning new constraints to symbols.
-///
-/// The main purpose of this class is to associate constraints to symbols,
-/// and impose additional constraints on other symbols, when we can imply
-/// them.
-///
-/// It has a nice symmetry with SymbolicRangeInferrer.  When the latter
-/// can provide more precise ranges by looking into the operands of the
-/// expression in question, ConstraintAssignor looks into the operands
-/// to see if we can imply more from the new constraint.
-class ConstraintAssignor : public ConstraintAssignorBase<ConstraintAssignor> {
-public:
-  template <class ClassOrSymbol>
-  LLVM_NODISCARD static ProgramStateRef
-  assign(ProgramStateRef State, SValBuilder &Builder, RangeSet::Factory &F,
-         ClassOrSymbol CoS, RangeSet NewConstraint) {
-    if (!State || NewConstraint.isEmpty())
-      return nullptr;
-
-    ConstraintAssignor Assignor{State, Builder, F};
-    return Assignor.assign(CoS, NewConstraint);
-  }
-
-  inline bool assignSymExprToConst(const SymExpr *Sym, Const Constraint);
-  inline bool assignSymSymExprToRangeSet(const SymSymExpr *Sym,
-                                         RangeSet Constraint);
-
-private:
-  ConstraintAssignor(ProgramStateRef State, SValBuilder &Builder,
-                     RangeSet::Factory &F)
-      : State(State), Builder(Builder), RangeFactory(F) {}
-  using Base = ConstraintAssignorBase<ConstraintAssignor>;
-
-  /// Base method for handling new constraints for symbols.
-  LLVM_NODISCARD ProgramStateRef assign(SymbolRef Sym, RangeSet NewConstraint) {
-    // All constraints are actually associated with equivalence classes, and
-    // that's what we are going to do first.
-    State = assign(EquivalenceClass::find(State, Sym), NewConstraint);
-    if (!State)
-      return nullptr;
-
-    // And after that we can check what other things we can get from this
-    // constraint.
-    Base::assign(Sym, NewConstraint);
-    return State;
-  }
-
-  /// Base method for handling new constraints for classes.
-  LLVM_NODISCARD ProgramStateRef assign(EquivalenceClass Class,
-                                        RangeSet NewConstraint) {
-    // There is a chance that we might need to update constraints for the
-    // classes that are known to be disequal to Class.
-    //
-    // In order for this to be even possible, the new constraint should
-    // be simply a constant because we can't reason about range disequalities.
-    if (const llvm::APSInt *Point = NewConstraint.getConcreteValue()) {
-
-      ConstraintRangeTy Constraints = State->get<ConstraintRange>();
-      ConstraintRangeTy::Factory &CF = State->get_context<ConstraintRange>();
-
-      // Add new constraint.
-      Constraints = CF.add(Constraints, Class, NewConstraint);
-
-      for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
-        RangeSet UpdatedConstraint = SymbolicRangeInferrer::inferRange(
-            RangeFactory, State, DisequalClass);
-
-        UpdatedConstraint = RangeFactory.deletePoint(UpdatedConstraint, *Point);
-
-        // If we end up with at least one of the disequal classes to be
-        // constrained with an empty range-set, the state is infeasible.
-        if (UpdatedConstraint.isEmpty())
-          return nullptr;
-
-        Constraints = CF.add(Constraints, DisequalClass, UpdatedConstraint);
-      }
-      assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
-                                         "a state with infeasible constraints");
-
-      return setConstraints(State, Constraints);
-    }
-
-    return setConstraint(State, Class, NewConstraint);
-  }
-
-  ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
-                                   SymbolRef RHS) {
-    return EquivalenceClass::markDisequal(RangeFactory, State, LHS, RHS);
-  }
-
-  ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
-                                SymbolRef RHS) {
-    return EquivalenceClass::merge(RangeFactory, State, LHS, RHS);
-  }
-
-  LLVM_NODISCARD Optional<bool> interpreteAsBool(RangeSet Constraint) {
-    assert(!Constraint.isEmpty() && "Empty ranges shouldn't get here");
-
-    if (Constraint.getConcreteValue())
-      return !Constraint.getConcreteValue()->isZero();
-
-    APSIntType T{Constraint.getMinValue()};
-    Const Zero = T.getZeroValue();
-    if (!Constraint.contains(Zero))
-      return true;
-
-    return llvm::None;
-  }
-
-  ProgramStateRef State;
-  SValBuilder &Builder;
-  RangeSet::Factory &RangeFactory;
-};
-
-//===----------------------------------------------------------------------===//
 //                  Constraint manager implementation details
 //===----------------------------------------------------------------------===//
 
@@ -1700,6 +1498,230 @@ private:
                          const llvm::APSInt &Adjustment);
 };
 
+//===----------------------------------------------------------------------===//
+//                         Constraint assignment logic
+//===----------------------------------------------------------------------===//
+
+/// ConstraintAssignorBase is a small utility class that unifies visitor
+/// for ranges with a visitor for constraints (rangeset/range/constant).
+///
+/// It is designed to have one derived class, but generally it can have more.
+/// Derived class can control which types we handle by defining methods of the
+/// following form:
+///
+///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
+///                                       CONSTRAINT Constraint);
+///
+/// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)
+///       CONSTRAINT is the type of constraint (RangeSet/Range/Const)
+///       return value signifies whether we should try other handle methods
+///          (i.e. false would mean to stop right after calling this method)
+template <class Derived> class ConstraintAssignorBase {
+public:
+  using Const = const llvm::APSInt &;
+
+#define DISPATCH(CLASS) return assign##CLASS##Impl(cast<CLASS>(Sym), Constraint)
+
+#define ASSIGN(CLASS, TO, SYM, CONSTRAINT)                                     \
+  if (!static_cast<Derived *>(this)->assign##CLASS##To##TO(SYM, CONSTRAINT))   \
+  return false
+
+  void assign(SymbolRef Sym, RangeSet Constraint) {
+    assignImpl(Sym, Constraint);
+  }
+
+  bool assignImpl(SymbolRef Sym, RangeSet Constraint) {
+    switch (Sym->getKind()) {
+#define SYMBOL(Id, Parent)                                                     \
+  case SymExpr::Id##Kind:                                                      \
+    DISPATCH(Id);
+#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
+    }
+    llvm_unreachable("Unknown SymExpr kind!");
+  }
+
+#define DEFAULT_ASSIGN(Id)                                                     \
+  bool assign##Id##To##RangeSet(const Id *Sym, RangeSet Constraint) {          \
+    return true;                                                               \
+  }                                                                            \
+  bool assign##Id##To##Range(const Id *Sym, Range Constraint) { return true; } \
+  bool assign##Id##To##Const(const Id *Sym, Const Constraint) { return true; }
+
+  // When we dispatch for constraint types, we first try to check
+  // if the new constraint is the constant and try the corresponding
+  // assignor methods.  If it didn't interrupt, we can proceed to the
+  // range, and finally to the range set.
+#define CONSTRAINT_DISPATCH(Id)                                                \
+  if (const llvm::APSInt *Const = Constraint.getConcreteValue()) {             \
+    ASSIGN(Id, Const, Sym, *Const);                                            \
+  }                                                                            \
+  if (Constraint.size() == 1) {                                                \
+    ASSIGN(Id, Range, Sym, *Constraint.begin());                               \
+  }                                                                            \
+  ASSIGN(Id, RangeSet, Sym, Constraint)
+
+  // Our internal assign method first tries to call assignor methods for all
+  // constraint types that apply.  And if not interrupted, continues with its
+  // parent class.
+#define SYMBOL(Id, Parent)                                                     \
+  bool assign##Id##Impl(const Id *Sym, RangeSet Constraint) {                  \
+    CONSTRAINT_DISPATCH(Id);                                                   \
+    DISPATCH(Parent);                                                          \
+  }                                                                            \
+  DEFAULT_ASSIGN(Id)
+#define ABSTRACT_SYMBOL(Id, Parent) SYMBOL(Id, Parent)
+#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
+
+  // Default implementations for the top class that doesn't have parents.
+  bool assignSymExprImpl(const SymExpr *Sym, RangeSet Constraint) {
+    CONSTRAINT_DISPATCH(SymExpr);
+    return true;
+  }
+  DEFAULT_ASSIGN(SymExpr);
+
+#undef DISPATCH
+#undef CONSTRAINT_DISPATCH
+#undef DEFAULT_ASSIGN
+#undef ASSIGN
+};
+
+/// A little component aggregating all of the reasoning we have about
+/// assigning new constraints to symbols.
+///
+/// The main purpose of this class is to associate constraints to symbols,
+/// and impose additional constraints on other symbols, when we can imply
+/// them.
+///
+/// It has a nice symmetry with SymbolicRangeInferrer.  When the latter
+/// can provide more precise ranges by looking into the operands of the
+/// expression in question, ConstraintAssignor looks into the operands
+/// to see if we can imply more from the new constraint.
+class ConstraintAssignor : public ConstraintAssignorBase<ConstraintAssignor> {
+public:
+  template <class ClassOrSymbol>
+  LLVM_NODISCARD static ProgramStateRef
+  assign(ProgramStateRef State, RangeConstraintManager &RCM,
+         SValBuilder &Builder, RangeSet::Factory &F, ClassOrSymbol CoS,
+         RangeSet NewConstraint) {
+    if (!State || NewConstraint.isEmpty())
+      return nullptr;
+
+    ConstraintAssignor Assignor{State, RCM, Builder, F};
+    return Assignor.assign(CoS, NewConstraint);
+  }
+
+  /// Handle expressions like: a % b != 0.
+  template <typename SymT>
+  bool handleRemainderOp(const SymT *Sym, RangeSet Constraint) {
+    if (Sym->getOpcode() != BO_Rem)
+      return true;
+    const SymbolRef LHS = Sym->getLHS();
+    const llvm::APSInt &Zero =
+        Builder.getBasicValueFactory().getValue(0, Sym->getType());
+    // a % b != 0 implies that a != 0.
+    if (!Constraint.containsZero()) {
+      State = RCM.assumeSymNE(State, LHS, Zero, Zero);
+      if (!State)
+        return false;
+    }
+    return true;
+  }
+
+  inline bool assignSymExprToConst(const SymExpr *Sym, Const Constraint);
+  inline bool assignSymIntExprToRangeSet(const SymIntExpr *Sym,
+                                         RangeSet Constraint) {
+    return handleRemainderOp(Sym, Constraint);
+  }
+  inline bool assignSymSymExprToRangeSet(const SymSymExpr *Sym,
+                                         RangeSet Constraint);
+
+private:
+  ConstraintAssignor(ProgramStateRef State, RangeConstraintManager &RCM,
+                     SValBuilder &Builder, RangeSet::Factory &F)
+      : State(State), RCM(RCM), Builder(Builder), RangeFactory(F) {}
+  using Base = ConstraintAssignorBase<ConstraintAssignor>;
+
+  /// Base method for handling new constraints for symbols.
+  LLVM_NODISCARD ProgramStateRef assign(SymbolRef Sym, RangeSet NewConstraint) {
+    // All constraints are actually associated with equivalence classes, and
+    // that's what we are going to do first.
+    State = assign(EquivalenceClass::find(State, Sym), NewConstraint);
+    if (!State)
+      return nullptr;
+
+    // And after that we can check what other things we can get from this
+    // constraint.
+    Base::assign(Sym, NewConstraint);
+    return State;
+  }
+
+  /// Base method for handling new constraints for classes.
+  LLVM_NODISCARD ProgramStateRef assign(EquivalenceClass Class,
+                                        RangeSet NewConstraint) {
+    // There is a chance that we might need to update constraints for the
+    // classes that are known to be disequal to Class.
+    //
+    // In order for this to be even possible, the new constraint should
+    // be simply a constant because we can't reason about range disequalities.
+    if (const llvm::APSInt *Point = NewConstraint.getConcreteValue()) {
+
+      ConstraintRangeTy Constraints = State->get<ConstraintRange>();
+      ConstraintRangeTy::Factory &CF = State->get_context<ConstraintRange>();
+
+      // Add new constraint.
+      Constraints = CF.add(Constraints, Class, NewConstraint);
+
+      for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
+        RangeSet UpdatedConstraint = SymbolicRangeInferrer::inferRange(
+            RangeFactory, State, DisequalClass);
+
+        UpdatedConstraint = RangeFactory.deletePoint(UpdatedConstraint, *Point);
+
+        // If we end up with at least one of the disequal classes to be
+        // constrained with an empty range-set, the state is infeasible.
+        if (UpdatedConstraint.isEmpty())
+          return nullptr;
+
+        Constraints = CF.add(Constraints, DisequalClass, UpdatedConstraint);
+      }
+      assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                         "a state with infeasible constraints");
+
+      return setConstraints(State, Constraints);
+    }
+
+    return setConstraint(State, Class, NewConstraint);
+  }
+
+  ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
+                                   SymbolRef RHS) {
+    return EquivalenceClass::markDisequal(RangeFactory, State, LHS, RHS);
+  }
+
+  ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
+                                SymbolRef RHS) {
+    return EquivalenceClass::merge(RangeFactory, State, LHS, RHS);
+  }
+
+  LLVM_NODISCARD Optional<bool> interpreteAsBool(RangeSet Constraint) {
+    assert(!Constraint.isEmpty() && "Empty ranges shouldn't get here");
+
+    if (Constraint.getConcreteValue())
+      return !Constraint.getConcreteValue()->isZero();
+
+    if (!Constraint.containsZero())
+      return true;
+
+    return llvm::None;
+  }
+
+  ProgramStateRef State;
+  RangeConstraintManager &RCM;
+  SValBuilder &Builder;
+  RangeSet::Factory &RangeFactory;
+};
+
+
 bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
                                               const llvm::APSInt &Constraint) {
   llvm::SmallSet<EquivalenceClass, 4> SimplifiedClasses;
@@ -1731,6 +1753,9 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
 
 bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
                                                     RangeSet Constraint) {
+  if (!handleRemainderOp(Sym, Constraint))
+    return false;
+
   Optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
 
   if (!ConstraintAsBool)
@@ -2419,7 +2444,8 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
 ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
                                                  SymbolRef Sym,
                                                  RangeSet Range) {
-  return ConstraintAssignor::assign(State, getSValBuilder(), F, Sym, Range);
+  return ConstraintAssignor::assign(State, *this, getSValBuilder(), F, Sym,
+                                    Range);
 }
 
 //===------------------------------------------------------------------------===

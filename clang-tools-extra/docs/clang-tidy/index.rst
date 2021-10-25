@@ -91,7 +91,7 @@ Name prefix            Description
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by :program:`clang-tidy` and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect
-compilation arguments, so it can not turn on Clang warnings which are not
+compilation arguments, so it cannot turn on Clang warnings which are not
 already turned on in build configuration. The ``-warnings-as-errors=`` option
 upgrades any warnings emitted under the ``-checks=`` flag to errors (but it
 does not enable any checks itself).
@@ -173,11 +173,11 @@ An overview of all the command-line options:
                                      errors were found. If compiler errors have
                                      attached fix-its, clang-tidy will apply them as
                                      well.
-    --fix-notes                    - 
-                                     If a warning has no fix, but a single fix can 
-                                     be found through an associated diagnostic note, 
-                                     apply the fix. 
-                                     Specifying this flag will implicitly enable the 
+    --fix-notes                    -
+                                     If a warning has no fix, but a single fix can
+                                     be found through an associated diagnostic note,
+                                     apply the fix.
+                                     Specifying this flag will implicitly enable the
                                      '--fix' flag.
     --format-style=<string>        -
                                      Style for formatting code around applied fixes:
@@ -281,10 +281,10 @@ Suppressing Undesired Diagnostics
 =================================
 
 :program:`clang-tidy` diagnostics are intended to call out code that does not
-adhere to a coding standard, or is otherwise problematic in some way.  However,
+adhere to a coding standard, or is otherwise problematic in some way. However,
 if the code is known to be correct, it may be useful to silence the warning.
 Some clang-tidy checks provide a check-specific way to silence the diagnostics,
-e.g.  `bugprone-use-after-move <checks/bugprone-use-after-move.html>`_ can be
+e.g. `bugprone-use-after-move <checks/bugprone-use-after-move.html>`_ can be
 silenced by re-initializing the variable after it has been moved out,
 `bugprone-string-integer-assignment
 <checks/bugprone-string-integer-assignment.html>`_ can be suppressed by
@@ -308,7 +308,9 @@ clang-tidy warnings on *multiple lines* (affecting all lines between the two
 comments).
 
 All comments can be followed by an optional list of check names in parentheses
-(see below for the formal syntax).
+(see below for the formal syntax). The list of check names supports globbing,
+with the same format and semantics as for enabling checks. Note: negative globs
+are ignored here, as they would effectively re-activate the warning.
 
 For example:
 
@@ -324,15 +326,39 @@ For example:
     // Silence only the specified checks for the line
     Foo(double param); // NOLINT(google-explicit-constructor, google-runtime-int)
 
+    // Silence all checks from the `google` module
+    Foo(bool param); // NOLINT(google*)
+
+    // Silence all checks ending with `-avoid-c-arrays`
+    int array[10]; // NOLINT(*-avoid-c-arrays)
+
     // Silence only the specified diagnostics for the next line
     // NOLINTNEXTLINE(google-explicit-constructor, google-runtime-int)
     Foo(bool param);
+
+    // Silence all checks from the `google` module for the next line
+    // NOLINTNEXTLINE(google*)
+    Foo(bool param);
+
+    // Silence all checks ending with `-avoid-c-arrays` for the next line
+    // NOLINTNEXTLINE(*-avoid-c-arrays)
+    int array[10];
 
     // Silence only the specified checks for all lines between the BEGIN and END
     // NOLINTBEGIN(google-explicit-constructor, google-runtime-int)
     Foo(short param);
     Foo(long param);
     // NOLINTEND(google-explicit-constructor, google-runtime-int)
+
+    // Silence all checks from the `google` module for all lines between the BEGIN and END
+    // NOLINTBEGIN(google*)
+    Foo(bool param);
+    // NOLINTEND(google*)
+
+    // Silence all checks ending with `-avoid-c-arrays` for all lines between the BEGIN and END
+    // NOLINTBEGIN(*-avoid-c-arrays)
+    int array[10];
+    // NOLINTEND(*-avoid-c-arrays)
   };
 
 The formal syntax of ``NOLINT``, ``NOLINTNEXTLINE``, and ``NOLINTBEGIN`` ...

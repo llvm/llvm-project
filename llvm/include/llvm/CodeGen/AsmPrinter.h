@@ -41,7 +41,6 @@ class DIEAbbrev;
 class DwarfDebug;
 class GCMetadataPrinter;
 class GCStrategy;
-class GlobalIndirectSymbol;
 class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
@@ -795,8 +794,8 @@ private:
   void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
-  /// Emit GlobalAlias or GlobalIFunc.
-  void emitGlobalIndirectSymbol(Module &M, const GlobalIndirectSymbol &GIS);
+  void emitGlobalAlias(Module &M, const GlobalAlias &GA);
+  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;

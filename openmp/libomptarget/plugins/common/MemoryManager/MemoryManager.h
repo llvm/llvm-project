@@ -34,7 +34,7 @@ public:
   virtual void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
-  virtual int alloc_free(void *TgtPtr) = 0;
+  virtual int free(void *TgtPtr) = 0;
 };
 
 /// Class of memory manager. The memory manager is per-device by using
@@ -137,7 +137,7 @@ class MemoryManagerTy {
   }
 
   /// Deallocate data on device
-  int deleteOnDevice(void *Ptr) const { return DeviceAllocator.alloc_free(Ptr); }
+  int deleteOnDevice(void *Ptr) const { return DeviceAllocator.free(Ptr); }
 
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the

@@ -171,7 +171,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
 
   SmallSet<NodeId,32> Defs;
 
-  // Remove all non-phi defs that are not aliased to RefRR, and segregate
+  // Remove all non-phi defs that are not aliased to RefRR, and separate
   // the the remaining defs into buckets for containing blocks.
   std::map<NodeId, NodeAddr<InstrNode*>> Owners;
   std::map<MachineBasicBlock*, SmallVector<NodeId,32>> Blocks;

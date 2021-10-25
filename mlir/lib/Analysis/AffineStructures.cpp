@@ -448,15 +448,44 @@ bool FlatAffineValueConstraints::areIdsAlignedWithOther(
   return areIdsAligned(*this, other);
 }
 
-/// Checks if the SSA values associated with `cst`'s identifiers are unique.
-static bool LLVM_ATTRIBUTE_UNUSED
-areIdsUnique(const FlatAffineValueConstraints &cst) {
+/// Checks if the SSA values associated with `cst`'s identifiers in range
+/// [start, end) are unique.
+static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
+    const FlatAffineValueConstraints &cst, unsigned start, unsigned end) {
+
+  assert(start <= cst.getNumIds() && "Start position out of bounds");
+  assert(end <= cst.getNumIds() && "End position out of bounds");
+
+  if (start >= end)
+    return true;
+
   SmallPtrSet<Value, 8> uniqueIds;
-  for (auto val : cst.getMaybeValues()) {
+  ArrayRef<Optional<Value>> maybeValues = cst.getMaybeValues();
+  for (Optional<Value> val : maybeValues) {
     if (val.hasValue() && !uniqueIds.insert(val.getValue()).second)
       return false;
   }
   return true;
+}
+
+/// Checks if the SSA values associated with `cst`'s identifiers are unique.
+static bool LLVM_ATTRIBUTE_UNUSED
+areIdsUnique(const FlatAffineConstraints &cst) {
+  return areIdsUnique(cst, 0, cst.getNumIds());
+}
+
+/// Checks if the SSA values associated with `cst`'s identifiers of kind `kind`
+/// are unique.
+static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
+    const FlatAffineValueConstraints &cst, FlatAffineConstraints::IdKind kind) {
+
+  if (kind == FlatAffineConstraints::IdKind::Dimension)
+    return areIdsUnique(cst, 0, cst.getNumDimIds());
+  if (kind == FlatAffineConstraints::IdKind::Symbol)
+    return areIdsUnique(cst, cst.getNumDimIds(), cst.getNumDimAndSymbolIds());
+  if (kind == FlatAffineConstraints::IdKind::Local)
+    return areIdsUnique(cst, cst.getNumDimAndSymbolIds(), cst.getNumIds());
+  llvm_unreachable("Unexpected IdKind");
 }
 
 /// Merge and align the identifiers of A and B starting at 'offset', so that
@@ -592,10 +621,15 @@ static void turnSymbolIntoDim(FlatAffineValueConstraints *cst, Value id) {
 }
 
 /// Merge and align symbols of `this` and `other` such that both get union of
-/// of symbols that are unique. Symbols with Value as `None` are considered
-/// to be inequal to all other symbols.
+/// of symbols that are unique. Symbols in `this` and `other` should be
+/// unique. Symbols with Value as `None` are considered to be inequal to all
+/// other symbols.
 void FlatAffineValueConstraints::mergeSymbolIds(
     FlatAffineValueConstraints &other) {
+
+  assert(areIdsUnique(*this, IdKind::Symbol) && "Symbol ids are not unique");
+  assert(areIdsUnique(other, IdKind::Symbol) && "Symbol ids are not unique");
+
   SmallVector<Value, 4> aSymValues;
   getValues(getNumDimIds(), getNumDimAndSymbolIds(), &aSymValues);
 
@@ -606,7 +640,7 @@ void FlatAffineValueConstraints::mergeSymbolIds(
     // If the id is a symbol in `other`, then align it, otherwise assume that
     // it is a new symbol
     if (other.findId(aSymValue, &loc) && loc >= other.getNumDimIds() &&
-        loc < getNumDimAndSymbolIds())
+        loc < other.getNumDimAndSymbolIds())
       other.swapId(s, loc);
     else
       other.insertSymbolId(s - other.getNumDimIds(), aSymValue);
@@ -621,6 +655,8 @@ void FlatAffineValueConstraints::mergeSymbolIds(
 
   assert(getNumSymbolIds() == other.getNumSymbolIds() &&
          "expected same number of symbols");
+  assert(areIdsUnique(*this, IdKind::Symbol) && "Symbol ids are not unique");
+  assert(areIdsUnique(other, IdKind::Symbol) && "Symbol ids are not unique");
 }
 
 // Changes all symbol identifiers which are loop IVs to dim identifiers.

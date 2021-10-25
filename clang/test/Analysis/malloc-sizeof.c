@@ -49,6 +49,6 @@ int *mallocArraySize() {
 
 int *mallocWrongArraySize() {
   static const double sTable[10];
-  int *table = malloc(sizeof sTable); // expected-warning {{Result of 'malloc' is converted to a pointer of type 'int', which is incompatible with sizeof operand type 'const double [10]'}}
+  int *table = malloc(sizeof sTable); // expected-warning {{Result of 'malloc' is converted to a pointer of type 'int', which is incompatible with sizeof operand type 'const double[10]'}}
   return table;
 }

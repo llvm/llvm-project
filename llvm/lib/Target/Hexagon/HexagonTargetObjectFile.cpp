@@ -90,9 +90,8 @@ static bool isSmallDataSection(StringRef Sec) {
     return true;
   // If either ".sdata." or ".sbss." is a substring of the section name
   // then put the symbol in small data.
-  return Sec.find(".sdata.") != StringRef::npos ||
-         Sec.find(".sbss.") != StringRef::npos ||
-         Sec.find(".scommon.") != StringRef::npos;
+  return Sec.contains(".sdata.") || Sec.contains(".sbss.") ||
+         Sec.contains(".scommon.");
 }
 
 static const char *getSectionSuffixForSize(unsigned Size) {
@@ -178,10 +177,10 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
 
   if (GO->hasSection()) {
     StringRef Section = GO->getSection();
-    if (Section.find(".access.text.group") != StringRef::npos)
+    if (Section.contains(".access.text.group"))
       return getContext().getELFSection(GO->getSection(), ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-    if (Section.find(".access.data.group") != StringRef::npos)
+    if (Section.contains(".access.data.group"))
       return getContext().getELFSection(GO->getSection(), ELF::SHT_PROGBITS,
                                         ELF::SHF_WRITE | ELF::SHF_ALLOC);
   }

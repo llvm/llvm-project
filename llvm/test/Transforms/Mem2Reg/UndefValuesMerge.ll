@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -S | not grep phi
+; RUN: opt < %s -passes=mem2reg -S | not grep phi
 
 define i32 @testfunc(i1 %C, i32 %i, i8 %j) {
 	%I = alloca i32		; <i32*> [#uses=2]

@@ -430,8 +430,8 @@ TEST(HasTypeLoc, MatchesClassTemplateSpecializationDecl) {
 
 TEST(HasTypeLoc, MatchesCompoundLiteralExpr) {
   EXPECT_TRUE(
-      matches("int* x = (int [2]) { 0, 1 };",
-              compoundLiteralExpr(hasTypeLoc(loc(asString("int [2]"))))));
+      matches("int* x = (int[2]) { 0, 1 };",
+              compoundLiteralExpr(hasTypeLoc(loc(asString("int[2]"))))));
 }
 
 TEST(HasTypeLoc, MatchesDeclaratorDecl) {

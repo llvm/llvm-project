@@ -8,7 +8,7 @@ widened, and suggests (with fix-it) to either silence the code by making
 widening explicit, or to perform the multiplication in a wider type,
 to avoid the widening afterwards.
 
-This is mainly useful when operating on a very large buffers.
+This is mainly useful when operating on very large buffers.
 For example, consider:
 
 .. code-block:: c++
@@ -22,7 +22,7 @@ For example, consider:
     }
   }
 
-This is fine in general, but iff ``width * height`` overflows,
+This is fine in general, but if ``width * height`` overflows,
 you end up wrapping back to the beginning of ``base``
 instead of processing the entire requested buffer.
 

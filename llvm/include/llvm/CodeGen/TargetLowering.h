@@ -2195,8 +2195,7 @@ protected:
   /// Indicate that the specified operation does not work with the specified
   /// type and indicate what to do about it. Note that VT may refer to either
   /// the type of a result or that of an operand of Op.
-  void setOperationAction(unsigned Op, MVT VT,
-                          LegalizeAction Action) {
+  void setOperationAction(unsigned Op, MVT VT, LegalizeAction Action) {
     assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
     OpActions[(unsigned)VT.SimpleTy][Op] = Action;
   }
@@ -2215,8 +2214,7 @@ protected:
 
   /// Indicate that the specified truncating store does not work with the
   /// specified type and indicate what to do about it.
-  void setTruncStoreAction(MVT ValVT, MVT MemVT,
-                           LegalizeAction Action) {
+  void setTruncStoreAction(MVT ValVT, MVT MemVT, LegalizeAction Action) {
     assert(ValVT.isValid() && MemVT.isValid() && "Table isn't big enough!");
     TruncStoreActions[(unsigned)ValVT.SimpleTy][MemVT.SimpleTy] = Action;
   }
@@ -3831,7 +3829,7 @@ public:
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
       NoMerge = Call.hasFnAttr(Attribute::NoMerge);
-      
+
       Callee = Target;
 
       CallConv = Call.getCallingConv();
@@ -4448,33 +4446,29 @@ public:
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandCTPOP(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTPOP(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTLZ/CTLZ_ZERO_UNDEF nodes. Expands vector/scalar CTLZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandCTLZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTTZ/CTTZ_ZERO_UNDEF nodes. Expands vector/scalar CTTZ nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandCTTZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// (ABS x) -> (XOR (ADD x, (SRA x, type_size)), (SRA x, type_size))
   /// \param N Node to expand
-  /// \param Result output after conversion
   /// \param IsNegative indicate negated abs
-  /// \returns True, if the expansion was successful, false otherwise
-  bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG,
-                 bool IsNegative = false) const;
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandABS(SDNode *N, SelectionDAG &DAG,
+                    bool IsNegative = false) const;
 
   /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
   /// scalar types. Returns SDValue() if expand fails.

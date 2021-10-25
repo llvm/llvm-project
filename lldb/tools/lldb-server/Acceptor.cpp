@@ -84,7 +84,7 @@ std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
   error.Clear();
 
   Socket::SocketProtocol socket_protocol = Socket::ProtocolUnixDomain;
-  int port;
+  llvm::Optional<uint16_t> port;
   StringRef scheme, host, path;
   // Try to match socket name as URL - e.g., tcp://localhost:5555
   if (UriParser::Parse(name, scheme, host, port, path)) {

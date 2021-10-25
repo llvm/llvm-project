@@ -1349,6 +1349,7 @@ public:
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:
     case TargetOpcode::PSEUDO_PROBE:
+    case TargetOpcode::ARITH_FENCE:
       return true;
     }
   }

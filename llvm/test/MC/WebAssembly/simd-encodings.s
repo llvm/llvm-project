@@ -803,4 +803,19 @@ main:
     # CHECK: i64x2.laneselect # encoding: [0xfd,0xd3,0x01]
     i64x2.laneselect
 
+    # CHECK: i8x16.relaxed_swizzle # encoding: [0xfd,0xa2,0x01]
+    i8x16.relaxed_swizzle
+
+    # CHECK: f32x4.relaxed_min # encoding: [0xfd,0xb4,0x01]
+    f32x4.relaxed_min
+
+    # CHECK: f32x4.relaxed_max # encoding: [0xfd,0xe2,0x01]
+    f32x4.relaxed_max
+
+    # CHECK: f64x2.relaxed_min # encoding: [0xfd,0xd4,0x01]
+    f64x2.relaxed_min
+
+    # CHECK: f64x2.relaxed_max # encoding: [0xfd,0xee,0x01]
+    f64x2.relaxed_max
+
     end_function

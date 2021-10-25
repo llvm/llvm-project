@@ -25,7 +25,7 @@ In a real use case size means a container's size which depends on the user input
     for (short i = 0; i < items.size(); ++i) {}
   }
 
-This algorithm works for small amount of objects, but will lead to freeze for a
+This algorithm works for a small amount of objects, but will lead to freeze for
 a larger user input.
 
 .. option:: MagnitudeBitsUpperLimit

@@ -468,6 +468,8 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
 void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
 
+  InitializeFirstCodeAddress();
+
   if (!GetGlobalPluginProperties().IgnoreFileIndexes()) {
     StreamString module_desc;
     GetObjectFile()->GetModule()->GetDescription(module_desc.AsRawOstream(),
@@ -510,6 +512,25 @@ void SymbolFileDWARF::InitializeObject() {
 
   m_index =
       std::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(), *this);
+}
+
+void SymbolFileDWARF::InitializeFirstCodeAddress() {
+  InitializeFirstCodeAddressRecursive(
+      *m_objfile_sp->GetModule()->GetSectionList());
+  if (m_first_code_address == LLDB_INVALID_ADDRESS)
+    m_first_code_address = 0;
+}
+
+void SymbolFileDWARF::InitializeFirstCodeAddressRecursive(
+    const lldb_private::SectionList &section_list) {
+  for (SectionSP section_sp : section_list) {
+    if (section_sp->GetChildren().GetSize() > 0) {
+      InitializeFirstCodeAddressRecursive(section_sp->GetChildren());
+    } else if (section_sp->GetType() == eSectionTypeCode) {
+      m_first_code_address =
+          std::min(m_first_code_address, section_sp->GetFileAddress());
+    }
+  }
 }
 
 bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
@@ -1111,6 +1132,12 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // The Sequences view contains only valid line sequences. Don't iterate over
   // the Rows directly.
   for (const llvm::DWARFDebugLine::Sequence &seq : line_table->Sequences) {
+    // Ignore line sequences that do not start after the first code address.
+    // All addresses generated in a sequence are incremental so we only need
+    // to check the first one of the sequence. Check the comment at the
+    // m_first_code_address declaration for more details on this.
+    if (seq.LowPC < m_first_code_address)
+      continue;
     std::unique_ptr<LineSequence> sequence =
         LineTable::CreateLineSequenceContainer();
     for (unsigned idx = seq.FirstRowIndex; idx < seq.LastRowIndex; ++idx) {
@@ -2236,12 +2263,9 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
       addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
-
-    if (auto section_sp = addr.GetSection()) {
-      if (section_sp->GetPermissions() & ePermissionsExecutable) {
-        sc_list.Append(sc);
-        return true;
-      }
+    if (addr.IsValid() && addr.GetFileAddress() >= m_first_code_address) {
+      sc_list.Append(sc);
+      return true;
     }
   }
 
@@ -3068,7 +3092,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         sc.comp_unit->SetVariableList(variables);
 
         m_index->GetGlobalVariables(*dwarf_cu, [&](DWARFDIE die) {
-          VariableSP var_sp(ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
+          VariableSP var_sp(ParseVariableDIECached(sc, die));
           if (var_sp) {
             variables->AddVariableIfUnique(var_sp);
             ++vars_added;
@@ -3082,6 +3106,26 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
   return 0;
 }
 
+VariableSP SymbolFileDWARF::ParseVariableDIECached(const SymbolContext &sc,
+                                                   const DWARFDIE &die) {
+  if (!die)
+    return nullptr;
+
+  DIEToVariableSP &die_to_variable = die.GetDWARF()->GetDIEToVariable();
+
+  VariableSP var_sp = die_to_variable[die.GetDIE()];
+  if (var_sp)
+    return var_sp;
+
+  var_sp = ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS);
+  if (var_sp) {
+    die_to_variable[die.GetDIE()] = var_sp;
+    if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification))
+      die_to_variable[spec_die.GetDIE()] = var_sp;
+  }
+  return var_sp;
+}
+
 VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                              const DWARFDIE &die,
                                              const lldb::addr_t func_low_pc) {
@@ -3090,9 +3134,6 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
   if (!die)
     return nullptr;
-
-  if (VariableSP var_sp = GetDIEToVariable()[die.GetDIE()])
-    return var_sp; // Already been parsed!
 
   const dw_tag_t tag = die.Tag();
   ModuleSP module = GetObjectFile()->GetModule();
@@ -3103,8 +3144,6 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
   DWARFAttributes attributes;
   const size_t num_attributes = die.GetAttributes(attributes);
-  DWARFDIE spec_die;
-  VariableSP var_sp;
   const char *name = nullptr;
   const char *mangled = nullptr;
   Declaration decl;
@@ -3151,9 +3190,6 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_location:
       location_form = form_value;
       break;
-    case DW_AT_specification:
-      spec_die = form_value.Reference();
-      break;
     case DW_AT_start_scope:
       // TODO: Implement this.
       break;
@@ -3164,6 +3200,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_description:
     case DW_AT_endianity:
     case DW_AT_segment:
+    case DW_AT_specification:
     case DW_AT_visibility:
     default:
     case DW_AT_abstract_origin:
@@ -3356,7 +3393,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             location.Update_DW_OP_addr(exe_file_addr);
           } else {
             // Variable didn't make it into the final executable
-            return var_sp;
+            return nullptr;
           }
         }
       }
@@ -3402,35 +3439,25 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     }
   }
 
-  if (symbol_context_scope) {
-    auto type_sp = std::make_shared<SymbolFileType>(
-        *this, GetUID(type_die_form.Reference()));
-
-    if (use_type_size_for_value && type_sp->GetType())
-      location.UpdateValue(
-          const_value_form.Unsigned(),
-          type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
-          die.GetCU()->GetAddressByteSize());
-
-    var_sp = std::make_shared<Variable>(
-        die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
-        scope_ranges, &decl, location, is_external, is_artificial,
-        location_is_const_value_data, is_static_member);
-  } else {
+  if (!symbol_context_scope) {
     // Not ready to parse this variable yet. It might be a global or static
     // variable that is in a function scope and the function in the symbol
     // context wasn't filled in yet
-    return var_sp;
+    return nullptr;
   }
-  // Cache var_sp even if NULL (the variable was just a specification or was
-  // missing vital information to be able to be displayed in the debugger
-  // (missing location due to optimization, etc)) so we don't re-parse this
-  // DIE over and over later...
-  GetDIEToVariable()[die.GetDIE()] = var_sp;
-  if (spec_die)
-    GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
 
-  return var_sp;
+  auto type_sp = std::make_shared<SymbolFileType>(
+      *this, GetUID(type_die_form.Reference()));
+
+  if (use_type_size_for_value && type_sp->GetType())
+    location.UpdateValue(const_value_form.Unsigned(),
+                         type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
+                         die.GetCU()->GetAddressByteSize());
+
+  return std::make_shared<Variable>(
+      die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
+      scope_ranges, &decl, location, is_external, is_artificial,
+      location_is_const_value_data, is_static_member);
 }
 
 DWARFDIE
@@ -3494,7 +3521,9 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
     return;
   }
 
-  // We haven't already parsed it, lets do that now.
+  // We haven't parsed the variable yet, lets do that now. Also, let us include
+  // the variable in the relevant compilation unit's variable list, if it
+  // exists.
   VariableListSP variable_list_sp;
   DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
   dw_tag_t parent_tag = sc_parent_die.Tag();
@@ -3521,7 +3550,7 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
     return;
   }
 
-  var_sp = ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS);
+  var_sp = ParseVariableDIECached(sc, die);
   if (!var_sp)
     return;
 
@@ -3530,32 +3559,109 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
     variable_list_sp->AddVariableIfUnique(var_sp);
 }
 
+DIEArray
+SymbolFileDWARF::MergeBlockAbstractParameters(const DWARFDIE &block_die,
+                                              DIEArray &&variable_dies) {
+  // DW_TAG_inline_subroutine objects may omit DW_TAG_formal_parameter in
+  // instances of the function when they are unused (i.e., the parameter's
+  // location list would be empty). The current DW_TAG_inline_subroutine may
+  // refer to another DW_TAG_subprogram that might actually have the definitions
+  // of the parameters and we need to include these so they show up in the
+  // variables for this function (for example, in a stack trace). Let us try to
+  // find the abstract subprogram that might contain the parameter definitions
+  // and merge with the concrete parameters.
+
+  // Nothing to merge if the block is not an inlined function.
+  if (block_die.Tag() != DW_TAG_inlined_subroutine) {
+    return std::move(variable_dies);
+  }
+
+  // Nothing to merge if the block does not have abstract parameters.
+  DWARFDIE abs_die = block_die.GetReferencedDIE(DW_AT_abstract_origin);
+  if (!abs_die || abs_die.Tag() != DW_TAG_subprogram ||
+      !abs_die.HasChildren()) {
+    return std::move(variable_dies);
+  }
+
+  // For each abstract parameter, if we have its concrete counterpart, insert
+  // it. Otherwise, insert the abstract parameter.
+  DIEArray::iterator concrete_it = variable_dies.begin();
+  DWARFDIE abstract_child = abs_die.GetFirstChild();
+  DIEArray merged;
+  bool did_merge_abstract = false;
+  for (; abstract_child; abstract_child = abstract_child.GetSibling()) {
+    if (abstract_child.Tag() == DW_TAG_formal_parameter) {
+      if (concrete_it == variable_dies.end() ||
+          GetDIE(*concrete_it).Tag() != DW_TAG_formal_parameter) {
+        // We arrived at the end of the concrete parameter list, so all
+        // the remaining abstract parameters must have been omitted.
+        // Let us insert them to the merged list here.
+        merged.push_back(*abstract_child.GetDIERef());
+        did_merge_abstract = true;
+        continue;
+      }
+
+      DWARFDIE origin_of_concrete =
+          GetDIE(*concrete_it).GetReferencedDIE(DW_AT_abstract_origin);
+      if (origin_of_concrete == abstract_child) {
+        // The current abstract paramater is the origin of the current
+        // concrete parameter, just push the concrete parameter.
+        merged.push_back(*concrete_it);
+        ++concrete_it;
+      } else {
+        // Otherwise, the parameter must have been omitted from the concrete
+        // function, so insert the abstract one.
+        merged.push_back(*abstract_child.GetDIERef());
+        did_merge_abstract = true;
+      }
+    }
+  }
+
+  // Shortcut if no merging happened.
+  if (!did_merge_abstract)
+    return std::move(variable_dies);
+
+  // We inserted all the abstract parameters (or their concrete counterparts).
+  // Let us insert all the remaining concrete variables to the merged list.
+  // During the insertion, let us check there are no remaining concrete
+  // formal parameters. If that's the case, then just bailout from the merge -
+  // the variable list is malformed.
+  for (; concrete_it != variable_dies.end(); ++concrete_it) {
+    if (GetDIE(*concrete_it).Tag() == DW_TAG_formal_parameter) {
+      return std::move(variable_dies);
+    }
+    merged.push_back(*concrete_it);
+  }
+  return merged;
+}
+
 size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
     const SymbolContext &sc, const DWARFDIE &die,
     const lldb::addr_t func_low_pc) {
   if (!die || !sc.function)
     return 0;
 
-  VariableList empty_variable_list;
-  // Since |die| corresponds to a Block instance, the recursive call will get
-  // a variable list from the block. |empty_variable_list| should remain empty.
+  DIEArray dummy_block_variables; // The recursive call should not add anything
+                                  // to this vector because |die| should be a
+                                  // subprogram, so all variables will be added
+                                  // to the subprogram's list.
   return ParseVariablesInFunctionContextRecursive(sc, die, func_low_pc,
-                                                  empty_variable_list);
+                                                  dummy_block_variables);
 }
 
+// This method parses all the variables in the blocks in the subtree of |die|,
+// and inserts them to the variable list for all the nested blocks.
+// The uninserted variables for the current block are accumulated in
+// |accumulator|.
 size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
     const lldb_private::SymbolContext &sc, const DWARFDIE &die,
-    const lldb::addr_t func_low_pc, VariableList &variable_list) {
+    lldb::addr_t func_low_pc, DIEArray &accumulator) {
   size_t vars_added = 0;
   dw_tag_t tag = die.Tag();
 
   if ((tag == DW_TAG_variable) || (tag == DW_TAG_constant) ||
       (tag == DW_TAG_formal_parameter)) {
-    VariableSP var_sp(ParseVariableDIE(sc, die, func_low_pc));
-    if (var_sp) {
-      variable_list.AddVariableIfUnique(var_sp);
-      ++vars_added;
-    }
+    accumulator.push_back(*die.GetDIERef());
   }
 
   switch (tag) {
@@ -3587,27 +3693,43 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
       block_variable_list_sp = std::make_shared<VariableList>();
       block->SetVariableList(block_variable_list_sp);
     }
+
+    DIEArray block_variables;
     for (DWARFDIE child = die.GetFirstChild(); child;
          child = child.GetSibling()) {
       vars_added += ParseVariablesInFunctionContextRecursive(
-          sc, child, func_low_pc, *block_variable_list_sp);
+          sc, child, func_low_pc, block_variables);
     }
-
+    block_variables =
+        MergeBlockAbstractParameters(die, std::move(block_variables));
+    vars_added += PopulateBlockVariableList(*block_variable_list_sp, sc,
+                                            block_variables, func_low_pc);
     break;
   }
 
   default:
-    // Recurse to children with the same variable list.
+    // Recurse to children with the same variable accumulator.
     for (DWARFDIE child = die.GetFirstChild(); child;
          child = child.GetSibling()) {
       vars_added += ParseVariablesInFunctionContextRecursive(
-          sc, child, func_low_pc, variable_list);
+          sc, child, func_low_pc, accumulator);
     }
-
     break;
   }
 
   return vars_added;
+}
+
+size_t SymbolFileDWARF::PopulateBlockVariableList(
+    VariableList &variable_list, const lldb_private::SymbolContext &sc,
+    llvm::ArrayRef<DIERef> variable_dies, lldb::addr_t func_low_pc) {
+  // Parse the variable DIEs and insert them to the list.
+  for (auto &die : variable_dies) {
+    if (VariableSP var_sp = ParseVariableDIE(sc, GetDIE(die), func_low_pc)) {
+      variable_list.AddVariableIfUnique(var_sp);
+    }
+  }
+  return variable_dies.size();
 }
 
 /// Collect call site parameters in a DW_TAG_call_site DIE.

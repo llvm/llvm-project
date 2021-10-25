@@ -87,7 +87,7 @@ class CppBitfieldsTestCase(TestBase):
             "frame variable --show-types lbd",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=[
-                '(char [3]) arr = "ab"',
+                '(char[3]) arr = "ab"',
                 '(int:32)  =',
                 '(unsigned int:20) a = 5',
                 ])

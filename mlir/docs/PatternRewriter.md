@@ -342,6 +342,39 @@ match larger patterns with ambiguous pattern sets.
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
 [pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
 
+### Debugging
+
+To debug the execution of the greedy pattern rewrite driver,
+`-debug-only=greedy-rewriter` may be used. This command line flag activates
+LLVM's debug logging infrastructure solely for the greedy pattern rewriter. The
+output is formatted as a tree structure, mirroring the structure of the pattern
+application process. This output contains all of the actions performed by the
+rewriter, how operations get processed and patterns are applied, and why they
+fail.
+
+Example output is shown below:
+
+```
+//===-------------------------------------------===//
+Processing operation : 'std.cond_br'(0x60f000001120) {
+  "std.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = dense<[1, 0, 0]> : vector<3xi32>} : (i1) -> ()
+
+  * Pattern SimplifyConstCondBranchPred : 'std.cond_br -> ()' {
+  } -> failure : pattern failed to match
+
+  * Pattern SimplifyCondBranchIdenticalSuccessors : 'std.cond_br -> ()' {
+    ** Insert  : 'std.br'(0x60b000003690)
+    ** Replace : 'std.cond_br'(0x60f000001120)
+  } -> success : pattern applied successfully
+} -> success : pattern matched
+//===-------------------------------------------===//
+```
+
+This output is describing the processing of a `std.cond_br` operation. We first
+try to apply the `SimplifyConstCondBranchPred`, which fails. From there, another
+pattern (`SimplifyCondBranchIdenticalSuccessors`) is applied that matches the
+`std.cond_br` and replaces it with a `std.br`.
+
 ## Debugging
 
 ### Pattern Filtering

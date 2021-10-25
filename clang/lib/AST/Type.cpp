@@ -821,6 +821,13 @@ QualType ObjCObjectType::stripObjCKindOfTypeAndQuals(
                                /*isKindOf=*/false);
 }
 
+ObjCInterfaceDecl *ObjCInterfaceType::getDecl() const {
+  ObjCInterfaceDecl *Canon = Decl->getCanonicalDecl();
+  if (ObjCInterfaceDecl *Def = Canon->getDefinition())
+    return Def;
+  return Canon;
+}
+
 const ObjCObjectPointerType *ObjCObjectPointerType::stripObjCKindOfTypeAndQuals(
                                const ASTContext &ctx) const {
   if (!isKindOfType() && qual_empty())
@@ -2785,7 +2792,6 @@ bool Type::isSpecifierType() const {
   case DependentTemplateSpecialization:
   case ObjCInterface:
   case ObjCObject:
-  case ObjCObjectPointer: // FIXME: object pointers aren't really specifiers
     return true;
   default:
     return false;

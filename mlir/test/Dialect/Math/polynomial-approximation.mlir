@@ -1,4 +1,6 @@
 // RUN: mlir-opt %s -test-math-polynomial-approximation | FileCheck %s
+// RUN: mlir-opt %s -test-math-polynomial-approximation=enable-avx2 \
+// RUN: | FileCheck --check-prefix=AVX2 %s
 
 // Check that all math functions lowered to approximations built from
 // standard operations (add, mul, fma, shift, etc...).
@@ -38,13 +40,14 @@
 // CHECK:           %[[VAL_31:.*]] = arith.cmpi sle, %[[VAL_26]], %[[VAL_13]] : i32
 // CHECK:           %[[VAL_32:.*]] = arith.cmpi sge, %[[VAL_26]], %[[VAL_14]] : i32
 // CHECK:           %[[VAL_33:.*]] = arith.cmpf oeq, %[[VAL_0]], %[[VAL_11]] : f32
-// CHECK:           %[[VAL_34:.*]] = arith.cmpf ogt, %[[VAL_0]], %[[VAL_9]] : f32
-// CHECK:           %[[VAL_35:.*]] = arith.andi %[[VAL_31]], %[[VAL_32]] : i1
-// CHECK:           %[[VAL_36:.*]] = select %[[VAL_33]], %[[VAL_9]], %[[VAL_12]] : f32
-// CHECK:           %[[VAL_37:.*]] = select %[[VAL_34]], %[[VAL_10]], %[[VAL_36]] : f32
-// CHECK:           %[[VAL_38:.*]] = select %[[VAL_35]], %[[VAL_30]], %[[VAL_37]] : f32
-// CHECK:           return %[[VAL_38]] : f32
-// CHECK:         }
+// CHECK:           %[[VAL_34:.*]] = arith.cmpf oeq, %[[VAL_0]], %[[VAL_10]] : f32
+// CHECK:           %[[VAL_35:.*]] = arith.cmpf ogt, %[[VAL_0]], %[[VAL_9]] : f32
+// CHECK:           %[[VAL_36:.*]] = arith.andi %[[VAL_31]], %[[VAL_32]] : i1
+// CHECK:           %[[VAL_37:.*]] = select %[[VAL_35]], %[[VAL_10]], %[[VAL_12]] : f32
+// CHECK:           %[[VAL_38:.*]] = select %[[VAL_36]], %[[VAL_30]], %[[VAL_37]] : f32
+// CHECK:           %[[VAL_39:.*]] = select %[[VAL_34]], %[[VAL_10]], %[[VAL_38]] : f32
+// CHECK:           %[[VAL_40:.*]] = select %[[VAL_33]], %[[VAL_9]], %[[VAL_39]] : f32
+// CHECK:           return %[[VAL_40]] : f32
 func @exp_scalar(%arg0: f32) -> f32 {
   %0 = math.exp %arg0 : f32
   return %0 : f32
@@ -54,10 +57,9 @@ func @exp_scalar(%arg0: f32) -> f32 {
 // CHECK-SAME:                     %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant dense<0.693147182> : vector<8xf32>
 // CHECK-NOT:       exp
-// CHECK-COUNT-2:   select
-// CHECK:           %[[VAL_38:.*]] = select
-// CHECK:           return %[[VAL_38]] : vector<8xf32>
-// CHECK:         }
+// CHECK-COUNT-3:   select
+// CHECK:           %[[VAL_40:.*]] = select
+// CHECK:           return %[[VAL_40]] : vector<8xf32>
 func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.exp %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
@@ -70,7 +72,7 @@ func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
 // CHECK-DAG:           %[[CST_ONE:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[BEGIN_EXP_X:.*]] = arith.mulf %[[X]], %[[CST_LOG2E]] : f32
 // CHECK-NOT:       exp
-// CHECK-COUNT-2:   select
+// CHECK-COUNT-3:   select
 // CHECK:           %[[EXP_X:.*]] = select
 // CHECK:           %[[VAL_58:.*]] = arith.cmpf oeq, %[[EXP_X]], %[[CST_ONE]] : f32
 // CHECK:           %[[VAL_59:.*]] = arith.subf %[[EXP_X]], %[[CST_ONE]] : f32
@@ -95,7 +97,7 @@ func @expm1_scalar(%arg0: f32) -> f32 {
 // CHECK-SAME:                       %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant dense<-1.000000e+00> : vector<8xf32>
 // CHECK-NOT:       exp
-// CHECK-COUNT-3:   select
+// CHECK-COUNT-4:   select
 // CHECK-NOT:       log
 // CHECK-COUNT-5:   select
 // CHECK-NOT:       expm1
@@ -298,5 +300,39 @@ func @tanh_scalar(%arg0: f32) -> f32 {
 // CHECK:         }
 func @tanh_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %0 = math.tanh %arg0 : vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// We only approximate rsqrt for vectors and when the AVX2 option is enabled.
+// CHECK-LABEL:   func @rsqrt_scalar
+// AVX2-LABEL:    func @rsqrt_scalar
+// CHECK:           math.rsqrt
+// AVX2:            math.rsqrt
+func @rsqrt_scalar(%arg0: f32) -> f32 {
+  %0 = math.rsqrt %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func @rsqrt_vector
+// CHECK:           math.rsqrt
+// AVX2-LABEL:    func @rsqrt_vector(
+// AVX2-SAME:       %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
+// AVX2:   %[[VAL_1:.*]] = arith.constant dense<0x7F800000> : vector<8xf32>
+// AVX2:   %[[VAL_2:.*]] = arith.constant dense<1.500000e+00> : vector<8xf32>
+// AVX2:   %[[VAL_3:.*]] = arith.constant dense<-5.000000e-01> : vector<8xf32>
+// AVX2:   %[[VAL_4:.*]] = arith.constant dense<1.17549435E-38> : vector<8xf32>
+// AVX2:   %[[VAL_5:.*]] = arith.mulf %[[VAL_0]], %[[VAL_3]] : vector<8xf32>
+// AVX2:   %[[VAL_6:.*]] = arith.cmpf olt, %[[VAL_0]], %[[VAL_4]] : vector<8xf32>
+// AVX2:   %[[VAL_7:.*]] = arith.cmpf oeq, %[[VAL_0]], %[[VAL_1]] : vector<8xf32>
+// AVX2:   %[[VAL_8:.*]] = arith.ori %[[VAL_6]], %[[VAL_7]] : vector<8xi1>
+// AVX2:   %[[VAL_9:.*]] = x86vector.avx.rsqrt %[[VAL_0]] : vector<8xf32>
+// AVX2:   %[[VAL_10:.*]] = arith.mulf %[[VAL_5]], %[[VAL_9]] : vector<8xf32>
+// AVX2:   %[[VAL_11:.*]] = math.fma %[[VAL_9]], %[[VAL_10]], %[[VAL_2]] : vector<8xf32>
+// AVX2:   %[[VAL_12:.*]] = arith.mulf %[[VAL_9]], %[[VAL_11]] : vector<8xf32>
+// AVX2:   %[[VAL_13:.*]] = select %[[VAL_8]], %[[VAL_9]], %[[VAL_12]] : vector<8xi1>, vector<8xf32>
+// AVX2:   return %[[VAL_13]] : vector<8xf32>
+// AVX2: }
+func @rsqrt_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
+  %0 = math.rsqrt %arg0 : vector<8xf32>
   return %0 : vector<8xf32>
 }

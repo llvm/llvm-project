@@ -61,7 +61,25 @@ enum { WARPSIZE = getGridValue().GV_Warp_Size };
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
 #define OMP_STATE_COUNT 32
-#define MAX_SM 64
+
+// FIXME: determine correct number of CUs for each amdgpu
+#if defined(__gfx900__)
+#define MAX_SM  64
+#elif defined(__gfx906__)
+#define MAX_SM  64
+#elif defined(__gfx908__)
+#define MAX_SM  120
+#elif defined(__gfx90a__)
+#define MAX_SM  110
+#elif defined(__gfx90c__)
+#define MAX_SM  120
+#elif defined(__gfx1030__)
+#define MAX_SM  72
+#elif defined(__gfx1031__)
+#define MAX_SM  40
+#else
+#define MAX_SM  120
+#endif
 
 #define OMP_ACTIVE_PARALLEL_LEVEL 128
 

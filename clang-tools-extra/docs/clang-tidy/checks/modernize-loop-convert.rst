@@ -138,7 +138,7 @@ lives.
 
    Specify the function used to reverse an iterator pair, the function should 
    accept a class with ``rbegin`` and ``rend`` methods and return a 
-   class with ``begin`` and ``end`` methods methods that call the ``rbegin`` and
+   class with ``begin`` and ``end`` methods that call the ``rbegin`` and
    ``rend`` methods respectively. Common examples are ``ranges::reverse_view``
    and ``llvm::reverse``.
    Default value is an empty string.
@@ -165,7 +165,7 @@ Limitations
 
 There are certain situations where the tool may erroneously perform
 transformations that remove information and change semantics. Users of the tool
-should be aware of the behaviour and limitations of the check outlined by
+should be aware of the behavior and limitations of the check outlined by
 the cases below.
 
 Comments inside loop headers
@@ -300,7 +300,7 @@ OpenMP
 ^^^^^^
 
 As range-based for loops are only available since OpenMP 5, this check should
-not been used on code with a compatibility requirements of OpenMP prior to
+not be used on code with a compatibility requirement of OpenMP prior to
 version 5. It is **intentional** that this check does not make any attempts to
 exclude incorrect diagnostics on OpenMP for loops prior to OpenMP 5.
 

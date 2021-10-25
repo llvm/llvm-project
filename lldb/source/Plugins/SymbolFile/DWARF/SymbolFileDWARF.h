@@ -379,6 +379,8 @@ protected:
   lldb::VariableSP ParseVariableDIE(const lldb_private::SymbolContext &sc,
                                     const DWARFDIE &die,
                                     const lldb::addr_t func_low_pc);
+  lldb::VariableSP ParseVariableDIECached(const lldb_private::SymbolContext &sc,
+                                          const DWARFDIE &die);
 
   void
   ParseAndAppendGlobalVariable(const lldb_private::SymbolContext &sc,
@@ -391,8 +393,15 @@ protected:
 
   size_t ParseVariablesInFunctionContextRecursive(
       const lldb_private::SymbolContext &sc, const DWARFDIE &die,
-      const lldb::addr_t func_low_pc,
-      lldb_private::VariableList &variable_list);
+      lldb::addr_t func_low_pc, DIEArray &accumulator);
+
+  size_t PopulateBlockVariableList(lldb_private::VariableList &variable_list,
+                                   const lldb_private::SymbolContext &sc,
+                                   llvm::ArrayRef<DIERef> variable_dies,
+                                   lldb::addr_t func_low_pc);
+
+  DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
+                                        DIEArray &&variable_dies);
 
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
 
@@ -494,6 +503,11 @@ protected:
 
   const lldb_private::FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
 
+  void InitializeFirstCodeAddressRecursive(
+      const lldb_private::SectionList &section_list);
+
+  void InitializeFirstCodeAddress();
+
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
 
@@ -529,6 +543,13 @@ protected:
   llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>
       m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
+  /// DWARF does not provide a good way for traditional (concatenating) linkers
+  /// to invalidate debug info describing dead-stripped code. These linkers will
+  /// keep the debug info but resolve any addresses referring to such code as
+  /// zero (BFD) or a small positive integer (zero + relocation addend -- GOLD).
+  /// Try to filter out this debug info by comparing it to the lowest code
+  /// address in the module.
+  lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

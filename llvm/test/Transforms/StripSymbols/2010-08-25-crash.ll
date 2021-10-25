@@ -1,4 +1,4 @@
-; RUN: opt -strip-dead-debug-info -disable-output < %s
+; RUN: opt -passes=strip-dead-debug-info -disable-output < %s
 source_filename = "test/Transforms/StripSymbols/2010-08-25-crash.ll"
 
 ; Function Attrs: nounwind ssp

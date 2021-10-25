@@ -39,7 +39,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
-#include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -3637,7 +3636,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   StringRef packet_str{packet.GetStringRef()};
   assert(packet_str.startswith("qSaveCore"));
   if (packet_str.consume_front("qSaveCore;")) {
-    for (auto x : llvm::Split(packet_str, ';')) {
+    for (auto x : llvm::split(packet_str, ';')) {
       if (x.consume_front("path-hint:"))
         StringExtractor(x).GetHexByteString(path_hint);
       else

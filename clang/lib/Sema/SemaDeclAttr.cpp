@@ -216,7 +216,7 @@ static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
                                 uint32_t &Val, unsigned Idx = UINT_MAX,
                                 bool StrictlyUnsigned = false) {
   Optional<llvm::APSInt> I = llvm::APSInt(32);
-  if (Expr->isTypeDependent() || Expr->isValueDependent() ||
+  if (Expr->isTypeDependent() ||
       !(I = Expr->getIntegerConstantExpr(S.Context))) {
     if (Idx != UINT_MAX)
       S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
@@ -308,7 +308,7 @@ static bool checkFunctionOrMethodParameterIndex(
       (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
 
   Optional<llvm::APSInt> IdxInt;
-  if (IdxExpr->isTypeDependent() || IdxExpr->isValueDependent() ||
+  if (IdxExpr->isTypeDependent() ||
       !(IdxInt = IdxExpr->getIntegerConstantExpr(S.Context))) {
     S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
         << &AI << AttrArgNum << AANT_ArgumentIntegerConstant
@@ -2860,8 +2860,7 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() > 0) {
     Expr *E = AL.getArgAsExpr(0);
     Optional<llvm::APSInt> Idx = llvm::APSInt(32);
-    if (E->isTypeDependent() || E->isValueDependent() ||
-        !(Idx = E->getIntegerConstantExpr(S.Context))) {
+    if (E->isTypeDependent() || !(Idx = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
           << AL << 1 << AANT_ArgumentIntegerConstant << E->getSourceRange();
       return;
@@ -2880,8 +2879,7 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() > 1) {
     Expr *E = AL.getArgAsExpr(1);
     Optional<llvm::APSInt> Idx = llvm::APSInt(32);
-    if (E->isTypeDependent() || E->isValueDependent() ||
-        !(Idx = E->getIntegerConstantExpr(S.Context))) {
+    if (E->isTypeDependent() || !(Idx = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
           << AL << 2 << AANT_ArgumentIntegerConstant << E->getSourceRange();
       return;
@@ -3213,13 +3211,13 @@ static void handleCodeSegAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, Architecture, Tune };
-  if (AttrStr.find("fpmath=") != StringRef::npos)
+  if (AttrStr.contains("fpmath="))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "fpmath=";
 
   // Diagnose use of tune if target doesn't support it.
   if (!Context.getTargetInfo().supportsTargetAttributeTune() &&
-      AttrStr.find("tune=") != StringRef::npos)
+      AttrStr.contains("tune="))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "tune=";
 
@@ -7570,7 +7568,7 @@ static void handleOpenCLAccessAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // C++ for OpenCL 2021 inherits rule from OpenCL C v3.0.
   if (const auto *PDecl = dyn_cast<ParmVarDecl>(D)) {
     const Type *DeclTy = PDecl->getType().getCanonicalType().getTypePtr();
-    if (AL.getAttrName()->getName().find("read_write") != StringRef::npos) {
+    if (AL.getAttrName()->getName().contains("read_write")) {
       bool ReadWriteImagesUnsupported =
           (S.getLangOpts().getOpenCLCompatibleVersion() < 200) ||
           (S.getLangOpts().getOpenCLCompatibleVersion() == 300 &&

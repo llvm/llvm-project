@@ -55,6 +55,13 @@ def get_triple():
 
 
 class BuilderDarwin(Builder):
+    def getTriple(self, arch):
+        vendor, os, version, env = get_triple()
+        components = [arch, vendor, os, version, env]
+        if None in components:
+            return None
+        return '-'.join(components)
+
     def getExtraMakeArgs(self):
         """
         Helper function to return extra argumentsfor the make system. This
@@ -80,16 +87,14 @@ class BuilderDarwin(Builder):
             args['CODESIGN'] = 'codesign'
 
         # Return extra args as a formatted string.
-        return ' '.join(
-            {'{}="{}"'.format(key, value)
-             for key, value in args.items()})
+        return ['{}={}'.format(key, value) for key, value in args.items()]
 
     def getArchCFlags(self, arch):
         """Returns the ARCH_CFLAGS for the make system."""
         # Get the triple components.
         vendor, os, version, env = get_triple()
         if vendor is None or os is None or version is None or env is None:
-            return ""
+            return []
 
         # Construct the triple from its components.
         triple = '-'.join([arch, vendor, os, version, env])
@@ -98,10 +103,10 @@ class BuilderDarwin(Builder):
         version_min = ""
         if env == "simulator":
             version_min = "-m{}-simulator-version-min={}".format(os, version)
-        elif os == "macosx":
+        else:
             version_min = "-m{}-version-min={}".format(os, version)
 
-        return "ARCH_CFLAGS=\"-target {} {}\"".format(triple, version_min)
+        return ["ARCH_CFLAGS=-target {} {}".format(triple, version_min)]
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info == "dsym":

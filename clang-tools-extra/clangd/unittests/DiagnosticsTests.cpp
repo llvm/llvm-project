@@ -176,7 +176,7 @@ o]]();
           Diag(Test.range("unk"), "use of undeclared identifier 'unknown'"),
           Diag(Test.range("type"),
                "cannot initialize a variable of type 'double' with an lvalue "
-               "of type 'const char [4]'"),
+               "of type 'const char[4]'"),
           Diag(Test.range("nomember"), "no member named 'y' in 'Foo'"),
           Diag(Test.range("nomembernamespace"),
                "no member named 'test' in namespace 'test'"),

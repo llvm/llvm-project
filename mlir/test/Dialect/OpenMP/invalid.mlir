@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 func @unknown_clause() {
-  // expected-error@+1 {{invalid is not a valid clause for the omp.parallel operation}}
+  // expected-error@+1 {{invalid is not a valid clause}}
   omp.parallel invalid {
   }
 
@@ -296,19 +296,9 @@ func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
 
 // -----
 
-func @omp_critical1() -> () {
-  // expected-error @below {{must specify a name unless the effect is as if no hint is specified}}
-  omp.critical hint(nonspeculative) {
-    omp.terminator
-  }
-  return
-}
-
-// -----
-
 func @omp_critical2() -> () {
   // expected-error @below {{expected symbol reference @excl to point to a critical declaration}}
-  omp.critical(@excl) hint(speculative) {
+  omp.critical(@excl) {
     omp.terminator
   }
   return
@@ -316,32 +306,72 @@ func @omp_critical2() -> () {
 
 // -----
 
-omp.critical.declare @mutex
-func @omp_critical() -> () {
-  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
-  omp.critical(@mutex) hint(uncontended, contended) {
-    omp.terminator
+// expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+omp.critical.declare @mutex hint(uncontended, contended)
+
+// -----
+
+// expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
+omp.critical.declare @mutex hint(nonspeculative, speculative)
+
+// -----
+
+// expected-error @below {{invalid_hint is not a valid hint}}
+omp.critical.declare @mutex hint(invalid_hint)
+
+// -----
+
+func @omp_ordered1(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(1) {
+    // expected-error @below {{ordered region must be closely nested inside a worksharing-loop region with an ordered clause without parameter present}}
+    omp.ordered_region {
+      omp.terminator
+    }
+    omp.yield
   }
   return
 }
 
 // -----
 
-omp.critical.declare @mutex
-func @omp_critical() -> () {
-  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
-  omp.critical(@mutex) hint(nonspeculative, speculative) {
-    omp.terminator
+func @omp_ordered2(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
+    // expected-error @below {{ordered region must be closely nested inside a worksharing-loop region with an ordered clause without parameter present}}
+    omp.ordered_region {
+      omp.terminator
+    }
+    omp.yield
   }
   return
 }
 
 // -----
 
-omp.critical.declare @mutex
-func @omp_critica() -> () {
-  // expected-error @below {{invalid_hint is not a valid hint}}
-  omp.critical(@mutex) hint(invalid_hint) {
-    omp.terminator
+func @omp_ordered3(%vec0 : i64) -> () {
+  // expected-error @below {{ordered depend directive must be closely nested inside a worksharing-loop with ordered clause with parameter present}}
+  omp.ordered depend_type("dependsink") depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
+  return
+}
+
+// -----
+
+func @omp_ordered4(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64) -> () {
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(0) {
+    // expected-error @below {{ordered depend directive must be closely nested inside a worksharing-loop with ordered clause with parameter present}}
+    omp.ordered depend_type("dependsink") depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
+
+    omp.yield
   }
+  return
+}
+// -----
+
+func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec1 : i64) -> () {
+  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(1) {
+    // expected-error @below {{number of variables in depend clause does not match number of iteration variables in the doacross loop}}
+    omp.ordered depend_type("dependsource") depend_vec(%vec0, %vec1 : i64, i64) {num_loops_val = 2 : i64}
+
+    omp.yield
+  }
+  return
 }

@@ -1889,7 +1889,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   // X & -C == -C -> X >  u ~C
   // X & -C != -C -> X <= u ~C
   //   iff C is a power of 2
-  if (Cmp.getOperand(1) == Y && (-C).isPowerOf2()) {
+  if (Cmp.getOperand(1) == Y && C.isNegatedPowerOf2()) {
     auto NewPred =
         Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT : CmpInst::ICMP_ULE;
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
@@ -4184,8 +4184,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     if (match(Op0, m_Mul(m_Value(X), m_APInt(C))) && *C != 0 &&
         match(Op1, m_Mul(m_Value(Y), m_SpecificInt(*C))) && I.isEquality())
       if (!C->countTrailingZeros() ||
-          (BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap()) ||
-          (BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap()))
+          (BO0 && BO1 && BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap()) ||
+          (BO0 && BO1 && BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap()))
       return new ICmpInst(Pred, X, Y);
   }
 

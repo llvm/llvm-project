@@ -1162,6 +1162,18 @@ public:
   /// Try to apply information from loop guards for \p L to \p Expr.
   const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
 
+  /// Return true if the loop has no abnormal exits. That is, if the loop
+  /// is not infinite, it must exit through an explicit edge in the CFG.
+  /// (As opposed to either a) throwing out of the function or b) entering a
+  /// well defined infinite loop in some callee.)
+  bool loopHasNoAbnormalExits(const Loop *L) {
+    return getLoopProperties(L).HasNoAbnormalExits;
+  }
+
+  /// Return true if this loop is finite by assumption.  That is,
+  /// to be infinite, it must also be undefined.
+  bool loopIsFiniteByAssumption(const Loop *L);
+
 private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
@@ -1482,14 +1494,6 @@ private:
     return getLoopProperties(L).HasNoSideEffects;
   }
 
-  bool loopHasNoAbnormalExits(const Loop *L) {
-    return getLoopProperties(L).HasNoAbnormalExits;
-  }
-
-  /// Return true if this loop is finite by assumption.  That is,
-  /// to be infinite, it must also be undefined.
-  bool loopIsFiniteByAssumption(const Loop *L);
-
   /// Compute a LoopDisposition value.
   LoopDisposition computeLoopDisposition(const SCEV *S, const Loop *L);
 
@@ -1688,12 +1692,6 @@ private:
                                                  SwitchInst *Switch,
                                                  BasicBlock *ExitingBB,
                                                  bool IsSubExpr);
-
-  /// Given an exit condition of 'icmp op load X, cst', try to see if we can
-  /// compute the backedge-taken count.
-  ExitLimit computeLoadConstantCompareExitLimit(LoadInst *LI, Constant *RHS,
-                                                const Loop *L,
-                                                ICmpInst::Predicate p);
 
   /// Compute the exit limit of a loop that is controlled by a
   /// "(IV >> 1) != 0" type comparison.  We cannot compute the exact trip

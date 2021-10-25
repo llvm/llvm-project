@@ -663,6 +663,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
       Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
+    if (Tag == dwarf::DW_TAG_typedef)
+      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
   } else if (Tag != dwarf::DW_TAG_member) {
     return;
   }
@@ -832,7 +834,9 @@ void BTFDebug::emitBTFSection() {
     return;
 
   MCContext &Ctx = OS.getContext();
-  OS.SwitchSection(Ctx.getELFSection(".BTF", ELF::SHT_PROGBITS, 0));
+  MCSectionELF *Sec = Ctx.getELFSection(".BTF", ELF::SHT_PROGBITS, 0);
+  Sec->setAlignment(Align(4));
+  OS.SwitchSection(Sec);
 
   // Emit header.
   emitCommonHeader();
@@ -870,7 +874,9 @@ void BTFDebug::emitBTFExtSection() {
     return;
 
   MCContext &Ctx = OS.getContext();
-  OS.SwitchSection(Ctx.getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0));
+  MCSectionELF *Sec = Ctx.getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0);
+  Sec->setAlignment(Align(4));
+  OS.SwitchSection(Sec);
 
   // Emit header.
   emitCommonHeader();

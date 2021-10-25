@@ -26,22 +26,33 @@ StringRef CSKYMCExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Invalid ELF symbol kind");
+  case VK_CSKY_None:
   case VK_CSKY_ADDR:
     return "";
-  case VK_CSKY_PCREL:
-    return "";
+  case VK_CSKY_ADDR_HI16:
+    return "@HI16";
+  case VK_CSKY_ADDR_LO16:
+    return "@LO16";
+  case VK_CSKY_GOT_IMM18_BY4:
   case VK_CSKY_GOT:
     return "@GOT";
   case VK_CSKY_GOTPC:
     return "@GOTPC";
   case VK_CSKY_GOTOFF:
     return "@GOTOFF";
+  case VK_CSKY_PLT_IMM18_BY4:
   case VK_CSKY_PLT:
     return "@PLT";
-  case VK_CSKY_TPOFF:
+  case VK_CSKY_TLSLE:
     return "@TPOFF";
+  case VK_CSKY_TLSIE:
+    return "@GOTTPOFF";
   case VK_CSKY_TLSGD:
-    return "@TLSGD";
+    return "@TLSGD32";
+  case VK_CSKY_TLSLDO:
+    return "@TLSLDO32";
+  case VK_CSKY_TLSLDM:
+    return "@TLSLDM32";
   }
 }
 
@@ -87,7 +98,8 @@ void CSKYMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   switch (getKind()) {
   default:
     return;
-  case VK_CSKY_TPOFF:
+  case VK_CSKY_TLSLE:
+  case VK_CSKY_TLSIE:
   case VK_CSKY_TLSGD:
     break;
   }
@@ -106,14 +118,17 @@ bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     switch (getKind()) {
     default:
       return true;
-
-    case VK_CSKY_ADDR:
-    case VK_CSKY_PCREL:
     case VK_CSKY_GOT:
+    case VK_CSKY_GOT_IMM18_BY4:
     case VK_CSKY_GOTPC:
     case VK_CSKY_GOTOFF:
-    case VK_CSKY_TPOFF:
+    case VK_CSKY_PLT:
+    case VK_CSKY_PLT_IMM18_BY4:
+    case VK_CSKY_TLSIE:
+    case VK_CSKY_TLSLE:
     case VK_CSKY_TLSGD:
+    case VK_CSKY_TLSLDO:
+    case VK_CSKY_TLSLDM:
       return false;
     }
   }

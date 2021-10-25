@@ -117,23 +117,23 @@
   #elif defined(__gfx909__)
     #define _DEVICE_GPU 9090
   #elif defined(__gfx90a__)
-    #define _DEVICE_GPU 9010
+    #define _DEVICE_GPU 9100
   #elif defined(__gfx90c__)
-    #define _DEVICE_GPU 9012
+    #define _DEVICE_GPU 9120
   #elif defined(__gfx1010__)
-    #define _DEVICE_GPU 1010
+    #define _DEVICE_GPU 10100
   #elif defined(__gfx1011__)
-    #define _DEVICE_GPU 1011
+    #define _DEVICE_GPU 10110
   #elif defined(__gfx1012__)
-    #define _DEVICE_GPU 1012
+    #define _DEVICE_GPU 10120
   #elif defined(__gfx1030__)
-    #define _DEVICE_GPU 1030
+    #define _DEVICE_GPU 10300
   #elif defined(__gfx1031__)
-    #define _DEVICE_GPU 1031
+    #define _DEVICE_GPU 10310
   #elif defined(__gfx1032__)
-    #define _DEVICE_GPU 1032
+    #define _DEVICE_GPU 10320
   #elif defined(__gfx1033__)
-    #define _DEVICE_GPU 1033
+    #define _DEVICE_GPU 10330
   #else
     #define _DEVICE_GPU UNKNOWN
   #endif

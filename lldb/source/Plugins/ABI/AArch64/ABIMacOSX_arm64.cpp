@@ -828,10 +828,3 @@ void ABIMacOSX_arm64::Initialize() {
 void ABIMacOSX_arm64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-// PluginInterface protocol
-
-ConstString ABIMacOSX_arm64::GetPluginNameStatic() {
-  static ConstString g_plugin_name("ABIMacOSX_arm64");
-  return g_plugin_name;
-}

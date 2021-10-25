@@ -427,7 +427,7 @@ class PtyServerSocket(ServerSocket):
         return libc.ptsname(self._master.fileno()).decode()
 
     def get_connect_url(self):
-        return "file://" + self.get_connect_address()
+        return "serial://" + self.get_connect_address()
 
     def close_server(self):
         self._slave.close()

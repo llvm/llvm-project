@@ -1,11 +1,8 @@
 // TODO: Investigate these failures
 // XFAIL: asan, tsan, ubsan
 
-// TODO: Investigate these failures on x86_64 macOS
-// XFAIL: target=x86_64-apple-darwin{{.+}}
-
-// TODO: Investigate this failure
-// XFAIL: 32bits-on-64bits
+// TODO: Investigate these failures on x86_64 macOS back deployment
+// UNSUPPORTED: target=x86_64-apple-darwin{{.+}}
 
 #include <libunwind.h>
 #include <stdlib.h>

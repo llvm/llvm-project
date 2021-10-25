@@ -181,7 +181,7 @@ public:
   // Determine whether the vector instructions requirements represented by
   // InstrInfo are compatible with the previous vsetvli instruction represented
   // by this.
-  bool isCompatible(const VSETVLIInfo &InstrInfo) const {
+  bool isCompatible(const VSETVLIInfo &InstrInfo, bool Strict) const {
     assert(isValid() && InstrInfo.isValid() &&
            "Can't compare invalid VSETVLIInfos");
     assert(!InstrInfo.SEWLMULRatioOnly &&
@@ -196,7 +196,8 @@ public:
 
     // If the instruction doesn't need an AVLReg and the SEW matches, consider
     // it compatible.
-    if (InstrInfo.hasAVLReg() && InstrInfo.AVLReg == RISCV::NoRegister) {
+    if (!Strict && InstrInfo.hasAVLReg() &&
+        InstrInfo.AVLReg == RISCV::NoRegister) {
       if (SEW == InstrInfo.SEW)
         return true;
     }
@@ -208,6 +209,10 @@ public:
     // Simple case, see if full VTYPE matches.
     if (hasSameVTYPE(InstrInfo))
       return true;
+
+    // Strict matches must ensure a full VTYPE match.
+    if (Strict)
+      return false;
 
     // If this is a mask reg operation, it only cares about VLMAX.
     // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
@@ -317,7 +322,7 @@ public:
 
     // If the change is compatible with the input, we won't create a VSETVLI
     // and should keep the predecessor.
-    if (isCompatible(Other))
+    if (isCompatible(Other, /*Strict*/ true))
       return *this;
 
     // Otherwise just use whatever is in this block.
@@ -550,7 +555,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
 
 bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) {
-  if (CurInfo.isCompatible(Require))
+  if (CurInfo.isCompatible(Require, /*Strict*/ false))
     return false;
 
   // We didn't find a compatible value. If our AVL is a virtual register,

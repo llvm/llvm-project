@@ -102,8 +102,7 @@ void MallocOverflowSecurityChecker::CheckMallocArgument(
         e = rhs;
       } else
         return;
-    }
-    else if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
+    } else if (isa<DeclRefExpr, MemberExpr>(e))
       break;
     else
       return;

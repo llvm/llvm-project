@@ -3832,6 +3832,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
     return true;
 
+  // Ensure wrapping after __attribute__((XX)) and @interface etc.
+  if (Left.is(TT_AttributeParen) && Right.is(TT_ObjCDecl))
+    return true;
+
   if (Left.is(TT_LambdaLBrace)) {
     if (IsFunctionArgument(Left) &&
         Style.AllowShortLambdasOnASingleLine == FormatStyle::SLS_Inline)

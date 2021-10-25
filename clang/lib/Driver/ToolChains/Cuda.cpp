@@ -822,17 +822,9 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   // flags are not duplicated.
   // Also append the compute capability.
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args) {
-      bool IsDuplicate = false;
-      for (Arg *DALArg : *DAL) {
-        if (A == DALArg) {
-          IsDuplicate = true;
-          break;
-        }
-      }
-      if (!IsDuplicate)
+    for (Arg *A : Args)
+      if (!llvm::is_contained(*DAL, A))
         DAL->append(A);
-    }
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
     if (Arch.empty())

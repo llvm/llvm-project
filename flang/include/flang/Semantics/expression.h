@@ -317,6 +317,8 @@ private:
       const parser::SectionSubscript &);
   std::vector<Subscript> AnalyzeSectionSubscripts(
       const std::list<parser::SectionSubscript> &);
+  std::optional<Component> CreateComponent(
+      DataRef &&, const Symbol &, const semantics::Scope &);
   MaybeExpr Designate(DataRef &&);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);

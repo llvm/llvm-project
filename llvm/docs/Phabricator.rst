@@ -49,10 +49,9 @@ repository is to run:
 
 Sometime you may want to create a draft revision to show the proof of concept
 or for experimental purposes, In that case you can use the `--draft` option. It
-will either create a new draft revisoin or convert the original revision to a
-draft revision depending on your local branch status. The good part is: it will not
-send mail to llvm-commit mailing list, patch reviewers, and all other subscribers,
-buildbot will also run on every patch update:
+will create a new draft revision. The good part is: it will not send mail to
+llvm-commit mailing list, patch reviewers, and all other subscribers, buildbot
+will also run on every patch update:
 
 ::
 

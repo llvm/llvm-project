@@ -487,9 +487,8 @@ static void rewriteToObjCProperty(const ObjCMethodDecl *Getter,
 
   // Short circuit 'delegate' properties that contain the name "delegate" or
   // "dataSource", or have exact name "target" to have 'assign' attribute.
-  if (PropertyName.equals("target") ||
-      (PropertyName.find("delegate") != StringRef::npos) ||
-      (PropertyName.find("dataSource") != StringRef::npos)) {
+  if (PropertyName.equals("target") || PropertyName.contains("delegate") ||
+      PropertyName.contains("dataSource")) {
     QualType QT = Getter->getReturnType();
     if (!QT->isRealType())
       append_attr(PropertyString, "assign", LParenAdded);

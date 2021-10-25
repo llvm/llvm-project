@@ -3319,11 +3319,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // Convert 0 - abs(x).
-    SDValue Result;
     if (N1->getOpcode() == ISD::ABS &&
-        !TLI.isOperationLegalOrCustom(ISD::ABS, VT) &&
-        TLI.expandABS(N1.getNode(), Result, DAG, true))
-      return Result;
+        !TLI.isOperationLegalOrCustom(ISD::ABS, VT))
+      if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
+        return Result;
 
     // Fold neg(splat(neg(x)) -> splat(x)
     if (VT.isVector()) {
@@ -3841,7 +3840,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
 
   // fold (mul x, -(1 << c)) -> -(x << c) or (-x) << c
-  if (N1IsConst && !N1IsOpaqueConst && (-ConstValue1).isPowerOf2()) {
+  if (N1IsConst && !N1IsOpaqueConst && ConstValue1.isNegatedPowerOf2()) {
     unsigned Log2Val = (-ConstValue1).logBase2();
     SDLoc DL(N);
     // FIXME: If the input is something that is easily negated (e.g. a
@@ -4212,7 +4211,7 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
       return false;
     if (C->getAPIntValue().isPowerOf2())
       return true;
-    if ((-C->getAPIntValue()).isPowerOf2())
+    if (C->getAPIntValue().isNegatedPowerOf2())
       return true;
     return false;
   };
@@ -5627,6 +5626,35 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Setcc, DL, VT);
 }
 
+/// For targets that support usubsat, match a bit-hack form of that operation
+/// that ends in 'and' and convert it.
+static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N1.getValueType();
+
+  // Canonicalize xor as operand 0.
+  if (N1.getOpcode() == ISD::XOR)
+    std::swap(N0, N1);
+
+  if (N0.getOpcode() != ISD::XOR || N1.getOpcode() != ISD::SRA ||
+      !N0.hasOneUse() || !N1.hasOneUse() ||
+      N0.getOperand(0) != N1.getOperand(0))
+    return SDValue();
+
+  unsigned BitWidth = VT.getScalarSizeInBits();
+  ConstantSDNode *XorC = isConstOrConstSplat(N0.getOperand(1), true);
+  ConstantSDNode *SraC = isConstOrConstSplat(N1.getOperand(1), true);
+  if (!XorC || !XorC->getAPIntValue().isSignMask() ||
+      !SraC || SraC->getAPIntValue() != BitWidth - 1)
+    return SDValue();
+
+  // (i8 X ^ 128) & (i8 X s>> 7) --> usubsat X, 128
+  SDLoc DL(N);
+  SDValue SignMask = DAG.getConstant(XorC->getAPIntValue(), DL, VT);
+  return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0), SignMask);
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5988,6 +6016,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // Replace (and (sign_extend ...) #bitmask) with (zero_extend ...).
   if (IsAndZeroExtMask(N0, N1))
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, N0.getOperand(0));
+
+  if (hasOperation(ISD::USUBSAT, VT))
+    if (SDValue V = foldAndToUsubsat(N, DAG))
+      return V;
 
   return SDValue();
 }
@@ -7315,7 +7347,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   // TODO: If there is evidence that running this later would help, this
   //       limitation could be removed. Legality checks may need to be added
   //       for the created store and optional bswap/rotate.
-  if (LegalOperations)
+  if (LegalOperations || OptLevel == CodeGenOpt::None)
     return SDValue();
 
   // We only handle merging simple stores of 1-4 bytes.
@@ -20469,9 +20501,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Extract->getOperand(0));
-  auto *ExtIdx = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
-  if (!Ld || Ld->getExtensionType() || !Ld->isSimple() ||
-      !ExtIdx)
+  if (!Ld || Ld->getExtensionType() || !Ld->isSimple())
     return SDValue();
 
   // Allow targets to opt-out.
@@ -20481,7 +20511,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   if (!VT.isByteSized())
     return SDValue();
 
-  unsigned Index = ExtIdx->getZExtValue();
+  unsigned Index = Extract->getConstantOperandVal(1);
   unsigned NumElts = VT.getVectorMinNumElements();
 
   // The definition of EXTRACT_SUBVECTOR states that the index must be a

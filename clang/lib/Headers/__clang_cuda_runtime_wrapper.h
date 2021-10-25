@@ -271,7 +271,38 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 #undef __CUDABE__
 #endif
 #include "sm_20_atomic_functions.hpp"
+// Predicate functions used in `__builtin_assume` need to have no side effect.
+// However, sm_20_intrinsics.hpp doesn't define them with neither pure nor
+// const attribute. Rename definitions from sm_20_intrinsics.hpp and re-define
+// them as pure ones.
+#pragma push_macro("__isGlobal")
+#pragma push_macro("__isShared")
+#pragma push_macro("__isConstant")
+#pragma push_macro("__isLocal")
+#define __isGlobal __ignored_cuda___isGlobal
+#define __isShared __ignored_cuda___isShared
+#define __isConstant __ignored_cuda___isConstant
+#define __isLocal __ignored_cuda___isLocal
 #include "sm_20_intrinsics.hpp"
+#pragma pop_macro("__isGlobal")
+#pragma pop_macro("__isShared")
+#pragma pop_macro("__isConstant")
+#pragma pop_macro("__isLocal")
+#pragma push_macro("__DEVICE__")
+#define __DEVICE__ static __device__ __forceinline__ __attribute__((const))
+__DEVICE__ unsigned int __isGlobal(const void *p) {
+  return __nvvm_isspacep_global(p);
+}
+__DEVICE__ unsigned int __isShared(const void *p) {
+  return __nvvm_isspacep_shared(p);
+}
+__DEVICE__ unsigned int __isConstant(const void *p) {
+  return __nvvm_isspacep_const(p);
+}
+__DEVICE__ unsigned int __isLocal(const void *p) {
+  return __nvvm_isspacep_local(p);
+}
+#pragma pop_macro("__DEVICE__")
 #include "sm_32_atomic_functions.hpp"
 
 // Don't include sm_30_intrinsics.h and sm_32_intrinsics.h.  These define the

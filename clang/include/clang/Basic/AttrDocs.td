@@ -22,7 +22,7 @@
 // Windows (from within the clang\docs directory):
 //   make.bat html
 // Non-Windows (from within the clang\docs directory):
-//   make -f Makefile.sphinx html
+//   sphinx-build -b html _build/html
 
 def GlobalDocumentation {
   code Intro =[{..
@@ -2016,9 +2016,10 @@ def BTFDeclTagDocs : Documentation {
   let Content = [{
 Clang supports the ``__attribute__((btf_decl_tag("ARGUMENT")))`` attribute for
 all targets. This attribute may be attached to a struct/union, struct/union
-field, function, function parameter or variable declaration. If -g is specified,
-the ``ARGUMENT`` info will be preserved in IR and be emitted to dwarf.
-For BPF targets, the ``ARGUMENT`` info will be emitted to .BTF ELF section too.
+field, function, function parameter, variable or typedef declaration. If -g is
+specified, the ``ARGUMENT`` info will be preserved in IR and be emitted to
+dwarf. For BPF targets, the ``ARGUMENT`` info will be emitted to .BTF ELF
+section too.
   }];
 }
 

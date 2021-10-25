@@ -5242,8 +5242,8 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
 static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
-                               bool isFP, SDValue &LHS, SDValue &RHS,
-                               SelectionDAG &DAG) {
+                                    bool isFP, SDValue &LHS, SDValue &RHS,
+                                    SelectionDAG &DAG) {
   if (!isFP) {
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
       if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnes()) {
@@ -5338,6 +5338,9 @@ static bool hasFPCMov(unsigned X86CC) {
   }
 }
 
+static bool useVPTERNLOG(const X86Subtarget &Subtarget, MVT VT) {
+  return Subtarget.hasVLX() || (Subtarget.hasAVX512() && VT.is512BitVector());
+}
 
 bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                            const CallInst &I,
@@ -8700,10 +8703,10 @@ static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
   case ISD::SCALAR_TO_VECTOR:
     return findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset);
   case ISD::SRL:
-    if (auto *IdxC = dyn_cast<ConstantSDNode>(Elt.getOperand(1))) {
-      uint64_t Idx = IdxC->getZExtValue();
-      if ((Idx % 8) == 0 && findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset)) {
-        ByteOffset += Idx / 8;
+    if (auto *AmtC = dyn_cast<ConstantSDNode>(Elt.getOperand(1))) {
+      uint64_t Amt = AmtC->getZExtValue();
+      if ((Amt % 8) == 0 && findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset)) {
+        ByteOffset += Amt / 8;
         return true;
       }
     }
@@ -23263,7 +23266,7 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   if (isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N,0); // Lower SDIV as SDIV
 
-  assert((Divisor.isPowerOf2() || (-Divisor).isPowerOf2()) &&
+  assert((Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()) &&
          "Unexpected divisor!");
 
   // Only perform this transform if CMOV is supported otherwise the select
@@ -28135,20 +28138,37 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
   EVT SetCCResultType =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
-  if (Opcode == ISD::USUBSAT && !TLI.isOperationLegal(ISD::UMAX, VT)) {
-    // usubsat X, Y --> (X >u Y) ? X - Y : 0
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
-    SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
-    // TODO: Move this to DAGCombiner?
-    if (SetCCResultType == VT &&
-        DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
-      return DAG.getNode(ISD::AND, DL, VT, Cmp, Sub);
-    return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
+  unsigned BitWidth = VT.getScalarSizeInBits();
+  if (Opcode == ISD::USUBSAT) {
+    if (!TLI.isOperationLegal(ISD::UMAX, VT) || useVPTERNLOG(Subtarget, VT)) {
+      // Handle a special-case with a bit-hack instead of cmp+select:
+      // usubsat X, SMIN --> (X ^ SMIN) & (X s>> BW-1)
+      // If the target can use VPTERNLOG, DAGToDAG will match this as
+      // "vpsra + vpternlog" which is better than "vpmax + vpsub" with a
+      // "broadcast" constant load.
+      ConstantSDNode *C = isConstOrConstSplat(Y, true);
+      if (C && C->getAPIntValue().isSignMask()) {
+        SDValue SignMask = DAG.getConstant(C->getAPIntValue(), DL, VT);
+        SDValue ShiftAmt = DAG.getConstant(BitWidth - 1, DL, VT);
+        SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, X, SignMask);
+        SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, X, ShiftAmt);
+        return DAG.getNode(ISD::AND, DL, VT, Xor, Sra);
+      }
+    }
+    if (!TLI.isOperationLegal(ISD::UMAX, VT)) {
+      // usubsat X, Y --> (X >u Y) ? X - Y : 0
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, X, Y);
+      SDValue Cmp = DAG.getSetCC(DL, SetCCResultType, X, Y, ISD::SETUGT);
+      // TODO: Move this to DAGCombiner?
+      if (SetCCResultType == VT &&
+          DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
+        return DAG.getNode(ISD::AND, DL, VT, Cmp, Sub);
+      return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
+    }
   }
 
   if ((Opcode == ISD::SADDSAT || Opcode == ISD::SSUBSAT) &&
       (!VT.isVector() || VT == MVT::v2i64)) {
-    unsigned BitWidth = VT.getScalarSizeInBits();
     APInt MinVal = APInt::getSignedMinValue(BitWidth);
     APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
     SDValue Zero = DAG.getConstant(0, DL, VT);
@@ -46101,9 +46121,7 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
 
   // On XOP we'll lower to PCMOV so accept one use. With AVX512, we can use
   // VPTERNLOG. Otherwise only do this if either mask has multiple uses already.
-  bool UseVPTERNLOG = (Subtarget.hasAVX512() && VT.is512BitVector()) ||
-                      Subtarget.hasVLX();
-  if (!(Subtarget.hasXOP() || UseVPTERNLOG ||
+  if (!(Subtarget.hasXOP() || useVPTERNLOG(Subtarget, VT) ||
         !N0.getOperand(1).hasOneUse() || !N1.getOperand(1).hasOneUse()))
     return SDValue();
 
@@ -46127,8 +46145,8 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
 
-  if (UseVPTERNLOG) {
-    // Emit a VPTERNLOG node directly.
+  if (useVPTERNLOG(Subtarget, VT)) {
+    // Emit a VPTERNLOG node directly - 0xCA is the imm code for A?B:C.
     SDValue A = DAG.getBitcast(VT, N0.getOperand(1));
     SDValue B = DAG.getBitcast(VT, N0.getOperand(0));
     SDValue C = DAG.getBitcast(VT, N1.getOperand(0));

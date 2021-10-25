@@ -724,7 +724,7 @@ void FormatManager::LoadSystemFormatters() {
   lldb::TypeSummaryImplSP string_array_format(
       new StringSummaryFormat(string_array_flags, "${var%char[]}"));
 
-  RegularExpression any_size_char_arr(llvm::StringRef("char \\[[0-9]+\\]"));
+  RegularExpression any_size_char_arr(llvm::StringRef("char ?\\[[0-9]+\\]"));
 
   TypeCategoryImpl::SharedPointer sys_category_sp =
       GetCategory(m_system_category_name);
@@ -773,12 +773,11 @@ void FormatManager::LoadVectorFormatters() {
 
   AddStringSummary(vectors_category_sp, "${var.uint128}",
                    ConstString("builtin_type_vec128"), vector_flags);
-
-  AddStringSummary(vectors_category_sp, "", ConstString("float [4]"),
+  AddStringSummary(vectors_category_sp, "", ConstString("float[4]"),
                    vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("int32_t [4]"),
+  AddStringSummary(vectors_category_sp, "", ConstString("int32_t[4]"),
                    vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("int16_t [8]"),
+  AddStringSummary(vectors_category_sp, "", ConstString("int16_t[8]"),
                    vector_flags);
   AddStringSummary(vectors_category_sp, "", ConstString("vDouble"),
                    vector_flags);

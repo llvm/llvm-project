@@ -85,7 +85,7 @@ class CppDataFormatterTestCase(TestBase):
                     substrs=['no custom formatter for Speed'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%s}\" -x \"char \\[[0-9]+\\]\" -v")
+            "type summary add --summary-string \"arr = ${var%s}\" -x \"char\\[[0-9]+\\]\" -v")
 
         self.expect("frame variable strarr",
                     substrs=['arr = "Hello world!"'])
@@ -99,7 +99,7 @@ class CppDataFormatterTestCase(TestBase):
                     substrs=['ptr = "Hello world!"'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%s}\" -x \"char \\[[0-9]+\\]\" -v")
+            "type summary add --summary-string \"arr = ${var%s}\" -x \"char\\[[0-9]+\\]\" -v")
 
         self.expect("frame variable strarr",
                     substrs=['arr = "Hello world!'])
@@ -176,7 +176,7 @@ class CppDataFormatterTestCase(TestBase):
                     matching=False)
 
         self.runCmd(
-            "type summary add --summary-string \"${var[1-3]}\" \"int [5]\"")
+            "type summary add --summary-string \"${var[1-3]}\" \"int[5]\"")
 
         self.expect("frame variable int_array",
                     substrs=['2',
@@ -188,7 +188,7 @@ class CppDataFormatterTestCase(TestBase):
         self.runCmd(
             "type summary add --summary-string \"${var[0-2].integer}\" \"i_am_cool *\"")
         self.runCmd(
-            "type summary add --summary-string \"${var[2-4].integer}\" \"i_am_cool [5]\"")
+            "type summary add --summary-string \"${var[2-4].integer}\" \"i_am_cool[5]\"")
 
         self.expect("frame variable cool_array",
                     substrs=['1,1,6'])
@@ -199,7 +199,7 @@ class CppDataFormatterTestCase(TestBase):
         # test special symbols for formatting variables into summaries
         self.runCmd(
             "type summary add --summary-string \"cool object @ ${var%L}\" i_am_cool")
-        self.runCmd("type summary delete \"i_am_cool [5]\"")
+        self.runCmd("type summary delete \"i_am_cool[5]\"")
 
         # this test might fail if the compiler tries to store
         # these values into registers.. hopefully this is not

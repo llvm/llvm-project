@@ -1522,6 +1522,13 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
   KA_TRACE(20, ("GOMP_parallel_sections: T#%d\n", gtid));
 
 #if OMPT_SUPPORT
+  ompt_frame_t *task_frame;
+  kmp_info_t *thr;
+  if (ompt_enabled.enabled) {
+    thr = __kmp_threads[gtid];
+    task_frame = &(thr->th.th_current_task->ompt_task_info.frame);
+    task_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+  }
   OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
@@ -1537,9 +1544,31 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
 
     KMP_DISPATCH_INIT(&loc, gtid, kmp_nm_dynamic_chunked, 1, count, 1, 1, TRUE);
   }
+
+#if OMPT_SUPPORT
+  ompt_frame_t *child_frame;
+  if (ompt_enabled.enabled) {
+    child_frame = &(thr->th.th_current_task->ompt_task_info.frame);
+    child_frame->exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+  }
+#endif
+
   task(data);
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    child_frame->exit_frame = ompt_data_none;
+  }
+#endif
+
   KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();
   KA_TRACE(20, ("GOMP_parallel_sections exit: T#%d\n", gtid));
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    task_frame->enter_frame = ompt_data_none;
+  }
+#endif
 }
 
 #define PARALLEL_LOOP(func, schedule, ompt_pre, ompt_post)                     \
@@ -2456,6 +2485,26 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_WORKSHARE_TASK_REDUCTION_UNREGISTER)(
   }
 }
 
+// allocator construct
+void *KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ALLOC)(size_t alignment, size_t size,
+                                               uintptr_t allocator) {
+  int gtid = __kmp_entry_gtid();
+  KA_TRACE(20, ("GOMP_alloc: T#%d\n", gtid));
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmp_alloc(gtid, alignment, size, (omp_allocator_handle_t)allocator);
+}
+
+void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_FREE)(void *ptr, uintptr_t allocator) {
+  int gtid = __kmp_entry_gtid();
+  KA_TRACE(20, ("GOMP_free: T#%d\n", gtid));
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return ___kmpc_free(gtid, ptr, (omp_allocator_handle_t)allocator);
+}
+
 /* The following sections of code create aliases for the GOMP_* functions, then
    create versioned symbols using the assembler directive .symver. This is only
    pertinent for ELF .so library. The KMP_VERSION_SYMBOL macro is defined in
@@ -2644,6 +2693,10 @@ KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_START, 50, "GOMP_5.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_SECTIONS2_START, 50, "GOMP_5.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_WORKSHARE_TASK_REDUCTION_UNREGISTER, 50,
                    "GOMP_5.0");
+
+// GOMP_5.0.1 versioned symbols
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_ALLOC, 501, "GOMP_5.0.1");
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_FREE, 501, "GOMP_5.0.1");
 #endif // KMP_USE_VERSION_SYMBOLS
 
 #ifdef __cplusplus

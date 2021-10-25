@@ -954,8 +954,8 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
 
   // Check to see if this is a fixed string, or if it has regex pieces.
   if (!MatchFullLinesHere &&
-      (PatternStr.size() < 2 || (PatternStr.find("{{") == StringRef::npos &&
-                                 PatternStr.find("[[") == StringRef::npos))) {
+      (PatternStr.size() < 2 ||
+       (!PatternStr.contains("{{") && !PatternStr.contains("[[")))) {
     FixedStr = PatternStr;
     return false;
   }

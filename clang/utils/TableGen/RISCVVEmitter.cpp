@@ -140,8 +140,7 @@ enum RISCVExtension : uint8_t {
   F = 1 << 1,
   D = 1 << 2,
   Zfh = 1 << 3,
-  Zvamo = 1 << 4,
-  Zvlsseg = 1 << 5,
+  Zvlsseg = 1 << 4,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic
@@ -198,7 +197,7 @@ public:
   void emitCodeGenSwitchBody(raw_ostream &o) const;
 
   // Emit the macros for mapping C/C++ intrinsic function to builtin functions.
-  void emitIntrinsicMacro(raw_ostream &o) const;
+  void emitIntrinsicFuncDef(raw_ostream &o) const;
 
   // Emit the mangled function definition.
   void emitMangledFuncDef(raw_ostream &o) const;
@@ -652,7 +651,7 @@ void RVVType::applyModifier(StringRef Transformer) {
     assert(Idx != StringRef::npos);
     StringRef ComplexType = Transformer.slice(1, Idx);
     Transformer = Transformer.drop_front(Idx + 1);
-    assert(Transformer.find('(') == StringRef::npos &&
+    assert(!Transformer.contains('(') &&
            "Only allow one complex type transformer");
 
     auto UpdateAndCheckComplexProto = [&]() {
@@ -787,8 +786,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     else if (T->isFloatVector(64) || T->isFloat(64))
       RISCVExtensions |= RISCVExtension::D;
   }
-  if (RequiredExtension == "Zvamo")
-    RISCVExtensions |= RISCVExtension::Zvamo;
   if (RequiredExtension == "Zvlsseg")
     RISCVExtensions |= RISCVExtension::Zvlsseg;
 
@@ -855,34 +852,30 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
   OS << "  break;\n";
 }
 
-void RVVIntrinsic::emitIntrinsicMacro(raw_ostream &OS) const {
-  OS << "#define " << getName() << "(";
+void RVVIntrinsic::emitIntrinsicFuncDef(raw_ostream &OS) const {
+  OS << "__attribute__((__clang_builtin_alias__(";
+  OS << "__builtin_rvv_" << getName() << ")))\n";
+  OS << OutputType->getTypeStr() << " " << getName() << "(";
+  // Emit function arguments
   if (!InputTypes.empty()) {
     ListSeparator LS;
-    for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
-      OS << LS << "op" << i;
+    for (unsigned i = 0; i < InputTypes.size(); ++i)
+      OS << LS << InputTypes[i]->getTypeStr();
   }
-  OS << ") \\\n";
-  OS << "__builtin_rvv_" << getName() << "(";
-  if (!InputTypes.empty()) {
-    ListSeparator LS;
-    for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
-      OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
-  }
-  OS << ")\n";
+  OS << ");\n";
 }
 
 void RVVIntrinsic::emitMangledFuncDef(raw_ostream &OS) const {
-  OS << "__attribute__((clang_builtin_alias(";
+  OS << "__attribute__((__clang_builtin_alias__(";
   OS << "__builtin_rvv_" << getName() << ")))\n";
   OS << OutputType->getTypeStr() << " " << getMangledName() << "(";
   // Emit function arguments
   if (!InputTypes.empty()) {
     ListSeparator LS;
     for (unsigned i = 0; i < InputTypes.size(); ++i)
-      OS << LS << InputTypes[i]->getTypeStr() << " op" << i;
+      OS << LS << InputTypes[i]->getTypeStr();
   }
-  OS << ");\n\n";
+  OS << ");\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -975,29 +968,36 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   OS << "#endif\n\n";
 
   // The same extension include in the same arch guard marco.
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<RVVIntrinsic> &A,
-                      const std::unique_ptr<RVVIntrinsic> &B) {
-                     return A->getRISCVExtensions() < B->getRISCVExtensions();
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                             const std::unique_ptr<RVVIntrinsic> &B) {
+    return A->getRISCVExtensions() < B->getRISCVExtensions();
+  });
+
+  OS << "#define __rvv_ai static __inline__ "
+        "__attribute__((__always_inline__, __nodebug__))\n";
 
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
-    Inst.emitIntrinsicMacro(OS);
+    OS << "__rvv_ai ";
+    Inst.emitIntrinsicFuncDef(OS);
   });
+
+  OS << "#undef __rvv_ai\n\n";
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
 
   // Print Overloaded APIs
-  OS << "#define __rvv_overloaded static inline "
+  OS << "#define __rvv_aio static __inline__ "
         "__attribute__((__always_inline__, __nodebug__, __overloadable__))\n";
 
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     if (!Inst.isMask() && !Inst.hasNoMaskedOverloaded())
       return;
-    OS << "__rvv_overloaded ";
+    OS << "__rvv_aio ";
     Inst.emitMangledFuncDef(OS);
   });
+
+  OS << "#undef __rvv_aio\n";
 
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";
@@ -1024,11 +1024,10 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
   // IR name could be empty, use the stable sort preserves the relative order.
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<RVVIntrinsic> &A,
-                      const std::unique_ptr<RVVIntrinsic> &B) {
-                     return A->getIRName() < B->getIRName();
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                             const std::unique_ptr<RVVIntrinsic> &B) {
+    return A->getIRName() < B->getIRName();
+  });
   // Print switch body when the ir name or ManualCodegen changes from previous
   // iteration.
   RVVIntrinsic *PrevDef = Defs.begin()->get();
@@ -1254,8 +1253,6 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
     OS << LS << "defined(__riscv_d)";
   if (Extents & RISCVExtension::Zfh)
     OS << LS << "defined(__riscv_zfh)";
-  if (Extents & RISCVExtension::Zvamo)
-    OS << LS << "defined(__riscv_zvamo)";
   if (Extents & RISCVExtension::Zvlsseg)
     OS << LS << "defined(__riscv_zvlsseg)";
   OS << "\n";

@@ -446,6 +446,10 @@ def FeatureSMEF64 : SubtargetFeature<"sme-f64", "HasSMEF64", "true",
 def FeatureSMEI64 : SubtargetFeature<"sme-i64", "HasSMEI64", "true",
   "Enable Scalable Matrix Extension (SME) I16I64 instructions", [FeatureSME]>;
 
+def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
+  "Apple A7 (the CPU formerly known as Cyclone)">;
+
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -597,678 +601,516 @@ include "AArch64SchedA64FX.td"
 include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
 
-def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
-                                   "Cortex-A35 ARM processors", [
-                                   FeatureCRC,
-                                   FeatureCrypto,
-                                   FeatureFPARMv8,
-                                   FeatureNEON,
-                                   FeaturePerfMon
-                                   ]>;
+def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
+                                "Cortex-A35 ARM processors">;
 
-def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
+def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", [
+                                   FeatureFuseAES,
                                    FeatureBalanceFPOps,
-                                   FeatureCRC,
-                                   FeatureCrypto,
                                    FeatureCustomCheapAsMoveHandling,
-                                   FeatureFPARMv8,
-                                   FeatureFuseAES,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
-                                   FeaturePostRAScheduler,
-                                   ]>;
+                                   FeaturePostRAScheduler]>;
 
-def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
+def TuneA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    "Cortex-A55 ARM processors", [
-                                   HasV8_2aOps,
-                                   FeatureCrypto,
-                                   FeatureFPARMv8,
                                    FeatureFuseAES,
-                                   FeatureNEON,
-                                   FeatureFullFP16,
-                                   FeatureDotProd,
-                                   FeatureRCPC,
-                                   FeaturePerfMon,
                                    FeaturePostRAScheduler,
-                                   FeatureFuseAddress,
-                                   ]>;
+                                   FeatureFuseAddress]>;
 
-def ProcA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
+def TuneA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
                                    "Cortex-A510 ARM processors", [
-                                   HasV9_0aOps,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
-                                   FeatureMatMulInt8,
-                                   FeatureBF16,
-                                   FeatureAM,
-                                   FeatureMTE,
-                                   FeatureETE,
-                                   FeatureSVE2BitPerm,
-                                   FeatureFP16FML,
                                    FeatureFuseAES,
                                    FeaturePostRAScheduler
                                    ]>;
 
-def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
+def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", [
+                                   FeatureFuseAES,
                                    FeatureBalanceFPOps,
-                                   FeatureCRC,
-                                   FeatureCrypto,
                                    FeatureCustomCheapAsMoveHandling,
-                                   FeatureFPARMv8,
-                                   FeatureFuseAES,
                                    FeatureFuseLiterals,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
                                    FeaturePostRAScheduler,
-                                   FeaturePredictableSelectIsExpensive
-                                   ]>;
+                                   FeaturePredictableSelectIsExpensive]>;
 
-def ProcA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
+def TuneA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
                                    "Cortex-A65 ARM processors", [
-                                   HasV8_2aOps,
-                                   FeatureCrypto,
-                                   FeatureDotProd,
-                                   FeatureFPARMv8,
-                                   FeatureFullFP16,
+                                   FeatureFuseAES,
                                    FeatureFuseAddress,
-                                   FeatureFuseAES,
-                                   FeatureFuseLiterals,
-                                   FeatureNEON,
-                                   FeatureRAS,
-                                   FeatureRCPC,
-                                   FeatureSSBS,
-                                   ]>;
+                                   FeatureFuseLiterals]>;
 
-def ProcA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
+def TuneA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
                                    "Cortex-A72 ARM processors", [
-                                   FeatureCRC,
-                                   FeatureCrypto,
-                                   FeatureFPARMv8,
                                    FeatureFuseAES,
-                                   FeatureFuseLiterals,
-                                   FeatureNEON,
-                                   FeaturePerfMon
-                                   ]>;
+                                   FeatureFuseLiterals]>;
 
-def ProcA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
+def TuneA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
                                    "Cortex-A73 ARM processors", [
-                                   FeatureCRC,
-                                   FeatureCrypto,
-                                   FeatureFPARMv8,
-                                   FeatureFuseAES,
-                                   FeatureNEON,
-                                   FeaturePerfMon
-                                   ]>;
+                                   FeatureFuseAES]>;
 
-def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
+def TuneA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    "Cortex-A75 ARM processors", [
-                                   HasV8_2aOps,
-                                   FeatureCrypto,
-                                   FeatureFPARMv8,
-                                   FeatureFuseAES,
-                                   FeatureNEON,
-                                   FeatureFullFP16,
-                                   FeatureDotProd,
-                                   FeatureRCPC,
-                                   FeaturePerfMon
-                                   ]>;
+                                   FeatureFuseAES]>;
 
-def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
+def TuneA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                    "Cortex-A76 ARM processors", [
-                                    HasV8_2aOps,
-                                    FeatureFPARMv8,
-                                    FeatureFuseAES,
-                                    FeatureNEON,
-                                    FeatureRCPC,
-                                    FeatureCrypto,
-                                    FeatureFullFP16,
-                                    FeatureDotProd,
-                                    FeatureSSBS
-                                    ]>;
+                                   FeatureFuseAES]>;
 
-def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
+def TuneA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", [
-                                    HasV8_2aOps,
-                                    FeatureCmpBccFusion,
-                                    FeatureFPARMv8,
-                                    FeatureFuseAES,
-                                    FeatureNEON, FeatureRCPC,
-                                    FeatureCrypto,
-                                    FeatureFullFP16,
-                                    FeatureDotProd
-                                    ]>;
+                                   FeatureCmpBccFusion,
+                                   FeatureFuseAES]>;
 
-def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
-                               "CortexA78",
+def TuneA78 : SubtargetFeature<"a78", "ARMProcFamily", "CortexA78",
                                "Cortex-A78 ARM processors", [
-                               HasV8_2aOps,
                                FeatureCmpBccFusion,
-                               FeatureCrypto,
-                               FeatureFPARMv8,
                                FeatureFuseAES,
-                               FeatureNEON,
-                               FeatureRCPC,
-                               FeaturePerfMon,
-                               FeaturePostRAScheduler,
-                               FeatureSPE,
-                               FeatureFullFP16,
-                               FeatureSSBS,
-                               FeatureDotProd]>;
+                               FeaturePostRAScheduler]>;
 
-def ProcA78C : SubtargetFeature<"cortex-a78c", "ARMProcFamily",
+def TuneA78C : SubtargetFeature<"a78c", "ARMProcFamily",
                                 "CortexA78C",
                                 "Cortex-A78C ARM processors", [
-                                HasV8_2aOps,
                                 FeatureCmpBccFusion,
-                                FeatureCrypto,
-                                FeatureDotProd,
-                                FeatureFlagM,
-                                FeatureFP16FML,
-                                FeatureFPARMv8,
-                                FeatureFullFP16,
                                 FeatureFuseAES,
-                                FeatureNEON,
-                                FeaturePAuth,
-                                FeaturePerfMon,
-                                FeaturePostRAScheduler,
-                                FeatureRCPC,
-                                FeatureSPE,
-                                FeatureSSBS]>;
+                                FeaturePostRAScheduler]>;
 
-def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
+def TuneR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
-                               "Cortex-R82 ARM Processors", [
-                               FeaturePostRAScheduler,
-                               // All other features are implied by v8_0r ops:
-                               HasV8_0rOps,
-                               ]>;
+                               "Cortex-R82 ARM processors", [
+                               FeaturePostRAScheduler]>;
 
-def ProcX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
+def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   "Cortex-X1 ARM processors", [
-                                  HasV8_2aOps,
                                   FeatureCmpBccFusion,
-                                  FeatureCrypto,
-                                  FeatureFPARMv8,
                                   FeatureFuseAES,
-                                  FeatureNEON,
-                                  FeatureRCPC,
-                                  FeaturePerfMon,
-                                  FeaturePostRAScheduler,
-                                  FeatureSPE,
-                                  FeatureFullFP16,
-                                  FeatureDotProd]>;
+                                  FeaturePostRAScheduler]>;
 
-def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
+def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  "Fujitsu A64FX processors", [
-                                  HasV8_2aOps,
-                                  FeatureFPARMv8,
-                                  FeatureNEON,
-                                  FeatureSHA2,
-                                  FeaturePerfMon,
-                                  FeatureFullFP16,
-                                  FeatureSVE,
-                                  FeaturePostRAScheduler,
-                                  FeatureComplxNum,
-                                  FeatureAggressiveFMA,
-                                  FeatureArithmeticBccFusion,
-                                  FeaturePredictableSelectIsExpensive
-                                  ]>;
+                                 FeaturePostRAScheduler,
+                                 FeatureAggressiveFMA,
+                                 FeatureArithmeticBccFusion,
+                                 FeaturePredictableSelectIsExpensive
+                                 ]>;
 
-def ProcCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
-                                  "Nvidia Carmel processors", [
-                                   HasV8_2aOps,
-                                   FeatureNEON,
-                                   FeatureCrypto,
-                                   FeatureFullFP16
-                                   ]>;
+def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
+                                  "Nvidia Carmel processors">;
 
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
 // perform the fusion and cyclone is used by default when targetting apple OSes.
-def ProcAppleA7 : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
-                                   "Apple A7 (the CPU formerly known as Cyclone)", [
-                                   FeatureAlternateSExtLoadCVTF32Pattern,
-                                   FeatureArithmeticBccFusion,
-                                   FeatureArithmeticCbzFusion,
-                                   FeatureCrypto,
-                                   FeatureDisableLatencySchedHeuristic,
-                                   FeatureFPARMv8,
-                                   FeatureFuseAES,
-                                   FeatureFuseCryptoEOR,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
-                                   FeatureZCRegMove,
-                                   FeatureZCZeroing,
-                                   FeatureZCZeroingFPWorkaround
-                                   ]>;
+def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
+                                    "Apple A7 (the CPU formerly known as Cyclone)", [
+                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureArithmeticCbzFusion,
+                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureFuseAES, FeatureFuseCryptoEOR,
+                                    FeatureZCRegMove,
+                                    FeatureZCZeroing,
+                                    FeatureZCZeroingFPWorkaround]
+                                    >;
 
-def ProcAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
+def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
                                     "Apple A10", [
                                     FeatureAlternateSExtLoadCVTF32Pattern,
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
-                                    FeatureCrypto,
                                     FeatureDisableLatencySchedHeuristic,
-                                    FeatureFPARMv8,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
-                                    FeatureNEON,
-                                    FeaturePerfMon,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing,
-                                    FeatureCRC,
-                                    FeatureRDM,
-                                    FeaturePAN,
-                                    FeatureLOR,
-                                    FeatureVH,
-                                    ]>;
+                                    FeatureZCZeroing]
+                                    >;
 
-def ProcAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
+def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
                                     "Apple A11", [
                                     FeatureAlternateSExtLoadCVTF32Pattern,
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
-                                    FeatureCrypto,
                                     FeatureDisableLatencySchedHeuristic,
-                                    FeatureFPARMv8,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
-                                    FeatureNEON,
-                                    FeaturePerfMon,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing,
-                                    FeatureFullFP16,
-                                    HasV8_2aOps
-                                    ]>;
+                                    FeatureZCZeroing]
+                                    >;
 
-def ProcAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
+def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
                                     "Apple A12", [
                                     FeatureAlternateSExtLoadCVTF32Pattern,
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
-                                    FeatureCrypto,
                                     FeatureDisableLatencySchedHeuristic,
-                                    FeatureFPARMv8,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
-                                    FeatureNEON,
-                                    FeaturePerfMon,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing,
-                                    FeatureFullFP16,
-                                    HasV8_3aOps
-                                    ]>;
+                                    FeatureZCZeroing]
+                                    >;
 
-def ProcAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
-                                     "Apple A13", [
-                                     FeatureAlternateSExtLoadCVTF32Pattern,
-                                     FeatureArithmeticBccFusion,
-                                     FeatureArithmeticCbzFusion,
-                                     FeatureCrypto,
-                                     FeatureDisableLatencySchedHeuristic,
-                                     FeatureFPARMv8,
-                                     FeatureFuseAES,
-                                     FeatureFuseCryptoEOR,
-                                     FeatureNEON,
-                                     FeaturePerfMon,
-                                     FeatureZCRegMove,
-                                     FeatureZCZeroing,
-                                     FeatureFullFP16,
-                                     FeatureFP16FML,
-                                     FeatureSHA3,
-                                     HasV8_4aOps
-                                     ]>;
+def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
+                                    "Apple A13", [
+                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureArithmeticCbzFusion,
+                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureFuseAES,
+                                    FeatureFuseCryptoEOR,
+                                    FeatureZCRegMove,
+                                    FeatureZCZeroing]
+                                    >;
 
-def ProcAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
+def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     "Apple A14", [
                                     FeatureAggressiveFMA,
                                     FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureAltFPCmp,
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
-                                    FeatureCrypto,
                                     FeatureDisableLatencySchedHeuristic,
-                                    FeatureFPARMv8,
-                                    FeatureFRInt3264,
                                     FeatureFuseAddress,
                                     FeatureFuseAES,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCCSelect,
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
-                                    FeatureNEON,
-                                    FeaturePerfMon,
-                                    FeatureSpecRestrict,
-                                    FeatureSSBS,
-                                    FeatureSB,
-                                    FeaturePredRes,
-                                    FeatureCacheDeepPersist,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing,
-                                    FeatureFullFP16,
-                                    FeatureFP16FML,
-                                    FeatureSHA3,
-                                    HasV8_4aOps
-                                    ]>;
+                                    FeatureZCZeroing]>;
 
-def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
+def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
-                                    [FeatureCRC,
-                                     FeatureCrypto,
-                                     FeatureExynosCheapAsMoveHandling,
+                                    [FeatureExynosCheapAsMoveHandling,
                                      FeatureForce32BitJumpTables,
                                      FeatureFuseAddress,
                                      FeatureFuseAES,
                                      FeatureFuseCCSelect,
                                      FeatureFuseLiterals,
                                      FeatureLSLFast,
-                                     FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeaturePredictableSelectIsExpensive]>;
 
-def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
-                                    "Samsung Exynos-M4 processors",
-                                    [HasV8_2aOps,
-                                     FeatureArithmeticBccFusion,
+def TuneExynosM4 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
+                                    "Samsung Exynos-M3 processors",
+                                    [FeatureArithmeticBccFusion,
                                      FeatureArithmeticCbzFusion,
-                                     FeatureCrypto,
-                                     FeatureDotProd,
                                      FeatureExynosCheapAsMoveHandling,
                                      FeatureForce32BitJumpTables,
-                                     FeatureFullFP16,
                                      FeatureFuseAddress,
                                      FeatureFuseAES,
                                      FeatureFuseArithmeticLogic,
                                      FeatureFuseCCSelect,
                                      FeatureFuseLiterals,
                                      FeatureLSLFast,
-                                     FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeatureZCZeroing]>;
 
-def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
+def TuneKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [
-                                   FeatureCRC,
-                                   FeatureCrypto,
                                    FeatureCustomCheapAsMoveHandling,
-                                   FeatureFPARMv8,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureZCZeroing,
-                                   FeatureLSLFast
-                                   ]>;
+                                   FeatureLSLFast]
+                                   >;
 
-def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
+def TuneFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    "Qualcomm Falkor processors", [
-                                   FeatureCRC,
-                                   FeatureCrypto,
                                    FeatureCustomCheapAsMoveHandling,
-                                   FeatureFPARMv8,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
-                                   FeatureRDM,
                                    FeatureZCZeroing,
                                    FeatureLSLFast,
                                    FeatureSlowSTRQro
                                    ]>;
 
-def ProcNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily",
-                                      "NeoverseE1",
+def TuneNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily", "NeoverseE1",
                                       "Neoverse E1 ARM processors", [
-                                      HasV8_2aOps,
-                                      FeatureCrypto,
-                                      FeatureDotProd,
-                                      FeatureFPARMv8,
-                                      FeatureFullFP16,
-                                      FeatureNEON,
-                                      FeatureRCPC,
-                                      FeatureSSBS,
                                       FeaturePostRAScheduler,
-                                      FeatureFuseAES,
+                                      FeatureFuseAES
                                       ]>;
 
-def ProcNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily",
-                                      "NeoverseN1",
+def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1",
                                       "Neoverse N1 ARM processors", [
-                                      HasV8_2aOps,
-                                      FeatureCrypto,
-                                      FeatureDotProd,
-                                      FeatureFPARMv8,
-                                      FeatureFullFP16,
-                                      FeatureNEON,
-                                      FeatureRCPC,
-                                      FeatureSPE,
-                                      FeatureSSBS,
                                       FeaturePostRAScheduler,
-                                      FeatureFuseAES,
+                                      FeatureFuseAES
                                       ]>;
 
-def ProcNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily",
-                                      "NeoverseN2",
+def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2",
                                       "Neoverse N2 ARM processors", [
-                                      HasV8_5aOps,
-                                      FeatureBF16,
-                                      FeatureETE,
-                                      FeatureMatMulInt8,
-                                      FeatureMTE,
-                                      FeatureSVE2,
-                                      FeatureSVE2BitPerm,
-                                      FeatureTRBE,
                                       FeaturePostRAScheduler,
-                                      FeatureCrypto,
-                                      FeatureFuseAES,
+                                      FeatureFuseAES
                                       ]>;
 
-def ProcNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily",
-                                      "NeoverseV1",
+def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1",
                                       "Neoverse V1 ARM processors", [
-                                      HasV8_4aOps,
-                                      FeatureBF16,
-                                      FeatureCacheDeepPersist,
-                                      FeatureCrypto,
-                                      FeatureFPARMv8,
-                                      FeatureFP16FML,
-                                      FeatureFullFP16,
                                       FeatureFuseAES,
-                                      FeatureMatMulInt8,
-                                      FeatureNEON,
-                                      FeaturePerfMon,
-                                      FeaturePostRAScheduler,
-                                      FeatureRandGen,
-                                      FeatureSPE,
-                                      FeatureSSBS,
-                                      FeatureSVE]>;
+                                      FeaturePostRAScheduler]>;
 
-def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
+def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
-                                   FeatureCrypto,
                                    FeatureCustomCheapAsMoveHandling,
-                                   FeatureFPARMv8,
-                                   FeatureNEON,
-                                   FeatureSPE,
-                                   FeaturePerfMon,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureZCZeroing,
-                                   FeatureLSLFast,
-                                   HasV8_4aOps]>;
+                                   FeatureLSLFast]>;
 
-def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
-                                         "ThunderX2T99",
+def TuneThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily", "ThunderX2T99",
                                          "Cavium ThunderX2 processors", [
                                           FeatureAggressiveFMA,
-                                          FeatureCRC,
-                                          FeatureCrypto,
-                                          FeatureFPARMv8,
                                           FeatureArithmeticBccFusion,
-                                          FeatureNEON,
                                           FeaturePostRAScheduler,
-                                          FeaturePredictableSelectIsExpensive,
-                                          FeatureLSE,
-                                          HasV8_1aOps]>;
+                                          FeaturePredictableSelectIsExpensive]>;
 
-def ProcThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
-                                         "ThunderX3T110",
-                                         "Marvell ThunderX3 processors", [
-                                          FeatureAggressiveFMA,
-                                          FeatureCRC,
-                                          FeatureCrypto,
-                                          FeatureFPARMv8,
-                                          FeatureArithmeticBccFusion,
-                                          FeatureNEON,
-                                          FeaturePostRAScheduler,
-                                          FeaturePredictableSelectIsExpensive,
-                                          FeatureLSE,
-                                          FeaturePAuth,
-                                          FeatureBalanceFPOps,
-                                          FeaturePerfMon,
-                                          FeatureStrictAlign,
-                                          HasV8_3aOps]>;
+def TuneThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
+                                          "ThunderX3T110",
+                                          "Marvell ThunderX3 processors", [
+                                           FeatureAggressiveFMA,
+                                           FeatureArithmeticBccFusion,
+                                           FeaturePostRAScheduler,
+                                           FeaturePredictableSelectIsExpensive,
+                                           FeatureBalanceFPOps,
+                                           FeatureStrictAlign]>;
 
-def ProcThunderX : SubtargetFeature<"thunderx", "ARMProcFamily", "ThunderX",
+def TuneThunderX : SubtargetFeature<"thunderx", "ARMProcFamily", "ThunderX",
                                     "Cavium ThunderX processors", [
-                                    FeatureCRC,
-                                    FeatureCrypto,
-                                    FeatureFPARMv8,
-                                    FeaturePerfMon,
                                     FeaturePostRAScheduler,
-                                    FeaturePredictableSelectIsExpensive,
-                                    FeatureNEON]>;
+                                    FeaturePredictableSelectIsExpensive]>;
 
-def ProcThunderXT88 : SubtargetFeature<"thunderxt88", "ARMProcFamily",
+def TuneThunderXT88 : SubtargetFeature<"thunderxt88", "ARMProcFamily",
                                        "ThunderXT88",
                                        "Cavium ThunderX processors", [
-                                       FeatureCRC,
-                                       FeatureCrypto,
-                                       FeatureFPARMv8,
-                                       FeaturePerfMon,
                                        FeaturePostRAScheduler,
-                                       FeaturePredictableSelectIsExpensive,
-                                       FeatureNEON]>;
+                                       FeaturePredictableSelectIsExpensive]>;
 
-def ProcThunderXT81 : SubtargetFeature<"thunderxt81", "ARMProcFamily",
+def TuneThunderXT81 : SubtargetFeature<"thunderxt81", "ARMProcFamily",
                                        "ThunderXT81",
                                        "Cavium ThunderX processors", [
-                                       FeatureCRC,
-                                       FeatureCrypto,
-                                       FeatureFPARMv8,
-                                       FeaturePerfMon,
                                        FeaturePostRAScheduler,
-                                       FeaturePredictableSelectIsExpensive,
-                                       FeatureNEON]>;
+                                       FeaturePredictableSelectIsExpensive]>;
 
-def ProcThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
+def TuneThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
                                        "ThunderXT83",
                                        "Cavium ThunderX processors", [
-                                       FeatureCRC,
-                                       FeatureCrypto,
-                                       FeatureFPARMv8,
-                                       FeaturePerfMon,
                                        FeaturePostRAScheduler,
-                                       FeaturePredictableSelectIsExpensive,
-                                       FeatureNEON]>;
+                                       FeaturePredictableSelectIsExpensive]>;
 
-def ProcTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
+def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   "HiSilicon TS-V110 processors", [
-                                  HasV8_2aOps,
-                                  FeatureCrypto,
                                   FeatureCustomCheapAsMoveHandling,
-                                  FeatureFPARMv8,
                                   FeatureFuseAES,
-                                  FeatureNEON,
-                                  FeaturePerfMon,
-                                  FeaturePostRAScheduler,
-                                  FeatureSPE,
-                                  FeatureFullFP16,
-                                  FeatureFP16FML,
-                                  FeatureDotProd]>;
+                                  FeaturePostRAScheduler]>;
 
-def : ProcessorModel<"generic", CortexA55Model, [
-                     FeatureFPARMv8,
-                     FeatureFuseAES,
-                     FeatureNEON,
-                     FeaturePerfMon,
-                     FeaturePostRAScheduler,
-// ETE and TRBE are future architecture extensions. We temporarily enable them
-// by default for users targeting generic AArch64, until it is decided in which
-// armv8.x-a architecture revision they will end up. The extensions do not
-// affect code generated by the compiler and can be used only by explicitly
-// mentioning the new system register names in assembly.
-                     FeatureETE
-                     ]>;
 
-def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
-def : ProcessorModel<"cortex-a34", CortexA53Model, [ProcA35]>;
-def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
-def : ProcessorModel<"cortex-a55", CortexA55Model, [ProcA55]>;
-def : ProcessorModel<"cortex-a510", CortexA55Model, [ProcA510]>;
-def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
-def : ProcessorModel<"cortex-a65", CortexA53Model, [ProcA65]>;
-def : ProcessorModel<"cortex-a65ae", CortexA53Model, [ProcA65]>;
-def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA72]>;
-def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
-def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
-def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
-def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
-def : ProcessorModel<"cortex-a77", CortexA57Model, [ProcA77]>;
-def : ProcessorModel<"cortex-a78", CortexA57Model, [ProcA78]>;
-def : ProcessorModel<"cortex-a78c", CortexA57Model, [ProcA78C]>;
-def : ProcessorModel<"cortex-r82", CortexA55Model, [ProcR82]>;
-def : ProcessorModel<"cortex-x1", CortexA57Model, [ProcX1]>;
-def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
-def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
-def : ProcessorModel<"neoverse-n2", CortexA57Model, [ProcNeoverseN2]>;
-def : ProcessorModel<"neoverse-v1", CortexA57Model, [ProcNeoverseV1]>;
-def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
-def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
-def : ProcessorModel<"exynos-m5", ExynosM5Model, [ProcExynosM4]>;
-def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
-def : ProcessorModel<"saphira", FalkorModel, [ProcSaphira]>;
-def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;
+def ProcessorFeatures {
+  list<SubtargetFeature> A53  = [FeatureCRC, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeaturePerfMon];
+  list<SubtargetFeature> A55  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                 FeatureRCPC, FeaturePerfMon];
+  list<SubtargetFeature> A510 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
+                                 FeatureMatMulInt8, FeatureBF16, FeatureAM,
+                                 FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
+                                 FeatureFP16FML];
+  list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                 FeatureRCPC, FeatureSSBS, FeatureRAS];
+  list<SubtargetFeature> A76  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                 FeatureRCPC, FeatureSSBS];
+  list<SubtargetFeature> A77  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                 FeatureRCPC];
+  list<SubtargetFeature> A78  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                 FeatureRCPC, FeaturePerfMon, FeatureSPE,
+                                 FeatureSSBS];
+  list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                 FeatureFlagM, FeatureFP16FML, FeaturePAuth,
+                                 FeaturePerfMon, FeatureRCPC, FeatureSPE,
+                                 FeatureSSBS];
+  list<SubtargetFeature> R82  = [HasV8_0rOps];
+  list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                 FeatureNEON, FeatureRCPC, FeaturePerfMon,
+                                 FeatureSPE, FeatureFullFP16, FeatureDotProd];
+  list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
+                                     FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
+                                     FeatureSVE, FeatureComplxNum];
+  list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureCrypto,
+                                     FeatureFullFP16];
+  list<SubtargetFeature> AppleA7  = [FeatureCrypto, FeatureFPARMv8, FeatureNEON,
+                                     FeaturePerfMon, FeatureAppleA7SysReg];
+  list<SubtargetFeature> AppleA10 = [FeatureCrypto, FeatureFPARMv8, FeatureNEON,
+                                     FeaturePerfMon, FeatureCRC, FeatureRDM,
+                                     FeaturePAN, FeatureLOR, FeatureVH];
+  list<SubtargetFeature> AppleA11 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16];
+  list<SubtargetFeature> AppleA12 = [HasV8_3aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16];
+  list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16,
+                                     FeatureFP16FML, FeatureSHA3];
+  list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureFRInt3264,
+                                     FeatureSpecRestrict, FeatureSSBS, FeatureSB,
+                                     FeaturePredRes, FeatureCacheDeepPersist,
+                                     FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
+                                     FeatureAltFPCmp];
+  list<SubtargetFeature> ExynosM3 = [FeatureCRC, FeatureCrypto, FeaturePerfMon];
+  list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
+                                     FeatureFullFP16, FeaturePerfMon];
+  list<SubtargetFeature> Falkor   = [FeatureCRC, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureRDM];
+  list<SubtargetFeature> NeoverseE1 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
+                                       FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
+                                       FeatureRCPC, FeatureSSBS];
+  list<SubtargetFeature> NeoverseN1 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
+                                       FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
+                                       FeatureRCPC, FeatureSPE, FeatureSSBS];
+  list<SubtargetFeature> NeoverseN2 = [HasV8_5aOps, FeatureBF16, FeatureETE,
+                                       FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
+                                       FeatureSVE2BitPerm, FeatureTRBE, FeatureCrypto];
+  list<SubtargetFeature> NeoverseV1 = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
+                                       FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
+                                       FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
+                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
+                                       FeatureSSBS, FeatureSVE];
+  list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
+                                       FeatureNEON, FeatureSPE, FeaturePerfMon];
+  list<SubtargetFeature> ThunderX   = [FeatureCRC, FeatureCrypto, FeatureFPARMv8,
+                                       FeaturePerfMon, FeatureNEON];
+  list<SubtargetFeature> ThunderX2T99  = [HasV8_1aOps, FeatureCRC, FeatureCrypto,
+                                          FeatureFPARMv8, FeatureNEON, FeatureLSE];
+  list<SubtargetFeature> ThunderX3T110 = [HasV8_3aOps, FeatureCRC, FeatureCrypto,
+                                          FeatureFPARMv8, FeatureNEON, FeatureLSE,
+                                          FeaturePAuth, FeaturePerfMon];
+  list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                   FeatureNEON, FeaturePerfMon, FeatureSPE,
+                                   FeatureFullFP16, FeatureFP16FML, FeatureDotProd];
+
+  // ETE and TRBE are future architecture extensions. We temporarily enable them
+  // by default for users targeting generic AArch64. The extensions do not
+  // affect code generated by the compiler and can be used only by explicitly
+  // mentioning the new system register names in assembly.
+  list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeaturePerfMon, FeatureETE];
+}
+
+
+def : ProcessorModel<"generic", CortexA55Model, ProcessorFeatures.Generic,
+                     [FeatureFuseAES, FeaturePostRAScheduler]>;
+def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
+                     [TuneA35]>;
+def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
+                     [TuneA35]>;
+def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
+                     [TuneA53]>;
+def : ProcessorModel<"cortex-a55", CortexA55Model, ProcessorFeatures.A55,
+                     [TuneA55]>;
+def : ProcessorModel<"cortex-a510", CortexA55Model, ProcessorFeatures.A510,
+                     [TuneA510]>;
+def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
+                     [TuneA57]>;
+def : ProcessorModel<"cortex-a65", CortexA53Model, ProcessorFeatures.A65,
+                     [TuneA65]>;
+def : ProcessorModel<"cortex-a65ae", CortexA53Model, ProcessorFeatures.A65,
+                     [TuneA65]>;
+def : ProcessorModel<"cortex-a72", CortexA57Model, ProcessorFeatures.A53,
+                     [TuneA72]>;
+def : ProcessorModel<"cortex-a73", CortexA57Model, ProcessorFeatures.A53,
+                     [TuneA73]>;
+def : ProcessorModel<"cortex-a75", CortexA57Model, ProcessorFeatures.A55,
+                     [TuneA75]>;
+def : ProcessorModel<"cortex-a76", CortexA57Model, ProcessorFeatures.A76,
+                     [TuneA76]>;
+def : ProcessorModel<"cortex-a76ae", CortexA57Model, ProcessorFeatures.A76,
+                     [TuneA76]>;
+def : ProcessorModel<"cortex-a77", CortexA57Model, ProcessorFeatures.A77,
+                     [TuneA77]>;
+def : ProcessorModel<"cortex-a78", CortexA57Model, ProcessorFeatures.A78,
+                     [TuneA78]>;
+def : ProcessorModel<"cortex-a78c", CortexA57Model, ProcessorFeatures.A78C,
+                     [TuneA78C]>;
+def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
+                     [TuneR82]>;
+def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,
+                     [TuneX1]>;
+def : ProcessorModel<"neoverse-e1", CortexA53Model,
+                     ProcessorFeatures.NeoverseE1, [TuneNeoverseE1]>;
+def : ProcessorModel<"neoverse-n1", CortexA57Model,
+                     ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
+def : ProcessorModel<"neoverse-n2", CortexA57Model,
+                     ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
+def : ProcessorModel<"neoverse-v1", CortexA57Model,
+                     ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
+def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
+                     [TuneExynosM3]>;
+def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,
+                     [TuneExynosM4]>;
+def : ProcessorModel<"exynos-m5", ExynosM5Model, ProcessorFeatures.ExynosM4,
+                     [TuneExynosM4]>;
+def : ProcessorModel<"falkor", FalkorModel, ProcessorFeatures.Falkor,
+                     [TuneFalkor]>;
+def : ProcessorModel<"saphira", FalkorModel, ProcessorFeatures.Saphira,
+                     [TuneSaphira]>;
+def : ProcessorModel<"kryo", KryoModel, ProcessorFeatures.A53, [TuneKryo]>;
+
 // Cavium ThunderX/ThunderX T8X  Processors
-def : ProcessorModel<"thunderx", ThunderXT8XModel,  [ProcThunderX]>;
-def : ProcessorModel<"thunderxt88", ThunderXT8XModel,  [ProcThunderXT88]>;
-def : ProcessorModel<"thunderxt81", ThunderXT8XModel,  [ProcThunderXT81]>;
-def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
+def : ProcessorModel<"thunderx", ThunderXT8XModel,  ProcessorFeatures.ThunderX,
+                     [TuneThunderX]>;
+def : ProcessorModel<"thunderxt88", ThunderXT8XModel,
+                     ProcessorFeatures.ThunderX, [TuneThunderXT88]>;
+def : ProcessorModel<"thunderxt81", ThunderXT8XModel,
+                     ProcessorFeatures.ThunderX, [TuneThunderXT81]>;
+def : ProcessorModel<"thunderxt83", ThunderXT8XModel,
+                     ProcessorFeatures.ThunderX, [TuneThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
-def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
+def : ProcessorModel<"thunderx2t99", ThunderX2T99Model,
+                     ProcessorFeatures.ThunderX2T99, [TuneThunderX2T99]>;
 // Marvell ThunderX3T110 Processors.
-def : ProcessorModel<"thunderx3t110", ThunderX3T110Model, [ProcThunderX3T110]>;
-def : ProcessorModel<"tsv110", TSV110Model, [ProcTSV110]>;
+def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
+                     ProcessorFeatures.ThunderX3T110, [TuneThunderX3T110]>;
+def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
+                     [TuneTSV110]>;
 
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
-def : ProcessorModel<"cyclone", CycloneModel, [ProcAppleA7]>;
+def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,
+                     [TuneAppleA7]>;
 
 // iPhone and iPad CPUs
-def : ProcessorModel<"apple-a7", CycloneModel, [ProcAppleA7]>;
-def : ProcessorModel<"apple-a8", CycloneModel, [ProcAppleA7]>;
-def : ProcessorModel<"apple-a9", CycloneModel, [ProcAppleA7]>;
-def : ProcessorModel<"apple-a10", CycloneModel, [ProcAppleA10]>;
-def : ProcessorModel<"apple-a11", CycloneModel, [ProcAppleA11]>;
-def : ProcessorModel<"apple-a12", CycloneModel, [ProcAppleA12]>;
-def : ProcessorModel<"apple-a13", CycloneModel, [ProcAppleA13]>;
-def : ProcessorModel<"apple-a14", CycloneModel, [ProcAppleA14]>;
+def : ProcessorModel<"apple-a7", CycloneModel, ProcessorFeatures.AppleA7,
+                     [TuneAppleA7]>;
+def : ProcessorModel<"apple-a8", CycloneModel, ProcessorFeatures.AppleA7,
+                     [TuneAppleA7]>;
+def : ProcessorModel<"apple-a9", CycloneModel, ProcessorFeatures.AppleA7,
+                     [TuneAppleA7]>;
+def : ProcessorModel<"apple-a10", CycloneModel, ProcessorFeatures.AppleA10,
+                     [TuneAppleA10]>;
+def : ProcessorModel<"apple-a11", CycloneModel, ProcessorFeatures.AppleA11,
+                     [TuneAppleA11]>;
+def : ProcessorModel<"apple-a12", CycloneModel, ProcessorFeatures.AppleA12,
+                     [TuneAppleA12]>;
+def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
+                     [TuneAppleA13]>;
+def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
+                     [TuneAppleA14]>;
 
 // Mac CPUs
-def : ProcessorModel<"apple-m1", CycloneModel, [ProcAppleA14]>;
+def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
+                     [TuneAppleA14]>;
 
 // watch CPUs.
-def : ProcessorModel<"apple-s4", CycloneModel, [ProcAppleA12]>;
-def : ProcessorModel<"apple-s5", CycloneModel, [ProcAppleA12]>;
+def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
+                     [TuneAppleA12]>;
+def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
+                     [TuneAppleA12]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA14]>;
+def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA14,
+                     [TuneAppleA14]>;
 
 // Fujitsu A64FX
-def : ProcessorModel<"a64fx", A64FXModel, [ProcA64FX]>;
+def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
+                     [TuneA64FX]>;
 
 // Nvidia Carmel
-def : ProcessorModel<"carmel", NoSchedModel, [ProcCarmel]>;
+def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
+                     [TuneCarmel]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

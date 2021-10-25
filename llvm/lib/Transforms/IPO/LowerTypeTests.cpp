@@ -342,7 +342,8 @@ private:
 struct ScopedSaveAliaseesAndUsed {
   Module &M;
   SmallVector<GlobalValue *, 4> Used, CompilerUsed;
-  std::vector<std::pair<GlobalIndirectSymbol *, Function *>> FunctionAliases;
+  std::vector<std::pair<GlobalAlias *, Function *>> FunctionAliases;
+  std::vector<std::pair<GlobalIFunc *, Function *>> ResolverIFuncs;
 
   ScopedSaveAliaseesAndUsed(Module &M) : M(M) {
     // The users of this class want to replace all function references except
@@ -362,13 +363,16 @@ struct ScopedSaveAliaseesAndUsed {
     if (GlobalVariable *GV = collectUsedGlobalVariables(M, CompilerUsed, true))
       GV->eraseFromParent();
 
-    for (auto &GIS : concat<GlobalIndirectSymbol>(M.aliases(), M.ifuncs())) {
+    for (auto &GA : M.aliases()) {
       // FIXME: This should look past all aliases not just interposable ones,
       // see discussion on D65118.
-      if (auto *F =
-              dyn_cast<Function>(GIS.getIndirectSymbol()->stripPointerCasts()))
-        FunctionAliases.push_back({&GIS, F});
+      if (auto *F = dyn_cast<Function>(GA.getAliasee()->stripPointerCasts()))
+        FunctionAliases.push_back({&GA, F});
     }
+
+    for (auto &GI : M.ifuncs())
+      if (auto *F = dyn_cast<Function>(GI.getResolver()->stripPointerCasts()))
+        ResolverIFuncs.push_back({&GI, F});
   }
 
   ~ScopedSaveAliaseesAndUsed() {
@@ -376,8 +380,15 @@ struct ScopedSaveAliaseesAndUsed {
     appendToCompilerUsed(M, CompilerUsed);
 
     for (auto P : FunctionAliases)
-      P.first->setIndirectSymbol(
+      P.first->setAliasee(
           ConstantExpr::getBitCast(P.second, P.first->getType()));
+
+    for (auto P : ResolverIFuncs) {
+      // This does not preserve pointer casts that may have been stripped by the
+      // constructor, but the resolver's type is different from that of the
+      // ifunc anyway.
+      P.first->setResolver(P.second);
+    }
   }
 };
 

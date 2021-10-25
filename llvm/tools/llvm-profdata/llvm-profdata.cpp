@@ -836,7 +836,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
     if (SanitizedEntry.startswith("#"))
       continue;
     // If there's no comma, it's an unweighted profile.
-    else if (SanitizedEntry.find(',') == StringRef::npos)
+    else if (!SanitizedEntry.contains(','))
       addWeightedInput(WFV, {std::string(SanitizedEntry), 1});
     else
       addWeightedInput(WFV, parseWeightedFile(SanitizedEntry));
@@ -2108,9 +2108,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
       if (FuncIsCS != ShowCS)
         continue;
     }
-    bool Show =
-        ShowAllFunctions || (!ShowFunction.empty() &&
-                             Func.Name.find(ShowFunction) != Func.Name.npos);
+    bool Show = ShowAllFunctions ||
+                (!ShowFunction.empty() && Func.Name.contains(ShowFunction));
 
     bool doTextFormatDump = (Show && TextFormat);
 

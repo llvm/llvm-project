@@ -108,5 +108,5 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-attributes #0 = { "amdgpu-waves-per-eu"="1,10" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,10" }
 attributes #1 = { nounwind readnone speculatable willreturn }

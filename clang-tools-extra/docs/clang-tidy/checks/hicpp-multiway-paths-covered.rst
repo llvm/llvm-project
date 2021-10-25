@@ -68,7 +68,7 @@ Degenerated ``switch`` statements without any labels are caught as well.
   int i = 42;
   switch(i) {
     case 1: // do something here
-    default: // do somethe else here
+    default: // do something else here
   }
 
   // Should rather be the following:

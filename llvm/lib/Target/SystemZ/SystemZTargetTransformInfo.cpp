@@ -424,8 +424,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
           (C->getType()->isVectorTy()
                ? dyn_cast_or_null<const ConstantInt>(C->getSplatValue())
                : dyn_cast<const ConstantInt>(C));
-      if (CVal != nullptr &&
-          (CVal->getValue().isPowerOf2() || (-CVal->getValue()).isPowerOf2()))
+      if (CVal && (CVal->getValue().isPowerOf2() ||
+                   CVal->getValue().isNegatedPowerOf2()))
         DivRemConstPow2 = true;
       else
         DivRemConst = true;

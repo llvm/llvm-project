@@ -1,4 +1,4 @@
-; RUN: opt -vector-combine -S %s | FileCheck %s
+; RUN: opt -passes=vector-combine -S %s | FileCheck %s
 
 ; Negative test for extract + cmp + binop - don't try this with scalable vectors.
 ; Moved from X86/extract-cmp-binop.ll
