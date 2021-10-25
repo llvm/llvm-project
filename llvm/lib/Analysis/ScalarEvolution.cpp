@@ -13304,7 +13304,11 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
 void ScalarEvolution::registerUser(const SCEV *User,
                                    ArrayRef<const SCEV *> Ops) {
   for (auto *Op : Ops)
-    SCEVUsers[Op].insert(User);
+    // We do not expect that forgetting cached data for SCEVConstants will ever
+    // open any prospects for sharpening or introduce any correctness issues,
+    // so we don't bother storing their dependencies.
+    if (!isa<SCEVConstant>(Op))
+      SCEVUsers[Op].insert(User);
 }
 
 const SCEV *PredicatedScalarEvolution::getSCEV(Value *V) {
