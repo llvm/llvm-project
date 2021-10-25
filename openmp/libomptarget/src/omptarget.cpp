@@ -1441,9 +1441,6 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     }
   }
 
-  // Get loop trip count
-  uint64_t LoopTripCount = getLoopTripCount(DeviceId);
-
   // Launch device execution.
   void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
@@ -1455,7 +1452,7 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     if (IsTeamConstruct)
       Ret = Device.runTeamRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                                  TgtArgs.size(), TeamNum, ThreadLimit,
-                                 LoopTripCount, AsyncInfo);
+                                 getLoopTripCount(DeviceId), AsyncInfo);
     else
       Ret = Device.runRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                              TgtArgs.size(), AsyncInfo);
