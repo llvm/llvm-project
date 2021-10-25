@@ -981,8 +981,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     return A->getRISCVExtensions() < B->getRISCVExtensions();
   });
 
-  OS << "#define __rvv_ai static __inline__ "
-        "__attribute__((__always_inline__, __nodebug__))\n";
+  OS << "#define __rvv_ai static __inline__\n";
 
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
@@ -996,7 +995,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   // Print Overloaded APIs
   OS << "#define __rvv_aio static __inline__ "
-        "__attribute__((__always_inline__, __nodebug__, __overloadable__))\n";
+        "__attribute__((__overloadable__))\n";
 
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     if (!Inst.isMask() && !Inst.hasNoMaskedOverloaded())
