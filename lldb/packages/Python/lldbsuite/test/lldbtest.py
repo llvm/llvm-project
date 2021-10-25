@@ -315,7 +315,8 @@ class ValueCheck:
         for i in range(0, val.GetNumChildren()):
             expected_child = self.children[i]
             actual_child = val.GetChildAtIndex(i)
-            expected_child.check_value(test_base, actual_child, error_msg)
+            child_error = "Checking child with index " + str(i) + ":\n" + error_msg
+            expected_child.check_value(test_base, actual_child, child_error)
 
 class recording(SixStringIO):
     """
