@@ -196,12 +196,12 @@ public:
   /// between TransferTrackers view of variable locations and MLocTrackers. For
   /// example, MLocTracker observes all clobbers, but TransferTracker lazily
   /// does not.
-  std::vector<ValueIDNum> VarLocs;
+  SmallVector<ValueIDNum, 32> VarLocs;
 
   /// Map from LocIdxes to which DebugVariables are based that location.
   /// Mantained while stepping through the block. Not accurate if
   /// VarLocs[Idx] != MTracker->LocIdxToIDNum[Idx].
-  std::map<LocIdx, SmallSet<DebugVariable, 4>> ActiveMLocs;
+  DenseMap<LocIdx, SmallSet<DebugVariable, 4>> ActiveMLocs;
 
   /// Map from DebugVariable to it's current location and qualifying meta
   /// information. To be used in conjunction with ActiveMLocs to construct
@@ -273,6 +273,8 @@ public:
 
     // Map of the preferred location for each value.
     std::map<ValueIDNum, LocIdx> ValueToLoc;
+    ActiveMLocs.reserve(VLocs.size());
+    ActiveVLocs.reserve(VLocs.size());
 
     // Produce a map of value numbers to the current machine locs they live
     // in. When emulating VarLocBasedImpl, there should only be one
@@ -568,6 +570,8 @@ public:
 
     flushDbgValues(Pos, nullptr);
 
+    // Re-find ActiveMLocIt, iterator could have been invalidated.
+    ActiveMLocIt = ActiveMLocs.find(MLoc);
     ActiveMLocIt->second.clear();
   }
 
@@ -582,11 +586,14 @@ public:
 
     // assert(ActiveMLocs[Dst].size() == 0);
     //^^^ Legitimate scenario on account of un-clobbered slot being assigned to?
-    ActiveMLocs[Dst] = ActiveMLocs[Src];
+
+    // Move set of active variables from one location to another.
+    auto MovingVars = ActiveMLocs[Src];
+    ActiveMLocs[Dst] = MovingVars;
     VarLocs[Dst.asU64()] = VarLocs[Src.asU64()];
 
     // For each variable based on Src; create a location at Dst.
-    for (auto &Var : ActiveMLocs[Src]) {
+    for (auto &Var : MovingVars) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
@@ -627,6 +634,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
+ValueIDNum ValueIDNum::TombstoneValue = {UINT_MAX, UINT_MAX, UINT_MAX - 1};
 
 #ifndef NDEBUG
 void DbgValue::dump(const MLocTracker *MTrack) const {
