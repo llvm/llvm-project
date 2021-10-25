@@ -131,7 +131,7 @@ private:
   std::pair<std::vector<SymbolVersion>, std::vector<SymbolVersion>>
   readSymbols();
 
-  // True if a script being read is in a subdirectory specified by -sysroot.
+  // True if a script being read is in the --sysroot directory.
   bool isUnderSysroot = false;
 
   // A set to detect an INCLUDE() cycle.

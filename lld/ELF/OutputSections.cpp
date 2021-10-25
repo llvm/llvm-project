@@ -328,7 +328,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
   if (type == SHT_NOBITS)
     return;
 
-  // If -compress-debug-section is specified and if this is a debug section,
+  // If --compress-debug-section is specified and if this is a debug section,
   // we've already compressed section contents. If that's the case,
   // just write it down.
   if (!compressedData.empty()) {

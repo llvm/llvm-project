@@ -338,7 +338,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 // so that they are emitted to the output file.
 template <class ELFT> void elf::markLive() {
   llvm::TimeTraceScope timeScope("markLive");
-  // If -gc-sections is not given, no sections are removed.
+  // If --gc-sections is not given, retain all input sections.
   if (!config->gcSections) {
     for (InputSectionBase *sec : inputSections)
       sec->markLive();
@@ -353,7 +353,7 @@ template <class ELFT> void elf::markLive() {
 
   // Otherwise, do mark-sweep GC.
   //
-  // The -gc-sections option works only for SHF_ALLOC sections (sections that
+  // The --gc-sections option works only for SHF_ALLOC sections (sections that
   // are memory-mapped at runtime). So we can unconditionally make non-SHF_ALLOC
   // sections alive except SHF_LINK_ORDER, SHT_REL/SHT_RELA sections, and
   // sections in a group.
@@ -369,7 +369,7 @@ template <class ELFT> void elf::markLive() {
   // We are able to garbage collect them.
   //
   // Note on SHF_REL{,A}: Such sections reach here only when -r
-  // or -emit-reloc were given. And they are subject of garbage
+  // or --emit-reloc were given. And they are subject of garbage
   // collection because, if we remove a text section, we also
   // remove its relocation section.
   //

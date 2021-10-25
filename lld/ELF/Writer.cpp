@@ -594,9 +594,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (errorCount())
     return;
 
-  // If -compressed-debug-sections is specified, we need to compress
-  // .debug_* sections. Do it right now because it changes the size of
-  // output sections.
+  // If --compressed-debug-sections is specified, compress .debug_* sections.
+  // Do it right now because it changes the size of output sections.
   for (OutputSection *sec : outputSections)
     sec->maybeCompress<ELFT>();
 
@@ -807,7 +806,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 
     // Unlike other synthetic sections, mergeable output sections contain data
     // copied from input sections, and there may be a relocation pointing to its
-    // contents if -r or -emit-reloc are given.
+    // contents if -r or --emit-reloc is given.
     if (isa<SyntheticSection>(isec) && !(isec->flags & SHF_MERGE))
       continue;
 
@@ -1335,7 +1334,7 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  // Use the rarely used option -call-graph-ordering-file to sort sections.
+  // Use the rarely used option --call-graph-ordering-file to sort sections.
   if (!config->callGraphProfile.empty())
     return computeCallGraphProfileOrder();
 
@@ -2247,8 +2246,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 }
 
 // Ensure data sections are not mixed with executable sections when
-// -execute-only is used. -execute-only is a feature to make pages executable
-// but not readable, and the feature is currently supported only on AArch64.
+// --execute-only is used. --execute-only make pages executable but not
+// readable.
 template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
   if (!config->executeOnly)
     return;
@@ -2975,7 +2974,7 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
-  // In -r or -emit-relocs mode, write the relocation sections first as in
+  // In -r or --emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
   for (OutputSection *sec : outputSections)

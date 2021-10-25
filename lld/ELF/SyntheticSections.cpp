@@ -2171,7 +2171,7 @@ size_t SymbolTableBaseSection::getSymbolIndex(Symbol *sym) {
     return sym->dynsymIndex;
 
   // Initializes symbol lookup tables lazily. This is used only for -r,
-  // -emit-relocs and dynsyms in partitions other than the main one.
+  // --emit-relocs and dynsyms in partitions other than the main one.
   llvm::call_once(onceFlag, [&] {
     symbolIndexMap.reserve(symbols.size());
     size_t i = 0;
@@ -2350,8 +2350,7 @@ size_t SymtabShndxSection::getSize() const {
 // is to help the dynamic linker resolve symbols quickly. If ELF files
 // don't have them, the dynamic linker has to do linear search on all
 // dynamic symbols, which makes programs slower. Therefore, a .hash
-// section is added to a DSO by default. A .gnu.hash is added if you
-// give the -hash-style=gnu or -hash-style=both option.
+// section is added to a DSO by default.
 //
 // The Unix semantics of resolving dynamic symbols is somewhat expensive.
 // Each ELF file has a list of DSOs that the ELF file depends on and a
@@ -2374,8 +2373,8 @@ size_t SymtabShndxSection::getSize() const {
 // and better version of .hash. .hash is just an on-disk hash table, but
 // .gnu.hash has a bloom filter in addition to a hash table to skip
 // DSOs very quickly. If you are sure that your dynamic linker knows
-// about .gnu.hash, you want to specify -hash-style=gnu. Otherwise, a
-// safe bet is to specify -hash-style=both for backward compatibility.
+// about .gnu.hash, you want to specify --hash-style=gnu. Otherwise, a
+// safe bet is to specify --hash-style=both for backward compatibility.
 GnuHashTableSection::GnuHashTableSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, config->wordsize, ".gnu.hash") {
 }
@@ -2402,7 +2401,7 @@ void GnuHashTableSection::finalizeContents() {
 void GnuHashTableSection::writeTo(uint8_t *buf) {
   // The output buffer is not guaranteed to be zero-cleared because we pre-
   // fill executable sections with trap instructions. This is a precaution
-  // for that case, which happens only when -no-rosegment is given.
+  // for that case, which happens only when --no-rosegment is given.
   memset(buf, 0, size);
 
   // Write a header.
