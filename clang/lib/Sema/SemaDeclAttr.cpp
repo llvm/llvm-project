@@ -6325,13 +6325,12 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
       // might be because we've transformed some of them. Check for potential
       // "out" parameters and err on the side of not warning.
       unsigned MaybeOutParamCount =
-          std::count_if(Params.begin(), Params.end(),
-                        [](const ParmVarDecl *Param) -> bool {
-        QualType ParamTy = Param->getType();
-        if (ParamTy->isReferenceType() || ParamTy->isPointerType())
-          return !ParamTy->getPointeeType().isConstQualified();
-        return false;
-      });
+          llvm::count_if(Params, [](const ParmVarDecl *Param) -> bool {
+            QualType ParamTy = Param->getType();
+            if (ParamTy->isReferenceType() || ParamTy->isPointerType())
+              return !ParamTy->getPointeeType().isConstQualified();
+            return false;
+          });
 
       ParamCountValid = SwiftParamCount + MaybeOutParamCount >= ParamCount;
     }

@@ -485,8 +485,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     // all language modes, and diagnose the empty lookup in ActOnCallExpr if we
     // successfully form a call to an undeclared template-id.
     bool AllFunctions =
-        getLangOpts().CPlusPlus20 &&
-        std::all_of(Found.begin(), Found.end(), [](NamedDecl *ND) {
+        getLangOpts().CPlusPlus20 && llvm::all_of(Found, [](NamedDecl *ND) {
           return isa<FunctionDecl>(ND->getUnderlyingDecl());
         });
     if (AllFunctions || (Found.empty() && !IsDependent)) {
