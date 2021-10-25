@@ -59,6 +59,24 @@ class MutexSet {
 #endif
 };
 
+// MutexSet is too large to live on stack.
+// DynamicMutexSet can be use used to create local MutexSet's.
+class DynamicMutexSet {
+ public:
+  DynamicMutexSet();
+  ~DynamicMutexSet();
+  MutexSet* operator->() { return ptr_; }
+  operator MutexSet*() { return ptr_; }
+  DynamicMutexSet(const DynamicMutexSet&) = delete;
+  DynamicMutexSet& operator=(const DynamicMutexSet&) = delete;
+
+ private:
+  MutexSet* ptr_;
+#if SANITIZER_GO
+  MutexSet set_;
+#endif
+};
+
 // Go does not have mutexes, so do not spend memory and time.
 // (Go sync.Mutex is actually a semaphore -- can be unlocked
 // in different goroutine).
@@ -71,6 +89,8 @@ void MutexSet::AddAddr(uptr addr, StackID stack_id, bool write) {}
 void MutexSet::DelAddr(uptr addr, bool destroy) {}
 uptr MutexSet::Size() const { return 0; }
 MutexSet::Desc MutexSet::Get(uptr i) const { return Desc(); }
+DynamicMutexSet::DynamicMutexSet() : ptr_(&set_) {}
+DynamicMutexSet::~DynamicMutexSet() {}
 #endif
 
 }  // namespace __tsan
