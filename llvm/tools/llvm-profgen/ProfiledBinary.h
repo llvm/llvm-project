@@ -204,9 +204,11 @@ class ProfiledBinary {
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddrOffsets;
   // A set of call instruction offsets. Used by virtual unwinding.
-  std::unordered_set<uint64_t> CallAddrs;
+  std::unordered_set<uint64_t> CallOffsets;
   // A set of return instruction offsets. Used by virtual unwinding.
-  std::unordered_set<uint64_t> RetAddrs;
+  std::unordered_set<uint64_t> RetOffsets;
+  // A set of branch instruction offsets.
+  std::unordered_set<uint64_t> BranchOffsets;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -305,21 +307,29 @@ public:
     return TextSegmentOffsets;
   }
 
+  bool offsetIsCode(uint64_t Offset) const {
+    return Offset2InstSizeMap.find(Offset) != Offset2InstSizeMap.end();
+  }
   bool addressIsCode(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
-    return Offset2InstSizeMap.find(Offset) != Offset2InstSizeMap.end();
+    return offsetIsCode(Offset);
   }
   bool addressIsCall(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
-    return CallAddrs.count(Offset);
+    return CallOffsets.count(Offset);
   }
   bool addressIsReturn(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
-    return RetAddrs.count(Offset);
+    return RetOffsets.count(Offset);
   }
   bool addressInPrologEpilog(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
     return ProEpilogTracker.PrologEpilogSet.count(Offset);
+  }
+
+  bool offsetIsTransfer(uint64_t Offset) {
+    return BranchOffsets.count(Offset) || RetOffsets.count(Offset) ||
+           CallOffsets.count(Offset);
   }
 
   uint64_t getAddressforIndex(uint64_t Index) const {
