@@ -1,4 +1,4 @@
-//===-- RewritePatterns.td - FIR Rewrite Patterns -----------*- tablegen -*-===//
+//===-- CanonicalizationPatterns.td - FIR Canonicalization Patterns -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,7 +49,8 @@ def CombineConvertOptPattern
 def createConstantOp
     : NativeCodeCall<"$_builder.create<mlir::arith::ConstantOp>"
                      "($_loc, $_builder.getIndexType(), "
-                     "rewriter.getIndexAttr($1.dyn_cast<IntegerAttr>().getInt()))">;
+                     "rewriter.getIndexAttr($1.dyn_cast<IntegerAttr>()"
+                     ".getInt()))">;
 
 def ForwardConstantConvertPattern
     : Pat<(fir_ConvertOp:$res (Arith_ConstantOp:$cnt $attr)),

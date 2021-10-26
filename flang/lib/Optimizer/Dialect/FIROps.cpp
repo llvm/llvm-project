@@ -25,7 +25,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace {
-#include "flang/Optimizer/Transforms/RewritePatterns.inc"
+#include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
 using namespace fir;
 
