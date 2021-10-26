@@ -89,6 +89,12 @@ public:
 
   void Clear() { m_sections.clear(); }
 
+  /// Get the debug information size from all sections that contain debug
+  /// information. Symbol tables are not considered part of the debug
+  /// information for this call, just known sections that contain debug
+  /// information.
+  uint64_t GetDebugInfoSize() const;
+
 protected:
   collection m_sections;
 };
@@ -235,6 +241,13 @@ public:
   bool IsRelocated() const { return m_relocated; }
 
   void SetIsRelocated(bool b) { m_relocated = b; }
+
+  /// Returns true if this section contains debug information. Symbol tables
+  /// are not considered debug information since some symbols might contain
+  /// debug information (STABS, COFF) but not all symbols do, so to keep this
+  /// fast and simple only sections that contains only debug information should
+  /// return true.
+  bool ContainsOnlyDebugInfo() const;
 
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should

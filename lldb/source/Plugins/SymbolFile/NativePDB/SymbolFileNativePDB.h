@@ -75,6 +75,8 @@ public:
 
   void InitializeObject() override;
 
+  uint64_t GetDebugInfoSize() override;
+
   // Compile Unit function calls
 
   void
