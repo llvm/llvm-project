@@ -289,6 +289,8 @@ private:
   operator=(const GDBRemoteCommunicationServerLLGS &) = delete;
 };
 
+std::string LLGSArgToURL(llvm::StringRef url_arg, bool reverse_connect);
+
 } // namespace process_gdb_remote
 } // namespace lldb_private
 

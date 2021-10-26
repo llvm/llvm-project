@@ -28,6 +28,9 @@ class SocketAddress;
 
 class ConnectionFileDescriptor : public Connection {
 public:
+  typedef llvm::function_ref<void(llvm::StringRef local_socket_id)>
+      socket_id_callback_type;
+
   ConnectionFileDescriptor(bool child_processes_inherit = false);
 
   ConnectionFileDescriptor(int fd, bool owns_fd);
@@ -38,7 +41,12 @@ public:
 
   bool IsConnected() const override;
 
-  lldb::ConnectionStatus Connect(llvm::StringRef s, Status *error_ptr) override;
+  lldb::ConnectionStatus Connect(llvm::StringRef url,
+                                 Status *error_ptr) override;
+
+  lldb::ConnectionStatus Connect(llvm::StringRef url,
+                                 socket_id_callback_type socket_id_callback,
+                                 Status *error_ptr);
 
   lldb::ConnectionStatus Disconnect(Status *error_ptr) override;
 
@@ -67,29 +75,51 @@ protected:
 
   void CloseCommandPipe();
 
-  lldb::ConnectionStatus SocketListenAndAccept(llvm::StringRef host_and_port,
-                                               Status *error_ptr);
+  lldb::ConnectionStatus
+  SocketListenAndAccept(llvm::StringRef host_and_port,
+                        socket_id_callback_type socket_id_callback,
+                        Status *error_ptr);
 
   lldb::ConnectionStatus ConnectTCP(llvm::StringRef host_and_port,
+                                    socket_id_callback_type socket_id_callback,
                                     Status *error_ptr);
 
-  lldb::ConnectionStatus ConnectUDP(llvm::StringRef args, Status *error_ptr);
+  lldb::ConnectionStatus ConnectUDP(llvm::StringRef args,
+                                    socket_id_callback_type socket_id_callback,
+                                    Status *error_ptr);
 
-  lldb::ConnectionStatus NamedSocketConnect(llvm::StringRef socket_name,
-                                            Status *error_ptr);
+  lldb::ConnectionStatus
+  NamedSocketConnect(llvm::StringRef socket_name,
+                     socket_id_callback_type socket_id_callback,
+                     Status *error_ptr);
 
-  lldb::ConnectionStatus NamedSocketAccept(llvm::StringRef socket_name,
-                                           Status *error_ptr);
+  lldb::ConnectionStatus
+  NamedSocketAccept(llvm::StringRef socket_name,
+                    socket_id_callback_type socket_id_callback,
+                    Status *error_ptr);
 
-  lldb::ConnectionStatus UnixAbstractSocketConnect(llvm::StringRef socket_name,
-                                                   Status *error_ptr);
+  lldb::ConnectionStatus
+  UnixAbstractSocketAccept(llvm::StringRef socket_name,
+                           socket_id_callback_type socket_id_callback,
+                           Status *error_ptr);
 
-  lldb::ConnectionStatus ConnectFD(llvm::StringRef args, Status *error_ptr);
+  lldb::ConnectionStatus
+  UnixAbstractSocketConnect(llvm::StringRef socket_name,
+                            socket_id_callback_type socket_id_callback,
+                            Status *error_ptr);
 
-  lldb::ConnectionStatus ConnectFile(llvm::StringRef args, Status *error_ptr);
+  lldb::ConnectionStatus ConnectFD(llvm::StringRef args,
+                                   socket_id_callback_type socket_id_callback,
+                                   Status *error_ptr);
 
-  lldb::ConnectionStatus ConnectSerialPort(llvm::StringRef args,
-                                           Status *error_ptr);
+  lldb::ConnectionStatus ConnectFile(llvm::StringRef args,
+                                     socket_id_callback_type socket_id_callback,
+                                     Status *error_ptr);
+
+  lldb::ConnectionStatus
+  ConnectSerialPort(llvm::StringRef args,
+                    socket_id_callback_type socket_id_callback,
+                    Status *error_ptr);
 
   lldb::IOObjectSP m_io_sp;
 
@@ -103,7 +133,6 @@ protected:
   std::atomic<bool> m_shutting_down; // This marks that we are shutting down so
                                      // if we get woken up from
   // BytesAvailable to disconnect, we won't try to read again.
-  bool m_waiting_for_accept = false;
   bool m_child_processes_inherit;
 
   std::string m_uri;
