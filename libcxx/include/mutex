@@ -112,7 +112,7 @@ template <class... MutexTypes>
 class scoped_lock // C++17
 {
 public:
-    using mutex_type = Mutex;  // If MutexTypes... consists of the single type Mutex
+    using mutex_type = Mutex;  // Only if sizeof...(MutexTypes) == 1
 
     explicit scoped_lock(MutexTypes&... m);
     scoped_lock(adopt_lock_t, MutexTypes&... m);
