@@ -643,6 +643,9 @@ BUILTIN(__builtin_alloca, "v*z"   , "Fn")
 BUILTIN(__builtin_alloca_with_align, "v*zIz", "Fn")
 BUILTIN(__builtin_call_with_static_chain, "v.", "nt")
 
+BUILTIN(__builtin_elementwise_max, "v.", "nct")
+BUILTIN(__builtin_elementwise_min, "v.", "nct")
+
 BUILTIN(__builtin_matrix_transpose, "v.", "nFt")
 BUILTIN(__builtin_matrix_column_major_load, "v.", "nFt")
 BUILTIN(__builtin_matrix_column_major_store, "v.", "nFt")
