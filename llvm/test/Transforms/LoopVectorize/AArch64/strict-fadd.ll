@@ -49,6 +49,52 @@ for.end:
   ret float %add
 }
 
+; Same as above but where fadd has a fast-math flag.
+define float @fadd_strict_fmf(float* noalias nocapture readonly %a, i64 %n) {
+; CHECK-ORDERED-LABEL: @fadd_strict_fmf
+; CHECK-ORDERED: vector.body:
+; CHECK-ORDERED: [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %vector.ph ], [ [[RDX:%.*]], %vector.body ]
+; CHECK-ORDERED: [[LOAD_VEC:%.*]] = load <8 x float>, <8 x float>*
+; CHECK-ORDERED: [[RDX]] = call nnan float @llvm.vector.reduce.fadd.v8f32(float [[VEC_PHI]], <8 x float> [[LOAD_VEC]])
+; CHECK-ORDERED: for.end:
+; CHECK-ORDERED: [[RES:%.*]] = phi float [ [[SCALAR:%.*]], %for.body ], [ [[RDX]], %middle.block ]
+; CHECK-ORDERED: ret float [[RES]]
+
+; CHECK-UNORDERED-LABEL: @fadd_strict_fmf
+; CHECK-UNORDERED: vector.body:
+; CHECK-UNORDERED: [[VEC_PHI:%.*]] = phi <8 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vector.ph ], [ [[FADD_VEC:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[LOAD_VEC:%.*]] = load <8 x float>, <8 x float>*
+; CHECK-UNORDERED: [[FADD_VEC]] = fadd nnan <8 x float> [[LOAD_VEC]], [[VEC_PHI]]
+; CHECK-UNORDERED-NOT: @llvm.vector.reduce.fadd 
+; CHECK-UNORDERED: middle.block:
+; CHECK-UNORDERED: [[RDX:%.*]] = call nnan float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[FADD_VEC]])
+; CHECK-UNORDERED: for.body:
+; CHECK-UNORDERED: [[LOAD:%.*]] = load float, float*
+; CHECK-UNORDERED: [[FADD:%.*]] = fadd nnan float [[LOAD]], {{.*}}
+; CHECK-UNORDERED: for.end:
+; CHECK-UNORDERED: [[RES:%.*]] = phi float [ [[FADD]], %for.body ], [ [[RDX]], %middle.block ]
+; CHECK-UNORDERED: ret float [[RES]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_strict_fmf
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %add = fadd nnan float %0, %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret float %add
+}
+
 define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_strict_unroll
 ; CHECK-ORDERED: vector.body:
@@ -759,6 +805,79 @@ for.body:
   %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
   %0 = load float, float* %arrayidx, align 4
   %add = fadd float %0, %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:
+  ret float %add
+}
+
+; Same as above but where fadd has a fast-math flag.
+define float @fadd_scalar_vf_fmf(float* noalias nocapture readonly %a, i64 %n) {
+; CHECK-ORDERED-LABEL: @fadd_scalar_vf_fmf
+; CHECK-ORDERED: vector.body:
+; CHECK-ORDERED: [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %vector.ph ], [ [[FADD4:%.*]], %vector.body ]
+; CHECK-ORDERED: [[LOAD1:%.*]] = load float, float*
+; CHECK-ORDERED: [[LOAD2:%.*]] = load float, float*
+; CHECK-ORDERED: [[LOAD3:%.*]] = load float, float*
+; CHECK-ORDERED: [[LOAD4:%.*]] = load float, float*
+; CHECK-ORDERED: [[FADD1:%.*]] = fadd nnan float [[VEC_PHI]], [[LOAD1]]
+; CHECK-ORDERED: [[FADD2:%.*]] = fadd nnan float [[FADD1]], [[LOAD2]]
+; CHECK-ORDERED: [[FADD3:%.*]] = fadd nnan float [[FADD2]], [[LOAD3]]
+; CHECK-ORDERED: [[FADD4]] = fadd nnan float [[FADD3]], [[LOAD4]]
+; CHECK-ORDERED-NOT: @llvm.vector.reduce.fadd
+; CHECK-ORDERED: scalar.ph:
+; CHECK-ORDERED: [[MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %entry ], [ [[FADD4]], %middle.block ]
+; CHECK-ORDERED: for.body:
+; CHECK-ORDERED: [[SUM_07:%.*]] = phi float [ [[MERGE_RDX]], %scalar.ph ], [ [[FADD5:%.*]], %for.body ]
+; CHECK-ORDERED: [[LOAD5:%.*]] = load float, float*
+; CHECK-ORDERED: [[FADD5]] = fadd nnan float [[LOAD5]], [[SUM_07]]
+; CHECK-ORDERED: for.end:
+; CHECK-ORDERED: [[RES:%.*]] = phi float [ [[FADD5]], %for.body ], [ [[FADD4]], %middle.block ]
+; CHECK-ORDERED: ret float [[RES]]
+
+; CHECK-UNORDERED-LABEL: @fadd_scalar_vf_fmf
+; CHECK-UNORDERED: vector.body:
+; CHECK-UNORDERED: [[VEC_PHI1:%.*]] = phi float [ 0.000000e+00, %vector.ph ], [ [[FADD1:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[VEC_PHI2:%.*]] = phi float [ -0.000000e+00, %vector.ph ], [ [[FADD2:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[VEC_PHI3:%.*]] = phi float [ -0.000000e+00, %vector.ph ], [ [[FADD3:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[VEC_PHI4:%.*]] = phi float [ -0.000000e+00, %vector.ph ], [ [[FADD4:%.*]], %vector.body ]
+; CHECK-UNORDERED: [[LOAD1:%.*]] = load float, float*
+; CHECK-UNORDERED: [[LOAD2:%.*]] = load float, float*
+; CHECK-UNORDERED: [[LOAD3:%.*]] = load float, float*
+; CHECK-UNORDERED: [[LOAD4:%.*]] = load float, float*
+; CHECK-UNORDERED: [[FADD1]] = fadd nnan float [[LOAD1]], [[VEC_PHI1]]
+; CHECK-UNORDERED: [[FADD2]] = fadd nnan float [[LOAD2]], [[VEC_PHI2]]
+; CHECK-UNORDERED: [[FADD3]] = fadd nnan float [[LOAD3]], [[VEC_PHI3]]
+; CHECK-UNORDERED: [[FADD4]] = fadd nnan float [[LOAD4]], [[VEC_PHI4]]
+; CHECK-UNORDERED-NOT: @llvm.vector.reduce.fadd
+; CHECK-UNORDERED: middle.block:
+; CHECK-UNORDERED: [[BIN_RDX1:%.*]] = fadd nnan float [[FADD2]], [[FADD1]]
+; CHECK-UNORDERED: [[BIN_RDX2:%.*]] = fadd nnan float [[FADD3]], [[BIN_RDX1]]
+; CHECK-UNORDERED: [[BIN_RDX3:%.*]] = fadd nnan float [[FADD4]], [[BIN_RDX2]]
+; CHECK-UNORDERED: scalar.ph:
+; CHECK-UNORDERED: [[MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %entry ], [ [[BIN_RDX3]], %middle.block ]
+; CHECK-UNORDERED: for.body:
+; CHECK-UNORDERED: [[SUM_07:%.*]] = phi float [ [[MERGE_RDX]], %scalar.ph ], [ [[FADD5:%.*]], %for.body ]
+; CHECK-UNORDERED: [[LOAD5:%.*]] = load float, float*
+; CHECK-UNORDERED: [[FADD5]] = fadd nnan float [[LOAD5]], [[SUM_07]]
+; CHECK-UORDERED: for.end
+; CHECK-UNORDERED: [[RES:%.*]] = phi float [ [[FADD5]], %for.body ], [ [[BIN_RDX3]], %middle.block ]
+; CHECK-UNORDERED: ret float [[RES]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_scalar_vf_fmf
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %add = fadd nnan float %0, %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !4
