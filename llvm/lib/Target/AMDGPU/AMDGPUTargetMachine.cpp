@@ -385,8 +385,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
   initializeGCNNSAReassignPass(*PR);
   initializeGCNPreRAOptimizationsPass(*PR);
-  initializeSIInsertScratchBoundsPass(*PR);
-  initializeSIFixScratchSizePass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1195,7 +1193,6 @@ void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {
     addPass(createAMDGPUMachineCFGStructurizerPass());
   }
-  addPass(createSIInsertScratchBoundsPass());
   addPass(createSIInsertWaterfallPass());
 }
 
@@ -1345,7 +1342,6 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(createSIInsertWaitcntsPass());
 
   addPass(createSIModeRegisterPass());
-  addPass(createSIFixScratchSizePass());
 
   if (getOptLevel() > CodeGenOpt::None)
     addPass(&SIInsertHardClausesID);

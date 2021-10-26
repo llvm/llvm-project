@@ -105,7 +105,6 @@
 ; GCN-O0-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O0-NEXT:        Local Stack Slot Allocation
 ; GCN-O0-NEXT:        Register Usage Information Propagation
-; GCN-O0-NEXT:        SI Insert Scratch Bounds Checks
 ; GCN-O0-NEXT:        SI Insert waterfalls
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
@@ -137,7 +136,6 @@
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O0-NEXT:        SI insert wait instructions
 ; GCN-O0-NEXT:        Insert required mode register values
-; GCN-O0-NEXT:        SI Resolve Scratch Size Symbols
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        SI Final Branch Preparation
 ; GCN-O0-NEXT:        Post RA hazard recognizer
@@ -316,7 +314,6 @@
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        Register Usage Information Propagation
-; GCN-O1-NEXT:        SI Insert Scratch Bounds Checks
 ; GCN-O1-NEXT:        SI Insert waterfalls
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
@@ -394,7 +391,6 @@
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        SI insert wait instructions
 ; GCN-O1-NEXT:        Insert required mode register values
-; GCN-O1-NEXT:        SI Resolve Scratch Size Symbols
 ; GCN-O1-NEXT:        SI Insert Hard Clauses
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        SI Final Branch Preparation
@@ -608,7 +604,6 @@
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
-; GCN-O1-OPTS-NEXT:        SI Insert Scratch Bounds Checks
 ; GCN-O1-OPTS-NEXT:        SI Insert waterfalls
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
@@ -687,7 +682,6 @@
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI insert wait instructions
 ; GCN-O1-OPTS-NEXT:        Insert required mode register values
-; GCN-O1-OPTS-NEXT:        SI Resolve Scratch Size Symbols
 ; GCN-O1-OPTS-NEXT:        SI Insert Hard Clauses
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI Final Branch Preparation
@@ -902,7 +896,6 @@
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
 ; GCN-O2-NEXT:        Register Usage Information Propagation
-; GCN-O2-NEXT:        SI Insert Scratch Bounds Checks
 ; GCN-O2-NEXT:        SI Insert waterfalls
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
@@ -982,7 +975,6 @@
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        SI insert wait instructions
 ; GCN-O2-NEXT:        Insert required mode register values
-; GCN-O2-NEXT:        SI Resolve Scratch Size Symbols
 ; GCN-O2-NEXT:        SI Insert Hard Clauses
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        SI Final Branch Preparation
@@ -1210,7 +1202,6 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        Register Usage Information Propagation
-; GCN-O3-NEXT:        SI Insert Scratch Bounds Checks
 ; GCN-O3-NEXT:        SI Insert waterfalls
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
@@ -1290,7 +1281,6 @@
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        SI insert wait instructions
 ; GCN-O3-NEXT:        Insert required mode register values
-; GCN-O3-NEXT:        SI Resolve Scratch Size Symbols
 ; GCN-O3-NEXT:        SI Insert Hard Clauses
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        SI Final Branch Preparation

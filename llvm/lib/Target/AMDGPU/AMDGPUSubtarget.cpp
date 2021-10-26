@@ -211,7 +211,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     EnableLoadStoreOpt(false),
     EnableUnsafeDSOffsetFolding(false),
-    EnableScratchBoundsChecks(false),
     EnableSIScheduler(false),
     EnableDS128(false),
     EnablePRTStrictNull(false),
