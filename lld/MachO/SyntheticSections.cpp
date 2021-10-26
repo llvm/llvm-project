@@ -621,14 +621,14 @@ void StubHelperSection::setup() {
       ConcatOutputSection::getOrCreateForInput(in.imageLoaderCache);
   inputSections.push_back(in.imageLoaderCache);
   // Since this isn't in the symbol table or in any input file, the noDeadStrip
-  // argument doesn't matter. It's kept alive by ImageLoaderCacheSection()
-  // setting `live` to true on the backing InputSection.
+  // argument doesn't matter.
   dyldPrivate =
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
                     /*isExternal=*/false, /*isPrivateExtern=*/false,
                     /*isThumb=*/false, /*isReferencedDynamically=*/false,
                     /*noDeadStrip=*/false);
+  dyldPrivate->used = true;
 }
 
 LazyPointerSection::LazyPointerSection()
