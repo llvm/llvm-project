@@ -93,7 +93,7 @@ void lldb_private::CreateDomainConnectedSockets(
 
 static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
   llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(
-      Addr, /*child_processes_inherit=*/false, /*predicate=*/nullptr);
+      Addr, /*child_processes_inherit=*/false);
   if (Sock)
     return true;
   llvm::Error Err = Sock.takeError();

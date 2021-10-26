@@ -12,6 +12,7 @@
 #include "GDBRemoteCommunicationHistory.h"
 
 #include <condition_variable>
+#include <future>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -243,6 +244,8 @@ private:
   std::mutex m_packet_queue_mutex; // Mutex for accessing queue
   std::condition_variable
       m_condition_queue_not_empty; // Condition variable to wait for packets
+  // Promise used to grab the port number from listening thread
+  std::promise<uint16_t> m_port_promise;
 
   HostThread m_listen_thread;
   std::string m_listen_url;

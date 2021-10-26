@@ -893,8 +893,13 @@ GDBRemoteCommunication::ListenThread(lldb::thread_arg_t arg) {
 
   if (connection) {
     // Do the listen on another thread so we can continue on...
-    if (connection->Connect(comm->m_listen_url.c_str(), &error) !=
-        eConnectionStatusSuccess)
+    if (connection->Connect(
+            comm->m_listen_url.c_str(), [comm](llvm::StringRef port_str) {
+              uint16_t port = 0;
+              llvm::to_integer(port_str, port, 10);
+              comm->m_port_promise.set_value(port);
+            },
+            &error) != eConnectionStatusSuccess)
       comm->SetConnection(nullptr);
   }
   return {};
@@ -1056,10 +1061,12 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
           return error;
         }
 
-        ConnectionFileDescriptor *connection =
-            (ConnectionFileDescriptor *)GetConnection();
         // Wait for 10 seconds to resolve the bound port
-        uint16_t port_ = connection->GetListeningPort(std::chrono::seconds(10));
+        std::future<uint16_t> port_future = m_port_promise.get_future();
+        uint16_t port_ = port_future.wait_for(std::chrono::seconds(10)) ==
+                                 std::future_status::ready
+                             ? port_future.get()
+                             : 0;
         if (port_ > 0) {
           char port_cstr[32];
           snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", port_);

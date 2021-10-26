@@ -622,10 +622,9 @@ ConnectionStatus ConnectionFileDescriptor::SocketListenAndAccept(
     Status *error_ptr) {
   if (error_ptr)
     *error_ptr = Status();
-  m_port_predicate.SetValue(0, eBroadcastNever);
 
   llvm::Expected<std::unique_ptr<TCPSocket>> listening_socket =
-      Socket::TcpListen(s, m_child_processes_inherit, &m_port_predicate);
+      Socket::TcpListen(s, m_child_processes_inherit);
   if (!listening_socket) {
     if (error_ptr)
       *error_ptr = listening_socket.takeError();
@@ -825,12 +824,6 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
   return eConnectionStatusSuccess;
 #endif // LLDB_ENABLE_POSIX
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
-}
-
-uint16_t
-ConnectionFileDescriptor::GetListeningPort(const Timeout<std::micro> &timeout) {
-  auto Result = m_port_predicate.WaitForValueNotEqualTo(0, timeout);
-  return Result ? *Result : 0;
 }
 
 bool ConnectionFileDescriptor::GetChildProcessesInherit() const {

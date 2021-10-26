@@ -18,7 +18,6 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/IOObject.h"
-#include "lldb/Utility/Predicate.h"
 
 namespace lldb_private {
 
@@ -64,8 +63,6 @@ public:
   bool InterruptRead() override;
 
   lldb::IOObjectSP GetReadObject() override { return m_io_sp; }
-
-  uint16_t GetListeningPort(const Timeout<std::micro> &timeout);
 
   bool GetChildProcessesInherit() const;
   void SetChildProcessesInherit(bool child_processes_inherit);
@@ -122,11 +119,6 @@ protected:
                     Status *error_ptr);
 
   lldb::IOObjectSP m_io_sp;
-
-  Predicate<uint16_t>
-      m_port_predicate; // Used when binding to port zero to wait for the thread
-                        // that creates the socket, binds and listens to
-                        // resolve the port number.
 
   Pipe m_pipe;
   std::recursive_mutex m_mutex;
