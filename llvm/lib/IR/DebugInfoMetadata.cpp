@@ -640,6 +640,9 @@ DICompositeType *DICompositeType::buildODRType(
                VTableHolder, TemplateParams, &Identifier, Discriminator,
                DataLocation, Associated, Allocated, Rank, Annotations);
 
+  if (CT->getTag() != Tag)
+    return nullptr;
+
   // Only mutate CT if it's a forward declaration and the new operands aren't.
   assert(CT->getRawIdentifier() == &Identifier && "Wrong ODR identifier?");
   if (!CT->isForwardDecl() || (Flags & DINode::FlagFwdDecl))
@@ -672,12 +675,16 @@ DICompositeType *DICompositeType::getODRType(
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
   auto *&CT = (*Context.pImpl->DITypeMap)[&Identifier];
-  if (!CT)
+  if (!CT) {
     CT = DICompositeType::getDistinct(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
         TemplateParams, &Identifier, Discriminator, DataLocation, Associated,
         Allocated, Rank, Annotations);
+  } else {
+    if (CT->getTag() != Tag)
+      return nullptr;
+  }
   return CT;
 }
 
