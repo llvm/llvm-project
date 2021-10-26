@@ -116,6 +116,7 @@ Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
 Error MachOReader::readLoadCommands(Object &O) const {
   // For MachO sections indices start from 1.
   uint32_t NextSectionIndex = 1;
+  static constexpr char TextSegmentName[] = "__TEXT";
   for (auto LoadCmd : MachOObj.load_commands()) {
     LoadCommand LC;
     switch (LoadCmd.C.cmd) {
@@ -123,6 +124,11 @@ Error MachOReader::readLoadCommands(Object &O) const {
       O.CodeSignatureCommandIndex = O.LoadCommands.size();
       break;
     case MachO::LC_SEGMENT:
+      if (StringRef(
+              reinterpret_cast<MachO::segment_command const *>(LoadCmd.Ptr)
+                  ->segname) == TextSegmentName)
+        O.TextSegmentCommandIndex = O.LoadCommands.size();
+
       if (Expected<std::vector<std::unique_ptr<Section>>> Sections =
               extractSections<MachO::section, MachO::segment_command>(
                   LoadCmd, MachOObj, NextSectionIndex))
@@ -131,6 +137,11 @@ Error MachOReader::readLoadCommands(Object &O) const {
         return Sections.takeError();
       break;
     case MachO::LC_SEGMENT_64:
+      if (StringRef(
+              reinterpret_cast<MachO::segment_command_64 const *>(LoadCmd.Ptr)
+                  ->segname) == TextSegmentName)
+        O.TextSegmentCommandIndex = O.LoadCommands.size();
+
       if (Expected<std::vector<std::unique_ptr<Section>>> Sections =
               extractSections<MachO::section_64, MachO::segment_command_64>(
                   LoadCmd, MachOObj, NextSectionIndex))
@@ -271,10 +282,6 @@ void MachOReader::readLinkData(Object &O, Optional<size_t> LCIndex,
       arrayRefFromStringRef(MachOObj.getData().substr(LC.dataoff, LC.datasize));
 }
 
-void MachOReader::readCodeSignature(Object &O) const {
-  return readLinkData(O, O.CodeSignatureCommandIndex, O.CodeSignature);
-}
-
 void MachOReader::readDataInCodeData(Object &O) const {
   return readLinkData(O, O.DataInCodeCommandIndex, O.DataInCode);
 }
@@ -336,7 +343,6 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readWeakBindInfo(*Obj);
   readLazyBindInfo(*Obj);
   readExportInfo(*Obj);
-  readCodeSignature(*Obj);
   readDataInCodeData(*Obj);
   readLinkerOptimizationHint(*Obj);
   readFunctionStartsData(*Obj);

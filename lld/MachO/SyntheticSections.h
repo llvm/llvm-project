@@ -476,6 +476,8 @@ public:
 // The code signature comes at the very end of the linked output file.
 class CodeSignatureSection final : public LinkEditSection {
 public:
+  // NOTE: These values are duplicated in llvm-objcopy's MachO/Object.h file
+  // and any changes here, should be repeated there.
   static constexpr uint8_t blockSizeShift = 12;
   static constexpr size_t blockSize = (1 << blockSizeShift); // 4 KiB
   static constexpr size_t hashSize = 256 / 8;

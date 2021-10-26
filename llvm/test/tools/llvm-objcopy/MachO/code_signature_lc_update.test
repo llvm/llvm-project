@@ -1,44 +1,75 @@
 # RUN: yaml2obj %s -o %t
 
-## Verify that the input file is valid and contains the expected load command.
 # RUN: llvm-objdump --private-headers %t | FileCheck %s --check-prefix=CHECK-ORIGINAL
 
-# CHECK-ORIGINAL:      cmd LC_CODE_SIGNATURE
+## Check offset, size and index of text segment command
+# CHECK-ORIGINAL:      Load command 1
+# CHECK-ORIGINAL-NEXT  cmdsize
+# CHECK-ORIGINAL-NEXT  segname __TEXT
+# CHECK-ORIGINAL-NEXT  vmaddr
+# CHECK-ORIGINAL-NEXT  vmsize
+# CHECK-ORIGINAL-NEXT  fileoff 0
+# CHECK-ORIGINAL-NEXT  filesize 16384
+
+## Check offset and index of code signature command
+# CHECK-ORIGINAL:      Load command 14
+# CHECK-ORIGINAL-NEXT: cmd LC_CODE_SIGNATURE
 # CHECK-ORIGINAL-NEXT: cmdsize 16
 # CHECK-ORIGINAL-NEXT: dataoff 16544
 # CHECK-ORIGINAL-NEXT: datasize 280
 
-# RUN: llvm-objcopy %t %t.copy
-# RUN: obj2yaml %t > %t.yaml
-# RUN: obj2yaml %t.copy > %t.copy.yaml
+# RUN: llvm-install-name-tool -prepend_rpath abcd %t
 
-## Verify that the copy still includes the load command
-# RUN: cat %t.copy.yaml | FileCheck %s --check-prefix=CHECK-COPY
-# CHECK-COPY:      - cmd:             LC_CODE_SIGNATURE
-# CHECK-COPY-NEXT:   cmdsize:         16
-# CHECK-COPY-NEXT:   dataoff:         16544
-# CHECK-COPY-NEXT:   datasize:        304
+# RUN: llvm-objdump --private-headers %t | FileCheck %s --check-prefix=CHECK-PREPEND
+## Verify that the binary contains the new RPATH command, as the first command
+# CHECK-PREPEND:         Load command 0
+# CHECK-PREPEND-NEXT:    cmd LC_RPATH
+# CHECK-PREPEND-NEXT:    cmdsize
+# CHECK-PREPEND-NEXT:    path abcd
 
-## Remove information changed by regeneration of load command:
-## - __LINKEDIT segment filesize may change
-## - LC_CODE_SIGNATURE command dataoff and datasize may change
-## - __LINKEDIT data locations may change
+## Verify the text segment command index increased by 1
+# CHECK-PREPEND:      Load command 2
+# CHECK-PREPEND-NEXT  cmdsize
+# CHECK-PREPEND-NEXT  segname __TEXT
+# CHECK-PREPEND-NEXT  vmaddr
+# CHECK-PREPEND-NEXT  vmsize
+# CHECK-PREPEND-NEXT  fileoff 0
+# CHECK-PREPEND-NEXT  filesize 16384
 
-# RUN: sed -e '/__LINKEDIT/,+4d' \
-# RUN:     -e '/LC_CODE_SIGNATURE/,+3d' \ 
-# RUN:     -e '/n_strx/d' \ 
-# RUN:     -e '/dyld_stub_binder/d' %t.yaml > %t.clean.yaml
-
-# RUN: sed -e '/__LINKEDIT/,+4d' \
-# RUN:     -e '/LC_CODE_SIGNATURE/,+3d' \ 
-# RUN:     -e '/n_strx/d' \ 
-# RUN:     -e '/dyld_stub_binder/d' %t.copy.yaml > %t.copy.clean.yaml
-
-## Verify the remainder of the object file remains unchanged
-# RUN: diff %t.clean.yaml %t.copy.clean.yaml
+## Verify the code signature command index increased by 1
+# CHECK-PREPEND:        Load command 15
+# CHECK-PREPEND-NEXT:   cmd LC_CODE_SIGNATURE
+# CHECK-PREPEND-NEXT:   cmdsize 16
+# CHECK-PREPEND-NEXT:   dataoff 16544
+# CHECK-PREPEND-NEXT:   datasize 320
 
 ## Verify the new signature is valid
-# RUN: %python %p/Inputs/code-signature-check.py %t.copy 16544 304 0 16544
+# RUN: %python %p/Inputs/code-signature-check.py %t 16544 320 0 16544 | FileCheck %s --check-prefix=CHECK-TEXT-SEGMENT
+## Verify the text segment offset and text segment size values included in the signature header are accurate
+# CHECK-TEXT-SEGMENT: execSegBase=0, execSegLimit=16384
+
+# RUN: llvm-install-name-tool -delete_rpath abcd %t
+
+# RUN: llvm-objdump --private-headers %t | FileCheck %s --check-prefix=CHECK-REMOVE
+
+## Verify text segment command index returned to orignal
+# CHECK-REMOVE:      Load command 1
+# CHECK-REMOVE-NEXT  cmdsize
+# CHECK-REMOVE-NEXT  segname __TEXT
+# CHECK-REMOVE-NEXT  vmaddr
+# CHECK-REMOVE-NEXT  vmsize
+# CHECK-REMOVE-NEXT  fileoff 0
+# CHECK-REMOVE-NEXT  filesize 16384
+
+## Verify text segment command index returned to original
+# CHECK-REMOVE:      Load command 14
+# CHECK-REMOVE-NEXT: cmd LC_CODE_SIGNATURE
+# CHECK-REMOVE-NEXT: cmdsize 16
+# CHECK-REMOVE-NEXT: dataoff 16544
+# CHECK-REMOVE-NEXT: datasize 320
+
+## Verify the new signature is valid and text segment values are accurate
+# RUN: %python %p/Inputs/code-signature-check.py %t 16544 320 0 16544 | FileCheck %s --check-prefix=CHECK-TEXT-SEGMENT
 
 --- !mach-o
 FileHeader:
