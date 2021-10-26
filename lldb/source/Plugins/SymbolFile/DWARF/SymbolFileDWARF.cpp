@@ -864,7 +864,6 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
 
   // Union of all ranges in the function DIE (if the function is
   // discontiguous)
-  AddressRange func_range;
   lldb::addr_t lowest_func_addr = ranges.GetMinRangeBase(0);
   lldb::addr_t highest_func_addr = ranges.GetMaxRangeEnd(0);
   if (lowest_func_addr == LLDB_INVALID_ADDRESS ||
@@ -873,6 +872,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
     return nullptr;
 
   ModuleSP module_sp(die.GetModule());
+  AddressRange func_range;
   func_range.GetBaseAddress().ResolveAddressUsingFileSections(
       lowest_func_addr, module_sp->GetSectionList());
   if (!func_range.GetBaseAddress().IsValid())
