@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: split-file %s %t
+# RUN: rm -rf %s; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t/live.o
 # RUN: not %lld -undefined bogus -o /dev/null %t/live.o 2>&1 | \
