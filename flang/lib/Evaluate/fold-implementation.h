@@ -65,6 +65,7 @@ public:
   Expr<T> EOSHIFT(FunctionRef<T> &&);
   Expr<T> PACK(FunctionRef<T> &&);
   Expr<T> RESHAPE(FunctionRef<T> &&);
+  Expr<T> SPREAD(FunctionRef<T> &&);
   Expr<T> TRANSPOSE(FunctionRef<T> &&);
   Expr<T> UNPACK(FunctionRef<T> &&);
 
@@ -855,6 +856,51 @@ template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
   return MakeInvalidIntrinsic(std::move(funcRef));
 }
 
+template <typename T> Expr<T> Folder<T>::SPREAD(FunctionRef<T> &&funcRef) {
+  auto args{funcRef.arguments()};
+  CHECK(args.size() == 3);
+  const Constant<T> *source{UnwrapConstantValue<T>(args[0])};
+  auto dim{GetInt64Arg(args[1])};
+  auto ncopies{GetInt64Arg(args[2])};
+  if (!source || !dim) {
+    return Expr<T>{std::move(funcRef)};
+  }
+  int sourceRank{source->Rank()};
+  if (sourceRank >= common::maxRank) {
+    context_.messages().Say(
+        "SOURCE= argument to SPREAD has rank %d but must have rank less than %d"_err_en_US,
+        sourceRank, common::maxRank);
+  } else if (*dim < 1 || *dim > sourceRank + 1) {
+    context_.messages().Say(
+        "DIM=%d argument to SPREAD must be between 1 and %d"_err_en_US, *dim,
+        sourceRank + 1);
+  } else if (!ncopies) {
+    return Expr<T>{std::move(funcRef)};
+  } else {
+    if (*ncopies < 0) {
+      ncopies = 0;
+    }
+    // TODO: Consider moving this implementation (after the user error
+    // checks), along with other transformational intrinsics, into
+    // constant.h (or a new header) so that the transformationals
+    // are available for all Constant<>s without needing to be packaged
+    // as references to intrinsic functions for folding.
+    ConstantSubscripts shape{source->shape()};
+    shape.insert(shape.begin() + *dim - 1, *ncopies);
+    Constant<T> spread{source->Reshape(std::move(shape))};
+    std::vector<int> dimOrder;
+    for (int j{0}; j < sourceRank; ++j) {
+      dimOrder.push_back(j);
+    }
+    dimOrder.insert(dimOrder.begin() + *dim - 1, sourceRank);
+    ConstantSubscripts at{spread.lbounds()}; // all 1
+    spread.CopyFrom(*source, TotalElementCount(spread.shape()), at, &dimOrder);
+    return Expr<T>{std::move(spread)};
+  }
+  // Invalid, prevent re-folding
+  return MakeInvalidIntrinsic(std::move(funcRef));
+}
+
 template <typename T> Expr<T> Folder<T>::TRANSPOSE(FunctionRef<T> &&funcRef) {
   auto args{funcRef.arguments()};
   CHECK(args.size() == 1);
@@ -1017,12 +1063,13 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       return Folder<T>{context}.PACK(std::move(funcRef));
     } else if (name == "reshape") {
       return Folder<T>{context}.RESHAPE(std::move(funcRef));
+    } else if (name == "spread") {
+      return Folder<T>{context}.SPREAD(std::move(funcRef));
     } else if (name == "transpose") {
       return Folder<T>{context}.TRANSPOSE(std::move(funcRef));
     } else if (name == "unpack") {
       return Folder<T>{context}.UNPACK(std::move(funcRef));
     }
-    // TODO: spread
     // TODO: extends_type_of, same_type_as
     if constexpr (!std::is_same_v<T, SomeDerived>) {
       return FoldIntrinsicFunction(context, std::move(funcRef));
