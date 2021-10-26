@@ -175,6 +175,9 @@ void ProfiledBinary::load() {
   // Decode pseudo probe related section
   decodePseudoProbe(Obj);
 
+  // Load debug info of subprograms from DWARF section.
+  loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(&Binary));
+
   // Disassemble the text sections.
   disassemble(Obj);
 
@@ -183,7 +186,7 @@ void ProfiledBinary::load() {
     FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder);
 
   // Use function start and return address to infer prolog and epilog
-  ProEpilogTracker.inferPrologOffsets(FuncStartOffsetMap);
+  ProEpilogTracker.inferPrologOffsets(StartOffset2FuncRangeMap);
   ProEpilogTracker.inferEpilogOffsets(RetAddrs);
 
   // TODO: decode other sections.
@@ -306,6 +309,20 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
     ProbeDecoder.printGUID2FuncDescMap(outs());
 }
 
+void ProfiledBinary::setIsFuncEntry(uint64_t Offset, StringRef RangeSymName) {
+  // Note that the start offset of each ELF section can be a non-function
+  // symbol, we need to binary search for the start of a real function range.
+  auto *FuncRange = findFuncRangeForOffset(Offset);
+  // Skip external function symbol.
+  if (!FuncRange)
+    return;
+
+  // Set IsFuncEntry to ture if the RangeSymName from ELF is equal to its
+  // DWARF-based function name.
+  if (!FuncRange->IsFuncEntry && FuncRange->getFuncName() == RangeSymName)
+    FuncRange->IsFuncEntry = true;
+}
+
 bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                                         SectionSymbolsTy &Symbols,
                                         const SectionRef &Section) {
@@ -316,7 +333,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   uint64_t NextStartOffset =
       (SI + 1 < SE) ? Symbols[SI + 1].Addr - getPreferredBaseAddress()
                     : SectionOffset + SectSize;
-  if (StartOffset >= NextStartOffset)
+  if (StartOffset > NextStartOffset)
     return true;
 
   StringRef SymbolName =
@@ -404,8 +421,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   if (ShowDisassembly)
     outs() << "\n";
 
-  FuncStartOffsetMap.emplace(StartOffset,
-                             std::make_pair(Symbols[SI].Name.str(), EndOffset));
+  setIsFuncEntry(StartOffset, Symbols[SI].Name);
+
   return true;
 }
 
@@ -517,6 +534,71 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
   }
 }
 
+void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
+  auto DebugContext = llvm::DWARFContext::create(Obj);
+  if (!DebugContext)
+    exitWithError("Misssing debug info.", Path);
+
+  for (const auto &CompilationUnit : DebugContext->compile_units()) {
+    for (const auto &DieInfo : CompilationUnit->dies()) {
+      llvm::DWARFDie Die(CompilationUnit.get(), &DieInfo);
+
+      if (!Die.isSubprogramDIE())
+        continue;
+      auto Name = Die.getName(llvm::DINameKind::LinkageName);
+      if (!Name)
+        Name = Die.getName(llvm::DINameKind::ShortName);
+      if (!Name)
+        continue;
+
+      auto RangesOrError = Die.getAddressRanges();
+      if (!RangesOrError)
+        continue;
+      const DWARFAddressRangesVector &Ranges = RangesOrError.get();
+
+      if (Ranges.empty())
+        continue;
+
+      // Different DWARF symbols can have same function name, search or create
+      // BinaryFunction indexed by the name.
+      auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
+      auto &Func = Ret.first->second;
+      if (Ret.second)
+        Func.FuncName = Ret.first->first;
+
+      for (const auto &Range : Ranges) {
+        uint64_t FuncStart = Range.LowPC;
+        uint64_t FuncSize = Range.HighPC - FuncStart;
+
+        if (FuncSize == 0 || FuncStart < getPreferredBaseAddress())
+          continue;
+
+        uint64_t StartOffset = FuncStart - getPreferredBaseAddress();
+        uint64_t EndOffset = Range.HighPC - getPreferredBaseAddress();
+
+        // We may want to know all ranges for one function. Here group the
+        // ranges and store them into BinaryFunction.
+        Func.Ranges.emplace_back(StartOffset, EndOffset);
+
+        auto R = StartOffset2FuncRangeMap.emplace(StartOffset, FuncRange());
+        if (R.second) {
+          FuncRange &FRange = R.first->second;
+          FRange.Func = &Func;
+          FRange.StartOffset = StartOffset;
+          FRange.EndOffset = EndOffset;
+        } else {
+          WithColor::warning()
+              << "Duplicated symbol start address at "
+              << format("%8" PRIx64, StartOffset + getPreferredBaseAddress())
+              << " " << R.first->second.getFuncName() << " and " << Name
+              << "\n";
+        }
+      }
+    }
+  }
+  assert(!StartOffset2FuncRangeMap.empty() && "Misssing debug info.");
+}
+
 void ProfiledBinary::setupSymbolizer() {
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
   SymbolizerOpts.PrintFunctions =
@@ -576,7 +658,7 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t StartOffset,
                          << format("%8" PRIx64, StartOffset) << "\n";
 
   uint64_t Offset = CodeAddrOffsets[Index];
-  while (Offset <= EndOffset) {
+  while (Offset < EndOffset) {
     const SampleContextFrameVector &SymbolizedCallStack =
         getFrameLocationStack(Offset, UsePseudoProbes);
     uint64_t Size = Offset2InstSizeMap[Offset];
