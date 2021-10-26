@@ -485,6 +485,9 @@ void toLSPDiags(
   case Diag::ClangTidy:
     Main.source = "clang-tidy";
     break;
+  case Diag::Clangd:
+    Main.source = "clangd";
+    break;
   case Diag::ClangdConfig:
     Main.source = "clangd-config";
     break;

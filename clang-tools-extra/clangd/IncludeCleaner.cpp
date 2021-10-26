@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncludeCleaner.h"
+#include "Config.h"
+#include "Protocol.h"
+#include "SourceCode.h"
 #include "support/Logger.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 namespace clangd {
@@ -149,6 +154,20 @@ struct ReferencedFiles {
   }
 };
 
+// Returns the range starting at '#' and ending at EOL. Escaped newlines are not
+// handled.
+clangd::Range getDiagnosticRange(llvm::StringRef Code, unsigned HashOffset) {
+  clangd::Range Result;
+  Result.end = Result.start = offsetToPosition(Code, HashOffset);
+
+  // Span the warning until the EOL or EOF.
+  Result.end.character +=
+      lspLength(Code.drop_front(HashOffset).take_until([](char C) {
+        return C == '\n' || C == '\r';
+      }));
+  return Result;
+}
+
 } // namespace
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
@@ -220,6 +239,48 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
   auto ReferencedFiles = translateToHeaderIDs(findReferencedFiles(Refs, SM),
                                               AST.getIncludeStructure(), SM);
   return getUnused(AST.getIncludeStructure(), ReferencedFiles);
+}
+
+std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
+                                                 llvm::StringRef Code) {
+  const Config &Cfg = Config::current();
+  if (Cfg.Diagnostics.UnusedIncludes != Config::UnusedIncludesPolicy::Strict ||
+      Cfg.Diagnostics.SuppressAll ||
+      Cfg.Diagnostics.Suppress.contains("unused-includes"))
+    return {};
+  std::vector<Diag> Result;
+  std::string FileName =
+      AST.getSourceManager()
+          .getFileEntryForID(AST.getSourceManager().getMainFileID())
+          ->getName()
+          .str();
+  for (const auto *Inc : computeUnusedIncludes(AST)) {
+    Diag D;
+    D.Message =
+        llvm::formatv("included header {0} is not used",
+                      llvm::sys::path::filename(
+                          Inc->Written.substr(1, Inc->Written.size() - 2),
+                          llvm::sys::path::Style::posix));
+    D.Name = "unused-includes";
+    D.Source = Diag::DiagSource::Clangd;
+    D.File = FileName;
+    D.Severity = DiagnosticsEngine::Warning;
+    D.Tags.push_back(Unnecessary);
+    D.Range = getDiagnosticRange(Code, Inc->HashOffset);
+    // FIXME(kirillbobyrev): Removing inclusion might break the code if the
+    // used headers are only reachable transitively through this one. Suggest
+    // including them directly instead.
+    // FIXME(kirillbobyrev): Add fix suggestion for adding IWYU pragmas
+    // (keep/export) remove the warning once we support IWYU pragmas.
+    D.Fixes.emplace_back();
+    D.Fixes.back().Message = "remove #include directive";
+    D.Fixes.back().Edits.emplace_back();
+    D.Fixes.back().Edits.back().range.start.line = Inc->HashLine;
+    D.Fixes.back().Edits.back().range.end.line = Inc->HashLine + 1;
+    D.InsideMainFile = true;
+    Result.push_back(std::move(D));
+  }
+  return Result;
 }
 
 } // namespace clangd

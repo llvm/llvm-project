@@ -1479,6 +1479,44 @@ TEST(Diagnostics, Tags) {
                   AllOf(Diag(Test.range("deprecated"), "'bar' is deprecated"),
                         WithTag(DiagnosticTag::Deprecated))));
 }
+
+TEST(DiagnosticsTest, IncludeCleaner) {
+  Annotations Test(R"cpp(
+$fix[[  $diag[[#include "unused.h"]]
+]]  #include "used.h"
+
+  void foo() {
+    used();
+  }
+  )cpp");
+  TestTU TU;
+  TU.Code = Test.code().str();
+  TU.AdditionalFiles["unused.h"] = R"cpp(
+    void unused() {}
+  )cpp";
+  TU.AdditionalFiles["used.h"] = R"cpp(
+    void used() {}
+  )cpp";
+  // Off by default.
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      UnorderedElementsAre(AllOf(
+          Diag(Test.range("diag"), "included header unused.h is not used"),
+          WithTag(DiagnosticTag::Unnecessary), DiagSource(Diag::Clangd),
+          WithFix(Fix(Test.range("fix"), "", "remove #include directive")))));
+  Cfg.Diagnostics.SuppressAll = true;
+  WithContextValue SuppressAllWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+  Cfg.Diagnostics.SuppressAll = false;
+  Cfg.Diagnostics.Suppress = {"unused-includes"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -67,6 +67,7 @@ Diagnostics:
     CheckOptions:
       IgnoreMacros: true
       example-check.ExampleOption: 0
+  UnusedIncludes: Strict
   )yaml";
   auto Results = Fragment::parseYAML(YAML, "config.yaml", Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
@@ -83,6 +84,8 @@ Diagnostics:
   EXPECT_THAT(Results[3].Diagnostics.ClangTidy.CheckOptions,
               ElementsAre(PairVal("IgnoreMacros", "true"),
                           PairVal("example-check.ExampleOption", "0")));
+  EXPECT_TRUE(Results[3].Diagnostics.UnusedIncludes);
+  EXPECT_EQ("Strict", *Results[3].Diagnostics.UnusedIncludes.getValue());
 }
 
 TEST(ParseYAML, Locations) {

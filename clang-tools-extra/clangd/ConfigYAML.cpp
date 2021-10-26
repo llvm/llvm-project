@@ -118,6 +118,9 @@ private:
       if (auto Values = scalarValues(N))
         F.Suppress = std::move(*Values);
     });
+    Dict.handle("UnusedIncludes", [&](Node &N) {
+      F.UnusedIncludes = scalarValue(N, "UnusedIncludes");
+    });
     Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
     Dict.parse(N);
   }
