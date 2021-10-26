@@ -171,15 +171,16 @@ bool DWARFVerifier::verifyName(const DWARFDie &Die) {
   std::string OriginalFullName;
   Die.getFullName(OS, &OriginalFullName);
   OS.flush();
-  if (!OriginalFullName.empty() && OriginalFullName != ReconstructedName) {
-    error() << "Simplified template DW_AT_name could not be reconstituted:\n"
-            << formatv("         original: {0}\n"
-                       "    reconstituted: {1}\n",
-                       OriginalFullName, ReconstructedName);
-    dump(Die) << '\n';
-    dump(Die.getDwarfUnit()->getUnitDIE()) << '\n';
-  }
-  return 0;
+  if (OriginalFullName.empty() || OriginalFullName == ReconstructedName)
+    return 0;
+
+  error() << "Simplified template DW_AT_name could not be reconstituted:\n"
+          << formatv("         original: {0}\n"
+                     "    reconstituted: {1}\n",
+                     OriginalFullName, ReconstructedName);
+  dump(Die) << '\n';
+  dump(Die.getDwarfUnit()->getUnitDIE()) << '\n';
+  return 1;
 }
 
 unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
