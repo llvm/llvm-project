@@ -298,10 +298,9 @@ class TwinePrinter:
       val = child['stdString'].dereference()
       return self.string_from_pretty_printer_lookup(val)
 
-    if self.is_twine_kind(kind, 'StringRefKind'):
-      val = child['stringRef'].dereference()
-      pp = StringRefPrinter(val)
-      return pp.to_string()
+    if self.is_twine_kind(kind, 'PtrAndLengthKind'):
+      val = child['ptrAndLength']
+      return val['ptr'].string(encoding='Latin-1', length=val['length']).encode('unicode_escape').decode()
 
     if self.is_twine_kind(kind, 'SmallStringKind'):
       val = child['smallString'].dereference()
