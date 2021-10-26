@@ -80,7 +80,7 @@ message("------------------- DIR: ${CMAKE_CURRENT_BINARY_DIR}/../../../runtime/s
     set(omp_common_args "${omp_common_args};--hip-device-lib-path=${BC_DIR}")
   endif(NOT ${AOMP_STANDALONE_BUILD})
 
-  set(openmp_c_cmd ${LLVM_INSTALL_PREFIX}/bin/clang ${omp_common_args}
+  set(openmp_c_cmd ${CLANG_TOOL} ${omp_common_args}
       ${CMAKE_CURRENT_SOURCE_DIR}/src/libm.c)
 
   # AMD only linking of ocml.bc to libm
