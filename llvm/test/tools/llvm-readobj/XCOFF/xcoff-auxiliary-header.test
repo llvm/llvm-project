@@ -1,3 +1,4 @@
+# REQUIRES: system-aix
 ## This file tests the ability of llvm-readobj to display the auxiliary header for 64 bits XCOFF and 32 bits XCOFF object file.
 # RUN: llvm-readobj --auxiliary-header %p/Inputs/xcoff-64-xlc-exec 2>&1 | \
 # RUN:   FileCheck --check-prefixes=XLC64EXEC,WARN64 %s
