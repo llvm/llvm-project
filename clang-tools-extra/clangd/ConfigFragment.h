@@ -210,6 +210,20 @@ struct Fragment {
     /// This often has other advantages, such as skipping some analysis.
     std::vector<Located<std::string>> Suppress;
 
+    /// Controls how clangd will correct "unnecessary #include directives.
+    /// clangd can warn if a header is `#include`d but not used, and suggest
+    /// removing it.
+    //
+    /// Strict means a header is unused if it does not *directly* provide any
+    /// symbol used in the file. Removing it may still break compilation if it
+    /// transitively includes headers that are used. This should be fixed by
+    /// including those headers directly.
+    ///
+    /// Valid values are:
+    /// - Strict
+    /// - None
+    llvm::Optional<Located<std::string>> UnusedIncludes;
+
     /// Controls how clang-tidy will run over the code base.
     ///
     /// The settings are merged with any settings found in .clang-tidy

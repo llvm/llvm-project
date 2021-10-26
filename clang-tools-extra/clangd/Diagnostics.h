@@ -101,6 +101,7 @@ struct Diag : DiagBase {
     Unknown,
     Clang,
     ClangTidy,
+    Clangd,
     ClangdConfig,
   } Source = Unknown;
   /// Elaborate on the problem, usually pointing to a related piece of code.
