@@ -97,6 +97,9 @@ public:
                      llvm::codeview::GlobalTypeTableBuilder &GlobalCVTypes,
                      bool GHash) {}
 
+  // Only implement for XCOFF
+  virtual void printAuxiliaryHeader() {}
+
   // Only implemented for MachO.
   virtual void printMachODataInCode() { }
   virtual void printMachOVersionMin() { }

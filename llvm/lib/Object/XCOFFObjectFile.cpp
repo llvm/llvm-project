@@ -149,6 +149,16 @@ const XCOFFFileHeader64 *XCOFFObjectFile::fileHeader64() const {
   return static_cast<const XCOFFFileHeader64 *>(FileHeader);
 }
 
+const XCOFFAuxiliaryHeader32 *XCOFFObjectFile::auxiliaryHeader32() const {
+  assert(!is64Bit() && "32-bit interface called on 64-bit object file.");
+  return static_cast<const XCOFFAuxiliaryHeader32 *>(AuxiliaryHeader);
+}
+
+const XCOFFAuxiliaryHeader64 *XCOFFObjectFile::auxiliaryHeader64() const {
+  assert(is64Bit() && "64-bit interface called on a 32-bit object file.");
+  return static_cast<const XCOFFAuxiliaryHeader64 *>(AuxiliaryHeader);
+}
+
 template <typename T> const T *XCOFFObjectFile::sectionHeaderTable() const {
   return static_cast<const T *>(SectionHeaderTable);
 }
@@ -1027,8 +1037,15 @@ XCOFFObjectFile::create(unsigned Type, MemoryBufferRef MBR) {
   Obj->FileHeader = FileHeaderOrErr.get();
 
   CurOffset += Obj->getFileHeaderSize();
-  // TODO FIXME we don't have support for an optional header yet, so just skip
-  // past it.
+
+  if (Obj->getOptionalHeaderSize()) {
+    auto AuxiliaryHeaderOrErr =
+        getObject<void>(Data, Base + CurOffset, Obj->getOptionalHeaderSize());
+    if (Error E = AuxiliaryHeaderOrErr.takeError())
+      return std::move(E);
+    Obj->AuxiliaryHeader = AuxiliaryHeaderOrErr.get();
+  }
+
   CurOffset += Obj->getOptionalHeaderSize();
 
   // Parse the section header table if it is present.
