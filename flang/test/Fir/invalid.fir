@@ -606,3 +606,13 @@ func @bad_array_modify(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : i
   fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   return
 }
+
+// -----
+
+func @slice_must_be_integral() {
+  %0 = arith.constant 42 : i32
+  %1 = fir.field_index field, !fir.type<t(param:i32){field:i32}> (%0 : i32)
+  // expected-error@+1 {{'fir.slice' op operand #0 must be any integer, but got '!fir.field'}}
+  %2 = fir.slice %1, %1, %1 : (!fir.field, !fir.field, !fir.field) -> !fir.slice<1>
+  return
+}

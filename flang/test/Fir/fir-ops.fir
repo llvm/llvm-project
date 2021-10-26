@@ -699,3 +699,13 @@ func @char_convert() {
   fir.char_convert %2 for %1 to %3 : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
   return
 }
+
+func @slice_substr() {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 42 : index
+  %c1 = arith.constant 1 : index
+  %offset = arith.constant 10 : index
+  %0 = fir.slice %lb, %ub, %c1 substr %offset, %c1 : (index, index, index, index, index) -> !fir.slice<1>
+  // CHECK: fir.slice %{{.*}}, %{{.*}}, %{{.*}} substr %{{.*}}, %{{.*}} : (index, index, index, index, index) -> !fir.slice<1>
+  return
+}
