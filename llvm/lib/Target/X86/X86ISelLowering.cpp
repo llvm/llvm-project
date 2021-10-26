@@ -50283,6 +50283,48 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+  // Try to move splat constant adders from the index operand to the base
+  // pointer operand. Taking care to multiply by the scale. We can only do
+  // this when index element type is the same as the pointer type.
+  // Otherwise we need to be sure the math doesn't wrap before the scale.
+  if (Index.getOpcode() == ISD::ADD &&
+      Index.getValueType().getVectorElementType() == PtrVT &&
+      isa<ConstantSDNode>(Scale)) {
+    uint64_t ScaleAmt = cast<ConstantSDNode>(Scale)->getZExtValue();
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(Index.getOperand(1))) {
+      BitVector UndefElts;
+      if (ConstantSDNode *C = BV->getConstantSplatNode(&UndefElts)) {
+        // FIXME: Allow non-constant?
+        if (UndefElts.none()) {
+          // Apply the scale.
+          APInt Adder = C->getAPIntValue() * ScaleAmt;
+          // Add it to the existing base.
+          Base = DAG.getNode(ISD::ADD, DL, PtrVT, Base,
+                             DAG.getConstant(Adder, DL, PtrVT));
+          Index = Index.getOperand(0);
+          return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        }
+      }
+
+      // It's also possible base is just a constant. In that case, just
+      // replace it with 0 and move the displacement into the index.
+      if (BV->isConstant() && isa<ConstantSDNode>(Base) &&
+          isOneConstant(Scale)) {
+        SDValue Splat = DAG.getSplatBuildVector(Index.getValueType(), DL, Base);
+        // Combine the constant build_vector and the constant base.
+        Splat = DAG.getNode(ISD::ADD, DL, Index.getValueType(),
+                            Index.getOperand(1), Splat);
+        // Add to the LHS of the original Index add.
+        Index = DAG.getNode(ISD::ADD, DL, Index.getValueType(),
+                            Index.getOperand(0), Splat);
+        Base = DAG.getConstant(0, DL, Base.getValueType());
+        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+      }
+    }
+  }
+
   if (DCI.isBeforeLegalizeOps()) {
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
