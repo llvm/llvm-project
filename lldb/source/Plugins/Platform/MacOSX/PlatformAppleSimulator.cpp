@@ -529,8 +529,7 @@ static const char *g_ios_description = "iPhone simulator platform plug-in.";
 /// IPhone Simulator Plugin.
 struct PlatformiOSSimulator {
   static void Initialize() {
-    PluginManager::RegisterPlugin(ConstString(g_ios_plugin_name),
-                                  g_ios_description,
+    PluginManager::RegisterPlugin(g_ios_plugin_name, g_ios_description,
                                   PlatformiOSSimulator::CreateInstance);
   }
 
@@ -579,8 +578,7 @@ static const char *g_tvos_description = "tvOS simulator platform plug-in.";
 /// Apple TV Simulator Plugin.
 struct PlatformAppleTVSimulator {
   static void Initialize() {
-    PluginManager::RegisterPlugin(ConstString(g_tvos_plugin_name),
-                                  g_tvos_description,
+    PluginManager::RegisterPlugin(g_tvos_plugin_name, g_tvos_description,
                                   PlatformAppleTVSimulator::CreateInstance);
   }
 
@@ -621,8 +619,7 @@ static const char *g_watchos_description =
 /// Apple Watch Simulator Plugin.
 struct PlatformAppleWatchSimulator {
   static void Initialize() {
-    PluginManager::RegisterPlugin(ConstString(g_watchos_plugin_name),
-                                  g_watchos_description,
+    PluginManager::RegisterPlugin(g_watchos_plugin_name, g_watchos_description,
                                   PlatformAppleWatchSimulator::CreateInstance);
   }
 
