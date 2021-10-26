@@ -25,8 +25,8 @@ class TypeSummaryListArgumentTestCase(TestBase):
         self.expect(
             'type summary list char',
             substrs=[
-                'char *',
-                'unsigned char'])
+                'char ?(\*|\[\])',
+                'char ?\[[0-9]+\]'])
 
         self.expect(
             'type summary list -w default',
@@ -40,5 +40,7 @@ class TypeSummaryListArgumentTestCase(TestBase):
             matching=False)
         self.expect(
             'type summary list -w system char',
-            substrs=['unsigned char *'],
+            substrs=[
+                'char ?(\*|\[\])',
+                'char ?\[[0-9]+\]'],
             matching=True)
