@@ -1863,9 +1863,6 @@ DEF_TRAVERSE_DECL(UnresolvedUsingIfExistsDecl, {})
 DEF_TRAVERSE_DECL(EnumDecl, {
   TRY_TO(TraverseDeclTemplateParameterLists(D));
 
-  if (D->getTypeForDecl())
-    TRY_TO(TraverseType(QualType(D->getTypeForDecl(), 0)));
-
   TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (auto *TSI = D->getIntegerTypeSourceInfo())
     TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
