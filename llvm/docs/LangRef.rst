@@ -2655,7 +2655,7 @@ default set of specifications which are then (possibly) overridden by
 the specifications in the ``datalayout`` keyword. The default
 specifications are given in this list:
 
--  ``E`` - big endian
+-  ``e`` - little endian
 -  ``p:64:64:64`` - 64-bit pointers with 64-bit alignment.
 -  ``p[n]:64:64:64`` - Other address spaces are assumed to be the
    same as the default address space.
