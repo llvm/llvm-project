@@ -269,7 +269,7 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
 
     auto splitRecords = [&](int recordSize) -> void {
       subsections.push_back({});
-      if (data.size() == 0)
+      if (data.empty())
         return;
 
       SubsectionMap &subsecMap = subsections.back();
@@ -619,8 +619,7 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
   }
 }
 
-template <class NList>
-static bool isUndef(const NList &sym) {
+template <class NList> static bool isUndef(const NList &sym) {
   return (sym.n_type & N_TYPE) == N_UNDF && sym.n_value == 0;
 }
 
@@ -1211,7 +1210,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 void DylibFile::parseReexports(const InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
-  for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
+  for (const InterfaceFileRef &intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
         is_contained(targets, config->platformInfo.target))

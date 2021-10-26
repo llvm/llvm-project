@@ -174,7 +174,7 @@ static std::vector<StringRef> getSystemLibraryRoots(InputArgList &args) {
   for (const Arg *arg : args.filtered(OPT_syslibroot))
     roots.push_back(arg->getValue());
   // NOTE: the final `-syslibroot` being `/` will ignore all roots
-  if (roots.size() && roots.back() == "/")
+  if (!roots.empty() && roots.back() == "/")
     roots.clear();
   // NOTE: roots can never be empty - add an empty root to simplify the library
   // and framework search path computation.
@@ -206,7 +206,9 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
        args.filtered(OPT_thinlto_cache_policy, OPT_prune_interval_lto,
                      OPT_prune_after_lto, OPT_max_relative_cache_size_lto)) {
     switch (arg->getOption().getID()) {
-    case OPT_thinlto_cache_policy: add(arg->getValue()); break;
+    case OPT_thinlto_cache_policy:
+      add(arg->getValue());
+      break;
     case OPT_prune_interval_lto:
       if (!strcmp("-1", arg->getValue()))
         add("prune_interval=87600h"); // 10 years
