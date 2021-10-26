@@ -1045,22 +1045,9 @@ public:
     return mlir::success();
   }
 
-  mlir::LogicalResult buildCompoundStmt(const CompoundStmt &S) {
-    // Create a scope in the symbol table to hold variable declarations local
-    // to this compound statement.
-    SymTableScopeTy varScope(symbolTable);
-    for (auto *CurStmt : S.body())
-      if (buildStmt(CurStmt).failed())
-        return mlir::failure();
-
-    return mlir::success();
-  }
-
-  mlir::LogicalResult buildStmt(const Stmt *S) {
+  mlir::LogicalResult buildSimpleStmt(const Stmt *S) {
     switch (S->getStmtClass()) {
     default:
-      llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
-                   << "' not implemented\n";
       return mlir::failure();
     case Stmt::DeclStmtClass:
       return buildDeclStmt(cast<DeclStmt>(*S));
@@ -1068,7 +1055,45 @@ public:
       return buildCompoundStmt(cast<CompoundStmt>(*S));
     case Stmt::ReturnStmtClass:
       return buildReturnStmt(cast<ReturnStmt>(*S));
+    case Stmt::NullStmtClass:
+      break;
+
+    case Stmt::LabelStmtClass:
+    case Stmt::AttributedStmtClass:
+    case Stmt::GotoStmtClass:
+    case Stmt::BreakStmtClass:
+    case Stmt::ContinueStmtClass:
+    case Stmt::DefaultStmtClass:
+    case Stmt::CaseStmtClass:
+    case Stmt::SEHLeaveStmtClass:
+      llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
+                   << "' not implemented\n";
+      assert(0 && "not implemented");
     }
+
+    return mlir::success();
+  }
+
+  mlir::LogicalResult buildStmt(const Stmt *S) {
+    if (mlir::succeeded(buildSimpleStmt(S)))
+      return mlir::success();
+    assert(0 && "not implemented");
+    return mlir::failure();
+  }
+
+  mlir::LogicalResult buildFunctionBody(const Stmt *Body) {
+    const CompoundStmt *S = dyn_cast<CompoundStmt>(Body);
+    assert(S && "expected compound stmt");
+    return buildCompoundStmt(*S);
+  }
+
+  mlir::LogicalResult buildCompoundStmt(const CompoundStmt &S) {
+    // Create a scope in the symbol table to hold variable declarations local
+    // to this compound statement.
+    SymTableScopeTy varScope(symbolTable);
+    for (auto *CurStmt : S.body())
+      if (buildStmt(CurStmt).failed())
+        return mlir::failure();
 
     return mlir::success();
   }
@@ -1124,7 +1149,7 @@ public:
     }
 
     // Emit the body of the function.
-    if (mlir::failed(buildStmt(FD->getBody()))) {
+    if (mlir::failed(buildFunctionBody(FD->getBody()))) {
       function.erase();
       return nullptr;
     }
