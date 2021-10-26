@@ -42,6 +42,10 @@ LibStdcppTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibStdcppBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibStdcppVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                 lldb::ValueObjectSP);
 
