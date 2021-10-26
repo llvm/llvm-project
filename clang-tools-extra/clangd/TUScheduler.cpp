@@ -58,6 +58,7 @@
 #include "support/Logger.h"
 #include "support/MemoryTree.h"
 #include "support/Path.h"
+#include "support/ThreadCrashReporter.h"
 #include "support/Threading.h"
 #include "support/Trace.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -76,6 +77,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -902,6 +904,40 @@ void ASTWorker::runWithAST(
   startTask(Name, std::move(Task), /*Update=*/None, Invalidation);
 }
 
+/// To be called from ThreadCrashReporter's signal handler.
+static void crashDumpCompileCommand(llvm::raw_ostream &OS,
+                                    const tooling::CompileCommand &Command) {
+  OS << "  Filename: " << Command.Filename << "\n";
+  OS << "  Directory: " << Command.Directory << "\n";
+  OS << "  Command Line:";
+  for (auto &Arg : Command.CommandLine) {
+    OS << " " << Arg;
+  }
+  OS << "\n";
+}
+
+/// To be called from ThreadCrashReporter's signal handler.
+static void crashDumpFileContents(llvm::raw_ostream &OS,
+                                  const std::string &Contents) {
+  // Avoid flooding the terminal with source code by default, but allow clients
+  // to opt in. Use an env var to preserve backwards compatibility of the
+  // command line interface, while allowing it to be set outside the clangd
+  // launch site for more flexibility.
+  if (getenv("CLANGD_CRASH_DUMP_SOURCE")) {
+    OS << "  Contents:\n";
+    OS << Contents << "\n";
+  }
+}
+
+/// To be called from ThreadCrashReporter's signal handler.
+static void crashDumpParseInputs(llvm::raw_ostream &OS,
+                                 const ParseInputs &FileInputs) {
+  auto &Command = FileInputs.CompileCommand;
+  crashDumpCompileCommand(OS, Command);
+  OS << "  Version: " << FileInputs.Version << "\n";
+  crashDumpFileContents(OS, FileInputs.Contents);
+}
+
 void PreambleThread::build(Request Req) {
   assert(Req.CI && "Got preamble request with null compiler invocation");
   const ParseInputs &Inputs = Req.Inputs;
@@ -931,6 +967,11 @@ void PreambleThread::build(Request Req) {
          "version {2})",
          FileName, Inputs.Version, LatestBuild->Version);
   }
+
+  ThreadCrashReporter ScopedReporter([&Inputs]() {
+    llvm::errs() << "Signalled while building preamble\n";
+    crashDumpParseInputs(llvm::errs(), Inputs);
+  });
 
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
@@ -1288,6 +1329,11 @@ void ASTWorker::run() {
         Status.ASTActivity.Name = CurrentRequest->Name;
       });
       WithContext WithProvidedContext(ContextProvider(FileName));
+      ThreadCrashReporter ScopedReporter([this]() {
+        const char *Name = CurrentRequest ? CurrentRequest->Name.c_str() : "";
+        llvm::errs() << "Signalled during AST worker action: " << Name << "\n";
+        crashDumpParseInputs(llvm::errs(), FileInputs);
+      });
       CurrentRequest->Action();
     }
 
@@ -1613,6 +1659,11 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
                Ctx = Context::current().derive(kFileBeingProcessed,
                                                std::string(File)),
                Action = std::move(Action), this]() mutable {
+    ThreadCrashReporter ScopedReporter([&Name, &Contents, &Command]() {
+      llvm::errs() << "Signalled during preamble action: " << Name << "\n";
+      crashDumpCompileCommand(llvm::errs(), Command);
+      crashDumpFileContents(llvm::errs(), Contents);
+    });
     std::shared_ptr<const PreambleData> Preamble;
     if (Consistency == PreambleConsistency::Stale) {
       // Wait until the preamble is built for the first time, if preamble

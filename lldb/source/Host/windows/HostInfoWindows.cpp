@@ -82,10 +82,8 @@ llvm::Optional<std::string> HostInfoWindows::GetOSBuildString() {
   return "Windows NT " + version.getAsString();
 }
 
-bool HostInfoWindows::GetOSKernelDescription(std::string &s) {
-  llvm::Optional<std::string> build = GetOSBuildString();
-  s = build.getValueOr("");
-  return build.hasValue();
+llvm::Optional<std::string> HostInfoWindows::GetOSKernelDescription() {
+  return GetOSBuildString();
 }
 
 bool HostInfoWindows::GetHostname(std::string &s) {

@@ -510,8 +510,8 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
       m_kext_summary_header(), m_known_kexts(), m_mutex(),
       m_break_id(LLDB_INVALID_BREAK_ID) {
   Status error;
-  PlatformSP platform_sp(
-      Platform::Create(PlatformDarwinKernel::GetPluginNameStatic(), error));
+  PlatformSP platform_sp(Platform::Create(
+      ConstString(PlatformDarwinKernel::GetPluginNameStatic()), error));
   if (platform_sp.get())
     process->GetTarget().SetPlatform(platform_sp);
 }

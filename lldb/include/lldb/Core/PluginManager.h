@@ -211,7 +211,7 @@ public:
 
   // Platform
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  PlatformCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
@@ -220,11 +220,11 @@ public:
   static PlatformCreateInstance GetPlatformCreateCallbackAtIndex(uint32_t idx);
 
   static PlatformCreateInstance
-  GetPlatformCreateCallbackForPluginName(ConstString name);
+  GetPlatformCreateCallbackForPluginName(llvm::StringRef name);
 
-  static const char *GetPlatformPluginNameAtIndex(uint32_t idx);
+  static llvm::StringRef GetPlatformPluginNameAtIndex(uint32_t idx);
 
-  static const char *GetPlatformPluginDescriptionAtIndex(uint32_t idx);
+  static llvm::StringRef GetPlatformPluginDescriptionAtIndex(uint32_t idx);
 
   static void AutoCompletePlatformName(llvm::StringRef partial_name,
                                        CompletionRequest &request);

@@ -129,21 +129,10 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
 PlatformAndroid::PlatformAndroid(bool is_host)
     : PlatformLinux(is_host), m_sdk_version(0) {}
 
-ConstString PlatformAndroid::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-android");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformAndroid::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformAndroid::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local Android user platform plug-in.";
-  else
-    return "Remote Android user platform plug-in.";
+  return "Remote Android user platform plug-in.";
 }
 
 Status PlatformAndroid::ConnectRemote(Args &args) {
