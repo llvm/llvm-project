@@ -732,34 +732,27 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
   L->getExitEdges(ExitEdges);
 
-  DenseMap<BasicBlock *, BasicBlock *> ExitIDom;
+  // Remember dominators of blocks we might reach through exits to change them
+  // later. Immediate dominator of such block might change, because we add more
+  // routes which can lead to the exit: we can reach it from the peeled
+  // iterations too.
+  DenseMap<BasicBlock *, BasicBlock *> NonLoopBlocksIDom;
   if (DT) {
-    // We'd like to determine the idom of exit block after peeling one
-    // iteration.
-    // Let Exit is exit block.
-    // Let ExitingSet - is a set of predecessors of Exit block. They are exiting
-    // blocks.
-    // Let Latch' and ExitingSet' are copies after a peeling.
-    // We'd like to find an idom'(Exit) - idom of Exit after peeling.
-    // It is an evident that idom'(Exit) will be the nearest common dominator
-    // of ExitingSet and ExitingSet'.
-    // idom(Exit) is a nearest common dominator of ExitingSet.
-    // idom(Exit)' is a nearest common dominator of ExitingSet'.
-    // Taking into account that we have a single Latch, Latch' will dominate
-    // Header and idom(Exit).
-    // So the idom'(Exit) is nearest common dominator of idom(Exit)' and Latch'.
-    // All these basic blocks are in the same loop, so what we find is
-    // (nearest common dominator of idom(Exit) and Latch)'.
-    // In the loop below we remember nearest common dominator of idom(Exit) and
-    // Latch to update idom of Exit later.
-    assert(L->hasDedicatedExits() && "No dedicated exits?");
-    for (auto Edge : ExitEdges) {
-      if (ExitIDom.count(Edge.second))
-        continue;
-      BasicBlock *BB = DT->findNearestCommonDominator(
-          DT->getNode(Edge.second)->getIDom()->getBlock(), Latch);
-      assert(L->contains(BB) && "IDom is not in a loop");
-      ExitIDom[Edge.second] = BB;
+    for (auto *BB : L->blocks()) {
+      auto *BBDomNode = DT->getNode(BB);
+      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+      for (auto *ChildDomNode : BBDomNode->children()) {
+        auto *ChildBB = ChildDomNode->getBlock();
+        if (!L->contains(ChildBB))
+          ChildrenToUpdate.push_back(ChildBB);
+      }
+      // The new idom of the block will be the nearest common dominator
+      // of all copies of the previous idom. This is equivalent to the
+      // nearest common dominator of the previous idom and the first latch,
+      // which dominates all copies of the previous idom.
+      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latch);
+      for (auto *ChildBB : ChildrenToUpdate)
+        NonLoopBlocksIDom[ChildBB] = NewIDom;
     }
   }
 
@@ -848,13 +841,11 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     remapInstructionsInBlocks(NewBlocks, VMap);
 
     if (DT) {
-      // Latches of the cloned loops dominate over the loop exit, so idom of the
-      // latter is the first cloned loop body, as original PreHeader dominates
-      // the original loop body.
+      // Update IDoms of the blocks reachable through exits.
       if (Iter == 0)
-        for (auto Exit : ExitIDom)
-          DT->changeImmediateDominator(Exit.first,
-                                       cast<BasicBlock>(LVMap[Exit.second]));
+        for (auto BBIDom : NonLoopBlocksIDom)
+          DT->changeImmediateDominator(BBIDom.first,
+                                       cast<BasicBlock>(LVMap[BBIDom.second]));
 #ifdef EXPENSIVE_CHECKS
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif
