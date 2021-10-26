@@ -8,6 +8,7 @@
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_warnIfReached();
+template <typename T> void clang_analyzer_dump(T);
 
 void free(void *ptr);
 
@@ -41,6 +42,12 @@ void null_constant_parameter() {
   std::string x((char *)0);
   // expected-warning@-1 {{The parameter must not be null}}
   // expected-note@-2    {{The parameter must not be null}}
+}
+
+void unknown_ctor_param(const char *p) {
+  // Pass 'UnknownVal' to the std::string constructor.
+  clang_analyzer_dump((char *)(p == 0)); // expected-warning {{Unknown}} expected-note {{Unknown}}
+  std::string x((char *)(p == 0));       // no-crash, no-warning
 }
 
 void ctor_notetag_on_constraining_symbol(const char *p) {
