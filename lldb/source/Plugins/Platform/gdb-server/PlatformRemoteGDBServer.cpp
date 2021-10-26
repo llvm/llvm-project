@@ -240,8 +240,9 @@ llvm::Optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
   return m_gdb_client.GetOSBuildString();
 }
 
-bool PlatformRemoteGDBServer::GetRemoteOSKernelDescription(std::string &s) {
-  return m_gdb_client.GetOSKernelDescription(s);
+llvm::Optional<std::string>
+PlatformRemoteGDBServer::GetRemoteOSKernelDescription() {
+  return m_gdb_client.GetOSKernelDescription();
 }
 
 // Remote Platform subclasses need to override this function

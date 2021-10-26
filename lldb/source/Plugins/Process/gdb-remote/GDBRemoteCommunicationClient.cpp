@@ -978,15 +978,13 @@ llvm::Optional<std::string> GDBRemoteCommunicationClient::GetOSBuildString() {
   return llvm::None;
 }
 
-bool GDBRemoteCommunicationClient::GetOSKernelDescription(std::string &s) {
+llvm::Optional<std::string>
+GDBRemoteCommunicationClient::GetOSKernelDescription() {
   if (GetHostInfo()) {
-    if (!m_os_kernel.empty()) {
-      s = m_os_kernel;
-      return true;
-    }
+    if (!m_os_kernel.empty())
+      return m_os_kernel;
   }
-  s.clear();
-  return false;
+  return llvm::None;
 }
 
 bool GDBRemoteCommunicationClient::GetHostname(std::string &s) {

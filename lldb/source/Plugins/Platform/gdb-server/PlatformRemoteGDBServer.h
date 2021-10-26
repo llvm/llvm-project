@@ -79,7 +79,7 @@ public:
 
   llvm::Optional<std::string> GetRemoteOSBuildString() override;
 
-  bool GetRemoteOSKernelDescription(std::string &s) override;
+  llvm::Optional<std::string> GetRemoteOSKernelDescription() override;
 
   // Remote Platform subclasses need to override this function
   ArchSpec GetRemoteSystemArchitecture() override;
