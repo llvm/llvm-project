@@ -93,9 +93,33 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   align = std::max(align, copy->align);
   copy->live = false;
   copy->wasCoalesced = true;
-  numRefs += copy->numRefs;
-  copy->numRefs = 0;
   copy->replacement = this;
+
+  // Merge the sorted vectors of symbols together.
+  auto it = symbols.begin();
+  for (auto copyIt = copy->symbols.begin(); copyIt != copy->symbols.end();) {
+    if (it == symbols.end()) {
+      symbols.push_back(*copyIt++);
+      it = symbols.end();
+    } else if ((*it)->value > (*copyIt)->value) {
+      std::swap(*it++, *copyIt);
+    } else {
+      ++it;
+    }
+  }
+  copy->symbols.clear();
+
+  // Remove duplicate compact unwind info for symbols at the same address.
+  if (symbols.size() == 0)
+    return;
+  it = symbols.begin();
+  uint64_t v = (*it)->value;
+  for (++it; it != symbols.end(); ++it) {
+    if ((*it)->value == v)
+      (*it)->compactUnwind = nullptr;
+    else
+      v = (*it)->value;
+  }
 }
 
 void ConcatInputSection::writeTo(uint8_t *buf) {

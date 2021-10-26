@@ -10,6 +10,7 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
+#include "InputSection.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"

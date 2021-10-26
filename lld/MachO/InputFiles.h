@@ -119,6 +119,7 @@ private:
                         SubsectionMap &);
   void parseDebugInfo();
   void parseDataInCode();
+  void registerCompactUnwind();
 };
 
 // command-line -sectcreate file

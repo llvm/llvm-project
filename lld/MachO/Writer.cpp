@@ -673,8 +673,11 @@ void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->overridesWeakDef && defined->isLive())
+      if (!defined->isLive())
+        continue;
+      if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
+      in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       // This branch intentionally doesn't check isLive().
       if (dysym->isDynamicLookup())
@@ -682,6 +685,15 @@ void Writer::scanSymbols() {
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->getRefState());
     }
+  }
+
+  for (const InputFile *file : inputFiles) {
+    if (auto *objFile = dyn_cast<ObjFile>(file))
+      for (Symbol *sym : objFile->symbols) {
+        if (auto *defined = dyn_cast_or_null<Defined>(sym))
+          if (!defined->isExternal() && defined->isLive())
+            in.unwindInfo->addSymbol(defined);
+      }
   }
 }
 
@@ -1101,6 +1113,7 @@ template <class LP> void Writer::run() {
   treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
+  scanSymbols();
   scanRelocations();
 
   // Do not proceed if there was an undefined symbol.
@@ -1109,7 +1122,6 @@ template <class LP> void Writer::run() {
 
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
-  scanSymbols();
   createOutputSections<LP>();
 
   // After this point, we create no new segments; HOWEVER, we might

@@ -28,21 +28,21 @@
 
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/a.out | FileCheck %s --check-prefixes=A,CHECK -D#%x,OFF=0x100000000
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/b.out | FileCheck %s --check-prefixes=BC,CHECK -D#%x,OFF=0x100000000
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/c.out | FileCheck %s --check-prefixes=BC,CHECK -D#%x,OFF=0
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --bind %t/c.out | FileCheck %s --check-prefixes=BC,C,CHECK -D#%x,OFF=0
 
 # A:      Indirect symbols for (__DATA_CONST,__got)
 # A-NEXT: address                    index name
-# A-DAG:  0x[[#%x,GXX_PERSONALITY_LO:]] [[#]] ___gxx_personality_v0
-# A-DAG:  0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0
-# A-DAG:  0x[[#%x,PERSONALITY_1:]]  LOCAL
-# A-DAG:  0x[[#%x,PERSONALITY_2:]]  LOCAL
+# A:      0x[[#%x,GXX_PERSONALITY_LO:]] [[#]] ___gxx_personality_v0
+# A:      0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0
+# A:      0x[[#%x,PERSONALITY_1:]]  LOCAL
+# A:      0x[[#%x,PERSONALITY_2:]]  LOCAL
 
 # BC:      Indirect symbols for (__DATA_CONST,__got)
 # BC-NEXT: address                    index name
-# BC-DAG:  0x[[#%x,GXX_PERSONALITY_HI:]] LOCAL
-# BC-DAG:  0x[[#%x,GXX_PERSONALITY_LO:]] LOCAL
-# BC-DAG:  0x[[#%x,PERSONALITY_1:]]  LOCAL
-# BC-DAG:  0x[[#%x,PERSONALITY_2:]]  LOCAL
+# C:       0x[[#%x,GXX_PERSONALITY_HI:]] LOCAL
+# BC:      0x[[#%x,GXX_PERSONALITY_LO:]] LOCAL
+# BC:      0x[[#%x,PERSONALITY_1:]]      LOCAL
+# BC:      0x[[#%x,PERSONALITY_2:]]      LOCAL
 
 # CHECK:        Personality functions: (count = 3)
 # CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#GXX_PERSONALITY_LO-OFF]]

@@ -107,7 +107,7 @@ template <class Ptr>
 class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
   void prepareRelocations(ConcatInputSection *) override;
-  void addInput(ConcatInputSection *) override;
+  void addSymbol(const Defined *) override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
@@ -141,11 +141,11 @@ void UnwindInfoSection::prepareRelocations() {
 }
 
 template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::addInput(ConcatInputSection *isec) {
-  assert(isec->getSegName() == segment_names::ld &&
-         isec->getName() == section_names::compactUnwind);
-  isec->parent = compactUnwindSection;
-  compactUnwindSection->addInput(isec);
+void UnwindInfoSectionImpl<Ptr>::addSymbol(const Defined *d) {
+  if (d->compactUnwind) {
+    d->compactUnwind->parent = compactUnwindSection;
+    compactUnwindSection->addInput(d->compactUnwind);
+  }
 }
 
 // Compact unwind relocations have different semantics, so we handle them in a
@@ -255,9 +255,6 @@ static ConcatInputSection *checkTextSegment(InputSection *isec) {
   return cast<ConcatInputSection>(isec);
 }
 
-template <class Ptr>
-constexpr Ptr TombstoneValue = std::numeric_limits<Ptr>::max();
-
 // We need to apply the relocations to the pre-link compact unwind section
 // before converting it to post-link form. There should only be absolute
 // relocations here: since we are not emitting the pre-link CU section, there
@@ -274,7 +271,7 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
     memcpy(buf, isec->data.data(), isec->data.size());
 
     for (const Reloc &r : isec->relocs) {
-      uint64_t referentVA = TombstoneValue<Ptr>;
+      uint64_t referentVA = 0;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
           if (auto *defined = dyn_cast<Defined>(referentSym))
@@ -333,8 +330,7 @@ static void addEntriesForFunctionsWithoutUnwindInfo(
     std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
   DenseSet<Ptr> hasUnwindInfo;
   for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
-    if (cuEntry.functionAddress != TombstoneValue<Ptr>)
-      hasUnwindInfo.insert(cuEntry.functionAddress);
+    hasUnwindInfo.insert(cuEntry.functionAddress);
 
   // Add explicit "has no unwind info" entries for all global and local symbols
   // without unwind info.
@@ -413,28 +409,6 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
                              const CompactUnwindEntry<Ptr> *b) {
     return a->functionAddress < b->functionAddress;
   });
-
-  // Dead-stripped functions get a functionAddress of TombstoneValue in
-  // relocateCompactUnwind(). Filter them out here.
-  // FIXME: This doesn't yet collect associated data like LSDAs kept
-  // alive only by a now-removed CompactUnwindEntry or other comdat-like
-  // data (`kindNoneGroupSubordinate*` in ld64).
-  CompactUnwindEntry<Ptr> tombstone;
-  tombstone.functionAddress = TombstoneValue<Ptr>;
-  cuPtrVector.erase(
-      std::lower_bound(cuPtrVector.begin(), cuPtrVector.end(), &tombstone,
-                       [](const CompactUnwindEntry<Ptr> *a,
-                          const CompactUnwindEntry<Ptr> *b) {
-                         return a->functionAddress < b->functionAddress;
-                       }),
-      cuPtrVector.end());
-
-  // If there are no entries left after adding explicit "no unwind info"
-  // entries and removing entries for dead-stripped functions, don't write
-  // an __unwind_info section at all.
-  assert(allEntriesAreOmitted == cuPtrVector.empty());
-  if (cuPtrVector.empty())
-    return;
 
   // Fold adjacent entries with matching encoding+personality+lsda
   // We use three iterators on the same cuPtrVector to fold in-situ:
@@ -608,7 +582,6 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
   }
   // Level-1 sentinel
   const CompactUnwindEntry<Ptr> &cuEnd = *cuPtrVector.back();
-  assert(cuEnd.functionAddress != TombstoneValue<Ptr>);
   iep->functionOffset =
       cuEnd.functionAddress - in.header->addr + cuEnd.functionLength;
   iep->secondLevelPagesSectionOffset = 0;

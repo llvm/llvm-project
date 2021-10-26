@@ -330,6 +330,7 @@ void ConcatOutputSection::finalize() {
           /*size=*/thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
           /*isThumb=*/false, /*isReferencedDynamically=*/false,
           /*noDeadStrip=*/false);
+      thunkInfo.sym->used = true;
       target->populateThunk(thunkInfo.isec, funcSym);
       finalizeOne(thunkInfo.isec);
       thunks.push_back(thunkInfo.isec);

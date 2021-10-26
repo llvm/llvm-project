@@ -31,7 +31,7 @@ public:
     return !compactUnwindSection->inputs.empty() && !allEntriesAreOmitted;
   }
   uint64_t getSize() const override { return unwindInfoSize; }
-  virtual void addInput(ConcatInputSection *) = 0;
+  virtual void addSymbol(const Defined *) = 0;
   std::vector<ConcatInputSection *> getInputs() {
     return compactUnwindSection->inputs;
   }

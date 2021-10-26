@@ -235,9 +235,13 @@ InputFile::InputFile(Kind kind, const InterfaceFile &interface)
 // Note that "record" is a term I came up with. In contrast, "literal" is a term
 // used by the Mach-O format.
 static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
-  if (name == section_names::cfString)
+  if (name == section_names::cfString) {
     if (config->icfLevel != ICFLevel::none && segname == segment_names::data)
       return target->wordSize == 8 ? 32 : 16;
+  } else if (name == section_names::compactUnwind) {
+    if (segname == segment_names::ld)
+      return target->wordSize == 8 ? 32 : 20;
+  }
   return {};
 }
 
@@ -562,7 +566,6 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
         isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
         sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
   }
-
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
   return make<Defined>(
@@ -662,11 +665,11 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     uint64_t sectionAddr = sectionHeaders[i].addr;
     uint32_t sectionAlign = 1u << sectionHeaders[i].align;
 
-    InputSection *isec = subsecMap.back().isec;
-    // __cfstring has already been split into subsections during
+    InputSection *lastIsec = subsecMap.back().isec;
+    // Record-based sections have already been split into subsections during
     // parseSections(), so we simply need to match Symbols to the corresponding
     // subsection here.
-    if (config->icfLevel != ICFLevel::none && isCfStringSection(isec)) {
+    if (getRecordSize(lastIsec->getSegName(), lastIsec->getName())) {
       for (size_t j = 0; j < symbolIndices.size(); ++j) {
         uint32_t symIndex = symbolIndices[j];
         const NList &sym = nList[symIndex];
@@ -674,7 +677,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
         uint64_t symbolOffset = sym.n_value - sectionAddr;
         InputSection *isec = findContainingSubsection(subsecMap, &symbolOffset);
         if (symbolOffset != 0) {
-          error(toString(this) + ": __cfstring contains symbol " + name +
+          error(toString(lastIsec) + ":  symbol " + name +
                 " at misaligned offset");
           continue;
         }
@@ -719,7 +722,6 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       auto *concatIsec = cast<ConcatInputSection>(isec);
 
       auto *nextIsec = make<ConcatInputSection>(*concatIsec);
-      nextIsec->numRefs = 0;
       nextIsec->wasCoalesced = false;
       if (isZeroFill(isec->getFlags())) {
         // Zero-fill sections have NULL data.data() non-zero data.size()
@@ -830,6 +832,7 @@ template <class LP> void ObjFile::parse() {
   parseDebugInfo();
   if (config->emitDataInCodeInfo)
     parseDataInCode();
+  registerCompactUnwind();
 }
 
 void ObjFile::parseDebugInfo() {
@@ -868,6 +871,52 @@ void ObjFile::parseDataInCode() {
                                          const data_in_code_entry &rhs) {
     return lhs.offset < rhs.offset;
   }));
+}
+
+// Create pointers from symbols to their associated compact unwind entries.
+void ObjFile::registerCompactUnwind() {
+  // First, locate the __compact_unwind section.
+  SubsectionMap *cuSubsecMap = nullptr;
+  for (SubsectionMap &map : subsections) {
+    if (map.empty())
+      continue;
+    if (map[0].isec->getSegName() != segment_names::ld)
+      continue;
+    cuSubsecMap = &map;
+    break;
+  }
+  if (!cuSubsecMap)
+    return;
+
+  for (SubsectionEntry &entry : *cuSubsecMap) {
+    ConcatInputSection *isec = cast<ConcatInputSection>(entry.isec);
+    ConcatInputSection *referentIsec;
+    for (const Reloc &r : isec->relocs) {
+      if (r.offset != 0)
+        continue;
+      uint64_t add = r.addend;
+      if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
+        add += sym->value;
+        referentIsec = cast<ConcatInputSection>(sym->isec);
+      } else {
+        referentIsec =
+            cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
+      }
+      // The functionAddress relocations are typically section relocations.
+      // However, unwind info operates on a per-symbol basis, so we search for
+      // the function symbol here.
+      auto it = llvm::lower_bound(
+          referentIsec->symbols, add,
+          [](Defined *d, uint64_t add) { return d->value < add; });
+      // The relocation should point at the exact address of a symbol (with no
+      // addend).
+      if (it == referentIsec->symbols.end() || (*it)->value != add) {
+        assert(referentIsec->wasCoalesced);
+        continue;
+      }
+      (*it)->compactUnwind = isec;
+    }
+  }
 }
 
 // The path can point to either a dylib or a .tbd file.
