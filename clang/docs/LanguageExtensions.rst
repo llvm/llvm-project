@@ -3657,10 +3657,10 @@ governed by the pragma uses precise floating point semantics, effectively
 ``-ffast-math`` is disabled and ``-ffp-contract=on``
 (fused multiply add) is enabled.
 
-When ``pragma float_control(except, on)`` is enabled, the section of code governed
-by the pragma behaves as though the command-line option
+When ``pragma float_control(except, on)`` is enabled, the section of code
+governed by the pragma behaves as though the command-line option
 ``-ffp-exception-behavior=strict`` is enabled,
-when ``pragma float_control(precise, off)`` is enabled, the section of code
+when ``pragma float_control(except, off)`` is enabled, the section of code
 governed by the pragma behaves as though the command-line option
 ``-ffp-exception-behavior=ignore`` is enabled.
 
