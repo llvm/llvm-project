@@ -276,6 +276,32 @@ define <4 x i32> @combine_vec_neg_xor_consts(<4 x i32> %x) {
   ret <4 x i32> %sub
 }
 
+define void @PR52032_oneuse_constant(<8 x i32>* %p) {
+; SSE-LABEL: PR52032_oneuse_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqu (%rdi), %xmm0
+; SSE-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    psubd %xmm2, %xmm1
+; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
+; SSE-NEXT:    movdqu %xmm1, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_oneuse_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %i3 = load <8 x i32>, <8 x i32>* %p, align 4
+  %i4 = add nsw <8 x i32> %i3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  store <8 x i32> %i4, <8 x i32>* %p, align 4
+  ret void
+}
+
 define void @PR52032(<8 x i32>* %p) {
 ; SSE-LABEL: PR52032:
 ; SSE:       # %bb.0:
