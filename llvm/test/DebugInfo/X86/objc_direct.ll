@@ -1,3 +1,4 @@
+; UNSUPPORTED: -zos, -aix
 ; RUN: llc < %s -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
