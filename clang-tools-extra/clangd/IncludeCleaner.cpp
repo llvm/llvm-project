@@ -39,6 +39,13 @@ public:
     return true;
   }
 
+  bool VisitFunctionDecl(FunctionDecl *FD) {
+    // Function definition will require redeclarations to be included.
+    if (FD == FD->getDefinition())
+      add(FD);
+    return true;
+  }
+
   bool VisitCXXConstructExpr(CXXConstructExpr *CCE) {
     add(CCE->getConstructor());
     return true;

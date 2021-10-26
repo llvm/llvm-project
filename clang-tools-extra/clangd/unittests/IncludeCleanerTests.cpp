@@ -79,6 +79,19 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "struct ^X { ^X(int) {} int ^foo(); };",
           "auto x = X(42); auto y = x.foo();",
       },
+      // Function
+      {
+          "void ^foo();",
+          "void foo() {}",
+      },
+      {
+          "void foo() {}",
+          "void foo();",
+      },
+      {
+          "inline void ^foo() {}",
+          "void bar() { foo(); }",
+      },
       // Static function
       {
           "struct ^X { static bool ^foo(); }; bool X::^foo() {}",
