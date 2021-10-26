@@ -50,6 +50,18 @@ func @sin(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @erf(
+// CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func @erf(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.erf %[[F]] : f32
+  %0 = math.erf %f : f32
+  // CHECK: %{{.*}} = math.erf %[[V]] : vector<4xf32>
+  %1 = math.erf %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.erf %[[T]] : tensor<4x4x?xf32>
+  %2 = math.erf %t : tensor<4x4x?xf32>
+  return
+}
+
 // CHECK-LABEL: func @exp(
 // CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
 func @exp(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {

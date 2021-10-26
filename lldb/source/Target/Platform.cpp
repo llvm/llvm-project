@@ -398,7 +398,6 @@ Platform::Platform(bool is_host)
 Platform::~Platform() = default;
 
 void Platform::GetStatus(Stream &strm) {
-  std::string s;
   strm.Format("  Platform: {0}\n", GetPluginName());
 
   ArchSpec arch(GetSystemArchitecture());
@@ -414,8 +413,8 @@ void Platform::GetStatus(Stream &strm) {
   if (!os_version.empty()) {
     strm.Format("OS Version: {0}", os_version.getAsString());
 
-    if (GetOSBuildString(s))
-      strm.Printf(" (%s)", s.c_str());
+    if (llvm::Optional<std::string> s = GetOSBuildString())
+      strm.Format(" ({0})", *s);
 
     strm.EOL();
   }
@@ -440,6 +439,7 @@ void Platform::GetStatus(Stream &strm) {
   if (!specific_info.empty())
     strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
 
+  std::string s;
   if (GetOSKernelDescription(s))
     strm.Printf("    Kernel: %s\n", s.c_str());
 }
@@ -486,14 +486,10 @@ llvm::VersionTuple Platform::GetOSVersion(Process *process) {
   return llvm::VersionTuple();
 }
 
-bool Platform::GetOSBuildString(std::string &s) {
-  if (IsHost()) {
-    llvm::Optional<std::string> str = HostInfo::GetOSBuildString();
-    s = str.getValueOr("");
-    return str.hasValue();
-  }
-  s.clear();
-  return GetRemoteOSBuildString(s);
+llvm::Optional<std::string> Platform::GetOSBuildString() {
+  if (IsHost())
+    return HostInfo::GetOSBuildString();
+  return GetRemoteOSBuildString();
 }
 
 bool Platform::GetOSKernelDescription(std::string &s) {

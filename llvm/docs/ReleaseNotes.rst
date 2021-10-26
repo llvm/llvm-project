@@ -157,6 +157,10 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* A change in Clang's type printing has changed the way LLDB names array types
+  (from ``int [N]`` to ``int[N]``) - LLDB pretty printer type name matching
+  code may need to be updated to handle this.
+
 Changes to Sanitizers
 ---------------------
 

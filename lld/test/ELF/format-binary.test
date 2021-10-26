@@ -38,7 +38,7 @@
 # EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT  ABS _binary_d_t_txt_size
 
 # RUN: not ld.lld -b foo 2>&1 | FileCheck --check-prefix=ERR %s
-# ERR: error: unknown -format value: foo (supported formats: elf, default, binary)
+# ERR: error: unknown --format value: foo (supported formats: elf, default, binary)
 
 ## Non-isalnum bytes are converted to _. See D37331.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o d/£.o

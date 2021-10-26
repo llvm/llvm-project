@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -559,9 +560,10 @@ TEST_F(FileManagerTest, getBypassFile) {
 
   // Calling a second time should not affect the UID or size.
   unsigned VirtualUID = FE.getUID();
-  EXPECT_EQ(
-      &FE,
-      &expectedToOptional(Manager.getFileRef("/tmp/test"))->getFileEntry());
+  llvm::Optional<FileEntryRef> SearchRef;
+  ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
+                    Succeeded());
+  EXPECT_EQ(&FE, &SearchRef->getFileEntry());
   EXPECT_EQ(FE.getUID(), VirtualUID);
   EXPECT_EQ(FE.getSize(), 10);
 
@@ -578,9 +580,9 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_NE(BypassRef->getSize(), FE.getSize());
 
   // The virtual file should still be returned when searching.
-  EXPECT_EQ(
-      &FE,
-      &expectedToOptional(Manager.getFileRef("/tmp/test"))->getFileEntry());
+  ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
+                    Succeeded());
+  EXPECT_EQ(&FE, &SearchRef->getFileEntry());
 }
 
 } // anonymous namespace

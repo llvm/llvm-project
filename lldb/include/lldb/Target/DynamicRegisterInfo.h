@@ -57,11 +57,6 @@ public:
   size_t SetRegisterInfo(std::vector<Register> &&regs,
                          const lldb_private::ArchSpec &arch);
 
-  void AddRegister(lldb_private::RegisterInfo reg_info,
-                   lldb_private::ConstString &set_name);
-
-  void Finalize(const lldb_private::ArchSpec &arch);
-
   size_t GetNumRegisters() const;
 
   size_t GetNumRegisterSets() const;
@@ -115,6 +110,8 @@ protected:
       lldb::ByteOrder byte_order);
 
   void MoveFrom(DynamicRegisterInfo &&info);
+
+  void Finalize(const lldb_private::ArchSpec &arch);
 
   void ConfigureOffsets();
 

@@ -43,8 +43,7 @@ using llvm::object::Archive;
 
 class Symbol;
 
-// If -reproduce option is given, all input files are written
-// to this tar archive.
+// If --reproduce is specified, all input files are written to this tar archive.
 extern std::unique_ptr<llvm::TarWriter> tar;
 
 // Opens a given file.
@@ -261,8 +260,7 @@ private:
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(const Elf_Shdr &sec);
-  InputSectionBase *createInputSection(const Elf_Shdr &sec);
-  StringRef getSectionName(const Elf_Shdr &sec);
+  InputSectionBase *createInputSection(const Elf_Shdr &sec, StringRef shstrtab);
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
@@ -279,9 +277,6 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
-
-  // .shstrtab contents.
-  StringRef sectionStringTable;
 
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a

@@ -332,11 +332,10 @@ bool RemoteAwarePlatform::GetRemoteOSVersion() {
   return false;
 }
 
-bool RemoteAwarePlatform::GetRemoteOSBuildString(std::string &s) {
+llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSBuildString(s);
-  s.clear();
-  return false;
+    return m_remote_platform_sp->GetRemoteOSBuildString();
+  return llvm::None;
 }
 
 bool RemoteAwarePlatform::GetRemoteOSKernelDescription(std::string &s) {

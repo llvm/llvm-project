@@ -105,13 +105,12 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_options.m_all_targets) {
-      result.AppendMessageWithFormatv(
-          "{0:2}", DebuggerStats::ReportStatistics(GetDebugger()));
-    } else {
-      Target &target = m_exe_ctx.GetTargetRef();
-      result.AppendMessageWithFormatv("{0:2}", target.ReportStatistics());
-    }
+    Target *target = nullptr;
+    if (!m_options.m_all_targets)
+      target = m_exe_ctx.GetTargetPtr();
+
+    result.AppendMessageWithFormatv(
+        "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target));
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }

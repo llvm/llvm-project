@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -convert-math-to-libm -canonicalize | FileCheck %s
 
+// CHECK-DAG: @erf(f64) -> f64
+// CHECK-DAG: @erff(f32) -> f32
 // CHECK-DAG: @expm1(f64) -> f64
 // CHECK-DAG: @expm1f(f32) -> f32
 // CHECK-DAG: @atan2(f64, f64) -> f64
@@ -28,6 +30,18 @@ func @atan2_caller(%float: f32, %double: f64) -> (f32, f64) {
   %float_result = math.atan2 %float, %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @atan2(%[[DOUBLE]], %[[DOUBLE]]) : (f64, f64) -> f64
   %double_result = math.atan2 %double, %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @erf_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func @erf_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @erff(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.erf %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @erf(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.erf %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
 }

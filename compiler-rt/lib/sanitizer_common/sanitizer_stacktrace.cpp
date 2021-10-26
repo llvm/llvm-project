@@ -24,7 +24,7 @@ uptr StackTrace::GetNextInstructionPc(uptr pc) {
   return pc + 8;
 #elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__) || \
     defined(__hexagon__)
-  return pc + 4;
+  return STRIP_PAC_PC((void *)pc) + 4;
 #elif SANITIZER_RISCV64
   // Current check order is 4 -> 2 -> 6 -> 8
   u8 InsnByte = *(u8 *)(pc);

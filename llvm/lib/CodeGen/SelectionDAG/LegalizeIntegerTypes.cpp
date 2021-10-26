@@ -491,19 +491,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
                      CreateStackStoreLoad(InOp, OutVT));
 }
 
-// Helper for BSWAP/BITREVERSE promotion to ensure we can fit any shift amount
-// in the VT returned by getShiftAmountTy and to return a safe VT if we can't.
-static EVT getShiftAmountTyForConstant(EVT VT, const TargetLowering &TLI,
-                                       SelectionDAG &DAG) {
-  EVT ShiftVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-  // If any possible shift value won't fit in the prefered type, just use
-  // something safe. It will be legalized when the shift is expanded.
-  if (!ShiftVT.isVector() &&
-      ShiftVT.getSizeInBits() < Log2_32_Ceil(VT.getSizeInBits()))
-    ShiftVT = MVT::i32;
-  return ShiftVT;
-}
-
 SDValue DAGTypeLegalizer::PromoteIntRes_FREEZE(SDNode *N) {
   SDValue V = GetPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::FREEZE, SDLoc(N),
@@ -527,7 +514,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
+  EVT ShiftVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   return DAG.getNode(ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
                      DAG.getConstant(DiffBits, dl, ShiftVT));
 }
@@ -549,7 +536,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
+  EVT ShiftVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   return DAG.getNode(ISD::SRL, dl, NVT,
                      DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
                      DAG.getConstant(DiffBits, dl, ShiftVT));
@@ -1493,7 +1480,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   if (N->getOpcode() == ISD::UMULO) {
     // Unsigned overflow occurred if the high part is non-zero.
     unsigned Shift = SmallVT.getScalarSizeInBits();
-    EVT ShiftTy = getShiftAmountTyForConstant(Mul.getValueType(), TLI, DAG);
+    EVT ShiftTy = TLI.getShiftAmountTy(Mul.getValueType(), DAG.getDataLayout());
     SDValue Hi = DAG.getNode(ISD::SRL, DL, Mul.getValueType(), Mul,
                              DAG.getConstant(Shift, DL, ShiftTy));
     Overflow = DAG.getSetCC(DL, N->getValueType(1), Hi,
@@ -3153,7 +3140,7 @@ void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   bool HasAddCarry = TLI.isOperationLegalOrCustom(
       ISD::ADDCARRY, TLI.getTypeToExpandTo(*DAG.getContext(), NVT));
   if (HasAddCarry) {
-    EVT ShiftAmtTy = getShiftAmountTyForConstant(NVT, TLI, DAG);
+    EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
     SDValue Sign =
         DAG.getNode(ISD::SRA, dl, NVT, Hi,
                     DAG.getConstant(NVT.getSizeInBits() - 1, dl, ShiftAmtTy));
@@ -3548,11 +3535,6 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
     SDValue TL = DAG.getNode(ISD::AND, dl, NVT, T, Mask);
 
     EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
-    if (APInt::getMaxValue(ShiftAmtTy.getSizeInBits()).ult(HalfBits)) {
-      // The type from TLI is too small to fit the shift amount we want.
-      // Override it with i32. The shift will have to be legalized.
-      ShiftAmtTy = MVT::i32;
-    }
     SDValue Shift = DAG.getConstant(HalfBits, dl, ShiftAmtTy);
     SDValue TH = DAG.getNode(ISD::SRL, dl, NVT, T, Shift);
     SDValue LLH = DAG.getNode(ISD::SRL, dl, NVT, LL, Shift);
@@ -3992,9 +3974,6 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     // the new SHL_PARTS operation would need further legalization.
     SDValue ShiftOp = N->getOperand(1);
     EVT ShiftTy = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-    assert(ShiftTy.getScalarSizeInBits() >=
-           Log2_32_Ceil(VT.getScalarSizeInBits()) &&
-           "ShiftAmountTy is too small to cover the range of this type!");
     if (ShiftOp.getValueType() != ShiftTy)
       ShiftOp = DAG.getZExtOrTrunc(ShiftOp, dl, ShiftTy);
 

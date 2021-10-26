@@ -155,9 +155,8 @@ private:
 } // namespace
 
 static CallExpr::arg_range dropDefaultArgs(CallExpr::arg_range Args) {
-  auto FirstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto It) {
-    return isa<CXXDefaultArgExpr>(It);
-  });
+  auto FirstDefaultArg =
+      llvm::find_if(Args, [](auto It) { return isa<CXXDefaultArgExpr>(It); });
   return llvm::make_range(Args.begin(), FirstDefaultArg);
 }
 
