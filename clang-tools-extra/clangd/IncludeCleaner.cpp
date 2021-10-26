@@ -98,7 +98,7 @@ public:
   bool VisitEnumDecl(EnumDecl *D) {
     if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
       add(D);
-    return false;
+    return true;
   }
 
 private:
