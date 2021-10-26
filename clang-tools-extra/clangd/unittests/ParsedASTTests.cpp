@@ -361,7 +361,11 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
         : HashOffset(SM.getDecomposedLoc(HashLoc).second), IncTok(IncludeTok),
           IncDirective(IncludeTok.getIdentifierInfo()->getName()),
           FileNameOffset(SM.getDecomposedLoc(FilenameRange.getBegin()).second),
-          FileName(FileName), IsAngled(IsAngled) {}
+          FileName(FileName), IsAngled(IsAngled) {
+      EXPECT_EQ(
+          toSourceCode(SM, FilenameRange.getAsRange()).drop_back().drop_front(),
+          FileName);
+    }
     size_t HashOffset;
     syntax::Token IncTok;
     llvm::StringRef IncDirective;
