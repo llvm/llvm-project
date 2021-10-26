@@ -183,8 +183,8 @@ func @expm1_scalar(%arg0: f32) -> f32 {
 }
 
 // CHECK-LABEL:   func @expm1_vector(
-// CHECK-SAME:                       %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
-// CHECK:           %[[VAL_1:.*]] = arith.constant dense<-1.000000e+00> : vector<8xf32>
+// CHECK-SAME:                       %[[VAL_0:.*]]: vector<8x8xf32>) -> vector<8x8xf32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<-1.000000e+00> : vector<8x8xf32>
 // CHECK-NOT:       exp
 // CHECK-COUNT-4:   select
 // CHECK-NOT:       log
@@ -192,11 +192,11 @@ func @expm1_scalar(%arg0: f32) -> f32 {
 // CHECK-NOT:       expm1
 // CHECK-COUNT-3:   select
 // CHECK:           %[[VAL_115:.*]] = select
-// CHECK:           return %[[VAL_115]] : vector<8xf32>
+// CHECK:           return %[[VAL_115]] : vector<8x8xf32>
 // CHECK:         }
-func @expm1_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
-  %0 = math.expm1 %arg0 : vector<8xf32>
-  return %0 : vector<8xf32>
+func @expm1_vector(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
+  %0 = math.expm1 %arg0 : vector<8x8xf32>
+  return %0 : vector<8x8xf32>
 }
 
 // CHECK-LABEL:   func @log_scalar(
