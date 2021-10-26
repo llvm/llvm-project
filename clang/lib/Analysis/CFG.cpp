@@ -5683,21 +5683,18 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
       OS << L->getName();
     else if (CaseStmt *C = dyn_cast<CaseStmt>(Label)) {
       OS << "case ";
-      if (C->getLHS())
-        C->getLHS()->printPretty(OS, &Helper,
-                                 PrintingPolicy(Helper.getLangOpts()));
-      if (C->getRHS()) {
+      if (const Expr *LHS = C->getLHS())
+        LHS->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
+      if (const Expr *RHS = C->getRHS()) {
         OS << " ... ";
-        C->getRHS()->printPretty(OS, &Helper,
-                                 PrintingPolicy(Helper.getLangOpts()));
+        RHS->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
       }
     } else if (isa<DefaultStmt>(Label))
       OS << "default";
     else if (CXXCatchStmt *CS = dyn_cast<CXXCatchStmt>(Label)) {
       OS << "catch (";
-      if (CS->getExceptionDecl())
-        CS->getExceptionDecl()->print(OS, PrintingPolicy(Helper.getLangOpts()),
-                                      0);
+      if (const VarDecl *ED = CS->getExceptionDecl())
+        ED->print(OS, PrintingPolicy(Helper.getLangOpts()), 0);
       else
         OS << "...";
       OS << ")";
