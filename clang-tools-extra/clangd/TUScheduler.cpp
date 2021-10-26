@@ -589,6 +589,8 @@ private:
   void startTask(llvm::StringRef Name, llvm::unique_function<void()> Task,
                  llvm::Optional<UpdateType> Update,
                  TUScheduler::ASTActionInvalidation);
+  /// Runs a task synchronously.
+  void runTask(llvm::StringRef Name, llvm::function_ref<void()> Task);
 
   /// Determines the next action to perform.
   /// All actions that should never run are discarded.
@@ -1025,7 +1027,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
     generateDiagnostics(std::move(CI), std::move(PI), std::move(CIDiags));
   };
   if (RunSync) {
-    Task();
+    runTask(TaskName, Task);
     return;
   }
   {
@@ -1195,15 +1197,23 @@ void ASTWorker::stop() {
   RequestsCV.notify_all();
 }
 
+void ASTWorker::runTask(llvm::StringRef Name, llvm::function_ref<void()> Task) {
+  ThreadCrashReporter ScopedReporter([this, Name]() {
+    llvm::errs() << "Signalled during AST worker action: " << Name << "\n";
+    crashDumpParseInputs(llvm::errs(), FileInputs);
+  });
+  trace::Span Tracer(Name);
+  WithContext WithProvidedContext(ContextProvider(FileName));
+  Task();
+}
+
 void ASTWorker::startTask(llvm::StringRef Name,
                           llvm::unique_function<void()> Task,
                           llvm::Optional<UpdateType> Update,
                           TUScheduler::ASTActionInvalidation Invalidation) {
   if (RunSync) {
     assert(!Done && "running a task after stop()");
-    trace::Span Tracer(Name + ":" + llvm::sys::path::filename(FileName));
-    WithContext WithProvidedContext(ContextProvider(FileName));
-    Task();
+    runTask(Name, Task);
     return;
   }
 
@@ -1323,18 +1333,11 @@ void ASTWorker::run() {
         Lock.lock();
       }
       WithContext Guard(std::move(CurrentRequest->Ctx));
-      trace::Span Tracer(CurrentRequest->Name);
       Status.update([&](TUStatus &Status) {
         Status.ASTActivity.K = ASTAction::RunningAction;
         Status.ASTActivity.Name = CurrentRequest->Name;
       });
-      WithContext WithProvidedContext(ContextProvider(FileName));
-      ThreadCrashReporter ScopedReporter([this]() {
-        const char *Name = CurrentRequest ? CurrentRequest->Name.c_str() : "";
-        llvm::errs() << "Signalled during AST worker action: " << Name << "\n";
-        crashDumpParseInputs(llvm::errs(), FileInputs);
-      });
-      CurrentRequest->Action();
+      runTask(CurrentRequest->Name, CurrentRequest->Action);
     }
 
     bool IsEmpty = false;
