@@ -20,6 +20,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 using namespace llvm;
@@ -404,7 +405,8 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
     PageSize = 4096;
   }
 
-  MachOWriter Writer(**O, In.is64Bit(), In.isLittleEndian(), PageSize, Out);
+  MachOWriter Writer(**O, In.is64Bit(), In.isLittleEndian(),
+                     sys::path::filename(Config.OutputFilename), PageSize, Out);
   if (auto E = Writer.finalize())
     return E;
   return Writer.write();
