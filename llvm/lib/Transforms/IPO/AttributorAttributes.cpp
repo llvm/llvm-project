@@ -1224,7 +1224,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
 
         // Check if the PHI operand is not dependent on the PHI itself.
-        APInt Offset(DL.getIndexTypeSizeInBits(AssociatedValue.getType()), 0);
+        // TODO: This is not great as we look at the pointer type. However, it
+        // is unclear where the Offset size comes from with typeless pointers.
+        APInt Offset(
+            DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
+            0);
         if (&AssociatedValue == CurPtr->stripAndAccumulateConstantOffsets(
                                     DL, Offset, /* AllowNonInbounds */ true)) {
           if (Offset != PtrOI.Offset) {
