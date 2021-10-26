@@ -1483,29 +1483,19 @@ static void sortSection(OutputSection *sec,
       if (auto *isd = dyn_cast<InputSectionDescription>(b))
         sortISDBySectionOrder(isd, order);
 
-  // Sort input sections by section name suffixes for
-  // __attribute__((init_priority(N))).
+  if (script->hasSectionsCommand)
+    return;
+
   if (name == ".init_array" || name == ".fini_array") {
-    if (!script->hasSectionsCommand)
-      sec->sortInitFini();
-    return;
-  }
-
-  // Sort input sections by the special rule for .ctors and .dtors.
-  if (name == ".ctors" || name == ".dtors") {
-    if (!script->hasSectionsCommand)
-      sec->sortCtorsDtors();
-    return;
-  }
-
-  // .toc is allocated just after .got and is accessed using GOT-relative
-  // relocations. Object files compiled with small code model have an
-  // addressable range of [.got, .got + 0xFFFC] for GOT-relative relocations.
-  // To reduce the risk of relocation overflow, .toc contents are sorted so that
-  // sections having smaller relocation offsets are at beginning of .toc
-  if (config->emachine == EM_PPC64 && name == ".toc") {
-    if (script->hasSectionsCommand)
-      return;
+    sec->sortInitFini();
+  } else if (name == ".ctors" || name == ".dtors") {
+    sec->sortCtorsDtors();
+  } else if (config->emachine == EM_PPC64 && name == ".toc") {
+    // .toc is allocated just after .got and is accessed using GOT-relative
+    // relocations. Object files compiled with small code model have an
+    // addressable range of [.got, .got + 0xFFFC] for GOT-relative relocations.
+    // To reduce the risk of relocation overflow, .toc contents are sorted so
+    // that sections having smaller relocation offsets are at beginning of .toc
     assert(sec->sectionCommands.size() == 1);
     auto *isd = cast<InputSectionDescription>(sec->sectionCommands[0]);
     llvm::stable_sort(isd->sections,
@@ -1513,7 +1503,6 @@ static void sortSection(OutputSection *sec,
                         return a->file->ppc64SmallCodeModelTocRelocs &&
                                !b->file->ppc64SmallCodeModelTocRelocs;
                       });
-    return;
   }
 }
 

@@ -146,6 +146,9 @@ private:
   llvm::DenseMap<const void *, std::string> localTypeConstraints;
 };
 
+// Escape a string using C++ encoding. E.g. foo"bar -> foo\x22bar.
+std::string escapeString(StringRef value);
+
 } // namespace tblgen
 } // namespace mlir
 

@@ -1907,20 +1907,37 @@ def fir_SliceOp : fir_Op<"slice", [NoSideEffect, AttrSizedOperandSegments]> {
 
     ```mlir
       %fld = fir.field_index component, !fir.type<t{...component:ct...}>
-      %d = fir.slice %lo, %hi, %step path %fld : (index, index, index, !fir.field) -> !fir.slice<1>
+      %d = fir.slice %lo, %hi, %step path %fld :
+          (index, index, index, !fir.field) -> !fir.slice<1>
+    ```
+
+    Projections of `!fir.char` type can be further narrowed to invariant
+    substrings.
+
+    ```mlir
+      %d = fir.slice %lo, %hi, %step substr %offset, %width :
+          (index, index, index, index, index) -> !fir.slice<1>
     ```
   }];
 
   let arguments = (ins
-    Variadic<AnyCoordinateType>:$triples,
-    Variadic<AnyComponentType>:$fields
+    Variadic<AnyIntegerType>:$triples,
+    Variadic<AnyComponentType>:$fields,
+    Variadic<AnyIntegerType>:$substr
   );
 
   let results = (outs fir_SliceType);
 
   let assemblyFormat = [{
-    $triples (`path` $fields^)? attr-dict `:` functional-type(operands, results)
+    $triples (`path` $fields^)? (`substr` $substr^)? attr-dict `:`
+      functional-type(operands, results)
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::ValueRange":$triples,
+      CArg<"mlir::ValueRange", "llvm::None">:$fields,
+      CArg<"mlir::ValueRange", "llvm::None">:$substr)>
+  ];
 
   let verifier = "return ::verify(*this);";
 

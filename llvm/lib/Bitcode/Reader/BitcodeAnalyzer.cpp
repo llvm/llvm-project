@@ -529,10 +529,9 @@ Error BitcodeAnalyzer::decodeMetadataStringsBlob(StringRef Indent,
     if (R.AtEndOfStream())
       return reportError("bad length");
 
-    Expected<uint32_t> MaybeSize = R.ReadVBR(6);
-    if (!MaybeSize)
-      return MaybeSize.takeError();
-    uint32_t Size = MaybeSize.get();
+    uint32_t Size;
+    if (Error E = R.ReadVBR(6).moveInto(Size))
+      return E;
     if (Strings.size() < Size)
       return reportError("truncated chars");
 
@@ -555,11 +554,8 @@ BitcodeAnalyzer::BitcodeAnalyzer(StringRef Buffer,
 
 Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
                                Optional<StringRef> CheckHash) {
-  Expected<CurStreamTypeType> MaybeType = analyzeHeader(O, Stream);
-  if (!MaybeType)
-    return MaybeType.takeError();
-  else
-    CurStreamType = *MaybeType;
+  if (Error E = analyzeHeader(O, Stream).moveInto(CurStreamType))
+    return E;
 
   Stream.setBlockInfo(&BlockInfo);
 
@@ -567,9 +563,8 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
   // The block info must be a top-level block.
   if (BlockInfoStream) {
     BitstreamCursor BlockInfoCursor(*BlockInfoStream);
-    Expected<CurStreamTypeType> H = analyzeHeader(O, BlockInfoCursor);
-    if (!H)
-      return H.takeError();
+    if (Error E = analyzeHeader(O, BlockInfoCursor).takeError())
+      return E;
 
     while (!BlockInfoCursor.AtEndOfStream()) {
       Expected<unsigned> MaybeCode = BlockInfoCursor.ReadCode();
@@ -582,12 +577,11 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
       if (!MaybeBlockID)
         return MaybeBlockID.takeError();
       if (MaybeBlockID.get() == bitc::BLOCKINFO_BLOCK_ID) {
-        Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
-            BlockInfoCursor.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
-        if (!MaybeNewBlockInfo)
-          return MaybeNewBlockInfo.takeError();
-        Optional<BitstreamBlockInfo> NewBlockInfo =
-            std::move(MaybeNewBlockInfo.get());
+        Optional<BitstreamBlockInfo> NewBlockInfo;
+        if (Error E =
+                BlockInfoCursor.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true)
+                    .moveInto(NewBlockInfo))
+          return E;
         if (!NewBlockInfo)
           return reportError("Malformed BlockInfoBlock in block info file");
         BlockInfo = std::move(*NewBlockInfo);
@@ -746,12 +740,10 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
     if (O && !O->DumpBlockinfo)
       O->OS << Indent << "<BLOCKINFO_BLOCK/>\n";
-    Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
-        Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
-    if (!MaybeNewBlockInfo)
-      return MaybeNewBlockInfo.takeError();
-    Optional<BitstreamBlockInfo> NewBlockInfo =
-        std::move(MaybeNewBlockInfo.get());
+    Optional<BitstreamBlockInfo> NewBlockInfo;
+    if (Error E = Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true)
+                      .moveInto(NewBlockInfo))
+      return E;
     if (!NewBlockInfo)
       return reportError("Malformed BlockInfoBlock");
     BlockInfo = std::move(*NewBlockInfo);
@@ -796,11 +788,10 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
 
     uint64_t RecordStartBit = Stream.GetCurrentBitNo();
 
-    Expected<BitstreamEntry> MaybeEntry =
-        Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
-    if (!MaybeEntry)
-      return MaybeEntry.takeError();
-    BitstreamEntry Entry = MaybeEntry.get();
+    BitstreamEntry Entry;
+    if (Error E = Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs)
+                      .moveInto(Entry))
+      return E;
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -847,10 +838,9 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
 
     StringRef Blob;
     uint64_t CurrentRecordPos = Stream.GetCurrentBitNo();
-    Expected<unsigned> MaybeCode = Stream.readRecord(Entry.ID, Record, &Blob);
-    if (!MaybeCode)
-      return MaybeCode.takeError();
-    unsigned Code = MaybeCode.get();
+    unsigned Code;
+    if (Error E = Stream.readRecord(Entry.ID, Record, &Blob).moveInto(Code))
+      return E;
 
     // Increment the # occurrences of this code.
     if (BlockStats.CodeFreq.size() <= Code)

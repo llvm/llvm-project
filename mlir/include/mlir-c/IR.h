@@ -713,9 +713,7 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 //===----------------------------------------------------------------------===//
 
 /// Checks whether a type id is null.
-MLIR_CAPI_EXPORTED static inline bool mlirTypeIDIsNull(MlirTypeID typeID) {
-  return !typeID.ptr;
-}
+static inline bool mlirTypeIDIsNull(MlirTypeID typeID) { return !typeID.ptr; }
 
 /// Checks if two type ids are equal.
 MLIR_CAPI_EXPORTED bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2);
