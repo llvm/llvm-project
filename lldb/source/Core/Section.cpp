@@ -396,6 +396,76 @@ lldb::offset_t Section::GetSectionData(DataExtractor &section_data) {
   return 0;
 }
 
+bool Section::ContainsOnlyDebugInfo() const {
+  switch (m_type) {
+  case eSectionTypeInvalid:
+  case eSectionTypeCode:
+  case eSectionTypeContainer:
+  case eSectionTypeData:
+  case eSectionTypeDataCString:
+  case eSectionTypeDataCStringPointers:
+  case eSectionTypeDataSymbolAddress:
+  case eSectionTypeData4:
+  case eSectionTypeData8:
+  case eSectionTypeData16:
+  case eSectionTypeDataPointers:
+  case eSectionTypeZeroFill:
+  case eSectionTypeDataObjCMessageRefs:
+  case eSectionTypeDataObjCCFStrings:
+  case eSectionTypeELFSymbolTable:
+  case eSectionTypeELFDynamicSymbols:
+  case eSectionTypeELFRelocationEntries:
+  case eSectionTypeELFDynamicLinkInfo:
+  case eSectionTypeEHFrame:
+  case eSectionTypeARMexidx:
+  case eSectionTypeARMextab:
+  case eSectionTypeCompactUnwind:
+  case eSectionTypeGoSymtab:
+  case eSectionTypeAbsoluteAddress:
+  case eSectionTypeOther:
+    return false;
+
+  case eSectionTypeDebug:
+  case eSectionTypeDWARFDebugAbbrev:
+  case eSectionTypeDWARFDebugAbbrevDwo:
+  case eSectionTypeDWARFDebugAddr:
+  case eSectionTypeDWARFDebugAranges:
+  case eSectionTypeDWARFDebugCuIndex:
+  case eSectionTypeDWARFDebugTuIndex:
+  case eSectionTypeDWARFDebugFrame:
+  case eSectionTypeDWARFDebugInfo:
+  case eSectionTypeDWARFDebugInfoDwo:
+  case eSectionTypeDWARFDebugLine:
+  case eSectionTypeDWARFDebugLineStr:
+  case eSectionTypeDWARFDebugLoc:
+  case eSectionTypeDWARFDebugLocDwo:
+  case eSectionTypeDWARFDebugLocLists:
+  case eSectionTypeDWARFDebugLocListsDwo:
+  case eSectionTypeDWARFDebugMacInfo:
+  case eSectionTypeDWARFDebugMacro:
+  case eSectionTypeDWARFDebugPubNames:
+  case eSectionTypeDWARFDebugPubTypes:
+  case eSectionTypeDWARFDebugRanges:
+  case eSectionTypeDWARFDebugRngLists:
+  case eSectionTypeDWARFDebugRngListsDwo:
+  case eSectionTypeDWARFDebugStr:
+  case eSectionTypeDWARFDebugStrDwo:
+  case eSectionTypeDWARFDebugStrOffsets:
+  case eSectionTypeDWARFDebugStrOffsetsDwo:
+  case eSectionTypeDWARFDebugTypes:
+  case eSectionTypeDWARFDebugTypesDwo:
+  case eSectionTypeDWARFDebugNames:
+  case eSectionTypeDWARFAppleNames:
+  case eSectionTypeDWARFAppleTypes:
+  case eSectionTypeDWARFAppleNamespaces:
+  case eSectionTypeDWARFAppleObjC:
+  case eSectionTypeDWARFGNUDebugAltLink:
+    return true;
+  }
+  return false;
+}
+
+
 #pragma mark SectionList
 
 SectionList &SectionList::operator=(const SectionList &rhs) {
@@ -598,4 +668,16 @@ size_t SectionList::Slide(addr_t slide_amount, bool slide_children) {
       ++count;
   }
   return count;
+}
+
+uint64_t SectionList::GetDebugInfoSize() const {
+  uint64_t debug_info_size = 0;
+  for (const auto &section : m_sections) {
+    const SectionList &sub_sections = section->GetChildren();
+    if (sub_sections.GetSize() > 0)
+      debug_info_size += sub_sections.GetDebugInfoSize();
+    else if (section->ContainsOnlyDebugInfo())
+      debug_info_size += section->GetFileSize();
+  }
+  return debug_info_size;
 }

@@ -144,6 +144,9 @@ class TestCase(TestBase):
                 "moduleIdentifiers": [...],
             }
           ],
+          "totalDebugInfoByteSize": 182522234,
+          "totalDebugInfoIndexTime": 2.33343,
+          "totalDebugInfoParseTime": 8.2121400240000071,
           "totalSymbolTableParseTime": 0.123,
           "totalSymbolTableIndexTime": 0.234,
         }
@@ -155,6 +158,9 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalDebugInfoByteSize',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoParseTime',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats['targets'][0]
@@ -198,6 +204,9 @@ class TestCase(TestBase):
                     },
                 }
             ],
+            "totalDebugInfoByteSize": 182522234,
+            "totalDebugInfoIndexTime": 2.33343,
+            "totalDebugInfoParseTime": 8.2121400240000071,
             "totalSymbolTableParseTime": 0.123,
             "totalSymbolTableIndexTime": 0.234,
         }
@@ -212,6 +221,9 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalDebugInfoByteSize',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoParseTime',
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats['targets'][0]
@@ -247,6 +259,9 @@ class TestCase(TestBase):
             'targets',
             'totalSymbolTableParseTime',
             'totalSymbolTableIndexTime',
+            'totalDebugInfoParseTime',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoByteSize'
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats['targets'][0]
@@ -256,6 +271,9 @@ class TestCase(TestBase):
         self.verify_keys(stats, '"stats"', keys_exist, None)
         exe_module = self.find_module_in_metrics(exe, debug_stats)
         module_keys = [
+            'debugInfoByteSize',
+            'debugInfoIndexTime',
+            'debugInfoParseTime',
             'identifier',
             'path',
             'symbolTableIndexTime',

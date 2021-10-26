@@ -150,6 +150,8 @@ public:
     return GetPluginNameStatic().GetStringRef();
   }
 
+  uint64_t GetDebugInfoSize() override;
+
 private:
   // A class representing a position in the breakpad file. Useful for
   // remembering the position so we can go back to it later and parse more data.
