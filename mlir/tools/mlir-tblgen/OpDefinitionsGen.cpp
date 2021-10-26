@@ -2443,7 +2443,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     ERROR_IF_PRUNED(m, "getOperands", op);
     m->body() << "  return odsOperands;";
   }
-  std::string attr = op.getGetterName("operand_segment_sizes");
+  std::string attr = "operand_segment_sizes";
   std::string sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode, attr);
   generateNamedOperandGetters(op, adaptor,
                               /*isAdaptor=*/true, sizeAttrInit,
