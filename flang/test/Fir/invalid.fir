@@ -616,3 +616,42 @@ func @slice_must_be_integral() {
   %2 = fir.slice %1, %1, %1 : (!fir.field, !fir.field, !fir.field) -> !fir.slice<1>
   return
 }
+
+// -----
+
+func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  // expected-error@+1 {{'fir.array_coor' op array_coor cannot take a slice with substring}}
+  %p = fir.array_coor %a[%slice] %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>, index, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  // expected-error@+1 {{'fir.array_load' op array_load cannot take a slice with substring}}
+  %v = fir.array_load %a[%slice] : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>) -> !fir.array<?x?xf32>
+  return
+}
+
+// -----
+
+func @array_merge_store_no_slice_substr(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f : f32) {
+  %i10 = arith.constant 10 : index
+  %j20 = arith.constant 20 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
+  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
+  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  %addr, %av2 = fir.array_modify %av1, %i10, %i10 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
+  fir.store %f to %addr : !fir.ref<f32>
+  // expected-error@+1 {{'fir.array_merge_store' op array_merge_store cannot take a slice with substring}}
+  fir.array_merge_store %av1, %av2 to %arr1[%slice] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>
+  return
+}

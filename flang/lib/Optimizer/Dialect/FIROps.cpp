@@ -348,10 +348,14 @@ static mlir::LogicalResult verify(fir::ArrayCoorOp op) {
       return op.emitOpError("number of indices do not match dim rank");
   }
 
-  if (auto sliceOp = op.slice())
+  if (auto sliceOp = op.slice()) {
+    if (auto sl = mlir::dyn_cast_or_null<fir::SliceOp>(sliceOp.getDefiningOp()))
+      if (!sl.substr().empty())
+        return op.emitOpError("array_coor cannot take a slice with substring");
     if (auto sliceTy = sliceOp.getType().dyn_cast<fir::SliceType>())
       if (sliceTy.getRank() != arrDim)
         return op.emitOpError("rank of dimension in slice mismatched");
+  }
 
   return mlir::success();
 }
@@ -407,10 +411,14 @@ static mlir::LogicalResult verify(fir::ArrayLoadOp op) {
       return op.emitOpError("rank of dimension mismatched");
   }
 
-  if (auto sliceOp = op.slice())
+  if (auto sliceOp = op.slice()) {
+    if (auto sl = mlir::dyn_cast_or_null<fir::SliceOp>(sliceOp.getDefiningOp()))
+      if (!sl.substr().empty())
+        return op.emitOpError("array_load cannot take a slice with substring");
     if (auto sliceTy = sliceOp.getType().dyn_cast<fir::SliceType>())
       if (sliceTy.getRank() != arrDim)
         return op.emitOpError("rank of dimension in slice mismatched");
+  }
 
   return mlir::success();
 }
@@ -423,8 +431,11 @@ static mlir::LogicalResult verify(fir::ArrayMergeStoreOp op) {
   if (!isa<ArrayLoadOp>(op.original().getDefiningOp()))
     return op.emitOpError("operand #0 must be result of a fir.array_load op");
   if (auto sl = op.slice()) {
-    if (auto *slOp = sl.getDefiningOp()) {
-      auto sliceOp = mlir::cast<fir::SliceOp>(slOp);
+    if (auto sliceOp =
+            mlir::dyn_cast_or_null<fir::SliceOp>(sl.getDefiningOp())) {
+      if (!sliceOp.substr().empty())
+        return op.emitOpError(
+            "array_merge_store cannot take a slice with substring");
       if (!sliceOp.fields().empty()) {
         // This is an intra-object merge, where the slice is projecting the
         // subfields that are to be overwritten by the merge operation.
