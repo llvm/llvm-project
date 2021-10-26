@@ -77,6 +77,11 @@ class Pred;
 //   type constraints directly to an operand/result, $_self will be replaced
 //   by the operand/result's type. E.g., for `F32` in `F32:$operand`, its
 //   `$_self` will be expanded as `getOperand(...).getType()`.
+//
+// One thing to be noticed, while using these placeholders in the C expression,
+// the type of placeholder is only guaranteed to be the base type. For example,
+// if you have a predicate in the form `CPred<"CheckType($_self)">, the argument
+// type of the function `CheckType` should be `mlir::Type`.
 class CPred<code pred> : Pred {
   code predExpr = "(" # pred # ")";
 }
