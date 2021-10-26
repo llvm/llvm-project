@@ -4589,6 +4589,31 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   return nullptr;
 }
 
+static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
+                                      InstCombiner::BuilderTy &Builder) {
+  const ICmpInst::Predicate Pred = ICmp.getPredicate();
+  Value *Op0 = ICmp.getOperand(0), *Op1 = ICmp.getOperand(1);
+
+  // Try to canonicalize trunc + compare-to-constant into a mask + cmp.
+  // The trunc masks high bits while the compare may effectively mask low bits.
+  Value *X;
+  const APInt *C;
+  if (match(Op0, m_OneUse(m_Trunc(m_Value(X)))) && match(Op1, m_Power2(C))) {
+    if (Pred == ICmpInst::ICMP_ULT) {
+      // (trunc X) u< Pow2C --> (X & MaskC) == 0
+      unsigned SrcBits = X->getType()->getScalarSizeInBits();
+      unsigned DstBits = Op0->getType()->getScalarSizeInBits();
+      APInt MaskC = APInt::getOneBitSet(SrcBits, DstBits) - C->zext(SrcBits);
+      Value *And = Builder.CreateAnd(X, MaskC);
+      Constant *Zero = ConstantInt::getNullValue(X->getType());
+      return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
+    }
+    // TODO: Handle ugt.
+  }
+
+  return nullptr;
+}
+
 static Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp,
                                            InstCombiner::BuilderTy &Builder) {
   assert(isa<CastInst>(ICmp.getOperand(0)) && "Expected cast for operand 0");
@@ -4731,6 +4756,9 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
     if (NewOp1)
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
+
+  if (Instruction *R = foldICmpWithTrunc(ICmp, Builder))
+    return R;
 
   return foldICmpWithZextOrSext(ICmp, Builder);
 }

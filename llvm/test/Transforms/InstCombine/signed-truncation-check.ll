@@ -397,8 +397,8 @@ define i1 @positive_trunc_signbit_logical(i32 %arg) {
 
 define i1 @positive_trunc_base(i32 %arg) {
 ; CHECK-LABEL: @positive_trunc_base(
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i16
-; CHECK-NEXT:    [[T5_SIMPLIFIED:%.*]] = icmp ult i16 [[T1]], 128
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 65408
+; CHECK-NEXT:    [[T5_SIMPLIFIED:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[T5_SIMPLIFIED]]
 ;
   %t1 = trunc i32 %arg to i16
@@ -411,8 +411,8 @@ define i1 @positive_trunc_base(i32 %arg) {
 
 define i1 @positive_trunc_base_logical(i32 %arg) {
 ; CHECK-LABEL: @positive_trunc_base_logical(
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i16
-; CHECK-NEXT:    [[T5_SIMPLIFIED:%.*]] = icmp ult i16 [[T1]], 128
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 65408
+; CHECK-NEXT:    [[T5_SIMPLIFIED:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[T5_SIMPLIFIED]]
 ;
   %t1 = trunc i32 %arg to i16

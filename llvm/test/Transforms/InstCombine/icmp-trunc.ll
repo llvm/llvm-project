@@ -5,8 +5,8 @@ declare void @use(i8)
 
 define i1 @ult_2(i32 %x) {
 ; CHECK-LABEL: @ult_2(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 254
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t = trunc i32 %x to i8
@@ -16,14 +16,16 @@ define i1 @ult_2(i32 %x) {
 
 define <2 x i1> @ult_16_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @ult_16_splat(
-; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i11>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i11> [[T]], <i11 16, i11 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 2032, i16 2032>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = trunc <2 x i16> %x to <2 x i11>
   %r = icmp ult <2 x i11> %t, <i11 16, i11 16>
   ret <2 x i1> %r
 }
+
+; negative test - need power-of-2 constant
 
 define i1 @ult_3(i32 %x) {
 ; CHECK-LABEL: @ult_3(
@@ -35,6 +37,8 @@ define i1 @ult_3(i32 %x) {
   %r = icmp ult i8 %t, 3
   ret i1 %r
 }
+
+; negative test - no extra use allowed
 
 define i1 @ult_2_use(i32 %x) {
 ; CHECK-LABEL: @ult_2_use(
@@ -53,12 +57,7 @@ define i1 @ult_2_use(i32 %x) {
 
 define i1 @PR52260(i32 %x) {
 ; CHECK-LABEL: @PR52260(
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @a, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[IDX]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[T1]] to i8
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ult i8 [[TMP1]], 2
-; CHECK-NEXT:    ret i1 [[TOBOOL]]
+; CHECK-NEXT:    ret i1 true
 ;
   %idxprom = sext i32 %x to i64
   %idx = getelementptr inbounds [3 x i32], [3 x i32]* @a, i64 0, i64 %idxprom
@@ -69,4 +68,3 @@ define i1 @PR52260(i32 %x) {
   %tobool = icmp eq i8 %conv2, 0
   ret i1 %tobool
 }
-
