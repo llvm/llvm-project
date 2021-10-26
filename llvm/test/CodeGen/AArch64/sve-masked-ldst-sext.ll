@@ -89,6 +89,23 @@ define <vscale x 16 x i32> @masked_sload_nxv16i8(<vscale x 16 x i8>* %a, <vscale
   ret <vscale x 16 x i32> %ext
 }
 
+; Masked load requires promotion
+define <vscale x 4 x double> @masked_sload_4i8_4f32(<vscale x 4 x i8>* noalias %in, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_sload_4i8_4f32:
+; CHECK:       punpkhi p2.h, p0.b
+; CHECK-NEXT:  punpklo p0.h, p0.b
+; CHECK-NEXT:  ld1sb { z1.d }, p2/z, [x0, #1, mul vl]
+; CHECK-NEXT:  ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:  ptrue p1.d
+; CHECK-NEXT:  scvtf z0.d, p1/m, z0.d
+; CHECK-NEXT:  scvtf z1.d, p1/m, z1.d
+; CHECK-NEXT:  ret
+  %wide.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(<vscale x 4 x i8>* %in, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %sext = sext <vscale x 4 x i8> %wide.load to <vscale x 4 x i64>
+  %res = sitofp <vscale x 4 x i64> %sext to <vscale x 4 x double>
+  ret <vscale x 4 x double> %res
+}
+
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>*, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>*, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 declare <vscale x 2 x i32> @llvm.masked.load.nxv2i32(<vscale x 2 x i32>*, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)

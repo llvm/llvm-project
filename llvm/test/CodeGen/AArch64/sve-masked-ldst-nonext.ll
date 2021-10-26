@@ -117,6 +117,15 @@ define <vscale x 4 x i32> @masked_load_passthru(<vscale x 4 x i32> *%a, <vscale 
   ret <vscale x 4 x i32> %load
 }
 
+; Masked load requires promotion
+define <vscale x 2 x i16> @masked_load_nxv2i16(<vscale x 2 x i16>* noalias %in, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_load_nxv2i16
+; CHECK:       ld1sh { z0.d }, p0/z, [x0]
+; CHECK-NEXT:  ret
+  %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>* %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  ret <vscale x 2 x i16> %wide.load
+}
+
 ;
 ; Masked Stores
 ;
@@ -315,6 +324,7 @@ define void @masked.store.nxv2p0s_struct(<vscale x 2 x %struct*> %data, <vscale 
 
 declare <vscale x 2 x i64> @llvm.masked.load.nxv2i64(<vscale x 2 x i64>*, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
 declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(<vscale x 4 x i32>*, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
+declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>*, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(<vscale x 8 x i16>*, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(<vscale x 16 x i8>*, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
 
