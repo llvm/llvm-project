@@ -152,11 +152,8 @@ const int SA_SIGINFO = 4;
 const int SIG_SETMASK = 2;
 #endif
 
-// All tsan interceptors check for initialization and/or initialize things
-// as necessary lazily, so we can pretend everything is initialized in this
-// check to avoid double-checking for initialization (this is only necessary for
-// sanitizers that don't handle initialization on common grounds).
-#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED false
+#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED \
+  (!cur_thread_init()->is_inited)
 
 namespace __tsan {
 struct SignalDesc {
