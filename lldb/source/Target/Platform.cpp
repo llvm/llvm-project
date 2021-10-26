@@ -493,8 +493,11 @@ llvm::Optional<std::string> Platform::GetOSBuildString() {
 }
 
 bool Platform::GetOSKernelDescription(std::string &s) {
-  if (IsHost())
-    return HostInfo::GetOSKernelDescription(s);
+  if (IsHost()) {
+    llvm::Optional<std::string> desc = HostInfo::GetOSKernelDescription();
+    s = desc.getValueOr("");
+    return desc.hasValue();
+  }
   return GetRemoteOSKernelDescription(s);
 }
 

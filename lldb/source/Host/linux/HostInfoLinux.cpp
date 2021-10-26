@@ -75,19 +75,6 @@ llvm::Optional<std::string> HostInfoLinux::GetOSBuildString() {
   return std::string(un.release);
 }
 
-bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
-  struct utsname un;
-
-  ::memset(&un, 0, sizeof(utsname));
-  s.clear();
-
-  if (uname(&un) < 0)
-    return false;
-
-  s.assign(un.version);
-  return true;
-}
-
 llvm::StringRef HostInfoLinux::GetDistributionId() {
   assert(g_fields && "Missing call to Initialize?");
   // Try to run 'lbs_release -i', and use that response for the distribution

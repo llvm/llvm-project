@@ -19,7 +19,6 @@ class HostInfoNetBSD : public HostInfoPosix {
 public:
   static llvm::VersionTuple GetOSVersion();
   static llvm::Optional<std::string> GetOSBuildString();
-  static bool GetOSKernelDescription(std::string &s);
   static FileSpec GetProgramFileSpec();
 };
 }

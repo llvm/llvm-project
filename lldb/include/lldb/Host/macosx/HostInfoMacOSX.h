@@ -25,7 +25,6 @@ public:
   static llvm::VersionTuple GetOSVersion();
   static llvm::VersionTuple GetMacCatalystVersion();
   static llvm::Optional<std::string> GetOSBuildString();
-  static bool GetOSKernelDescription(std::string &s);
   static FileSpec GetProgramFileSpec();
   static FileSpec GetXcodeContentsDirectory();
   static FileSpec GetXcodeDeveloperDirectory();

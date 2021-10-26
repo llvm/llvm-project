@@ -65,18 +65,6 @@ llvm::Optional<std::string> HostInfoMacOSX::GetOSBuildString() {
   return llvm::None;
 }
 
-bool HostInfoMacOSX::GetOSKernelDescription(std::string &s) {
-  int mib[2] = {CTL_KERN, KERN_VERSION};
-  char cstr[PATH_MAX];
-  size_t cstr_len = sizeof(cstr);
-  if (::sysctl(mib, 2, cstr, &cstr_len, NULL, 0) == 0) {
-    s.assign(cstr, cstr_len);
-    return true;
-  }
-  s.clear();
-  return false;
-}
-
 static void ParseOSVersion(llvm::VersionTuple &version, NSString *Key) {
   @autoreleasepool {
     NSDictionary *version_info =
