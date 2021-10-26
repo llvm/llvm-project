@@ -29,7 +29,7 @@ if (LLVM_DIR)
   find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
   find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  libomptarget_say("Building Device RTL. Using clang: ${CLANG_TOOL}")
+  libomptarget_say("Building DeviceRTL. Using clang: ${CLANG_TOOL}")
 elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDALONE_BUILD)
   # LLVM in-tree builds may use CMake target names to discover the tools.
   set(CLANG_TOOL $<TARGET_FILE:clang>)
@@ -63,7 +63,7 @@ set(source_directory ${devicertl_base_directory}/src)
 set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80)
 
 set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${all_capabilities} CACHE STRING
-  "List of CUDA Compute Capabilities to be used to compile the NVPTX device RTL.")
+  "List of CUDA Compute Capabilities to be used to compile the NVPTX DeviceRTL.")
 string(TOLOWER ${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES} LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES)
 
 if (LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "all")
@@ -80,7 +80,7 @@ endif()
 # If user set LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES to empty, we disable the
 # build.
 if (NOT nvptx_sm_list)
-  libomptarget_say("Not building CUDA offloading device RTL: empty compute capability list")
+  libomptarget_say("Not building CUDA offloading DeviceRTL: empty compute capability list")
   return()
 endif()
 
@@ -90,6 +90,12 @@ foreach(sm ${nvptx_sm_list})
     libomptarget_warning_say("[NVPTX] Compute capability ${sm} is not supported. Make sure clang can work with it.")
   endif()
 endforeach()
+
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx1010 gfx1030 gfx1031)
+if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
+  set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
+endif()
+
 
 # Activate RTL message dumps if requested by the user.
 set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
@@ -121,11 +127,9 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -S -x c++ -std=c++17
               ${clang_opt_flags}
-             -target nvptx64
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
-             -Xclang -target-feature -Xclang +ptx61
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
@@ -137,23 +141,21 @@ else()
   list(APPEND bc_flags -DOMPTARGET_DEBUG=0)
 endif()
 
-# Create target to build all Bitcode libraries.
-add_custom_target(omptarget-new-nvptx-bc)
-add_dependencies(omptarget-new-nvptx-bc opt llvm-link)
+function(compileDeviceRTLLibrary target_cpu target_name)
+  set(target_bc_flags ${ARGN})
 
-# Generate a Bitcode library for all the compute capabilities the user requested
-foreach(sm ${nvptx_sm_list})
-  # TODO: replace this with declare variant and isa selector.
-  set(cuda_flags -Xclang -target-cpu -Xclang sm_${sm} "-D__CUDA_ARCH__=${sm}0")
   set(bc_files "")
   foreach(src ${src_files})
     get_filename_component(infile ${src} ABSOLUTE)
     get_filename_component(outfile ${src} NAME)
-    set(outfile "${outfile}-sm_${sm}.bc")
+    set(outfile "${outfile}-${target_cpu}.bc")
 
     add_custom_command(OUTPUT ${outfile}
-      COMMAND ${CLANG_TOOL} ${bc_flags}
-        ${cuda_flags} ${infile} -o ${outfile}
+      COMMAND ${CLANG_TOOL}
+      ${bc_flags}
+      -Xclang -target-cpu -Xclang ${target_cpu}
+      ${target_bc_flags}
+      ${infile} -o ${outfile}
       DEPENDS ${infile}
       IMPLICIT_DEPENDS CXX ${infile}
       COMMENT "Building LLVM bitcode ${outfile}"
@@ -173,43 +175,41 @@ foreach(sm ${nvptx_sm_list})
     list(APPEND bc_files ${outfile})
   endforeach()
 
-  set(bclib_name "libomptarget-new-nvptx-sm_${sm}.bc")
+  set(bclib_name "libomptarget-new-${target_name}-${target_cpu}.bc")
 
   # Link to a bitcode library.
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       COMMAND ${LINK_TOOL}
-        -o ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} ${bc_files}
+        -o ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name} ${bc_files}
       DEPENDS ${bc_files}
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
 
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt
-      COMMAND ${OPT_TOOL} ${link_opt_flags} ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+      COMMAND ${OPT_TOOL} ${link_opt_flags} ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
                       -o ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
-      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       COMMENT "Optimizing LLVM bitcode ${bclib_name}"
   )
 
   # Add a file-level dependency to ensure that llvm-link and opt are up-to-date.
   # By default, add_custom_command only builds the tool if the executable is missing
   if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       DEPENDS llvm-link
       APPEND)
   endif()
   if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       DEPENDS opt
       APPEND)
   endif()
 
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name})
 
-  set(bclib_target_name "omptarget-new-nvptx-sm_${sm}-bc")
+  set(bclib_target_name "omptarget-new-${target_name}-${target_cpu}-bc")
 
-  add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt)
-  add_dependencies(omptarget-new-nvptx-bc ${bclib_target_name})
-  add_dependencies(${bclib_target_name} opt llvm-link)
+  add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name})
 
   # Copy library to destination.
   add_custom_command(TARGET ${bclib_target_name} POST_BUILD
@@ -218,4 +218,14 @@ foreach(sm ${nvptx_sm_list})
 
   # Install bitcode library under the lib destination folder.
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+endfunction()
+
+# Generate a Bitcode library for all the compute capabilities the user requested
+foreach(sm ${nvptx_sm_list})
+  compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64 -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
+endforeach()
+
+foreach(mcpu ${amdgpu_mcpus})
+  # require D112227 or similar to enable the compilation for amdgpu
+  # compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -fvisibility=default -nogpulib)
 endforeach()
