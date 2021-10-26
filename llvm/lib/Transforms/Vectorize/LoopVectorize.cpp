@@ -2551,7 +2551,6 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
   auto CreateSplatIV = [&](Value *ScalarIV, Value *Step) {
     Value *Broadcasted = getBroadcastInstrs(ScalarIV);
     for (unsigned Part = 0; Part < UF; ++Part) {
-      assert(!State.VF.isScalable() && "scalable vectors not yet supported.");
       Value *StartIdx;
       if (Step->getType()->isFloatingPointTy())
         StartIdx =
@@ -3083,10 +3082,9 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   if (Cost->foldTailByMasking()) {
     assert(isPowerOf2_32(VF.getKnownMinValue() * UF) &&
            "VF*UF must be a power of 2 when folding tail by masking");
-    assert(!VF.isScalable() &&
-           "Tail folding not yet supported for scalable vectors");
+    Value *NumLanes = getRuntimeVF(Builder, Ty, VF * UF);
     TC = Builder.CreateAdd(
-        TC, ConstantInt::get(Ty, VF.getKnownMinValue() * UF - 1), "n.rnd.up");
+        TC, Builder.CreateSub(NumLanes, ConstantInt::get(Ty, 1)), "n.rnd.up");
   }
 
   // Now we need to generate the expression for the part of the loop that the
@@ -5481,10 +5479,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     }
   }
 
-  // For scalable vectors, don't use tail folding as this is currently not yet
-  // supported. The code is likely to have ended up here if the tripcount is
-  // low, in which case it makes sense not to use scalable vectors.
-  if (MaxFactors.ScalableVF.isVector())
+  // For scalable vectors don't use tail folding for low trip counts or
+  // optimizing for code size. We only permit this if the user has explicitly
+  // requested it.
+  if (ScalarEpilogueStatus != CM_ScalarEpilogueNotNeededUsePredicate &&
+      ScalarEpilogueStatus != CM_ScalarEpilogueNotAllowedUsePredicate &&
+      MaxFactors.ScalableVF.isVector())
     MaxFactors.ScalableVF = ElementCount::getScalable(0);
 
   // If we don't know the precise trip count, or if the trip count that we
