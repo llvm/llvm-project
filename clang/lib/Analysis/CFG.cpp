@@ -3288,7 +3288,7 @@ CFGBlock *CFGBuilder::VisitLabelStmt(LabelStmt *L) {
   if (badCFG)
     return nullptr;
 
-  // We set Block to NULL to allow lazy creation of a new block (if necessary);
+  // We set Block to NULL to allow lazy creation of a new block (if necessary).
   Block = nullptr;
 
   // This block is now the implicit successor of other blocks.
@@ -4274,7 +4274,7 @@ CFGBlock *CFGBuilder::VisitCaseStmt(CaseStmt *CS) {
                shouldAddCase(switchExclusivelyCovered, switchCond,
                              CS, *Context));
 
-  // We set Block to NULL to allow lazy creation of a new block (if necessary)
+  // We set Block to NULL to allow lazy creation of a new block (if necessary).
   Block = nullptr;
 
   if (TopBlock) {
@@ -4310,7 +4310,7 @@ CFGBlock *CFGBuilder::VisitDefaultStmt(DefaultStmt *Terminator) {
   // (including a fall-through to the code after the switch statement) to always
   // be the last successor of a switch-terminated block.
 
-  // We set Block to NULL to allow lazy creation of a new block (if necessary)
+  // We set Block to NULL to allow lazy creation of a new block (if necessary).
   Block = nullptr;
 
   // This block is now the implicit successor of other blocks.
@@ -4409,7 +4409,7 @@ CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {
   if (badCFG)
     return nullptr;
 
-  // We set Block to NULL to allow lazy creation of a new block (if necessary)
+  // We set Block to NULL to allow lazy creation of a new block (if necessary).
   Block = nullptr;
 
   return CatchBlock;
