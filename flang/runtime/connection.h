@@ -66,5 +66,32 @@ struct ConnectionState : public ConnectionAttributes {
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
 };
+
+// Utility class for capturing and restoring a position in an input stream.
+class SavedPosition {
+public:
+  explicit SavedPosition(ConnectionState &c)
+      : connection_{c}, positionInRecord_{c.positionInRecord},
+        furthestPositionInRecord_{c.furthestPositionInRecord},
+        leftTabLimit_{c.leftTabLimit}, previousResumptionRecordNumber_{
+                                           c.resumptionRecordNumber} {
+    c.resumptionRecordNumber = c.currentRecordNumber;
+  }
+  ~SavedPosition() {
+    connection_.currentRecordNumber = *connection_.resumptionRecordNumber;
+    connection_.resumptionRecordNumber = previousResumptionRecordNumber_;
+    connection_.leftTabLimit = leftTabLimit_;
+    connection_.furthestPositionInRecord = furthestPositionInRecord_;
+    connection_.positionInRecord = positionInRecord_;
+  }
+
+private:
+  ConnectionState &connection_;
+  std::int64_t positionInRecord_;
+  std::int64_t furthestPositionInRecord_;
+  std::optional<std::int64_t> leftTabLimit_;
+  std::optional<std::int64_t> previousResumptionRecordNumber_;
+};
+
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_IO_CONNECTION_H_

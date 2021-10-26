@@ -1309,7 +1309,7 @@ static bool FindFunctionInModule(ConstString &mangled_name,
                                  llvm::Module *module, const char *orig_name) {
   for (const auto &func : module->getFunctionList()) {
     const StringRef &name = func.getName();
-    if (name.find(orig_name) != StringRef::npos) {
+    if (name.contains(orig_name)) {
       mangled_name.SetString(name);
       return true;
     }

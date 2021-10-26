@@ -16,6 +16,7 @@
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
@@ -870,6 +871,18 @@ public:
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
+  /// Accessor for the symbol table parse time metric.
+  ///
+  /// The value is returned as a reference to allow it to be updated by the
+  /// ElapsedTime RAII object.
+  StatsDuration &GetSymtabParseTime() { return m_symtab_parse_time; }
+  
+  /// Accessor for the symbol table index time metric.
+  ///
+  /// The value is returned as a reference to allow it to be updated by the
+  /// ElapsedTime RAII object.
+  StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///
@@ -995,6 +1008,14 @@ protected:
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.
+  /// We store a symbol table parse time duration here because we might have
+  /// an object file and a symbol file which both have symbol tables. The parse
+  /// time for the symbol tables can be aggregated here.
+  StatsDuration m_symtab_parse_time{0.0};
+  /// We store a symbol named index time duration here because we might have
+  /// an object file and a symbol file which both have symbol tables. The parse
+  /// time for the symbol tables can be aggregated here.
+  StatsDuration m_symtab_index_time{0.0};
 
   /// Resolve a file or load virtual address.
   ///

@@ -325,14 +325,15 @@ bool mlir::isDisjointTransferIndices(VectorTransferOpInterface transferA,
     if (i < rankOffset) {
       // For leading dimensions, if we can prove that index are different we
       // know we are accessing disjoint slices.
-      if (indexA.value().cast<IntegerAttr>().getInt() !=
-          indexB.value().cast<IntegerAttr>().getInt())
+      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
+          indexB.getValue().cast<IntegerAttr>().getInt())
         return true;
     } else {
       // For this dimension, we slice a part of the memref we need to make sure
       // the intervals accessed don't overlap.
-      int64_t distance = std::abs(indexA.value().cast<IntegerAttr>().getInt() -
-                                  indexB.value().cast<IntegerAttr>().getInt());
+      int64_t distance =
+          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
+                   indexB.getValue().cast<IntegerAttr>().getInt());
       if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
         return true;
     }

@@ -32,7 +32,7 @@ StringRef Dialect::getCppNamespace() const {
 std::string Dialect::getCppClassName() const {
   // Simply use the name and remove any '_' tokens.
   std::string cppName = def->getName().str();
-  llvm::erase_if(cppName, [](char c) { return c == '_'; });
+  llvm::erase_value(cppName, '_');
   return cppName;
 }
 

@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; This test is reduced from the TSVC evaluation of vectorizers:
-; https://github.com/llvm/llvm-test-suite/commits/master/MultiSource/Benchmarks/TSVC/LoopRerolling-flt/tsc.c
+; https://github.com/llvm/llvm-test-suite/commits/main/MultiSource/Benchmarks/TSVC/LoopRerolling-flt/tsc.c
 ; Two loads and an fmul are expected to be vectorized to <2 x float>.
 ; Otherwise, performance will suffer on Cortex-A53.
 ; See https://bugs.llvm.org/show_bug.cgi?id=36280 for more details.
@@ -30,39 +30,40 @@ define i32 @s352() {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[DOT_115:%.*]] = phi float [ 0.000000e+00, [[PREHEADER]] ], [ [[ADD39:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA:%.*]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[MUL7:%.*]] = fmul float [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[DOT_115]], [[MUL7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX10]], align 4
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[MUL14:%.*]] = fmul float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[ADD15:%.*]] = fadd float [[ADD]], [[MUL14]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[ARRAYIDX18]] to <2 x float>*
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, <2 x float>* [[TMP7]], align 4
-; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[ARRAYIDX21]] to <2 x float>*
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, <2 x float>* [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
-; CHECK-NEXT:    [[ADD23:%.*]] = fadd float [[ADD15]], [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD23]], [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load float, float* [[ARRAYIDX34]], align 4
-; CHECK-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load float, float* [[ARRAYIDX37]], align 4
-; CHECK-NEXT:    [[MUL38:%.*]] = fmul float [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX6]] to <2 x float>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[DOT_115]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
+; CHECK-NEXT:    [[ADD15:%.*]] = fadd float [[ADD]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP8]]
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[ARRAYIDX18]] to <2 x float>*
+; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x float>, <2 x float>* [[TMP10]], align 4
+; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float* [[ARRAYIDX21]] to <2 x float>*
+; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x float>, <2 x float>* [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[TMP11]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP14]], i32 0
+; CHECK-NEXT:    [[ADD23:%.*]] = fadd float [[ADD15]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP14]], i32 1
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD23]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 0, i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load float, float* [[ARRAYIDX34]], align 4
+; CHECK-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], %struct.GlobalData* @global_data, i64 0, i32 3, i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = load float, float* [[ARRAYIDX37]], align 4
+; CHECK-NEXT:    [[MUL38:%.*]] = fmul float [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    [[ADD39]] = fadd float [[ADD31]], [[MUL38]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], 32000

@@ -392,7 +392,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_32() #10 {
   ret void
 }
 
-attributes #0 = { "amdgpu-waves-per-eu"="2,3" }
+attributes #0 = { "amdgpu-waves-per-eu"="2,3" "amdgpu-flat-work-group-size"="1,64" }
 attributes #1 = { "amdgpu-waves-per-eu"="18,18" }
 attributes #2 = { "amdgpu-waves-per-eu"="19,19" }
 attributes #3 = { "amdgpu-flat-work-group-size"="1,64" }

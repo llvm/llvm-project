@@ -43,6 +43,9 @@ syn keyword mlirOps memref_shape_cast mulf muli negf powf prefetch rsqrt sitofp
 syn keyword mlirOps splat store select sqrt subf subi subview tanh
 syn keyword mlirOps view
 
+" Math ops.
+syn match mlirOps /\<math\.erf\>/
+
 " Affine ops.
 syn match mlirOps /\<affine\.apply\>/
 syn match mlirOps /\<affine\.dma_start\>/

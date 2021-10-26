@@ -568,6 +568,46 @@ rewritten as:
 This second form is often more readable for functions that involve multiple
 ``Expected<T>`` values as it limits the indentation required.
 
+If an ``Expected<T>`` value will be moved into an existing variable then the
+``moveInto()`` method avoids the need to name an extra variable.  This is
+useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+semantics.  For example:
+
+.. code-block:: c++
+
+  Expected<std::unique_ptr<MemoryBuffer>> openBuffer(StringRef Path);
+  Error processBuffer(StringRef Buffer);
+
+  Error processBufferAtPath(StringRef Path) {
+    // Try to open a buffer.
+    std::unique_ptr<MemoryBuffer> MB;
+    if (auto Err = openBuffer(Path).moveInto(MB))
+      // On error, return the Error value.
+      return Err;
+    // On success, use MB.
+    return processContent(MB->getBuffer());
+  }
+
+This third form works with any type that can be assigned to from ``T&&``. This
+can be useful if the ``Expected<T>`` value needs to be stored an already-declared
+``Optional<T>``. For example:
+
+.. code-block:: c++
+
+  Expected<StringRef> extractClassName(StringRef Definition);
+  struct ClassData {
+    StringRef Definition;
+    Optional<StringRef> LazyName;
+    ...
+    Error initialize() {
+      if (auto Err = extractClassName(Path).moveInto(LazyName))
+        // On error, return the Error value.
+        return Err;
+      // On success, LazyName has been initialized.
+      ...
+    }
+  };
+
 All ``Error`` instances, whether success or failure, must be either checked or
 moved from (via ``std::move`` or a return) before they are destructed.
 Accidentally discarding an unchecked error will cause a program abort at the

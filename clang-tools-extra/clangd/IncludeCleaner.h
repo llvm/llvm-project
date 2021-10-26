@@ -63,6 +63,9 @@ getUnused(const IncludeStructure &Includes,
 
 std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
 
+std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
+                                                 llvm::StringRef Code);
+
 } // namespace clangd
 } // namespace clang
 

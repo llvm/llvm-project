@@ -39,8 +39,8 @@ bool Preprocessor::isInPrimaryFile() const {
   // If there are any stacked lexers, we're in a #include.
   assert(IsFileLexer(IncludeMacroStack[0]) &&
          "Top level include stack isn't our primary lexer?");
-  return std::none_of(
-      IncludeMacroStack.begin() + 1, IncludeMacroStack.end(),
+  return llvm::none_of(
+      llvm::drop_begin(IncludeMacroStack),
       [&](const IncludeStackInfo &ISI) -> bool { return IsFileLexer(ISI); });
 }
 

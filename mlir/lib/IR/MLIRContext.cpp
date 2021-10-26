@@ -853,7 +853,7 @@ Identifier Identifier::get(const Twine &string, MLIRContext *context) {
   // identifier table - if we already had it in the table, then it already
   // passed invariant checks.
   assert(!str.empty() && "Cannot create an empty identifier");
-  assert(str.find('\0') == StringRef::npos &&
+  assert(!str.contains('\0') &&
          "Cannot create an identifier with a nul character");
 
   auto getDialectOrContext = [&]() {

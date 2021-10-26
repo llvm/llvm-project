@@ -163,7 +163,7 @@ Socket::TcpConnect(llvm::StringRef host_and_port,
 
 llvm::Expected<std::unique_ptr<TCPSocket>>
 Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
-                  Predicate<uint16_t> *predicate, int backlog) {
+                  int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
@@ -187,13 +187,6 @@ Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
   if (port == 0)
     port = listen_socket->GetLocalPortNumber();
 
-  // Set the port predicate since when doing a listen://<host>:<port> it
-  // often needs to accept the incoming connection which is a blocking system
-  // call. Allowing access to the bound port using a predicate allows us to
-  // wait for the port predicate to be set to a non-zero value from another
-  // thread in an efficient manor.
-  if (predicate)
-    predicate->SetValue(port, eBroadcastAlways);
   return std::move(listen_socket);
 }
 

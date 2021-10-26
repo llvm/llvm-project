@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=aarch64 -run-pass aarch64-mi-peephole-opt -verify-machineinstrs -o - %s | FileCheck %s
+---
+name:            test1
+# CHECK-LABEL: name: test1
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr32 }
+  - { id: 3, class: gpr32 }
+  - { id: 4, class: gpr64 }
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    B %bb.1
+
+  bb.1:
+    %2:gpr32 = nsw ADDWrr %0, %1
+    B %bb.2
+
+  bb.2:
+    ; CHECK-LABEL: bb.2:
+    ; CHECK-NOT: %3:gpr32 = ORRWrs $wzr, %2, 0
+    ; The ORRWrs should be removed.
+    %3:gpr32 = ORRWrs $wzr, %2, 0
+    %4:gpr64 = SUBREG_TO_REG 0, %3, %subreg.sub_32
+    B %bb.3
+
+  bb.3:
+    $x0 = COPY %4
+    RET_ReallyLR implicit $x0
+...
+---
+name:            test2
+# CHECK-LABEL: name: test2
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr32 }
+  - { id: 3, class: gpr64 }
+body:             |
+  bb.0:
+    liveins: $x0
+
+    %0:gpr64 = COPY $x0
+    B %bb.1
+
+  bb.1:
+    %1:gpr32 = EXTRACT_SUBREG %0, %subreg.sub_32
+    B %bb.2
+
+  bb.2:
+    ; CHECK-LABEL: bb.2:
+    ; CHECK: %2:gpr32 = ORRWrs $wzr, %1, 0
+    ; The ORRWrs should not be removed.
+    %2:gpr32 = ORRWrs $wzr, %1, 0
+    %3:gpr64 = SUBREG_TO_REG 0, %2, %subreg.sub_32
+    B %bb.3
+
+  bb.3:
+    $x0 = COPY %3
+    RET_ReallyLR implicit $x0
+...

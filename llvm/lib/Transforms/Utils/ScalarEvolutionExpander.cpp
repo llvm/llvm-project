@@ -747,9 +747,8 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
   // so that pointer operands are inserted first, which the code below relies on
   // to form more involved GEPs.
   SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;
-  for (std::reverse_iterator<SCEVAddExpr::op_iterator> I(S->op_end()),
-       E(S->op_begin()); I != E; ++I)
-    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(*I), *I));
+  for (const SCEV *Op : reverse(S->operands()))
+    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(Op), Op));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants and
   // pointer operands precede non-pointer operands.
@@ -811,9 +810,8 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
   // Collect all the mul operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal.
   SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;
-  for (std::reverse_iterator<SCEVMulExpr::op_iterator> I(S->op_end()),
-       E(S->op_begin()); I != E; ++I)
-    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(*I), *I));
+  for (const SCEV *Op : reverse(S->operands()))
+    OpsAndLoops.push_back(std::make_pair(getRelevantLoop(Op), Op));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants.
   llvm::stable_sort(OpsAndLoops, LoopCompare(SE.DT));
@@ -1835,6 +1833,22 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
   return V;
 }
 
+/// Check whether value has nuw/nsw/exact set but SCEV does not.
+/// TODO: In reality it is better to check the poison recursively
+/// but this is better than nothing.
+static bool SCEVLostPoisonFlags(const SCEV *S, const Instruction *I) {
+  if (isa<OverflowingBinaryOperator>(I)) {
+    if (auto *NS = dyn_cast<SCEVNAryExpr>(S)) {
+      if (I->hasNoSignedWrap() && !NS->hasNoSignedWrap())
+        return true;
+      if (I->hasNoUnsignedWrap() && !NS->hasNoUnsignedWrap())
+        return true;
+    }
+  } else if (isa<PossiblyExactOperator>(I) && I->isExact())
+    return true;
+  return false;
+}
+
 ScalarEvolution::ValueOffsetPair
 SCEVExpander::FindValueInExprValueMap(const SCEV *S,
                                       const Instruction *InsertPt) {
@@ -1844,19 +1858,22 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
   if (CanonicalMode || !SE.containsAddRecurrence(S)) {
     // If S is scConstant, it may be worse to reuse an existing Value.
     if (S->getSCEVType() != scConstant && Set) {
-      // Choose a Value from the set which dominates the insertPt.
-      // insertPt should be inside the Value's parent loop so as not to break
+      // Choose a Value from the set which dominates the InsertPt.
+      // InsertPt should be inside the Value's parent loop so as not to break
       // the LCSSA form.
       for (auto const &VOPair : *Set) {
         Value *V = VOPair.first;
         ConstantInt *Offset = VOPair.second;
-        Instruction *EntInst = nullptr;
-        if (V && isa<Instruction>(V) && (EntInst = cast<Instruction>(V)) &&
-            S->getType() == V->getType() &&
-            EntInst->getFunction() == InsertPt->getFunction() &&
+        Instruction *EntInst = dyn_cast_or_null<Instruction>(V);
+        if (!EntInst)
+          continue;
+
+        assert(EntInst->getFunction() == InsertPt->getFunction());
+        if (S->getType() == V->getType() &&
             SE.DT.dominates(EntInst, InsertPt) &&
             (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)) &&
+            !SCEVLostPoisonFlags(S, EntInst))
           return {V, Offset};
       }
     }

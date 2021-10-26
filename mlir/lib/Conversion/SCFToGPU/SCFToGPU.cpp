@@ -421,7 +421,7 @@ static LogicalResult processParallelLoop(
       return val;
     if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
       return rewriter.create<arith::ConstantOp>(constOp.getLoc(),
-                                                constOp.value());
+                                                constOp.getValue());
     return {};
   };
 

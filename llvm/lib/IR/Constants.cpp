@@ -3294,7 +3294,7 @@ bool ConstantDataSequential::isCString() const {
   if (Str.back() != 0) return false;
 
   // Other elements must be non-nul.
-  return Str.drop_back().find(0) == StringRef::npos;
+  return !Str.drop_back().contains(0);
 }
 
 bool ConstantDataVector::isSplatData() const {

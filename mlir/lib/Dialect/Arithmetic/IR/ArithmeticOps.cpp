@@ -82,7 +82,7 @@ namespace {
 void arith::ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   auto type = getType();
-  if (auto intCst = value().dyn_cast<IntegerAttr>()) {
+  if (auto intCst = getValue().dyn_cast<IntegerAttr>()) {
     auto intType = type.dyn_cast<IntegerType>();
 
     // Sugar i1 constants with 'true' and 'false'.
@@ -106,15 +106,15 @@ void arith::ConstantOp::getAsmResultNames(
 static LogicalResult verify(arith::ConstantOp op) {
   auto type = op.getType();
   // The value's type must match the return type.
-  if (op.value().getType() != type) {
-    return op.emitOpError() << "value type " << op.value().getType()
+  if (op.getValue().getType() != type) {
+    return op.emitOpError() << "value type " << op.getValue().getType()
                             << " must match return type: " << type;
   }
   // Integer values must be signless.
   if (type.isa<IntegerType>() && !type.cast<IntegerType>().isSignless())
     return op.emitOpError("integer return type must be signless");
   // Any float or elements attribute are acceptable.
-  if (!op.value().isa<IntegerAttr, FloatAttr, ElementsAttr>()) {
+  if (!op.getValue().isa<IntegerAttr, FloatAttr, ElementsAttr>()) {
     return op.emitOpError(
         "value must be an integer, float, or elements attribute");
   }
@@ -133,7 +133,7 @@ bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
 }
 
 OpFoldResult arith::ConstantOp::fold(ArrayRef<Attribute> operands) {
-  return value();
+  return getValue();
 }
 
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
@@ -187,8 +187,8 @@ bool arith::ConstantIndexOp::classof(Operation *op) {
 
 OpFoldResult arith::AddIOp::fold(ArrayRef<Attribute> operands) {
   // addi(x, 0) -> x
-  if (matchPattern(rhs(), m_Zero()))
-    return lhs();
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a + b; });
@@ -209,8 +209,8 @@ OpFoldResult arith::SubIOp::fold(ArrayRef<Attribute> operands) {
   if (getOperand(0) == getOperand(1))
     return Builder(getContext()).getZeroAttr(getType());
   // subi(x,0) -> x
-  if (matchPattern(rhs(), m_Zero()))
-    return lhs();
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a - b; });
@@ -229,10 +229,10 @@ void arith::SubIOp::getCanonicalizationPatterns(
 
 OpFoldResult arith::MulIOp::fold(ArrayRef<Attribute> operands) {
   // muli(x, 0) -> 0
-  if (matchPattern(rhs(), m_Zero()))
-    return rhs();
+  if (matchPattern(getRhs(), m_Zero()))
+    return getRhs();
   // muli(x, 1) -> x
-  if (matchPattern(rhs(), m_One()))
+  if (matchPattern(getRhs(), m_One()))
     return getOperand(0);
   // TODO: Handle the overflow case.
 
@@ -259,10 +259,10 @@ OpFoldResult arith::DivUIOp::fold(ArrayRef<Attribute> operands) {
   // Fold out division by one. Assumes all tensors of all ones are splats.
   if (auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>()) {
     if (rhs.getValue() == 1)
-      return lhs();
+      return getLhs();
   } else if (auto rhs = operands[1].dyn_cast_or_null<SplatElementsAttr>()) {
     if (rhs.getSplatValue<IntegerAttr>().getValue() == 1)
-      return lhs();
+      return getLhs();
   }
 
   return div0 ? Attribute() : result;
@@ -286,10 +286,10 @@ OpFoldResult arith::DivSIOp::fold(ArrayRef<Attribute> operands) {
   // Fold out division by one. Assumes all tensors of all ones are splats.
   if (auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>()) {
     if (rhs.getValue() == 1)
-      return lhs();
+      return getLhs();
   } else if (auto rhs = operands[1].dyn_cast_or_null<SplatElementsAttr>()) {
     if (rhs.getSplatValue<IntegerAttr>().getValue() == 1)
-      return lhs();
+      return getLhs();
   }
 
   return overflowOrDiv0 ? Attribute() : result;
@@ -346,10 +346,10 @@ OpFoldResult arith::CeilDivSIOp::fold(ArrayRef<Attribute> operands) {
   // splats.
   if (auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>()) {
     if (rhs.getValue() == 1)
-      return lhs();
+      return getLhs();
   } else if (auto rhs = operands[1].dyn_cast_or_null<SplatElementsAttr>()) {
     if (rhs.getSplatValue<IntegerAttr>().getValue() == 1)
-      return lhs();
+      return getLhs();
   }
 
   return overflowOrDiv0 ? Attribute() : result;
@@ -395,10 +395,10 @@ OpFoldResult arith::FloorDivSIOp::fold(ArrayRef<Attribute> operands) {
   // splats.
   if (auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>()) {
     if (rhs.getValue() == 1)
-      return lhs();
+      return getLhs();
   } else if (auto rhs = operands[1].dyn_cast_or_null<SplatElementsAttr>()) {
     if (rhs.getSplatValue<IntegerAttr>().getValue() == 1)
-      return lhs();
+      return getLhs();
   }
 
   return overflowOrDiv0 ? Attribute() : result;
@@ -458,15 +458,15 @@ OpFoldResult arith::RemSIOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
   /// and(x, 0) -> 0
-  if (matchPattern(rhs(), m_Zero()))
-    return rhs();
+  if (matchPattern(getRhs(), m_Zero()))
+    return getRhs();
   /// and(x, allOnes) -> x
   APInt intValue;
-  if (matchPattern(rhs(), m_ConstantInt(&intValue)) && intValue.isAllOnes())
-    return lhs();
+  if (matchPattern(getRhs(), m_ConstantInt(&intValue)) && intValue.isAllOnes())
+    return getLhs();
   /// and(x, x) -> x
-  if (lhs() == rhs())
-    return rhs();
+  if (getLhs() == getRhs())
+    return getRhs();
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a & b; });
@@ -478,11 +478,11 @@ OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult arith::OrIOp::fold(ArrayRef<Attribute> operands) {
   /// or(x, 0) -> x
-  if (matchPattern(rhs(), m_Zero()))
-    return lhs();
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
   /// or(x, x) -> x
-  if (lhs() == rhs())
-    return rhs();
+  if (getLhs() == getRhs())
+    return getRhs();
   /// or(x, <all ones>) -> <all ones>
   if (auto rhsAttr = operands[1].dyn_cast_or_null<IntegerAttr>())
     if (rhsAttr.getValue().isAllOnes())
@@ -498,10 +498,10 @@ OpFoldResult arith::OrIOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult arith::XOrIOp::fold(ArrayRef<Attribute> operands) {
   /// xor(x, 0) -> x
-  if (matchPattern(rhs(), m_Zero()))
-    return lhs();
+  if (matchPattern(getRhs(), m_Zero()))
+    return getLhs();
   /// xor(x, x) -> 0
-  if (lhs() == rhs())
+  if (getLhs() == getRhs())
     return Builder(getContext()).getZeroAttr(getType());
 
   return constFoldBinaryOp<IntegerAttr>(operands,
@@ -599,7 +599,7 @@ static bool areValidCastInputsAndOutputs(TypeRange inputs, TypeRange outputs) {
 // Extend ops can only extend to a wider type.
 template <typename ValType, typename Op>
 static LogicalResult verifyExtOp(Op op) {
-  Type srcType = getElementTypeOrSelf(op.in().getType());
+  Type srcType = getElementTypeOrSelf(op.getIn().getType());
   Type dstType = getElementTypeOrSelf(op.getType());
 
   if (srcType.cast<ValType>().getWidth() >= dstType.cast<ValType>().getWidth())
@@ -612,7 +612,7 @@ static LogicalResult verifyExtOp(Op op) {
 // Truncate ops can only truncate to a shorter type.
 template <typename ValType, typename Op>
 static LogicalResult verifyTruncateOp(Op op) {
-  Type srcType = getElementTypeOrSelf(op.in().getType());
+  Type srcType = getElementTypeOrSelf(op.getIn().getType());
   Type dstType = getElementTypeOrSelf(op.getType());
 
   if (srcType.cast<ValType>().getWidth() <= dstType.cast<ValType>().getWidth())
@@ -935,7 +935,7 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "cmpi takes two operands");
 
   // cmpi(pred, x, x)
-  if (lhs() == rhs()) {
+  if (getLhs() == getRhs()) {
     auto val = applyCmpPredicateToEqualOperands(getPredicate());
     return BoolAttr::get(getContext(), val);
   }

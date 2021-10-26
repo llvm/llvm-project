@@ -1478,6 +1478,7 @@ CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
 CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)
 CHECK_SIMPLE_CLAUSE(When, OMPC_when)
 CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
+CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)

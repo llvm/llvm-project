@@ -2747,7 +2747,7 @@ void request_setVariable(const llvm::json::Object &request) {
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
   llvm::StringRef name = GetString(arguments, "name");
-  bool is_duplicated_variable_name = name.find(" @") != llvm::StringRef::npos;
+  bool is_duplicated_variable_name = name.contains(" @");
 
   const auto value = GetString(arguments, "value");
   // Set success to false just in case we don't find the variable by name

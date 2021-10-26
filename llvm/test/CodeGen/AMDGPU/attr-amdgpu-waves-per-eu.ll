@@ -10,7 +10,7 @@ define amdgpu_kernel void @empty_exactly_1() #0 {
 entry:
   ret void
 }
-attributes #0 = {"amdgpu-waves-per-eu"="1,1"}
+attributes #0 = {"amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,64" }
 
 ; Exactly 5 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_exactly_5:
@@ -84,7 +84,7 @@ define amdgpu_kernel void @empty_at_most_5() #6 {
 entry:
   ret void
 }
-attributes #6 = {"amdgpu-waves-per-eu"="1,5"}
+attributes #6 = {"amdgpu-waves-per-eu"="1,5" "amdgpu-flat-work-group-size"="1,64"}
 
 ; At most 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}empty_at_most_10:

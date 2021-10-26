@@ -383,11 +383,12 @@ static DynamicLoaderInstances &GetDynamicLoaderInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     DynamicLoaderCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
   return GetDynamicLoaderInstances().RegisterPlugin(
-      name, description, create_callback, debugger_init_callback);
+      ConstString(name), description.str().c_str(), create_callback,
+      debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -401,8 +402,9 @@ PluginManager::GetDynamicLoaderCreateCallbackAtIndex(uint32_t idx) {
 }
 
 DynamicLoaderCreateInstance
-PluginManager::GetDynamicLoaderCreateCallbackForPluginName(ConstString name) {
-  return GetDynamicLoaderInstances().GetCallbackForName(name);
+PluginManager::GetDynamicLoaderCreateCallbackForPluginName(
+    llvm::StringRef name) {
+  return GetDynamicLoaderInstances().GetCallbackForName(ConstString(name));
 }
 
 #pragma mark JITLoader
@@ -416,11 +418,12 @@ static JITLoaderInstances &GetJITLoaderInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     JITLoaderCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
   return GetJITLoaderInstances().RegisterPlugin(
-      name, description, create_callback, debugger_init_callback);
+      ConstString(name), description.str().c_str(), create_callback,
+      debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(JITLoaderCreateInstance create_callback) {
@@ -444,10 +447,10 @@ static EmulateInstructionInstances &GetEmulateInstructionInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     EmulateInstructionCreateInstance create_callback) {
-  return GetEmulateInstructionInstances().RegisterPlugin(name, description,
-                                                         create_callback);
+  return GetEmulateInstructionInstances().RegisterPlugin(
+      ConstString(name), description.str().c_str(), create_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -462,8 +465,8 @@ PluginManager::GetEmulateInstructionCreateCallbackAtIndex(uint32_t idx) {
 
 EmulateInstructionCreateInstance
 PluginManager::GetEmulateInstructionCreateCallbackForPluginName(
-    ConstString name) {
-  return GetEmulateInstructionInstances().GetCallbackForName(name);
+    llvm::StringRef name) {
+  return GetEmulateInstructionInstances().GetCallbackForName(ConstString(name));
 }
 
 #pragma mark OperatingSystem
@@ -775,22 +778,24 @@ static PlatformInstances &GetPlatformInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     PlatformCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
   return GetPlatformInstances().RegisterPlugin(
-      name, description, create_callback, debugger_init_callback);
+      ConstString(name), description.str().c_str(), create_callback,
+      debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(PlatformCreateInstance create_callback) {
   return GetPlatformInstances().UnregisterPlugin(create_callback);
 }
 
-const char *PluginManager::GetPlatformPluginNameAtIndex(uint32_t idx) {
+llvm::StringRef PluginManager::GetPlatformPluginNameAtIndex(uint32_t idx) {
   return GetPlatformInstances().GetNameAtIndex(idx);
 }
 
-const char *PluginManager::GetPlatformPluginDescriptionAtIndex(uint32_t idx) {
+llvm::StringRef
+PluginManager::GetPlatformPluginDescriptionAtIndex(uint32_t idx) {
   return GetPlatformInstances().GetDescriptionAtIndex(idx);
 }
 
@@ -800,8 +805,8 @@ PluginManager::GetPlatformCreateCallbackAtIndex(uint32_t idx) {
 }
 
 PlatformCreateInstance
-PluginManager::GetPlatformCreateCallbackForPluginName(ConstString name) {
-  return GetPlatformInstances().GetCallbackForName(name);
+PluginManager::GetPlatformCreateCallbackForPluginName(llvm::StringRef name) {
+  return GetPlatformInstances().GetCallbackForName(ConstString(name));
 }
 
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,

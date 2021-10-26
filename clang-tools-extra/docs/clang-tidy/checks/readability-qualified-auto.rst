@@ -65,7 +65,7 @@ Options
    auto *Foo2 = cast<const int *>(Bar2);
    auto &Foo3 = cast<const int &>(Bar3);
 
-If AddConstToQualified is set to `false`,  it will be transformed into:
+If AddConstToQualified is set to `false`, it will be transformed into:
 
 .. code-block:: c++
 

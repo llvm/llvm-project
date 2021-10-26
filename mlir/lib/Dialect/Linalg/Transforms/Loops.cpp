@@ -194,8 +194,8 @@ static void replaceIndexOpsByInductionVariables(LinalgOp linalgOp,
 }
 
 template <typename LoopTy>
-static Optional<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
-                                                 LinalgOp linalgOp) {
+static FailureOr<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
+                                                  LinalgOp linalgOp) {
   using LoadOpTy =
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineLoadOp, memref::LoadOp>::type;
@@ -227,12 +227,12 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
   SetVector<Operation *> loopSet;
   for (Value iv : allIvs) {
     if (!iv)
-      return {};
+      return failure();
     // The induction variable is a block argument of the entry block of the
     // loop operation.
     BlockArgument ivVal = iv.dyn_cast<BlockArgument>();
     if (!ivVal)
-      return {};
+      return failure();
     loopSet.insert(ivVal.getOwner()->getParentOp());
   }
   LinalgLoops loops(loopSet.begin(), loopSet.end());
@@ -253,7 +253,7 @@ public:
     auto linalgOp = dyn_cast<LinalgOp>(op);
     if (!isa<LinalgOp>(op))
       return failure();
-    if (!linalgOpToLoopsImpl<LoopType>(rewriter, linalgOp))
+    if (failed(linalgOpToLoopsImpl<LoopType>(rewriter, linalgOp)))
       return failure();
     rewriter.eraseOp(op);
     return success();
@@ -547,20 +547,20 @@ mlir::createConvertLinalgToAffineLoopsPass() {
 }
 
 /// Emits a loop nest of `affine.for` with the proper body for `linalgOp`.
-Optional<LinalgLoops>
+FailureOr<LinalgLoops>
 mlir::linalg::linalgOpToAffineLoops(PatternRewriter &rewriter,
                                     LinalgOp linalgOp) {
   return linalgOpToLoopsImpl<AffineForOp>(rewriter, linalgOp);
 }
 
 /// Emits a loop nest of `scf.for` with the proper body for `linalgOp`.
-Optional<LinalgLoops> mlir::linalg::linalgOpToLoops(PatternRewriter &rewriter,
-                                                    LinalgOp linalgOp) {
+FailureOr<LinalgLoops> mlir::linalg::linalgOpToLoops(PatternRewriter &rewriter,
+                                                     LinalgOp linalgOp) {
   return linalgOpToLoopsImpl<scf::ForOp>(rewriter, linalgOp);
 }
 
 /// Emits a loop nest of `scf.parallel` with the proper body for `linalgOp`.
-Optional<LinalgLoops>
+FailureOr<LinalgLoops>
 mlir::linalg::linalgOpToParallelLoops(PatternRewriter &rewriter,
                                       LinalgOp linalgOp) {
   return linalgOpToLoopsImpl<scf::ParallelOp>(rewriter, linalgOp);

@@ -197,16 +197,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 #endif
   uint16_t *port_ptr = port.getPointer();
   if (m_socket_protocol == Socket::ProtocolTcp) {
-    llvm::StringRef platform_scheme;
-    llvm::StringRef platform_ip;
-    llvm::Optional<uint16_t> platform_port;
-    llvm::StringRef platform_path;
     std::string platform_uri = GetConnection()->GetURI();
-    bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
-                               platform_port, platform_path);
-    UNUSED_IF_ASSERT_DISABLED(ok);
-    assert(ok);
-    url << '[' << platform_ip.str() << "]:" << *port;
+    llvm::Optional<URI> parsed_uri = URI::Parse(platform_uri);
+    url << '[' << parsed_uri->hostname.str() << "]:" << *port;
   } else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;

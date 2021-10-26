@@ -51,7 +51,7 @@ Options
 .. option:: AllowMissingMoveFunctionsWhenCopyIsDeleted
 
    When set to `true` (default is `false`), this check doesn't flag classes which define deleted copy
-   operations but don't define move operations. This flags is related to Google C++ Style Guide
+   operations but don't define move operations. This flag is related to Google C++ Style Guide
    https://google.github.io/styleguide/cppguide.html#Copyable_Movable_Types. With this option enabled, the 
    following class won't be flagged:
    

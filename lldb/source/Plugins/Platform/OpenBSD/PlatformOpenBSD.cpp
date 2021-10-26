@@ -71,21 +71,10 @@ PlatformSP PlatformOpenBSD::CreateInstance(bool force, const ArchSpec *arch) {
   return PlatformSP();
 }
 
-ConstString PlatformOpenBSD::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-openbsd");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformOpenBSD::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformOpenBSD::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local OpenBSD user platform plug-in.";
-  else
-    return "Remote OpenBSD user platform plug-in.";
+  return "Remote OpenBSD user platform plug-in.";
 }
 
 void PlatformOpenBSD::Initialize() {

@@ -16,7 +16,6 @@
 
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Utility/IOObject.h"
-#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 
 #ifdef _WIN32
@@ -68,7 +67,7 @@ public:
   // the socket after it is initialized, but before entering a blocking accept.
   static llvm::Expected<std::unique_ptr<TCPSocket>>
   TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
-            Predicate<uint16_t> *predicate, int backlog = 5);
+            int backlog = 5);
 
   static llvm::Expected<std::unique_ptr<Socket>>
   TcpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);

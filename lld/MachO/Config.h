@@ -174,6 +174,8 @@ struct Configuration {
 
   bool zeroModTime = false;
 
+  llvm::StringRef osoPrefix;
+
   llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
 
   llvm::MachO::PlatformKind platform() const {

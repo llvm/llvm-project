@@ -10,6 +10,7 @@
 #include "descriptor-io.h"
 #include "io-stmt.h"
 #include "flang/Runtime/io-api.h"
+#include <algorithm>
 #include <cstring>
 #include <limits>
 
@@ -133,7 +134,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   // ambiguous within the parentheses.
   SubscriptValue lower[maxRank], upper[maxRank], stride[maxRank];
   int j{0};
-  std::size_t elemLen{source.ElementBytes()};
+  std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::optional<char32_t> ch{io.GetNextNonBlank()};
   for (; ch && *ch != ')'; ++j) {
@@ -142,7 +143,9 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
       const Dimension &dim{source.GetDimension(j)};
       dimLower = dim.LowerBound();
       dimUpper = dim.UpperBound();
-      dimStride = elemLen ? dim.ByteStride() / elemLen : 1;
+      dimStride =
+          dim.ByteStride() / std::max<SubscriptValue>(contiguousStride, 1);
+      contiguousStride *= dim.Extent();
     } else if (ok) {
       handler.SignalError(
           "Too many subscripts for rank-%d NAMELIST group item '%s'",
@@ -333,7 +336,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       return false;
     }
     io.HandleRelativePosition(1);
-    // Read the values into the descriptor
+    // Read the values into the descriptor.  An array can be short.
     listInput->ResetForNextNamelistItem();
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
@@ -350,6 +353,27 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   io.HandleRelativePosition(1);
   return true;
+}
+
+bool IsNamelistName(IoStatementState &io) {
+  if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
+    ConnectionState &connection{io.GetConnectionState()};
+    if (connection.modes.inNamelist) {
+      SavedPosition savedPosition{connection};
+      if (auto ch{io.GetNextNonBlank()}) {
+        if (IsLegalIdStart(*ch)) {
+          do {
+            io.HandleRelativePosition(1);
+            ch = io.GetCurrentChar();
+          } while (ch && IsLegalIdChar(*ch));
+          ch = io.GetNextNonBlank();
+          // TODO: how to deal with NaN(...) ambiguity?
+          return ch && (ch == '=' || ch == '(' || ch == '%');
+        }
+      }
+    }
+  }
+  return false;
 }
 
 } // namespace Fortran::runtime::io

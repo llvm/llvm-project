@@ -9291,20 +9291,22 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   auto Plan = std::make_unique<VPlan>();
-  VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
-  Plan->setEntry(VPBB);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
   LoopBlocksDFS DFS(OrigLoop);
   DFS.perform(LI);
 
+  VPBasicBlock *VPBB = nullptr;
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
     unsigned VPBBsForBB = 0;
     auto *FirstVPBBForBB = new VPBasicBlock(BB->getName());
-    VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
+    if (VPBB)
+      VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
+    else
+      Plan->setEntry(FirstVPBBForBB);
     VPBB = FirstVPBBForBB;
     Builder.setInsertPoint(VPBB);
 
@@ -9363,16 +9365,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     }
   }
 
+  assert(isa<VPBasicBlock>(Plan->getEntry()) &&
+         !Plan->getEntry()->getEntryBasicBlock()->empty() &&
+         "entry block must be set to a non-empty VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
-
-  // Discard empty dummy pre-entry VPBasicBlock. Note that other VPBasicBlocks
-  // may also be empty, such as the last one VPBB, reflecting original
-  // basic-blocks with no recipes.
-  VPBasicBlock *PreEntry = cast<VPBasicBlock>(Plan->getEntry());
-  assert(PreEntry->empty() && "Expecting empty pre-entry block.");
-  VPBlockBase *Entry = Plan->setEntry(PreEntry->getSingleSuccessor());
-  VPBlockUtils::disconnectBlocks(PreEntry, Entry);
-  delete PreEntry;
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to

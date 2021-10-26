@@ -55,6 +55,13 @@ def get_triple():
 
 
 class BuilderDarwin(Builder):
+    def getTriple(self, arch):
+        vendor, os, version, env = get_triple()
+        components = [arch, vendor, os, version, env]
+        if None in components:
+            return None
+        return '-'.join(components)
+
     def getExtraMakeArgs(self):
         """
         Helper function to return extra argumentsfor the make system. This

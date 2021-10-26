@@ -7145,8 +7145,8 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::CTPOP, dl, VT, Tmp);
 }
 
-bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
-                               SelectionDAG &DAG, bool IsNegative) const {
+SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
+                                  bool IsNegative) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -7156,27 +7156,24 @@ bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
   if (!IsNegative && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::SMAX, VT)) {
     SDValue Zero = DAG.getConstant(0, dl, VT);
-    Result = DAG.getNode(ISD::SMAX, dl, VT, Op,
-                         DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
-    return true;
+    return DAG.getNode(ISD::SMAX, dl, VT, Op,
+                       DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
   }
 
   // abs(x) -> umin(x,sub(0,x))
   if (!IsNegative && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::UMIN, VT)) {
     SDValue Zero = DAG.getConstant(0, dl, VT);
-    Result = DAG.getNode(ISD::UMIN, dl, VT, Op,
-                         DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
-    return true;
+    return DAG.getNode(ISD::UMIN, dl, VT, Op,
+                       DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
   }
 
   // 0 - abs(x) -> smin(x, sub(0,x))
   if (IsNegative && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::SMIN, VT)) {
     SDValue Zero = DAG.getConstant(0, dl, VT);
-    Result = DAG.getNode(ISD::SMIN, dl, VT, Op,
-                         DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
-    return true;
+    return DAG.getNode(ISD::SMIN, dl, VT, Op,
+                       DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
   }
 
   // Only expand vector types if we have the appropriate vector operations.
@@ -7185,20 +7182,19 @@ bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
        (!IsNegative && !isOperationLegalOrCustom(ISD::ADD, VT)) ||
        (IsNegative && !isOperationLegalOrCustom(ISD::SUB, VT)) ||
        !isOperationLegalOrCustomOrPromote(ISD::XOR, VT)))
-    return false;
+    return SDValue();
 
   SDValue Shift =
       DAG.getNode(ISD::SRA, dl, VT, Op,
                   DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, ShVT));
   if (!IsNegative) {
     SDValue Add = DAG.getNode(ISD::ADD, dl, VT, Op, Shift);
-    Result = DAG.getNode(ISD::XOR, dl, VT, Add, Shift);
-  } else {
-    // 0 - abs(x) -> Y = sra (X, size(X)-1); sub (Y, xor (X, Y))
-    SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Op, Shift);
-    Result = DAG.getNode(ISD::SUB, dl, VT, Shift, Xor);
+    return DAG.getNode(ISD::XOR, dl, VT, Add, Shift);
   }
-  return true;
+
+  // 0 - abs(x) -> Y = sra (X, size(X)-1); sub (Y, xor (X, Y))
+  SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Op, Shift);
+  return DAG.getNode(ISD::SUB, dl, VT, Shift, Xor);
 }
 
 SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {

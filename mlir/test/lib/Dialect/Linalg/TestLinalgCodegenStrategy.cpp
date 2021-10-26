@@ -153,16 +153,25 @@ void TestLinalgCodegenStrategy::runStrategy(
       .generalizeIf(generalize, anchorOpName)
       .interchangeIf(!iteratorInterchange.empty(), iteratorInterchange)
       .vectorizeIf(vectorize, generalize ? genericOpName : anchorOpName)
-      .setEnableVectorTransferPartialRewrite(true)
-      .setEnableVectorContractLowering(true)
-      .setEnableVectorToSCFConversion(true)
-      .setVectorTransformsOptions(
-          vector::VectorTransformsOptions()
-              .setVectorTransformsOptions(vectorContractLowering)
-              .setVectorTransferSplit(vectorTransferSplit))
-      .setVectorTransferToSCFOptions(
-          VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
-  (void)strategy.transform(getFunction());
+      .vectorLowering(
+          LinalgVectorLoweringOptions()
+              .setVectorTransformsOptions(
+                  vector::VectorTransformsOptions()
+                      .setVectorTransformsOptions(vectorContractLowering)
+                      .setVectorTransferSplit(vectorTransferSplit))
+              .setVectorTransferToSCFOptions(
+                  VectorTransferToSCFOptions().enableFullUnroll(
+                      unrollVectorTransfers))
+              .enableTransferPartialRewrite()
+              .enableContractionLowering()
+              .enableTransferToSCFConversion());
+
+  // Created a nested OpPassManager and run.
+  FuncOp funcOp = getFunction();
+  OpPassManager dynamicPM("builtin.func");
+  strategy.configurePassPipeline(dynamicPM, funcOp.getContext());
+  if (failed(runPipeline(dynamicPM, funcOp)))
+    return signalPassFailure();
 }
 } // end anonymous namespace
 

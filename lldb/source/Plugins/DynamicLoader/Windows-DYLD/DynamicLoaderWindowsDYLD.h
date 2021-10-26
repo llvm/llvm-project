@@ -24,8 +24,8 @@ public:
 
   static void Initialize();
   static void Terminate();
-  static ConstString GetPluginNameStatic();
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "windows-dyld"; }
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
 
@@ -39,9 +39,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop) override;
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   lldb::addr_t GetLoadAddress(lldb::ModuleSP executable);

@@ -132,9 +132,9 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
 
   for (auto &AV : Affected) {
     auto &AVV = getOrInsertAffectedValues(AV.Assume);
-    if (std::find_if(AVV.begin(), AVV.end(), [&](ResultElem &Elem) {
+    if (llvm::none_of(AVV, [&](ResultElem &Elem) {
           return Elem.Assume == CI && Elem.Index == AV.Index;
-        }) == AVV.end())
+        }))
       AVV.push_back({CI, AV.Index});
   }
 }

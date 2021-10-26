@@ -949,7 +949,7 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
     return nullptr;
 
   auto vecTy = getVectorType(scalarTy, state.strategy);
-  auto vecAttr = DenseElementsAttr::get(vecTy, constOp.value());
+  auto vecAttr = DenseElementsAttr::get(vecTy, constOp.getValue());
 
   OpBuilder::InsertionGuard guard(state.builder);
   Operation *parentOp = state.builder.getInsertionBlock()->getParentOp();
@@ -1253,7 +1253,7 @@ static bool isNeutralElementConst(AtomicRMWKind reductionKind, Value value,
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
-    return constOp.value() == valueAttr;
+    return constOp.getValue() == valueAttr;
   return false;
 }
 

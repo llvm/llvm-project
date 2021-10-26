@@ -71,7 +71,8 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   assert(!Name.empty() && "Must have a name!");
   // Use the given path verbatim if it contains any slashes; this matches
   // the behavior of sh(1) and friends.
-  if (Name.find('/') != StringRef::npos) return std::string(Name);
+  if (Name.contains('/'))
+    return std::string(Name);
 
   SmallVector<StringRef, 16> EnvironmentPaths;
   if (Paths.empty())

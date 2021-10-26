@@ -759,10 +759,11 @@ class getNumNodeArgs<SDPatternOperator Op> {
   int ret = TP.NumOperands;
 }
 
-
 class getDivergentFrag<SDPatternOperator Op> {
+  assert !or(!isa<SDNode>(Op), !isa<PatFrags>(Op)), "Expected SDNode or PatFrags";
 
-  int NumSrcArgs = getNumNodeArgs<Op>.ret;
+  int NumSrcArgs = !if(!isa<SDNode>(Op), getNumNodeArgs<Op>.ret,
+    !size(!cast<PatFrags>(Op).Operands));
   PatFrag ret = PatFrag <
     !if(!eq(NumSrcArgs, 1),
              (ops node:$src0),

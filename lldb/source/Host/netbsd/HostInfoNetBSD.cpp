@@ -54,20 +54,6 @@ llvm::Optional<std::string> HostInfoNetBSD::GetOSBuildString() {
   return llvm::None;
 }
 
-bool HostInfoNetBSD::GetOSKernelDescription(std::string &s) {
-  struct utsname un;
-
-  ::memset(&un, 0, sizeof(un));
-  s.clear();
-
-  if (::uname(&un) < 0)
-    return false;
-
-  s.assign(un.version);
-
-  return true;
-}
-
 FileSpec HostInfoNetBSD::GetProgramFileSpec() {
   static FileSpec g_program_filespec;
 

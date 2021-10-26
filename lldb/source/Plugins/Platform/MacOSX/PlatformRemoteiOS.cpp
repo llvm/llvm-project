@@ -125,12 +125,7 @@ PlatformSP PlatformRemoteiOS::CreateInstance(bool force, const ArchSpec *arch) {
   return lldb::PlatformSP();
 }
 
-lldb_private::ConstString PlatformRemoteiOS::GetPluginNameStatic() {
-  static ConstString g_name("remote-ios");
-  return g_name;
-}
-
-const char *PlatformRemoteiOS::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteiOS::GetDescriptionStatic() {
   return "Remote iOS platform plug-in.";
 }
 

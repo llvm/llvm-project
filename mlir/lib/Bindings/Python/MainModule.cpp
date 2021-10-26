@@ -85,6 +85,7 @@ PYBIND11_MODULE(_mlir, m) {
   populateIRCore(irModule);
   populateIRAffine(irModule);
   populateIRAttributes(irModule);
+  populateIRInterfaces(irModule);
   populateIRTypes(irModule);
 
   // Define and populate PassManager submodule.

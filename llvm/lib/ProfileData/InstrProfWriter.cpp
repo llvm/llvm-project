@@ -215,8 +215,7 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
   InstrProfRecord &Dest = Where->second;
 
   uint64_t ValueCutoff = FuncFilter.ValueCutoff;
-  if (!FuncFilter.NameFilter.empty() &&
-      Name.find(FuncFilter.NameFilter) != Name.npos)
+  if (!FuncFilter.NameFilter.empty() && Name.contains(FuncFilter.NameFilter))
     ValueCutoff = 0;
 
   Dest.overlap(Other, Overlap, FuncLevelOverlap, ValueCutoff);

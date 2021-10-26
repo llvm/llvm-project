@@ -79,6 +79,19 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "struct ^X { ^X(int) {} int ^foo(); };",
           "auto x = X(42); auto y = x.foo();",
       },
+      // Function
+      {
+          "void ^foo();",
+          "void foo() {}",
+      },
+      {
+          "void foo() {}",
+          "void foo();",
+      },
+      {
+          "inline void ^foo() {}",
+          "void bar() { foo(); }",
+      },
       // Static function
       {
           "struct ^X { static bool ^foo(); }; bool X::^foo() {}",
@@ -102,6 +115,30 @@ TEST(IncludeCleaner, ReferencedLocations) {
       {
           "struct ^X { enum ^Language { ^CXX = 42, Python = 9000}; };",
           "int Lang = X::CXX;",
+      },
+      {
+          "enum class ^Color : int;",
+          "enum class Color : int {};",
+      },
+      {
+          "enum class Color : int {};",
+          "enum class Color : int;",
+      },
+      {
+          "enum class ^Color;",
+          "Color c;",
+      },
+      {
+          "enum class ^Color : int;",
+          "Color c;",
+      },
+      {
+          "enum class ^Color : char;",
+          "Color *c;",
+      },
+      {
+          "enum class ^Color : char {};",
+          "Color *c;",
       },
       {
           // When a type is resolved via a using declaration, the

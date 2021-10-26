@@ -4524,6 +4524,17 @@ unsigned EnumDecl::getODRHash() {
   return ODRHash;
 }
 
+SourceRange EnumDecl::getSourceRange() const {
+  auto Res = TagDecl::getSourceRange();
+  // Set end-point to enum-base, e.g. enum foo : ^bar
+  if (auto *TSI = getIntegerTypeSourceInfo()) {
+    // TagDecl doesn't know about the enum base.
+    if (!getBraceRange().getEnd().isValid())
+      Res.setEnd(TSI->getTypeLoc().getEndLoc());
+  }
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // RecordDecl Implementation
 //===----------------------------------------------------------------------===//

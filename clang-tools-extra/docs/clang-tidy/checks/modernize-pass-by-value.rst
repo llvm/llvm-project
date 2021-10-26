@@ -124,7 +124,7 @@ When delayed template parsing is enabled, constructors part of templated
 contexts; templated constructors, constructors in class templates, constructors
 of inner classes of template classes, etc., are not transformed. Delayed
 template parsing is enabled by default on Windows as a Microsoft extension:
-`Clang Compiler User’s Manual - Microsoft extensions`_.
+`Clang Compiler User's Manual - Microsoft extensions`_.
 
 Delayed template parsing can be enabled using the `-fdelayed-template-parsing`
 flag and disabled using `-fno-delayed-template-parsing`.
@@ -144,7 +144,7 @@ Example:
  +  C(std::string S) : S(std::move(S)) {}
    };
 
-.. _Clang Compiler User’s Manual - Microsoft extensions: https://clang.llvm.org/docs/UsersManual.html#microsoft-extensions
+.. _Clang Compiler User's Manual - Microsoft extensions: https://clang.llvm.org/docs/UsersManual.html#microsoft-extensions
 
 .. seealso::
 

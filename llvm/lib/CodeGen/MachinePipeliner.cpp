@@ -385,7 +385,7 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   SlotIndexes &Slots = *getAnalysis<LiveIntervals>().getSlotIndexes();
 
-  for (MachineInstr &PI : make_range(B.begin(), B.getFirstNonPHI())) {
+  for (MachineInstr &PI : B.phis()) {
     MachineOperand &DefOp = PI.getOperand(0);
     assert(DefOp.getSubReg() == 0);
     auto *RC = MRI.getRegClass(DefOp.getReg());

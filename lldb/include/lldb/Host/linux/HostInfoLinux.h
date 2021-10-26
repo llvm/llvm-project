@@ -27,7 +27,6 @@ public:
 
   static llvm::VersionTuple GetOSVersion();
   static llvm::Optional<std::string> GetOSBuildString();
-  static bool GetOSKernelDescription(std::string &s);
   static llvm::StringRef GetDistributionId();
   static FileSpec GetProgramFileSpec();
 

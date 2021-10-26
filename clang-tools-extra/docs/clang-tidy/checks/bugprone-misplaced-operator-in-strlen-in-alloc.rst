@@ -9,7 +9,7 @@ instead of the result and the value is used as an argument to a memory
 allocation function (``malloc()``, ``calloc()``, ``realloc()``, ``alloca()``) or
 the ``new[]`` operator in `C++`. The check detects error cases even if one of
 these functions (except the ``new[]`` operator) is called by a constant function
-pointer.  Cases where ``1`` is added both to the parameter and the result of the
+pointer. Cases where ``1`` is added both to the parameter and the result of the
 ``strlen()``-like function are ignored, as are cases where the whole addition is
 surrounded by extra parentheses.
 

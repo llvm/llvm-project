@@ -714,8 +714,8 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return failure();
 
     // If the loop is known to have 0 iterations, remove it.
-    llvm::APInt lbValue = lb.value().cast<IntegerAttr>().getValue();
-    llvm::APInt ubValue = ub.value().cast<IntegerAttr>().getValue();
+    llvm::APInt lbValue = lb.getValue().cast<IntegerAttr>().getValue();
+    llvm::APInt ubValue = ub.getValue().cast<IntegerAttr>().getValue();
     if (lbValue.sge(ubValue)) {
       rewriter.replaceOp(op, op.getIterOperands());
       return success();
@@ -727,7 +727,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 
     // If the loop is known to have 1 iteration, inline its body and remove the
     // loop.
-    llvm::APInt stepValue = step.value().cast<IntegerAttr>().getValue();
+    llvm::APInt stepValue = step.getValue().cast<IntegerAttr>().getValue();
     if ((lbValue + stepValue).sge(ubValue)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
@@ -1241,7 +1241,7 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
     if (!constant)
       return failure();
 
-    if (constant.value().cast<BoolAttr>().getValue())
+    if (constant.getValue().cast<BoolAttr>().getValue())
       replaceOpWithRegion(rewriter, op, op.thenRegion());
     else if (!op.elseRegion().empty())
       replaceOpWithRegion(rewriter, op, op.elseRegion());
@@ -1425,8 +1425,8 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
       if (!falseYield)
         continue;
 
-      bool trueVal = trueYield.value().cast<BoolAttr>().getValue();
-      bool falseVal = falseYield.value().cast<BoolAttr>().getValue();
+      bool trueVal = trueYield.getValue().cast<BoolAttr>().getValue();
+      bool falseVal = falseYield.getValue().cast<BoolAttr>().getValue();
       if (!trueVal && falseVal) {
         if (!opResult.use_empty()) {
           Value notCond = rewriter.create<arith::XOrIOp>(

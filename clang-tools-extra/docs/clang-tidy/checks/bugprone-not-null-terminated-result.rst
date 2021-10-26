@@ -6,7 +6,7 @@ bugprone-not-null-terminated-result
 Finds function calls where it is possible to cause a not null-terminated result.
 Usually the proper length of a string is ``strlen(src) + 1`` or equal length of
 this expression, because the null terminator needs an extra space. Without the
-null terminator it can result in undefined behaviour when the string is read.
+null terminator it can result in undefined behavior when the string is read.
 
 The following and their respective ``wchar_t`` based functions are checked:
 
@@ -61,7 +61,7 @@ Rewrite based on the destination array
   obtain the capacity of the destination array then the new function could be
   the safe version (ending with ``cpy_s``).
 
-- If the new function is could be safe version and C++ files are analysed and
+- If the new function is could be safe version and C++ files are analyzed and
   the destination array is plain ``char``/``wchar_t`` without ``un/signed`` then
   the length of the destination array can be omitted.
 

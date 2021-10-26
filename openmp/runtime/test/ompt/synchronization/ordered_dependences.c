@@ -1,4 +1,4 @@
-// RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
+// RUN: %libomp-c99-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
 #include "callback.h"

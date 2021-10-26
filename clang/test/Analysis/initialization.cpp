@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++14 -triple i386-apple-darwin10 -analyze -analyzer-config eagerly-assume=false -analyzer-checker=core.uninitialized.Assign,core.builtin,debug.ExprInspection,core.uninitialized.UndefReturn -verify %s
 
+template <typename T>
+void clang_analyzer_dump(T x);
 void clang_analyzer_eval(int);
 
 struct S {
@@ -30,6 +32,10 @@ void glob_invalid_index1() {
   const int *ptr = glob_arr1;
   int idx = -42;
   auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+}
+
+void glob_symbolic_index1(int idx) {
+  clang_analyzer_dump(glob_arr1[idx]); // expected-warning{{Unknown}}
 }
 
 int const glob_arr2[4] = {1, 2};
@@ -127,4 +133,16 @@ void glob_invalid_index6() {
   int idx = 42;
   // FIXME: Should warn {{garbage or undefined}}.
   auto x = ptr[idx]; // // no-warning
+}
+
+extern const int glob_arr_no_init[10];
+void glob_array_index4() {
+  clang_analyzer_eval(glob_arr_no_init[2]); // expected-warning{{UNKNOWN}}
+}
+
+struct S2 {
+  static const int arr_no_init[10];
+};
+void struct_arr_index1() {
+  clang_analyzer_eval(S2::arr_no_init[2]); // expected-warning{{UNKNOWN}}
 }

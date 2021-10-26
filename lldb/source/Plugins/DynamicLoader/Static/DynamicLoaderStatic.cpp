@@ -152,12 +152,7 @@ void DynamicLoaderStatic::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString DynamicLoaderStatic::GetPluginNameStatic() {
-  static ConstString g_name("static");
-  return g_name;
-}
-
-const char *DynamicLoaderStatic::GetPluginDescriptionStatic() {
+llvm::StringRef DynamicLoaderStatic::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that will load any images at the static "
          "addresses contained in each image.";
 }
