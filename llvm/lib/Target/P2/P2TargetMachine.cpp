@@ -84,7 +84,8 @@ namespace {
     }
 
     void P2PassConfig::addPreEmitPass() {
-        // P2TargetMachine &TM = getP2TargetMachine();
+        P2TargetMachine &TM = getP2TargetMachine();
+        // addPass(createP2DelJmp0Pass(TM));
     }
 
     void P2PassConfig::addPreRegAlloc() {

@@ -23,6 +23,7 @@ namespace llvm {
     class FunctionPass;
 
     FunctionPass *createP2ExpandPseudosPass(P2TargetMachine &tm);
+    FunctionPass *createP2DelJmp0Pass(P2TargetMachine &TM);
 
 
 } // end namespace llvm;

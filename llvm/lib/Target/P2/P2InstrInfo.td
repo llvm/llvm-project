@@ -264,16 +264,18 @@ let DecoderMethod = "DecodeJumpInstruction", isBarrier = 1, isBranch = 1, isTerm
     def JMPlte  : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_c_or_z>;*/
 }
 
+let DecoderMethod = "DecodeTJInstruction", isBranch = 1, isBarrier = 1, isTerminator = 1 in {
+    def TJZrr   : P2InstIDS<0b101110010, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjz $d, $s">;
+    def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjz $d, #$s">;
+
+    def TJNZrr  : P2InstIDS<0b101110011, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjnz $d, $s">;
+    def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjnz $d, #$s">;
+}
+
 let Constraints = "$s1 = $d" in {
     def DJNZrr  : P2InstIDS<0b101101101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s1, P2GPR:$s), "djnz $d, $s">;
     def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, cogjmptarget:$s), "djnz $d, #$s">;
 }
-
-def TJZrr   : P2InstIDS<0b101110010, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjz $d, $s">;
-def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjz $d, #$s">;
-
-def TJNZrr  : P2InstIDS<0b101110011, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjnz $d, $s">;
-def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjnz $d, #$s">;
 
 def REPrr   : P2InstLIDS<0b11001101, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rep $d, $s">;
 def REPri   : P2InstLIDS<0b11001101, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rep $d, #$s">;

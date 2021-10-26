@@ -353,20 +353,45 @@ MachineBasicBlock::iterator P2FrameLowering::eliminateCallFramePseudoInstr(Machi
 
         int64_t adjust = I->getOperand(0).getImm();
 
-
         if (I->getOpcode() == P2::ADJCALLSTACKDOWN) {
+            LLVM_DEBUG(errs() << "Adjust down\n");
+            LLVM_DEBUG(errs() << "block: \n");
+            LLVM_DEBUG(MBB.dump());
+
+            // move backwards until we get to the call instruction
             adjust = -adjust;
-            I = MBB.erase(I);
-        } else {
-            I = MBB.erase(I); // first erase our psuedo instruction.
+            I = MBB.erase(I); // erase the psuedo
+            if (I == MBB.end()) I--;
+
+            LLVM_DEBUG(errs() << "instruction to check: \n");
+            LLVM_DEBUG(I->dump());
 
             auto op = I->getOpcode();
             while (op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
-                LLVM_DEBUG(errs() << "instruction to skip: \n");
+                I--; // skip back to the call instruction.
+
+                LLVM_DEBUG(errs() << "instruction to check: \n");
                 LLVM_DEBUG(I->dump());
-                LLVM_DEBUG(errs() << "op code is " << op << "\n");
+                op = I->getOpcode();
+            }
+
+            I++; // go forward one to insert after the call
+        } else if (I->getOpcode() == P2::ADJCALLSTACKUP) {
+            LLVM_DEBUG(errs() << "Adjust up\n");
+            LLVM_DEBUG(errs() << "block: \n");
+            LLVM_DEBUG(MBB.dump());
+
+            I = MBB.erase(I); // first erase our psuedo instruction.
+
+            LLVM_DEBUG(errs() << "instruction to check: \n");
+            LLVM_DEBUG(I->dump());
+
+            auto op = I->getOpcode();
+            while (op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
                 I++; // skip ahead to the call instruction.
 
+                LLVM_DEBUG(errs() << "instruction to check: \n");
+                LLVM_DEBUG(I->dump());
                 op = I->getOpcode();
             }
         }

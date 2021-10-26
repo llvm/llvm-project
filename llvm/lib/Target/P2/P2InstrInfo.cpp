@@ -140,11 +140,23 @@ void P2InstrInfo::adjustStackPtr(unsigned SP, int64_t amount, MachineBasicBlock 
     }
 }
 
+static bool isTJOpcode(MachineInstr &I) {
+    return (I.getOpcode() == P2::TJNZri || 
+            I.getOpcode() == P2::TJNZrr ||
+            I.getOpcode() == P2::TJZri || 
+            I.getOpcode() == P2::TJZrr);
+}
+
 static bool isCondBranchOpcode(MachineInstr &I) {
-    if (I.getOpcode() != P2::JMP) return false; // not a branch.
+    if (I.getOpcode() != P2::JMP && !isTJOpcode(I)) return false; // not a branch.
+
     LLVM_DEBUG(errs() << "is cond branch? ");
     LLVM_DEBUG(I.dump());
-    return I.getOperand(2).getImm() != P2::ALWAYS;
+
+    if (I.getOpcode() == P2::JMP)
+        return I.getOperand(2).getImm() != P2::ALWAYS;
+
+    return true; // this is a TJ* instruction, which are always conditional. 
 }
 
 /// Analyze the branching code at the end of MBB, returning
@@ -192,11 +204,19 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
         // Working from the bottom, when we see a non-terminator
         // instruction, we're done.
-        if (!isUnpredicatedTerminator(*I)) break;
+        if (!isUnpredicatedTerminator(*I)) {
+            LLVM_DEBUG(errs() << "Not a terminator: ");
+            LLVM_DEBUG(I->dump());
+            break;
+        }
 
         // A terminator that isn't a branch can't easily be handled
         // by this analysis.
-        if (!I->isBranch()) return true;
+        if (!I->isBranch()) {
+            LLVM_DEBUG(I->dump());
+            LLVM_DEBUG(errs() << "   is not a branch\n");
+            return true;
+        }
 
         // Cannot handle indirect branches.
         if (I->getOpcode() == P2::JMPr)
@@ -204,6 +224,12 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
         // Handle unconditional branches.
         if (!isCondBranchOpcode(*I)) {
+            LLVM_DEBUG(I->dump());
+            LLVM_DEBUG(errs() << "   is an unconditional branch\n");
+
+            LLVM_DEBUG(errs() << "jump destination is: ");
+            LLVM_DEBUG(I->getOperand(0).getMBB());
+
             if (!AllowModify) {
                 TBB = I->getOperand(0).getMBB();
                 continue;
@@ -216,6 +242,7 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
             // Delete the JMP if it's equivalent to a fall-through.
             if (MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
+                LLVM_DEBUG(errs() << "  this is equivalent to a fallthrough\n");
                 TBB = nullptr;
                 I->eraseFromParent();
                 I = MBB.end();
@@ -227,20 +254,27 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
             continue;
         }
 
+        // TODO: fix operand indices here
         // Handle conditional branches.
         assert(isCondBranchOpcode(*I) && "Invalid conditional branch");
-        LLVM_DEBUG(errs() << "jmp instruction: ");
         LLVM_DEBUG(I->dump());
-        int BranchCode = I->getOperand(2).getImm();
+        LLVM_DEBUG(errs() << "  is a conditional branch\n");
 
-        LLVM_DEBUG(errs() << "Got a conditional branch\n");
+        unsigned dest_op_idx = 0;
+        unsigned cond_op_idx = 1;
+        if (isTJOpcode(*I)) {
+            dest_op_idx = 1;
+            cond_op_idx = 0;
+        }
+
+        int BranchCode = I->getOperand(2).getImm(); // condition code
 
         // Working from the bottom, handle the first conditional branch.
         if (Cond.empty()) {
             FBB = TBB;
-            TBB = I->getOperand(0).getMBB();
-            Cond.push_back(I->getOperand(1));
-            Cond.push_back(MachineOperand::CreateImm(BranchCode)); // create an immediate with the branch op code
+            TBB = I->getOperand(dest_op_idx).getMBB();
+            Cond.push_back(I->getOperand(cond_op_idx));
+            Cond.push_back(MachineOperand::CreateImm(BranchCode)); // create an immediate with the branch condition code
             old_br_code = BranchCode;
             continue;
         }
@@ -252,11 +286,10 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
         // Only handle the case where all conditional branches branch to
         // the same destination.
-        if (TBB != I->getOperand(0).getMBB()) return true;
+        if (TBB != I->getOperand(dest_op_idx).getMBB()) return true;
 
         // If the conditions are the same, we can leave them alone.
         if (old_br_code == BranchCode) continue;
-
 
         return true;
     }

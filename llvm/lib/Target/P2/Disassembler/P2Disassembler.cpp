@@ -76,6 +76,7 @@ static uint16_t getRegForField(uint16_t r) {
 static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeIOInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeJumpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeTJInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCmpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCordicInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGetQInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
@@ -141,6 +142,27 @@ static DecodeStatus DecodeJumpInstruction(MCInst &Inst, unsigned Insn, uint64_t 
     }
     Inst.addOperand(MCOperand::createImm(a_field)); // turn this into a symbol instead of immediate. make a decoder for calls and do the same
     Inst.addOperand(MCOperand::createReg(P2::SW));
+    Inst.addOperand(getConditionOperand(Insn));
+
+    return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTJInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
+    LLVM_DEBUG(errs() << "decode tj instruction\n");
+
+    // for readability, print negatives out
+    unsigned d_field = fieldFromInstruction(Insn, 9, 9);
+    unsigned s_field = fieldFromInstruction(Insn, 0, 9);
+    unsigned is_imm = fieldFromInstruction(Insn, 18, 1);
+    
+    Inst.addOperand(MCOperand::createImm(getRegForField(d_field))); // turn this into a symbol instead of immediate. make a decoder for calls and do the same
+    
+    if (is_imm) {
+        Inst.addOperand(MCOperand::createImm(s_field));
+    } else {
+        Inst.addOperand(MCOperand::createReg(getRegForField(s_field)));
+    }
+
     Inst.addOperand(getConditionOperand(Insn));
 
     return MCDisassembler::Success;
