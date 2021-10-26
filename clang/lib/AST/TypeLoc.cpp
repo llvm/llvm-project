@@ -257,6 +257,7 @@ SourceLocation TypeLoc::getEndLoc() const {
       if (!Last)
         Last = Cur;
       break;
+    case ObjCObjectPointer:
     case Qualified:
     case Elaborated:
       break;
