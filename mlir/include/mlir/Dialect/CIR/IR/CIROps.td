@@ -33,6 +33,8 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
+
+
 def ConstantOp : CIR_Op<"cst",
     [ConstantLike, Pure]> {
 
@@ -42,8 +44,9 @@ def ConstantOp : CIR_Op<"cst",
     to the operation as an attribute. For example:
 
     ```mlir
-      %0 = cir.cst 42 : i32
-      %1 = cir.cst 4.2 : f32
+      %0 = cir.cst(42 : i32)
+      %1 = cir.cst(4.2 : f32)
+      %2 = cir.cst(nullptr : !cir.ptr<i32>)
     ```
   }];
 
@@ -53,9 +56,15 @@ def ConstantOp : CIR_Op<"cst",
   // The constant operation returns a single value of AnyType.
   let results = (outs AnyType:$res);
 
-  let assemblyFormat = "`(` $value `)` attr-dict `:` type($res)";
+  let assemblyFormat = "`(` custom<ConstantValue>($value) `)` attr-dict `:` type($res)";
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+     bool isNullPtr() {
+       return getValue().isa<UnitAttr>();
+     }
+  }];
 
   // TODO: hasFolder, etc
 }
