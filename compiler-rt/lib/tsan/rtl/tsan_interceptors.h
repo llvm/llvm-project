@@ -47,10 +47,7 @@ inline bool in_symbolizer() {
 
 #define SCOPED_TSAN_INTERCEPTOR(func, ...)                                \
   SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__);                              \
-  if (REAL(func) == 0) {                                                  \
-    Report("FATAL: ThreadSanitizer: failed to intercept %s\n", #func);    \
-    Die();                                                                \
-  }                                                                       \
+  DCHECK(REAL(func));                                                     \
   if (!thr->is_inited || thr->ignore_interceptors || thr->in_ignored_lib) \
     return REAL(func)(__VA_ARGS__);
 
