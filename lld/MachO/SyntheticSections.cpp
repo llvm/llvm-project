@@ -259,7 +259,7 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
 }
 
 GotSection::GotSection()
-    : NonLazyPointerSectionBase(segment_names::dataConst, section_names::got) {
+    : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
   flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 

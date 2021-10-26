@@ -55,6 +55,23 @@
 # YDATA-DAG: __DATA_CONST,__objc_imageinfo __DATA__objc_imageinfo
 # YDATA-DAG: __DATA_CONST,__nl_symbol_ptr __IMPORT__pointers
 
+## LLD doesn't support defining symbols in synthetic sections, so we test them
+## via this slightly more awkward route.
+# RUN: llvm-readobj --section-headers %t/ydata | \
+# RUN:     FileCheck %s --check-prefix=SYNTH -DSEGNAME=__DATA_CONST
+# RUN: llvm-readobj --section-headers %t/ndata | \
+# RUN:     FileCheck %s --check-prefix=SYNTH -DSEGNAME=__DATA
+# RUN: llvm-readobj --section-headers %t/nopie | \
+# RUN:     FileCheck %s --check-prefix=SYNTH -DSEGNAME=__DATA
+# RUN: llvm-readobj --section-headers %t/old | \
+# RUN:     FileCheck %s --check-prefix=SYNTH -DSEGNAME=__DATA
+
+# SYNTH:      Name: __got
+# SYNTH-NEXT: Segment: [[SEGNAME]] ({{.*}})
+## Note that __la_symbol_ptr always remains in the non-const data segment.
+# SYNTH:      Name: __la_symbol_ptr
+# SYNTH-NEXT: Segment: __DATA ({{.*}})
+
 #--- renames.s
 .section __DATA,__auth_got
 .global __DATA__auth_got
@@ -80,13 +97,6 @@ __DATA__const:
 .global __DATA__cfstring
 __DATA__cfstring:
   .space 8
-
-# FIXME: error: conflicts with synthetic section ...
-# FIXME: we can't explicitly define syms in synthetic sections
-# COM: .section __DATA,__got
-# COM: .global __DATA__got
-# COM: __DATA__got:
-# COM:   .space 8
 
 .section __DATA,__mod_init_func,mod_init_funcs
 .global __DATA__mod_init_func
@@ -128,13 +138,6 @@ __DATA__objc_protolist:
 __DATA__objc_imageinfo:
   .space 8
 
-# FIXME: error: conflicts with synthetic section ...
-# FIXME: we can't explicitly define syms in synthetic sections
-# COM: .section __DATA,__la_symbol_ptr,lazy_symbol_pointers
-# COM: .global __DATA__la_symbol_ptr
-# COM: __DATA__la_symbol_ptr:
-# COM:   .space 8
-
 .section __IMPORT,__pointers,non_lazy_symbol_pointers
 .global __IMPORT__pointers
 __IMPORT__pointers:
@@ -150,4 +153,6 @@ __TEXT__StaticInit:
 .text
 .global _main
 _main:
+  mov ___nan@GOTPCREL(%rip), %rax ## ensure the __got section is created
+  callq ___isnan ## ensure the __la_symbol_ptr section is created
   ret
