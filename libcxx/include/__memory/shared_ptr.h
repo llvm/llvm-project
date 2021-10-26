@@ -15,12 +15,15 @@
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
+#include <__iterator/access.h>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -962,6 +965,216 @@ shared_ptr<_Tp> make_shared(_Args&& ...__args)
 {
     return _VSTD::allocate_shared<_Tp>(allocator<_Tp>(), _VSTD::forward<_Args>(__args)...);
 }
+
+#if _LIBCPP_STD_VER > 17
+
+template <size_t _Alignment>
+struct __sp_aligned_storage {
+    alignas(_Alignment) char __storage[_Alignment];
+};
+
+template <class _Tp, class _Alloc>
+struct __unbounded_array_control_block;
+
+template <class _Tp, class _Alloc>
+struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
+{
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    _Tp* __get_data() noexcept { return __data_; }
+
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __unbounded_array_control_block(_Alloc const& __alloc, size_t __count, _Tp const& __arg)
+        : __alloc_(__alloc), __count_(__count)
+    {
+        std::__uninitialized_allocator_fill_n(__alloc_, std::begin(__data_), __count_, __arg);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __unbounded_array_control_block(_Alloc const& __alloc, size_t __count)
+        : __alloc_(__alloc), __count_(__count)
+    {
+        std::__uninitialized_allocator_value_construct_n(__alloc_, std::begin(__data_), __count_);
+    }
+
+    // Returns the number of bytes required to store a control block followed by the given number
+    // of elements of _Tp, with the whole storage being aligned to a multiple of _Tp's alignment.
+    _LIBCPP_HIDE_FROM_ABI
+    static constexpr size_t __bytes_for(size_t __elements) {
+        // When there's 0 elements, the control block alone is enough since it holds one element.
+        // Otherwise, we allocate one fewer element than requested because the control block already
+        // holds one. Also, we use the bitwise formula below to ensure that we allocate enough bytes
+        // for the whole allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
+        //
+        // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
+        size_t __bytes = __elements == 0 ? sizeof(__unbounded_array_control_block)
+                                         : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
+        constexpr size_t __align = alignof(_Tp);
+        return (__bytes + __align - 1) & ~(__align - 1);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI
+    ~__unbounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
+
+private:
+    void __on_zero_shared() _NOEXCEPT override {
+        __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
+        std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + __count_);
+    }
+
+    void __on_zero_shared_weak() _NOEXCEPT override {
+        using _AlignedStorage = __sp_aligned_storage<alignof(__unbounded_array_control_block)>;
+        using _StorageAlloc = __allocator_traits_rebind_t<_Alloc, _AlignedStorage>;
+        using _PointerTraits = pointer_traits<typename allocator_traits<_StorageAlloc>::pointer>;
+
+        _StorageAlloc __tmp(__alloc_);
+        __alloc_.~_Alloc();
+        size_t __size = __unbounded_array_control_block::__bytes_for(__count_);
+        _AlignedStorage* __storage = reinterpret_cast<_AlignedStorage*>(this);
+        allocator_traits<_StorageAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*__storage), __size);
+    }
+
+    _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+    size_t __count_;
+    union {
+        _Tp __data_[1];
+    };
+};
+
+template<class _Array, class _Alloc, class... _Arg>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Array> __allocate_shared_unbounded_array(const _Alloc& __a, size_t __n, _Arg&& ...__arg)
+{
+    static_assert(is_unbounded_array_v<_Array>);
+    // We compute the number of bytes necessary to hold the control block and the
+    // array elements. Then, we allocate an array of properly-aligned dummy structs
+    // large enough to hold the control block and array. This allows shifting the
+    // burden of aligning memory properly from us to the allocator.
+    using _ControlBlock = __unbounded_array_control_block<_Array, _Alloc>;
+    using _AlignedStorage = __sp_aligned_storage<alignof(_ControlBlock)>;
+    using _StorageAlloc = __allocator_traits_rebind_t<_Alloc, _AlignedStorage>;
+    __allocation_guard<_StorageAlloc> __guard(__a, _ControlBlock::__bytes_for(__n) / sizeof(_AlignedStorage));
+    _ControlBlock* __control_block = reinterpret_cast<_ControlBlock*>(std::addressof(*__guard.__get()));
+    std::construct_at(__control_block, __a, __n, std::forward<_Arg>(__arg)...);
+    __guard.__release_ptr();
+    return shared_ptr<_Array>::__create_with_control_block(__control_block->__get_data(), __control_block);
+}
+
+template <class _Tp, class _Alloc>
+struct __bounded_array_control_block;
+
+template <class _Tp, size_t _Count, class _Alloc>
+struct __bounded_array_control_block<_Tp[_Count], _Alloc>
+    : __shared_weak_count
+{
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    _Tp* __get_data() noexcept { return __data_; }
+
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __bounded_array_control_block(_Alloc const& __alloc, _Tp const& __arg) : __alloc_(__alloc) {
+        std::__uninitialized_allocator_fill_n(__alloc_, std::addressof(__data_[0]), _Count, __arg);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __bounded_array_control_block(_Alloc const& __alloc) : __alloc_(__alloc) {
+        std::__uninitialized_allocator_value_construct_n(__alloc_, std::addressof(__data_[0]), _Count);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI
+    ~__bounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
+
+private:
+    void __on_zero_shared() _NOEXCEPT override {
+        __allocator_traits_rebind_t<_Alloc, _Tp> __value_alloc(__alloc_);
+        std::__allocator_destroy_multidimensional(__value_alloc, __data_, __data_ + _Count);
+    }
+
+    void __on_zero_shared_weak() _NOEXCEPT override {
+        using _ControlBlockAlloc = __allocator_traits_rebind_t<_Alloc, __bounded_array_control_block>;
+        using _PointerTraits = pointer_traits<typename allocator_traits<_ControlBlockAlloc>::pointer>;
+
+        _ControlBlockAlloc __tmp(__alloc_);
+        __alloc_.~_Alloc();
+        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), sizeof(*this));
+    }
+
+    _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+    union {
+        _Tp __data_[_Count];
+    };
+};
+
+template<class _Array, class _Alloc, class... _Arg>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Array> __allocate_shared_bounded_array(const _Alloc& __a, _Arg&& ...__arg)
+{
+    static_assert(is_bounded_array_v<_Array>);
+    using _ControlBlock = __bounded_array_control_block<_Array, _Alloc>;
+    using _ControlBlockAlloc = __allocator_traits_rebind_t<_Alloc, _ControlBlock>;
+
+    __allocation_guard<_ControlBlockAlloc> __guard(__a, 1);
+    _ControlBlock* __control_block = reinterpret_cast<_ControlBlock*>(std::addressof(*__guard.__get()));
+    std::construct_at(__control_block, __a, std::forward<_Arg>(__arg)...);
+    __guard.__release_ptr();
+    return shared_ptr<_Array>::__create_with_control_block(__control_block->__get_data(), __control_block);
+}
+
+template<class _Tp, class _Alloc, class = __enable_if_t<is_bounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a)
+{
+    return std::__allocate_shared_bounded_array<_Tp>(__a);
+}
+
+template<class _Tp, class _Alloc, class = __enable_if_t<is_bounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a, const remove_extent_t<_Tp>& __u)
+{
+    return std::__allocate_shared_bounded_array<_Tp>(__a, __u);
+}
+
+template<class _Tp, class _Alloc, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n);
+}
+
+template<class _Tp, class _Alloc, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n, const remove_extent_t<_Tp>& __u)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n, __u);
+}
+
+template<class _Tp, class = __enable_if_t<is_bounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared()
+{
+    return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>());
+}
+
+template<class _Tp, class = __enable_if_t<is_bounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared(const remove_extent_t<_Tp>& __u)
+{
+    return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>(), __u);
+}
+
+template<class _Tp, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared(size_t __n)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n);
+}
+
+template<class _Tp, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared(size_t __n, const remove_extent_t<_Tp>& __u)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n, __u);
+}
+
+#endif // _LIBCPP_STD_VER > 17
 
 template<class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY

@@ -1,6 +1,6 @@
 "Paper #","Group","Paper Name","Meeting","Status","First released version"
 "`P0463R1 <https://wg21.link/P0463R1>`__","LWG","Endian just Endian","Toronto","|Complete|","7.0"
-"`P0674R1 <https://wg21.link/P0674R1>`__","LWG","Extending make_shared to Support Arrays","Toronto","",""
+"`P0674R1 <https://wg21.link/P0674R1>`__","LWG","Extending make_shared to Support Arrays","Toronto","|Complete|","15.0"
 "","","","","",""
 "`P0020R6 <https://wg21.link/P0020R6>`__","LWG","Floating Point Atomic","Albuquerque","",""
 "`P0053R7 <https://wg21.link/P0053R7>`__","LWG","C++ Synchronized Buffered Ostream","Albuquerque","",""

@@ -154,7 +154,8 @@ __cpp_lib_sample                                        201603L <algorithm>
 __cpp_lib_scoped_lock                                   201703L <mutex>
 __cpp_lib_semaphore                                     201907L <semaphore>
 __cpp_lib_shared_mutex                                  201505L <shared_mutex>
-__cpp_lib_shared_ptr_arrays                             201611L <memory>
+__cpp_lib_shared_ptr_arrays                             201707L <memory>
+                                                        201611L // C++17
 __cpp_lib_shared_ptr_weak_type                          201606L <memory>
 __cpp_lib_shared_timed_mutex                            201402L <shared_mutex>
 __cpp_lib_shift                                         201806L <algorithm>
@@ -353,6 +354,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore)
 #   define __cpp_lib_semaphore                          201907L
 # endif
+# undef  __cpp_lib_shared_ptr_arrays
+# define __cpp_lib_shared_ptr_arrays                    201707L
 # define __cpp_lib_shift                                201806L
 // # define __cpp_lib_smart_ptr_for_overwrite              202002L
 // # define __cpp_lib_source_location                      201907L

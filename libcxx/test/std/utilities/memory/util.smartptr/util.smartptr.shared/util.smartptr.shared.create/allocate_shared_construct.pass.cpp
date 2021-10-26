@@ -13,7 +13,7 @@
 // shared_ptr
 
 // template<class T, class A, class... Args>
-//    shared_ptr<T> allocate_shared(const A& a, Args&&... args);
+// shared_ptr<T> allocate_shared(const A& a, Args&&... args);
 
 // This test checks that allocator_traits::construct is used in allocate_shared
 // as requested in C++20 (via P0674R1).

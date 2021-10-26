@@ -608,7 +608,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_shared_mutex)",
   }, {
     "name": "__cpp_lib_shared_ptr_arrays",
-    "values": { "c++17": 201611 },
+    "values": { "c++17": 201611, "c++20": 201707 },
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_shared_ptr_weak_type",
