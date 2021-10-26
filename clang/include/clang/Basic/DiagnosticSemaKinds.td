@@ -11398,7 +11398,9 @@ def err_builtin_launder_invalid_arg : Error<
   "'__builtin_launder' is not allowed">;
 
 def err_builtin_invalid_arg_type: Error <
-  "%ordinal0 argument must be a %1 (was %2)">;
+  "%ordinal0 argument must be a "
+  "%select{vector, integer or floating point type|matrix|"
+   "pointer to a valid matrix element type}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
@@ -11412,11 +11414,8 @@ def err_matrix_separate_incomplete_index: Error<
   "matrix row and column subscripts cannot be separated by any expression">;
 def err_matrix_subscript_comma: Error<
   "comma expressions are not allowed as indices in matrix subscript expressions">;
-def err_builtin_matrix_arg: Error<"1st argument must be a matrix">;
 def err_builtin_matrix_scalar_unsigned_arg: Error<
   "%0 argument must be a constant unsigned integer expression">;
-def err_builtin_matrix_pointer_arg: Error<
-  "%ordinal0 argument must be a pointer to a valid matrix element type">;
 def err_builtin_matrix_pointer_arg_mismatch: Error<
   "the pointee of the 2nd argument must match the element type of the 1st argument (%0 != %1)">;
 def err_builtin_matrix_store_to_const: Error<
