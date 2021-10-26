@@ -251,35 +251,17 @@ Value mlir::getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
   case AtomicRMWKind::muli:
     return builder.create<arith::MulIOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxf:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGT, lhs, rhs),
-        lhs, rhs);
+    return builder.create<MaxFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minf:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs),
-        lhs, rhs);
+    return builder.create<MinFOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxs:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, lhs, rhs),
-        lhs, rhs);
+    return builder.create<MaxSIOp>(loc, lhs, rhs);
   case AtomicRMWKind::mins:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, rhs),
-        lhs, rhs);
+    return builder.create<MinSIOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxu:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt, lhs, rhs),
-        lhs, rhs);
+    return builder.create<MaxUIOp>(loc, lhs, rhs);
   case AtomicRMWKind::minu:
-    return builder.create<SelectOp>(
-        loc,
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, lhs, rhs),
-        lhs, rhs);
+    return builder.create<MinUIOp>(loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
