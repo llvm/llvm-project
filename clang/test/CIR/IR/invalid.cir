@@ -1,0 +1,11 @@
+// Test attempts to build bogus CIR
+
+// RUN: cir-tool -verify-diagnostics %s
+module  {
+  func.func @p0() {
+    // expected-error@+1 {{'cir.cst' op nullptr expects pointer type}}
+    %1 = cir.cst(#cir.null : !cir.ptr<i32>) : i32
+
+    cir.return
+  }
+}
