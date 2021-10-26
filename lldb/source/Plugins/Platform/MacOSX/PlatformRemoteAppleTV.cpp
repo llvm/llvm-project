@@ -128,12 +128,7 @@ PlatformSP PlatformRemoteAppleTV::CreateInstance(bool force,
   return lldb::PlatformSP();
 }
 
-lldb_private::ConstString PlatformRemoteAppleTV::GetPluginNameStatic() {
-  static ConstString g_name("remote-tvos");
-  return g_name;
-}
-
-const char *PlatformRemoteAppleTV::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteAppleTV::GetDescriptionStatic() {
   return "Remote Apple TV platform plug-in.";
 }
 

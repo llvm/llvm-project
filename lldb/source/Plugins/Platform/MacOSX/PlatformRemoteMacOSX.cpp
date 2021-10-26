@@ -201,12 +201,7 @@ lldb_private::Status PlatformRemoteMacOSX::GetFileWithUUID(
   return Status();
 }
 
-lldb_private::ConstString PlatformRemoteMacOSX::GetPluginNameStatic() {
-  static ConstString g_name("remote-macosx");
-  return g_name;
-}
-
-const char *PlatformRemoteMacOSX::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteMacOSX::GetDescriptionStatic() {
   return "Remote Mac OS X user platform plug-in.";
 }
 

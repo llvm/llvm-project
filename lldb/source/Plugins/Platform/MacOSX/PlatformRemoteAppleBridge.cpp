@@ -133,12 +133,7 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
   return lldb::PlatformSP();
 }
 
-lldb_private::ConstString PlatformRemoteAppleBridge::GetPluginNameStatic() {
-  static ConstString g_name("remote-bridgeos");
-  return g_name;
-}
-
-const char *PlatformRemoteAppleBridge::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteAppleBridge::GetDescriptionStatic() {
   return "Remote BridgeOS platform plug-in.";
 }
 

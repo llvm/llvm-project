@@ -104,17 +104,7 @@ PlatformSP PlatformWindows::CreateInstance(bool force,
   return PlatformSP();
 }
 
-lldb_private::ConstString PlatformWindows::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-windows");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformWindows::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformWindows::GetPluginDescriptionStatic(bool is_host) {
   return is_host ? "Local Windows user platform plug-in."
                  : "Remote Windows user platform plug-in.";
 }

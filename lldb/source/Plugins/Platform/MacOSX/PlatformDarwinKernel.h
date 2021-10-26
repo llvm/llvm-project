@@ -32,9 +32,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "darwin-kernel"; }
 
-  static const char *GetDescriptionStatic();
+  static llvm::StringRef GetDescriptionStatic();
 
   // Class Methods
   PlatformDarwinKernel(lldb_private::LazyBool is_ios_debug_session);
@@ -42,12 +42,10 @@ public:
   virtual ~PlatformDarwinKernel();
 
   // lldb_private::PluginInterface functions
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // lldb_private::Platform functions
-  const char *GetDescription() override { return GetDescriptionStatic(); }
+  llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
   void GetStatus(lldb_private::Stream &strm) override;
 
@@ -221,7 +219,7 @@ public:
 
 class PlatformDarwinKernel {
 public:
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "darwin-kernel"; }
 };
 
 #endif // __APPLE__

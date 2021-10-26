@@ -49,7 +49,7 @@ public:
   llvm::StringRef GetPluginName() override {
     return m_plugin_name.GetStringRef();
   }
-  const char *GetDescription() override { return m_description; }
+  llvm::StringRef GetDescription() override { return m_description; }
 
   lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;

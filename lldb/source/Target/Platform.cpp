@@ -294,8 +294,8 @@ PlatformSP Platform::Create(ConstString name, Status &error) {
     if (name == g_host_platform_name)
       return GetHostPlatform();
 
-    create_callback =
-        PluginManager::GetPlatformCreateCallbackForPluginName(name);
+    create_callback = PluginManager::GetPlatformCreateCallbackForPluginName(
+        name.GetStringRef());
     if (create_callback)
       platform_sp = create_callback(true, nullptr);
     else

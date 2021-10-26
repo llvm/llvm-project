@@ -1120,7 +1120,7 @@ uint32_t SBDebugger::GetNumAvailablePlatforms() {
 
   uint32_t idx = 0;
   while (true) {
-    if (!PluginManager::GetPlatformPluginNameAtIndex(idx)) {
+    if (PluginManager::GetPlatformPluginNameAtIndex(idx).empty()) {
       break;
     }
     ++idx;
@@ -1143,18 +1143,15 @@ SBStructuredData SBDebugger::GetAvailablePlatformInfoAtIndex(uint32_t idx) {
     platform_dict->AddStringItem(
         desc_str, llvm::StringRef(host_platform_sp->GetDescription()));
   } else if (idx > 0) {
-    const char *plugin_name =
+    llvm::StringRef plugin_name =
         PluginManager::GetPlatformPluginNameAtIndex(idx - 1);
-    if (!plugin_name) {
+    if (plugin_name.empty()) {
       return LLDB_RECORD_RESULT(data);
     }
     platform_dict->AddStringItem(name_str, llvm::StringRef(plugin_name));
 
-    const char *plugin_desc =
+    llvm::StringRef plugin_desc =
         PluginManager::GetPlatformPluginDescriptionAtIndex(idx - 1);
-    if (!plugin_desc) {
-      return LLDB_RECORD_RESULT(data);
-    }
     platform_dict->AddStringItem(desc_str, llvm::StringRef(plugin_desc));
   }
 
