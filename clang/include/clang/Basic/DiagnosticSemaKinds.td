@@ -11352,6 +11352,9 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_builtin_invalid_arg_type: Error <
+  "%ordinal0 argument must be a %1 (was %2)">;
+
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_matrix_index_not_integer: Error<

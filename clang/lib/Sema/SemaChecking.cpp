@@ -2288,6 +2288,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
+  case Builtin::BI__builtin_elementwise_min:
+  case Builtin::BI__builtin_elementwise_max:
+    if (SemaBuiltinElementwiseMath(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_matrix_transpose:
     return SemaBuiltinMatrixTranspose(TheCall, TheCallResult);
 
@@ -16735,6 +16740,49 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
   RefersToMemberWithReducedAlignment(
       rhs, std::bind(&Sema::AddPotentialMisalignedMembers, std::ref(*this), _1,
                      _2, _3, _4));
+}
+
+// Check if \p Ty is a valid type for the elementwise math builtins. If it is
+// not a valid type, emit an error message and return true. Otherwise return
+// false.
+static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
+                                        QualType Ty) {
+  if (!Ty->getAs<VectorType>() && !ConstantMatrixType::isValidElementType(Ty)) {
+    S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+        << 1 << "vector, integer or floating point type" << Ty;
+    return true;
+  }
+  return false;
+}
+
+bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
+
+  ExprResult A = TheCall->getArg(0);
+  ExprResult B = TheCall->getArg(1);
+  // Do standard promotions between the two arguments, returning their common
+  // type.
+  QualType Res =
+      UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
+  if (A.isInvalid() || B.isInvalid())
+    return true;
+
+  QualType TyA = A.get()->getType();
+  QualType TyB = B.get()->getType();
+
+  if (Res.isNull() || TyA.getCanonicalType() != TyB.getCanonicalType())
+    return Diag(A.get()->getBeginLoc(),
+                diag::err_typecheck_call_different_arg_types)
+           << TyA << TyB;
+
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+    return true;
+
+  TheCall->setArg(0, A.get());
+  TheCall->setArg(1, B.get());
+  TheCall->setType(Res);
+  return false;
 }
 
 ExprResult Sema::SemaBuiltinMatrixTranspose(CallExpr *TheCall,
