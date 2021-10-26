@@ -398,50 +398,9 @@ public:
       return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
     }
 
-    LValue EmitDeclRefLValue(const DeclRefExpr *E) {
-      const NamedDecl *ND = E->getDecl();
-
-      assert(E->isNonOdrUse() != NOUR_Unevaluated &&
-             "should not emit an unevaluated operand");
-
-      if (const auto *VD = dyn_cast<VarDecl>(ND)) {
-        // Global Named registers access via intrinsics only
-        assert(VD->getStorageClass() != SC_Register && "not implemented");
-        assert(E->isNonOdrUse() != NOUR_Constant && "not implemented");
-        assert(!E->refersToEnclosingVariableOrCapture() && "not implemented");
-        assert(!(VD->hasLinkage() || VD->isStaticDataMember()) &&
-               "not implemented");
-        assert(!VD->isEscapingByref() && "not implemented");
-        assert(!VD->getType()->isReferenceType() && "not implemented");
-        assert(Builder.symbolTable.count(VD) && "should be already mapped");
-
-        mlir::Value V = Builder.symbolTable.lookup(VD);
-        assert(V && "Name lookup must succeed");
-
-        LValue LV = LValue::makeAddr(RawAddress(V, CharUnits::fromQuantity(4)),
-                                     VD->getType(), AlignmentSource::Decl);
-        return LV;
-      }
-
-      llvm_unreachable("Unhandled DeclRefExpr?");
-    }
-
-    LValue EmitLValue(const Expr *E) {
-      switch (E->getStmtClass()) {
-      case Expr::DeclRefExprClass:
-        return EmitDeclRefLValue(cast<DeclRefExpr>(E));
-      default:
-        emitError(Builder.getLoc(E->getExprLoc()),
-                  "l-value not implemented for '")
-            << E->getStmtClassName() << "'";
-        break;
-      }
-      return LValue::makeAddr(RawAddress::invalid(), E->getType());
-    }
-
     /// Emits the address of the l-value, then loads and returns the result.
     mlir::Value buildLoadOfLValue(const Expr *E) {
-      LValue LV = EmitLValue(E);
+      LValue LV = Builder.buildLValue(E);
       auto load = Builder.builder.create<mlir::cir::LoadOp>(
           Builder.getLoc(E->getExprLoc()), Builder.getCIRType(E->getType()),
           LV.getPointer(), mlir::UnitAttr::get(Builder.builder.getContext()));
@@ -1074,10 +1033,231 @@ public:
     return mlir::success();
   }
 
+  LValue buildDeclRefLValue(const DeclRefExpr *E) {
+    const NamedDecl *ND = E->getDecl();
+
+    assert(E->isNonOdrUse() != NOUR_Unevaluated &&
+           "should not emit an unevaluated operand");
+
+    if (const auto *VD = dyn_cast<VarDecl>(ND)) {
+      // Global Named registers access via intrinsics only
+      assert(VD->getStorageClass() != SC_Register && "not implemented");
+      assert(E->isNonOdrUse() != NOUR_Constant && "not implemented");
+      assert(!E->refersToEnclosingVariableOrCapture() && "not implemented");
+      assert(!(VD->hasLinkage() || VD->isStaticDataMember()) &&
+             "not implemented");
+      assert(!VD->isEscapingByref() && "not implemented");
+      assert(!VD->getType()->isReferenceType() && "not implemented");
+      assert(symbolTable.count(VD) && "should be already mapped");
+
+      mlir::Value V = symbolTable.lookup(VD);
+      assert(V && "Name lookup must succeed");
+
+      LValue LV = LValue::makeAddr(RawAddress(V, CharUnits::fromQuantity(4)),
+                                   VD->getType(), AlignmentSource::Decl);
+      return LV;
+    }
+
+    llvm_unreachable("Unhandled DeclRefExpr?");
+  }
+
+  /// Emit code to compute a designator that specifies the location
+  /// of the expression.
+  /// FIXME: document this function better.
+  LValue buildLValue(const Expr *E) {
+    // FIXME: ApplyDebugLocation DL(*this, E);
+    switch (E->getStmtClass()) {
+    default: {
+      emitError(getLoc(E->getExprLoc()), "l-value not implemented for '")
+          << E->getStmtClassName() << "'";
+      assert(0 && "not implemented");
+    }
+    case Expr::ObjCPropertyRefExprClass:
+      llvm_unreachable("cannot emit a property reference directly");
+    case Expr::DeclRefExprClass:
+      return buildDeclRefLValue(cast<DeclRefExpr>(E));
+    }
+
+    return LValue::makeAddr(RawAddress::invalid(), E->getType());
+  }
+
+  /// EmitIgnoredExpr - Emit code to compute the specified expression,
+  /// ignoring the result.
+  void buildIgnoredExpr(const Expr *E) {
+    assert(!E->isPRValue() && "not implemented");
+
+    // Just emit it as an l-value and drop the result.
+    buildLValue(E);
+  }
+
   mlir::LogicalResult buildStmt(const Stmt *S) {
     if (mlir::succeeded(buildSimpleStmt(S)))
       return mlir::success();
-    assert(0 && "not implemented");
+
+    if (astCtx.getLangOpts().OpenMP && astCtx.getLangOpts().OpenMPSimd)
+      assert(0 && "not implemented");
+
+    switch (S->getStmtClass()) {
+    case Stmt::OpenACCComputeConstructClass:
+    case Stmt::OMPScopeDirectiveClass:
+    case Stmt::OMPTeamsGenericLoopDirectiveClass:
+    case Stmt::OMPParallelMaskedDirectiveClass:
+    case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+    case Stmt::OMPErrorDirectiveClass:
+    case Stmt::OMPGenericLoopDirectiveClass:
+    case Stmt::OMPMaskedTaskLoopDirectiveClass:
+    case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+    case Stmt::OMPParallelGenericLoopDirectiveClass:
+    case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+    case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+    case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+      llvm_unreachable("NYI");
+    case Stmt::NoStmtClass:
+    case Stmt::CXXCatchStmtClass:
+    case Stmt::SEHExceptStmtClass:
+    case Stmt::SEHFinallyStmtClass:
+    case Stmt::MSDependentExistsStmtClass:
+      llvm_unreachable("invalid statement class to emit generically");
+    case Stmt::NullStmtClass:
+    case Stmt::CompoundStmtClass:
+    case Stmt::DeclStmtClass:
+    case Stmt::LabelStmtClass:
+    case Stmt::AttributedStmtClass:
+    case Stmt::GotoStmtClass:
+    case Stmt::BreakStmtClass:
+    case Stmt::ContinueStmtClass:
+    case Stmt::DefaultStmtClass:
+    case Stmt::CaseStmtClass:
+    case Stmt::SEHLeaveStmtClass:
+      llvm_unreachable("should have emitted these statements as simple");
+
+#define STMT(Type, Base)
+#define ABSTRACT_STMT(Op)
+#define EXPR(Type, Base) case Stmt::Type##Class:
+#include "clang/AST/StmtNodes.inc"
+      {
+        // Remember the block we came in on.
+        mlir::Block *incoming = builder.getInsertionBlock();
+        assert(incoming && "expression emission must have an insertion point");
+
+        buildIgnoredExpr(cast<Expr>(S));
+
+        mlir::Block *outgoing = builder.getInsertionBlock();
+        assert(outgoing && "expression emission cleared block!");
+
+        // FIXME: Should we mimic LLVM emission here?
+        // The expression emitters assume (reasonably!) that the insertion
+        // point is always set.  To maintain that, the call-emission code
+        // for noreturn functions has to enter a new block with no
+        // predecessors.  We want to kill that block and mark the current
+        // insertion point unreachable in the common case of a call like
+        // "exit();".  Since expression emission doesn't otherwise create
+        // blocks with no predecessors, we can just test for that.
+        // However, we must be careful not to do this to our incoming
+        // block, because *statement* emission does sometimes create
+        // reachable blocks which will have no predecessors until later in
+        // the function.  This occurs with, e.g., labels that are not
+        // reachable by fallthrough.
+        if (incoming != outgoing && outgoing->use_empty())
+          assert(0 && "not implemented");
+        break;
+      }
+
+    case Stmt::IndirectGotoStmtClass:
+    case Stmt::IfStmtClass:
+    case Stmt::WhileStmtClass:
+    case Stmt::DoStmtClass:
+    case Stmt::ForStmtClass:
+    case Stmt::ReturnStmtClass:
+    case Stmt::SwitchStmtClass:
+    // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
+    case Stmt::GCCAsmStmtClass:
+    case Stmt::MSAsmStmtClass:
+    case Stmt::CoroutineBodyStmtClass:
+    case Stmt::CoreturnStmtClass:
+    case Stmt::CapturedStmtClass:
+    case Stmt::ObjCAtTryStmtClass:
+    case Stmt::ObjCAtThrowStmtClass:
+    case Stmt::ObjCAtSynchronizedStmtClass:
+    case Stmt::ObjCForCollectionStmtClass:
+    case Stmt::ObjCAutoreleasePoolStmtClass:
+    case Stmt::CXXTryStmtClass:
+    case Stmt::CXXForRangeStmtClass:
+    case Stmt::SEHTryStmtClass:
+    case Stmt::OMPMetaDirectiveClass:
+    case Stmt::OMPCanonicalLoopClass:
+    case Stmt::OMPParallelDirectiveClass:
+    case Stmt::OMPSimdDirectiveClass:
+    case Stmt::OMPTileDirectiveClass:
+    case Stmt::OMPUnrollDirectiveClass:
+    case Stmt::OMPForDirectiveClass:
+    case Stmt::OMPForSimdDirectiveClass:
+    case Stmt::OMPSectionsDirectiveClass:
+    case Stmt::OMPSectionDirectiveClass:
+    case Stmt::OMPSingleDirectiveClass:
+    case Stmt::OMPMasterDirectiveClass:
+    case Stmt::OMPCriticalDirectiveClass:
+    case Stmt::OMPParallelForDirectiveClass:
+    case Stmt::OMPParallelForSimdDirectiveClass:
+    case Stmt::OMPParallelMasterDirectiveClass:
+    case Stmt::OMPParallelSectionsDirectiveClass:
+    case Stmt::OMPTaskDirectiveClass:
+    case Stmt::OMPTaskyieldDirectiveClass:
+    case Stmt::OMPBarrierDirectiveClass:
+    case Stmt::OMPTaskwaitDirectiveClass:
+    case Stmt::OMPTaskgroupDirectiveClass:
+    case Stmt::OMPFlushDirectiveClass:
+    case Stmt::OMPDepobjDirectiveClass:
+    case Stmt::OMPScanDirectiveClass:
+    case Stmt::OMPOrderedDirectiveClass:
+    case Stmt::OMPAtomicDirectiveClass:
+    case Stmt::OMPTargetDirectiveClass:
+    case Stmt::OMPTeamsDirectiveClass:
+    case Stmt::OMPCancellationPointDirectiveClass:
+    case Stmt::OMPCancelDirectiveClass:
+    case Stmt::OMPTargetDataDirectiveClass:
+    case Stmt::OMPTargetEnterDataDirectiveClass:
+    case Stmt::OMPTargetExitDataDirectiveClass:
+    case Stmt::OMPTargetParallelDirectiveClass:
+    case Stmt::OMPTargetParallelForDirectiveClass:
+    case Stmt::OMPTaskLoopDirectiveClass:
+    case Stmt::OMPTaskLoopSimdDirectiveClass:
+    case Stmt::OMPMasterTaskLoopDirectiveClass:
+    case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+    case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+    case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+    case Stmt::OMPDistributeDirectiveClass:
+    case Stmt::OMPTargetUpdateDirectiveClass:
+    case Stmt::OMPDistributeParallelForDirectiveClass:
+    case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+    case Stmt::OMPDistributeSimdDirectiveClass:
+    case Stmt::OMPTargetParallelForSimdDirectiveClass:
+    case Stmt::OMPTargetSimdDirectiveClass:
+    case Stmt::OMPTeamsDistributeDirectiveClass:
+    case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+    case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+    case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+    case Stmt::OMPTargetTeamsDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    case Stmt::OMPInteropDirectiveClass:
+    case Stmt::OMPDispatchDirectiveClass:
+    case Stmt::OMPMaskedDirectiveClass: {
+      llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
+                   << "' not implemented\n";
+      assert(0 && "not implemented");
+      break;
+    }
+    case Stmt::ObjCAtCatchStmtClass:
+      llvm_unreachable(
+          "@catch statements should be handled by EmitObjCAtTryStmt");
+    case Stmt::ObjCAtFinallyStmtClass:
+      llvm_unreachable(
+          "@finally statements should be handled by EmitObjCAtTryStmt");
+    }
+
     return mlir::failure();
   }
 
