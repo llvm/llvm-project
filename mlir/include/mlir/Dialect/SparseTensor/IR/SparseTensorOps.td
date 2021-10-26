@@ -74,15 +74,17 @@ def SparseTensor_InitOp : SparseTensor_Op<"init", []>,
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [NoSideEffect, SameOperandsAndResultType]>,
+  [NoSideEffect, SameOperandsAndResultElementType]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
   string description = [{
     Converts one sparse or dense tensor type to another tensor type. The rank
-    and dimensions of the source and destination types must match, but the sparse
-    encoding of these types can obviously be different. The name `convert` was
-    preferred over `cast`, since the operation may incur a non-trivial cost.
+    of the source and destination types must match exactly, and the dimension
+    sizes must either match exactly or relax from a static to a dynamic size.
+    The sparse encoding of the two types can obviously be completely different.
+    The name `convert` was preferred over `cast`, since the operation may incur
+    a non-trivial cost.
 
     When converting between two different sparse tensor types, only explicitly
     stored values are moved from one underlying sparse storage format to

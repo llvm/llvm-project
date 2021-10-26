@@ -237,7 +237,8 @@ static LogicalResult verify(InitOp op) {
 static LogicalResult verify(ConvertOp op) {
   if (auto tp1 = op.source().getType().dyn_cast<RankedTensorType>()) {
     if (auto tp2 = op.dest().getType().dyn_cast<RankedTensorType>()) {
-      assert(tp1.getRank() == tp2.getRank());
+      if (tp1.getRank() != tp2.getRank())
+        return op.emitError("unexpected conversion mismatch in rank");
       auto shape1 = tp1.getShape();
       auto shape2 = tp2.getShape();
       // Accept size matches between the source and the destination type
