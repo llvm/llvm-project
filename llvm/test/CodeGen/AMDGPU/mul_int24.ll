@@ -177,6 +177,126 @@ entry:
   ret void
 }
 
+define i64 @test_smul48_i64(i64 %lhs, i64 %rhs) {
+; SI-LABEL: test_smul48_i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-NEXT:    v_ashr_i64 v[3:4], v[0:1], 40
+; SI-NEXT:    v_ashr_i64 v[1:2], v[1:2], 40
+; SI-NEXT:    v_mul_i32_i24_e32 v0, v3, v1
+; SI-NEXT:    v_mul_hi_i32_i24_e32 v1, v3, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: test_smul48_i64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; VI-NEXT:    v_ashrrev_i64 v[3:4], 40, v[0:1]
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 8, v2
+; VI-NEXT:    v_ashrrev_i64 v[1:2], 40, v[0:1]
+; VI-NEXT:    v_mul_i32_i24_e32 v0, v3, v1
+; VI-NEXT:    v_mul_hi_i32_i24_e32 v1, v3, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: test_smul48_i64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX9-NEXT:    v_ashrrev_i64 v[3:4], 40, v[0:1]
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 8, v2
+; GFX9-NEXT:    v_ashrrev_i64 v[1:2], 40, v[0:1]
+; GFX9-NEXT:    v_mul_i32_i24_e32 v0, v3, v1
+; GFX9-NEXT:    v_mul_hi_i32_i24_e32 v1, v3, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; EG-LABEL: test_smul48_i64:
+; EG:       ; %bb.0:
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+;
+; CM-LABEL: test_smul48_i64:
+; CM:       ; %bb.0:
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+  %shl.lhs = shl i64 %lhs, 40
+  %lhs24 = ashr i64 %shl.lhs, 40
+  %shl.rhs = shl i64 %rhs, 40
+  %rhs24 = ashr i64 %shl.rhs, 40
+  %mul = mul i64 %lhs24, %rhs24
+  ret i64 %mul
+}
+
+define <2 x i64> @test_smul48_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
+; SI-LABEL: test_smul48_v2i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 8, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 8, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; SI-NEXT:    v_ashr_i64 v[5:6], v[0:1], 40
+; SI-NEXT:    v_ashr_i64 v[1:2], v[1:2], 40
+; SI-NEXT:    v_ashr_i64 v[6:7], v[2:3], 40
+; SI-NEXT:    v_ashr_i64 v[2:3], v[3:4], 40
+; SI-NEXT:    v_mul_i32_i24_e32 v0, v1, v2
+; SI-NEXT:    v_mul_hi_i32_i24_e32 v1, v1, v2
+; SI-NEXT:    v_mul_i32_i24_e32 v2, v5, v6
+; SI-NEXT:    v_mul_hi_i32_i24_e32 v3, v5, v6
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: test_smul48_v2i64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 8, v2
+; VI-NEXT:    v_ashrrev_i64 v[7:8], 40, v[0:1]
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; VI-NEXT:    v_ashrrev_i64 v[1:2], 40, v[0:1]
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v6
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
+; VI-NEXT:    v_ashrrev_i64 v[3:4], 40, v[2:3]
+; VI-NEXT:    v_ashrrev_i64 v[4:5], 40, v[1:2]
+; VI-NEXT:    v_mul_i32_i24_e32 v0, v1, v3
+; VI-NEXT:    v_mul_hi_i32_i24_e32 v1, v1, v3
+; VI-NEXT:    v_mul_i32_i24_e32 v2, v7, v4
+; VI-NEXT:    v_mul_hi_i32_i24_e32 v3, v7, v4
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: test_smul48_v2i64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 8, v2
+; GFX9-NEXT:    v_ashrrev_i64 v[7:8], 40, v[0:1]
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX9-NEXT:    v_ashrrev_i64 v[1:2], 40, v[0:1]
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 8, v6
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
+; GFX9-NEXT:    v_ashrrev_i64 v[3:4], 40, v[2:3]
+; GFX9-NEXT:    v_ashrrev_i64 v[4:5], 40, v[1:2]
+; GFX9-NEXT:    v_mul_i32_i24_e32 v0, v1, v3
+; GFX9-NEXT:    v_mul_hi_i32_i24_e32 v1, v1, v3
+; GFX9-NEXT:    v_mul_i32_i24_e32 v2, v7, v4
+; GFX9-NEXT:    v_mul_hi_i32_i24_e32 v3, v7, v4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; EG-LABEL: test_smul48_v2i64:
+; EG:       ; %bb.0:
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+;
+; CM-LABEL: test_smul48_v2i64:
+; CM:       ; %bb.0:
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+  %shl.lhs = shl <2 x i64> %lhs, <i64 40, i64 40>
+  %lhs24 = ashr <2 x i64> %shl.lhs, <i64 40, i64 40>
+  %shl.rhs = shl <2 x i64> %rhs, <i64 40, i64 40>
+  %rhs24 = ashr <2 x i64> %shl.rhs, <i64 40, i64 40>
+  %mul = mul <2 x i64> %lhs24, %rhs24
+  ret <2 x i64> %mul
+}
+
 ; This requires handling of the original 64-bit mul node to eliminate
 ; unnecessary extension instructions because after legalization they
 ; will not be removed by SimplifyDemandedBits because there are
@@ -588,10 +708,10 @@ define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s2, 0
-; SI-NEXT:    s_cbranch_scc0 BB6_2
+; SI-NEXT:    s_cbranch_scc0 BB8_2
 ; SI-NEXT:  ; %bb.1: ; %bb7
 ; SI-NEXT:    s_endpgm
-; SI-NEXT:  BB6_2: ; %bb11
+; SI-NEXT:  BB8_2: ; %bb11
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xd
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xf
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -611,10 +731,10 @@ define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s2, 0
-; VI-NEXT:    s_cbranch_scc0 BB6_2
+; VI-NEXT:    s_cbranch_scc0 BB8_2
 ; VI-NEXT:  ; %bb.1: ; %bb7
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:  BB6_2: ; %bb11
+; VI-NEXT:  BB8_2: ; %bb11
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x3c
@@ -634,10 +754,10 @@ define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX9-NEXT:    s_cbranch_scc0 BB6_2
+; GFX9-NEXT:    s_cbranch_scc0 BB8_2
 ; GFX9-NEXT:  ; %bb.1: ; %bb7
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:  BB6_2: ; %bb11
+; GFX9-NEXT:  BB8_2: ; %bb11
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; GFX9-NEXT:    s_load_dword s3, s[0:1], 0x3c
