@@ -2269,12 +2269,14 @@ TypeSystemSwiftTypeRef::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
                                                        idx);
   return {};
 }
+
 CompilerType
 TypeSystemSwiftTypeRef::GetPointeeType(opaque_compiler_type_t type) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->GetPointeeType(ReconstructType(type));
-  return {};
+  auto impl = []() { return CompilerType(); };
+  VALIDATE_AND_RETURN(impl, GetPointeeType, type,
+                      (ReconstructType(type)), (ReconstructType(type)));
 }
+
 CompilerType
 TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
