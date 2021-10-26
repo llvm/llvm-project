@@ -206,6 +206,12 @@ cc_library(
     includes = ["include"],
     linkopts = select({
         "@bazel_tools//src/conditions:windows": [],
+        "@bazel_tools//src/conditions:freebsd": [
+            "-pthread",
+            "-lexecinfo",
+            "-ldl",
+            "-lm",
+        ],
         "//conditions:default": [
             "-pthread",
             "-ldl",
