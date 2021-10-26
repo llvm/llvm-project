@@ -677,7 +677,8 @@ void Writer::scanSymbols() {
         continue;
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
-      in.unwindInfo->addSymbol(defined);
+      if (!defined->isAbsolute() && isCodeSection(defined->isec))
+        in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       // This branch intentionally doesn't check isLive().
       if (dysym->isDynamicLookup())
@@ -691,7 +692,8 @@ void Writer::scanSymbols() {
     if (auto *objFile = dyn_cast<ObjFile>(file))
       for (Symbol *sym : objFile->symbols) {
         if (auto *defined = dyn_cast_or_null<Defined>(sym))
-          if (!defined->isExternal() && defined->isLive())
+          if (!defined->isExternal() && defined->isLive() &&
+              !defined->isAbsolute() && isCodeSection(defined->isec))
             in.unwindInfo->addSymbol(defined);
       }
   }
