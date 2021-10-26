@@ -553,8 +553,6 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
   BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  Type *I64Ty = Type::getInt64Ty(Header->getContext());
-
   SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
                      "loopprepare-chaincommon");
 
@@ -605,7 +603,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
           return false;
 
       Value *OffsetValue = SCEVE.expandCodeFor(
-          OffsetSCEV, I64Ty, LoopPredecessor->getTerminator());
+          OffsetSCEV, OffsetSCEV->getType(), LoopPredecessor->getTerminator());
 
       Instruction *NewPtr = rewriteForBucketElement(Base, Bucket.Elements[Idx],
                                                     OffsetValue, DeletedPtrs);
