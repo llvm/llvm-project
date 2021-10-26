@@ -40,7 +40,7 @@ def testTraverseOpRegionBlockIterators():
   print(f".verify = {module.operation.verify()}")
 
   # Get the regions and blocks from the default collections.
-  default_regions = list(op)
+  default_regions = list(op.regions)
   default_blocks = list(default_regions[0])
   # They should compare equal regardless of how obtained.
   assert default_regions == regions
@@ -53,7 +53,7 @@ def testTraverseOpRegionBlockIterators():
   assert default_operations == operations
 
   def walk_operations(indent, op):
-    for i, region in enumerate(op):
+    for i, region in enumerate(op.regions):
       print(f"{indent}REGION {i}:")
       for j, block in enumerate(region):
         print(f"{indent}  BLOCK {j}:")
