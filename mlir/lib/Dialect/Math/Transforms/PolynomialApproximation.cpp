@@ -198,9 +198,9 @@ static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
 namespace {
 Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
                                 llvm::ArrayRef<Value> coeffs, Value x) {
-  auto width = vectorWidth(x.getType(), isF32);
+  auto shape = vectorShape(x.getType(), isF32);
   if (coeffs.size() == 0) {
-    return broadcast(builder, f32Cst(builder, 0.0f), *width);
+    return broadcast(builder, f32Cst(builder, 0.0f), *shape);
   } else if (coeffs.size() == 1) {
     return coeffs[0];
   }
@@ -509,13 +509,13 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
 LogicalResult
 ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
                                             PatternRewriter &rewriter) const {
-  auto width = vectorWidth(op.operand().getType(), isF32);
-  if (!width.hasValue())
+  auto shape = vectorShape(op.operand().getType(), isF32);
+  if (!shape.hasValue())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
-    return broadcast(builder, value, *width);
+    return broadcast(builder, value, *shape);
   };
 
   const int intervalsCount = 3;
