@@ -1,10 +1,10 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=128 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-128
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=256 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-256
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=512 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-512
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=1024 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-1024
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=2048 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-2048
-// RUN: %clang_cc1 -triple aarch64_32-unknown-darwin -target-feature +sve -target-feature +bf16 -msve-vector-bits=512 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ILP32
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -mvscale-min=1 -mvscale-max=1 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-128
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -mvscale-min=2 -mvscale-max=2 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-256
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -mvscale-min=4 -mvscale-max=4 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-512
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -mvscale-min=8 -mvscale-max=8 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-1024
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -mvscale-min=16 -mvscale-max=16 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-2048
+// RUN: %clang_cc1 -triple aarch64_32-unknown-darwin -target-feature +sve -target-feature +bf16 -mvscale-min=4 -mvscale-max=4 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ILP32
 
 #include <arm_sve.h>
 

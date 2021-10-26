@@ -1429,6 +1429,15 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   }
   assert(TargetTable && "Global data has not been mapped\n");
 
+  // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we
+  // need to manifest base pointers prior to launching a kernel. Even if we have
+  // mapped an object only partially, e.g. A[N:M], although the kernel is
+  // expected to access elements starting at address &A[N] and beyond, we still
+  // need to manifest the base of the array &A[0]. In other cases, e.g. the COI
+  // API, we need the begin address itself, i.e. &A[N], as the API operates on
+  // begin addresses, not bases. That's why we pass args and offsets as two
+  // separate entities so that each plugin can do what it needs. This behavior
+  // was introdued via https://reviews.llvm.org/D33028 and commit 1546d319244c.
   std::vector<void *> TgtArgs;
   std::vector<ptrdiff_t> TgtOffsets;
 
@@ -1446,9 +1455,6 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     }
   }
 
-  // Get loop trip count
-  uint64_t LoopTripCount = getLoopTripCount(DeviceId);
-
   // Launch device execution.
   void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
@@ -1460,7 +1466,7 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     if (IsTeamConstruct)
       Ret = Device.runTeamRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                                  TgtArgs.size(), TeamNum, ThreadLimit,
-                                 LoopTripCount, AsyncInfo);
+                                 getLoopTripCount(DeviceId), AsyncInfo);
     else
       Ret = Device.runRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                              TgtArgs.size(), AsyncInfo);

@@ -129,6 +129,12 @@
 ; CHECK-NEXT:     Offset: 1073
 ; CHECK-NEXT:     Name: producers
 ; CHECK-NEXT:   }
+; CHECK-NEXT:   Section {
+; CHECK-NEXT:     Type: CUSTOM (0x0)
+; CHECK-NEXT:     Size: 11
+; CHECK-NEXT:     Offset: 1166
+; CHECK-NEXT:     Name: target_features
+; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
 ; CHECK-NEXT: Relocations [
 ; CHECK-NEXT:   Section (7) DATA {

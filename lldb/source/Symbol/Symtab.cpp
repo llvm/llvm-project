@@ -265,6 +265,7 @@ void Symtab::InitNameIndexes() {
   // Protected function, no need to lock mutex...
   if (!m_name_indexes_computed) {
     m_name_indexes_computed = true;
+    ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabIndexTime());
     LLDB_SCOPED_TIMER();
 
     // Collect all loaded language plugins.

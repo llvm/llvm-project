@@ -722,13 +722,6 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(llvm::StringRef s,
     llvm::sys::RetryAfterSignal(-1, ::tcsetattr, fd, TCSANOW, &options);
   }
 
-  int flags = ::fcntl(fd, F_GETFL, 0);
-  if (flags >= 0) {
-    if ((flags & O_NONBLOCK) == 0) {
-      flags |= O_NONBLOCK;
-      ::fcntl(fd, F_SETFL, flags);
-    }
-  }
   m_io_sp =
       std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, true);
   return eConnectionStatusSuccess;
@@ -759,14 +752,6 @@ ConnectionFileDescriptor::ConnectSerialPort(llvm::StringRef s,
     if (error_ptr)
       error_ptr->SetErrorToErrno();
     return eConnectionStatusError;
-  }
-
-  int flags = ::fcntl(fd, F_GETFL, 0);
-  if (flags >= 0) {
-    if ((flags & O_NONBLOCK) == 0) {
-      flags |= O_NONBLOCK;
-      ::fcntl(fd, F_SETFL, flags);
-    }
   }
 
   llvm::Expected<std::unique_ptr<SerialPort>> serial_sp = SerialPort::Create(

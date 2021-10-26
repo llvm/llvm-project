@@ -15,6 +15,7 @@
 
 #include <omp.h>
 #include <stdio.h>
+#include "omp_my_sleep.h"
 
 int *buf;
 
@@ -29,6 +30,7 @@ int foo(int n)
         #pragma omp task firstprivate(event,i,j,n) shared(ret) default(none) depend(out:ret)
         {
           //printf("Task %i, %i: %i\n", i, j, omp_get_thread_num());
+          my_sleep(.01);
           #pragma omp atomic
             ret++;
 #if _OPENMP
@@ -51,12 +53,11 @@ int foo(int n)
 int main()
 {
   int ret;
-#pragma omp parallel
+#pragma omp parallel num_threads(4)
 #pragma omp master
   {
     ret = foo(8);
   }
   printf("%i\n", ret);
-  //CHECK: 64
-  return 0;
+  return !(ret == 64);
 }

@@ -14,13 +14,13 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::vector;
+
 namespace {
 
 struct TestVectorToVectorConversion
@@ -159,11 +159,14 @@ struct TestVectorContractionConversion
     VectorContractLowering contractLowering = VectorContractLowering::Dot;
     if (lowerToFlatMatrix)
       contractLowering = VectorContractLowering::Matmul;
+    VectorMultiReductionLowering vectorMultiReductionLowering =
+        VectorMultiReductionLowering::InnerParallel;
     VectorTransposeLowering transposeLowering =
         VectorTransposeLowering::EltWise;
     if (lowerToFlatTranspose)
       transposeLowering = VectorTransposeLowering::Flat;
-    VectorTransformsOptions options{contractLowering, transposeLowering};
+    VectorTransformsOptions options{
+        contractLowering, vectorMultiReductionLowering, transposeLowering};
     populateVectorBroadcastLoweringPatterns(patterns);
     populateVectorContractLoweringPatterns(patterns, options);
     populateVectorMaskOpLoweringPatterns(patterns);
@@ -461,7 +464,10 @@ struct TestVectorMultiReductionLoweringPatterns
       llvm::cl::init(false)};
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorMultiReductionLoweringPatterns(patterns, !useOuterReductions);
+    populateVectorMultiReductionLoweringPatterns(
+        patterns, useOuterReductions
+                      ? vector::VectorMultiReductionLowering::InnerParallel
+                      : vector::VectorMultiReductionLowering::InnerReduction);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
@@ -505,7 +511,7 @@ struct TestVectorReduceToContractPatternsPatterns
   }
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
-    populateVetorReductionToContractPatterns(patterns);
+    populateVectorReductionToContractPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };

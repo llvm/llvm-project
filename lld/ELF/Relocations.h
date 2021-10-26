@@ -45,6 +45,7 @@ enum RelExpr {
   R_PC,
   R_PLT,
   R_PLT_PC,
+  R_PLT_GOTPLT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
   R_RELAX_TLS_GD_TO_IE,

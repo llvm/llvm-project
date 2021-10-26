@@ -377,6 +377,21 @@ TEST(IndexTest, RelationBaseOf) {
                              Not(HasRole(SymbolRole::RelationBaseOf)))));
 }
 
+TEST(IndexTest, EnumBase) {
+  std::string Code = R"cpp(
+    typedef int MyTypedef;
+    enum Foo : MyTypedef;
+    enum Foo : MyTypedef {};
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index), Code);
+  EXPECT_THAT(
+      Index->Symbols,
+      AllOf(Contains(AllOf(QName("MyTypedef"), HasRole(SymbolRole::Reference),
+                           WrittenAt(Position(3, 16)))),
+            Contains(AllOf(QName("MyTypedef"), HasRole(SymbolRole::Reference),
+                           WrittenAt(Position(4, 16))))));
+}
 } // namespace
 } // namespace index
 } // namespace clang

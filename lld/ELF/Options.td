@@ -119,8 +119,8 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
     "Reorder sections with call graph profile (default)",
     "Do not reorder sections with call graph profile">;
 
-// -chroot doesn't have a help text because it is an internal option.
-def chroot: Separate<["--", "-"], "chroot">;
+// --chroot doesn't have a help text because it is an internal option.
+def chroot: Separate<["--"], "chroot">;
 
 defm color_diagnostics: B<"color-diagnostics",
   "Alias for --color-diagnostics=always",
@@ -256,7 +256,7 @@ def ignore_function_address_equality: F<"ignore-function-address-equality">,
 def ignore_data_address_equality: F<"ignore-data-address-equality">,
   HelpText<"lld can break the address equality of data">;
 
-defm image_base: Eq<"image-base", "Set the base address">;
+defm image_base: EEq<"image-base", "Set the base address">;
 
 defm init: Eq<"init", "Specify an initializer function">,
   MetaVarName<"<symbol>">;

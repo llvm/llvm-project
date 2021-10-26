@@ -50,7 +50,7 @@ continue:                                         ; preds = %safepoint, %entry
 ; CHECK-DAG: [ %p, %entry ]
 ; CHECK: %cond = icmp
 ; CHECK: br i1 %cond
-; Sanity check that nothing bad happens if already last instruction
+; Check that nothing bad happens if already last instruction
 ; before terminator
   br i1 %cond, label %taken, label %untaken
 

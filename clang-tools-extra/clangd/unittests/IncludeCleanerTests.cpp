@@ -104,6 +104,30 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "int Lang = X::CXX;",
       },
       {
+          "enum class ^Color : int;",
+          "enum class Color : int {};",
+      },
+      {
+          "enum class Color : int {};",
+          "enum class Color : int;",
+      },
+      {
+          "enum class ^Color;",
+          "Color c;",
+      },
+      {
+          "enum class ^Color : int;",
+          "Color c;",
+      },
+      {
+          "enum class ^Color : char;",
+          "Color *c;",
+      },
+      {
+          "enum class ^Color : char {};",
+          "Color *c;",
+      },
+      {
           // When a type is resolved via a using declaration, the
           // UsingShadowDecl is not referenced in the AST.
           // Compare to TypedefType, or DeclRefExpr::getFoundDecl().

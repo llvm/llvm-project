@@ -560,9 +560,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
     if (tctx->thr)
       last_pos = (Event *)atomic_load_relaxed(&tctx->thr->trace_pos);
   }
-  // Too large for stack.
-  alignas(MutexSet) static char mset_storage[sizeof(MutexSet)];
-  MutexSet &mset = *new (mset_storage) MutexSet();
+  DynamicMutexSet mset;
   Vector<uptr> stack;
   uptr prev_pc = 0;
   bool found = false;
@@ -588,7 +586,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
           if (match && type == EventType::kAccessExt &&
               IsWithinAccess(addr, size, ev_addr, ev_size) &&
               is_read == ev->is_read && is_atomic == ev->is_atomic && !is_free)
-            RestoreStackMatch(pstk, pmset, &stack, &mset, ev_pc, &found);
+            RestoreStackMatch(pstk, pmset, &stack, mset, ev_pc, &found);
           return;
         }
         if (evp->is_func) {
@@ -615,7 +613,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
                 IsWithinAccess(addr, size, ev_addr, ev_size) &&
                 is_read == ev->is_read && is_atomic == ev->is_atomic &&
                 !is_free)
-              RestoreStackMatch(pstk, pmset, &stack, &mset, ev->pc, &found);
+              RestoreStackMatch(pstk, pmset, &stack, mset, ev->pc, &found);
             break;
           }
           case EventType::kAccessRange: {
@@ -630,7 +628,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
             if (match && type == EventType::kAccessExt &&
                 IsWithinAccess(addr, size, ev_addr, ev_size) &&
                 is_read == ev->is_read && !is_atomic && is_free == ev->is_free)
-              RestoreStackMatch(pstk, pmset, &stack, &mset, ev_pc, &found);
+              RestoreStackMatch(pstk, pmset, &stack, mset, ev_pc, &found);
             break;
           }
           case EventType::kLock:
@@ -644,18 +642,18 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
                 (ev->stack_hi << EventLock::kStackIDLoBits) + ev->stack_lo;
             DPrintf2("  Lock: pc=0x%zx addr=0x%zx stack=%u write=%d\n", ev_pc,
                      ev_addr, stack_id, is_write);
-            mset.AddAddr(ev_addr, stack_id, is_write);
+            mset->AddAddr(ev_addr, stack_id, is_write);
             // Events with ev_pc == 0 are written to the beginning of trace
             // part as initial mutex set (are not real).
             if (match && type == EventType::kLock && addr == ev_addr && ev_pc)
-              RestoreStackMatch(pstk, pmset, &stack, &mset, ev_pc, &found);
+              RestoreStackMatch(pstk, pmset, &stack, mset, ev_pc, &found);
             break;
           }
           case EventType::kUnlock: {
             auto *ev = reinterpret_cast<EventUnlock *>(evp);
             uptr ev_addr = RestoreAddr(ev->addr);
             DPrintf2("  Unlock: addr=0x%zx\n", ev_addr);
-            mset.DelAddr(ev_addr);
+            mset->DelAddr(ev_addr);
             break;
           }
           case EventType::kTime:
@@ -897,11 +895,7 @@ void ReportRace(ThreadState *thr) {
   if (IsFiredSuppression(ctx, typ, traces[0]))
     return;
 
-  // MutexSet is too large to live on stack.
-  Vector<u64> mset_buffer;
-  mset_buffer.Resize(sizeof(MutexSet) / sizeof(u64) + 1);
-  MutexSet *mset2 = new(&mset_buffer[0]) MutexSet();
-
+  DynamicMutexSet mset2;
   Shadow s2(thr->racy_state[1]);
   RestoreStack(s2.tid(), s2.epoch(), &traces[1], mset2, &tags[1]);
   if (IsFiredSuppression(ctx, typ, traces[1]))

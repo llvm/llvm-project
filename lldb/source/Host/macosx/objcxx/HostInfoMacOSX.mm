@@ -60,7 +60,7 @@ llvm::Optional<std::string> HostInfoMacOSX::GetOSBuildString() {
   char cstr[PATH_MAX];
   size_t cstr_len = sizeof(cstr);
   if (::sysctl(mib, 2, cstr, &cstr_len, NULL, 0) == 0)
-    return std::string(cstr, cstr_len);
+    return std::string(cstr, cstr_len - 1);
 
   return llvm::None;
 }

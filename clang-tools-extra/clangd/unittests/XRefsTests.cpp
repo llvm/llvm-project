@@ -880,6 +880,19 @@ TEST(LocateSymbol, All) {
         };
       )cpp",
 
+      R"cpp(// Enum base
+        typedef int $decl[[MyTypeDef]];
+        enum Foo : My^TypeDef {};
+      )cpp",
+      R"cpp(// Enum base
+        typedef int $decl[[MyTypeDef]];
+        enum Foo : My^TypeDef;
+      )cpp",
+      R"cpp(// Enum base
+        using $decl[[MyTypeDef]] = int;
+        enum Foo : My^TypeDef {};
+      )cpp",
+
       R"objc(
         @protocol Dog;
         @protocol $decl[[Dog]]
@@ -1952,6 +1965,20 @@ TEST(FindReferences, WithinAST) {
           bar<ns::S>(s);
           [[f^oo]](s);
         }
+      )cpp",
+
+      // Enum base
+      R"cpp(
+        typedef int $def[[MyTypeD^ef]];
+        enum MyEnum : [[MyTy^peDef]] { };
+      )cpp",
+      R"cpp(
+        typedef int $def[[MyType^Def]];
+        enum MyEnum : [[MyTypeD^ef]];
+      )cpp",
+      R"cpp(
+        using $def[[MyTypeD^ef]] = int;
+        enum MyEnum : [[MyTy^peDef]] { };
       )cpp",
   };
   for (const char *Test : Tests)

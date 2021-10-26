@@ -10,6 +10,8 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -53,7 +55,11 @@ enum class VisitEvent {
   StartTraverseFunction,
   EndTraverseFunction,
   StartTraverseAttr,
-  EndTraverseAttr
+  EndTraverseAttr,
+  StartTraverseEnum,
+  EndTraverseEnum,
+  StartTraverseTypedefType,
+  EndTraverseTypedefType,
 };
 
 class CollectInterestingEvents
@@ -71,6 +77,22 @@ public:
     Events.push_back(VisitEvent::StartTraverseAttr);
     bool Ret = RecursiveASTVisitor::TraverseAttr(A);
     Events.push_back(VisitEvent::EndTraverseAttr);
+
+    return Ret;
+  }
+
+  bool TraverseEnumDecl(EnumDecl *D) {
+    Events.push_back(VisitEvent::StartTraverseEnum);
+    bool Ret = RecursiveASTVisitor::TraverseEnumDecl(D);
+    Events.push_back(VisitEvent::EndTraverseEnum);
+
+    return Ret;
+  }
+
+  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL) {
+    Events.push_back(VisitEvent::StartTraverseTypedefType);
+    bool Ret = RecursiveASTVisitor::TraverseTypedefTypeLoc(TL);
+    Events.push_back(VisitEvent::EndTraverseTypedefType);
 
     return Ret;
   }
@@ -102,4 +124,18 @@ __attribute__((annotate("something"))) int foo() { return 10; }
                           VisitEvent::StartTraverseAttr,
                           VisitEvent::EndTraverseAttr,
                           VisitEvent::EndTraverseFunction));
+}
+
+TEST(RecursiveASTVisitorTest, EnumDeclWithBase) {
+  // Check enum and its integer base is visited.
+  llvm::StringRef Code = R"cpp(
+  typedef int Foo;
+  enum Bar : Foo;
+  )cpp";
+
+  EXPECT_THAT(collectEvents(Code),
+              ElementsAre(VisitEvent::StartTraverseEnum,
+                          VisitEvent::StartTraverseTypedefType,
+                          VisitEvent::EndTraverseTypedefType,
+                          VisitEvent::EndTraverseEnum));
 }
