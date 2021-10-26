@@ -20,7 +20,7 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL: {{^}}test_implicit:
-; HSA: kernarg_segment_byte_size = 8
+; HSA: kernarg_segment_byte_size = 64
 ; OS-MESA3D: kernarg_segment_byte_size = 24
 ; CO-V2: kernarg_segment_alignment = 4
 
@@ -36,7 +36,7 @@ define amdgpu_kernel void @test_implicit(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL: {{^}}test_implicit_alignment:
-; HSA: kernarg_segment_byte_size = 12
+; HSA: kernarg_segment_byte_size = 72
 ; OS-MESA3D: kernarg_segment_byte_size = 28
 ; CO-V2: kernarg_segment_alignment = 4
 

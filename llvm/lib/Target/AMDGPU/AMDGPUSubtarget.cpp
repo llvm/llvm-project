@@ -648,6 +648,8 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 }
 
 unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
+  assert(AMDGPU::isKernel(F.getCallingConv()));
+
   // We don't allocate the segment if we know the implicit arguments weren't
   // used, even if the ABI implies we need them.
   if (F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
@@ -655,7 +657,9 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
 
   if (isMesaKernel(F))
     return 16;
-  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 0);
+
+  // Assume all implicit inputs are used by default
+  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 56);
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,

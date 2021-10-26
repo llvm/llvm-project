@@ -478,7 +478,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; GCN: s_mov_b64 s[8:9], 0{{$}}
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
-define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #1 {
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #2 {
   call void @use_every_sgpr_input()
   ret void
 }
@@ -613,3 +613,4 @@ declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }
+attributes #2 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }

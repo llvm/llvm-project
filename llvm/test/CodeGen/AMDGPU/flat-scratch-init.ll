@@ -68,11 +68,11 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 define amdgpu_kernel void @kernel_calls_no_stack() {
 ; FLAT_SCR_OPT-LABEL: kernel_calls_no_stack:
 ; FLAT_SCR_OPT:       ; %bb.0:
-; FLAT_SCR_OPT-NEXT:    s_add_u32 s6, s6, s11
+; FLAT_SCR_OPT-NEXT:    s_add_u32 s8, s8, s13
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 s32, 0
-; FLAT_SCR_OPT-NEXT:    s_addc_u32 s7, s7, 0
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
-; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
+; FLAT_SCR_OPT-NEXT:    s_addc_u32 s9, s9, 0
+; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
+; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
 ; FLAT_SCR_OPT-NEXT:    s_getpc_b64 s[0:1]
 ; FLAT_SCR_OPT-NEXT:    s_add_u32 s0, s0, extern_func@gotpcrel32@lo+4
 ; FLAT_SCR_OPT-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12
