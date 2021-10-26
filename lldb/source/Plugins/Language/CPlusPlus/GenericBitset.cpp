@@ -1,4 +1,4 @@
-//===-- LibCxxBitset.cpp --------------------------------------------------===//
+//===-- GenericBitset.cpp //-----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibCxx.h"
+#include "LibStdcpp.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
@@ -16,9 +17,15 @@ using namespace lldb_private;
 
 namespace {
 
-class BitsetFrontEnd : public SyntheticChildrenFrontEnd {
+/// This class can be used for handling bitsets from both libcxx and libstdcpp.
+class GenericBitsetFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  BitsetFrontEnd(ValueObject &valobj);
+  enum class StdLib {
+    LibCxx,
+    LibStdcpp,
+  };
+
+  GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib);
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     return formatters::ExtractIndexFromString(name.GetCString());
@@ -30,6 +37,8 @@ public:
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
 private:
+  ConstString GetDataContainerMemberName();
+
   // The lifetime of a ValueObject and all its derivative ValueObjects
   // (children, clones, etc.) is managed by a ClusterManager. These
   // objects are only destroyed when every shared pointer to any of them
@@ -38,15 +47,16 @@ private:
   // Value objects created from raw data (i.e. in a different cluster) must
   // be referenced via shared pointer to keep them alive, however.
   std::vector<ValueObjectSP> m_elements;
-  ValueObject* m_first = nullptr;
+  ValueObject *m_first = nullptr;
   CompilerType m_bool_type;
   ByteOrder m_byte_order = eByteOrderInvalid;
   uint8_t m_byte_size = 0;
+  StdLib m_stdlib;
 };
 } // namespace
 
-BitsetFrontEnd::BitsetFrontEnd(ValueObject &valobj)
-    : SyntheticChildrenFrontEnd(valobj) {
+GenericBitsetFrontEnd::GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib)
+    : SyntheticChildrenFrontEnd(valobj), m_stdlib(stdlib) {
   m_bool_type = valobj.GetCompilerType().GetBasicTypeFromAST(eBasicTypeBool);
   if (auto target_sp = m_backend.GetTargetSP()) {
     m_byte_order = target_sp->GetArchitecture().GetByteOrder();
@@ -55,7 +65,16 @@ BitsetFrontEnd::BitsetFrontEnd(ValueObject &valobj)
   }
 }
 
-bool BitsetFrontEnd::Update() {
+ConstString GenericBitsetFrontEnd::GetDataContainerMemberName() {
+  switch (m_stdlib) {
+  case StdLib::LibCxx:
+    return ConstString("__first_");
+  case StdLib::LibStdcpp:
+    return ConstString("_M_w");
+  }
+}
+
+bool GenericBitsetFrontEnd::Update() {
   m_elements.clear();
   m_first = nullptr;
 
@@ -65,16 +84,17 @@ bool BitsetFrontEnd::Update() {
   size_t capping_size = target_sp->GetMaximumNumberOfChildrenToDisplay();
 
   size_t size = 0;
+
   if (auto arg = m_backend.GetCompilerType().GetIntegralTemplateArgument(0))
     size = arg->value.getLimitedValue(capping_size);
 
   m_elements.assign(size, ValueObjectSP());
-
-  m_first = m_backend.GetChildMemberWithName(ConstString("__first_"), true).get();
+  m_first = m_backend.GetChildMemberWithName(GetDataContainerMemberName(), true)
+                .get();
   return false;
 }
 
-ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
+ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(size_t idx) {
   if (idx >= m_elements.size() || !m_first)
     return ValueObjectSP();
 
@@ -112,9 +132,18 @@ ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
   return m_elements[idx];
 }
 
+SyntheticChildrenFrontEnd *formatters::LibStdcppBitsetSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (valobj_sp)
+    return new GenericBitsetFrontEnd(*valobj_sp,
+                                     GenericBitsetFrontEnd::StdLib::LibStdcpp);
+  return nullptr;
+}
+
 SyntheticChildrenFrontEnd *formatters::LibcxxBitsetSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
   if (valobj_sp)
-    return new BitsetFrontEnd(*valobj_sp);
+    return new GenericBitsetFrontEnd(*valobj_sp,
+                                     GenericBitsetFrontEnd::StdLib::LibCxx);
   return nullptr;
 }

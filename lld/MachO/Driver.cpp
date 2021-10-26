@@ -1006,7 +1006,6 @@ static void gatherInputSections() {
             continue;
           if (isec->getSegName() == segment_names::ld) {
             assert(isec->getName() == section_names::compactUnwind);
-            in.unwindInfo->addInput(isec);
             continue;
           }
           isec->outSecOff = inputOrder++;
