@@ -279,6 +279,20 @@ public:
                                    const char *name, ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) override;
 
+  CompilerType
+  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+
+  CompilerType
+  GetRValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+
+  CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+
   /// \}
 protected:
   /// Used in the logs.

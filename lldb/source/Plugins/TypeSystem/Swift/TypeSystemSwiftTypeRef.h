@@ -229,11 +229,6 @@ public:
   CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) override;
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
-  CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override;
-  CompilerType
-  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override;
-  CompilerType
-  GetRValueReferenceType(lldb::opaque_compiler_type_t type) override;
   uint32_t GetNumDirectBaseClasses(lldb::opaque_compiler_type_t type) override;
   CompilerType GetDirectBaseClassAtIndex(lldb::opaque_compiler_type_t type,
                                          size_t idx,
