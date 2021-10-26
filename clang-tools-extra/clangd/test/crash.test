@@ -1,5 +1,0 @@
-# Overflow the recursive json parser, prevent `yes` error due to broken pipe and `clangd` SIGSEGV from being treated as a failure.
-# RUN: (yes '[' || :) | head -n 50000 | (clangd --input-style=delimited 2>&1 || :) | FileCheck %s
-#      CHECK: Signalled while processing message:
-# CHECK-NEXT: [
-# CHECK-NEXT: [
