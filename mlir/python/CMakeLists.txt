@@ -8,10 +8,6 @@ declare_mlir_python_sources(MLIRPythonSources)
 declare_mlir_python_sources(MLIRPythonSources.Dialects
   ADD_TO_PARENT MLIRPythonSources)
 
-declare_mlir_python_sources(MLIRPythonTestSources)
-declare_mlir_python_sources(MLIRPythonTestSources.Dialects
-  ADD_TO_PARENT MLIRPythonTestSources)
-
 ################################################################################
 # Pure python sources and generated code
 ################################################################################
@@ -112,26 +108,6 @@ declare_mlir_dialect_python_bindings(
     dialects/memref.py
     dialects/_memref_ops_ext.py
   DIALECT_NAME memref)
-
-# TODO: this uses a tablegen file from the test directory and should be
-# decoupled from here.
-declare_mlir_python_sources(
-  MLIRPythonSources.Dialects.PythonTest
-  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  ADD_TO_PARENT MLIRPythonSources.Dialects
-  SOURCES dialects/python_test.py)
-set(LLVM_TARGET_DEFINITIONS
-  "${MLIR_MAIN_SRC_DIR}/test/python/python_test_ops.td")
-mlir_tablegen(
-  "dialects/_python_test_ops_gen.py"
-  -gen-python-op-bindings
-  -bind-dialect=python_test)
-add_public_tablegen_target(PythonTestDialectPyIncGen)
-declare_mlir_python_sources(
-  MLIRPythonSources.Dialects.PythonTest.ops_gen
-  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
-  ADD_TO_PARENT MLIRPythonSources.Dialects.PythonTest
-  SOURCES "dialects/_python_test_ops_gen.py")
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -312,19 +288,48 @@ declare_mlir_python_extension(MLIRPythonExtension.Transforms
     MLIRCAPITransforms
 )
 
-# TODO: This should not be included in the main Python extension. However,
+# TODO: Figure out how to put this in the test tree.
+# This should not be included in the main Python extension. However,
 # putting it into MLIRPythonTestSources along with the dialect declaration
 # above confuses Python module loader when running under lit.
-declare_mlir_python_extension(MLIRPythonExtension.PythonTest
-  MODULE_NAME _mlirPythonTest
-  ADD_TO_PARENT MLIRPythonSources.Dialects
-  SOURCES
-    ${MLIR_SOURCE_DIR}/test/python/lib/PythonTestModule.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPIPythonTestDialect
-)
+set(_ADDL_TEST_SOURCES)
+if(MLIR_INCLUDE_TESTS)
+  set(_ADDL_TEST_SOURCES MLIRPythonTestSources)
+  declare_mlir_python_sources(MLIRPythonTestSources)
+  declare_mlir_python_sources(MLIRPythonTestSources.Dialects
+    ADD_TO_PARENT MLIRPythonTestSources)
+
+  # TODO: this uses a tablegen file from the test directory and should be
+  # decoupled from here.
+  declare_mlir_python_sources(
+    MLIRPythonTestSources.Dialects.PythonTest
+    ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+    ADD_TO_PARENT MLIRPythonTestSources.Dialects
+    SOURCES dialects/python_test.py)
+  set(LLVM_TARGET_DEFINITIONS
+    "${MLIR_MAIN_SRC_DIR}/test/python/python_test_ops.td")
+  mlir_tablegen(
+    "dialects/_python_test_ops_gen.py"
+    -gen-python-op-bindings
+    -bind-dialect=python_test)
+  add_public_tablegen_target(PythonTestDialectPyIncGen)
+  declare_mlir_python_sources(
+    MLIRPythonTestSources.Dialects.PythonTest.ops_gen
+    ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+    ADD_TO_PARENT MLIRPythonTestSources.Dialects.PythonTest
+    SOURCES "dialects/_python_test_ops_gen.py")
+
+  declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtension
+    MODULE_NAME _mlirPythonTest
+    ADD_TO_PARENT MLIRPythonTestSources.Dialects
+    SOURCES
+      ${MLIR_SOURCE_DIR}/test/python/lib/PythonTestModule.cpp
+    PRIVATE_LINK_LIBS
+      LLVMSupport
+    EMBED_CAPI_LINK_LIBS
+      MLIRCAPIPythonTestDialect
+  )
+endif()
 
 ################################################################################
 # Common CAPI dependency DSO.
@@ -347,6 +352,7 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
   DECLARED_SOURCES
     MLIRPythonSources
     MLIRPythonExtension.AllPassesRegistration
+    ${_ADDL_TEST_SOURCES}
 )
 
 ################################################################################
@@ -361,13 +367,7 @@ add_mlir_python_modules(MLIRPythonModules
     MLIRPythonSources
     MLIRPythonExtension.AllPassesRegistration
     MLIRPythonCAPIHeaderSources
+    ${_ADDL_TEST_SOURCES}
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
-  )
-
-add_mlir_python_modules(MLIRPythonTestModules
-  ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_test/mlir"
-  INSTALL_PREFIX "python_packages/mlir_test/mlir"
-  DECLARED_SOURCES
-    MLIRPythonTestSources
   )
