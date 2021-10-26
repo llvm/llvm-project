@@ -371,16 +371,28 @@ Value mlir::vector::getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder,
                                                builder.getStringAttr("mul"),
                                                vector, ValueRange{});
   case AtomicRMWKind::minf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("minf"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::mins:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("minsi"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("min"),
+                                               builder.getStringAttr("minui"),
                                                vector, ValueRange{});
   case AtomicRMWKind::maxf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("maxf"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::maxs:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("maxsi"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("max"),
+                                               builder.getStringAttr("maxui"),
                                                vector, ValueRange{});
   // TODO: Add remaining reduction operations.
   default:
