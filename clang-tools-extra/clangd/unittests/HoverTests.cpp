@@ -2934,6 +2934,35 @@ Value = val
 def)pt";
   EXPECT_EQ(HI.present().asPlainText(), ExpectedPlaintext);
 }
+
+TEST(Hover, SpaceshipTemplateNoCrash) {
+  Annotations T(R"cpp(
+  namespace std {
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering equal, greater, less;
+  };
+  constexpr strong_ordering strong_ordering::equal = {0};
+  constexpr strong_ordering strong_ordering::greater = {1};
+  constexpr strong_ordering strong_ordering::less = {-1};
+  }
+
+  template <typename T>
+  struct S {
+    // Foo bar baz
+    friend auto operator<=>(S, S) = default;
+  };
+  static_assert(S<void>() =^= S<void>());
+    )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.ExtraArgs.push_back("-std=c++20");
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  EXPECT_EQ(HI->Documentation, "Foo bar baz");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

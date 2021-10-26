@@ -262,24 +262,30 @@ const FunctionDecl *getUnderlyingFunction(const Decl *D) {
 // Returns the decl that should be used for querying comments, either from index
 // or AST.
 const NamedDecl *getDeclForComment(const NamedDecl *D) {
+  const NamedDecl *DeclForComment = D;
   if (const auto *TSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     // Template may not be instantiated e.g. if the type didn't need to be
     // complete; fallback to primary template.
     if (TSD->getTemplateSpecializationKind() == TSK_Undeclared)
-      return TSD->getSpecializedTemplate();
-    if (const auto *TIP = TSD->getTemplateInstantiationPattern())
-      return TIP;
-  }
-  if (const auto *TSD = llvm::dyn_cast<VarTemplateSpecializationDecl>(D)) {
+      DeclForComment = TSD->getSpecializedTemplate();
+    else if (const auto *TIP = TSD->getTemplateInstantiationPattern())
+      DeclForComment = TIP;
+  } else if (const auto *TSD =
+                 llvm::dyn_cast<VarTemplateSpecializationDecl>(D)) {
     if (TSD->getTemplateSpecializationKind() == TSK_Undeclared)
-      return TSD->getSpecializedTemplate();
-    if (const auto *TIP = TSD->getTemplateInstantiationPattern())
-      return TIP;
-  }
-  if (const auto *FD = D->getAsFunction())
+      DeclForComment = TSD->getSpecializedTemplate();
+    else if (const auto *TIP = TSD->getTemplateInstantiationPattern())
+      DeclForComment = TIP;
+  } else if (const auto *FD = D->getAsFunction())
     if (const auto *TIP = FD->getTemplateInstantiationPattern())
-      return TIP;
-  return D;
+      DeclForComment = TIP;
+  // Ensure that getDeclForComment(getDeclForComment(X)) = getDeclForComment(X).
+  // This is usually not needed, but in strange cases of comparision operators
+  // being instantiated from spasceship operater, which itself is a template
+  // instantiation the recursrive call is necessary.
+  if (D != DeclForComment)
+    DeclForComment = getDeclForComment(DeclForComment);
+  return DeclForComment;
 }
 
 // Look up information about D from the index, and add it to Hover.
