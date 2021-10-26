@@ -877,6 +877,34 @@ struct LinalgEnablingOptions {
 /// Vector lowering options control how ops are lowered down to 1-D and scf.for
 /// form.
 struct LinalgVectorLoweringOptions {
+  /// Enable lowering of vector.contract.
+  /// In a progressive lowering of vectors, this would be the 1st step.
+  bool contractionLowering = false;
+  LinalgVectorLoweringOptions &enableContractionLowering(bool val = true) {
+    contractionLowering = val;
+    return *this;
+  }
+  /// Enable lowering of vector.multi_reduce.
+  /// In a progressive lowering of vectors, this would be the 2nd step.
+  bool multiReductionLowering = false;
+  LinalgVectorLoweringOptions &enableMultiReductionLowering(bool val = true) {
+    multiReductionLowering = val;
+    return *this;
+  }
+  /// Trigger full / partial vector.transfer splits.
+  /// In a progressive lowering of vectors, this would be the 3rd step.
+  bool transferPartialRewrite = false;
+  LinalgVectorLoweringOptions &enableTransferPartialRewrite(bool val = true) {
+    transferPartialRewrite = val;
+    return *this;
+  }
+  /// Enable lowering of vector.transfer to scf.
+  /// In a progressive lowering of vectors, this would be the 4th step.
+  bool transferToSCFConversion = false;
+  LinalgVectorLoweringOptions &enableTransferToSCFConversion(bool val = true) {
+    transferToSCFConversion = val;
+    return *this;
+  }
   /// Maximal transfer rank under which we do not lower further.
   int64_t maxTransferRank = 1;
   LinalgVectorLoweringOptions &setMaxTransferRank(int64_t val) {
@@ -885,41 +913,27 @@ struct LinalgVectorLoweringOptions {
   }
   /// Vector lowering operations may result in surprising behavior when
   /// composing multiple codegen strategies and must be enabled explicitly.
+  /// In a progressive lowering of vectors, this would be the 5th step.
   bool transferLowering = true;
   LinalgVectorLoweringOptions &enableTransferLowering(bool val = true) {
     transferLowering = val;
     return *this;
   }
+  /// Enable lowering of vector.shape_cast to insert/extract.
+  /// In a progressive lowering of vectors, this would be the 6th step.
+  bool shapeCastLowering = true;
+  LinalgVectorLoweringOptions &enableShapeCastLowering(bool val = true) {
+    shapeCastLowering = val;
+    return *this;
+  }
   /// Enable lowering of vector.transpose.
+  /// In a progressive lowering of vectors, this would be the 7th step.
   bool transposeLowering = false;
   LinalgVectorLoweringOptions &enableVectorTransposeLowering(bool val = true) {
     transposeLowering = val;
     return *this;
   }
-  /// Enable lowering of vector.multi_reduce.
-  bool multiReductionLowering = false;
-  LinalgVectorLoweringOptions &enableMultiReductionLowering(bool val = true) {
-    multiReductionLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.contract.
-  bool contractionLowering = false;
-  LinalgVectorLoweringOptions &enableContractionLowering(bool val = true) {
-    contractionLowering = val;
-    return *this;
-  }
-  /// Trigger full / partial vector.transfer splits.
-  bool transferPartialRewrite = false;
-  LinalgVectorLoweringOptions &enableTransferPartialRewrite(bool val = true) {
-    transferPartialRewrite = val;
-    return *this;
-  }
-  /// Enable lowering of vector.transfer to scf.
-  bool transferToSCFConversion = false;
-  LinalgVectorLoweringOptions &enableTransferToSCFConversion(bool val = true) {
-    transferToSCFConversion = val;
-    return *this;
-  }
+
   /// Configure the post staged-patterns late vector.transfer to scf
   /// conversion.
   VectorTransferToSCFOptions vectorTransferToSCFOptions;

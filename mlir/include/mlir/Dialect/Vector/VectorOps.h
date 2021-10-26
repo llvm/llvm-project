@@ -81,12 +81,6 @@ void populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns,
     llvm::Optional<unsigned> maxTransferRank = llvm::None);
 
-/// Collect a set of transfer read/write lowering patterns that simplify the
-/// permutation map (e.g., converting it to a minor identity map) by inserting
-/// broadcasts and transposes.
-void populateVectorTransferPermutationMapLoweringPatterns(
-    RewritePatternSet &patterns);
-
 /// These patterns materialize masks for various vector ops such as transfers.
 void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
                                                bool enableIndexOptimizations);

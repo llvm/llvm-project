@@ -169,6 +169,64 @@ void populateVectorContractLoweringPatterns(
 /// transpose/broadcast ops into the contract.
 void populateVectorReductionToContractPatterns(RewritePatternSet &patterns);
 
+//===----------------------------------------------------------------------===//
+// Vector.transfer patterns.
+//===----------------------------------------------------------------------===//
+/// Collect a set of transfer read/write lowering patterns that simplify the
+/// permutation map (e.g., converting it to a minor identity map) by inserting
+/// broadcasts and transposes. More specifically:
+///
+/// [TransferReadPermutationLowering]
+/// Lower transfer_read op with permutation into a transfer_read with a
+/// permutation map composed of leading zeros followed by a minor identity +
+/// vector.transpose op.
+/// Ex:
+///     vector.transfer_read ...
+///         permutation_map: (d0, d1, d2) -> (0, d1)
+/// into:
+///     %v = vector.transfer_read ...
+///         permutation_map: (d0, d1, d2) -> (d1, 0)
+///     vector.transpose %v, [1, 0]
+///
+///     vector.transfer_read ...
+///         permutation_map: (d0, d1, d2, d3) -> (0, 0, 0, d1, d3)
+/// into:
+///     %v = vector.transfer_read ...
+///         permutation_map: (d0, d1, d2, d3) -> (0, 0, d1, 0, d3)
+///     vector.transpose %v, [0, 1, 3, 2, 4]
+/// Note that an alternative is to transform it to linalg.transpose +
+/// vector.transfer_read to do the transpose in memory instead.
+///
+/// [TransferWritePermutationLowering]
+/// Lower transfer_write op with permutation into a transfer_write with a
+/// minor identity permutation map. (transfer_write ops cannot have broadcasts.)
+/// Ex:
+///     vector.transfer_write %v ...
+///         permutation_map: (d0, d1, d2) -> (d2, d0, d1)
+/// into:
+///     %tmp = vector.transpose %v, [2, 0, 1]
+///     vector.transfer_write %tmp ...
+///         permutation_map: (d0, d1, d2) -> (d0, d1, d2)
+///
+///     vector.transfer_write %v ...
+///         permutation_map: (d0, d1, d2, d3) -> (d3, d2)
+/// into:
+///     %tmp = vector.transpose %v, [1, 0]
+///     %v = vector.transfer_write %tmp ...
+///         permutation_map: (d0, d1, d2, d3) -> (d2, d3)
+///
+/// [TransferOpReduceRank]
+/// Lower transfer_read op with broadcast in the leading dimensions into
+/// transfer_read of lower rank + vector.broadcast.
+/// Ex: vector.transfer_read ...
+///         permutation_map: (d0, d1, d2, d3) -> (0, d1, 0, d3)
+/// into:
+///     %v = vector.transfer_read ...
+///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
+///     vector.broadcast %v
+void populateVectorTransferPermutationMapLoweringPatterns(
+    RewritePatternSet &patterns);
+
 /// Collect a set of patterns to reduce the rank of the operands of vector
 /// transfer ops to operate on the largest contigious vector.
 /// These patterns are useful when lowering to dialects with 1d vector type
