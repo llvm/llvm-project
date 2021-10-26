@@ -95,6 +95,17 @@ public:
 
   OutputBuffer &operator<<(StringView R) { return (*this += R); }
 
+  OutputBuffer prepend(StringView R) {
+    size_t Size = R.size();
+
+    grow(Size);
+    std::memmove(Buffer + Size, Buffer, CurrentPosition);
+    std::memcpy(Buffer, R.begin(), Size);
+    CurrentPosition += Size;
+
+    return *this;
+  }
+
   OutputBuffer &operator<<(char C) { return (*this += C); }
 
   OutputBuffer &operator<<(long long N) {
