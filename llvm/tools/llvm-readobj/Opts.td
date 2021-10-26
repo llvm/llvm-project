@@ -83,6 +83,10 @@ def coff_load_config : FF<"coff-load-config", "Display load config">, Group<grp_
 def coff_resources : FF<"coff-resources", "Display .rsrc section">, Group<grp_coff>;
 def coff_tls_directory : FF<"coff-tls-directory", "Display TLS directory">, Group<grp_coff>;
 
+// XCOFF specific options.
+def grp_xcoff : OptionGroup<"kind">, HelpText<"OPTIONS (XCOFF specific)">;
+def auxiliary_header : FF<"auxiliary-header" , "display the auxiliary header">, Group<grp_xcoff>;
+
 def help : FF<"help", "Display this help">;
 def version : FF<"version", "Display the version">;
 
