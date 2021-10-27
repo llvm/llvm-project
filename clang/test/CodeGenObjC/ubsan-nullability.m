@@ -102,9 +102,8 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
                               int *arg4,
                               int arg5, ...) {
   // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
-  // CHECK-NEXT: [[DO_RV_CHECK_1:%.*]] = and i1 true, [[ARG1CMP]], !nosanitize
   // CHECK: [[ARG2CMP:%.*]] = icmp ne i32* %arg2, null, !nosanitize
-  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[DO_RV_CHECK_1]], [[ARG2CMP]]
+  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[ARG1CMP]], [[ARG2CMP]]
   // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
   // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
   // CHECK-NEXT: [[DO_RV_CHECK_3:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK_2]]
@@ -128,10 +127,9 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 // CHECK-LABEL: define internal i32* @"\01+[A objc_clsmethod:]"
 +(int *_Nonnull) objc_clsmethod: (int *_Nonnull) arg1 {
   // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
-  // CHECK-NEXT: [[DO_RV_CHECK:%.*]] = and i1 true, [[ARG1CMP]]
   // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
   // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
-  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK]]
+  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[ARG1CMP]]
   // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
@@ -145,10 +143,9 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 // CHECK-LABEL: define internal i32* @"\01-[A objc_method:]"
 -(int *_Nonnull) objc_method: (int *_Nonnull) arg1 {
   // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
-  // CHECK-NEXT: [[DO_RV_CHECK:%.*]] = and i1 true, [[ARG1CMP]]
   // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
   // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
-  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK]]
+  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[ARG1CMP]]
   // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize

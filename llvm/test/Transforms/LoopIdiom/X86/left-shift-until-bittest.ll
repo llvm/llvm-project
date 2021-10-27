@@ -714,7 +714,7 @@ define void @p10_x_is_not_one(i32 %bit, i32* %p0, i32* %p1) {
 ; LZCNT-NEXT:    call void @llvm.dbg.value(metadata i32 [[BITMASK]], metadata [[META166:![0-9]+]], metadata !DIExpression()), !dbg [[DBG171]]
 ; LZCNT-NEXT:    [[BIT_LOWBITMASK:%.*]] = add i32 [[BITMASK]], -1, !dbg [[DBG172:![0-9]+]]
 ; LZCNT-NEXT:    [[BIT_MASK:%.*]] = or i32 [[BIT_LOWBITMASK]], [[BITMASK]], !dbg [[DBG172]]
-; LZCNT-NEXT:    [[DOTMASKED:%.*]] = and i32 2, [[BIT_MASK]], !dbg [[DBG172]]
+; LZCNT-NEXT:    [[DOTMASKED:%.*]] = and i32 [[BIT_MASK]], 2, !dbg [[DBG172]]
 ; LZCNT-NEXT:    [[DOTMASKED_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[DOTMASKED]], i1 true), !dbg [[DBG172]]
 ; LZCNT-NEXT:    [[DOTMASKED_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[DOTMASKED_NUMLEADINGZEROS]], !dbg [[DBG172]]
 ; LZCNT-NEXT:    [[DOTMASKED_LEADINGONEPOS:%.*]] = add nsw i32 [[DOTMASKED_NUMACTIVEBITS]], -1, !dbg [[DBG172]]
