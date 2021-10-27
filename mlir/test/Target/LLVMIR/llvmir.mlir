@@ -799,10 +799,10 @@ llvm.func @memref_dim(%arg0: !llvm.struct<(ptr<f32>, i64, i64)>) -> i64 {
 // CHECK-NEXT: %3 = extractvalue { float*, i64, i64 } %0, 2
   %3 = llvm.extractvalue %arg0[2] : !llvm.struct<(ptr<f32>, i64, i64)>
 // Checking that the constant for d0 has been created.
-// CHECK-NEXT: %4 = add i64 42, %2
+// CHECK-NEXT: %4 = add i64 %2, 42
   %4 = llvm.add %0, %1 : i64
 // Checking that the constant for d2 has been created.
-// CHECK-NEXT: %5 = add i64 10, %3
+// CHECK-NEXT: %5 = add i64 %3, 10
   %5 = llvm.add %2, %3 : i64
 // CHECK-NEXT: %6 = add i64 %4, %5
   %6 = llvm.add %4, %5 : i64
