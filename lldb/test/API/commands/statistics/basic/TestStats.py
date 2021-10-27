@@ -283,3 +283,85 @@ class TestCase(TestBase):
         ]
         self.assertNotEqual(exe_module, None)
         self.verify_keys(exe_module, 'module dict for "%s"' % (exe), module_keys)
+
+    def test_breakpoints(self):
+        """Test "statistics dump"
+
+        Output expected to be something like:
+
+        {
+          "modules" : [...],
+          "targets" : [
+                {
+                    "firstStopTime": 0.34164492800000001,
+                    "launchOrAttachTime": 0.31969605400000001,
+                    "moduleIdentifiers": [...],
+                    "targetCreateTime": 0.0040863039999999998
+                    "expressionEvaluation": {
+                        "failures": 0,
+                        "successes": 0
+                    },
+                    "frameVariable": {
+                        "failures": 0,
+                        "successes": 0
+                    },
+                    "breakpoints": [
+                        {
+                            "details": {...},
+                            "id": 1,
+                            "resolveTime": 2.65438675
+                        },
+                        {
+                            "details": {...},
+                            "id": 2,
+                            "resolveTime": 4.3632581669999997
+                        }                        
+                    ]
+                }
+            ],
+            "totalDebugInfoByteSize": 182522234,
+            "totalDebugInfoIndexTime": 2.33343,
+            "totalDebugInfoParseTime": 8.2121400240000071,
+            "totalSymbolTableParseTime": 0.123,
+            "totalSymbolTableIndexTime": 0.234,
+            "totalBreakpointResolveTime": 7.0176449170000001
+        }
+
+        """
+        target = self.createTestTarget()
+        self.runCmd("b main.cpp:7")
+        self.runCmd("b a_function")
+        debug_stats = self.get_stats()
+        debug_stat_keys = [
+            'modules', 
+            'targets',
+            'totalSymbolTableParseTime',
+            'totalSymbolTableIndexTime',
+            'totalDebugInfoParseTime',
+            'totalDebugInfoIndexTime',
+            'totalDebugInfoByteSize',
+        ]
+        self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
+        target_stats = debug_stats['targets'][0]
+        keys_exist = [
+            'breakpoints',
+            'expressionEvaluation',
+            'frameVariable',
+            'targetCreateTime',
+            'moduleIdentifiers',
+            'totalBreakpointResolveTime',
+        ]
+        self.verify_keys(target_stats, '"stats"', keys_exist, None)
+        self.assertGreater(target_stats['totalBreakpointResolveTime'], 0.0)
+        breakpoints = target_stats['breakpoints']
+        bp_keys_exist = [
+            'details',
+            'id',
+            'internal',
+            'numLocations',
+            'numResolvedLocations',
+            'resolveTime'
+        ]
+        for breakpoint in breakpoints:
+            self.verify_keys(breakpoint, 'target_stats["breakpoints"]', 
+                             bp_keys_exist, None)
