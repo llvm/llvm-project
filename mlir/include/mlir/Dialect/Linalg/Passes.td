@@ -43,7 +43,10 @@ def LinalgComprehensiveModuleBufferize :
            "Allows the return of memrefs (for testing purposes only)">,
     Option<"useAlloca", "use-alloca", "bool",
            /*default=*/"false",
-           "Use stack allocations for memrefs (for testing purposes only)">
+           "Use stack allocations for memrefs (for testing purposes only)">,
+    Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
+           /*default=*/"0",
+           "Analyze ops in random order with a given seed (fuzzer)">
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }

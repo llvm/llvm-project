@@ -107,6 +107,8 @@
 
 #include "mlir/Dialect/Linalg/Transforms/ComprehensiveBufferize.h"
 
+#include <random>
+
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -2359,7 +2361,16 @@ bufferizableInPlaceAnalysis(OpOperand &operand,
 /// ExtractSliceOps are interleaved with other ops in traversal order.
 LogicalResult mlir::linalg::inPlaceAnalysis(SmallVector<Operation *> &ops,
                                             BufferizationAliasInfo &aliasInfo,
-                                            const DominanceInfo &domInfo) {
+                                            const DominanceInfo &domInfo,
+                                            unsigned analysisFuzzerSeed) {
+  if (analysisFuzzerSeed) {
+    // This is a fuzzer. For testing purposes only. Randomize the order in which
+    // operations are analyzed. The bufferization quality is likely worse, but
+    // we want to make sure that no assertions are triggered anywhere.
+    std::mt19937 g(analysisFuzzerSeed);
+    llvm::shuffle(ops.begin(), ops.end(), g);
+  }
+
   // Walk ops in reverse for better interference analysis.
   for (Operation *op : reverse(ops)) {
     for (OpOperand &opOperand : op->getOpOperands())
@@ -2383,7 +2394,8 @@ LogicalResult mlir::linalg::inPlaceAnalysis(SmallVector<Operation *> &ops,
 /// Analyze the `funcOp` body to determine which OpResults are inplaceable.
 static LogicalResult
 inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
-                          const DominanceInfo &domInfo) {
+                          const DominanceInfo &domInfo,
+                          unsigned analysisFuzzerSeed = 0) {
   LLVM_DEBUG(llvm::dbgs() << "\n\n");
   LDBG("Begin InPlaceAnalysisFuncOpInternals:\n" << funcOp << '\n');
   assert(funcOp && funcOp->getNumRegions() > 0 && !funcOp.body().empty() &&
@@ -2408,7 +2420,8 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
       aliasInfo.setBufferizesToWritableMemory(bbArg);
   }
 
-  LogicalResult res = inPlaceAnalysis(ops, aliasInfo, domInfo);
+  LogicalResult res =
+      inPlaceAnalysis(ops, aliasInfo, domInfo, analysisFuzzerSeed);
   LDBG("End InPlaceAnalysisFuncOpInternals:\n" << funcOp << '\n');
 
   return res;
@@ -3099,7 +3112,8 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
           setInPlaceFuncArgument(bbArg);
 
     // If the analysis fails, just return.
-    if (failed(inPlaceAnalysisFuncOpBody(funcOp, aliasInfo, domInfo))) {
+    if (failed(inPlaceAnalysisFuncOpBody(funcOp, aliasInfo, domInfo,
+                                         analysisFuzzerSeed))) {
       signalPassFailure();
       return;
     }
