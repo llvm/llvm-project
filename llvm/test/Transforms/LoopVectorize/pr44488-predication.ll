@@ -17,7 +17,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE4:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 99, [[TMP0]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 [[TMP0]], 99
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[OFFSET_IDX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], <i16 0, i16 1>
@@ -51,7 +51,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[TMP15]], i16* @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 12, 12
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -74,7 +74,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[COND6]], i16* @v_39, align 1
 ; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RV:%.*]] = load i16, i16* @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]

@@ -17,7 +17,7 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[MUL_RESULT]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 0
@@ -163,7 +163,7 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[MUL_RESULT]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 0

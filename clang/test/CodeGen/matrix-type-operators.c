@@ -909,9 +909,9 @@ void insert_int_idx_expr(ix9x3_t a, int i) {
   // CHECK-LABEL: @insert_int_idx_expr(
   // CHECK:         [[I1:%.*]] = load i32, i32* %i.addr, align 4
   // CHECK-NEXT:    [[I2:%.*]] = load i32, i32* %i.addr, align 4
-  // CHECK-NEXT:    [[I2_ADD:%.*]] = add nsw i32 4, [[I2]]
+  // CHECK-NEXT:    [[I2_ADD:%.*]] = add nsw i32 [[I2]], 4
   // CHECK-NEXT:    [[ADD_EXT:%.*]] = sext i32 [[I2_ADD]] to i64
-  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 18, [[ADD_EXT]]
+  // CHECK-NEXT:    [[IDX2:%.*]] = add i64 [[ADD_EXT]], 18
   // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX2]], 27
   // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[MAT:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
@@ -1004,7 +1004,7 @@ double test_extract_matrix_pointer1(dx3x2_t **ptr, unsigned j) {
   // CHECK-LABEL: @test_extract_matrix_pointer1(
   // CHECK:         [[J:%.*]] = load i32, i32* %j.addr, align 4
   // CHECK-NEXT:    [[J_EXT:%.*]] = zext i32 [[J]] to i64
-  // CHECK-NEXT:    [[IDX:%.*]] = add i64 3, [[J_EXT]]
+  // CHECK-NEXT:    [[IDX:%.*]] = add i64 [[J_EXT]], 3
   // OPT-NEXT:      [[CMP:%.*]] = icmp ult i64 [[IDX]], 6
   // OPT-NEXT:      call void @llvm.assume(i1 [[CMP]])
   // CHECK-NEXT:    [[PTR:%.*]] = load [6 x double]**, [6 x double]*** %ptr.addr, align 8

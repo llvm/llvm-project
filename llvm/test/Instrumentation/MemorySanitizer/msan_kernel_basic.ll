@@ -350,7 +350,7 @@ attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
 
 ; CHECK: [[OSIZE:%[0-9]+]] = load i64, i64* [[VA_ARG_OVERFLOW_SIZE]]
 ; Register save area is 48 bytes for non-SSE builds.
-; CHECK: [[SIZE:%[0-9]+]] = add i64 48, [[OSIZE]]
+; CHECK: [[SIZE:%[0-9]+]] = add i64 [[OSIZE]], 48
 ; CHECK: [[SHADOWS:%[0-9]+]] = alloca i8, i64 [[SIZE]]
 ; CHECK: [[VA_ARG_SHADOW]]
 ; CHECK: call void @llvm.memcpy{{.*}}(i8* align 8 [[SHADOWS]], {{.*}}, i64 [[SIZE]]
