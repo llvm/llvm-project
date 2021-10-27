@@ -138,35 +138,36 @@ Error SelfExecutorProcessControl::disconnect() {
 void SelfExecutorProcessControl::writeUInt8sAsync(
     ArrayRef<tpctypes::UInt8Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *W.Addr.toPtr<uint8_t *>() = W.Value;
+    *jitTargetAddressToPointer<uint8_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeUInt16sAsync(
     ArrayRef<tpctypes::UInt16Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *W.Addr.toPtr<uint16_t *>() = W.Value;
+    *jitTargetAddressToPointer<uint16_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeUInt32sAsync(
     ArrayRef<tpctypes::UInt32Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *W.Addr.toPtr<uint32_t *>() = W.Value;
+    *jitTargetAddressToPointer<uint32_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeUInt64sAsync(
     ArrayRef<tpctypes::UInt64Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *W.Addr.toPtr<uint64_t *>() = W.Value;
+    *jitTargetAddressToPointer<uint64_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeBuffersAsync(
     ArrayRef<tpctypes::BufferWrite> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    memcpy(W.Addr.toPtr<char *>(), W.Buffer.data(), W.Buffer.size());
+    memcpy(jitTargetAddressToPointer<char *>(W.Address), W.Buffer.data(),
+           W.Buffer.size());
   OnWriteComplete(Error::success());
 }
 
