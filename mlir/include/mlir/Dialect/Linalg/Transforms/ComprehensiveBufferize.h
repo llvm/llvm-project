@@ -173,7 +173,8 @@ private:
 /// Analyze the `ops` to determine which OpResults are inplaceable.
 LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                               BufferizationAliasInfo &aliasInfo,
-                              const DominanceInfo &domInfo);
+                              const DominanceInfo &domInfo,
+                              unsigned analysisFuzzerSeed = 0);
 
 /// Default allocation function that is used by the comprehensive bufferization
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
