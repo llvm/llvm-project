@@ -57,7 +57,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX512: LV: Found an estimated cost of 40 for VF 32 For instruction:   %valB = load i64, i64* %inB, align 8
 ; AVX512: LV: Found an estimated cost of 80 for VF 64 For instruction:   %valB = load i64, i64* %inB, align 8
 ;
-; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %v0 = load i8, i8* %in0, align 2
+; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %valB = load i64, i64* %inB, align 8
 
 define void @test() {
 entry:
