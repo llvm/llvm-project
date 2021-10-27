@@ -6047,27 +6047,6 @@ SwiftASTContext::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
   return TypeMemberFunctionImpl();
 }
 
-CompilerType
-SwiftASTContext::GetLValueReferenceType(opaque_compiler_type_t type) {
-  return {};
-}
-
-CompilerType
-SwiftASTContext::GetRValueReferenceType(opaque_compiler_type_t type) {
-  return {};
-}
-
-CompilerType SwiftASTContext::GetNonReferenceType(opaque_compiler_type_t type) {
-  VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
-
-  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-
-  swift::LValueType *lvalue = swift_can_type->getAs<swift::LValueType>();
-  if (lvalue)
-    return ToCompilerType({lvalue->getObjectType().getPointer()});
-  return {};
-}
-
 CompilerType SwiftASTContext::GetPointeeType(opaque_compiler_type_t type) {
   return {};
 }
