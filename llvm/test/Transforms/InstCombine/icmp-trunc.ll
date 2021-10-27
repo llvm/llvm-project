@@ -68,3 +68,103 @@ define i1 @PR52260(i32 %x) {
   %tobool = icmp eq i8 %conv2, 0
   ret i1 %tobool
 }
+
+define i1 @ult_192(i32 %x) {
+; CHECK-LABEL: @ult_192(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T]], -64
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t = trunc i32 %x to i8
+  %r = icmp ult i8 %t, 192 ; 0b1100_0000
+  ret i1 %r
+}
+
+define <2 x i1> @ult_2044_splat(<2 x i16> %x) {
+; CHECK-LABEL: @ult_2044_splat(
+; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i11>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i11> [[T]], <i11 -4, i11 -4>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t = trunc <2 x i16> %x to <2 x i11>
+  %r = icmp ult <2 x i11> %t, <i11 2044, i11 2044> ; 0b111_1111_1100
+  ret <2 x i1> %r
+}
+
+; negative test - need high-bit-mask constant
+
+define i1 @ult_96(i32 %x) {
+; CHECK-LABEL: @ult_96(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T]], 96
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t = trunc i32 %x to i8
+  %r = icmp ult i8 %t, 96  ; 0b0110_0000
+  ret i1 %r
+}
+
+; negative test - no extra use allowed
+
+define i1 @ult_192_use(i32 %x) {
+; CHECK-LABEL: @ult_192_use(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[T]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T]], -64
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t = trunc i32 %x to i8
+  call void @use(i8 %t)
+  %r = icmp ult i8 %t, 192
+  ret i1 %r
+}
+
+define i1 @ugt_253(i32 %x) {
+; CHECK-LABEL: @ugt_253(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[T]], -3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t = trunc i32 %x to i8
+  %r = icmp ugt i8 %t, 253
+  ret i1 %r
+}
+
+define <2 x i1> @ugt_239_splat(<2 x i16> %x) {
+; CHECK-LABEL: @ugt_239_splat(
+; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i11>
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i11> [[T]], <i11 239, i11 239>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t = trunc <2 x i16> %x to <2 x i11>
+  %r = icmp ugt <2 x i11> %t, <i11 239, i11 239>
+  ret <2 x i1> %r
+}
+
+; negative test - need inverted power-of-2 constant
+
+define i1 @ugt_3(i32 %x) {
+; CHECK-LABEL: @ugt_3(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[T]], -4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t = trunc i32 %x to i8
+  %r = icmp ugt i8 %t, 252
+  ret i1 %r
+}
+
+; negative test - no extra use allowed
+
+define i1 @ugt_2_use(i32 %x) {
+; CHECK-LABEL: @ugt_2_use(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[T]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[T]], -3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t = trunc i32 %x to i8
+  call void @use(i8 %t)
+  %r = icmp ugt i8 %t, 253
+  ret i1 %r
+}
