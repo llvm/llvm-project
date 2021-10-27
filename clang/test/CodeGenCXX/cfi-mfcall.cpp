@@ -25,9 +25,8 @@ void f(S *s, void (S::*p)()) {
 
   // CHECK: [[NVFPTR:%.*]] = bitcast void (%struct.S*)* {{.*}} to i8*
   // CHECK: [[TT1:%.*]] = call i1 @llvm.type.test(i8* [[NVFPTR]], metadata !"_ZTSM2B1FvvE")
-  // CHECK: [[OR1:%.*]] = or i1 false, [[TT1]]
   // CHECK: [[TT2:%.*]] = call i1 @llvm.type.test(i8* [[NVFPTR]], metadata !"_ZTSM2B2FvvE")
-  // CHECK: [[OR2:%.*]] = or i1 [[OR1]], [[TT2]]
+  // CHECK: [[OR2:%.*]] = or i1 [[TT1]], [[TT2]]
   // CHECK: br i1 [[OR2]], label {{.*}}, label %[[TRAP2:[^,]*]]
 
   // CHECK: [[TRAP2]]:

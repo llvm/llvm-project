@@ -68,34 +68,33 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP10]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 false, [[TMP12]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[ADD_US]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP16]] to i64
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i32* [[TMP19]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP21:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[ADD_US]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i32* [[TMP18]] to <4 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP20]], i32 0
+; CHECK-NEXT:    store i32 [[TMP21]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP20]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP22]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP20]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP23]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP21]], i32 2
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP20]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP24]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP21]], i32 3
-; CHECK-NEXT:    store i32 [[TMP25]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_US]], label [[SCALAR_PH]]

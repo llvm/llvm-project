@@ -1386,6 +1386,8 @@ public:
   }
 
   Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+    if (!isa<Constant>(RHS) && isa<Constant>(LHS))
+      std::swap(LHS, RHS);
     if (auto *RC = dyn_cast<Constant>(RHS)) {
       if (RC->isNullValue())
         return LHS;  // LHS | 0 -> LHS
