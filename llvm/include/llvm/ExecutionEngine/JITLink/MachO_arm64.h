@@ -29,6 +29,8 @@ enum MachOARM64RelocationKind : Edge::Kind {
   PageOffset12,
   GOTPage21,
   GOTPageOffset12,
+  TLVPage21,
+  TLVPageOffset12,
   PointerToGOT,
   PairedAddend,
   LDRLiteral19,
