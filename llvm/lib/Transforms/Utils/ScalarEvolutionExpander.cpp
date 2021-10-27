@@ -2494,13 +2494,22 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 
   // Get the backedge taken count and truncate or extended to the AR type.
   Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
-  auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
-                                         Intrinsic::umul_with_overflow, Ty);
 
   // Compute |Step| * Backedge
-  CallInst *Mul = Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
-  Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
-  Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+  Value *MulV, *OfMul;
+  if (Step->isOne()) {
+    // Special-case Step of one. Potentially-costly `umul_with_overflow` isn't
+    // needed, there is never an overflow, so to avoid artificially inflating
+    // the cost of the check, directly emit the optimized IR.
+    MulV = TruncTripCount;
+    OfMul = ConstantInt::getFalse(MulV->getContext());
+  } else {
+    auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
+                                           Intrinsic::umul_with_overflow, Ty);
+    CallInst *Mul = Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
+    MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+    OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+  }
 
   // Compute:
   //   Start + |Step| * Backedge < Start
