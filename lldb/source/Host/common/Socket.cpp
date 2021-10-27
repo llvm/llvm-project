@@ -167,12 +167,25 @@ Socket::TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   LLDB_LOG(log, "host_and_port = {0}", host_and_port);
 
+  std::string host_str;
+  std::string port_str;
+  uint16_t port;
+  if (llvm::Error decode_error =
+          DecodeHostAndPort(host_and_port, host_str, port_str, port))
+    return std::move(decode_error);
+
   std::unique_ptr<TCPSocket> listen_socket(
       new TCPSocket(true, child_processes_inherit));
 
   Status error = listen_socket->Listen(host_and_port, backlog);
   if (error.Fail())
     return error.ToError();
+
+  // We were asked to listen on port zero which means we must now read the
+  // actual port that was given to us as port zero is a special code for
+  // "find an open port for me".
+  if (port == 0)
+    port = listen_socket->GetLocalPortNumber();
 
   return std::move(listen_socket);
 }
@@ -181,6 +194,70 @@ llvm::Expected<std::unique_ptr<UDPSocket>>
 Socket::UdpConnect(llvm::StringRef host_and_port,
                    bool child_processes_inherit) {
   return UDPSocket::Connect(host_and_port, child_processes_inherit);
+}
+
+Status Socket::UnixDomainConnect(llvm::StringRef name,
+                                 bool child_processes_inherit,
+                                 Socket *&socket) {
+  Status error;
+  std::unique_ptr<Socket> connect_socket(
+      Create(ProtocolUnixDomain, child_processes_inherit, error));
+  if (error.Fail())
+    return error;
+
+  error = connect_socket->Connect(name);
+  if (error.Success())
+    socket = connect_socket.release();
+
+  return error;
+}
+
+Status Socket::UnixDomainAccept(llvm::StringRef name,
+                                bool child_processes_inherit, Socket *&socket) {
+  Status error;
+  std::unique_ptr<Socket> listen_socket(
+      Create(ProtocolUnixDomain, child_processes_inherit, error));
+  if (error.Fail())
+    return error;
+
+  error = listen_socket->Listen(name, 5);
+  if (error.Fail())
+    return error;
+
+  error = listen_socket->Accept(socket);
+  return error;
+}
+
+Status Socket::UnixAbstractConnect(llvm::StringRef name,
+                                   bool child_processes_inherit,
+                                   Socket *&socket) {
+  Status error;
+  std::unique_ptr<Socket> connect_socket(
+      Create(ProtocolUnixAbstract, child_processes_inherit, error));
+  if (error.Fail())
+    return error;
+
+  error = connect_socket->Connect(name);
+  if (error.Success())
+    socket = connect_socket.release();
+  return error;
+}
+
+Status Socket::UnixAbstractAccept(llvm::StringRef name,
+                                  bool child_processes_inherit,
+                                  Socket *&socket) {
+  Status error;
+  std::unique_ptr<Socket> listen_socket(
+      Create(ProtocolUnixAbstract, child_processes_inherit, error));
+  if (error.Fail())
+    return error;
+
+  error = listen_socket->Listen(name, 5);
+  if (error.Fail())
+    return error;
+
+  error = listen_socket->Accept(socket);
+  return error;
 }
 
 llvm::Error Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
