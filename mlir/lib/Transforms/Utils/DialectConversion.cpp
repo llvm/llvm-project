@@ -2772,8 +2772,6 @@ static LogicalResult legalizeUnresolvedMaterialization(
       newMaterialization = converter->materializeTargetConversion(
           rewriter, op->getLoc(), outputType, inputOperands);
       break;
-    default:
-      llvm_unreachable("unknown materialization kind");
     }
     if (newMaterialization) {
       replaceMaterialization(rewriterImpl, opResult, newMaterialization,
