@@ -7784,11 +7784,11 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
       // }
       if (HasVAListArg) {
         if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(VD)) {
-          if (const NamedDecl *ND = dyn_cast<NamedDecl>(PV->getDeclContext())) {
+          if (const Decl *D = dyn_cast<Decl>(PV->getDeclContext())) {
             int PVIndex = PV->getFunctionScopeIndex() + 1;
-            for (const auto *PVFormat : ND->specific_attrs<FormatAttr>()) {
+            for (const auto *PVFormat : D->specific_attrs<FormatAttr>()) {
               // adjust for implicit parameter
-              if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(ND))
+              if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D))
                 if (MD->isInstance())
                   ++PVIndex;
               // We also check if the formats are compatible.
