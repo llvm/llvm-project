@@ -3917,12 +3917,8 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   if (url_arg.startswith(":"))
     host_port.insert(0, "localhost");
 
-  std::string host_str;
-  std::string port_str;
-  uint16_t port;
   // Try parsing the (preprocessed) argument as host:port pair.
-  if (!llvm::errorToBool(
-          Socket::DecodeHostAndPort(host_port, host_str, port_str, port)))
+  if (!llvm::errorToBool(Socket::DecodeHostAndPort(host_port).takeError()))
     return (reverse_connect ? "connect://" : "listen://") + host_port;
 
   // If none of the above applied, interpret the argument as UNIX socket path.

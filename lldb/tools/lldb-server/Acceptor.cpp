@@ -92,12 +92,8 @@ std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
     else
       name = name.drop_front(res->scheme.size() + strlen("://"));
   } else {
-    std::string host_str;
-    std::string port_str;
-    uint16_t port;
     // Try to match socket name as $host:port - e.g., localhost:5555
-    if (!llvm::errorToBool(
-            Socket::DecodeHostAndPort(name, host_str, port_str, port)))
+    if (!llvm::errorToBool(Socket::DecodeHostAndPort(name).takeError()))
       socket_protocol = Socket::ProtocolTcp;
   }
 
