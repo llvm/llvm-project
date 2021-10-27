@@ -74,11 +74,13 @@ tls3:
 
 # RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck --check-prefix=ASM %s --
 
 # RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-merge-data-segments --no-entry -o %t2.wasm %t.o
 # RUN: obj2yaml %t2.wasm | FileCheck %s
 
 # CHECK:      - Type:            GLOBAL
+# __stack_pointer
 # CHECK-NEXT:   Globals:
 # CHECK-NEXT:     - Index:           0
 # CHECK-NEXT:       Type:            I32
@@ -112,60 +114,41 @@ tls3:
 # CHECK-NEXT:         Value:           4
 
 
-# CHECK:      - Type:            CODE
-# CHECK-NEXT:   Functions:
-# Skip __wasm_call_ctors
-# CHECK:          - Index:           1
-# CHECK-NEXT:       Locals:          []
-# CHECK-NEXT:       Body:            2000240120004100410CFC0800000B
+# ASM:      <__wasm_init_tls>:
+# ASM-EMPTY:
+# ASM-NEXT:   local.get 0
+# ASM-NEXT:   global.set 1
+# ASM-NEXT:   local.get 0
+# ASM-NEXT:   i32.const 0
+# ASM-NEXT:   i32.const 12
+# ASM-NEXT:   memory.init 0, 0
+# ASM-NEXT:   end
 
-# Expected body of __wasm_init_tls:
-#   local.get 0
-#   global.set  1
-#   local.get 0
-#   i32.const 0
-#   i32.const 12
-#   memory.init 1, 0
-#   end
+# ASM:      <tls1_addr>:
+# ASM-EMPTY:
+# ASM-NEXT:   global.get 1
+# ASM-NEXT:   i32.const 0
+# ASM-NEXT:   i32.add
+# ASM-NEXT:   end
 
-# CHECK-NEXT:     - Index:           2
-# CHECK-NEXT:       Locals:          []
-# CHECK-NEXT:       Body:            2381808080004180808080006A0B
+# ASM:      <tls2_addr>:
+# ASM-EMPTY:
+# ASM-NEXT:   global.get 1
+# ASM-NEXT:   i32.const 4
+# ASM-NEXT:   i32.add
+# ASM-NEXT:   end
 
-# Expected body of tls1_addr:
-#   global.get 1
-#   i32.const 0
-#   i32.add
-#   end
+# ASM:      <tls3_addr>:
+# ASM-EMPTY:
+# ASM-NEXT:   global.get 1
+# ASM-NEXT:   i32.const 8
+# ASM-NEXT:   i32.add
+# ASM-NEXT:   end
 
-# CHECK-NEXT:     - Index:           3
-# CHECK-NEXT:       Locals:          []
-# CHECK-NEXT:       Body:            2381808080004184808080006A0B
-
-# Expected body of tls2_addr:
-#   global.get 1
-#   i32.const 4
-#   i32.add
-#   end
-
-# CHECK-NEXT:     - Index:           4
-# CHECK-NEXT:       Locals:          []
-# CHECK-NEXT:       Body:            2381808080004188808080006A0B
-
-# Expected body of tls3_addr:
-#   global.get 1
-#   i32.const 4
-#   i32.add
-#   end
-
-# CHECK-NEXT:     - Index:           5
-# CHECK-NEXT:       Locals:          []
-# CHECK-NEXT:       Body:            2383808080000B
-
-# Expected body of tls_align:
-#   global.get 3
-#   end
-
+# ASM:      <tls_align>:
+# ASM-EMPTY:
+# ASM-NEXT:  global.get 3
+# ASM-NEXT:  end
 
 # Also verify TLS usage with --relocatable
 # RUN: wasm-ld --relocatable -o %t3.wasm %t.o
