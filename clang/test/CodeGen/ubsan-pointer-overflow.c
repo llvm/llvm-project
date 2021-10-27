@@ -85,7 +85,6 @@ void struct_index(struct S1 *p) {
   // CHECK: getelementptr inbounds %struct.S1, %struct.S1* [[P:%.*]], i64 10
   // CHECK-NEXT: [[BASE:%.*]] = ptrtoint %struct.S1* [[P]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], 240, !nosanitize
-  // CHECK: select
   // CHECK: @__ubsan_handle_pointer_overflow{{.*}} i64 [[BASE]], i64 [[COMPGEP]]) {{.*}}, !nosanitize
 
   // CHECK-NOT: @__ubsan_handle_pointer_overflow
