@@ -643,3 +643,23 @@ constexpr int x = a.f();
 // Show that we reject when not in an immediate context.
 int w2 = (a.*&test::f)(); // expected-error {{cannot take address of consteval function 'f' outside of an immediate invocation}}
 }
+
+namespace PR48235 {
+consteval int d() {
+  return 1;
+}
+
+struct A {
+  consteval int a() const { return 1; }
+
+  void b() {
+    this->a() + d(); // expected-error {{call to consteval function 'PR48235::A::a' is not a constant expression}} \
+                     // expected-note {{use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}}
+  }
+
+  void c() {
+    a() + d(); // expected-error {{call to consteval function 'PR48235::A::a' is not a constant expression}} \
+               // expected-note {{use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}}
+  }
+};
+} // PR48235
