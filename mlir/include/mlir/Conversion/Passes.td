@@ -700,23 +700,23 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"reassociateFPReductions", "reassociate-fp-reductions",
            "bool", /*default=*/"false",
            "Allows llvm to reassociate floating-point reductions for speed">,
-    Option<"enableIndexOptimizations", "enable-index-optimizations",
+    Option<"indexOptimizations", "enable-index-optimizations",
            "bool", /*default=*/"true",
            "Allows compiler to assume indices fit in 32-bit if that yields "
 	   "faster code">,
-    Option<"enableAMX", "enable-amx",
+    Option<"amx", "enable-amx",
            "bool", /*default=*/"false",
            "Enables the use of AMX dialect while lowering the vector "
 	   "dialect.">,
-    Option<"enableArmNeon", "enable-arm-neon",
+    Option<"armNeon", "enable-arm-neon",
            "bool", /*default=*/"false",
            "Enables the use of ArmNeon dialect while lowering the vector "
 	   "dialect.">,
-    Option<"enableArmSVE", "enable-arm-sve",
+    Option<"armSVE", "enable-arm-sve",
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
-    Option<"enableX86Vector", "enable-x86vector",
+    Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
 	   "dialect.">

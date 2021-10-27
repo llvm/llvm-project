@@ -83,7 +83,7 @@ void populateVectorTransferLoweringPatterns(
 
 /// These patterns materialize masks for various vector ops such as transfers.
 void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
-                                               bool enableIndexOptimizations);
+                                               bool indexOptimizations);
 
 /// Collect a set of patterns to propagate insert_map/extract_map in the ssa
 /// chain.
