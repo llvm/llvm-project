@@ -24,17 +24,13 @@ define i8 @widget(i8* %arr, i8 %t9) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[T1_0_LCSSA1]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[ARR2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i8
-; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP5]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 1, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 1, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i8 1, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 1, [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP4]], 255
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
@@ -45,18 +41,18 @@ define i8 @widget(i8* %arr, i8 %t9) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i8> [[VEC_IND]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, i8* [[ARR]], i8 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt <4 x i8> [[TMP13]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP17:%.*]] = zext <4 x i1> [[TMP16]] to <4 x i8>
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, i8* [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8* [[TMP18]] to <4 x i8>*
-; CHECK-NEXT:    store <4 x i8> [[TMP17]], <4 x i8>* [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i8> [[VEC_IND]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, i8* [[ARR]], i8 [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt <4 x i8> [[TMP12]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP16:%.*]] = zext <4 x i1> [[TMP15]] to <4 x i8>
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, i8* [[TMP14]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i8* [[TMP17]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[TMP16]], <4 x i8>* [[TMP18]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], <i8 4, i8 4, i8 4, i8 4>
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
