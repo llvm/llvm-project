@@ -256,8 +256,7 @@ public:
     }
     if (dim) { // DIM=
       if (*dim < 1 || *dim > array->Rank()) {
-        context_.messages().Say(
-            "FINDLOC(DIM=%d) is out of range"_err_en_US, *dim);
+        context_.messages().Say("DIM=%d is out of range"_err_en_US, *dim);
         return std::nullopt;
       }
       int zbDim{*dim - 1};
@@ -267,22 +266,27 @@ public:
       ConstantSubscript dimLength{array->shape()[zbDim]};
       ConstantSubscript n{GetSize(resultShape)};
       for (ConstantSubscript j{0}; j < n; ++j) {
-        ConstantSubscript hit{array->lbounds()[zbDim] - 1};
-        value.reset();
+        ConstantSubscript hit{0};
+        if constexpr (WHICH == WhichLocation::Maxloc ||
+            WHICH == WhichLocation::Minloc) {
+          value.reset();
+        }
         for (ConstantSubscript k{0}; k < dimLength;
              ++k, ++at[zbDim], mask && ++maskAt[zbDim]) {
           if ((!mask || mask->At(maskAt).IsTrue()) &&
               IsHit(array->At(at), value, relation)) {
             hit = at[zbDim];
-            if (!back) {
-              break;
+            if constexpr (WHICH == WhichLocation::Findloc) {
+              if (!back) {
+                break;
+              }
             }
           }
         }
         resultIndices.emplace_back(hit);
-        at[zbDim] = array->lbounds()[zbDim] + dimLength - 1;
+        at[zbDim] = dimLength;
         array->IncrementSubscripts(at);
-        at[zbDim] = array->lbounds()[zbDim];
+        at[zbDim] = 1;
         if (mask) {
           maskAt[zbDim] = mask->lbounds()[zbDim] + dimLength - 1;
           mask->IncrementSubscripts(maskAt);
@@ -298,8 +302,10 @@ public:
         if ((!mask || mask->At(maskAt).IsTrue()) &&
             IsHit(array->At(at), value, relation)) {
           resultIndices = at;
-          if (!back) {
-            break;
+          if constexpr (WHICH == WhichLocation::Findloc) {
+            if (!back) {
+              break;
+            }
           }
         }
       }
@@ -318,6 +324,7 @@ private:
       std::optional<Constant<T>> &value,
       [[maybe_unused]] RelationalOperator relation) const {
     std::optional<Expr<LogicalResult>> cmp;
+    bool result{true};
     if (value) {
       if constexpr (T::category == TypeCategory::Logical) {
         // array(at) .EQV. value?
@@ -332,11 +339,17 @@ private:
                 Expr<T>{Constant<T>{*value}}));
       }
       Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
-      return GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
-    } else { // first unmasked element seen for MAXLOC/MINLOC
-      value.emplace(std::move(element));
-      return true;
+      result = GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
+    } else {
+      // first unmasked element for MAXLOC/MINLOC - always take it
     }
+    if constexpr (WHICH == WhichLocation::Maxloc ||
+        WHICH == WhichLocation::Minloc) {
+      if (result) {
+        value.emplace(std::move(element));
+      }
+    }
+    return result;
   }
 
   static constexpr int dimArg{WHICH == WhichLocation::Findloc ? 2 : 1};
