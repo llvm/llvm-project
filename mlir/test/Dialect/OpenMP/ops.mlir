@@ -454,3 +454,37 @@ func @omp_ordered(%arg1 : i32, %arg2 : i32, %arg3 : i32,
 
   return
 }
+
+// CHECK-LABEL: omp_atomic_read
+// CHECK-SAME: (%[[ADDR:.*]]: memref<i32>)
+func @omp_atomic_read(%addr : memref<i32>) {
+  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] : memref<i32> -> i32
+  %1 = omp.atomic.read %addr : memref<i32> -> i32
+  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(seq_cst) : memref<i32> -> i32
+  %2 = omp.atomic.read %addr memory_order(seq_cst) : memref<i32> -> i32
+  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(acquire) : memref<i32> -> i32
+  %5 = omp.atomic.read %addr memory_order(acquire) : memref<i32> -> i32
+  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(relaxed) : memref<i32> -> i32
+  %6 = omp.atomic.read %addr memory_order(relaxed) : memref<i32> -> i32
+  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] hint(contended, nonspeculative) : memref<i32> -> i32
+  %7 = omp.atomic.read %addr hint(nonspeculative, contended) : memref<i32> -> i32
+  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(seq_cst) hint(contended, speculative) : memref<i32> -> i32
+  %8 = omp.atomic.read %addr hint(speculative, contended) memory_order(seq_cst) : memref<i32> -> i32
+  return
+}
+
+// CHECK-LABEL: omp_atomic_write
+// CHECK-SAME: (%[[ADDR:.*]]: memref<i32>, %[[VAL:.*]]: i32)
+func @omp_atomic_write(%addr : memref<i32>, %val : i32) {
+  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] : memref<i32>, i32
+  omp.atomic.write %addr, %val : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] memory_order(seq_cst) : memref<i32>, i32
+  omp.atomic.write %addr, %val memory_order(seq_cst) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] memory_order(release) : memref<i32>, i32
+  omp.atomic.write %addr, %val memory_order(release) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] memory_order(relaxed) : memref<i32>, i32
+  omp.atomic.write %addr, %val memory_order(relaxed) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]], %[[VAL]] hint(uncontended, speculative) : memref<i32>, i32
+  omp.atomic.write %addr, %val hint(speculative, uncontended) : memref<i32>, i32
+  return
+}
