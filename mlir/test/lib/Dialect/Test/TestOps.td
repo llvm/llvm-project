@@ -1497,10 +1497,22 @@ def TestValidOp : TEST_Op<"valid", [Terminator]>,
 def TestMergeBlocksOp : TEST_Op<"merge_blocks"> {
   let summary = "merge_blocks operation";
   let description = [{
-    Test op with multiple blocks that are merged with Dialect Conversion"
+    Test op with multiple blocks that are merged with Dialect Conversion
   }];
 
   let regions = (region AnyRegion:$body);
+  let results = (outs Variadic<AnyType>:$result);
+}
+
+def TestRemappedValueRegionOp : TEST_Op<"remapped_value_region",
+                                        [SingleBlock]> {
+  let summary = "remapped_value_region operation";
+  let description = [{
+    Test op that remaps values that haven't yet been converted in Dialect
+    Conversion.
+  }];
+
+  let regions = (region SizedRegion<1>:$body);
   let results = (outs Variadic<AnyType>:$result);
 }
 

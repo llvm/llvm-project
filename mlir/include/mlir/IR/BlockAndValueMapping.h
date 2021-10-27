@@ -27,10 +27,8 @@ class BlockAndValueMapping {
 public:
   /// Inserts a new mapping for 'from' to 'to'. If there is an existing mapping,
   /// it is overwritten.
-  void map(Block *from, Block *to) { valueMap[from] = to; }
-  void map(Value from, Value to) {
-    valueMap[from.getAsOpaquePointer()] = to.getAsOpaquePointer();
-  }
+  void map(Block *from, Block *to) { blockMap[from] = to; }
+  void map(Value from, Value to) { valueMap[from] = to; }
 
   template <
       typename S, typename T,
@@ -42,14 +40,12 @@ public:
   }
 
   /// Erases a mapping for 'from'.
-  void erase(Block *from) { valueMap.erase(from); }
-  void erase(Value from) { valueMap.erase(from.getAsOpaquePointer()); }
+  void erase(Block *from) { blockMap.erase(from); }
+  void erase(Value from) { valueMap.erase(from); }
 
   /// Checks to see if a mapping for 'from' exists.
-  bool contains(Block *from) const { return valueMap.count(from); }
-  bool contains(Value from) const {
-    return valueMap.count(from.getAsOpaquePointer());
-  }
+  bool contains(Block *from) const { return blockMap.count(from); }
+  bool contains(Value from) const { return valueMap.count(from); }
 
   /// Lookup a mapped value within the map. If a mapping for the provided value
   /// does not exist then return nullptr.
@@ -76,28 +72,26 @@ public:
   /// Clears all mappings held by the mapper.
   void clear() { valueMap.clear(); }
 
-  /// Returns a new mapper containing the inverse mapping.
-  BlockAndValueMapping getInverse() const {
-    BlockAndValueMapping result;
-    for (const auto &pair : valueMap)
-      result.valueMap.try_emplace(pair.second, pair.first);
-    return result;
-  }
+  /// Return the held value mapping.
+  const DenseMap<Value, Value> &getValueMap() const { return valueMap; }
+
+  /// Return the held block mapping.
+  const DenseMap<Block *, Block *> &getBlockMap() const { return blockMap; }
 
 private:
   /// Utility lookupOrValue that looks up an existing key or returns the
   /// provided value.
   Block *lookupOrValue(Block *from, Block *value) const {
-    auto it = valueMap.find(from);
-    return it != valueMap.end() ? reinterpret_cast<Block *>(it->second) : value;
+    auto it = blockMap.find(from);
+    return it != blockMap.end() ? it->second : value;
   }
   Value lookupOrValue(Value from, Value value) const {
-    auto it = valueMap.find(from.getAsOpaquePointer());
-    return it != valueMap.end() ? Value::getFromOpaquePointer(it->second)
-                                : value;
+    auto it = valueMap.find(from);
+    return it != valueMap.end() ? it->second : value;
   }
 
-  DenseMap<void *, void *> valueMap;
+  DenseMap<Value, Value> valueMap;
+  DenseMap<Block *, Block *> blockMap;
 };
 
 } // end namespace mlir
