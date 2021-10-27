@@ -385,6 +385,8 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
   llvm.return
 }
 
+// -----
+
 // CHECK-LABEL: @wsloop_inclusive_1
 llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
   %0 = llvm.mlir.constant(42 : index) : i64
@@ -400,6 +402,8 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
   }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
+
+// -----
 
 // CHECK-LABEL: @wsloop_inclusive_2
 llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
@@ -417,6 +421,8 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
   llvm.return
 }
 
+// -----
+
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
@@ -431,6 +437,10 @@ llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
  llvm.return
 }
 
+// -----
+
+llvm.func @body(i64)
+
 llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(auto) {
   // CHECK: call void @__kmpc_dispatch_init_8u
@@ -442,6 +452,10 @@ llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
  }
  llvm.return
 }
+
+// -----
+
+llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime) {
@@ -455,6 +469,10 @@ llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
  llvm.return
 }
 
+// -----
+
+llvm.func @body(i64)
+
 llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided) {
   // CHECK: call void @__kmpc_dispatch_init_8u
@@ -467,6 +485,10 @@ llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
  llvm.return
 }
 
+// -----
+
+llvm.func @body(i64)
+
 llvm.func @test_omp_wsloop_dynamic_nonmonotonic(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, nonmonotonic) {
   // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741859
@@ -478,6 +500,10 @@ llvm.func @test_omp_wsloop_dynamic_nonmonotonic(%lb : i64, %ub : i64, %step : i6
  }
  llvm.return
 }
+
+// -----
+
+llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_dynamic_monotonic(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic) {

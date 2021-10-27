@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Math/Transforms/Approximation.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
@@ -21,9 +22,12 @@
 #include "mlir/Transforms/Bufferize.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <climits>
+#include <cstddef>
 
 using namespace mlir;
+using namespace mlir::math;
 using namespace mlir::vector;
 
 using TypePredicate = llvm::function_ref<bool(Type)>;
@@ -182,6 +186,24 @@ static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
 
   return exp2ValueF32;
 }
+
+namespace {
+Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
+                                llvm::ArrayRef<Value> coeffs, Value x) {
+  auto width = vectorWidth(x.getType(), isF32);
+  if (coeffs.size() == 0) {
+    return broadcast(builder, f32Cst(builder, 0.0f), *width);
+  } else if (coeffs.size() == 1) {
+    return coeffs[0];
+  }
+  Value res = builder.create<math::FmaOp>(x, coeffs[coeffs.size() - 1],
+                                          coeffs[coeffs.size() - 2]);
+  for (auto i = ptrdiff_t(coeffs.size()) - 3; i >= 0; --i) {
+    res = builder.create<math::FmaOp>(x, res, coeffs[i]);
+  }
+  return res;
+}
+} // namespace
 
 //----------------------------------------------------------------------------//
 // TanhOp approximation.
@@ -462,6 +484,122 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   Value approximation = builder.create<SelectOp>(
       builder.create<arith::OrIOp>(uSmall, uInf), x, logLarge);
   rewriter.replaceOp(op, approximation);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
+// Erf approximation.
+//----------------------------------------------------------------------------//
+
+// Approximates erf(x) with
+// a - P(x)/Q(x)
+// where P and Q are polynomials of degree 4.
+// Different coefficients are chosen based on the value of x.
+// The approximation error is ~2.5e-07.
+// Boost's minimax tool that utilizes the Remez method was used to find the
+// coefficients.
+LogicalResult
+ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
+                                            PatternRewriter &rewriter) const {
+  auto width = vectorWidth(op.operand().getType(), isF32);
+  if (!width.hasValue())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, *width);
+  };
+
+  const int intervalsCount = 3;
+  const int polyDegree = 4;
+
+  Value zero = bcast(f32Cst(builder, 0));
+  Value one = bcast(f32Cst(builder, 1));
+  Value pp[intervalsCount][polyDegree + 1];
+  pp[0][0] = bcast(f32Cst(builder, +0.00000000000000000e+00));
+  pp[0][1] = bcast(f32Cst(builder, +1.12837916222975858e+00));
+  pp[0][2] = bcast(f32Cst(builder, -5.23018562988006470e-01));
+  pp[0][3] = bcast(f32Cst(builder, +2.09741709609267072e-01));
+  pp[0][4] = bcast(f32Cst(builder, +2.58146801602987875e-02));
+  pp[1][0] = bcast(f32Cst(builder, +0.00000000000000000e+00));
+  pp[1][1] = bcast(f32Cst(builder, +1.12750687816789140e+00));
+  pp[1][2] = bcast(f32Cst(builder, -3.64721408487825775e-01));
+  pp[1][3] = bcast(f32Cst(builder, +1.18407396425136952e-01));
+  pp[1][4] = bcast(f32Cst(builder, +3.70645533056476558e-02));
+  pp[2][0] = bcast(f32Cst(builder, -3.30093071049483172e-03));
+  pp[2][1] = bcast(f32Cst(builder, +3.51961938357697011e-03));
+  pp[2][2] = bcast(f32Cst(builder, -1.41373622814988039e-03));
+  pp[2][3] = bcast(f32Cst(builder, +2.53447094961941348e-04));
+  pp[2][4] = bcast(f32Cst(builder, -1.71048029455037401e-05));
+
+  Value qq[intervalsCount][polyDegree + 1];
+  qq[0][0] = bcast(f32Cst(builder, +1.000000000000000000e+00));
+  qq[0][1] = bcast(f32Cst(builder, -4.635138185962547255e-01));
+  qq[0][2] = bcast(f32Cst(builder, +5.192301327279782447e-01));
+  qq[0][3] = bcast(f32Cst(builder, -1.318089722204810087e-01));
+  qq[0][4] = bcast(f32Cst(builder, +7.397964654672315005e-02));
+  qq[1][0] = bcast(f32Cst(builder, +1.00000000000000000e+00));
+  qq[1][1] = bcast(f32Cst(builder, -3.27607011824493086e-01));
+  qq[1][2] = bcast(f32Cst(builder, +4.48369090658821977e-01));
+  qq[1][3] = bcast(f32Cst(builder, -8.83462621207857930e-02));
+  qq[1][4] = bcast(f32Cst(builder, +5.72442770283176093e-02));
+  qq[2][0] = bcast(f32Cst(builder, +1.00000000000000000e+00));
+  qq[2][1] = bcast(f32Cst(builder, -2.06069165953913769e+00));
+  qq[2][2] = bcast(f32Cst(builder, +1.62705939945477759e+00));
+  qq[2][3] = bcast(f32Cst(builder, -5.83389859211130017e-01));
+  qq[2][4] = bcast(f32Cst(builder, +8.21908939856640930e-02));
+
+  Value offsets[intervalsCount];
+  offsets[0] = bcast(f32Cst(builder, 0));
+  offsets[1] = bcast(f32Cst(builder, 0));
+  offsets[2] = bcast(f32Cst(builder, 1));
+
+  Value bounds[intervalsCount];
+  bounds[0] = bcast(f32Cst(builder, 0.8));
+  bounds[1] = bcast(f32Cst(builder, 2));
+  bounds[2] = bcast(f32Cst(builder, 3.75));
+
+  Value isNegativeArg = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT,
+                                                      op.operand(), zero);
+  Value negArg = builder.create<arith::NegFOp>(op.operand());
+  Value x = builder.create<SelectOp>(isNegativeArg, negArg, op.operand());
+
+  Value offset = offsets[0];
+  Value p[polyDegree + 1];
+  Value q[polyDegree + 1];
+  for (int i = 0; i <= polyDegree; ++i) {
+    p[i] = pp[0][i];
+    q[i] = qq[0][i];
+  }
+
+  // TODO: maybe use vector stacking to reduce the number of selects.
+  Value isLessThanBound[intervalsCount];
+  for (int j = 0; j < intervalsCount - 1; ++j) {
+    isLessThanBound[j] =
+        builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, x, bounds[j]);
+    for (int i = 0; i <= polyDegree; ++i) {
+      p[i] = builder.create<SelectOp>(isLessThanBound[j], p[i], pp[j + 1][i]);
+      q[i] = builder.create<SelectOp>(isLessThanBound[j], q[i], qq[j + 1][i]);
+    }
+    offset =
+        builder.create<SelectOp>(isLessThanBound[j], offset, offsets[j + 1]);
+  }
+  isLessThanBound[intervalsCount - 1] = builder.create<arith::CmpFOp>(
+      arith::CmpFPredicate::ULT, x, bounds[intervalsCount - 1]);
+
+  Value pPoly = makePolynomialCalculation(builder, p, x);
+  Value qPoly = makePolynomialCalculation(builder, q, x);
+  Value rationalPoly = builder.create<arith::DivFOp>(pPoly, qPoly);
+  Value formula = builder.create<arith::AddFOp>(offset, rationalPoly);
+  formula = builder.create<SelectOp>(isLessThanBound[intervalsCount - 1],
+                                     formula, one);
+
+  // erf is odd function: erf(x) = -erf(-x).
+  Value negFormula = builder.create<arith::NegFOp>(formula);
+  Value res = builder.create<SelectOp>(isNegativeArg, negFormula, formula);
+
+  rewriter.replaceOp(op, res);
+
   return success();
 }
 
@@ -848,8 +986,8 @@ void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
   patterns.add<TanhApproximation, LogApproximation, Log2Approximation,
-               Log1pApproximation, ExpApproximation, ExpM1Approximation,
-               SinAndCosApproximation<true, math::SinOp>,
+               Log1pApproximation, ErfPolynomialApproximation, ExpApproximation,
+               ExpM1Approximation, SinAndCosApproximation<true, math::SinOp>,
                SinAndCosApproximation<false, math::CosOp>>(
       patterns.getContext());
   if (options.enableAvx2)

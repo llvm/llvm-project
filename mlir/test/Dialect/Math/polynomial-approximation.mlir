@@ -5,6 +5,95 @@
 // Check that all math functions lowered to approximations built from
 // standard operations (add, mul, fma, shift, etc...).
 
+// CHECK-LABEL: func @erf_scalar(
+// CHECK-SAME:    %[[val_arg0:.*]]: f32) -> f32 {
+// CHECK-DAG:     %[[val_cst:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:     %[[val_cst_0:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[val_cst_1:.*]] = arith.constant 1.12837911 : f32
+// CHECK-DAG:     %[[val_cst_2:.*]] = arith.constant -0.523018539 : f32
+// CHECK-DAG:     %[[val_cst_3:.*]] = arith.constant 0.209741712 : f32
+// CHECK-DAG:     %[[val_cst_4:.*]] = arith.constant 0.0258146804 : f32
+// CHECK-DAG:     %[[val_cst_5:.*]] = arith.constant 1.12750685 : f32
+// CHECK-DAG:     %[[val_cst_6:.*]] = arith.constant -0.364721417 : f32
+// CHECK-DAG:     %[[val_cst_7:.*]] = arith.constant 0.118407398 : f32
+// CHECK-DAG:     %[[val_cst_8:.*]] = arith.constant 0.0370645523 : f32
+// CHECK-DAG:     %[[val_cst_9:.*]] = arith.constant -0.00330093061 : f32
+// CHECK-DAG:     %[[val_cst_10:.*]] = arith.constant 0.00351961935 : f32
+// CHECK-DAG:     %[[val_cst_11:.*]] = arith.constant -0.00141373626 : f32
+// CHECK-DAG:     %[[val_cst_12:.*]] = arith.constant 2.53447099E-4 : f32
+// CHECK-DAG:     %[[val_cst_13:.*]] = arith.constant -1.71048032E-5 : f32
+// CHECK-DAG:     %[[val_cst_14:.*]] = arith.constant -0.463513821 : f32
+// CHECK-DAG:     %[[val_cst_15:.*]] = arith.constant 0.519230127 : f32
+// CHECK-DAG:     %[[val_cst_16:.*]] = arith.constant -0.131808966 : f32
+// CHECK-DAG:     %[[val_cst_17:.*]] = arith.constant 0.0739796459 : f32
+// CHECK-DAG:     %[[val_cst_18:.*]] = arith.constant -3.276070e-01 : f32
+// CHECK-DAG:     %[[val_cst_19:.*]] = arith.constant 0.448369086 : f32
+// CHECK-DAG:     %[[val_cst_20:.*]] = arith.constant -0.0883462652 : f32
+// CHECK-DAG:     %[[val_cst_21:.*]] = arith.constant 0.0572442785 : f32
+// CHECK-DAG:     %[[val_cst_22:.*]] = arith.constant -2.0606916 : f32
+// CHECK-DAG:     %[[val_cst_23:.*]] = arith.constant 1.62705934 : f32
+// CHECK-DAG:     %[[val_cst_24:.*]] = arith.constant -0.583389878 : f32
+// CHECK-DAG:     %[[val_cst_25:.*]] = arith.constant 0.0821908935 : f32
+// CHECK-DAG:     %[[val_cst_26:.*]] = arith.constant 8.000000e-01 : f32
+// CHECK-DAG:     %[[val_cst_27:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK-DAG:     %[[val_cst_28:.*]] = arith.constant 3.750000e+00 : f32
+// CHECK:         %[[val_0:.*]] = arith.cmpf olt, %[[val_arg0]], %[[val_cst]] : f32
+// CHECK:         %[[val_1:.*]] = arith.negf %[[val_arg0]] : f32
+// CHECK:         %[[val_2:.*]] = select %[[val_0]], %[[val_1]], %[[val_arg0]] : f32
+// CHECK:         %[[val_3:.*]] = arith.cmpf olt, %[[val_2]], %[[val_cst_26]] : f32
+// CHECK:         %[[val_4:.*]] = select %[[val_3]], %[[val_cst_1]], %[[val_cst_5]] : f32
+// CHECK:         %[[val_5:.*]] = select %[[val_3]], %[[val_cst_14]], %[[val_cst_18]] : f32
+// CHECK:         %[[val_6:.*]] = select %[[val_3]], %[[val_cst_2]], %[[val_cst_6]] : f32
+// CHECK:         %[[val_7:.*]] = select %[[val_3]], %[[val_cst_15]], %[[val_cst_19]] : f32
+// CHECK:         %[[val_8:.*]] = select %[[val_3]], %[[val_cst_3]], %[[val_cst_7]] : f32
+// CHECK:         %[[val_9:.*]] = select %[[val_3]], %[[val_cst_16]], %[[val_cst_20]] : f32
+// CHECK:         %[[val_10:.*]] = select %[[val_3]], %[[val_cst_4]], %[[val_cst_8]] : f32
+// CHECK:         %[[val_11:.*]] = select %[[val_3]], %[[val_cst_17]], %[[val_cst_21]] : f32
+// CHECK:         %[[val_12:.*]] = arith.cmpf olt, %[[val_2]], %[[val_cst_27]] : f32
+// CHECK:         %[[val_13:.*]] = select %[[val_12]], %[[val_cst]], %[[val_cst_9]] : f32
+// CHECK:         %[[val_14:.*]] = select %[[val_12]], %[[val_4]], %[[val_cst_10]] : f32
+// CHECK:         %[[val_15:.*]] = select %[[val_12]], %[[val_5]], %[[val_cst_22]] : f32
+// CHECK:         %[[val_16:.*]] = select %[[val_12]], %[[val_6]], %[[val_cst_11]] : f32
+// CHECK:         %[[val_17:.*]] = select %[[val_12]], %[[val_7]], %[[val_cst_23]] : f32
+// CHECK:         %[[val_18:.*]] = select %[[val_12]], %[[val_8]], %[[val_cst_12]] : f32
+// CHECK:         %[[val_19:.*]] = select %[[val_12]], %[[val_9]], %[[val_cst_24]] : f32
+// CHECK:         %[[val_20:.*]] = select %[[val_12]], %[[val_10]], %[[val_cst_13]] : f32
+// CHECK:         %[[val_21:.*]] = select %[[val_12]], %[[val_11]], %[[val_cst_25]] : f32
+// CHECK:         %[[val_22:.*]] = select %[[val_12]], %[[val_cst]], %[[val_cst_0]] : f32
+// CHECK:         %[[val_23:.*]] = arith.cmpf ult, %[[val_2]], %[[val_cst_28]] : f32
+// CHECK:         %[[val_24:.*]] = math.fma %[[val_2]], %[[val_20]], %[[val_18]] : f32
+// CHECK:         %[[val_25:.*]] = math.fma %[[val_2]], %[[val_24]], %[[val_16]] : f32
+// CHECK:         %[[val_26:.*]] = math.fma %[[val_2]], %[[val_25]], %[[val_14]] : f32
+// CHECK:         %[[val_27:.*]] = math.fma %[[val_2]], %[[val_26]], %[[val_13]] : f32
+// CHECK:         %[[val_28:.*]] = math.fma %[[val_2]], %[[val_21]], %[[val_19]] : f32
+// CHECK:         %[[val_29:.*]] = math.fma %[[val_2]], %[[val_28]], %[[val_17]] : f32
+// CHECK:         %[[val_30:.*]] = math.fma %[[val_2]], %[[val_29]], %[[val_15]] : f32
+// CHECK:         %[[val_31:.*]] = math.fma %[[val_2]], %[[val_30]], %[[val_cst_0]] : f32
+// CHECK:         %[[val_32:.*]] = arith.divf %[[val_27]], %[[val_31]] : f32
+// CHECK:         %[[val_33:.*]] = arith.addf %[[val_22]], %[[val_32]] : f32
+// CHECK:         %[[val_34:.*]] = select %[[val_23]], %[[val_33]], %[[val_cst_0]] : f32
+// CHECK:         %[[val_35:.*]] = arith.negf %[[val_34]] : f32
+// CHECK:         %[[val_36:.*]] = select %[[val_0]], %[[val_35]], %[[val_34]] : f32
+// CHECK:         return %[[val_36]] : f32
+// CHECK:       }
+func @erf_scalar(%arg0: f32) -> f32 {
+  %0 = math.erf %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func @erf_vector(
+// CHECK-SAME:                     %[[arg0:.*]]: vector<8xf32>) -> vector<8xf32> {
+// CHECK:           %[[zero:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
+// CHECK-NOT:       erf
+// CHECK-COUNT-20:  select
+// CHECK:           %[[res:.*]] = select
+// CHECK:           return %[[res]] : vector<8xf32>
+// CHECK:         }
+func @erf_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
+  %0 = math.erf %arg0 : vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
 // CHECK-LABEL:   func @exp_scalar(
 // CHECK-SAME:                     %[[VAL_0:.*]]: f32) -> f32 {
 // CHECK-DAG:           %[[VAL_1:.*]] = arith.constant 0.693147182 : f32

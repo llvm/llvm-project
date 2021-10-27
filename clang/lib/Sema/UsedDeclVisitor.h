@@ -72,7 +72,8 @@ public:
       QualType Destroyed = S.Context.getBaseElementType(DestroyedOrNull);
       if (const RecordType *DestroyedRec = Destroyed->getAs<RecordType>()) {
         CXXRecordDecl *Record = cast<CXXRecordDecl>(DestroyedRec->getDecl());
-        asImpl().visitUsedDecl(E->getBeginLoc(), S.LookupDestructor(Record));
+        if (Record->getDefinition())
+          asImpl().visitUsedDecl(E->getBeginLoc(), S.LookupDestructor(Record));
       }
     }
 

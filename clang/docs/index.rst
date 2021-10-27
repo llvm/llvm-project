@@ -81,6 +81,7 @@ Using Clang Tools
    ClangFormatStyleOptions
    ClangFormattedStatus
    ClangNvlinkWrapper
+   ClangOffloadWrapper
    ClangOffloadBundler
 
 Design Documents

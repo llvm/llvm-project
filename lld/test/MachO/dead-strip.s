@@ -67,8 +67,8 @@
 
 ## Extern symbols aren't stripped from executables with -export_dynamic
 # RUN: %lld -lSystem -dead_strip -export_dynamic -u _ref_private_extern_u \
-# RUN:     %t/basics.o -o %t/basics
-# RUN: llvm-objdump --syms --section-headers %t/basics | \
+# RUN:     %t/basics.o -o %t/basics-export-dyn
+# RUN: llvm-objdump --syms --section-headers %t/basics-export-dyn | \
 # RUN:     FileCheck --check-prefix=EXECDYN %s
 # EXECDYN-LABEL: Sections:
 # EXECDYN-LABEL: Name

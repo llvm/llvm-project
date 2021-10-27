@@ -171,14 +171,10 @@ TEST_P(SocketTest, TCPGetConnectURI) {
   CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
                             &socket_b_up);
 
-  llvm::StringRef scheme;
-  llvm::StringRef hostname;
-  llvm::Optional<uint16_t> port;
-  llvm::StringRef path;
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-  EXPECT_EQ(scheme, "connect");
-  EXPECT_EQ(port, socket_a_up->GetRemotePortNumber());
+  EXPECT_EQ((URI{"connect", GetParam().localhost_ip,
+                 socket_a_up->GetRemotePortNumber(), "/"}),
+            URI::Parse(uri));
 }
 
 TEST_P(SocketTest, UDPGetConnectURI) {
@@ -189,13 +185,8 @@ TEST_P(SocketTest, UDPGetConnectURI) {
       UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
   ASSERT_THAT_EXPECTED(socket, llvm::Succeeded());
 
-  llvm::StringRef scheme;
-  llvm::StringRef hostname;
-  llvm::Optional<uint16_t> port;
-  llvm::StringRef path;
   std::string uri = socket.get()->GetRemoteConnectionURI();
-  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-  EXPECT_EQ(scheme, "udp");
+  EXPECT_EQ((URI{"udp", "127.0.0.1", 0, "/"}), URI::Parse(uri));
 }
 
 #if LLDB_ENABLE_POSIX
@@ -214,14 +205,9 @@ TEST_P(SocketTest, DomainGetConnectURI) {
   std::unique_ptr<DomainSocket> socket_b_up;
   CreateDomainConnectedSockets(domain_path, &socket_a_up, &socket_b_up);
 
-  llvm::StringRef scheme;
-  llvm::StringRef hostname;
-  llvm::Optional<uint16_t> port;
-  llvm::StringRef path;
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-  EXPECT_EQ(scheme, "unix-connect");
-  EXPECT_EQ(path, domain_path);
+  EXPECT_EQ((URI{"unix-connect", "", llvm::None, domain_path}),
+            URI::Parse(uri));
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }

@@ -416,18 +416,117 @@ void RTLsTy::initAllRTLs() {
     initRTLonce(R);
 }
 
+/// Query runtime capabilities of this system by calling offload-arch -c
+/// offload_arch_output_buffer is persistant storage returned by this
+/// __tgt_get_active_offload_env.
+static void
+__tgt_get_active_offload_env(__tgt_active_offload_env *active_env,
+                             char *offload_arch_output_buffer,
+                             size_t offload_arch_output_buffer_size) {
+  void *handle = dlopen("libomptarget.so", RTLD_NOW);
+  if (!handle)
+    DP("dlopen() failed: %s\n", dlerror());
+  char *libomptarget_dir_name = new char[PATH_MAX];
+  if (dlinfo(handle, RTLD_DI_ORIGIN, libomptarget_dir_name) == -1)
+    DP("RTLD_DI_ORIGIN failed: %s\n", dlerror());
+  std::string cmd_bin;
+  cmd_bin.assign(libomptarget_dir_name).append("/../bin/amdgpu-arch");
+  struct stat stat_buffer;
+  if (stat(cmd_bin.c_str(), &stat_buffer)) {
+    DP("Missing offload-arch command at %s \n", cmd_bin.c_str());
+  } else {
+    // Add option to print capabilities of current system
+    FILE *stream = popen(cmd_bin.c_str(), "r");
+    while (fgets(offload_arch_output_buffer, offload_arch_output_buffer_size,
+                 stream) != NULL)
+      ;
+    pclose(stream);
+    active_env->capabilities = offload_arch_output_buffer;
+    size_t slen = strlen(active_env->capabilities);
+    offload_arch_output_buffer[slen - 1] =
+        '\0'; // terminate string before line feed
+    offload_arch_output_buffer +=
+        slen; // To store next value in offload_arch_output_buffer, not likely
+  }
+  delete[] libomptarget_dir_name;
+}
+
+std::vector<std::string> _splitstrings(char *input, const char *sep) {
+  std::vector<std::string> split_strings;
+  std::string s(input);
+  std::string delimiter(sep);
+  size_t pos = 0;
+  while ((pos = s.find(delimiter)) != std::string::npos) {
+    if (pos != 0)
+      split_strings.push_back(s.substr(0, pos));
+    s.erase(0, pos + delimiter.length());
+  }
+  if (s.length() > 1)
+    split_strings.push_back(s.substr(0, s.length()));
+  return split_strings;
+}
+
+static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
+                                      __tgt_active_offload_env *active_env) {
+  // get_image_info will return null if no image information was registered.
+  // If no image information, assume application built with old compiler and
+  // check each image.
+  if (!img_info)
+    return true;
+
+  // Each runtime requirement for the compiled image is stored in
+  // the img_info->offload_arch string and is separated by __ .
+  // Each runtime capability obtained from "offload-arch -c" is stored in
+  // actvie_env->capabilities and is separated by spaces.
+  // If every requirement has a matching capability, then the image
+  // is compatible with active environment
+
+  std::vector<std::string> reqs = _splitstrings(img_info->offload_arch, ":");
+  std::vector<std::string> caps = _splitstrings(active_env->capabilities, " ");
+
+  bool is_compatible = true;
+  for (auto req : reqs) {
+    bool missing_capability = true;
+    for (auto capability : caps)
+      if (capability == req)
+        missing_capability = false;
+    if (missing_capability) {
+      DP("Image requires %s but runtime capability %s is missing.\n",
+         img_info->offload_arch, req.c_str());
+      is_compatible = false;
+    }
+  }
+  return is_compatible;
+}
+
+#define MAX_CAPS_STR_SIZE 1024
 void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
+
+  // Get the current active offload environment
+  __tgt_active_offload_env offload_env;
+  // Need a buffer to hold results of offload-arch -c command
+  size_t offload_arch_output_buffer_size = MAX_CAPS_STR_SIZE;
+  std::vector<char> offload_arch_output_buffer;
+  offload_arch_output_buffer.resize(offload_arch_output_buffer_size);
+  __tgt_get_active_offload_env(&offload_env, offload_arch_output_buffer.data(),
+                               offload_arch_output_buffer_size);
+
+  RTLInfoTy *FoundRTL = NULL;
   PM->RTLsMtx.lock();
   // Register the images with the RTLs that understand them, if any.
   for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
     // Obtain the image.
     __tgt_device_image *img = &desc->DeviceImages[i];
 
-    RTLInfoTy *FoundRTL = nullptr;
-
+    // Get corresponding image info offload_arch and check with runtime
+    __tgt_image_info *img_info = __tgt_get_image_info(i);
+    if (!_ImageIsCompatibleWithEnv(img_info, &offload_env))
+      continue;
+    FoundRTL = NULL;
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : AllRTLs) {
+
       if (!R.is_valid_binary(img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(img->ImageStart), R.RTLName.c_str());
@@ -471,6 +570,39 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
     }
   }
   PM->RTLsMtx.unlock();
+
+  if (!FoundRTL) {
+    if (PM->TargetOffloadPolicy == tgt_mandatory)
+      fprintf(stderr, "ERROR:\
+	Runtime capabilities do NOT meet any offload image offload_arch\n\
+	and the OMP_TARGET_OFFLOAD policy is mandatory.  Terminating!\n\
+	Runtime capabilities : %s\n",
+              offload_env.capabilities);
+    else if (PM->TargetOffloadPolicy == tgt_disabled)
+      fprintf(stderr, "WARNING: Offloading is disabled.\n");
+    else
+      fprintf(
+          stderr,
+          "WARNING: Runtime capabilities do NOT meet any image offload_arch.\n\
+	 So device offloading is now disabled.\n\
+	Runtime capabilities : %s\n",
+          offload_env.capabilities);
+    if (PM->TargetOffloadPolicy != tgt_disabled) {
+      for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
+        __tgt_image_info *img_info = __tgt_get_image_info(i);
+        if (img_info)
+          fprintf(stderr, "\
+	  Image %d offload_arch : %s\n",
+                  i, img_info->offload_arch);
+        else
+          fprintf(stderr, "\
+	  Image %d has no offload_arch. Could be from older compiler\n",
+                  i);
+      }
+    }
+    if (PM->TargetOffloadPolicy == tgt_mandatory)
+      exit(1);
+  }
 
   DP("Done registering entries!\n");
 }

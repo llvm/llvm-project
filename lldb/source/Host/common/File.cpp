@@ -794,6 +794,21 @@ SerialPort::OptionsFromURL(llvm::StringRef urlqs) {
             llvm::inconvertibleErrorCode(),
             "Invalid parity (must be no, even, odd, mark or space): %s",
             x.str().c_str());
+    } else if (x.consume_front("parity-check=")) {
+      serial_options.ParityCheck =
+          llvm::StringSwitch<llvm::Optional<Terminal::ParityCheck>>(x)
+              .Case("no", Terminal::ParityCheck::No)
+              .Case("replace", Terminal::ParityCheck::ReplaceWithNUL)
+              .Case("ignore", Terminal::ParityCheck::Ignore)
+              // "mark" mode is not currently supported as it requires special
+              // input processing
+              // .Case("mark", Terminal::ParityCheck::Mark)
+              .Default(llvm::None);
+      if (!serial_options.ParityCheck)
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid parity-check (must be no, replace, ignore or mark): %s",
+            x.str().c_str());
     } else if (x.consume_front("stop-bits=")) {
       unsigned int stop_bits;
       if (!llvm::to_integer(x, stop_bits, 10) ||
@@ -829,6 +844,11 @@ SerialPort::Create(int fd, OpenOptions options, Options serial_options,
   }
   if (serial_options.Parity) {
     if (llvm::Error error = term.SetParity(serial_options.Parity.getValue()))
+      return std::move(error);
+  }
+  if (serial_options.ParityCheck) {
+    if (llvm::Error error =
+            term.SetParityCheck(serial_options.ParityCheck.getValue()))
       return std::move(error);
   }
   if (serial_options.StopBits) {

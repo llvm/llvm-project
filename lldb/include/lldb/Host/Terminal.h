@@ -28,6 +28,18 @@ public:
     Mark,
   };
 
+  enum class ParityCheck {
+    // No parity checking
+    No,
+    // Replace erraneous bytes with NUL
+    ReplaceWithNUL,
+    // Ignore erraneous bytes
+    Ignore,
+    // Mark erraneous bytes by prepending them with \xFF\x00; real \xFF
+    // is escaped to \xFF\xFF
+    Mark,
+  };
+
   Terminal(int fd = -1) : m_fd(fd) {}
 
   ~Terminal() = default;
@@ -53,6 +65,8 @@ public:
   llvm::Error SetStopBits(unsigned int stop_bits);
 
   llvm::Error SetParity(Parity parity);
+
+  llvm::Error SetParityCheck(ParityCheck parity_check);
 
   llvm::Error SetHardwareFlowControl(bool enabled);
 

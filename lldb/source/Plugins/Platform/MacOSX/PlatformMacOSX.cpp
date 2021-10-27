@@ -85,12 +85,7 @@ void PlatformMacOSX::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-lldb_private::ConstString PlatformMacOSX::GetPluginNameStatic() {
-  static ConstString g_host_name(Platform::GetHostPlatformName());
-  return g_host_name;
-}
-
-const char *PlatformMacOSX::GetDescriptionStatic() {
+llvm::StringRef PlatformMacOSX::GetDescriptionStatic() {
   return "Local Mac OS X user platform plug-in.";
 }
 

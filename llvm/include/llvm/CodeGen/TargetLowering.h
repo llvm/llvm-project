@@ -372,10 +372,18 @@ public:
     return getPointerTy(DL);
   }
 
-  /// EVT is not used in-tree, but is used by out-of-tree target.
-  /// A documentation for this function would be nice...
+  /// Return the type to use for a scalar shift opcode, given the shifted amount
+  /// type. Targets should return a legal type if the input type is legal.
+  /// Targets can return a type that is too small if the input type is illegal.
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
 
+  /// Returns the type for the shift amount of a shift opcode. For vectors,
+  /// returns the input type. For scalars, behavior depends on \p LegalTypes. If
+  /// \p LegalTypes is true, calls getScalarShiftAmountTy, otherwise uses
+  /// pointer type. If getScalarShiftAmountTy or pointer type cannot represent
+  /// all possible shift amounts, returns MVT::i32. In general, \p LegalTypes
+  /// should be set to true for calls during type legalization and after type
+  /// legalization has been completed.
   EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
                        bool LegalTypes = true) const;
 

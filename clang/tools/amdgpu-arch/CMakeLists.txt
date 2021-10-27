@@ -6,10 +6,6 @@
 # //
 # //===----------------------------------------------------------------------===//
 
-if (NOT ENABLE_AMDGPU_ARCH_TOOL)
-  return()
-endif()
-
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 if (NOT ${hsa-runtime64_FOUND})
   message(STATUS "Not building amdgpu-arch: hsa-runtime64 not found")

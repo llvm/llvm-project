@@ -285,6 +285,39 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ErfOp
+//===----------------------------------------------------------------------===//
+
+def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
+  let summary = "error function of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.erf` ssa-use `:` type
+    ```
+
+    The `erf` operation computes the error function. It takes one operand
+    and returns one result of the same type. This type may be a float scalar
+    type, a vector whose element type is float, or a tensor of floats. It has
+    no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar error function value.
+    %a = math.erf %b : f64
+
+    // SIMD vector element-wise error function value.
+    %f = math.erf %g : vector<4xf32>
+
+    // Tensor element-wise error function value.
+    %x = math.erf %y : tensor<4x?xf8>
+    ```
+  }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // ExpOp

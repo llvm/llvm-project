@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -32,6 +31,7 @@
 #include "mlir/Transforms/Utils.h"
 
 using namespace mlir;
+using namespace mlir::vector;
 using namespace linalg;
 
 namespace {
@@ -191,7 +191,7 @@ struct LinalgStrategyVectorizePass
     }
     vector::populateVectorTransferPermutationMapLoweringPatterns(
         vectorizationPatterns);
-    vector::populateVetorReductionToContractPatterns(vectorizationPatterns);
+    vector::populateVectorReductionToContractPatterns(vectorizationPatterns);
     vectorizationPatterns.add<linalg::LinalgCopyVTRForwardingPattern,
                               linalg::LinalgCopyVTWForwardingPattern>(
         funcOp.getContext(), /*benefit=*/2);
@@ -224,7 +224,7 @@ struct LinalgStrategyEnablePass
     if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
       return signalPassFailure();
 
-    if (options.enableLICM) {
+    if (options.licm) {
       if (funcOp
               ->walk([&](LoopLikeOpInterface loopLike) {
                 if (failed(moveLoopInvariantCode(loopLike)))
@@ -236,10 +236,10 @@ struct LinalgStrategyEnablePass
     }
 
     promoteSingleIterationLoops(funcOp);
-    if (options.enableHoistRedundantVectorTransfers)
+    if (options.hoistRedundantVectorTransfers)
       hoistRedundantVectorTransfers(funcOp);
 
-    if (options.enableHoistRedundantVectorTransfersOnTensor)
+    if (options.hoistRedundantVectorTransfersOnTensor)
       hoistRedundantVectorTransfersOnTensor(funcOp);
   }
 
@@ -263,24 +263,35 @@ struct LinalgStrategyLowerVectorsPass
 
     MLIRContext *context = funcOp.getContext();
     RewritePatternSet patterns(context);
-    if (options.enableVectorTransferLowering) {
+    vector::populateVectorToVectorCanonicalizationPatterns(patterns);
+    if (options.transferLowering) {
       vector::populateVectorTransferLoweringPatterns(patterns,
                                                      options.maxTransferRank);
     }
-    if (options.enableVectorTransferPartialRewrite) {
-      patterns.add<vector::VectorTransferFullPartialRewriter>(
-          context, options.vectorTransformOptions);
+    if (options.transposeLowering) {
+      vector::populateVectorTransposeLoweringPatterns(
+          patterns, options.vectorTransformOptions);
     }
-    if (options.enableVectorContractLowering) {
+    if (options.multiReductionLowering) {
+      vector::populateVectorMultiReductionLoweringPatterns(
+          patterns,
+          options.vectorTransformOptions.vectorMultiReductionLowering);
+    }
+    if (options.contractionLowering) {
       patterns.add<ContractionOpToOuterProductOpLowering,
                    ContractionOpToMatmulOpLowering, ContractionOpLowering>(
           options.vectorTransformOptions, context);
       vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
     }
-    if (options.enableVectorToSCFConversion) {
+    if (options.transferPartialRewrite) {
+      patterns.add<vector::VectorTransferFullPartialRewriter>(
+          context, options.vectorTransformOptions);
+    }
+    if (options.transferToSCFConversion) {
       populateVectorToSCFConversionPatterns(patterns,
                                             options.vectorTransferToSCFOptions);
     }
+    vector::populateVectorShapeCastLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   }
 

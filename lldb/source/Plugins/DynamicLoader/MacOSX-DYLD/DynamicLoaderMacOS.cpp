@@ -504,12 +504,7 @@ void DynamicLoaderMacOS::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString DynamicLoaderMacOS::GetPluginNameStatic() {
-  static ConstString g_name("macos-dyld");
-  return g_name;
-}
-
-const char *DynamicLoaderMacOS::GetPluginDescriptionStatic() {
+llvm::StringRef DynamicLoaderMacOS::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library loads/unloads "
          "in MacOSX user processes.";
 }

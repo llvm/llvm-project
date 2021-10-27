@@ -457,7 +457,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       if (!sec->isLive() || sec->parent || seen.contains(i))
         continue;
 
-      // For -emit-relocs we have to ignore entries like
+      // For --emit-relocs we have to ignore entries like
       //   .rela.dyn : { *(.rela.data) }
       // which are common because they are in the default bfd script.
       // We do not ignore SHT_REL[A] linker-synthesized sections here because

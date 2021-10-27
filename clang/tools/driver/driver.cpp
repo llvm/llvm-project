@@ -393,8 +393,8 @@ int main(int Argc, const char **Argv) {
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
-  auto FirstArg = std::find_if(Args.begin() + 1, Args.end(),
-                               [](const char *A) { return A != nullptr; });
+  auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
+                                [](const char *A) { return A != nullptr; });
   if (FirstArg != Args.end() && StringRef(*FirstArg).startswith("-cc1")) {
     // If -cc1 came from a response file, remove the EOL sentinels.
     if (MarkEOLs) {

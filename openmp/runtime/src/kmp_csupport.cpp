@@ -288,15 +288,7 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
     ompt_frame_t *ompt_frame;
     if (ompt_enabled.enabled) {
       kmp_info_t *master_th = __kmp_threads[gtid];
-      kmp_team_t *parent_team = master_th->th.th_team;
-      ompt_lw_taskteam_t *lwt = parent_team->t.ompt_serialized_team_info;
-      if (lwt)
-        ompt_frame = &(lwt->ompt_task_info.frame);
-      else {
-        int tid = __kmp_tid_from_gtid(gtid);
-        ompt_frame = &(
-            parent_team->t.t_implicit_task_taskdata[tid].ompt_task_info.frame);
-      }
+      ompt_frame = &master_th->th.th_current_task->ompt_task_info.frame;
       ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
     }
     OMPT_STORE_RETURN_ADDRESS(gtid);
@@ -320,6 +312,12 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
     );
 
     va_end(ap);
+
+#if OMPT_SUPPORT
+    if (ompt_enabled.enabled) {
+      ompt_frame->enter_frame = ompt_data_none;
+    }
+#endif
   }
 
 #if KMP_STATS_ENABLED

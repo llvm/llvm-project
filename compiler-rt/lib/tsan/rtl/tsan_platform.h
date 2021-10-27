@@ -906,7 +906,7 @@ struct RestoreAddrImpl {
     // 3 bits of the compressed addr match that of the app range. If yes, we
     // assume that the compressed address come from that range and restore the
     // missing top bits to match the app range address.
-    static constexpr uptr ranges[] = {
+    const uptr ranges[] = {
         Mapping::kLoAppMemBeg,  Mapping::kLoAppMemEnd, Mapping::kMidAppMemBeg,
         Mapping::kMidAppMemEnd, Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd,
         Mapping::kHeapMemBeg,   Mapping::kHeapMemEnd,

@@ -10,14 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "gtest/gtest.h"
 
 using namespace clang::ast_matchers;
@@ -137,4 +140,20 @@ TEST(Decl, MangleDependentSizedArray) {
 
   ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
   ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));
+}
+
+TEST(Decl, EnumDeclRange) {
+  llvm::Annotations Code(R"(
+    typedef int Foo;
+    [[enum Bar : Foo]];)");
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{});
+  ASTContext &Ctx = AST->getASTContext();
+  const auto &SM = Ctx.getSourceManager();
+
+  const auto *Bar =
+      selectFirst<TagDecl>("Bar", match(enumDecl().bind("Bar"), Ctx));
+  auto BarRange =
+      Lexer::getAsCharRange(Bar->getSourceRange(), SM, Ctx.getLangOpts());
+  EXPECT_EQ(SM.getFileOffset(BarRange.getBegin()), Code.range().Begin);
+  EXPECT_EQ(SM.getFileOffset(BarRange.getEnd()), Code.range().End);
 }

@@ -436,7 +436,7 @@ void Sema::CheckExtraCXXDefaultArguments(Declarator &D) {
 }
 
 static bool functionDeclHasDefaultArgument(const FunctionDecl *FD) {
-  return std::any_of(FD->param_begin(), FD->param_end(), [](ParmVarDecl *P) {
+  return llvm::any_of(FD->parameters(), [](ParmVarDecl *P) {
     return P->hasDefaultArg() && !P->hasInheritedDefaultArg();
   });
 }
@@ -1384,9 +1384,8 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
                                                  DecompType.getQualifiers());
 
   auto DiagnoseBadNumberOfBindings = [&]() -> bool {
-    unsigned NumFields =
-        std::count_if(RD->field_begin(), RD->field_end(),
-                      [](FieldDecl *FD) { return !FD->isUnnamedBitfield(); });
+    unsigned NumFields = llvm::count_if(
+        RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitfield(); });
     assert(Bindings.size() != NumFields);
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
         << DecompType << (unsigned)Bindings.size() << NumFields << NumFields

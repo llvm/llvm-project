@@ -1404,6 +1404,8 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
   SmallVector<Expr *, 6> AdjustNothing;
   SmallVector<Expr *, 6> AdjustNeedDevicePtr;
+  SmallVector<OMPDeclareVariantAttr::InteropType, 3> AppendArgs;
+  SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
   // At least one clause is required.
   if (Tok.is(tok::annot_pragma_openmp_end)) {
@@ -1428,6 +1430,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         IsError = parseOMPDeclareVariantMatchClause(Loc, TI, ParentTI);
         break;
       case OMPC_adjust_args: {
+        AdjustArgsLoc = Tok.getLocation();
         ConsumeToken();
         Parser::OpenMPVarListDataTy Data;
         SmallVector<Expr *> Vars;
@@ -1440,6 +1443,19 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
                              Vars);
         break;
       }
+      case OMPC_append_args:
+        if (!AppendArgs.empty()) {
+          Diag(AppendArgsLoc, diag::err_omp_more_one_clause)
+              << getOpenMPDirectiveName(OMPD_declare_variant)
+              << getOpenMPClauseName(CKind) << 0;
+          IsError = true;
+        }
+        if (!IsError) {
+          AppendArgsLoc = Tok.getLocation();
+          ConsumeToken();
+          IsError = parseOpenMPAppendArgs(AppendArgs);
+        }
+        break;
       default:
         llvm_unreachable("Unexpected clause for declare variant.");
       }
@@ -1458,16 +1474,104 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
 
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       Actions.checkOpenMPDeclareVariantFunction(
-          Ptr, AssociatedFunction.get(), TI,
+          Ptr, AssociatedFunction.get(), TI, AppendArgs.size(),
           SourceRange(Loc, Tok.getLocation()));
 
   if (DeclVarData && !TI.Sets.empty())
     Actions.ActOnOpenMPDeclareVariantDirective(
         DeclVarData->first, DeclVarData->second, TI, AdjustNothing,
-        AdjustNeedDevicePtr, SourceRange(Loc, Tok.getLocation()));
+        AdjustNeedDevicePtr, AppendArgs, AdjustArgsLoc, AppendArgsLoc,
+        SourceRange(Loc, Tok.getLocation()));
 
   // Skip the last annot_pragma_openmp_end.
   (void)ConsumeAnnotationToken();
+}
+
+/// Parse a list of interop-types. These are 'target' and 'targetsync'. Both
+/// are allowed but duplication of either is not meaningful.
+static Optional<OMPDeclareVariantAttr::InteropType>
+parseInteropTypeList(Parser &P) {
+  const Token &Tok = P.getCurToken();
+  bool HasError = false;
+  bool IsTarget = false;
+  bool IsTargetSync = false;
+
+  while (Tok.is(tok::identifier)) {
+    if (Tok.getIdentifierInfo()->isStr("target")) {
+      // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
+      // Each interop-type may be specified on an action-clause at most
+      // once.
+      if (IsTarget)
+        P.Diag(Tok, diag::warn_omp_more_one_interop_type) << "target";
+      IsTarget = true;
+    } else if (Tok.getIdentifierInfo()->isStr("targetsync")) {
+      if (IsTargetSync)
+        P.Diag(Tok, diag::warn_omp_more_one_interop_type) << "targetsync";
+      IsTargetSync = true;
+    } else {
+      HasError = true;
+      P.Diag(Tok, diag::err_omp_expected_interop_type);
+    }
+    P.ConsumeToken();
+
+    if (!Tok.is(tok::comma))
+      break;
+    P.ConsumeToken();
+  }
+  if (HasError)
+    return None;
+
+  if (!IsTarget && !IsTargetSync) {
+    P.Diag(Tok, diag::err_omp_expected_interop_type);
+    return None;
+  }
+
+  // As of OpenMP 5.1,there are two interop-types, "target" and
+  // "targetsync". Either or both are allowed for a single interop.
+  if (IsTarget && IsTargetSync)
+    return OMPDeclareVariantAttr::Target_TargetSync;
+  if (IsTarget)
+    return OMPDeclareVariantAttr::Target;
+  return OMPDeclareVariantAttr::TargetSync;
+}
+
+bool Parser::parseOpenMPAppendArgs(
+    SmallVectorImpl<OMPDeclareVariantAttr::InteropType> &InterOpTypes) {
+  bool HasError = false;
+  // Parse '('.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         getOpenMPClauseName(OMPC_append_args).data()))
+    return true;
+
+  // Parse the list of append-ops, each is;
+  // interop(interop-type[,interop-type]...)
+  while (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("interop")) {
+    ConsumeToken();
+    BalancedDelimiterTracker IT(*this, tok::l_paren,
+                                tok::annot_pragma_openmp_end);
+    if (IT.expectAndConsume(diag::err_expected_lparen_after, "interop"))
+      return true;
+
+    // Parse the interop-types.
+    if (Optional<OMPDeclareVariantAttr::InteropType> IType =
+            parseInteropTypeList(*this))
+      InterOpTypes.push_back(IType.getValue());
+    else
+      HasError = true;
+
+    IT.consumeClose();
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+  }
+  if (!HasError && InterOpTypes.empty()) {
+    HasError = true;
+    Diag(Tok.getLocation(), diag::err_omp_unexpected_append_op);
+    SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+              StopBeforeMatch);
+  }
+  HasError = T.consumeClose() || HasError;
+  return HasError;
 }
 
 bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
@@ -3342,36 +3446,15 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
     }
 
     // Parse the interop-types.
-    bool HasError = false;
-    while (Tok.is(tok::identifier)) {
-      if (PP.getSpelling(Tok) == "target") {
-        // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
-        // Each interop-type may be specified on an action-clause at most
-        // once.
-        if (IsTarget)
-          Diag(Tok, diag::warn_omp_more_one_interop_type) << "target";
-        IsTarget = true;
-      } else if (PP.getSpelling(Tok) == "targetsync") {
-        if (IsTargetSync)
-          Diag(Tok, diag::warn_omp_more_one_interop_type) << "targetsync";
-        IsTargetSync = true;
-      } else {
-        HasError = true;
-        Diag(Tok, diag::err_omp_expected_interop_type);
-      }
-      ConsumeToken();
-
-      if (!Tok.is(tok::comma))
-        break;
-      ConsumeToken();
+    if (Optional<OMPDeclareVariantAttr::InteropType> IType =
+            parseInteropTypeList(*this)) {
+      IsTarget = IType != OMPDeclareVariantAttr::TargetSync;
+      IsTargetSync = IType != OMPDeclareVariantAttr::Target;
+      if (Tok.isNot(tok::colon))
+        Diag(Tok, diag::warn_pragma_expected_colon) << "interop types";
     }
-    if (!HasError && !IsTarget && !IsTargetSync)
-      Diag(Tok, diag::err_omp_expected_interop_type);
-
     if (Tok.is(tok::colon))
       ConsumeToken();
-    else if (IsTarget || IsTargetSync)
-      Diag(Tok, diag::warn_pragma_expected_colon) << "interop types";
   }
 
   // Parse the variable.

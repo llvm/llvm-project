@@ -1430,7 +1430,7 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     assert(BI->isConditional() && "exit branch must be conditional");
 
     auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
-    if (!ICmp)
+    if (!ICmp || !ICmp->hasOneUse())
       continue;
 
     auto *LHS = ICmp->getOperand(0);

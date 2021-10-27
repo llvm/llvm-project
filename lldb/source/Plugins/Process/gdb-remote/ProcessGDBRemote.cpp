@@ -515,31 +515,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     }
   }
 
-  if (!registers.empty()) {
-    AddRemoteRegisters(registers, arch_to_use);
-    return;
-  }
-
-  // We didn't get anything if the accumulated reg_num is zero.  See if we are
-  // debugging ARM and fill with a hard coded register set until we can get an
-  // updated debugserver down on the devices. On the other hand, if the
-  // accumulated reg_num is positive, see if we can add composite registers to
-  // the existing primordial ones.
-  bool from_scratch = (m_register_info_sp->GetNumRegisters() == 0);
-
-  if (!target_arch.IsValid()) {
-    if (arch_to_use.IsValid() &&
-        (arch_to_use.GetMachine() == llvm::Triple::arm ||
-         arch_to_use.GetMachine() == llvm::Triple::thumb) &&
-        arch_to_use.GetTriple().getVendor() == llvm::Triple::Apple)
-      m_register_info_sp->HardcodeARMRegisters(from_scratch);
-  } else if (target_arch.GetMachine() == llvm::Triple::arm ||
-             target_arch.GetMachine() == llvm::Triple::thumb) {
-    m_register_info_sp->HardcodeARMRegisters(from_scratch);
-  }
-
-  // At this point, we can finalize our register info.
-  m_register_info_sp->Finalize(GetTarget().GetArchitecture());
+  AddRemoteRegisters(registers, arch_to_use);
 }
 
 Status ProcessGDBRemote::WillLaunch(lldb_private::Module *module) {
@@ -2373,9 +2349,9 @@ Status ProcessGDBRemote::DoDestroy() {
       m_public_state.GetValue() != eStateRunning) {
     PlatformSP platform_sp = GetTarget().GetPlatform();
 
-    // FIXME: These should be ConstStrings so we aren't doing strcmp'ing.
     if (platform_sp && platform_sp->GetName() &&
-        platform_sp->GetName() == PlatformRemoteiOS::GetPluginNameStatic()) {
+        platform_sp->GetName().GetStringRef() ==
+            PlatformRemoteiOS::GetPluginNameStatic()) {
       if (m_destroy_tried_resuming) {
         if (log)
           log->PutCString("ProcessGDBRemote::DoDestroy() - Tried resuming to "
@@ -3891,7 +3867,7 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, nullptr));
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
   return m_dyld_up.get();
 }
 

@@ -83,7 +83,7 @@ CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
                /* ParamsToSkip = */ 0);
 
   // We don't know how to emit non-scalar varargs.
-  if (std::any_of(Args.begin() + 1, Args.end(), [&](const CallArg &A) {
+  if (llvm::any_of(llvm::drop_begin(Args), [&](const CallArg &A) {
         return !A.getRValue(*this).isScalar();
       })) {
     CGM.ErrorUnsupported(E, "non-scalar arg to printf");

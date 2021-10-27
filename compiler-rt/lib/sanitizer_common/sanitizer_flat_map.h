@@ -43,14 +43,12 @@ class FlatMap {
   }
 
   T &operator[](uptr idx) {
-    CHECK_LT(idx, kSize);
-    // FIXME: CHECK may be too expensive here.
+    DCHECK_LT(idx, kSize);
     return map_[idx];
   }
 
   const T &operator[](uptr idx) const {
-    CHECK_LT(idx, kSize);
-    // FIXME: CHECK may be too expensive here.
+    DCHECK_LT(idx, kSize);
     return map_[idx];
   }
 
@@ -67,6 +65,8 @@ template <typename T, u64 kSize1, u64 kSize2,
           typename AddressSpaceViewTy = LocalAddressSpaceView,
           class MapUnmapCallback = NoOpMapUnmapCallback>
 class TwoLevelMap {
+  static_assert(IsPowerOfTwo(kSize2), "Use a power of two for performance.");
+
  public:
   using AddressSpaceView = AddressSpaceViewTy;
   void Init() {
@@ -106,13 +106,13 @@ class TwoLevelMap {
   }
 
   const T &operator[](uptr idx) const {
-    CHECK_LT(idx, kSize1 * kSize2);
+    DCHECK_LT(idx, kSize1 * kSize2);
     T *map2 = GetOrCreate(idx / kSize2);
     return *AddressSpaceView::Load(&map2[idx % kSize2]);
   }
 
   T &operator[](uptr idx) {
-    CHECK_LT(idx, kSize1 * kSize2);
+    DCHECK_LT(idx, kSize1 * kSize2);
     T *map2 = GetOrCreate(idx / kSize2);
     return *AddressSpaceView::LoadWritable(&map2[idx % kSize2]);
   }
@@ -123,7 +123,7 @@ class TwoLevelMap {
   }
 
   T *Get(uptr idx) const {
-    CHECK_LT(idx, kSize1);
+    DCHECK_LT(idx, kSize1);
     return reinterpret_cast<T *>(
         atomic_load(&map1_[idx], memory_order_acquire));
   }

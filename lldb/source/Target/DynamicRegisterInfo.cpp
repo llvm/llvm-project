@@ -422,35 +422,6 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
   return m_regs.size();
 }
 
-void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
-                                      ConstString &set_name) {
-  assert(!m_finalized);
-  const uint32_t reg_num = m_regs.size();
-  assert(reg_info.name);
-  uint32_t i;
-  if (reg_info.value_regs) {
-    for (i = 0; reg_info.value_regs[i] != LLDB_INVALID_REGNUM; ++i)
-      m_value_regs_map[reg_num].push_back(reg_info.value_regs[i]);
-
-    // invalidate until Finalize() is called
-    reg_info.value_regs = nullptr;
-  }
-  if (reg_info.invalidate_regs) {
-    for (i = 0; reg_info.invalidate_regs[i] != LLDB_INVALID_REGNUM; ++i)
-      m_invalidate_regs_map[reg_num].push_back(reg_info.invalidate_regs[i]);
-
-    // invalidate until Finalize() is called
-    reg_info.invalidate_regs = nullptr;
-  }
-
-  m_regs.push_back(reg_info);
-  uint32_t set = GetRegisterSetIndexByName(set_name, true);
-  assert(set < m_sets.size());
-  assert(set < m_set_reg_nums.size());
-  assert(set < m_set_names.size());
-  m_set_reg_nums[set].push_back(reg_num);
-}
-
 void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   if (m_finalized)
     return;

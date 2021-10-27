@@ -80,6 +80,12 @@ static cl::opt<bool> AddOpenMPOffloadNotes(
     "add-omp-offload-notes",
     cl::desc("Add LLVMOMPOFFLOAD ELF notes to ELF device images."), cl::Hidden);
 
+static cl::list<std::string>
+    OffloadArch("offload-arch",
+                cl::desc("Contains offload-arch of the following target binary."),
+                cl::value_desc("offload-arch-name"),
+                cl::cat(ClangOffloadWrapperCategory));
+
 namespace {
 
 class BinaryWrapper {
@@ -89,6 +95,7 @@ class BinaryWrapper {
   StructType *EntryTy = nullptr;
   StructType *ImageTy = nullptr;
   StructType *DescTy = nullptr;
+  StructType *ImageInfoTy = nullptr;
 
   std::string ToolName;
   std::string ObjcopyPath;
@@ -161,6 +168,27 @@ private:
 
   PointerType *getBinDescPtrTy() {
     return PointerType::getUnqual(getBinDescTy());
+  }
+
+  // This matches the runtime struct definition of __tgt_image_info
+  // declared in openmp/libomptarget/include/omptarget.h /
+  // struct __tgt_image_info {
+  //   int32_t version;
+  //   int32_t image_number;
+  //   int32_t number_images;
+  //   char* offload_arch;
+  //   char* target_compile_opts;
+  // };
+  StructType *getImageInfoTy() {
+    if (!ImageInfoTy)
+      ImageInfoTy = StructType::create(
+          "__tgt_image_info", Type::getInt32Ty(C), Type::getInt32Ty(C),
+          Type::getInt32Ty(C), Type::getInt8PtrTy(C), Type::getInt8PtrTy(C));
+    return ImageInfoTy;
+  }
+
+  PointerType *getImageInfoPtrTy() {
+    return PointerType::getUnqual(getImageInfoTy());
   }
 
   /// Creates binary descriptor for the given device images. Binary descriptor
@@ -277,7 +305,9 @@ private:
                               ".omp_offloading.descriptor");
   }
 
-  void createRegisterFunction(GlobalVariable *BinDesc) {
+  void createRegisterFunction(GlobalVariable *BinDesc,
+                              ArrayRef<ArrayRef<char>> OffloadArchs) {
+
     auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
                                   ".omp_offloading.descriptor_reg", &M);
@@ -291,15 +321,65 @@ private:
 
     // Construct function body
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
+    // Create calls to __tgt_register_image_info for each image
+    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
+    auto *Zero = ConstantInt::get(getSizeTTy(), 0u);
+    auto *RegInfoFuncTy =
+        FunctionType::get(Type::getVoidTy(C), getImageInfoPtrTy(), false);
+    FunctionCallee RegInfoFuncC =
+        M.getOrInsertFunction("__tgt_register_image_info", RegInfoFuncTy);
+    unsigned int ImgCount = 0;
+    std::string OffloadArchBase = "__offload_arch";
+    std::string OffloadImageBase = "offload_image_info";
+
+    for (ArrayRef<char> OArch : OffloadArchs) {
+      Constant *OArchV = ConstantDataArray::get(C, OArch);
+      std::string OffloadArchGV(OffloadArchBase), OffloadImageGV(OffloadImageBase);
+      if(ImgCount) {
+        auto Suffix = to_string(ImgCount);
+        OffloadArchGV.append(".").append(Suffix);
+        OffloadImageGV.append(".").append(Suffix);
+      }
+
+      auto *GV =
+          new GlobalVariable(M, OArchV->getType(), /*isConstant*/ true,
+                             GlobalValue::InternalLinkage, OArchV,
+                             OffloadArchGV);
+      GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+      // store value of these variables (i.e. offload archs) into a custom
+      // section which will be used by "offload-arch -f". It won't be
+      // removed during binary stripping.
+      GV->setSection(".offload_arch_list");
+
+      auto *RequirementVPtr =
+          ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zero);
+      RequirementVPtr =
+          ConstantExpr::getBitCast(RequirementVPtr, Type::getInt8PtrTy(C));
+      auto *InfoInit = ConstantStruct::get(
+          getImageInfoTy(), ConstantInt::get(Type::getInt32Ty(C), 1),
+          ConstantInt::get(Type::getInt32Ty(C), ImgCount++),
+          ConstantInt::get(Type::getInt32Ty(C), (uint32_t)OffloadArchs.size()),
+          RequirementVPtr,
+          NullPtr // TODO: capture target-compile-opts from clang driver
+      );
+      auto *ImageInfoGV = new GlobalVariable(
+          M, InfoInit->getType(),
+          /*isConstant*/ true, GlobalValue::InternalLinkage, InfoInit,
+         OffloadImageGV);
+      ImageInfoGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+      Builder.CreateCall(RegInfoFuncC, ImageInfoGV);
+    }
+
     Builder.CreateCall(RegFuncC, BinDesc);
     Builder.CreateRetVoid();
 
     // Add this function to constructors.
     // Set priority to 1 so that __tgt_register_lib is executed AFTER
-    // __tgt_register_requires (we want to know what requirements have been
+    // __tgt_register_requires (we want to know what offload-arch have been
     // asked for before we load a libomptarget plugin so that by the time the
     // plugin is loaded it can report how many devices there are which can
-    // satisfy these requirements).
+    // match with the offload-arch).
     appendToGlobalCtors(M, Func, /*Priority*/ 1);
   }
 
@@ -383,10 +463,11 @@ public:
     }
   }
 
-  const Module &wrapBinaries(ArrayRef<ArrayRef<char>> Binaries) {
+  const Module &wrapBinaries(ArrayRef<ArrayRef<char>> Binaries,
+                             ArrayRef<ArrayRef<char>> OffloadArchs) {
     GlobalVariable *Desc = createBinDesc(Binaries);
     assert(Desc && "no binary descriptor");
-    createRegisterFunction(Desc);
+    createRegisterFunction(Desc, OffloadArchs);
     createUnregisterFunction(Desc);
     return M;
   }
@@ -654,10 +735,20 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
+  SmallVector<ArrayRef<char>, 4u> OffloadArchs;
+  OffloadArchs.reserve(OffloadArch.size());
+  for (unsigned i = 0; i != OffloadArch.size(); ++i) {
+    OffloadArch[i].append("\0");
+    OffloadArchs.emplace_back(OffloadArch[i].data(), OffloadArch[i].size() + 1);
+  }
+
   // Create a wrapper for device binaries and write its bitcode to the file.
   WriteBitcodeToFile(
-      Wrapper.wrapBinaries(makeArrayRef(Images.data(), Images.size())),
+      Wrapper.wrapBinaries(
+          makeArrayRef(Images.data(), Images.size()),
+          makeArrayRef(OffloadArchs.data(), OffloadArchs.size())),
       Out.os());
+
   if (Out.os().has_error()) {
     reportError(createFileError(Output, Out.os().error()));
     return 1;

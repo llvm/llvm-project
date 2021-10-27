@@ -5169,11 +5169,8 @@ QualType ASTContext::getObjCObjectType(
   // sorted-and-uniqued list of protocols and the type arguments
   // canonicalized.
   QualType canonical;
-  bool typeArgsAreCanonical = std::all_of(effectiveTypeArgs.begin(),
-                                          effectiveTypeArgs.end(),
-                                          [&](QualType type) {
-                                            return type.isCanonical();
-                                          });
+  bool typeArgsAreCanonical = llvm::all_of(
+      effectiveTypeArgs, [&](QualType type) { return type.isCanonical(); });
   bool protocolsSorted = areSortedAndUniqued(protocols);
   if (!typeArgsAreCanonical || !protocolsSorted || !baseType.isCanonical()) {
     // Determine the canonical type arguments.
@@ -8769,8 +8766,8 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
 static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isVLSTBuiltinType() && "Invalid SVE Type");
   return Ty->getKind() == BuiltinType::SveBool
-             ? Context.getLangOpts().ArmSveVectorBits / Context.getCharWidth()
-             : Context.getLangOpts().ArmSveVectorBits;
+             ? (Context.getLangOpts().VScaleMin * 128) / Context.getCharWidth()
+             : Context.getLangOpts().VScaleMin * 128;
 }
 
 bool ASTContext::areCompatibleSveTypes(QualType FirstType,

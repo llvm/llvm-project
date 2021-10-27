@@ -39,6 +39,13 @@ public:
     return true;
   }
 
+  bool VisitFunctionDecl(FunctionDecl *FD) {
+    // Function definition will require redeclarations to be included.
+    if (FD == FD->getDefinition())
+      add(FD);
+    return true;
+  }
+
   bool VisitCXXConstructExpr(CXXConstructExpr *CCE) {
     add(CCE->getConstructor());
     return true;
@@ -78,6 +85,15 @@ public:
       add(Shadow->getTargetDecl());
     }
     return true;
+  }
+
+  // Enums may be usefully forward-declared as *complete* types by specifying
+  // an underlying type. In this case, the definition should see the declaration
+  // so they can be checked for compatibility.
+  bool VisitEnumDecl(EnumDecl *D) {
+    if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
+      add(D);
+    return false;
   }
 
 private:

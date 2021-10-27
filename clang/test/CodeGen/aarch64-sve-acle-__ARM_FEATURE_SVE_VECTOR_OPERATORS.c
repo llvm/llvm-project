@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=128  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK128
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=256  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECK256
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=512  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECK512
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=1024 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECK1024
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=2048 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECK2048
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK128
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECK256
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECK512
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECK1024
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECK2048
 // REQUIRES: aarch64-registered-target
 
 // Examples taken from section "3.7.3.3 Behavior specific to SVE
@@ -10,7 +10,7 @@
 // https://developer.arm.com/documentation/100987/latest
 //
 // Example has been expanded to work with mutiple values of
-// -msve-vector-bits.
+// -mvscale-{min,max}.
 
 #include <arm_sve.h>
 

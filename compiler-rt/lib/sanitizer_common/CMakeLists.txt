@@ -80,6 +80,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_stacktrace_printer.cpp
   sanitizer_stacktrace_sparc.cpp
   sanitizer_symbolizer.cpp
+  sanitizer_symbolizer_amdgpu.cpp
   sanitizer_symbolizer_libbacktrace.cpp
   sanitizer_symbolizer_libcdep.cpp
   sanitizer_symbolizer_mac.cpp
@@ -175,6 +176,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_stoptheworld.h
   sanitizer_suppressions.h
   sanitizer_symbolizer.h
+  sanitizer_symbolizer_amdgpu.h
   sanitizer_symbolizer_fuchsia.h
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h

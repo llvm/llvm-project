@@ -437,6 +437,10 @@ public:
 
   RegionBindingsRef removeSubRegionBindings(RegionBindingsConstRef B,
                                             const SubRegion *R);
+  Optional<SVal> getConstantValFromConstArrayInitializer(
+      RegionBindingsConstRef B, const VarRegion *VR, const ElementRegion *R);
+  Optional<SVal> getSValFromInitListExpr(const InitListExpr *ILE,
+                                         uint64_t Offset, QualType ElemT);
 
 public: // Part of public interface to class.
 
@@ -1625,6 +1629,105 @@ RegionStoreManager::findLazyBinding(RegionBindingsConstRef B,
   return Result;
 }
 
+Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
+    RegionBindingsConstRef B, const VarRegion *VR, const ElementRegion *R) {
+  assert(R && VR && "Regions should not be null");
+
+  // Check if the containing array has an initialized value that we can trust.
+  // We can trust a const value or a value of a global initializer in main().
+  const VarDecl *VD = VR->getDecl();
+  if (!VD->getType().isConstQualified() &&
+      !R->getElementType().isConstQualified() &&
+      (!B.isMainAnalysis() || !VD->hasGlobalStorage()))
+    return None;
+
+  // Array's declaration should have `ConstantArrayType` type, because only this
+  // type contains an array extent. It may happen that array type can be of
+  // `IncompleteArrayType` type. To get the declaration of `ConstantArrayType`
+  // type, we should find the declaration in the redeclarations chain that has
+  // the initialization expression.
+  // NOTE: `getAnyInitializer` has an out-parameter, which returns a new `VD`
+  // from which an initializer is obtained. We replace current `VD` with the new
+  // `VD`. If the return value of the function is null than `VD` won't be
+  // replaced.
+  const Expr *Init = VD->getAnyInitializer(VD);
+  // NOTE: If `Init` is non-null, then a new `VD` is non-null for sure. So check
+  // `Init` for null only and don't worry about the replaced `VD`.
+  if (!Init)
+    return None;
+
+  // Array's declaration should have ConstantArrayType type, because only this
+  // type contains an array extent.
+  const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(VD->getType());
+  if (!CAT)
+    return None;
+
+  // Array should be one-dimensional.
+  // TODO: Support multidimensional array.
+  if (isa<ConstantArrayType>(CAT->getElementType())) // is multidimensional
+    return None;
+
+  // Array's offset should be a concrete value.
+  // Return Unknown value if symbolic index presented.
+  // FIXME: We also need to take ElementRegions with symbolic
+  // indexes into account.
+  const auto OffsetVal = R->getIndex().getAs<nonloc::ConcreteInt>();
+  if (!OffsetVal.hasValue())
+    return UnknownVal();
+
+  // Check offset for being out of bounds.
+  // C++20 [expr.add] 7.6.6.4 (excerpt):
+  //   If P points to an array element i of an array object x with n
+  //   elements, where i < 0 or i > n, the behavior is undefined.
+  //   Dereferencing is not allowed on the "one past the last
+  //   element", when i == n.
+  // Example:
+  //   const int arr[4] = {1, 2};
+  //   const int *ptr = arr;
+  //   int x0 = ptr[0];  // 1
+  //   int x1 = ptr[1];  // 2
+  //   int x2 = ptr[2];  // 0
+  //   int x3 = ptr[3];  // 0
+  //   int x4 = ptr[4];  // UB
+  //   int x5 = ptr[-1]; // UB
+  const llvm::APSInt &OffsetInt = OffsetVal->getValue();
+  const auto Offset = static_cast<uint64_t>(OffsetInt.getExtValue());
+  // Use `getZExtValue` because array extent can not be negative.
+  const uint64_t Extent = CAT->getSize().getZExtValue();
+  // Check for `OffsetInt < 0` but NOT for `Offset < 0`, because `OffsetInt`
+  // CAN be negative, but `Offset` can NOT, because `Offset` is an uint64_t.
+  if (OffsetInt < 0 || Offset >= Extent)
+    return UndefinedVal();
+  // From here `Offset` is in the bounds.
+
+  // Handle InitListExpr.
+  if (const auto *ILE = dyn_cast<InitListExpr>(Init))
+    return getSValFromInitListExpr(ILE, Offset, R->getElementType());
+
+  // FIXME: Handle StringLiteral.
+
+  // FIXME: Handle CompoundLiteralExpr.
+
+  return None;
+}
+
+Optional<SVal>
+RegionStoreManager::getSValFromInitListExpr(const InitListExpr *ILE,
+                                            uint64_t Offset, QualType ElemT) {
+  assert(ILE && "InitListExpr should not be null");
+
+  // C++20 [expr.add] 9.4.17.5 (excerpt):
+  //   i-th array element is value-initialized for each k < i ≤ n,
+  //   where k is an expression-list size and n is an array extent.
+  if (Offset >= ILE->getNumInits())
+    return svalBuilder.makeZeroVal(ElemT);
+
+  // Return a constant value, if it is presented.
+  // FIXME: Support other SVals.
+  const Expr *E = ILE->getInit(Offset);
+  return svalBuilder.getConstantVal(E);
+}
+
 SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
                                               const ElementRegion* R) {
   // Check if the region has a binding.
@@ -1658,64 +1761,8 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       return svalBuilder.makeIntVal(c, T);
     }
   } else if (const VarRegion *VR = dyn_cast<VarRegion>(superR)) {
-    // Check if the containing array has an initialized value that we can trust.
-    // We can trust a const value or a value of a global initializer in main().
-    const VarDecl *VD = VR->getDecl();
-    if (VD->getType().isConstQualified() ||
-        R->getElementType().isConstQualified() ||
-        (B.isMainAnalysis() && VD->hasGlobalStorage())) {
-      if (const Expr *Init = VD->getAnyInitializer()) {
-        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
-          // The array index has to be known.
-          if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
-            // If it is not an array, return Undef.
-            QualType T = VD->getType();
-            const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(T);
-            if (!CAT)
-              return UndefinedVal();
-
-            // Support one-dimensional array.
-            // C++20 [expr.add] 7.6.6.4 (excerpt):
-            //   If P points to an array element i of an array object x with n
-            //   elements, where i < 0 or i > n, the behavior is undefined.
-            //   Dereferencing is not allowed on the "one past the last
-            //   element", when i == n.
-            // Example:
-            //   const int arr[4] = {1, 2};
-            //   const int *ptr = arr;
-            //   int x0 = ptr[0]; // 1
-            //   int x1 = ptr[1]; // 2
-            //   int x2 = ptr[2]; // 0
-            //   int x3 = ptr[3]; // 0
-            //   int x4 = ptr[4]; // UB
-            // TODO: Support multidimensional array.
-            if (!isa<ConstantArrayType>(CAT->getElementType())) {
-              // One-dimensional array.
-              const llvm::APSInt &Idx = CI->getValue();
-              const auto I = static_cast<uint64_t>(Idx.getExtValue());
-              // Use `getZExtValue` because array extent can not be negative.
-              const uint64_t Extent = CAT->getSize().getZExtValue();
-              // Check for `Idx < 0`, NOT for `I < 0`, because `Idx` CAN be
-              // negative, but `I` can NOT.
-              if (Idx < 0 || I >= Extent)
-                return UndefinedVal();
-
-              // C++20 [expr.add] 9.4.17.5 (excerpt):
-              //   i-th array element is value-initialized for each k < i ≤ n,
-              //   where k is an expression-list size and n is an array extent.
-              if (I >= InitList->getNumInits())
-                return svalBuilder.makeZeroVal(R->getElementType());
-
-              // Return a constant value, if it is presented.
-              // FIXME: Support other SVals.
-              const Expr *E = InitList->getInit(I);
-              if (Optional<SVal> V = svalBuilder.getConstantVal(E))
-                return *V;
-            }
-          }
-        }
-      }
-    }
+    if (Optional<SVal> V = getConstantValFromConstArrayInitializer(B, VR, R))
+      return *V;
   }
 
   // Check for loads from a code text region.  For such loads, just give up.

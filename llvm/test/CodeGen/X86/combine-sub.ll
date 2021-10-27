@@ -275,3 +275,143 @@ define <4 x i32> @combine_vec_neg_xor_consts(<4 x i32> %x) {
   %sub = sub <4 x i32> zeroinitializer, %xor
   ret <4 x i32> %sub
 }
+
+define void @PR52032(<8 x i32>* %p) {
+; SSE-LABEL: PR52032:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    movdqu 32(%rdi), %xmm3
+; SSE-NEXT:    movdqu 48(%rdi), %xmm4
+; SSE-NEXT:    psubd %xmm0, %xmm2
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
+; SSE-NEXT:    psubd %xmm0, %xmm4
+; SSE-NEXT:    psubd %xmm0, %xmm3
+; SSE-NEXT:    movdqu %xmm3, 32(%rdi)
+; SSE-NEXT:    movdqu %xmm4, 48(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vmovdqu (%rdi), %ymm1
+; AVX-NEXT:    vmovdqu 32(%rdi), %ymm2
+; AVX-NEXT:    vpsubd %ymm0, %ymm1, %ymm1
+; AVX-NEXT:    vmovdqu %ymm1, (%rdi)
+; AVX-NEXT:    vpsubd %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vmovdqu %ymm0, 32(%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %i3 = load <8 x i32>, <8 x i32>* %p, align 4
+  %i4 = add nsw <8 x i32> %i3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  store <8 x i32> %i4, <8 x i32>* %p, align 4
+  %p2 = getelementptr inbounds <8 x i32>, <8 x i32>* %p, i64 1
+  %i8 = load <8 x i32>, <8 x i32>* %p2, align 4
+  %i9 = add nsw <8 x i32> %i8, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  store <8 x i32> %i9, <8 x i32>* %p2, align 4
+  ret void
+}
+
+define void @PR52032_2(<4 x i32>* %p) {
+; SSE-LABEL: PR52032_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    psubd %xmm0, %xmm2
+; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu (%rdi), %xmm1
+; AVX-NEXT:    vmovdqu 16(%rdi), %xmm2
+; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqu %xmm1, (%rdi)
+; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX-NEXT:    retq
+  %i3 = load <4 x i32>, <4 x i32>* %p, align 4
+  %i4 = add nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i4, <4 x i32>* %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i64 1
+  %i8 = load <4 x i32>, <4 x i32>* %p2, align 4
+  %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i9, <4 x i32>* %p2, align 4
+  ret void
+}
+
+define void @PR52032_3(<4 x i32>* %p) {
+; SSE-LABEL: PR52032_3:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    paddd %xmm0, %xmm1
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    paddd %xmm0, %xmm2
+; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd (%rdi), %xmm0, %xmm1
+; AVX-NEXT:    vmovdqu %xmm1, (%rdi)
+; AVX-NEXT:    vpaddd 16(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX-NEXT:    retq
+  %i3 = load <4 x i32>, <4 x i32>* %p, align 4
+  %i4 = sub nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i4, <4 x i32>* %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i64 1
+  %i8 = load <4 x i32>, <4 x i32>* %p2, align 4
+  %i9 = sub nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i9, <4 x i32>* %p2, align 4
+  ret void
+}
+
+define void @PR52032_4(<4 x i32>* %p, <4 x i32>* %q) {
+; SSE-LABEL: PR52032_4:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqu (%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
+; SSE-NEXT:    movdqu 16(%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    movdqu %xmm0, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR52032_4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX-NEXT:    vmovdqu 16(%rdi), %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
+; AVX-NEXT:    retq
+  %i3 = load <4 x i32>, <4 x i32>* %p, align 4
+  store <4 x i32> %i3, <4 x i32>* %q
+  %i4 = add nsw <4 x i32> %i3, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i4, <4 x i32>* %p, align 4
+  %p2 = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i64 1
+  %q2 = getelementptr inbounds <4 x i32>, <4 x i32>* %q, i64 1
+  %i8 = load <4 x i32>, <4 x i32>* %p2, align 4
+  store <4 x i32> %i8, <4 x i32>* %q2
+  %i9 = add nsw <4 x i32> %i8, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %i9, <4 x i32>* %p2, align 4
+  ret void
+}

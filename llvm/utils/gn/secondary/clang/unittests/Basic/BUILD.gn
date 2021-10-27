@@ -6,6 +6,7 @@ unittest("BasicTests") {
     "//clang/lib/Basic",
     "//clang/lib/Lex",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "CharInfoTest.cpp",

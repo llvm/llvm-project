@@ -416,9 +416,9 @@ static LogicalResult verifyAveragePoolOp(tosa::AvgPool2dOp op) {
 
   if (inputETy.isF32() && resultETy.isF32())
     return success();
-  if (inputETy.isInteger(8) && resultETy.isInteger(32))
+  if (inputETy.isInteger(8) && resultETy.isInteger(8))
     return success();
-  if (inputETy.isInteger(16) && resultETy.isInteger(32))
+  if (inputETy.isInteger(16) && resultETy.isInteger(16))
     return success();
 
   return op.emitOpError("input/output element types are incompatible.");

@@ -743,7 +743,7 @@ public:
         op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
 
     rewriter.create<CallOp>(op->getLoc(), apiFuncName, TypeRange(),
-                            ValueRange({operand, handle, resumePtr.res()}));
+                            ValueRange({operand, handle, resumePtr.getRes()}));
     rewriter.eraseOp(op);
 
     return success();
@@ -771,8 +771,8 @@ public:
 
     // Call async runtime API to execute a coroutine in the managed thread.
     auto coroHdl = adaptor.handle();
-    rewriter.replaceOpWithNewOp<CallOp>(op, TypeRange(), kExecute,
-                                        ValueRange({coroHdl, resumePtr.res()}));
+    rewriter.replaceOpWithNewOp<CallOp>(
+        op, TypeRange(), kExecute, ValueRange({coroHdl, resumePtr.getRes()}));
 
     return success();
   }

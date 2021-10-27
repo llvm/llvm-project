@@ -542,16 +542,16 @@ declare hidden void @ex() #0
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; WAVE64: s_or_saveexec_b64 s[4:5], -1
-; WAVE32: s_or_saveexec_b32 s4, -1
+; WAVE64: s_or_saveexec_b64 [[EXEC_MASK:s\[[0-9]+:[0-9]+\]]], -1
+; WAVE32: s_or_saveexec_b32 [[EXEC_MASK:s[0-9]+]], -1
 ; CHECK-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VGPR40_wave64 = 2600
 ; WAVE64-NEXT: .cfi_offset 2600, 0
 ; VGPR40_wave32 = 1576
 ; WAVE32-NEXT: .cfi_offset 1576, 0
 ; CHECK-NOT: .cfi_{{.*}}
-; WAVE64: s_mov_b64 exec, s[4:5]
-; WAVE32: s_mov_b32 exec_lo, s4
+; WAVE64: s_mov_b64 exec, [[EXEC_MASK]]
+; WAVE32: s_mov_b32 exec_lo, [[EXEC_MASK]]
 
 ; CHECK-NOT: .cfi_{{.*}}
 

@@ -1252,6 +1252,7 @@ AliasResult BasicAAResult::aliasGEP(
     APInt GCD;
     bool AllNonNegative = DecompGEP1.Offset.isNonNegative();
     bool AllNonPositive = DecompGEP1.Offset.isNonPositive();
+    ConstantRange Range = ConstantRange(DecompGEP1.Offset);
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
       const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
       const APInt &Scale = Index.Scale;
@@ -1275,6 +1276,14 @@ AliasResult BasicAAResult::aliasGEP(
         AllNonPositive &= (SignKnownZero && Scale.isNonPositive()) ||
                           (SignKnownOne && Scale.isNonNegative());
       }
+
+      assert(Range.getBitWidth() == Scale.getBitWidth() &&
+             "Bit widths are normalized to MaxPointerSize");
+      Range = Range.add(Index.Val
+                            .evaluateWith(computeConstantRange(
+                                Index.Val.V, true, &AC, Index.CxtI))
+                            .sextOrTrunc(Range.getBitWidth())
+                            .smul_fast(ConstantRange(Scale)));
     }
 
     // We now have accesses at two offsets from the same base:
@@ -1306,13 +1315,22 @@ AliasResult BasicAAResult::aliasGEP(
         (-DecompGEP1.Offset).uge(V1Size.getValue()))
       return AliasResult::NoAlias;
 
+    if (!Range.isEmptySet()) {
+      // We know that Offset >= MinOffset.
+      // (MinOffset >= V2Size) => (Offset >= V2Size) => NoAlias.
+      if (V2Size.hasValue() && Range.getSignedMin().sge(V2Size.getValue()))
+        return AliasResult::NoAlias;
+
+      // We know that Offset <= MaxOffset.
+      // (MaxOffset <= -V1Size) => (Offset <= -V1Size) => NoAlias.
+      if (V1Size.hasValue() && Range.getSignedMax().sle(-V1Size.getValue()))
+        return AliasResult::NoAlias;
+    }
+
     if (V1Size.hasValue() && V2Size.hasValue()) {
-      // Try to determine the range of values for VarIndex.
-      // VarIndexRange is such that:
-      //    (VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex) &&
-      //    VarIndexRange.contains(VarIndex)
+      // Try to determine the range of values for VarIndex such that
+      // VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex.
       Optional<APInt> MinAbsVarIndex;
-      Optional<ConstantRange> VarIndexRange;
       if (DecompGEP1.VarIndices.size() == 1) {
         // VarIndex = Scale*V.
         const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
@@ -1321,11 +1339,6 @@ AliasResult BasicAAResult::aliasGEP(
           // If V != 0 then abs(VarIndex) >= abs(Scale).
           MinAbsVarIndex = Var.Scale.abs();
         }
-        ConstantRange R = Var.Val.evaluateWith(
-            computeConstantRange(Var.Val.V, true, &AC, Var.CxtI));
-        if (!R.isFullSet() && !R.isEmptySet())
-          VarIndexRange = R.sextOrTrunc(Var.Scale.getBitWidth())
-                              .smul_fast(ConstantRange(Var.Scale));
       } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
         // If V0 != V1 then abs(VarIndex) >= abs(Scale).
@@ -1347,21 +1360,6 @@ AliasResult BasicAAResult::aliasGEP(
         // We know that Offset <= OffsetLo || Offset >= OffsetHi
         if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&
             OffsetHi.isNonNegative() && OffsetHi.uge(V2Size.getValue()))
-          return AliasResult::NoAlias;
-      }
-
-      if (VarIndexRange) {
-        ConstantRange OffsetRange =
-            VarIndexRange->add(ConstantRange(DecompGEP1.Offset));
-
-        // We know that Offset >= MinOffset.
-        // (MinOffset >= V2Size) => (Offset >= V2Size) => NoAlias.
-        if (OffsetRange.getSignedMin().sge(V2Size.getValue()))
-          return AliasResult::NoAlias;
-
-        // We know that Offset <= MaxOffset.
-        // (MaxOffset <= -V1Size) => (Offset <= -V1Size) => NoAlias.
-        if (OffsetRange.getSignedMax().sle(-V1Size.getValue()))
           return AliasResult::NoAlias;
       }
     }

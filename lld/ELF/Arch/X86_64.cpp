@@ -356,6 +356,8 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
+  case R_X86_64_PLTOFF64:
+    return R_PLT_GOTPLT;
   case R_X86_64_GOTPC32:
   case R_X86_64_GOTPC64:
     return R_GOTPLTONLY_PC;
@@ -718,6 +720,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_GOT64:
   case R_X86_64_GOTOFF64:
   case R_X86_64_GOTPC64:
+  case R_X86_64_PLTOFF64:
   case R_X86_64_IRELATIVE:
   case R_X86_64_RELATIVE:
     return read64le(buf);
@@ -779,6 +782,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_GOT64:
   case R_X86_64_GOTOFF64:
   case R_X86_64_GOTPC64:
+  case R_X86_64_PLTOFF64:
     write64le(loc, val);
     break;
   default:

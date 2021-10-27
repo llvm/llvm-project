@@ -42,15 +42,23 @@ static inline bool is_hex_start(const char *__restrict src) {
 }
 
 // Takes the address of the string pointer and parses the base from the start of
-// it. This will advance the string pointer.
+// it. This function will advance |src| to the first valid digit in the inferred
+// base.
 static inline int infer_base(const char *__restrict *__restrict src) {
+  // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
+  // sequence of the deimal digits and the letters a (or A) through f (or F)
+  // with values 10 through 15 respectively." (C standard 6.4.4.1)
   if (is_hex_start(*src)) {
     (*src) += 2;
     return 16;
-  } else if (**src == '0') {
-    ++(*src);
+  } // An octal number is defined as "the prefix 0 optionally followed by a
+    // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
+    // number that starts with 0, including just 0, is an octal number.
+  else if (**src == '0') {
     return 8;
-  } else {
+  } // A decimal number is defined as beginning "with a nonzero digit and
+    // consist[ing] of a sequence of decimal digits." (C standard 6.4.4.1)
+  else {
     return 10;
   }
 }
@@ -62,6 +70,8 @@ template <class T>
 static inline T strtointeger(const char *__restrict src,
                              char **__restrict str_end, int base) {
   unsigned long long result = 0;
+  bool is_number = false;
+  const char *original_src = src;
 
   if (base < 0 || base == 1 || base > 36) {
     errno = EINVAL; // NOLINT
@@ -97,6 +107,7 @@ static inline T strtointeger(const char *__restrict src,
     if (cur_digit >= base)
       break;
 
+    is_number = true;
     ++src;
 
     // If the number has already hit the maximum value for the current type then
@@ -122,7 +133,7 @@ static inline T strtointeger(const char *__restrict src,
   }
 
   if (str_end != nullptr)
-    *str_end = const_cast<char *>(src);
+    *str_end = const_cast<char *>(is_number ? src : original_src);
 
   if (result == ABS_MAX) {
     if (is_positive || is_unsigned)

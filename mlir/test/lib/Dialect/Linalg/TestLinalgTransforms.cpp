@@ -536,7 +536,7 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
     RewritePatternSet canonicalizationPatterns(funcOp.getContext());
     vector::populateVectorTransferPermutationMapLoweringPatterns(
         canonicalizationPatterns);
-    vector::populateVetorReductionToContractPatterns(canonicalizationPatterns);
+    vector::populateVectorReductionToContractPatterns(canonicalizationPatterns);
     stage1Patterns.push_back(std::move(canonicalizationPatterns));
   }
   SmallVector<FrozenRewritePatternSet, 4> frozenStage1Patterns;
