@@ -78,7 +78,7 @@ func @entry() {
   %f4 = arith.constant 4.0 : f32
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %cM = arith.constant 1000 : index
+  %cN = arith.constant 50 : index
 
   //
   // Sanity check for the function under test.
@@ -130,7 +130,7 @@ func @entry() {
   //
 
   %t0 = call @rtclock() : () -> f64
-  scf.for %i = %c0 to %cM step %c1 {
+  scf.for %i = %c0 to %cN step %c1 {
     call @scf_parallel(%LHS0, %RHS0, %DST0)
       : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   }
