@@ -76,6 +76,11 @@ private:
   bool HasStdExtZbs = false;
   bool HasStdExtZbt = false;
   bool HasStdExtV = false;
+  bool HasStdExtZve32x = false;
+  bool HasStdExtZve32f = false;
+  bool HasStdExtZve64x = false;
+  bool HasStdExtZve64f = false;
+  bool HasStdExtZve64d = false;
   bool HasStdExtZvlsseg = false;
   bool HasStdExtZfhmin = false;
   bool HasStdExtZfh = false;
@@ -150,6 +155,11 @@ public:
   bool hasStdExtZbs() const { return HasStdExtZbs; }
   bool hasStdExtZbt() const { return HasStdExtZbt; }
   bool hasStdExtV() const { return HasStdExtV; }
+  bool hasStdExtZve32x() const { return HasStdExtZve32x; }
+  bool hasStdExtZve32f() const { return HasStdExtZve32f; }
+  bool hasStdExtZve64x() const { return HasStdExtZve64x; }
+  bool hasStdExtZve64f() const { return HasStdExtZve64f; }
+  bool hasStdExtZve64d() const { return HasStdExtZve64d; }
   bool hasStdExtZvlsseg() const { return HasStdExtZvlsseg; }
   bool hasStdExtZvl() const { return ZvlLen != ExtZvl::NotSet; }
   bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
@@ -177,11 +187,13 @@ public:
   }
 
   // Vector codegen related methods.
-  bool hasVInstructions() const { return HasStdExtV; }
-  bool hasVInstructionsI64() const { return HasStdExtV; }
-  bool hasVInstructionsF16() const { return HasStdExtV && hasStdExtZfh(); }
-  bool hasVInstructionsF32() const { return HasStdExtV && hasStdExtF(); }
-  bool hasVInstructionsF64() const { return HasStdExtV && hasStdExtD(); }
+  bool hasVInstructions() const { return HasStdExtZve32x; }
+  bool hasVInstructionsI64() const { return HasStdExtZve64x; }
+  bool hasVInstructionsF16() const { return HasStdExtZve32f && HasStdExtZfh; }
+  // FIXME: Consider Zfinx in the future
+  bool hasVInstructionsF32() const { return HasStdExtZve32f && HasStdExtF; }
+  // FIXME: Consider Zdinx in the future
+  bool hasVInstructionsF64() const { return HasStdExtZve64d && HasStdExtD; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   unsigned getMaxInterleaveFactor() const {
