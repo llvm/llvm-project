@@ -116,6 +116,35 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "struct ^X { enum ^Language { ^CXX = 42, Python = 9000}; };",
           "int Lang = X::CXX;",
       },
+      // Macros
+      {
+          "#define ^CONSTANT 42",
+          "int Foo = CONSTANT;",
+      },
+      {
+          "#define ^FOO x",
+          "#define BAR FOO",
+      },
+      {
+          "#define INNER 42\n"
+          "#define ^OUTER INNER",
+          "int answer = OUTER;",
+      },
+      {
+          "#define ^ANSWER 42\n"
+          "#define ^SQUARE(X) X * X",
+          "int sq = SQUARE(ANSWER);",
+      },
+      {
+          "#define ^FOO\n"
+          "#define ^BAR",
+          "#if 0\n"
+          "#if FOO\n"
+          "BAR\n"
+          "#endif\n"
+          "#endif",
+      },
+      // Misc
       {
           "enum class ^Color : int;",
           "enum class Color : int {};",
