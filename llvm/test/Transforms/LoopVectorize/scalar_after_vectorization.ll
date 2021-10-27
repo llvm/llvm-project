@@ -22,7 +22,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; NO-IC: vector.body:
 ; NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; NO-IC:   %offset.idx = add i64 1, %index
+; NO-IC:   %offset.idx = add i64 %index, 1
 ; NO-IC:   %[[T2:.+]] = add i64 %offset.idx, 0
 ; NO-IC:   %[[T3:.+]] = add i64 %offset.idx, 4
 ; NO-IC:   %[[T4:.+]] = add nuw nsw i64 %[[T2]], %tmp0

@@ -24,7 +24,7 @@ define i8 @widget(i8* %arr, i8 %t9) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[T1_0_LCSSA1]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[ARR2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i8
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 1, [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 1, [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 1

@@ -18,7 +18,7 @@ define i32 @foo(i32 %guard, ...) {
 
 ; CHECK-LABEL: @foo
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_va_arg_overflow_size_tls
-; CHECK: [[B:%.*]] = add i64 0, [[A]]
+; CHECK: [[B:%.*]] = add i64 [[A]], 0
 ; CHECK: [[C:%.*]] = alloca {{.*}} [[B]]
 
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[C]], i8* align 8 bitcast ({{.*}} @__msan_va_arg_tls to i8*), i64 [[B]], i1 false)

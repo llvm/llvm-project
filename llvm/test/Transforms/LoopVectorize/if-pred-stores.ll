@@ -206,13 +206,13 @@ define void @bug18724(i1 %cond) {
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; UNROLL-NEXT:    [[IND_END:%.*]] = add i64 undef, [[N_VEC]]
+; UNROLL-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], undef
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
 ; UNROLL-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[PRED_STORE_CONTINUE4]] ]
 ; UNROLL-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[PREDPHI5:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; UNROLL-NEXT:    [[OFFSET_IDX:%.*]] = add i64 undef, [[INDEX]]
+; UNROLL-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], undef
 ; UNROLL-NEXT:    [[INDUCTION:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; UNROLL-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION]]
@@ -274,13 +274,13 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY:       vector.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[IND_END:%.*]] = add i64 undef, [[N_VEC]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], undef
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.body:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[PRED_STORE_CONTINUE4]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[PREDPHI5:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; UNROLL-NOSIMPLIFY-NEXT:    [[OFFSET_IDX:%.*]] = add i64 undef, [[INDEX]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], undef
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION]]
@@ -348,12 +348,12 @@ define void @bug18724(i1 %cond) {
 ; VEC:       vector.ph:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; VEC-NEXT:    [[IND_END:%.*]] = add i64 undef, [[N_VEC]]
+; VEC-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], undef
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; VEC-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ <i32 undef, i32 0>, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[PRED_STORE_CONTINUE2]] ]
-; VEC-NEXT:    [[OFFSET_IDX:%.*]] = add i64 undef, [[INDEX]]
+; VEC-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], undef
 ; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[TMP4]]
 ; VEC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
