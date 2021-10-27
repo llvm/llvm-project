@@ -24,7 +24,6 @@ A* a() { return x; }
 // MSVC:   %[[vbtable:.*]] = load i32*, i32** %[[vbptr]]
 // MSVC:   %[[entry:.*]] = getelementptr inbounds i32, i32* {{.*}}, i32 1
 // MSVC:   %[[offset:.*]] = load i32, i32* %[[entry]]
-// MSVC:   add nsw i32 %[[offset]], 0
 // MSVC: }
 
 B* b() { return x; }
@@ -41,7 +40,6 @@ B* b() { return x; }
 // MSVC:   %[[vbtable:.*]] = load i32*, i32** %[[vbptr]]
 // MSVC:   %[[entry:.*]] = getelementptr inbounds i32, i32* {{.*}}, i32 2
 // MSVC:   %[[offset:.*]] = load i32, i32* %[[entry]]
-// MSVC:   add nsw i32 %[[offset]], 0
 // MSVC: }
 
 
@@ -60,7 +58,6 @@ BB* c() { return x; }
 // MSVC:   %[[vbtable:.*]] = load i32*, i32** %[[vbptr]]
 // MSVC:   %[[entry:.*]] = getelementptr inbounds i32, i32* {{.*}}, i32 4
 // MSVC:   %[[offset:.*]] = load i32, i32* %[[entry]]
-// MSVC:   add nsw i32 %[[offset]], 0
 // MSVC: }
 
 // Put the vbptr at a non-zero offset inside a non-virtual base.

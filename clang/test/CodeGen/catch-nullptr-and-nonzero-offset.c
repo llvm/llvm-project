@@ -83,16 +83,15 @@ char *var_zero(char *base) {
   // CHECK-NEXT:                          %[[BASE_RELOADED:.*]] = load i8*, i8** %[[BASE_ADDR]], align 8
   // CHECK-NEXT:                          %[[ADD_PTR:.*]] = getelementptr inbounds i8, i8* %[[BASE_RELOADED]], i64 0
   // CHECK-SANITIZE-C-NEXT:               %[[BASE_RELOADED_INT:.*]] = ptrtoint i8* %[[BASE_RELOADED]] to i64, !nosanitize
-  // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 %[[BASE_RELOADED_INT]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:               %[[BASE_IS_NOT_NULLPTR:.*]] = icmp ne i8* %[[BASE_RELOADED]], null, !nosanitize
-  // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[BASE_RELOADED_INT]], 0, !nosanitize
   // CHECK-SANITIZE-C-NEXT:             %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = and i1 %[[BASE_IS_NOT_NULLPTR]], %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
-  // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], %[[BASE_RELOADED_INT]], !nosanitize
+  // CHECK-SANITIZE-C-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[BASE_RELOADED_INT]], %[[BASE_RELOADED_INT]], !nosanitize
   // CHECK-SANITIZE-C-NEXT:               %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[COMPUTED_GEP_IS_UGE_BASE]], !nosanitize
   // CHECK-SANITIZE-C-NEXT:               br i1 %[[GEP_IS_OKAY]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-C:                  [[HANDLER_POINTER_OVERFLOW]]:
-  // CHECK-SANITIZE-NORECOVER-C-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_200]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
-  // CHECK-SANITIZE-RECOVER-C-NEXT:       call void @__ubsan_handle_pointer_overflow(i8* bitcast ({ {{{.*}}} }* @[[LINE_200]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
+  // CHECK-SANITIZE-NORECOVER-C-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_200]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[BASE_RELOADED_INT]])
+  // CHECK-SANITIZE-RECOVER-C-NEXT:       call void @__ubsan_handle_pointer_overflow(i8* bitcast ({ {{{.*}}} }* @[[LINE_200]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[BASE_RELOADED_INT]])
   // CHECK-SANITIZE-TRAP-C-NEXT:          call void @llvm.ubsantrap(i8 19){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-C-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE-C:                  [[CONT]]:
@@ -170,18 +169,17 @@ char *nullptr_var(unsigned long offset) {
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_AGGREGATE:.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 %[[OFFSET_RELOADED]]), !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_OVERFLOWED:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 1, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 0, !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP:.*]] = add i64 %[[COMPUTED_OFFSET]], 0, !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_GEP]], 0, !nosanitize
-  // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 false, %[[COMPUTED_GEP_IS_NOT_NULL]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_IS_NOT_NULL:.*]] = icmp ne i64 %[[COMPUTED_OFFSET]], 0, !nosanitize
+  // CHECK-SANITIZE-CPP-NEXT:           %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL:.*]] = icmp eq i1 false, %[[COMPUTED_OFFSET_IS_NOT_NULL]], !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW:.*]] = xor i1 %[[COMPUTED_OFFSET_OVERFLOWED]], true, !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_GEP_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_GEP]], 0, !nosanitize
-  // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_GEP_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_IS_UGE_BASE:.*]] = icmp uge i64 %[[COMPUTED_OFFSET]], 0, !nosanitize
+  // CHECK-SANITIZE-NEXT:               %[[GEP_DID_NOT_OVERFLOW:.*]] = and i1 %[[COMPUTED_OFFSET_IS_UGE_BASE]], %[[COMPUTED_OFFSET_DID_NOT_OVERFLOW]], !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           %[[GEP_IS_OKAY:.*]] = and i1 %[[BOTH_POINTERS_ARE_NULL_OR_BOTH_ARE_NONNULL]], %[[GEP_DID_NOT_OVERFLOW]], !nosanitize
   // CHECK-SANITIZE-C-NEXT:             br i1 false, label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           br i1 %[[GEP_IS_OKAY]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
-  // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_500]] to i8*), i64 0, i64 %[[COMPUTED_GEP]])
-  // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(i8* bitcast ({ {{{.*}}} }* @[[LINE_500]] to i8*), i64 0, i64 %[[COMPUTED_GEP]])
+  // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_500]] to i8*), i64 0, i64 %[[COMPUTED_OFFSET]])
+  // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(i8* bitcast ({ {{{.*}}} }* @[[LINE_500]] to i8*), i64 0, i64 %[[COMPUTED_OFFSET]])
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 19){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE:                  [[CONT]]:

@@ -33,14 +33,12 @@ define void @Simple() uwtable sanitize_address {
 ; NEVER-NEXT:    store i64 ptrtoint (void ()* @Simple to i64), i64* [[TMP7]], align 8
 ; NEVER-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP0]], 3
 ; NEVER-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 2147450880
-; NEVER-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 0
-; NEVER-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to i64*
-; NEVER-NEXT:    store i64 -868083113472691727, i64* [[TMP11]], align 1
+; NEVER-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to i64*
+; NEVER-NEXT:    store i64 -868083113472691727, i64* [[TMP10]], align 1
 ; NEVER-NEXT:    call void @Foo(i8* [[TMP2]])
 ; NEVER-NEXT:    store i64 1172321806, i64* [[TMP3]], align 8
-; NEVER-NEXT:    [[TMP12:%.*]] = add i64 [[TMP9]], 0
-; NEVER-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to i64*
-; NEVER-NEXT:    store i64 0, i64* [[TMP13]], align 1
+; NEVER-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to i64*
+; NEVER-NEXT:    store i64 0, i64* [[TMP11]], align 1
 ; NEVER-NEXT:    ret void
 ;
 ; RUNTIME-LABEL: @Simple(
@@ -75,29 +73,26 @@ define void @Simple() uwtable sanitize_address {
 ; RUNTIME-NEXT:    store i64 ptrtoint (void ()* @Simple to i64), i64* [[TMP17]], align 8
 ; RUNTIME-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP10]], 3
 ; RUNTIME-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], 2147450880
-; RUNTIME-NEXT:    [[TMP20:%.*]] = add i64 [[TMP19]], 0
-; RUNTIME-NEXT:    [[TMP21:%.*]] = inttoptr i64 [[TMP20]] to i64*
-; RUNTIME-NEXT:    store i64 -868083113472691727, i64* [[TMP21]], align 1
+; RUNTIME-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to i64*
+; RUNTIME-NEXT:    store i64 -868083113472691727, i64* [[TMP20]], align 1
 ; RUNTIME-NEXT:    call void @Foo(i8* [[TMP12]])
 ; RUNTIME-NEXT:    store i64 1172321806, i64* [[TMP13]], align 8
-; RUNTIME-NEXT:    [[TMP22:%.*]] = icmp ne i64 [[TMP5]], 0
-; RUNTIME-NEXT:    br i1 [[TMP22]], label [[TMP23:%.*]], label [[TMP30:%.*]]
-; RUNTIME:       23:
-; RUNTIME-NEXT:    [[TMP24:%.*]] = add i64 [[TMP19]], 0
+; RUNTIME-NEXT:    [[TMP21:%.*]] = icmp ne i64 [[TMP5]], 0
+; RUNTIME-NEXT:    br i1 [[TMP21]], label [[TMP22:%.*]], label [[TMP28:%.*]]
+; RUNTIME:       22:
+; RUNTIME-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP19]] to i64*
+; RUNTIME-NEXT:    store i64 -723401728380766731, i64* [[TMP23]], align 1
+; RUNTIME-NEXT:    [[TMP24:%.*]] = add i64 [[TMP5]], 56
 ; RUNTIME-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP24]] to i64*
-; RUNTIME-NEXT:    store i64 -723401728380766731, i64* [[TMP25]], align 1
-; RUNTIME-NEXT:    [[TMP26:%.*]] = add i64 [[TMP5]], 56
-; RUNTIME-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[TMP26]] to i64*
-; RUNTIME-NEXT:    [[TMP28:%.*]] = load i64, i64* [[TMP27]], align 8
-; RUNTIME-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to i8*
-; RUNTIME-NEXT:    store i8 0, i8* [[TMP29]], align 1
-; RUNTIME-NEXT:    br label [[TMP33:%.*]]
+; RUNTIME-NEXT:    [[TMP26:%.*]] = load i64, i64* [[TMP25]], align 8
+; RUNTIME-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[TMP26]] to i8*
+; RUNTIME-NEXT:    store i8 0, i8* [[TMP27]], align 1
+; RUNTIME-NEXT:    br label [[TMP30:%.*]]
+; RUNTIME:       28:
+; RUNTIME-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP19]] to i64*
+; RUNTIME-NEXT:    store i64 0, i64* [[TMP29]], align 1
+; RUNTIME-NEXT:    br label [[TMP30]]
 ; RUNTIME:       30:
-; RUNTIME-NEXT:    [[TMP31:%.*]] = add i64 [[TMP19]], 0
-; RUNTIME-NEXT:    [[TMP32:%.*]] = inttoptr i64 [[TMP31]] to i64*
-; RUNTIME-NEXT:    store i64 0, i64* [[TMP32]], align 1
-; RUNTIME-NEXT:    br label [[TMP33]]
-; RUNTIME:       33:
 ; RUNTIME-NEXT:    ret void
 ;
 ; ALWAYS-LABEL: @Simple(
@@ -125,29 +120,26 @@ define void @Simple() uwtable sanitize_address {
 ; ALWAYS-NEXT:    store i64 ptrtoint (void ()* @Simple to i64), i64* [[TMP12]], align 8
 ; ALWAYS-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP5]], 3
 ; ALWAYS-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], 2147450880
-; ALWAYS-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 0
-; ALWAYS-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to i64*
-; ALWAYS-NEXT:    store i64 -868083113472691727, i64* [[TMP16]], align 1
+; ALWAYS-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to i64*
+; ALWAYS-NEXT:    store i64 -868083113472691727, i64* [[TMP15]], align 1
 ; ALWAYS-NEXT:    call void @Foo(i8* [[TMP7]])
 ; ALWAYS-NEXT:    store i64 1172321806, i64* [[TMP8]], align 8
-; ALWAYS-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP0]], 0
-; ALWAYS-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP25:%.*]]
-; ALWAYS:       18:
-; ALWAYS-NEXT:    [[TMP19:%.*]] = add i64 [[TMP14]], 0
+; ALWAYS-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP0]], 0
+; ALWAYS-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP23:%.*]]
+; ALWAYS:       17:
+; ALWAYS-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP14]] to i64*
+; ALWAYS-NEXT:    store i64 -723401728380766731, i64* [[TMP18]], align 1
+; ALWAYS-NEXT:    [[TMP19:%.*]] = add i64 [[TMP0]], 56
 ; ALWAYS-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to i64*
-; ALWAYS-NEXT:    store i64 -723401728380766731, i64* [[TMP20]], align 1
-; ALWAYS-NEXT:    [[TMP21:%.*]] = add i64 [[TMP0]], 56
-; ALWAYS-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to i64*
-; ALWAYS-NEXT:    [[TMP23:%.*]] = load i64, i64* [[TMP22]], align 8
-; ALWAYS-NEXT:    [[TMP24:%.*]] = inttoptr i64 [[TMP23]] to i8*
-; ALWAYS-NEXT:    store i8 0, i8* [[TMP24]], align 1
-; ALWAYS-NEXT:    br label [[TMP28:%.*]]
+; ALWAYS-NEXT:    [[TMP21:%.*]] = load i64, i64* [[TMP20]], align 8
+; ALWAYS-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to i8*
+; ALWAYS-NEXT:    store i8 0, i8* [[TMP22]], align 1
+; ALWAYS-NEXT:    br label [[TMP25:%.*]]
+; ALWAYS:       23:
+; ALWAYS-NEXT:    [[TMP24:%.*]] = inttoptr i64 [[TMP14]] to i64*
+; ALWAYS-NEXT:    store i64 0, i64* [[TMP24]], align 1
+; ALWAYS-NEXT:    br label [[TMP25]]
 ; ALWAYS:       25:
-; ALWAYS-NEXT:    [[TMP26:%.*]] = add i64 [[TMP14]], 0
-; ALWAYS-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[TMP26]] to i64*
-; ALWAYS-NEXT:    store i64 0, i64* [[TMP27]], align 1
-; ALWAYS-NEXT:    br label [[TMP28]]
-; ALWAYS:       28:
 ; ALWAYS-NEXT:    ret void
 ;
 entry:
@@ -173,39 +165,37 @@ define void @Huge() uwtable sanitize_address {
 ; CHECK-NEXT:    store i64 ptrtoint (void ()* @Huge to i64), i64* [[TMP7]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 2147450880
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to i32*
-; CHECK-NEXT:    store i32 -235802127, i32* [[TMP11]], align 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP9]], 12504
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to i64*
-; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP9]], 12512
-; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to i64*
-; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP9]], 12520
-; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to i64*
-; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP17]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP9]], 12528
-; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to i64*
-; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to i32*
+; CHECK-NEXT:    store i32 -235802127, i32* [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP9]], 12504
+; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to i64*
+; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP12]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP9]], 12512
+; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to i64*
+; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP14]], align 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP9]], 12520
+; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to i64*
+; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP16]], align 1
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP9]], 12528
+; CHECK-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to i64*
+; CHECK-NEXT:    store i64 -868082074056920077, i64* [[TMP18]], align 1
 ; CHECK-NEXT:    [[XX:%.*]] = getelementptr inbounds [100000 x i8], [100000 x i8]* [[TMP2]], i64 0, i64 0
 ; CHECK-NEXT:    call void @Foo(i8* [[XX]])
 ; CHECK-NEXT:    store i64 1172321806, i64* [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = inttoptr i64 [[TMP20]] to i32*
-; CHECK-NEXT:    store i32 0, i32* [[TMP21]], align 1
-; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP9]], 12504
+; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP9]] to i32*
+; CHECK-NEXT:    store i32 0, i32* [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP9]], 12504
+; CHECK-NEXT:    [[TMP21:%.*]] = inttoptr i64 [[TMP20]] to i64*
+; CHECK-NEXT:    store i64 0, i64* [[TMP21]], align 1
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP9]], 12512
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to i64*
 ; CHECK-NEXT:    store i64 0, i64* [[TMP23]], align 1
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP9]], 12512
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP9]], 12520
 ; CHECK-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP24]] to i64*
 ; CHECK-NEXT:    store i64 0, i64* [[TMP25]], align 1
-; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[TMP9]], 12520
+; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[TMP9]], 12528
 ; CHECK-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[TMP26]] to i64*
 ; CHECK-NEXT:    store i64 0, i64* [[TMP27]], align 1
-; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[TMP9]], 12528
-; CHECK-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to i64*
-; CHECK-NEXT:    store i64 0, i64* [[TMP29]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

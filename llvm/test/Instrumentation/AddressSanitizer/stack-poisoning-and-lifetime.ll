@@ -23,8 +23,7 @@ entry:
   ; CHECK: [[SHADOW_BASE:%[0-9]+]] = add i64 %{{[0-9]+}}, 2147450880
 
   ; F1F1F1F1
-  ; ENTRY-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
-  ; ENTRY-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i32]]*
+  ; ENTRY-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[SHADOW_BASE]] to [[TYPE:i32]]*
   ; ENTRY-NEXT: store [[TYPE]] -235802127, [[TYPE]]* [[PTR]], align 1
 
   ; 02F2F2F2F2F2F2F2
@@ -53,8 +52,7 @@ entry:
   ; ENTRY-NEXT: store [[TYPE]] -13, [[TYPE]]* [[PTR]], align 1
 
   ; F1F1F1F1
-  ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
-  ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i32]]*
+  ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[SHADOW_BASE]] to [[TYPE:i32]]*
   ; ENTRY-UAS-NEXT: store [[TYPE]] -235802127, [[TYPE]]* [[PTR]], align 1
 
   ; F8F8F8...
@@ -161,16 +159,14 @@ entry:
 
   ; CHECK: {{^[0-9]+}}:
 
-  ; CHECK-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
-  ; CHECK-NEXT: call void @__asan_set_shadow_f5(i64 [[OFFSET]], i64 128)
+  ; CHECK-NEXT: call void @__asan_set_shadow_f5(i64 [[SHADOW_BASE]], i64 128)
 
   ; CHECK-NOT: add i64 [[SHADOW_BASE]]
 
   ; CHECK: {{^[0-9]+}}:
 
   ; 00000000
-  ; EXIT-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
-  ; EXIT-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to [[TYPE:i32]]*
+  ; EXIT-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[SHADOW_BASE]] to [[TYPE:i32]]*
   ; EXIT-NEXT: store [[TYPE]] 0, [[TYPE]]* [[PTR]], align 1
 
   ; 0000000000000000
@@ -199,8 +195,7 @@ entry:
   ; EXIT-NEXT: store [[TYPE]] 0, [[TYPE]]* [[PTR]], align 1
 
   ; 0000...
-  ; EXIT-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 0
-  ; EXIT-UAS-NEXT: call void @__asan_set_shadow_00(i64 [[OFFSET]], i64 116)
+  ; EXIT-UAS-NEXT: call void @__asan_set_shadow_00(i64 [[SHADOW_BASE]], i64 116)
 
   ; CHECK-NOT: add i64 [[SHADOW_BASE]]
 
