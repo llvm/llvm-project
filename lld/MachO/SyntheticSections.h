@@ -345,6 +345,7 @@ public:
   ExportSection();
   void finalizeContents() override;
   uint64_t getRawSize() const override { return size; }
+  bool isNeeded() const override { return size; }
   void writeTo(uint8_t *buf) const override;
 
   bool hasWeakSymbol = false;
