@@ -7,6 +7,13 @@
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.md5 -S | FileCheck %s
 ; RUN: llvm-profdata show --sample -show-sec-info-only %t.md5 | FileCheck %s --check-prefix=CHECK-ORDERED
 
+;; Validate that with replay in effect, we import call sites even if they are below the threshold
+;; Baseline import decisions
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -profile-summary-hot-count=10000 -S | FileCheck %s --check-prefix=THRESHOLD
+;; With replay
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -sample-profile-inline-replay=%S/Inputs/csspgo-import-list-replay.txt -sample-profile-inline-replay-scope=Module -profile-summary-hot-count=10000 -S | FileCheck %s --check-prefix=THRESHOLD-REPLAY
+;; With replay but no profile information for call to _Z5funcAi. We import _Z5funcAi because it's explicitly in the replay but don't go further to its callee (_Z3fibi) because we lack samples
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list-no-funca.prof -sample-profile-inline-replay=%S/Inputs/csspgo-import-list-replay.txt -sample-profile-inline-replay-scope=Module -profile-summary-hot-count=10000 -S | FileCheck %s --check-prefix=THRESHOLD-REPLAY-NO-FUNCA
 
 declare i32 @_Z5funcBi(i32 %x)
 declare i32 @_Z5funcAi(i32 %x)
@@ -32,10 +39,22 @@ for.body:                                         ; preds = %for.body, %entry
 }
 
 ; Make sure the ImportGUID stays with entry count metadata for ThinLTO-PreLink
+; For reference, the GUIDs of the functions are:
+; _Z5funcBi:446061515086924981
+; _Z8funcLeafi:7102633082150537521
+; _Z5funcBiLeaf2:3815895320998406042
+; _Z8funcLeafi3:-2862076748587597320
+; _Z5funcAi:6309742469962978389
+; _Z3fibi:-2016976694713209516
+
 ; CHECK: distinct !DISubprogram(name: "main"
 ; CHECK: !{!"function_entry_count", i64 3, i64 446061515086924981, i64 3815895320998406042, i64 7102633082150537521, i64 -2862076748587597320}
 
 ; CHECK-ORDERED: FuncOffsetTableSection {{.*}} {ordered}
+
+; THRESHOLD: !{!"function_entry_count", i64 3}
+; THRESHOLD-REPLAY: !{!"function_entry_count", i64 3, i64 446061515086924981, i64 3815895320998406042, i64 6309742469962978389, i64 7102633082150537521, i64 -2862076748587597320, i64 -2016976694713209516}
+; THRESHOLD-REPLAY-NO-FUNCA: !{!"function_entry_count", i64 3, i64 446061515086924981, i64 3815895320998406042, i64 6309742469962978389, i64 7102633082150537521, i64 -2862076748587597320}
 
 attributes #0 = { nofree noinline norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
 

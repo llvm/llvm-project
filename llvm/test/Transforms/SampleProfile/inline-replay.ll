@@ -1,24 +1,36 @@
 ;; Note that this needs new pass manager for now. Passing `-sample-profile-inline-replay` to legacy pass manager is a no-op.
 
 ;; Check baseline inline decisions
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=DEFAULT %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=DEFAULT %s
 
 ;; Check replay inline decisions
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=Module  -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=Module -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY %s
+
+;; Check baseline inline decisions with all callee counts missing
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-missing.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=DEFAULT-NOINLINING -allow-empty %s
+
+;; Check replay inline decisions with all callee counts missing. The call sites should still be passed to the replay advisor and successfully get inlined as before
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-missing.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=Module -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY %s
+
+;; Check baseline inline decisions with high threshold
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -profile-summary-hot-count=500000 -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=DEFAULT-NOINLINING -allow-empty %s
+
+;; Check replay inline decisions with high threshold. The call sites should still be passed to the replay advisor and successfully get inlined as before
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -profile-summary-hot-count=500000 -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=Module -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY -allow-empty %s
 
 ;; Check baseline inline decisions with "inline-topdown-inline-all.prof" which inlines all sites
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=DEFAULT-ALL %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=DEFAULT-ALL %s
 
 ;; Check function scope replay inline decisions with "inline-topdown-inline-all.prof" and "inline-topdown-function-scope.txt" which only contains: '_Z3sumii' inlined into 'main'
 ;; 1. _Z3sumii is inlined into main, but all other inline candidates in main (e.g. _Z3subii) are not inlined
 ;; 2. Inline decisions made in other functions match default sample inlining, in this case _Z3subii is inlined into _Z3sumii
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-inline-replay=%S/Inputs/inline-replay-function-scope.txt -sample-profile-inline-replay-scope=Function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ALL-FUNCTION %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-inline-replay=%S/Inputs/inline-replay-function-scope.txt -sample-profile-inline-replay-scope=Function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ALL-FUNCTION %s
 
 ;; Check behavior on non-existent replay file
-; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/non-existent-dummy.txt -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
+; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/non-existent-dummy.txt -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
 
 ;; Check scope inlining errors out on non <Module|Function> inputs
-; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s
+; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s
 
 ; DEFAULT: '_Z3sumii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
 ; DEFAULT: '_Z3subii' inlined into '_Z3sumii' to match profiling context with (cost={{[-0-9]+}}
@@ -27,6 +39,8 @@
 ; REPLAY: '_Z3sumii' inlined into 'main' to match profiling context with (cost=always)
 ; REPLAY: '_Z3subii' inlined into 'main' to match profiling context with (cost=always)
 ; REPLAY-NOT: '_Z3subii' inlined into '_Z3sumii'
+
+; DEFAULT-NOINLINING-NOT: inlined into
 
 ; DEFAULT-ALL: '_Z3sumii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
 ; DEFAULT-ALL: '_Z3subii' inlined into 'main' to match profiling context with (cost={{[-0-9]+}}
