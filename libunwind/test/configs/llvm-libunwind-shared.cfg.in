@@ -49,9 +49,7 @@ config.substitutions.append(('%{compile_flags}',
 config.substitutions.append(('%{link_flags}',
     '-nodefaultlibs -L {0} -Wl,-rpath,{0} -lunwind -ldl -lc {1}'.format('@LIBUNWIND_LIBRARY_DIR@', ' '.join(link_flags))
 ))
-config.substitutions.append(('%{exec}',
-    '{} {}/utils/run.py --execdir %T -- '.format(sys.executable, '@LIBUNWIND_LIBCXX_PATH@')
-))
+config.substitutions.append(('%{exec}', ''))
 
 import os, site
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
