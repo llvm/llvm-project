@@ -708,9 +708,8 @@ static Value *cloneConstantExprWithNewAddressSpace(
   if (CE->getOpcode() == Instruction::GetElementPtr) {
     // Needs to specify the source type while constructing a getelementptr
     // constant expression.
-    return CE->getWithOperands(
-      NewOperands, TargetType, /*OnlyIfReduced=*/false,
-      NewOperands[0]->getType()->getPointerElementType());
+    return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
+                               cast<GEPOperator>(CE)->getSourceElementType());
   }
 
   return CE->getWithOperands(NewOperands, TargetType);
@@ -1155,8 +1154,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUser)) {
           unsigned NewAS = NewV->getType()->getPointerAddressSpace();
           if (ASC->getDestAddressSpace() == NewAS) {
-            if (ASC->getType()->getPointerElementType() !=
-                NewV->getType()->getPointerElementType()) {
+            if (!cast<PointerType>(ASC->getType())
+                    ->hasSameElementTypeAs(
+                        cast<PointerType>(NewV->getType()))) {
               NewV = CastInst::Create(Instruction::BitCast, NewV,
                                       ASC->getType(), "", ASC);
             }
