@@ -10,6 +10,11 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  -sample-profile-cold-inline-threshold=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-NO-PREINL
 
+; Test cold profile trimming. Only base profiles should be dropped.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  --csprof-trim-cold-context=1 --profile-summary-hot-count=250
+
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-TRIM
+
 ; CHECK-DEFAULT:     [main:1 @ foo]:225:0
 ; CHECK-DEFAULT-NEXT: 2.1: 14
 ; CHECK-DEFAULT-NEXT: 3: 15
@@ -39,3 +44,8 @@
 ; CHECK-NO-PREINL-NEXT:[bar]:84:0
 ; CHECK-NO-PREINL-NEXT: 1: 14
 ; CHECK-NO-PREINL-NEXT: !Attributes: 1
+
+; CHECK-TRIM-NOT: [foo]:225:0
+; CHECK-TRIM:[foo:3.1 @ bar]:84:0
+; CHECK-TRIM-NEXT: 1: 14
+; CHECK-TRIM-NEXT: !Attributes: 3

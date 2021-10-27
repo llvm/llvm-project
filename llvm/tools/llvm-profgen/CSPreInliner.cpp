@@ -252,7 +252,7 @@ void CSPreInliner::run() {
   // trim out such profiles from the output.
   std::vector<SampleContext> ProfilesToBeRemoved;
   for (auto &It : ProfileMap) {
-    SampleContext Context = It.second.getContext();
+    SampleContext &Context = It.second.getContext();
     if (!Context.isBaseContext() && !Context.hasState(InlinedContext)) {
       assert(Context.hasState(MergedContext) &&
              "Not inlined context profile should be merged already");
