@@ -721,6 +721,19 @@ public:
     return getArch() == Triple::arm || getArch() == Triple::armeb;
   }
 
+  /// Tests whether the target supports the EHABI exception
+  /// handling standard.
+  bool isTargetEHABICompatible() const {
+    return (isARM() || isThumb()) &&
+           (getEnvironment() == Triple::EABI ||
+            getEnvironment() == Triple::GNUEABI ||
+            getEnvironment() == Triple::MuslEABI ||
+            getEnvironment() == Triple::EABIHF ||
+            getEnvironment() == Triple::GNUEABIHF ||
+            getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
+           isOSBinFormatELF();
+  }
+
   /// Tests whether the target is AArch64 (little and big endian).
   bool isAArch64() const {
     return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be ||
