@@ -40,7 +40,7 @@ static const std::string DefaultIgnoredParameterTypeSuffixes =
                                    "inputit",
                                    "InputIt",
                                    "forwardit",
-                                   "FowardIt",
+                                   "ForwardIt",
                                    "bidirit",
                                    "BidirIt",
                                    "constiterator",
