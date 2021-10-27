@@ -8064,12 +8064,6 @@ std::string SwiftASTContext::ImportName(const clang::NamedDecl *clang_decl) {
   return clang_decl->getName().str();
 }
 
-void SwiftASTContext::DumpSummary(opaque_compiler_type_t type,
-                                  ExecutionContext *exe_ctx, Stream *s,
-                                  const lldb_private::DataExtractor &data,
-                                  lldb::offset_t data_byte_offset,
-                                  size_t data_byte_size) {}
-
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
