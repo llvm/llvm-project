@@ -198,7 +198,7 @@ void OneScalarOp() {
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
   // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-  // CHECK: [[RHS_AND:%.+]] = and <4 x i32> [[XOR]], <i32 5, i32 5, i32 5, i32 5>
+  // CHECK: [[RHS_AND:%.+]] = and <4 x i32> <i32 5, i32 5, i32 5, i32 5>, [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i32> [[LHS]], [[SEXT]]
   // CHECK: = or <4 x i32> [[RHS_AND]], [[LHS_AND]]
 
@@ -224,7 +224,7 @@ void OneScalarOp() {
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
   // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
   // CHECK: [[LHS_CAST:%.+]] = bitcast <4 x double> [[LHS]] to <4 x i64>
-  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> [[XOR]], <i64 4618441417868443648, i64 4618441417868443648, i64 4618441417868443648, i64 4618441417868443648>
+  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> <i64 4618441417868443648, i64 4618441417868443648, i64 4618441417868443648, i64 4618441417868443648>, [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i64> [[LHS_CAST]], [[SEXT]]
   // CHECK: = or <4 x i64> [[RHS_AND]], [[LHS_AND]]
 
@@ -234,7 +234,7 @@ void OneScalarOp() {
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
   // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
-  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> [[XOR]], <i64 6, i64 6, i64 6, i64 6>
+  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> <i64 6, i64 6, i64 6, i64 6>, [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i64> [[LHS]], [[SEXT]]
   // CHECK: [[OR:%.+]] = or <4 x i64> [[RHS_AND]], [[LHS_AND]]
 

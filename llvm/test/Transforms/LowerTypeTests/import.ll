@@ -136,8 +136,8 @@ define i1 @inline5(i8* %p) {
   ; CHECK-NEXT: [[trunc:%.*]] = trunc i64 [[or]] to i32
   ; CHECK-NEXT: [[and:%.*]] = and i32 [[trunc]], 31
   ; CHECK-NEXT: [[shl2:%.*]] = shl i32 1, [[and]]
-  ; X86-NEXT: [[and2:%.*]] = and i32 [[shl2]], ptrtoint ([0 x i8]* @__typeid_inline5_inline_bits to i32)
-  ; ARM-NEXT: [[and2:%.*]] = and i32 [[shl2]], 123
+  ; X86-NEXT: [[and2:%.*]] = and i32 ptrtoint ([0 x i8]* @__typeid_inline5_inline_bits to i32), [[shl2]]
+  ; ARM-NEXT: [[and2:%.*]] = and i32 123, [[shl2]]
   ; CHECK-NEXT: [[ne:%.*]] = icmp ne i32 [[and2]], 0
   ; CHECK-NEXT: br label %[[f]]
 
@@ -164,8 +164,8 @@ define i1 @inline6(i8* %p) {
   ; CHECK: [[t]]:
   ; CHECK-NEXT: [[and:%.*]] = and i64 [[or]], 63
   ; CHECK-NEXT: [[shl2:%.*]] = shl i64 1, [[and]]
-  ; X86-NEXT: [[and2:%.*]] = and i64 [[shl2]], ptrtoint ([0 x i8]* @__typeid_inline6_inline_bits to i64)
-  ; ARM-NEXT: [[and2:%.*]] = and i64 [[shl2]], 1000000000000
+  ; X86-NEXT: [[and2:%.*]] = and i64 ptrtoint ([0 x i8]* @__typeid_inline6_inline_bits to i64), [[shl2]]
+  ; ARM-NEXT: [[and2:%.*]] = and i64 1000000000000, [[shl2]]
   ; CHECK-NEXT: [[ne:%.*]] = icmp ne i64 [[and2]], 0
   ; CHECK-NEXT: br label %[[f]]
 

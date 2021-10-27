@@ -9,7 +9,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vadc.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 29
-// CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
+// CHECK-NEXT:    [[TMP3:%.*]] = and i32 1, [[TMP2]]
 // CHECK-NEXT:    store i32 [[TMP3]], i32* [[CARRY_OUT:%.*]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP0]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP4]]
@@ -30,7 +30,7 @@ int32x4_t test_vadciq_s32(int32x4_t a, int32x4_t b, unsigned *carry_out)
 // CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vadc.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 29
-// CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = and i32 1, [[TMP4]]
 // CHECK-NEXT:    store i32 [[TMP5]], i32* [[CARRY]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -51,7 +51,7 @@ uint32x4_t test_vadcq_u32(uint32x4_t a, uint32x4_t b, unsigned *carry)
 // CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vadc.predicated.v4i32.v4i1(<4 x i32> [[INACTIVE:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 29
-// CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = and i32 1, [[TMP4]]
 // CHECK-NEXT:    store i32 [[TMP5]], i32* [[CARRY_OUT:%.*]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -74,7 +74,7 @@ uint32x4_t test_vadciq_m_u32(uint32x4_t inactive, uint32x4_t a, uint32x4_t b, un
 // CHECK-NEXT:    [[TMP4:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vadc.predicated.v4i32.v4i1(<4 x i32> [[INACTIVE:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 [[TMP1]], <4 x i1> [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP4]], 1
 // CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP5]], 29
-// CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP7:%.*]] = and i32 1, [[TMP6]]
 // CHECK-NEXT:    store i32 [[TMP7]], i32* [[CARRY]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP4]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP8]]
@@ -93,7 +93,7 @@ int32x4_t test_vadcq_m_s32(int32x4_t inactive, int32x4_t a, int32x4_t b, unsigne
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 29
-// CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
+// CHECK-NEXT:    [[TMP3:%.*]] = and i32 1, [[TMP2]]
 // CHECK-NEXT:    store i32 [[TMP3]], i32* [[CARRY_OUT:%.*]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP0]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP4]]
@@ -111,7 +111,7 @@ int32x4_t test_vsbciq_s32(int32x4_t a, int32x4_t b, unsigned *carry_out) {
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 29
-// CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
+// CHECK-NEXT:    [[TMP3:%.*]] = and i32 1, [[TMP2]]
 // CHECK-NEXT:    store i32 [[TMP3]], i32* [[CARRY_OUT:%.*]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP0]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP4]]
@@ -131,7 +131,7 @@ uint32x4_t test_vsbciq_u32(uint32x4_t a, uint32x4_t b, unsigned *carry_out) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 29
-// CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = and i32 1, [[TMP4]]
 // CHECK-NEXT:    store i32 [[TMP5]], i32* [[CARRY]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -151,7 +151,7 @@ int32x4_t test_vsbcq_s32(int32x4_t a, int32x4_t b, unsigned *carry) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 29
-// CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = and i32 1, [[TMP4]]
 // CHECK-NEXT:    store i32 [[TMP5]], i32* [[CARRY]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -171,7 +171,7 @@ uint32x4_t test_vsbcq_u32(uint32x4_t a, uint32x4_t b, unsigned *carry) {
 // CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> [[INACTIVE:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 29
-// CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = and i32 1, [[TMP4]]
 // CHECK-NEXT:    store i32 [[TMP5]], i32* [[CARRY_OUT:%.*]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -191,7 +191,7 @@ int32x4_t test_vsbciq_m_s32(int32x4_t inactive, int32x4_t a, int32x4_t b, unsign
 // CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> [[INACTIVE:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 29
-// CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = and i32 1, [[TMP4]]
 // CHECK-NEXT:    store i32 [[TMP5]], i32* [[CARRY_OUT:%.*]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP2]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -213,7 +213,7 @@ uint32x4_t test_vsbciq_m_u32(uint32x4_t inactive, uint32x4_t a, uint32x4_t b, un
 // CHECK-NEXT:    [[TMP4:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> [[INACTIVE:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 [[TMP1]], <4 x i1> [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP4]], 1
 // CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP5]], 29
-// CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP7:%.*]] = and i32 1, [[TMP6]]
 // CHECK-NEXT:    store i32 [[TMP7]], i32* [[CARRY]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP4]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP8]]
@@ -235,7 +235,7 @@ int32x4_t test_vsbcq_m_s32(int32x4_t inactive, int32x4_t a, int32x4_t b, unsigne
 // CHECK-NEXT:    [[TMP4:%.*]] = call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> [[INACTIVE:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 [[TMP1]], <4 x i1> [[TMP3]])
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP4]], 1
 // CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP5]], 29
-// CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP7:%.*]] = and i32 1, [[TMP6]]
 // CHECK-NEXT:    store i32 [[TMP7]], i32* [[CARRY]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i32>, i32 } [[TMP4]], 0
 // CHECK-NEXT:    ret <4 x i32> [[TMP8]]
