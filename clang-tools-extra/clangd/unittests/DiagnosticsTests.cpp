@@ -1483,7 +1483,9 @@ TEST(Diagnostics, Tags) {
 TEST(DiagnosticsTest, IncludeCleaner) {
   Annotations Test(R"cpp(
 $fix[[  $diag[[#include "unused.h"]]
-]]  #include "used.h"
+]]#include "used.h"
+
+  #include <system_header.h>
 
   void foo() {
     used();
@@ -1497,6 +1499,8 @@ $fix[[  $diag[[#include "unused.h"]]
   TU.AdditionalFiles["used.h"] = R"cpp(
     void used() {}
   )cpp";
+  TU.AdditionalFiles["system/system_header.h"] = "";
+  TU.ExtraArgs = {"-isystem" + testPath("system")};
   // Off by default.
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
   Config Cfg;
