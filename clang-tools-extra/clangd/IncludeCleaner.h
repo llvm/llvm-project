@@ -33,11 +33,12 @@ namespace clangd {
 using ReferencedLocations = llvm::DenseSet<SourceLocation>;
 /// Finds locations of all symbols used in the main file.
 ///
-/// Uses RecursiveASTVisitor to go through main file AST and computes all the
-/// locations used symbols are coming from. Returned locations may be macro
-/// expansions, and are not resolved to their spelling/expansion location. These
-/// locations are later used to determine which headers should be marked as
-/// "used" and "directly used".
+/// - RecursiveASTVisitor finds references to symbols and records their
+///   associated locations. These may be macro expansions, and are not resolved
+///   to their spelling or expansion location. These locations are later used to
+///   determine which headers should be marked as "used" and "directly used".
+/// - We also examine all identifier tokens in the file in case they reference
+///   macros.
 ///
 /// We use this to compute unused headers, so we:
 ///

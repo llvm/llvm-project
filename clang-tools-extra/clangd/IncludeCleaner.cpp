@@ -11,8 +11,10 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
@@ -168,13 +170,39 @@ clangd::Range getDiagnosticRange(llvm::StringRef Code, unsigned HashOffset) {
   return Result;
 }
 
+// Finds locations of macros referenced from within the main file. That includes
+// references that were not yet expanded, e.g `BAR` in `#define FOO BAR`.
+void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
+  trace::Span Tracer("IncludeCleaner::findReferencedMacros");
+  auto &SM = AST.getSourceManager();
+  auto &PP = AST.getPreprocessor();
+  // FIXME(kirillbobyrev): The macros from the main file are collected in
+  // ParsedAST's MainFileMacros. However, we can't use it here because it
+  // doesn't handle macro references that were not expanded, e.g. in macro
+  // definitions or preprocessor-disabled sections.
+  //
+  // Extending MainFileMacros to collect missing references and switching to
+  // this mechanism (as opposed to iterating through all tokens) will improve
+  // the performance of findReferencedMacros and also improve other features
+  // relying on MainFileMacros.
+  for (const syntax::Token &Tok :
+       AST.getTokens().spelledTokens(SM.getMainFileID())) {
+    auto Macro = locateMacroAt(Tok, PP);
+    if (!Macro)
+      continue;
+    auto Loc = Macro->Info->getDefinitionLoc();
+    if (Loc.isValid())
+      Result.insert(Loc);
+  }
+}
+
 } // namespace
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
   ReferencedLocations Result;
   ReferencedLocationCrawler Crawler(Result);
   Crawler.TraverseAST(AST.getASTContext());
-  // FIXME(kirillbobyrev): Handle macros.
+  findReferencedMacros(AST, Result);
   return Result;
 }
 
