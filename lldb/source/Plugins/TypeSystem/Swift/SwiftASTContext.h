@@ -709,12 +709,6 @@ public:
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-  // TODO: These methods appear unused. Should they be removed?
-
-  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream *s, const DataExtractor &data,
-                   lldb::offset_t data_offset, size_t data_byte_size) override;
-
   // TODO: Determine if these methods should move to TypeSystemClang.
 
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,

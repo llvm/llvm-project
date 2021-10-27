@@ -3400,16 +3400,6 @@ void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
     return swift_ast_context->DumpTypeDescription(ReconstructType(type), s,
                                                   level);
 }
-void TypeSystemSwiftTypeRef::DumpSummary(opaque_compiler_type_t type,
-                                         ExecutionContext *exe_ctx, Stream *s,
-                                         const DataExtractor &data,
-                                         lldb::offset_t data_offset,
-                                         size_t data_byte_size) {
-  LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
-    return swift_ast_context->DumpSummary(ReconstructType(type), exe_ctx, s,
-                                          data, data_offset, data_byte_size);
-}
 bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
     opaque_compiler_type_t type, CompilerType *pointee_type) {
   auto impl = [&]() {
