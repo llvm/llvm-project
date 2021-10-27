@@ -118,9 +118,8 @@ public:
   /// must return a Value of the converted type on success, an `llvm::None` if
   /// it failed but other materialization can be attempted, and `nullptr` on
   /// unrecoverable failure. It will only be called for (sub)types of `T`.
-  /// Materialization functions must be provided when a type conversion
-  /// results in more than one type, or if a type conversion may persist after
-  /// the conversion has finished.
+  /// Materialization functions must be provided when a type conversion may
+  /// persist after the conversion has finished.
   ///
   /// This method registers a materialization that will be called when
   /// converting an illegal block argument type, to a legal type.
@@ -551,9 +550,16 @@ public:
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
 
-  /// Return the converted value that replaces 'key'. Return 'key' if there is
-  /// no such a converted value.
+  /// Return the converted value of 'key' with a type defined by the type
+  /// converter of the currently executing pattern. Return nullptr in the case
+  /// of failure, the remapped value otherwise.
   Value getRemappedValue(Value key);
+
+  /// Return the converted values that replace 'keys' with types defined by the
+  /// type converter of the currently executing pattern. Returns failure if the
+  /// remap failed, success otherwise.
+  LogicalResult getRemappedValues(ValueRange keys,
+                                  SmallVectorImpl<Value> &results);
 
   //===--------------------------------------------------------------------===//
   // PatternRewriter Hooks

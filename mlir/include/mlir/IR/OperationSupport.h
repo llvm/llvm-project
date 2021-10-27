@@ -903,6 +903,7 @@ class ResultRange final
           ResultRange, detail::OpResultImpl *, OpResult, OpResult, OpResult> {
 public:
   using RangeBaseT::RangeBaseT;
+  ResultRange(OpResult result);
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -933,6 +934,22 @@ public:
     return llvm::all_of(*this,
                         [](OpResult result) { return result.use_empty(); });
   }
+
+  /// Replace all uses of results of this range with the provided 'values'. The
+  /// size of `values` must match the size of this range.
+  template <typename ValuesT>
+  std::enable_if_t<!std::is_convertible<ValuesT, Operation *>::value>
+  replaceAllUsesWith(ValuesT &&values) {
+    assert(static_cast<size_t>(std::distance(values.begin(), values.end())) ==
+               size() &&
+           "expected 'values' to correspond 1-1 with the number of results");
+
+    for (auto it : llvm::zip(*this, values))
+      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+  }
+
+  /// Replace all uses of results of this range with results of 'op'.
+  void replaceAllUsesWith(Operation *op);
 
   //===--------------------------------------------------------------------===//
   // Users

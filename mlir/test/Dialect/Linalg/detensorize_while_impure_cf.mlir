@@ -73,10 +73,7 @@ func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attribute
 // DET-ALL:           linalg.yield %{{.*}} : i32
 // DET-ALL:         } -> tensor<i32>
 // DET-ALL:         tensor.extract %{{.*}}[] : tensor<i32>
-// DET-ALL:         tensor.extract %{{.*}}[] : tensor<i32>
-// DET-ALL:         arith.cmpi slt, %{{.*}}, %{{.*}} : i32
-// DET-ALL:         tensor.extract %{{.*}}[] : tensor<i32>
-// DET-ALL:         tensor.extract %{{.*}}[] : tensor<i32>
+// DET-ALL:         cmpi slt, %{{.*}}, %{{.*}} : i32
 // DET-ALL:         cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]](%{{.*}} : i32)
 // DET-ALL:       ^[[bb2]](%{{.*}}: i32)
 // DET-ALL:         tensor.from_elements %{{.*}} : tensor<1xi32>
@@ -99,8 +96,7 @@ func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attribute
 // DET-CF:       ^bb1(%{{.*}}: tensor<10xi32>)
 // DET-CF:         %{{.*}} = linalg.generic {{{.*}}} ins(%{{.*}} : tensor<10xi32>) outs(%{{.*}} : tensor<i32>) {
 // DET-CF:         tensor.extract %{{.*}}[] : tensor<i32>
-// DET-CF:         tensor.extract %{{.*}}[] : tensor<i32>
-// DET-CF:         arith.cmpi slt, %{{.*}}, %{{.*}} : i32
+// DET-CF:         cmpi slt, %{{.*}}, %{{.*}} : i32
 // DET-CF:         cond_br %{{.*}}, ^bb2(%{{.*}} : tensor<i32>), ^bb3(%{{.*}} : tensor<i32>)
 // DET-CF:       ^bb2(%{{.*}}: tensor<i32>)
 // DET-CF:         %{{.*}} = linalg.generic {{{.*}}} ins(%{{.*}} : tensor<i32>) outs(%{{.*}} : tensor<10xi32>) {

@@ -74,11 +74,11 @@ func @tensor.from_elements(%arg0: index, %arg1: index) -> tensor<2xindex> {
 // CHECK-LABEL:   func @tensor.generate(
 // CHECK-SAME:                                       %[[ARG:.*]]: tensor<*xf32>,
 // CHECK-SAME:                                       %[[DYNAMIC_EXTENT:.*]]: index) -> tensor<?xindex> {
+// CHECK:           %[[CASTED:.*]] = memref.buffer_cast %[[ARG]] : memref<*xf32>
 // CHECK:           %[[MEMREF:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) : memref<?xindex>
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           scf.parallel (%[[I:.*]]) = (%[[C0]]) to (%[[DYNAMIC_EXTENT]]) step (%[[C1]]) {
-// CHECK:             %[[CASTED:.*]] = memref.buffer_cast %[[ARG]] : memref<*xf32>
 // CHECK:             %[[ELEM:.*]] = memref.dim %[[CASTED]], %[[I]] : memref<*xf32>
 // CHECK:             store %[[ELEM]], %[[MEMREF]][%[[I]]] : memref<?xindex>
 // CHECK:             scf.yield

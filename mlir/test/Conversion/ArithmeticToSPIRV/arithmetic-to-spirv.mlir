@@ -161,9 +161,10 @@ module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
+// expected-error @+1 {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'vector<4xi64>', with target type 'vector<4xi32>'}}
 func @int_vector4_invalid(%arg0: vector<4xi64>) {
   // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
-  // expected-error @+1 {{op requires the same type for all operands and results}}
+  // expected-note @+1 {{see existing live user here}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
