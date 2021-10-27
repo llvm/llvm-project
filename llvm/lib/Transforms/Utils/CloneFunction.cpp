@@ -217,6 +217,20 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
     for (DIType *Type : DIFinder->types())
       mapToSelfIfNew(Type);
+
+    for (DIGlobalVariable *DGV : DIFinder->heterogeneous_global_variables())
+      mapToSelfIfNew(DGV);
+
+    // FIXME: This is inefficient, and has to be repeated for each call to
+    // CloneFunction. Caching this information, maybe as a "kind" on the
+    // fragment, is one possible solution.
+    unsigned KindID = OldFunc->getContext().getMDKindID("dbg.def");
+    SmallVector<MDNode *> MDs;
+    for (const GlobalVariable &GV : OldFunc->getParent()->globals()) {
+      GV.getMetadata(KindID, MDs);
+      for (auto &MD : MDs)
+        mapToSelfIfNew(MD);
+    }
   } else {
     assert(!SPClonedWithinModule &&
            "Subprogram should be in DIFinder->subprogram_count()...");
@@ -271,6 +285,10 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     if (Visited.insert(MappedUnit).second)
       NMD->addOperand(MappedUnit);
   }
+  // FIXME: Does cloning a function semantically require any updates to
+  // llvm.retainedNodes ? Even when the cloned function "overrides" a global
+  // variable location, it doesn't imply that the global computed lifetime (if
+  // any) is still valid in the new module?
 }
 
 /// Return a copy of the specified function and add it to that function's
@@ -504,6 +522,45 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
   ValueMapTypeRemapper *TypeMapper = nullptr;
   ValueMaterializer *Materializer = nullptr;
+
+  DebugInfoFinder DIFinder;
+  if (DISubprogram *SP = OldFunc->getSubprogram())
+    DIFinder.processSubprogram(SP);
+  for (const BasicBlock &BI : *OldFunc)
+    for (const Instruction &II : BI)
+      DIFinder.processInstruction(*II.getModule(), II);
+  if (DIFinder.subprogram_count() > 0) {
+    ModuleLevelChanges = true;
+
+    auto mapToSelfIfNew = [&VMap](MDNode *N) {
+      // Avoid clobbering an existing mapping.
+      (void)VMap.MD().try_emplace(N, N);
+    };
+
+    // Avoid cloning types, compile units, and subprograms.
+    for (DISubprogram *ISP : DIFinder.subprograms())
+      mapToSelfIfNew(ISP);
+
+    for (DICompileUnit *CU : DIFinder.compile_units())
+      mapToSelfIfNew(CU);
+
+    for (DIType *Type : DIFinder.types())
+      mapToSelfIfNew(Type);
+
+    for (DIGlobalVariable *DGV : DIFinder.heterogeneous_global_variables())
+      mapToSelfIfNew(DGV);
+
+    // FIXME: This is inefficient, and has to be repeated for each call to
+    // CloneFunction. Caching this information, maybe as a "kind" on the
+    // fragment, is one possible solution.
+    unsigned KindID = OldFunc->getContext().getMDKindID("dbg.def");
+    SmallVector<MDNode *> MDs;
+    for (const GlobalVariable &GV : OldFunc->getParent()->globals()) {
+      GV.getMetadata(KindID, MDs);
+      for (auto &MD : MDs)
+        mapToSelfIfNew(MD);
+    }
+  }
 
 #ifndef NDEBUG
   // If the cloning starts at the beginning of the function, verify that
