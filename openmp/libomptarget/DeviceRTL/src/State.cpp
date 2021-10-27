@@ -263,9 +263,9 @@ struct ThreadStateTy {
     PreviousThreadState = nullptr;
   }
 
-  void init(ThreadStateTy &PreviousTS) {
-    ICVState = PreviousTS.ICVState;
-    PreviousThreadState = &PreviousTS;
+  void init(ThreadStateTy *PreviousTS) {
+    ICVState = PreviousTS ? PreviousTS->ICVState : TeamState.ICVState;
+    PreviousThreadState = PreviousTS;
   }
 };
 
@@ -369,7 +369,7 @@ void state::enterDataEnvironment() {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
-  NewThreadState->init(*ThreadStates[TId]);
+  NewThreadState->init(ThreadStates[TId]);
   ThreadStates[TId] = NewThreadState;
 }
 
