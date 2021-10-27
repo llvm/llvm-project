@@ -206,6 +206,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
     #include "dir/c.h"
     #include "dir/unused.h"
     #include "unused.h"
+    #include <system_header.h>
     void foo() {
       a();
       b();
@@ -220,17 +221,17 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
   TU.AdditionalFiles["dir/c.h"] = "void c();";
   TU.AdditionalFiles["unused.h"] = "void unused();";
   TU.AdditionalFiles["dir/unused.h"] = "void dirUnused();";
-  TU.AdditionalFiles["not_included.h"] = "void notIncluded();";
-  TU.ExtraArgs = {"-I" + testPath("dir")};
+  TU.AdditionalFiles["system/system_header.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("dir"));
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.Code = MainFile.str();
   ParsedAST AST = TU.build();
-  auto UnusedIncludes = computeUnusedIncludes(AST);
-  std::vector<std::string> UnusedHeaders;
-  UnusedHeaders.reserve(UnusedIncludes.size());
-  for (const auto &Include : UnusedIncludes)
-    UnusedHeaders.push_back(Include->Written);
-  EXPECT_THAT(UnusedHeaders,
-              UnorderedElementsAre("\"unused.h\"", "\"dir/unused.h\""));
+  std::vector<std::string> UnusedIncludes;
+  for (const auto &Include : computeUnusedIncludes(AST))
+    UnusedIncludes.push_back(Include->Written);
+  EXPECT_THAT(UnusedIncludes,
+              UnorderedElementsAre("\"unused.h\"", "\"dir/unused.h\"",
+                                   "<system_header.h>"));
 }
 
 TEST(IncludeCleaner, ScratchBuffer) {

@@ -196,6 +196,14 @@ void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
   }
 }
 
+// FIXME(kirillbobyrev): We currently do not support the umbrella headers.
+// Standard Library headers are typically umbrella headers, and system headers
+// are likely to be the Standard Library headers. Until we have a good support
+// for umbrella headers and Standard Library headers, don't warn about them.
+bool mayConsiderUnused(const Inclusion *Inc) {
+  return Inc->Written.front() != '<';
+}
+
 } // namespace
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
@@ -283,6 +291,8 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
           ->getName()
           .str();
   for (const auto *Inc : computeUnusedIncludes(AST)) {
+    if (!mayConsiderUnused(Inc))
+      continue;
     Diag D;
     D.Message =
         llvm::formatv("included header {0} is not used",
