@@ -16,9 +16,10 @@ define void @test(double* %data) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDUCTION]], 1
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDUCTION]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDUCTION1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, double* [[DATA:%.*]], i64 [[TMP2]]

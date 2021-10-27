@@ -378,9 +378,10 @@ for.end:
 ; Check the case when unrolled but not vectorized.
 ; UNROLL-NO-VF-LABEL: extract_second_last_iteration
 ; UNROLL-NO-VF: vector.body:
-; UNROLL-NO-VF:   %induction = add i32 %index, 1
-; UNROLL-NO-VF:   %[[L1:.+]] = add i32 %index, %x
-; UNROLL-NO-VF:   %[[L2:.+]] = add i32 %induction, %x
+; UNROLL-NO-VF:   %induction = add i32 %index, 0
+; UNROLL-NO-VF:   %induction1 = add i32 %index, 1
+; UNROLL-NO-VF:   %[[L1:.+]] = add i32 %induction, %x
+; UNROLL-NO-VF:   %[[L2:.+]] = add i32 %induction1, %x
 ; UNROLL-NO-VF:   %index.next = add nuw i32 %index, 2
 ; UNROLL-NO-VF:   icmp eq i32 %index.next, 96
 ; UNROLL-NO-VF: for.end:

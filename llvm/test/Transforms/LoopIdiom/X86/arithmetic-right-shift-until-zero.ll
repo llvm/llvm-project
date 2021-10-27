@@ -327,7 +327,8 @@ define i8 @p6(i8 %val, i8 %start) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
 ; CHECK-NEXT:    [[VAL_NUMACTIVEBITS:%.*]] = sub nuw nsw i8 8, [[VAL_NUMLEADINGZEROS]]
-; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i8 @llvm.smax.i8(i8 [[VAL_NUMACTIVEBITS]], i8 [[START:%.*]])
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS_OFFSET:%.*]] = add nuw nsw i8 [[VAL_NUMACTIVEBITS]], 0
+; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i8 @llvm.smax.i8(i8 [[VAL_NUMACTIVEBITS_OFFSET]], i8 [[START:%.*]])
 ; CHECK-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i8 [[IV_FINAL]], [[START]]
 ; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i8 [[LOOP_BACKEDGETAKENCOUNT]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1262,7 +1263,8 @@ define i1 @t24_nooffset_i1(i1 %val, i1 %start) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i1 @llvm.ctlz.i1(i1 [[VAL:%.*]], i1 false)
 ; CHECK-NEXT:    [[VAL_NUMACTIVEBITS:%.*]] = sub nuw nsw i1 true, [[VAL_NUMLEADINGZEROS]]
-; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i1 @llvm.smax.i1(i1 [[VAL_NUMACTIVEBITS]], i1 [[START:%.*]])
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS_OFFSET:%.*]] = add nuw nsw i1 [[VAL_NUMACTIVEBITS]], false
+; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i1 @llvm.smax.i1(i1 [[VAL_NUMACTIVEBITS_OFFSET]], i1 [[START:%.*]])
 ; CHECK-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i1 [[IV_FINAL]], [[START]]
 ; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i1 [[LOOP_BACKEDGETAKENCOUNT]], true
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1311,7 +1313,8 @@ define i2 @t25_nooffset_i2(i2 %val, i2 %start) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i2 @llvm.ctlz.i2(i2 [[VAL:%.*]], i1 false)
 ; CHECK-NEXT:    [[VAL_NUMACTIVEBITS:%.*]] = sub nuw i2 -2, [[VAL_NUMLEADINGZEROS]]
-; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i2 @llvm.smax.i2(i2 [[VAL_NUMACTIVEBITS]], i2 [[START:%.*]])
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS_OFFSET:%.*]] = add nuw nsw i2 [[VAL_NUMACTIVEBITS]], 0
+; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i2 @llvm.smax.i2(i2 [[VAL_NUMACTIVEBITS_OFFSET]], i2 [[START:%.*]])
 ; CHECK-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i2 [[IV_FINAL]], [[START]]
 ; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw i2 [[LOOP_BACKEDGETAKENCOUNT]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1360,7 +1363,8 @@ define i3 @t26_nooffset_i3(i3 %val, i3 %start) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i3 @llvm.ctlz.i3(i3 [[VAL:%.*]], i1 false)
 ; CHECK-NEXT:    [[VAL_NUMACTIVEBITS:%.*]] = sub nuw nsw i3 3, [[VAL_NUMLEADINGZEROS]]
-; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i3 @llvm.smax.i3(i3 [[VAL_NUMACTIVEBITS]], i3 [[START:%.*]])
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS_OFFSET:%.*]] = add nuw nsw i3 [[VAL_NUMACTIVEBITS]], 0
+; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i3 @llvm.smax.i3(i3 [[VAL_NUMACTIVEBITS_OFFSET]], i3 [[START:%.*]])
 ; CHECK-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i3 [[IV_FINAL]], [[START]]
 ; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i3 [[LOOP_BACKEDGETAKENCOUNT]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

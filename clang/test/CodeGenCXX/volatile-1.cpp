@@ -248,7 +248,7 @@ void test() {
   // CHECK-NEXT: store volatile
 
   __imag i;
-
+  
   // ============================================================
   // FIXME: Test cases we get wrong.
 
@@ -264,7 +264,7 @@ void test() {
   // CHECK-NEXT: call {{.*}}void
   ((a=a),a);
 
-  // Not a use.  gcc gets this wrong, it doesn't emit the copy!
+  // Not a use.  gcc gets this wrong, it doesn't emit the copy!  
   // CHECK-NEXT: call {{.*}}void
   (void)(a=a);
 
@@ -331,7 +331,7 @@ void test() {
   // CHECK-NEXT: store volatile
 
   // A use.
-  i + 1;
+  i + 0;
   // CHECK-NEXT: load volatile
   // CHECK-NEXT: add
 
@@ -345,7 +345,7 @@ void test() {
 
   // A use.  gcc treats this as not a use, that's probably a bug due to tree
   // folding ignoring volatile.
-  (i=j) + 1;
+  (i=j) + 0;
   // CHECK-NEXT: load volatile
   // CHECK-NEXT: store volatile
   // CHECK-NEXT: load volatile

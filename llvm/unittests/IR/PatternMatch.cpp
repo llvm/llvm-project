@@ -479,19 +479,19 @@ TEST_F(PatternMatchTest, SpecificIntSLE) {
 }
 
 TEST_F(PatternMatchTest, Unless) {
-  Value *X = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(-1));
+  Value *X = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(0));
 
-  EXPECT_TRUE(m_Add(m_One(), m_AllOnes()).match(X));
-  EXPECT_FALSE(m_Add(m_AllOnes(), m_One()).match(X));
+  EXPECT_TRUE(m_Add(m_One(), m_Zero()).match(X));
+  EXPECT_FALSE(m_Add(m_Zero(), m_One()).match(X));
 
-  EXPECT_FALSE(m_Unless(m_Add(m_One(), m_AllOnes())).match(X));
-  EXPECT_TRUE(m_Unless(m_Add(m_AllOnes(), m_One())).match(X));
+  EXPECT_FALSE(m_Unless(m_Add(m_One(), m_Zero())).match(X));
+  EXPECT_TRUE(m_Unless(m_Add(m_Zero(), m_One())).match(X));
 
-  EXPECT_TRUE(m_c_Add(m_One(), m_AllOnes()).match(X));
-  EXPECT_TRUE(m_c_Add(m_AllOnes(), m_One()).match(X));
+  EXPECT_TRUE(m_c_Add(m_One(), m_Zero()).match(X));
+  EXPECT_TRUE(m_c_Add(m_Zero(), m_One()).match(X));
 
-  EXPECT_FALSE(m_Unless(m_c_Add(m_One(), m_AllOnes())).match(X));
-  EXPECT_FALSE(m_Unless(m_c_Add(m_AllOnes(), m_One())).match(X));
+  EXPECT_FALSE(m_Unless(m_c_Add(m_One(), m_Zero())).match(X));
+  EXPECT_FALSE(m_Unless(m_c_Add(m_Zero(), m_One())).match(X));
 }
 
 TEST_F(PatternMatchTest, ZExtSExtSelf) {
