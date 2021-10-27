@@ -44,7 +44,8 @@ std::int64_t RTNAME(ArgumentLength)(std::int32_t n);
 // Returns a STATUS as described in the standard.
 std::int32_t RTNAME(EnvVariableValue)(const Descriptor &name,
     const Descriptor *value = nullptr, bool trim_name = true,
-    const Descriptor *errmsg = nullptr);
+    const Descriptor *errmsg = nullptr, const char *sourceFile = nullptr,
+    int line = 0);
 
 // Try to get the significant length of the environment variable specified by
 // NAME. Returns 0 if it doesn't manage.

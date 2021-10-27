@@ -57,6 +57,9 @@ const char *StatErrorString(int stat) {
   case StatValueTooShort:
     return "Value too short";
 
+  case StatMissingEnvVariable:
+    return "Missing environment variable";
+
   default:
     return nullptr;
   }

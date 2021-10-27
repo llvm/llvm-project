@@ -84,18 +84,20 @@ typedef signed char CFI_type_t;
 #define CFI_TYPE_LAST CFI_type_char32_t
 #define CFI_type_other (-1) // must be negative
 
-/* Error code macros */
+/* Error code macros - skip some of the small values to avoid conflicts with
+ * other status codes mandated by the standard, e.g. those returned by
+ * GET_ENVIRONMENT_VARIABLE (16.9.84) */
 #define CFI_SUCCESS 0 /* must be zero */
-#define CFI_ERROR_BASE_ADDR_NULL 1
-#define CFI_ERROR_BASE_ADDR_NOT_NULL 2
-#define CFI_INVALID_ELEM_LEN 3
-#define CFI_INVALID_RANK 4
-#define CFI_INVALID_TYPE 5
-#define CFI_INVALID_ATTRIBUTE 6
-#define CFI_INVALID_EXTENT 7
-#define CFI_INVALID_DESCRIPTOR 8
-#define CFI_ERROR_MEM_ALLOCATION 9
-#define CFI_ERROR_OUT_OF_BOUNDS 10
+#define CFI_ERROR_BASE_ADDR_NULL 11
+#define CFI_ERROR_BASE_ADDR_NOT_NULL 12
+#define CFI_INVALID_ELEM_LEN 13
+#define CFI_INVALID_RANK 14
+#define CFI_INVALID_TYPE 15
+#define CFI_INVALID_ATTRIBUTE 16
+#define CFI_INVALID_EXTENT 17
+#define CFI_INVALID_DESCRIPTOR 18
+#define CFI_ERROR_MEM_ALLOCATION 19
+#define CFI_ERROR_OUT_OF_BOUNDS 20
 
 /* 18.5.2 per-dimension information */
 typedef struct CFI_dim_t {
