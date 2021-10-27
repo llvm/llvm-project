@@ -181,10 +181,10 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-V7-FP-LABEL: _Z4testiiiiiddddd:
 ; CHECK-V7-FP:   .fnstart
-; CHECK-V7-FP:   .save  {r4, r10, r11, lr}
-; CHECK-V7-FP:   push   {r4, r10, r11, lr}
-; CHECK-V7-FP:   .setfp r11, sp, #8
-; CHECK-V7-FP:   add    r11, sp, #8
+; CHECK-V7-FP:   .save  {r11, lr}
+; CHECK-V7-FP:   push   {r11, lr}
+; CHECK-V7-FP:   .setfp r11, sp
+; CHECK-V7-FP:   mov    r11, sp
 ; CHECK-V7-FP:   .vsave {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP:   vpush  {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP:   .pad   #24
@@ -195,8 +195,8 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-V7-FP-ELIM-LABEL: _Z4testiiiiiddddd:
 ; CHECK-V7-FP-ELIM:   .fnstart
-; CHECK-V7-FP-ELIM:   .save  {r4, lr}
-; CHECK-V7-FP-ELIM:   push   {r4, lr}
+; CHECK-V7-FP-ELIM:   .save  {r11, lr}
+; CHECK-V7-FP-ELIM:   push   {r11, lr}
 ; CHECK-V7-FP-ELIM:   .vsave {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP-ELIM:   vpush  {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP-ELIM:   .pad   #24
@@ -254,33 +254,31 @@ declare void @_ZSt9terminatev()
 ; DWARF-V7-FP:    .cfi_startproc
 ; DWARF-V7-FP:    .cfi_personality 0, __gxx_personality_v0
 ; DWARF-V7-FP:    .cfi_lsda 0, .Lexception0
-; DWARF-V7-FP:    push {r4, r10, r11, lr}
-; DWARF-V7-FP:    .cfi_def_cfa_offset 16
+; DWARF-V7-FP:    push {r11, lr}
+; DWARF-V7-FP:    .cfi_def_cfa_offset 8
 ; DWARF-V7-FP:    .cfi_offset lr, -4
 ; DWARF-V7-FP:    .cfi_offset r11, -8
-; DWARF-V7-FP:    .cfi_offset r10, -12
-; DWARF-V7-FP:    .cfi_offset r4, -16
-; DWARF-V7-FP:    add r11, sp, #8
-; DWARF-V7-FP:    .cfi_def_cfa r11, 8
+; DWARF-V7-FP:    mov r11, sp
+; DWARF-V7-FP:    .cfi_def_cfa_register r11
 ; DWARF-V7-FP:    vpush {d8, d9, d10, d11, d12}
-; DWARF-V7-FP:    .cfi_offset d12, -24
-; DWARF-V7-FP:    .cfi_offset d11, -32
-; DWARF-V7-FP:    .cfi_offset d10, -40
-; DWARF-V7-FP:    .cfi_offset d9, -48
+; DWARF-V7-FP:    .cfi_offset d12, -16
+; DWARF-V7-FP:    .cfi_offset d11, -24
+; DWARF-V7-FP:    .cfi_offset d10, -32
+; DWARF-V7-FP:    .cfi_offset d9, -40
 ; DWARF-V7-FP:    sub sp, sp, #24
-; DWARF-V7-FP:    sub sp, r11, #48
+; DWARF-V7-FP:    sub sp, r11, #40
 ; DWARF-V7-FP:    vpop {d8, d9, d10, d11, d12}
-; DWARF-V7-FP:    pop {r4, r10, r11, pc}
+; DWARF-V7-FP:    pop {r11, pc}
 ; DWARF-V7-FP:    .cfi_endproc
 
 ; DWARF-V7-FP-ELIM-LABEL: _Z4testiiiiiddddd:
 ; DWARF-V7-FP-ELIM:    .cfi_startproc
 ; DWARF-V7-FP-ELIM:    .cfi_personality 0, __gxx_personality_v0
 ; DWARF-V7-FP-ELIM:    .cfi_lsda 0, .Lexception0
-; DWARF-V7-FP-ELIM:    push {r4, lr}
+; DWARF-V7-FP-ELIM:    push {r11, lr}
 ; DWARF-V7-FP-ELIM:    .cfi_def_cfa_offset 8
 ; DWARF-V7-FP-ELIM:    .cfi_offset lr, -4
-; DWARF-V7-FP-ELIM:    .cfi_offset r4, -8
+; DWARF-V7-FP-ELIM:    .cfi_offset r11, -8
 ; DWARF-V7-FP-ELIM:    vpush {d8, d9, d10, d11, d12}
 ; DWARF-V7-FP-ELIM:    .cfi_offset d12, -16
 ; DWARF-V7-FP-ELIM:    .cfi_offset d11, -24
@@ -290,7 +288,7 @@ declare void @_ZSt9terminatev()
 ; DWARF-V7-FP-ELIM:    .cfi_def_cfa_offset 72
 ; DWARF-V7-FP-ELIM:    add sp, sp, #24
 ; DWARF-V7-FP-ELIM:    vpop {d8, d9, d10, d11, d12}
-; DWARF-V7-FP-ELIM:    pop {r4, pc}
+; DWARF-V7-FP-ELIM:    pop {r11, pc}
 ; DWARF-V7-FP-ELIM:    .cfi_endproc
 
 ; DWARF-WIN-FP-ELIM-LABEL: _Z4testiiiiiddddd:

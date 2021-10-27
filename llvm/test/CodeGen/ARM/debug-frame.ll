@@ -197,29 +197,27 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-V7-FP-LABEL: _Z4testiiiiiddddd:
 ; CHECK-V7-FP:   .cfi_startproc
-; CHECK-V7-FP:   push   {r4, r10, r11, lr}
-; CHECK-V7-FP:   .cfi_def_cfa_offset 16
+; CHECK-V7-FP:   push   {r11, lr}
+; CHECK-V7-FP:   .cfi_def_cfa_offset 8
 ; CHECK-V7-FP:   .cfi_offset lr, -4
 ; CHECK-V7-FP:   .cfi_offset r11, -8
-; CHECK-V7-FP:   .cfi_offset r10, -12
-; CHECK-V7-FP:   .cfi_offset r4, -16
-; CHECK-V7-FP:   add    r11, sp, #8
-; CHECK-V7-FP:   .cfi_def_cfa r11, 8
+; CHECK-V7-FP:   mov     r11, sp
+; CHECK-V7-FP:   .cfi_def_cfa_register r11
 ; CHECK-V7-FP:   vpush  {d8, d9, d10, d11, d12}
-; CHECK-V7-FP:   .cfi_offset d12, -24
-; CHECK-V7-FP:   .cfi_offset d11, -32
-; CHECK-V7-FP:   .cfi_offset d10, -40
-; CHECK-V7-FP:   .cfi_offset d9, -48
-; CHECK-V7-FP:   .cfi_offset d8, -56
+; CHECK-V7-FP:   .cfi_offset d12, -16
+; CHECK-V7-FP:   .cfi_offset d11, -24
+; CHECK-V7-FP:   .cfi_offset d10, -32
+; CHECK-V7-FP:   .cfi_offset d9, -40
+; CHECK-V7-FP:   .cfi_offset d8, -48
 ; CHECK-V7-FP:   sub    sp, sp, #24
 ; CHECK-V7-FP:   .cfi_endproc
 
 ; CHECK-V7-FP-ELIM-LABEL: _Z4testiiiiiddddd:
 ; CHECK-V7-FP-ELIM:   .cfi_startproc
-; CHECK-V7-FP-ELIM:   push   {r4, lr}
+; CHECK-V7-FP-ELIM:   push   {r11, lr}
 ; CHECK-V7-FP-ELIM:   .cfi_def_cfa_offset 8
 ; CHECK-V7-FP-ELIM:   .cfi_offset lr, -4
-; CHECK-V7-FP-ELIM:   .cfi_offset r4, -8
+; CHECK-V7-FP-ELIM:   .cfi_offset r11, -8
 ; CHECK-V7-FP-ELIM:   vpush  {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP-ELIM:   .cfi_def_cfa_offset 48
 ; CHECK-V7-FP-ELIM:   .cfi_offset d12, -16
@@ -260,29 +258,27 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-THUMB-V7-FP-LABEL: _Z4testiiiiiddddd:
 ; CHECK-THUMB-V7-FP:   .cfi_startproc
-; CHECK-THUMB-V7-FP:   push   {r4, r6, r7, lr}
-; CHECK-THUMB-V7-FP:   .cfi_def_cfa_offset 16
+; CHECK-THUMB-V7-FP:   push   {r7, lr}
+; CHECK-THUMB-V7-FP:   .cfi_def_cfa_offset 8
 ; CHECK-THUMB-V7-FP:   .cfi_offset lr, -4
 ; CHECK-THUMB-V7-FP:   .cfi_offset r7, -8
-; CHECK-THUMB-V7-FP:   .cfi_offset r6, -12
-; CHECK-THUMB-V7-FP:   .cfi_offset r4, -16
-; CHECK-THUMB-V7-FP:   add    r7, sp, #8
-; CHECK-THUMB-V7-FP:   .cfi_def_cfa r7, 8
+; CHECK-THUMB-V7-FP:   mov    r7, sp
+; CHECK-THUMB-V7-FP:   .cfi_def_cfa_register r7
 ; CHECK-THUMB-V7-FP:   vpush  {d8, d9, d10, d11, d12}
-; CHECK-THUMB-V7-FP:   .cfi_offset d12, -24
-; CHECK-THUMB-V7-FP:   .cfi_offset d11, -32
-; CHECK-THUMB-V7-FP:   .cfi_offset d10, -40
-; CHECK-THUMB-V7-FP:   .cfi_offset d9, -48
-; CHECK-THUMB-V7-FP:   .cfi_offset d8, -56
+; CHECK-THUMB-V7-FP:   .cfi_offset d12, -16
+; CHECK-THUMB-V7-FP:   .cfi_offset d11, -24
+; CHECK-THUMB-V7-FP:   .cfi_offset d10, -32
+; CHECK-THUMB-V7-FP:   .cfi_offset d9, -40
+; CHECK-THUMB-V7-FP:   .cfi_offset d8, -48
 ; CHECK-THUMB-V7-FP:   sub    sp, #24
 ; CHECK-THUMB-V7-FP:   .cfi_endproc
 
 ; CHECK-THUMB-V7-FP-ELIM-LABEL: _Z4testiiiiiddddd:
 ; CHECK-THUMB-V7-FP-ELIM:   .cfi_startproc
-; CHECK-THUMB-V7-FP-ELIM:   push   {r4, lr}
+; CHECK-THUMB-V7-FP-ELIM:   push   {r7, lr}
 ; CHECK-THUMB-V7-FP-ELIM:   .cfi_def_cfa_offset 8
 ; CHECK-THUMB-V7-FP-ELIM:   .cfi_offset lr, -4
-; CHECK-THUMB-V7-FP-ELIM:   .cfi_offset r4, -8
+; CHECK-THUMB-V7-FP-ELIM:   .cfi_offset r7, -8
 ; CHECK-THUMB-V7-FP-ELIM:   vpush  {d8, d9, d10, d11, d12}
 ; CHECK-THUMB-V7-FP-ELIM:   .cfi_def_cfa_offset 48
 ; CHECK-THUMB-V7-FP-ELIM:   .cfi_offset d12, -16
@@ -296,20 +292,18 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-THUMB-V7-FP-NOIAS-LABEL: _Z4testiiiiiddddd:
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_startproc
-; CHECK-THUMB-V7-FP-NOIAS:   push   {r4, r6, r7, lr}
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa_offset 16
+; CHECK-THUMB-V7-FP-NOIAS:   push   {r7, lr}
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa_offset 8
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 14, -4
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 7, -8
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 6, -12
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 4, -16
-; CHECK-THUMB-V7-FP-NOIAS:   add    r7, sp, #8
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa 7, 8
+; CHECK-THUMB-V7-FP-NOIAS:   mov    r7, sp
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa_register 7
 ; CHECK-THUMB-V7-FP-NOIAS:   vpush  {d8, d9, d10, d11, d12}
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 268, -24
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 267, -32
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 266, -40
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 265, -48
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 264, -56
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 268, -16
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 267, -24
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 266, -32
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 265, -40
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 264, -48
 ; CHECK-THUMB-V7-FP-NOIAS:   sub    sp, #24
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_endproc
 
