@@ -14,6 +14,13 @@ template <class T> struct is_const<const T> : true_type {};
 
 // expected-no-diagnostics
 
+void test_builtin_elementwise_abs() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_abs(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_abs(b))>::value);
+}
+
 void test_builtin_elementwise_max() {
   const int a = 2;
   int b = 1;

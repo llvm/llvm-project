@@ -2,6 +2,7 @@
 
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef int int3 __attribute__((ext_vector_type(3)));
+typedef unsigned unsigned4 __attribute__((ext_vector_type(4)));
 
 struct Foo {
   char *p;
@@ -10,6 +11,26 @@ struct Foo {
 __attribute__((address_space(1))) int int_as_one;
 typedef int bar;
 bar b;
+
+void test_builtin_elementwise_abs(int i, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+  struct Foo s = __builtin_elementwise_abs(i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_elementwise_abs();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_abs(i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  i = __builtin_elementwise_abs(v);
+  // expected-error@-1 {{assigning to 'int' from incompatible type 'float4' (vector of 4 'float' values)}}
+
+  u = __builtin_elementwise_abs(u);
+  // expected-error@-1 {{1st argument must be a signed integer or floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_abs(uv);
+  // expected-error@-1 {{1st argument must be a signed integer or floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
 
 void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, int *p) {
   i = __builtin_elementwise_max(p, d);

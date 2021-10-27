@@ -3101,6 +3101,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(V);
   }
 
+  case Builtin::BI__builtin_elementwise_abs: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result;
+    if (Op0->getType()->isIntOrIntVectorTy())
+      Result = Builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, Op0, Builder.getFalse(), nullptr, "elt.abs");
+    else
+      Result = Builder.CreateUnaryIntrinsic(llvm::Intrinsic::fabs, Op0, nullptr,
+                                            "elt.abs");
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_elementwise_max: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));

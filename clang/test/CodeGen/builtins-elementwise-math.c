@@ -8,12 +8,54 @@ __attribute__((address_space(1))) int int_as_one;
 typedef int bar;
 bar b;
 
+void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2, si8 vi1, si8 vi2,
+                                  long long int i1, long long int i2, short si) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_abs(
+  // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.fabs.f32(float [[F1]])
+  f2 = __builtin_elementwise_abs(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, double* %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.fabs.f64(double [[D1]])
+  d2 = __builtin_elementwise_abs(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, <4 x float>* %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.fabs.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_abs(vf1);
+
+  // CHECK:      [[I1:%.+]] = load i64, i64* %i1.addr, align 8
+  // CHECK-NEXT: call i64 @llvm.abs.i64(i64 [[I1]], i1 false)
+  i2 = __builtin_elementwise_abs(i1);
+
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, <8 x i16>* %vi1.addr, align 16
+  // CHECK-NEXT: call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[VI1]], i1 false)
+  vi2 = __builtin_elementwise_abs(vi1);
+
+  // CHECK:      [[CVI2:%.+]] = load <8 x i16>, <8 x i16>* %cvi2, align 16
+  // CHECK-NEXT: call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[CVI2]], i1 false)
+  const si8 cvi2 = vi2;
+  vi2 = __builtin_elementwise_abs(cvi2);
+
+  // CHECK:      [[IA1:%.+]] = load i32, i32 addrspace(1)* @int_as_one, align 4
+  // CHECK-NEXT: call i32 @llvm.abs.i32(i32 [[IA1]], i1 false)
+  b = __builtin_elementwise_abs(int_as_one);
+
+  // CHECK:   call i32 @llvm.abs.i32(i32 -10, i1 false)
+  b = __builtin_elementwise_abs(-10);
+
+  // CHECK:      [[SI:%.+]] = load i16, i16* %si.addr, align 2
+  // CHECK-NEXT: [[SI_EXT:%.+]] = sext i16 [[SI]] to i32
+  // CHECK-NEXT: [[RES:%.+]] = call i32 @llvm.abs.i32(i32 [[SI_EXT]], i1 false)
+  // CHECK-NEXT: = trunc i32 [[RES]] to i16
+  si = __builtin_elementwise_abs(si);
+}
+
 void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2, long long int i1,
                                   long long int i2, si8 vi1, si8 vi2,
                                   unsigned u1, unsigned u2, u4 vu1, u4 vu2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_max(
-
   // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
   // CHECK-NEXT: [[F2:%.+]] = load float, float* %f2.addr, align 4
   // CHECK-NEXT:  call float @llvm.maxnum.f32(float %0, float %1)
