@@ -27,7 +27,7 @@
 ##       The ,+4d is a GNU extension which seems not to work in macOS 10.15
 
 # RUN: sed -e '/__LINKEDIT/{N;N;N;N;d;}' \
-# RUN:     -e '/LC_CODE_SIGNATURE/{N;N;N;d}' \
+# RUN:     -e '/LC_CODE_SIGNATURE/{N;N;N;d;}' \
 # RUN:     -e '/n_strx/d' \ 
 # RUN:     -e '/dyld_stub_binder/d' %t.yaml > %t.clean.yaml
 
