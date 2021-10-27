@@ -9,7 +9,7 @@ int g(void) {return f(0);}
 // CHECK: call i32 @f
 int f(int b) {return 1+b;}
 // CHECK: load i32, i32* %{{.*}}
-// CHECK: add nsw i32 %{{.*}}, 1
+// CHECK: add nsw i32 1, %{{.*}}
 int h(void) {return f(1);}
 // CHECK: call i32 @f
 

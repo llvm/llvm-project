@@ -51,7 +51,7 @@ define void @doit1(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 0
@@ -73,7 +73,7 @@ define void @doit1(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[TMP18]], zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i32 [[STEP]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP19]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -177,7 +177,7 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i8 [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP6]], 0
@@ -199,7 +199,7 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[TMP18]], zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i32 [[STEP]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP19]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -377,7 +377,7 @@ define void @doit4(i32 %n, i8 signext %cstep) local_unnamed_addr {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i8 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP5]], 0
@@ -396,7 +396,7 @@ define void @doit4(i32 %n, i8 signext %cstep) local_unnamed_addr {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[CONV]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[TMP15]], zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP15]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[CONV]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP16]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
