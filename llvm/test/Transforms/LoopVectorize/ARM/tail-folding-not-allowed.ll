@@ -281,34 +281,33 @@ define void @strides_different_direction(i32* noalias nocapture %A, i32* noalias
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], [[N]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP0]], [[N]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 true, i1 [[TMP2]], i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP9]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = sub nsw i32 [[N]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i32 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TMP13]], i32 -3
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i32* [[TMP14]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <4 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw i32 [[N]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i32 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TMP12]], i32 -3
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP13]] to <4 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP14]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP16:%.*]] = add nsw <4 x i32> [[REVERSE]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i32* [[TMP18]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP16]], <4 x i32>* [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = add nsw <4 x i32> [[REVERSE]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[TMP17]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP15]], <4 x i32>* [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
+; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 431, 428
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -320,11 +319,11 @@ define void @strides_different_direction(i32* noalias nocapture %A, i32* noalias
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[I_09]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[N]], [[I_09]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[C]], i32 [[SUB]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP22]], [[TMP21]]
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP21]], [[TMP20]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[I_09]]
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD3]] = add nuw nsw i32 [[I_09]], 1
