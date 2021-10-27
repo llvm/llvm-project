@@ -669,6 +669,86 @@ bool LiveVariables::runOnMachineFunction(MachineFunction &mf) {
   return false;
 }
 
+void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
+  assert(Reg.isVirtual());
+
+  VarInfo &VI = getVarInfo(Reg);
+  VI.AliveBlocks.clear();
+  VI.Kills.clear();
+
+  MachineInstr &DefMI = *MRI->getUniqueVRegDef(Reg);
+  MachineBasicBlock &DefBB = *DefMI.getParent();
+
+  // Handle the case where all uses have been removed.
+  if (MRI->use_nodbg_empty(Reg)) {
+    VI.Kills.push_back(&DefMI);
+    DefMI.addRegisterDead(Reg, nullptr);
+    return;
+  }
+  DefMI.clearRegisterDeads(Reg);
+
+  // Initialize a worklist of BBs that Reg is live-to-end of. (Here
+  // "live-to-end" means Reg is live at the end of a block even if it is only
+  // live because of phi uses in a successor. This is different from isLiveOut()
+  // which does not consider phi uses.)
+  SmallVector<MachineBasicBlock *> LiveToEndBlocks;
+  SparseBitVector<> UseBlocks;
+  for (auto &UseMO : MRI->use_nodbg_operands(Reg)) {
+    UseMO.setIsKill(false);
+    MachineInstr &UseMI = *UseMO.getParent();
+    MachineBasicBlock &UseBB = *UseMI.getParent();
+    UseBlocks.set(UseBB.getNumber());
+    if (UseMI.isPHI()) {
+      // If Reg is used in a phi then it is live-to-end of the corresponding
+      // predecessor.
+      unsigned Idx = UseMI.getOperandNo(&UseMO);
+      LiveToEndBlocks.push_back(UseMI.getOperand(Idx + 1).getMBB());
+    } else if (&UseBB == &DefBB) {
+      // A non-phi use in the same BB as the single def must come after the def.
+    } else {
+      // Otherwise Reg must be live-to-end of all predecessors.
+      LiveToEndBlocks.append(UseBB.pred_begin(), UseBB.pred_end());
+    }
+  }
+
+  // Iterate over the worklist adding blocks to AliveBlocks.
+  bool LiveToEndOfDefBB = false;
+  while (!LiveToEndBlocks.empty()) {
+    MachineBasicBlock &BB = *LiveToEndBlocks.pop_back_val();
+    if (&BB == &DefBB) {
+      LiveToEndOfDefBB = true;
+      continue;
+    }
+    if (VI.AliveBlocks.test(BB.getNumber()))
+      continue;
+    VI.AliveBlocks.set(BB.getNumber());
+    LiveToEndBlocks.append(BB.pred_begin(), BB.pred_end());
+  }
+
+  // Recompute kill flags. For each block in which Reg is used but is not
+  // live-through, find the last instruction that uses Reg. Ignore phi nodes
+  // because they should not be included in Kills.
+  for (unsigned UseBBNum : UseBlocks) {
+    if (VI.AliveBlocks.test(UseBBNum))
+      continue;
+    MachineBasicBlock &UseBB = *MF->getBlockNumbered(UseBBNum);
+    if (&UseBB == &DefBB && LiveToEndOfDefBB)
+      continue;
+    for (auto &MI : reverse(UseBB)) {
+      if (MI.isDebugOrPseudoInstr())
+        continue;
+      if (MI.isPHI())
+        break;
+      if (MI.readsRegister(Reg)) {
+        assert(!MI.killsRegister(Reg));
+        MI.addRegisterKilled(Reg, nullptr);
+        VI.Kills.push_back(&MI);
+        break;
+      }
+    }
+  }
+}
+
 /// replaceKillInstruction - Update register kill info by replacing a kill
 /// instruction with a new one.
 void LiveVariables::replaceKillInstruction(Register Reg, MachineInstr &OldMI,
