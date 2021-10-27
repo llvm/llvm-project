@@ -7,8 +7,9 @@ target triple = "aarch64--linux-gnu"
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 5
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDUCTION]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDUCTION1]] to i32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body

@@ -17,23 +17,24 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[MUL_RESULT]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
+; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i8* [[TMP10]], [[A5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i8* [[TMP9]], [[A5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP7]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* [[A5]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i8* [[TMP11]], [[A5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i8* [[TMP10]], [[A5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP8]], [[TMP14]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:
@@ -162,23 +163,24 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[MUL_RESULT]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
+; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i8* [[TMP10]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i8* [[TMP9]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP7]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*), i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i8* [[TMP11]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i8* [[TMP10]], bitcast (i32* getelementptr inbounds ([8192 x i32], [8192 x i32]* @global_a, i64 0, i64 42) to i8*)
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP8]], [[TMP14]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:
