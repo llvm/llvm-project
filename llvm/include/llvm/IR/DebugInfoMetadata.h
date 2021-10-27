@@ -226,6 +226,7 @@ public:
     case DIImportedEntityKind:
     case DIModuleKind:
     case DIGenericSubrangeKind:
+    case DILifetimeKind:
       return true;
     }
   }
@@ -4019,13 +4020,15 @@ public:
 };
 
 /// Represents one lifetime segment of a DIObject.
-class DILifetime : public MDNode {
+class DILifetime : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+  // FIXME: DILifetime must derive from DINode in order to be added to
+  // retainedNodes, but it has no meaningful "Tag".
   DILifetime(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops,
              ArrayRef<Metadata *> Args)
-      : MDNode(C, DILifetimeKind, Storage, Ops, Args) {
+      : DINode(C, DILifetimeKind, Storage, 0, Ops, Args) {
     assert(Storage != Uniqued);
   }
   ~DILifetime() = default;

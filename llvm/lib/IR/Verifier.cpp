@@ -856,12 +856,16 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   // There used to be various other llvm.dbg.* nodes, but we don't support
   // upgrading them and we want to reserve the namespace for future uses.
   if (NMD.getName().startswith("llvm.dbg."))
-    AssertDI(NMD.getName() == "llvm.dbg.cu",
+    AssertDI(NMD.getName() == "llvm.dbg.cu" ||
+                 NMD.getName() == "llvm.dbg.retainedNodes",
              "unrecognized named metadata node in the llvm.dbg namespace",
              &NMD);
   for (const MDNode *MD : NMD.operands()) {
     if (NMD.getName() == "llvm.dbg.cu")
       AssertDI(MD && isa<DICompileUnit>(MD), "invalid compile unit", &NMD, MD);
+    if (NMD.getName() == "llvm.dbg.retainedNodes")
+      AssertDI(MD && isa<DILifetime>(MD), "invalid module retained node", &NMD,
+               MD);
 
     if (!MD)
       continue;
@@ -1285,7 +1289,8 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
     for (Metadata *Op : N.getRetainedTypes()->operands()) {
       AssertDI(Op && (isa<DIType>(Op) ||
                       (isa<DISubprogram>(Op) &&
-                       !cast<DISubprogram>(Op)->isDefinition())),
+                       !cast<DISubprogram>(Op)->isDefinition()) ||
+                      isa<DILifetime>(Op)),
                "invalid retained type", &N, Op);
     }
   }
@@ -1332,8 +1337,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     AssertDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      AssertDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op)),
-               "invalid retained nodes, expected DILocalVariable or DILabel",
+      AssertDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
+                      isa<DILifetime>(Op)),
+               "invalid retained nodes, expected DILocalVariable or DILabel or "
+               "DILifetime",
                &N, Node, Op);
     }
   }
