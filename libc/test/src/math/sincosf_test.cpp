@@ -8,10 +8,10 @@
 
 #include "src/__support/CPP/Array.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/TestHelpers.h"
 #include "src/math/sincosf.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 

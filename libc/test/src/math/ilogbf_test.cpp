@@ -10,8 +10,8 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/FPUtil/TestHelpers.h"
 #include "src/math/ilogbf.h"
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
