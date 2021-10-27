@@ -129,7 +129,9 @@ struct ReferencedFiles {
   void add(SourceLocation Loc) { add(SM.getFileID(Loc), Loc); }
 
   void add(FileID FID, SourceLocation Loc) {
-    if (FID.isInvalid())
+    // Check if Loc is not written in a physical file.
+    if (FID.isInvalid() || SM.isWrittenInBuiltinFile(Loc) ||
+        SM.isWrittenInCommandLineFile(Loc))
       return;
     assert(SM.isInFileID(Loc, FID));
     if (Loc.isFileID()) {

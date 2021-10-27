@@ -234,13 +234,17 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
                                    "<system_header.h>"));
 }
 
-TEST(IncludeCleaner, ScratchBuffer) {
+TEST(IncludeCleaner, VirtualBuffers) {
   TestTU TU;
   TU.Filename = "foo.cpp";
   TU.Code = R"cpp(
     #include "macro_spelling_in_scratch_buffer.h"
 
     using flags::FLAGS_FOO;
+
+    // CLI will come from a define, __llvm__ is a built-in. In both cases, they
+    // come from non-existent files.
+    int y = CLI + __llvm__;
 
     int concat(a, b) = 42;
     )cpp";
@@ -258,6 +262,7 @@ TEST(IncludeCleaner, ScratchBuffer) {
     #define ab x
     #define concat(x, y) x##y
     )cpp";
+  TU.ExtraArgs = {"-DCLI=42"};
   ParsedAST AST = TU.build();
   auto &SM = AST.getSourceManager();
   auto &Includes = AST.getIncludeStructure();
