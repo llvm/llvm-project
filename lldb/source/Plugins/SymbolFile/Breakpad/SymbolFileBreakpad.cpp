@@ -783,3 +783,9 @@ void SymbolFileBreakpad::ParseUnwindData() {
   }
   m_unwind_data->win.Sort();
 }
+
+uint64_t SymbolFileBreakpad::GetDebugInfoSize() {
+  // Breakpad files are all debug info.
+  return m_objfile_sp->GetByteSize();
+}
+

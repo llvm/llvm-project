@@ -49,6 +49,7 @@ void DWARFUnit::ExtractUnitDIENoDwoIfNeeded() {
   if (m_first_die)
     return; // Already parsed
 
+  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
   LLDB_SCOPED_TIMERF("%8.8x: DWARFUnit::ExtractUnitDIENoDwoIfNeeded()",
                      GetOffset());
 
@@ -196,6 +197,7 @@ DWARFUnit::ScopedExtractDIEs &DWARFUnit::ScopedExtractDIEs::operator=(
 void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
+  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
   LLDB_SCOPED_TIMERF("%8.8x: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset());
 
   // Set the offset to that of the first DIE and calculate the start of the
