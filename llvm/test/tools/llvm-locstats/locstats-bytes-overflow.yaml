@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfdump --statistics %t.o 2>&1 | FileCheck %s
+# RUN: %llvm-locstats %t.o 2>&1 | FileCheck %s
 # RUN: rm %t.o
 
 ## Check that we are covering the situation when a stat field overflows.
@@ -23,7 +23,8 @@
 ##       DW_AT_location        (0x00000023:
 ##             [0x0000000000000003, 0x0000000000000005): DW_OP_reg2 RCX)
 
-# CHECK: "sum_all_variables(#bytes in parent scope)": "overflowed"
+# CHECK: warning: "sum_all_variables(#bytes in parent scope)" field overflowed.
+# CHECK: PC ranges covered: tainted
 
 --- !ELF
 FileHeader:
