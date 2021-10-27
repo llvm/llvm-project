@@ -43,6 +43,7 @@ set(TSAN_SOURCES
   rtl/tsan_preinit.cpp
   rtl/tsan_report.cpp
   rtl/tsan_rtl.cpp
+  rtl/tsan_rtl_access.cpp
   rtl/tsan_rtl_mutex.cpp
   rtl/tsan_rtl_proc.cpp
   rtl/tsan_rtl_report.cpp
