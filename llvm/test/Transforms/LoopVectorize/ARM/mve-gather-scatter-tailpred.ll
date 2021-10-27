@@ -79,7 +79,7 @@ define void @test_stride-1_4i32(i32* readonly %data, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[MUL_RESULT]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 2, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 2, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP1]], 2
@@ -431,7 +431,7 @@ define void @test_stride_noninvar_4i32(i32* readonly %data, i32* noalias nocaptu
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N_VEC]], 8
-; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[TMP0]], 3
+; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -549,11 +549,11 @@ define void @test_stride_noninvar3_4i32(i32* readonly %data, i32* noalias nocapt
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N_VEC]], [[X:%.*]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[TMP0]], 3
+; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[TMP1]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[X]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer

@@ -21,7 +21,7 @@ define i64 @foo(i64 %guard, ...) {
 
 ; CHECK-LABEL: @foo
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_va_arg_overflow_size_tls
-; CHECK: [[B:%.*]] = add i64 [[A]], 160
+; CHECK: [[B:%.*]] = add i64 160, [[A]]
 ; CHECK: alloca {{.*}} [[B]]
 
 ; We expect two memcpy operations: one for the register save area, and one for

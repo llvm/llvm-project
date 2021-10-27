@@ -20,7 +20,7 @@ define void @load_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i2 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i2 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i2 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i2 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i2 [[TMP2]], 0
@@ -109,7 +109,7 @@ define void @store_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i2 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i2 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i2 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i2 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i2 [[TMP2]], 0
@@ -277,7 +277,7 @@ define void @clamped_index_equal_dependence(i32* %A, i32* %B, i32 %N) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i2 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i2 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i2 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i2 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i2 [[TMP2]], 0

@@ -22,20 +22,20 @@ define i32 @foo(i32 %guard, ...) {
 
 ; CHECK-LABEL: @foo
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_va_arg_overflow_size_tls
-; CHECK: [[B:%.*]] = add i64 [[A]], 192
+; CHECK: [[B:%.*]] = add i64 192, [[A]]
 ; CHECK: alloca {{.*}} [[B]]
 
 ; We expect three memcpy operations: one for the general purpose registers,
 ; one for floating-point/SIMD ones, and one for thre remaining arguments.
 
-; Propagate the GR shadow values on for the va_list::__gp_top, adjust the
+; Propagate the GR shadow values on for the va_list::__gp_top, adjust the 
 ; offset in the __msan_va_arg_tls based on va_list:__gp_off, and finally
 ; issue the memcpy.
 ; CHECK: [[GRP:%.*]] = getelementptr inbounds i8, i8* {{%.*}}, i64 {{%.*}}
 ; CHECK: [[GRSIZE:%.*]] = sub i64 64, {{%.*}}
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{%.*}}, i8* align 8 [[GRP]], i64 [[GRSIZE]], i1 false)
 
-; Propagate the VR shadow values on for the va_list::__vr_top, adjust the
+; Propagate the VR shadow values on for the va_list::__vr_top, adjust the 
 ; offset in the __msan_va_arg_tls based on va_list:__vr_off, and finally
 ; issue the memcpy.
 ; CHECK: [[VRP:%.*]] = getelementptr inbounds i8, i8* {{%.*}}, i64 {{%.*}}
@@ -53,7 +53,7 @@ declare void @llvm.va_end(i8*) #2
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 define i32 @bar() {
-  %1 = call i32 (i32, ...) @foo(i32 0, i32 1, i32 2, double 3.000000e+00,
+  %1 = call i32 (i32, ...) @foo(i32 0, i32 1, i32 2, double 3.000000e+00, 
                                 double 4.000000e+00, i32 5, i32 6,
                                 double 7.000000e+00, i32 8, i32 9, i32 10, i32 11)
   ret i32 %1

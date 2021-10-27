@@ -484,7 +484,7 @@ int test_mixed_sign_mull_overflow(int x, unsigned y) {
 // CHECK-NEXT:  [[UnsignedOFlow:%.*]] = extractvalue { i32, i1 } %{{.*}}, 1
 // CHECK-NEXT:  [[UnsignedResult:%.*]] = extractvalue { i32, i1 } %{{.*}}, 0
 // CHECK-NEXT:  [[IsNegZext:%.*]] = zext i1 [[IsNeg]] to i32
-// CHECK-NEXT:  [[MaxResult:%.*]] = add i32 [[IsNegZext]], 2147483647
+// CHECK-NEXT:  [[MaxResult:%.*]] = add i32 2147483647, [[IsNegZext]]
 // CHECK-NEXT:  [[SignedOFlow:%.*]] = icmp ugt i32 [[UnsignedResult]], [[MaxResult]]
 // CHECK-NEXT:  [[OFlow:%.*]] = or i1 [[UnsignedOFlow]], [[SignedOFlow]]
 // CHECK-NEXT:  [[NegativeResult:%.*]] = sub i32 0, [[UnsignedResult]]
@@ -523,7 +523,7 @@ int test_mixed_sign_mull_overflow_unsigned(int x, unsigned y) {
 int test_mixed_sign_mull_overflow_swapped(int x, unsigned y) {
 // CHECK: @test_mixed_sign_mull_overflow_swapped
 // CHECK:  call { i32, i1 } @llvm.umul.with.overflow.i32
-// CHECK:  add i32 [[Op0:%.*]], 2147483647
+// CHECK:  add i32 2147483647
   int result;
   if (__builtin_mul_overflow(y, x, &result))
     return LongErrorCode;
@@ -533,7 +533,7 @@ int test_mixed_sign_mull_overflow_swapped(int x, unsigned y) {
 long long test_mixed_sign_mulll_overflow(long long x, unsigned long long y) {
 // CHECK: @test_mixed_sign_mulll_overflow
 // CHECK:  call { i64, i1 } @llvm.umul.with.overflow.i64
-// CHECK:  add i64 [[Op0:%.*]], 92233720368547
+// CHECK:  add i64 92233720368547
   long long result;
   if (__builtin_mul_overflow(x, y, &result))
     return LongLongErrorCode;
@@ -543,7 +543,7 @@ long long test_mixed_sign_mulll_overflow(long long x, unsigned long long y) {
 long long test_mixed_sign_mulll_overflow_swapped(long long x, unsigned long long y) {
 // CHECK: @test_mixed_sign_mulll_overflow_swapped
 // CHECK:  call { i64, i1 } @llvm.umul.with.overflow.i64
-// CHECK:  add i64 [[Op0:%.*]], 92233720368547
+// CHECK:  add i64 92233720368547
   long long result;
   if (__builtin_mul_overflow(y, x, &result))
     return LongLongErrorCode;
@@ -553,7 +553,7 @@ long long test_mixed_sign_mulll_overflow_swapped(long long x, unsigned long long
 long long test_mixed_sign_mulll_overflow_trunc_signed(long long x, unsigned long long y) {
 // CHECK: @test_mixed_sign_mulll_overflow_trunc_signed
 // CHECK:  call { i64, i1 } @llvm.umul.with.overflow.i64
-// CHECK:  add i64 [[Op0:%.*]], 2147483647
+// CHECK:  add i64 2147483647
 // CHECK:  trunc
 // CHECK:  store
   int result;
