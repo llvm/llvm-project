@@ -160,6 +160,8 @@ struct ExecutorAddrRange {
 
 namespace shared {
 
+class SPSExecutorAddr {};
+
 /// SPS serializatior for ExecutorAddr.
 template <> class SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
 public:
