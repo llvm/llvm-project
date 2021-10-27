@@ -280,6 +280,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "strdup",
+              RetValSpec<CharPtr>,
+              [ArgSpec<ConstCharPtr>]
+          >,
+          FunctionSpec<
               "strpbrk",
               RetValSpec<CharPtr>,
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]

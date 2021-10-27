@@ -36,6 +36,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcmp
     libc.src.string.strcpy
     libc.src.string.strcspn
+    libc.src.string.strdup
     libc.src.string.strlen
     libc.src.string.strncat
     libc.src.string.strncmp
@@ -237,7 +238,8 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     libc.src.stdlib.realloc
     libc.src.stdlib.free
 
-
+    # string.h entrypoints that depend on malloc
+    libc.src.string.strdup
   )
 endif()
 
