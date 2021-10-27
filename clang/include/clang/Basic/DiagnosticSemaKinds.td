@@ -11355,7 +11355,8 @@ def err_builtin_launder_invalid_arg : Error<
 def err_builtin_invalid_arg_type: Error <
   "%ordinal0 argument must be a "
   "%select{vector, integer or floating point type|matrix|"
-   "pointer to a valid matrix element type}1 (was %2)">;
+   "pointer to a valid matrix element type|"
+   "signed integer or floating point type}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
