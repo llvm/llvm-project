@@ -127,7 +127,7 @@ within a single branch, but this means the tuple `(num, branch-name)` uniquely
 identifies a commit.
 
 We can thus use this revision number to ensure that e.g. `clang -v` reports a
-user-friendly revision number (e.g. `master-12345` or `4.0-5321`), addressing
+user-friendly revision number (e.g. `main-12345` or `4.0-5321`), addressing
 the objections raised above with respect to this aspect of Git.
 
 What About Branches and Merges?
@@ -322,7 +322,7 @@ Currently
   git clone https://llvm.org/git/llvm.git
   cd llvm
   git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
-  git config svn-remote.svn.fetch :refs/remotes/origin/master
+  git config svn-remote.svn.fetch :refs/remotes/origin/main
   git svn rebase -l  # -l avoids fetching ahead of the git mirror.
 
 Commits are performed using `svn commit` or with the sequence `git commit` and
@@ -362,7 +362,7 @@ won't appear on your disk. The only effect is that your commit hash changes.
 You can check whether the changes in the last fetch are relevant to your commit
 by running::
 
-  git log origin/master@{1}..origin/master -- libcxx
+  git log origin/main@{1}..origin/main -- libcxx
 
 This command can be hidden in a script so that `git llvmpush` would perform all
 these steps, fail only if such a dependent change exists, and show immediately
@@ -392,21 +392,21 @@ Or using git-svn::
   git clone https://llvm.org/git/llvm.git
   cd llvm/
   git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
-  git config svn-remote.svn.fetch :refs/remotes/origin/master
+  git config svn-remote.svn.fetch :refs/remotes/origin/main
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
   cd tools
   git clone https://llvm.org/git/clang.git
   cd clang/
   git svn init https://llvm.org/svn/llvm-project/clang/trunk --username=<username>
-  git config svn-remote.svn.fetch :refs/remotes/origin/master
+  git config svn-remote.svn.fetch :refs/remotes/origin/main
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
   cd ../../projects/
   git clone https://llvm.org/git/libcxx.git
   cd libcxx
   git svn init https://llvm.org/svn/llvm-project/libcxx/trunk --username=<username>
-  git config svn-remote.svn.fetch :refs/remotes/origin/master
+  git config svn-remote.svn.fetch :refs/remotes/origin/main
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
 
@@ -604,13 +604,13 @@ Python script and are expanded on below to a more general recipe::
 
   # Octopus-merge the resulting local split histories to unify them.
 
-  # Assumes local work on local split mirrors is on master (and
+  # Assumes local work on local split mirrors is on main (and
   # upstream is presumably represented by some other branch like
-  # upstream/master).
-  my_local_branch="master"
+  # upstream/main).
+  my_local_branch="main"
 
-  git -C my-monorepo branch --no-track local/octopus/master \
-    $(git -C my-monorepo merge-base refs/remotes/upstream/monorepo/master \
+  git -C my-monorepo branch --no-track local/octopus/main \
+    $(git -C my-monorepo merge-base refs/remotes/upstream/monorepo/main \
                                     refs/remotes/local/split/llvm/${my_local_branch})
   git -C my-monorepo checkout local/octopus/${my_local_branch}
 
@@ -640,11 +640,11 @@ Python script and are expanded on below to a more general recipe::
 
 The above gets you to a state like the following::
 
-  U1 - U2 - U3 <- upstream/master
+  U1 - U2 - U3 <- upstream/main
     \   \    \
      \   \    - Llld1 - Llld2 -
       \   \                    \
-       \   - Lclang1 - Lclang2-- Lmerge <- local/octopus/master
+       \   - Lclang1 - Lclang2-- Lmerge <- local/octopus/main
         \                      /
          - Lllvm1 - Lllvm2-----
 
@@ -672,7 +672,7 @@ with some kind of "umbrella" project that imports the project git
 mirrors as submodules, similar to the multirepo umbrella proposed
 above.  Such an umbrella repository looks something like this::
 
-   UM1 ---- UM2 -- UM3 -- UM4 ---- UM5 ---- UM6 ---- UM7 ---- UM8 <- master
+   UM1 ---- UM2 -- UM3 -- UM4 ---- UM5 ---- UM6 ---- UM7 ---- UM8 <- main
    |        |             |        |        |        |        |
   Lllvm1   Llld1         Lclang1  Lclang2  Lllvm2   Llld2     Lmyproj1
 
@@ -687,14 +687,14 @@ https://github.com/greened/llvm-git-migration/tree/zip can be used to
 convert the umbrella history into a monorepo-based history with
 commits in the order implied by submodule updates::
 
-  U1 - U2 - U3 <- upstream/master
+  U1 - U2 - U3 <- upstream/main
    \    \    \
     \    -----\---------------                                    local/zip--.
      \         \              \                                               |
     - Lllvm1 - Llld1 - UM3 -  Lclang1 - Lclang2 - Lllvm2 - Llld2 - Lmyproj1 <-'
 
 
-The ``U*`` commits represent upstream commits to the monorepo master
+The ``U*`` commits represent upstream commits to the monorepo main
 branch.  Each submodule update in the local ``UM*`` commits brought in
 a subproject tree at some local commit.  The trees in the ``L*1``
 commits represent merges from upstream.  These result in edges from
@@ -790,8 +790,8 @@ create the zipped history is below::
       --update-tags
    )
 
-   # Create the zip branch (assuming umbrella master is wanted).
-   git -C my-monorepo branch --no-track local/zip/master refs/remotes/umbrella/master
+   # Create the zip branch (assuming umbrella main is wanted).
+   git -C my-monorepo branch --no-track local/zip/main refs/remotes/umbrella/main
 
 Note that if the umbrella has submodules to non-LLVM repositories,
 ``zip-downstream-fork.py`` needs to know about them to be able to
@@ -906,8 +906,8 @@ content into ``llvm`` in the zippped history::
       --update-tags
    )
 
-   # Create the zip branch (assuming umbrella master is wanted).
-   git -C my-monorepo branch --no-track local/zip/master refs/remotes/umbrella/master
+   # Create the zip branch (assuming umbrella main is wanted).
+   git -C my-monorepo branch --no-track local/zip/main refs/remotes/umbrella/main
 
 
 Comments at the top of ``zip-downstream-fork.py`` describe in more
@@ -952,12 +952,12 @@ getting them into the monorepo.  A recipe follows::
      git -C my-monorepo branch --no-track myrepo/${branch} ${ref}
    done
 
-   # Preserve master.
-   git -C my-monorepo branch --no-track myrepo/master refs/remotes/myrepo/master
+   # Preserve main.
+   git -C my-monorepo branch --no-track myrepo/main refs/remotes/myrepo/main
 
-   # Merge master.
-   git -C my-monorepo checkout local/zip/master  # Or local/octopus/master
-   git -C my-monorepo merge myrepo/master
+   # Merge main.
+   git -C my-monorepo checkout local/zip/main  # Or local/octopus/main
+   git -C my-monorepo merge myrepo/main
 
 You may want to merge other corresponding branches, for example
 ``myrepo`` release branches if they were in lockstep with LLVM project
@@ -974,14 +974,14 @@ imported repositories.
 
 Given this repository history::
 
-  R1 - R2 - R3 <- master
+  R1 - R2 - R3 <- main
        ^
        |
     release/1
 
 The above recipe results in a history like this::
 
-  U1 - U2 - U3 <- upstream/master
+  U1 - U2 - U3 <- upstream/main
    \    \    \
     \    -----\---------------                                         local/zip--.
      \         \              \                                                    |
@@ -992,7 +992,7 @@ The above recipe results in a history like this::
                                                                       |           |
                                                                myrepo-release/1   |
                                                                                   |
-                                                                   myrepo/master--'
+                                                                     myrepo/main--'
 
 Commits ``R1``, ``R2`` and ``R3`` have trees that *only* contain blobs
 from ``myrepo``.  If you require commits from ``myrepo`` to be
@@ -1022,12 +1022,12 @@ clean up.  The python tools use ``git-fast-import`` which leaves a lot
 of cruft around and we want to shrink our new monorepo mirror as much
 as possible.  Here is one way to do it::
 
-  git -C my-monorepo checkout master
+  git -C my-monorepo checkout main
 
   # Delete branches we no longer need.  Do this for any other branches
   # you merged above.
-  git -C my-monorepo branch -D local/zip/master || true
-  git -C my-monorepo branch -D local/octopus/master || true
+  git -C my-monorepo branch -D local/zip/main || true
+  git -C my-monorepo branch -D local/octopus/main || true
 
   # Remove remotes.
   git -C my-monorepo remote remove upstream/monorepo
