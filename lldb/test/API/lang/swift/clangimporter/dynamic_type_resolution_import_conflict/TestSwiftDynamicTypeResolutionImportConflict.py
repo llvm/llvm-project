@@ -45,6 +45,7 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
 
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
+        # rdar://84688015 SILModule::checkForLeaks can assert when used concurrently.
         self.runCmd("settings set target.experimental.swift-create-module-contexts-in-parallel false")
         self.build()
         target, _, _, _ = lldbutil.run_to_source_breakpoint(self, "break here",
