@@ -142,6 +142,7 @@ public:
     LDV->TRI = STI.getRegisterInfo();
     LDV->TFI = STI.getFrameLowering();
     LDV->MFI = &MF->getFrameInfo();
+    LDV->MRI = &MF->getRegInfo();
 
     DomTree = std::make_unique<MachineDominatorTree>(*MF);
     LDV->DomTree = &*DomTree;
