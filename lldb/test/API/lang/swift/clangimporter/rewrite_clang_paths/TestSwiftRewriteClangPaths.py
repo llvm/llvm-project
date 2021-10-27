@@ -60,6 +60,8 @@ class TestSwiftRewriteClangPaths(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.runCmd("settings set symbols.use-swift-dwarfimporter false")
+        # rdar://84688015 SILModule::checkForLeaks can assert when used concurrently.
+        self.runCmd("settings set target.experimental.swift-create-module-contexts-in-parallel false")
 
         botdir = os.path.realpath(self.getBuildArtifact("buildbot"))
         userdir = os.path.realpath(self.getBuildArtifact("user"))
