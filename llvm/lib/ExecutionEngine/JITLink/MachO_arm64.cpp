@@ -81,6 +81,14 @@ private:
       if (!RI.r_pcrel && !RI.r_extern && RI.r_length == 2)
         return PairedAddend;
       break;
+    case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21:
+      if (RI.r_pcrel && RI.r_extern && RI.r_length == 2)
+        return TLVPage21;
+      break;
+    case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
+      if (!RI.r_pcrel && RI.r_extern && RI.r_length == 2)
+        return TLVPageOffset12;
+      break;
     }
 
     return make_error<JITLinkError>(
@@ -324,6 +332,7 @@ private:
           break;
         }
         case Page21:
+        case TLVPage21:
         case GOTPage21: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
@@ -348,6 +357,7 @@ private:
                                             "encoded addend");
           break;
         }
+        case TLVPageOffset12:
         case GOTPageOffset12: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
@@ -414,6 +424,7 @@ public:
 
   bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
+           E.getKind() == TLVPage21 || E.getKind() == TLVPageOffset12 ||
            E.getKind() == PointerToGOT;
   }
 
@@ -425,7 +436,8 @@ public:
   }
 
   void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
-    if (E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12) {
+    if (E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
+        E.getKind() == TLVPage21 || E.getKind() == TLVPageOffset12) {
       // Update the target, but leave the edge addend as-is.
       E.setTarget(GOTEntry);
     } else if (E.getKind() == PointerToGOT) {
@@ -565,6 +577,7 @@ private:
       break;
     }
     case Page21:
+    case TLVPage21:
     case GOTPage21: {
       assert((E.getKind() != GOTPage21 || E.getAddend() == 0) &&
              "GOTPAGE21 with non-zero addend");
@@ -601,6 +614,7 @@ private:
       *(ulittle32_t *)FixupPtr = FixedInstr;
       break;
     }
+    case TLVPageOffset12:
     case GOTPageOffset12: {
       assert(E.getAddend() == 0 && "GOTPAGEOF12 with non-zero addend");
 
@@ -714,6 +728,10 @@ const char *getMachOARM64RelocationKindName(Edge::Kind R) {
     return "GOTPage21";
   case GOTPageOffset12:
     return "GOTPageOffset12";
+  case TLVPage21:
+    return "TLVPage21";
+  case TLVPageOffset12:
+    return "TLVPageOffset12";
   case PointerToGOT:
     return "PointerToGOT";
   case PairedAddend:
