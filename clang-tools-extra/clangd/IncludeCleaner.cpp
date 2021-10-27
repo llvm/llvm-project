@@ -81,16 +81,14 @@ public:
   }
 
   bool TraverseType(QualType T) {
-    if (isNew(T.getTypePtrOrNull())) { // don't care about quals
+    if (isNew(T.getTypePtrOrNull())) // don't care about quals
       Base::TraverseType(T);
-    }
     return true;
   }
 
   bool VisitUsingDecl(UsingDecl *D) {
-    for (const auto *Shadow : D->shadows()) {
+    for (const auto *Shadow : D->shadows())
       add(Shadow->getTargetDecl());
-    }
     return true;
   }
 
@@ -107,12 +105,10 @@ private:
   using Base = RecursiveASTVisitor<ReferencedLocationCrawler>;
 
   void add(const Decl *D) {
-    if (!D || !isNew(D->getCanonicalDecl())) {
+    if (!D || !isNew(D->getCanonicalDecl()))
       return;
-    }
-    for (const Decl *Redecl : D->redecls()) {
+    for (const Decl *Redecl : D->redecls())
       Result.insert(Redecl->getLocation());
-    }
   }
 
   bool isNew(const void *P) { return P && Visited.insert(P).second; }
@@ -243,9 +239,8 @@ getUnused(const IncludeStructure &Structure,
       continue;
     }
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
-    if (!ReferencedFiles.contains(IncludeID)) {
+    if (!ReferencedFiles.contains(IncludeID))
       Unused.push_back(&MFI);
-    }
     dlog("{0} is {1}", MFI.Written,
          ReferencedFiles.contains(IncludeID) ? "USED" : "UNUSED");
   }
