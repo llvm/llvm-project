@@ -41,9 +41,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "dwarf-debugmap"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
@@ -149,9 +149,7 @@ public:
                         lldb_private::CompileUnit *cu) override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   uint64_t GetDebugInfoSize() override;
   lldb_private::StatsDuration GetDebugInfoParseTime() override;

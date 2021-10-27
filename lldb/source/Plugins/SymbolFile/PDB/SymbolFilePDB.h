@@ -41,9 +41,9 @@ public:
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "pdb"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
@@ -161,9 +161,7 @@ public:
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   llvm::pdb::IPDBSession &GetPDBSession();
 

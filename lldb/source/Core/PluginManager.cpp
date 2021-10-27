@@ -514,10 +514,11 @@ static LanguageInstances &GetLanguageInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(ConstString name, const char *description,
+bool PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
                                    LanguageCreateInstance create_callback) {
-  return GetLanguageInstances().RegisterPlugin(name, description,
-                                               create_callback);
+  return GetLanguageInstances().RegisterPlugin(
+      ConstString(name), description.str().c_str(), create_callback);
 }
 
 bool PluginManager::UnregisterPlugin(LanguageCreateInstance create_callback) {
@@ -534,7 +535,8 @@ PluginManager::GetLanguageCreateCallbackAtIndex(uint32_t idx) {
 struct LanguageRuntimeInstance
     : public PluginInstance<LanguageRuntimeCreateInstance> {
   LanguageRuntimeInstance(
-      ConstString name, std::string description, CallbackType create_callback,
+      ConstString name, std::string description,
+      CallbackType create_callback,
       DebuggerInitializeCallback debugger_init_callback,
       LanguageRuntimeGetCommandObject command_callback,
       LanguageRuntimeGetExceptionPrecondition precondition_callback)
@@ -556,13 +558,13 @@ static LanguageRuntimeInstances &GetLanguageRuntimeInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     LanguageRuntimeCreateInstance create_callback,
     LanguageRuntimeGetCommandObject command_callback,
     LanguageRuntimeGetExceptionPrecondition precondition_callback) {
   return GetLanguageRuntimeInstances().RegisterPlugin(
-      name, description, create_callback, nullptr, command_callback,
-      precondition_callback);
+      ConstString(name), description.str().c_str(), create_callback, nullptr,
+      command_callback, precondition_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -602,10 +604,10 @@ static SystemRuntimeInstances &GetSystemRuntimeInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     SystemRuntimeCreateInstance create_callback) {
-  return GetSystemRuntimeInstances().RegisterPlugin(name, description,
-                                                    create_callback);
+  return GetSystemRuntimeInstances().RegisterPlugin(
+      ConstString(name), description.str().c_str(), create_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -990,11 +992,12 @@ static SymbolFileInstances &GetSymbolFileInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     SymbolFileCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
   return GetSymbolFileInstances().RegisterPlugin(
-      name, description, create_callback, debugger_init_callback);
+      ConstString(name), description.str().c_str(), create_callback,
+      debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(SymbolFileCreateInstance create_callback) {

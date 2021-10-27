@@ -36,9 +36,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "symtab"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
@@ -85,9 +85,7 @@ public:
                 lldb_private::TypeList &type_list) override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   uint32_t CalculateNumCompileUnits() override;

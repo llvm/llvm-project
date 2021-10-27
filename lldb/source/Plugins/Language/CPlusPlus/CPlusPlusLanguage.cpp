@@ -56,11 +56,6 @@ void CPlusPlusLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString CPlusPlusLanguage::GetPluginNameStatic() {
-  static ConstString g_name("cplusplus");
-  return g_name;
-}
-
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   const char *mangled_name = mangled.GetMangledName().GetCString();
   return mangled_name && CPlusPlusLanguage::IsCPPMangledName(mangled_name);
