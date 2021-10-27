@@ -38,7 +38,7 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT34:%.*]] = add i64 [[INDVARS_IV33]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV35:%.*]] = trunc i64 [[INDVARS_IV_NEXT34]] to i32
 ; CHECK-NEXT:    [[EXITCOND36:%.*]] = icmp eq i32 [[LFTR_WIDEIV35]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.body3.us:
 ; CHECK-NEXT:    [[INDVARS_IV29:%.*]] = phi i64 [ [[BC_RESUME_VAL:%.*]], [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT30:%.*]], [[FOR_BODY3_US:%.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV29]] to i32
@@ -51,7 +51,7 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT30]] = add i64 [[INDVARS_IV29]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV31:%.*]] = trunc i64 [[INDVARS_IV_NEXT30]] to i32
 ; CHECK-NEXT:    [[EXITCOND32:%.*]] = icmp eq i32 [[LFTR_WIDEIV31]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop !3
+; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.body3.lr.ph.us:
 ; CHECK-NEXT:    [[INDVARS_IV33]] = phi i64 [ [[INDVARS_IV_NEXT34]], [[FOR_END_US]] ], [ 0, [[FOR_BODY3_LR_PH_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], [[INDVARS_IV33]]
@@ -98,7 +98,7 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    store i32 [[TMP28]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !5
+; CHECK-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_US]], label [[SCALAR_PH]]
@@ -168,7 +168,7 @@ define void @no-par-mem-metadata(i32* nocapture %a, i32* nocapture %b, i32 %k, i
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT34:%.*]] = add i64 [[INDVARS_IV33]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV35:%.*]] = trunc i64 [[INDVARS_IV_NEXT34]] to i32
 ; CHECK-NEXT:    [[EXITCOND36:%.*]] = icmp eq i32 [[LFTR_WIDEIV35]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[EXITCOND36]], label [[FOR_END15_LOOPEXIT:%.*]], label [[FOR_BODY3_LR_PH_US]], !llvm.loop [[LOOP2]]
 ; CHECK:       for.body3.us:
 ; CHECK-NEXT:    [[INDVARS_IV29:%.*]] = phi i64 [ 0, [[FOR_BODY3_LR_PH_US]] ], [ [[INDVARS_IV_NEXT30:%.*]], [[FOR_BODY3_US:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV29]] to i32
@@ -181,7 +181,7 @@ define void @no-par-mem-metadata(i32* nocapture %a, i32* nocapture %b, i32 %k, i
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT30]] = add i64 [[INDVARS_IV29]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV31:%.*]] = trunc i64 [[INDVARS_IV_NEXT30]] to i32
 ; CHECK-NEXT:    [[EXITCOND32:%.*]] = icmp eq i32 [[LFTR_WIDEIV31]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop !1
+; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       for.body3.lr.ph.us:
 ; CHECK-NEXT:    [[INDVARS_IV33]] = phi i64 [ [[INDVARS_IV_NEXT34]], [[FOR_END_US]] ], [ 0, [[FOR_BODY3_LR_PH_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVARS_IV33]] to i32

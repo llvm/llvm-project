@@ -228,7 +228,7 @@ define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %l
 ; CHECK-LABEL: @signed_loop_0_to_n_ult_check_length_range_known(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[N]], [[LENGTH]]
@@ -1553,7 +1553,7 @@ exit:
 define i32 @provably_taken(i32* %array, i32* %length.ptr) {
 ; CHECK-LABEL: @provably_taken(
 ; CHECK-NEXT:  loop.preheader:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !1
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], false
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1907,7 +1907,7 @@ define i32 @unconditional_latch(i32* %a, i32 %length) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 400, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
-; CHECK-NEXT:    store volatile i32 0, i32* [[A:%.*]]
+; CHECK-NEXT:    store volatile i32 0, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
