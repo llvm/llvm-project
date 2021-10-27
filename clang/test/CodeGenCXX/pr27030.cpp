@@ -11,5 +11,6 @@ void test1() { (int A::*)(a); }
 // CHECK: br i1 %[[memptr_cmp]]
 
 // CHECK: %[[adj:.*]] = sub nsw i32 %[[load]], 0
+// CHECK: %[[nv_adj:.*]] = select i1 true, i32 %[[adj]], i32 0
 
-// CHECK: %[[memptr_converted:.*]] = phi i32 [ -1, {{.*}} ], [ %[[adj]], {{.*}} ]
+// CHECK: %[[memptr_converted:.*]] = phi i32 [ -1, {{.*}} ], [ %[[nv_adj]], {{.*}} ]

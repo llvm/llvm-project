@@ -1360,15 +1360,9 @@ public:
   }
 
   Value *CreateAnd(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (!isa<Constant>(RHS) && isa<Constant>(LHS))
-      std::swap(LHS, RHS);
-    if (auto RCI = dyn_cast<ConstantInt>(RHS)) {
-      if (RCI->isZero())
-        return RHS; // LHS & 0 -> 0
-      if (RCI->isMinusOne())
-        return LHS;  // LHS & -1 -> LHS
-    }
     if (auto *RC = dyn_cast<Constant>(RHS)) {
+      if (isa<ConstantInt>(RC) && cast<ConstantInt>(RC)->isMinusOne())
+        return LHS;  // LHS & -1 -> LHS
       if (auto *LC = dyn_cast<Constant>(LHS))
         return Insert(Folder.CreateAnd(LC, RC), Name);
     }
@@ -1392,8 +1386,6 @@ public:
   }
 
   Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (!isa<Constant>(RHS) && isa<Constant>(LHS))
-      std::swap(LHS, RHS);
     if (auto *RC = dyn_cast<Constant>(RHS)) {
       if (RC->isNullValue())
         return LHS;  // LHS | 0 -> LHS
