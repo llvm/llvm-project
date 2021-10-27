@@ -20,6 +20,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
@@ -273,10 +274,17 @@ ObjCLanguageRuntime::ClassDescriptorSP
 ObjCLanguageRuntime::GetClassDescriptorFromISA(ObjCISA isa) {
   if (isa) {
     UpdateISAToDescriptorMap();
+
     ObjCLanguageRuntime::ISAToDescriptorIterator pos =
         m_isa_to_descriptor.find(isa);
     if (pos != m_isa_to_descriptor.end())
       return pos->second;
+
+    if (ABISP abi_sp = m_process->GetABI()) {
+      pos = m_isa_to_descriptor.find(abi_sp->FixCodeAddress(isa));
+      if (pos != m_isa_to_descriptor.end())
+        return pos->second;
+    }
   }
   return ClassDescriptorSP();
 }
