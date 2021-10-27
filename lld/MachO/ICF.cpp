@@ -246,7 +246,7 @@ void ICF::run() {
             } else {
               hash += defined->value;
             }
-          } else
+          } else if (!isa<Undefined>(sym))
             llvm_unreachable("foldIdenticalSections symbol kind");
         }
       }
