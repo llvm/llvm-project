@@ -318,15 +318,6 @@ struct CastedValue {
     return N;
   }
 
-  KnownBits evaluateWith(KnownBits N) const {
-    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
-           "Incompatible bit width");
-    if (TruncBits) N = N.trunc(N.getBitWidth() - TruncBits);
-    if (SExtBits) N = N.sext(N.getBitWidth() + SExtBits);
-    if (ZExtBits) N = N.zext(N.getBitWidth() + ZExtBits);
-    return N;
-  }
-
   ConstantRange evaluateWith(ConstantRange N) const {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
@@ -1250,8 +1241,6 @@ AliasResult BasicAAResult::aliasGEP(
 
   if (!DecompGEP1.VarIndices.empty()) {
     APInt GCD;
-    bool AllNonNegative = DecompGEP1.Offset.isNonNegative();
-    bool AllNonPositive = DecompGEP1.Offset.isNonPositive();
     ConstantRange OffsetRange = ConstantRange(DecompGEP1.Offset);
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
       const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
@@ -1266,24 +1255,19 @@ AliasResult BasicAAResult::aliasGEP(
       else
         GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-      if (AllNonNegative || AllNonPositive) {
-        KnownBits Known = Index.Val.evaluateWith(
-            computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT));
-        bool SignKnownZero = Known.isNonNegative();
-        bool SignKnownOne = Known.isNegative();
-        AllNonNegative &= (SignKnownZero && Scale.isNonNegative()) ||
-                          (SignKnownOne && Scale.isNonPositive());
-        AllNonPositive &= (SignKnownZero && Scale.isNonPositive()) ||
-                          (SignKnownOne && Scale.isNonNegative());
-      }
+      ConstantRange CR =
+          computeConstantRange(Index.Val.V, true, &AC, Index.CxtI);
+      KnownBits Known =
+          computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
+      CR = CR.intersectWith(
+          ConstantRange::fromKnownBits(Known, /* Signed */ true),
+          ConstantRange::Signed);
 
       assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
              "Bit widths are normalized to MaxPointerSize");
-      OffsetRange = OffsetRange.add(Index.Val
-                            .evaluateWith(computeConstantRange(
-                                Index.Val.V, true, &AC, Index.CxtI))
-                            .sextOrTrunc(OffsetRange.getBitWidth())
-                            .smul_fast(ConstantRange(Scale)));
+      OffsetRange = OffsetRange.add(
+          Index.Val.evaluateWith(CR).sextOrTrunc(OffsetRange.getBitWidth())
+                                    .smul_fast(ConstantRange(Scale)));
     }
 
     // We now have accesses at two offsets from the same base:
@@ -1298,21 +1282,6 @@ AliasResult BasicAAResult::aliasGEP(
     if (V1Size.hasValue() && V2Size.hasValue() &&
         ModOffset.uge(V2Size.getValue()) &&
         (GCD - ModOffset).uge(V1Size.getValue()))
-      return AliasResult::NoAlias;
-
-    // If we know all the variables are non-negative, then the total offset is
-    // also non-negative and >= DecompGEP1.Offset. We have the following layout:
-    // [0, V2Size) ... [TotalOffset, TotalOffer+V1Size]
-    // If DecompGEP1.Offset >= V2Size, the accesses don't alias.
-    if (AllNonNegative && V2Size.hasValue() &&
-        DecompGEP1.Offset.uge(V2Size.getValue()))
-      return AliasResult::NoAlias;
-    // Similarly, if the variables are non-positive, then the total offset is
-    // also non-positive and <= DecompGEP1.Offset. We have the following layout:
-    // [TotalOffset, TotalOffset+V1Size) ... [0, V2Size)
-    // If -DecompGEP1.Offset >= V1Size, the accesses don't alias.
-    if (AllNonPositive && V1Size.hasValue() &&
-        (-DecompGEP1.Offset).uge(V1Size.getValue()))
       return AliasResult::NoAlias;
 
     if (V1Size.hasValue() && V2Size.hasValue()) {
