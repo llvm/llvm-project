@@ -4721,9 +4721,7 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
     // matched and avoid generating code for falling off the end if
     // so.
     bool AllMatched = false;
-    for (unsigned I = 0, N = AtTryStmt->getNumCatchStmts(); I != N; ++I) {
-      const ObjCAtCatchStmt *CatchStmt = AtTryStmt->getCatchStmt(I);
-
+    for (const ObjCAtCatchStmt *CatchStmt : AtTryStmt->catch_stmts()) {
       const VarDecl *CatchParam = CatchStmt->getCatchParamDecl();
       const ObjCObjectPointerType *OPT = nullptr;
 

@@ -268,6 +268,27 @@ public:
   const_child_range children() const {
     return const_child_range(const_cast<ObjCAtTryStmt *>(this)->children());
   }
+
+  using catch_stmt_iterator = CastIterator<ObjCAtCatchStmt>;
+  using const_catch_stmt_iterator = ConstCastIterator<ObjCAtCatchStmt>;
+  using catch_range = llvm::iterator_range<catch_stmt_iterator>;
+  using catch_const_range = llvm::iterator_range<const_catch_stmt_iterator>;
+
+  catch_stmt_iterator catch_stmts_begin() { return getStmts() + 1; }
+  catch_stmt_iterator catch_stmts_end() {
+    return catch_stmts_begin() + NumCatchStmts;
+  }
+  catch_range catch_stmts() {
+    return catch_range(catch_stmts_begin(), catch_stmts_end());
+  }
+
+  const_catch_stmt_iterator catch_stmts_begin() const { return getStmts() + 1; }
+  const_catch_stmt_iterator catch_stmts_end() const {
+    return catch_stmts_begin() + NumCatchStmts;
+  }
+  catch_const_range catch_stmts() const {
+    return catch_const_range(catch_stmts_begin(), catch_stmts_end());
+  }
 };
 
 /// Represents Objective-C's \@synchronized statement.

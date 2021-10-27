@@ -3935,10 +3935,9 @@ CFGBlock *CFGBuilder::VisitObjCAtTryStmt(ObjCAtTryStmt *Terminator) {
   NewTryTerminatedBlock->setTerminator(Terminator);
 
   bool HasCatchAll = false;
-  for (unsigned I = 0, E = Terminator->getNumCatchStmts(); I != E; ++I) {
+  for (ObjCAtCatchStmt *CS : Terminator->catch_stmts()) {
     // The code after the try is the implicit successor.
     Succ = TrySuccessor;
-    ObjCAtCatchStmt *CS = Terminator->getCatchStmt(I);
     if (CS->hasEllipsis()) {
       HasCatchAll = true;
     }
