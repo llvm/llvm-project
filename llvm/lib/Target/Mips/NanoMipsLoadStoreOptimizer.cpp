@@ -319,7 +319,9 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
       // Generate 16-bit save/restore if there are no register arguments or
       // register arguments are invalid. They have 8-bit offset with quadword
       // alignment.
-      if (!isValidSaveRestore16Offset(StackOffset))
+      // FIXME: It is also neccessary to make sure not to generate restore
+      // without registers, since it's an invalid instruction for GNU as.
+      if (!isValidSaveRestore16Offset(StackOffset) || (IsRestore && !Return))
         return false;
       LoadStoreList.clear();
     }
@@ -353,9 +355,12 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
       InsertBefore = MBBIter(MII.getInstr());
       if (IsRestore)
         InsertBefore = std::next(InsertBefore);
-      // Favorable case is to generate save/restore (16-bit), but we have to
+      // Favorable case is to generate save/restore.jrc (16-bit), but we have to
       // make sure the offset fits. Otherwise, we fall back to addiu (32-bit).
-      if (isValidSaveRestore16Offset(NewStackOffset)) {
+      // FIXME: It is also neccessary to make sure not to generate restore
+      // without registers, since it's an invalid instruction for GNU as.
+      if (isValidSaveRestore16Offset(NewStackOffset) &&
+          (!IsRestore || (IsRestore && Return))) {
         if (Return) {
           // In case return is also consumed, we should put restore.jrc after
           // return, to make sure it is very last instruction.
