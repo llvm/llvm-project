@@ -26,7 +26,7 @@ __sanitizer_on_print(const char *str) {
 
 int main(int argc, char *argv[]) {
   assert(argc >= 2);
-  f = open(argv[1], O_WRONLY);
+  f = open(argv[1], O_CREAT | O_WRONLY, 0666);
 
   // Use-after-free to trigger ASan/TSan reports.
   void *ptr = malloc(1);
