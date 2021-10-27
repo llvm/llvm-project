@@ -11,6 +11,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 class NS_Op<string mnemonic, list<OpTrait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -56,12 +57,12 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: public:
 // CHECK:   AOpAdaptor(::mlir::ValueRange values
 // CHECK:   ::mlir::ValueRange getODSOperands(unsigned index);
-// CHECK:   ::mlir::Value a();
-// CHECK:   ::mlir::ValueRange b();
-// CHECK:   ::mlir::IntegerAttr attr1();
-// CHECK:   ::mlir::FloatAttr attr2();
-// CHECK:   ::mlir::Region &someRegion();
-// CHECK:   ::mlir::RegionRange someRegions();
+// CHECK:   ::mlir::Value getA();
+// CHECK:   ::mlir::ValueRange getB();
+// CHECK:   ::mlir::IntegerAttr getAttr1();
+// CHECK:   ::mlir::FloatAttr getAttr2();
+// CHECK:   ::mlir::Region &getSomeRegion();
+// CHECK:   ::mlir::RegionRange getSomeRegions();
 // CHECK: private:
 // CHECK:   ::mlir::ValueRange odsOperands;
 // CHECK: };
@@ -75,18 +76,18 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:     return ::llvm::StringLiteral("test.a_op");
 // CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index);
-// CHECK:   ::mlir::Value a();
-// CHECK:   ::mlir::Operation::operand_range b();
-// CHECK:   ::mlir::MutableOperandRange aMutable();
-// CHECK:   ::mlir::MutableOperandRange bMutable();
+// CHECK:   ::mlir::Value getA();
+// CHECK:   ::mlir::Operation::operand_range getB();
+// CHECK:   ::mlir::MutableOperandRange getAMutable();
+// CHECK:   ::mlir::MutableOperandRange getBMutable();
 // CHECK:   ::mlir::Operation::result_range getODSResults(unsigned index);
-// CHECK:   ::mlir::Value r();
-// CHECK:   ::mlir::Region &someRegion();
-// CHECK:   ::mlir::MutableArrayRef<::mlir::Region> someRegions();
-// CHECK:   ::mlir::IntegerAttr attr1Attr()
-// CHECK:   uint32_t attr1();
-// CHECK:   ::mlir::FloatAttr attr2Attr()
-// CHECK:   ::llvm::Optional< ::llvm::APFloat > attr2();
+// CHECK:   ::mlir::Value getR();
+// CHECK:   ::mlir::Region &getSomeRegion();
+// CHECK:   ::mlir::MutableArrayRef<::mlir::Region> getSomeRegions();
+// CHECK:   ::mlir::IntegerAttr getAttr1Attr()
+// CHECK:   uint32_t getAttr1();
+// CHECK:   ::mlir::FloatAttr getAttr2Attr()
+// CHECK:   ::llvm::Optional< ::llvm::APFloat > getAttr2();
 // CHECK:   ::mlir::Attribute removeAttr2Attr();
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Value val);
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, int integer = 0);
@@ -106,7 +107,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // DEFS: AOpAdaptor::AOpAdaptor(::mlir::ValueRange values, ::mlir::DictionaryAttr attrs, ::mlir::RegionRange regions) : odsOperands(values), odsAttrs(attrs), odsRegions(regions)
 // DEFS: ::mlir::RegionRange AOpAdaptor::getRegions()
-// DEFS: ::mlir::RegionRange AOpAdaptor::someRegions()
+// DEFS: ::mlir::RegionRange AOpAdaptor::getSomeRegions()
 // DEFS-NEXT: return odsRegions.drop_front(1);
 
 // Check AttrSizedOperandSegments
@@ -126,11 +127,11 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
 // CHECK-LABEL: AttrSizedOperandOpAdaptor(
 // CHECK-SAME:    ::mlir::ValueRange values
 // CHECK-SAME:    ::mlir::DictionaryAttr attrs
-// CHECK:  ::mlir::ValueRange a();
-// CHECK:  ::mlir::ValueRange b();
-// CHECK:  ::mlir::Value c();
-// CHECK:  ::mlir::ValueRange d();
-// CHECK:  ::mlir::DenseIntElementsAttr operand_segment_sizes();
+// CHECK:  ::mlir::ValueRange getA();
+// CHECK:  ::mlir::ValueRange getB();
+// CHECK:  ::mlir::Value getC();
+// CHECK:  ::mlir::ValueRange getD();
+// CHECK:  ::mlir::DenseIntElementsAttr getOperandSegmentSizes();
 
 // Check op trait for different number of operands
 // ---
@@ -162,9 +163,9 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 }
 
 // CHECK-LABEL: NS::EOp declarations
-// CHECK:   ::mlir::Value a();
-// CHECK:   ::mlir::MutableOperandRange aMutable();
-// CHECK:   ::mlir::Value b();
+// CHECK:   ::mlir::Value getA();
+// CHECK:   ::mlir::MutableOperandRange getAMutable();
+// CHECK:   ::mlir::Value getB();
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::Type b, /*optional*/::mlir::Value a)
 
 // Check that all types match constraint results in generating builder.

@@ -1886,10 +1886,10 @@ def FormatCustomDirectiveOperandsAndTypes
 }
 
 def FormatCustomDirectiveRegions : TEST_Op<"format_custom_directive_regions"> {
-  let regions = (region AnyRegion:$region, VariadicRegion<AnyRegion>:$regions);
+  let regions = (region AnyRegion:$region, VariadicRegion<AnyRegion>:$other_regions);
   let assemblyFormat = [{
     custom<CustomDirectiveRegions>(
-      $region, $regions
+      $region, $other_regions
     )
     attr-dict
   }];
