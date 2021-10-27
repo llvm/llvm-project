@@ -75,6 +75,18 @@ public:
   static llvm::Expected<std::unique_ptr<UDPSocket>>
   UdpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
 
+  static Status UnixDomainConnect(llvm::StringRef host_and_port,
+                                  bool child_processes_inherit,
+                                  Socket *&socket);
+  static Status UnixDomainAccept(llvm::StringRef host_and_port,
+                                 bool child_processes_inherit, Socket *&socket);
+  static Status UnixAbstractConnect(llvm::StringRef host_and_port,
+                                    bool child_processes_inherit,
+                                    Socket *&socket);
+  static Status UnixAbstractAccept(llvm::StringRef host_and_port,
+                                   bool child_processes_inherit,
+                                   Socket *&socket);
+
   int GetOption(int level, int option_name, int &option_value);
   int SetOption(int level, int option_name, int option_value);
 
