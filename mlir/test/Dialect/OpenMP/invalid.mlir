@@ -375,3 +375,99 @@ func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec1 : i
   }
   return
 }
+
+// -----
+
+func @omp_atomic_read1(%addr : memref<i32>) {
+  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined.}}
+  %1 = omp.atomic.read %addr hint(speculative, nonspeculative) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read2(%addr : memref<i32>) {
+  // expected-error @below {{attribute 'memory_order' failed to satisfy constraint: MemoryOrderKind Clause}}
+  %1 = omp.atomic.read %addr memory_order(xyz) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read3(%addr : memref<i32>) {
+  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  %1 = omp.atomic.read %addr memory_order(acq_rel) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read4(%addr : memref<i32>) {
+  // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
+  %1 = omp.atomic.read %addr memory_order(release) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read5(%addr : memref<i32>) {
+  // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.read operation}}
+  %1 = omp.atomic.read %addr memory_order(acquire) memory_order(relaxed) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_read6(%addr : memref<i32>) {
+  // expected-error @below {{at most one hint clause can appear on the omp.atomic.read operation}}
+  %1 = omp.atomic.read  %addr hint(speculative) hint(contended) : memref<i32> -> i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write1(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+  omp.atomic.write  %addr, %val hint(contended, uncontended) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write2(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  omp.atomic.write  %addr, %val memory_order(acq_rel) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write3(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{memory-order must not be acq_rel or acquire for atomic writes}}
+  omp.atomic.write  %addr, %val memory_order(acquire) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write4(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.write operation}}
+  omp.atomic.write  %addr, %val memory_order(release) memory_order(seq_cst) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write5(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{at most one hint clause can appear on the omp.atomic.write operation}}
+  omp.atomic.write  %addr, %val hint(contended) hint(speculative) : memref<i32>, i32
+  return
+}
+
+// -----
+
+func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
+  // expected-error @below {{attribute 'memory_order' failed to satisfy constraint: MemoryOrderKind Clause}}
+  omp.atomic.write  %addr, %val memory_order(xyz) : memref<i32>, i32
+  return
+}

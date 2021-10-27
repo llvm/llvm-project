@@ -391,8 +391,9 @@ static LogicalResult verifyReductionVarList(Operation *op,
 ///
 /// hint-clause = `hint` `(` hint-value `)`
 static ParseResult parseSynchronizationHint(OpAsmParser &parser,
-                                            IntegerAttr &hintAttr) {
-  if (failed(parser.parseOptionalKeyword("hint"))) {
+                                            IntegerAttr &hintAttr,
+                                            bool parseKeyword = true) {
+  if (parseKeyword && failed(parser.parseOptionalKeyword("hint"))) {
     hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), 0);
     return success();
   }
@@ -450,11 +451,11 @@ static void printSynchronizationHint(OpAsmPrinter &p, Operation *op,
 
   p << "hint(";
   llvm::interleaveComma(hints, p);
-  p << ")";
+  p << ") ";
 }
 
 /// Verifies a synchronization hint clause
-static LogicalResult verifySynchronizationHint(Operation *op, int32_t hint) {
+static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 
   // Helper function to get n-th bit from the right end of `value`
   auto bitn = [](int value, int n) -> bool { return value & (1 << n); };
@@ -492,6 +493,8 @@ enum ClauseType {
   orderClause,
   orderedClause,
   inclusiveClause,
+  memoryOrderClause,
+  hintClause,
   COUNT
 };
 
@@ -720,6 +723,19 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
         return failure();
       auto attr = UnitAttr::get(parser.getBuilder().getContext());
       result.addAttribute("inclusive", attr);
+    } else if (clauseKeyword == "memory_order") {
+      StringRef memoryOrder;
+      if (checkAllowed(memoryOrderClause) || parser.parseLParen() ||
+          parser.parseKeyword(&memoryOrder) || parser.parseRParen())
+        return failure();
+      result.addAttribute("memory_order",
+                          parser.getBuilder().getStringAttr(memoryOrder));
+    } else if (clauseKeyword == "hint") {
+      IntegerAttr hint;
+      if (checkAllowed(hintClause) ||
+          parseSynchronizationHint(parser, hint, false))
+        return failure();
+      result.addAttribute("hint", hint);
     } else {
       return parser.emitError(parser.getNameLoc())
              << clauseKeyword << " is not a valid clause";
@@ -1182,6 +1198,106 @@ static LogicalResult verifyOrderedRegionOp(OrderedRegionOp op) {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicReadOp
+//===----------------------------------------------------------------------===//
+
+/// Parser for AtomicReadOp
+///
+/// operation ::= `omp.atomic.read` atomic-clause-list address `->` result-type
+/// address ::= operand `:` type
+static ParseResult parseAtomicReadOp(OpAsmParser &parser,
+                                     OperationState &result) {
+  OpAsmParser::OperandType address;
+  Type addressType;
+  SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
+  SmallVector<int> segments;
+
+  if (parser.parseOperand(address) ||
+      parseClauses(parser, result, clauses, segments) ||
+      parser.parseColonType(addressType) ||
+      parser.resolveOperand(address, addressType, result.operands))
+    return failure();
+
+  SmallVector<Type> resultType;
+  if (parser.parseArrowTypeList(resultType))
+    return failure();
+  result.addTypes(resultType);
+  return success();
+}
+
+/// Printer for AtomicReadOp
+static void printAtomicReadOp(OpAsmPrinter &p, AtomicReadOp op) {
+  p << " " << op.address() << " ";
+  if (op.memory_order())
+    p << "memory_order(" << op.memory_order().getValue() << ") ";
+  if (op.hintAttr())
+    printSynchronizationHint(p << " ", op, op.hintAttr());
+  p << ": " << op.address().getType() << " -> " << op.getType();
+  return;
+}
+
+/// Verifier for AtomicReadOp
+static LogicalResult verifyAtomicReadOp(AtomicReadOp op) {
+  if (op.memory_order()) {
+    StringRef memOrder = op.memory_order().getValue();
+    if (memOrder.equals("acq_rel") || memOrder.equals("release"))
+      return op.emitError(
+          "memory-order must not be acq_rel or release for atomic reads");
+  }
+  return verifySynchronizationHint(op, op.hint());
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicWriteOp
+//===----------------------------------------------------------------------===//
+
+/// Parser for AtomicWriteOp
+///
+/// operation ::= `omp.atomic.write` atomic-clause-list operands
+/// operands ::= address `,` value
+/// address ::= operand `:` type
+/// value ::= operand `:` type
+static ParseResult parseAtomicWriteOp(OpAsmParser &parser,
+                                      OperationState &result) {
+  OpAsmParser::OperandType address, value;
+  Type addrType, valueType;
+  SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
+  SmallVector<int> segments;
+
+  if (parser.parseOperand(address) || parser.parseComma() ||
+      parser.parseOperand(value) ||
+      parseClauses(parser, result, clauses, segments) ||
+      parser.parseColonType(addrType) || parser.parseComma() ||
+      parser.parseType(valueType) ||
+      parser.resolveOperand(address, addrType, result.operands) ||
+      parser.resolveOperand(value, valueType, result.operands))
+    return failure();
+  return success();
+}
+
+/// Printer for AtomicWriteOp
+static void printAtomicWriteOp(OpAsmPrinter &p, AtomicWriteOp op) {
+  p << " " << op.address() << ", " << op.value() << " ";
+  if (op.memory_order())
+    p << "memory_order(" << op.memory_order() << ") ";
+  if (op.hintAttr())
+    printSynchronizationHint(p, op, op.hintAttr());
+  p << ": " << op.address().getType() << ", " << op.value().getType();
+  return;
+}
+
+/// Verifier for AtomicWriteOp
+static LogicalResult verifyAtomicWriteOp(AtomicWriteOp op) {
+  if (op.memory_order()) {
+    StringRef memoryOrder = op.memory_order().getValue();
+    if (memoryOrder.equals("acq_rel") || memoryOrder.equals("acquire"))
+      return op.emitError(
+          "memory-order must not be acq_rel or acquire for atomic writes");
+  }
+  return verifySynchronizationHint(op, op.hint());
 }
 
 #define GET_OP_CLASSES
