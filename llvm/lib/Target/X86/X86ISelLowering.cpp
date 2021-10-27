@@ -5039,13 +5039,30 @@ X86TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
 //                           Other Lowering Hooks
 //===----------------------------------------------------------------------===//
 
-static bool MayFoldLoad(SDValue Op, bool AssumeSingleUse = false) {
-  return (AssumeSingleUse || Op.hasOneUse()) && ISD::isNormalLoad(Op.getNode());
+static bool mayFoldLoad(SDValue Op, const X86Subtarget &Subtarget,
+                        bool AssumeSingleUse = false) {
+  if (!AssumeSingleUse && !Op.hasOneUse())
+    return false;
+  if (!ISD::isNormalLoad(Op.getNode()))
+    return false;
+
+  // If this is an unaligned vector, make sure the target supports folding it.
+  auto *Ld = cast<LoadSDNode>(Op.getNode());
+  if (!Subtarget.hasAVX() && !Subtarget.hasSSEUnalignedMem() &&
+      Ld->getValueSizeInBits(0) == 128 && Ld->getAlignment() < 16)
+    return false;
+
+  // TODO: If this is a non-temporal load and the target has an instruction
+  //       for it, it should not be folded. See "useNonTemporalLoad()".
+
+  return true;
 }
 
-static bool MayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT,
+static bool mayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT,
+                                            const X86Subtarget &Subtarget,
                                             bool AssumeSingleUse = false) {
-  if (!MayFoldLoad(Op, AssumeSingleUse))
+  assert(Subtarget.hasAVX() && "Expected AVX for broadcast from memory");
+  if (!mayFoldLoad(Op, Subtarget, AssumeSingleUse))
     return false;
 
   // We can not replace a wide volatile load with a broadcast-from-memory,
@@ -8996,8 +9013,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
               Broadcast = concatSubVectors(Broadcast, Broadcast, DAG, DL);
           } else {
             if (!Subtarget.hasAVX2() &&
-                !MayFoldLoadIntoBroadcastFromMem(
+                !mayFoldLoadIntoBroadcastFromMem(
                     RepeatLoad, RepeatVT.getScalarType().getSimpleVT(),
+                    Subtarget,
                     /*AssumeSingleUse=*/true))
               return SDValue();
             Broadcast =
@@ -12727,8 +12745,8 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
                                          &DAG](SDValue &Input,
                                                MutableArrayRef<int> InputMask) {
     unsigned EltSizeInBits = Input.getScalarValueSizeInBits();
-    if (!Subtarget.hasAVX2() &&
-        (!Subtarget.hasAVX() || EltSizeInBits < 32 || !MayFoldLoad(Input)))
+    if (!Subtarget.hasAVX2() && (!Subtarget.hasAVX() || EltSizeInBits < 32 ||
+                                 !mayFoldLoad(Input, Subtarget)))
       return;
     if (isNoopShuffleMask(InputMask))
       return;
@@ -16413,7 +16431,7 @@ static SDValue lowerV2X128Shuffle(const SDLoc &DL, MVT VT, SDValue V1,
     bool SplatLo = isShuffleEquivalent(Mask, {0, 1, 0, 1}, V1);
     bool SplatHi = isShuffleEquivalent(Mask, {2, 3, 2, 3}, V1);
     if ((SplatLo || SplatHi) && !Subtarget.hasAVX512() && V1.hasOneUse() &&
-        MayFoldLoad(peekThroughOneUseBitcasts(V1))) {
+        mayFoldLoad(peekThroughOneUseBitcasts(V1), Subtarget)) {
       auto *Ld = cast<LoadSDNode>(peekThroughOneUseBitcasts(V1));
       if (!Ld->isNonTemporal()) {
         MVT MemVT = VT.getHalfNumVectorElementsVT();
@@ -19413,7 +19431,8 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     // FIXME: relax the profitability check iff all N1 uses are insertions.
     if (!VT.is128BitVector() && IdxVal >= NumEltsIn128 &&
         ((Subtarget.hasAVX2() && EltSizeInBits != 8) ||
-         (Subtarget.hasAVX() && (EltSizeInBits >= 32) && MayFoldLoad(N1)))) {
+         (Subtarget.hasAVX() && (EltSizeInBits >= 32) &&
+          mayFoldLoad(N1, Subtarget)))) {
       SDValue N1SplatVec = DAG.getSplatBuildVector(VT, dl, N1);
       SmallVector<int, 8> BlendMask;
       for (unsigned i = 0; i != NumElts; ++i)
@@ -19486,7 +19505,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       //   combine either bitwise AND or insert of float 0.0 to set these bits.
 
       bool MinSize = DAG.getMachineFunction().getFunction().hasMinSize();
-      if (IdxVal == 0 && (!MinSize || !MayFoldLoad(N1))) {
+      if (IdxVal == 0 && (!MinSize || !mayFoldLoad(N1, Subtarget))) {
         // If this is an insertion of 32-bits into the low 32-bits of
         // a vector, we prefer to generate a blend with immediate rather
         // than an insertps. Blends are simpler operations in hardware and so
@@ -24626,8 +24645,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   //        being inserted between two CMOV's. (in i16 case too TBN)
   //        https://bugs.llvm.org/show_bug.cgi?id=40974
   if ((Op.getValueType() == MVT::i8 && Subtarget.hasCMov()) ||
-      (Op.getValueType() == MVT::i16 && !MayFoldLoad(Op1) &&
-       !MayFoldLoad(Op2))) {
+      (Op.getValueType() == MVT::i16 && !mayFoldLoad(Op1, Subtarget) &&
+       !mayFoldLoad(Op2, Subtarget))) {
     Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
     Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
     SDValue Ops[] = { Op2, Op1, CC, Cond };
@@ -36974,7 +36993,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (isUndefOrEqual(Mask, 0)) {
         if (V1.getValueType() == MaskVT &&
             V1.getOpcode() == ISD::SCALAR_TO_VECTOR &&
-            MayFoldLoad(V1.getOperand(0))) {
+            mayFoldLoad(V1.getOperand(0), Subtarget)) {
           if (Depth == 0 && Root.getOpcode() == X86ISD::VBROADCAST)
             return SDValue(); // Nothing to do!
           Res = V1.getOperand(0);
@@ -38415,8 +38434,10 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
     SDValue N0 = V.getOperand(0);
     SDValue N1 = V.getOperand(1);
     unsigned Imm = V.getConstantOperandVal(2);
-    if (!MayFoldLoad(peekThroughOneUseBitcasts(N0)) ||
-        MayFoldLoad(peekThroughOneUseBitcasts(N1)))
+    const X86Subtarget &Subtarget =
+        static_cast<const X86Subtarget &>(DAG.getSubtarget());
+    if (!mayFoldLoad(peekThroughOneUseBitcasts(N0), Subtarget) ||
+        mayFoldLoad(peekThroughOneUseBitcasts(N1), Subtarget))
       return SDValue();
     Imm = ((Imm & 0x0F) << 4) | ((Imm & 0xF0) >> 4);
     return DAG.getNode(X86ISD::SHUFP, DL, VT, N1, N0,
@@ -51652,8 +51673,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
     if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
-        (Subtarget.hasAVX2() || MayFoldLoadIntoBroadcastFromMem(
-                                    Op0.getOperand(0), VT.getScalarType())))
+        (Subtarget.hasAVX2() ||
+         mayFoldLoadIntoBroadcastFromMem(Op0.getOperand(0), VT.getScalarType(),
+                                         Subtarget)))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64,
                                      Op0.getOperand(0),
@@ -51662,7 +51684,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     // concat_vectors(scalar_to_vector(x),scalar_to_vector(x)) -> broadcast(x)
     if (Op0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
         (Subtarget.hasAVX2() ||
-         (EltSizeInBits >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
+         (EltSizeInBits >= 32 && mayFoldLoad(Op0.getOperand(0), Subtarget))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
 
@@ -52994,7 +53016,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   case ISD::SRL: {
     SDValue N0 = Op.getOperand(0);
     // Look out for (store (shl (load), x)).
-    if (MayFoldLoad(N0) && IsFoldableRMW(N0, Op))
+    if (mayFoldLoad(N0, Subtarget) && IsFoldableRMW(N0, Op))
       return false;
     break;
   }
@@ -53009,11 +53031,11 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
     SDValue N0 = Op.getOperand(0);
     SDValue N1 = Op.getOperand(1);
     // Avoid disabling potential load folding opportunities.
-    if (MayFoldLoad(N1) &&
+    if (mayFoldLoad(N1, Subtarget) &&
         (!Commute || !isa<ConstantSDNode>(N0) ||
          (Op.getOpcode() != ISD::MUL && IsFoldableRMW(N1, Op))))
       return false;
-    if (MayFoldLoad(N0) &&
+    if (mayFoldLoad(N0, Subtarget) &&
         ((Commute && !isa<ConstantSDNode>(N1)) ||
          (Op.getOpcode() != ISD::MUL && IsFoldableRMW(N0, Op))))
       return false;

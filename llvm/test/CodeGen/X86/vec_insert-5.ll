@@ -97,20 +97,18 @@ define <4 x float> @t4_under_aligned(<4 x float>* %P) nounwind {
 ; X32-LABEL: t4_under_aligned:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movups (%eax), %xmm1
-; X32-NEXT:    xorps %xmm2, %xmm2
-; X32-NEXT:    xorps %xmm0, %xmm0
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[3,0]
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[2,3]
+; X32-NEXT:    movups (%eax), %xmm0
+; X32-NEXT:    xorps %xmm1, %xmm1
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0],xmm1[1,0]
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
 ; X32-NEXT:    retl
 ;
 ; ALIGN-LABEL: t4_under_aligned:
 ; ALIGN:       # %bb.0:
-; ALIGN-NEXT:    movups (%rdi), %xmm1
-; ALIGN-NEXT:    xorps %xmm2, %xmm2
-; ALIGN-NEXT:    xorps %xmm0, %xmm0
-; ALIGN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[3,0]
-; ALIGN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[2,3]
+; ALIGN-NEXT:    movups (%rdi), %xmm0
+; ALIGN-NEXT:    xorps %xmm1, %xmm1
+; ALIGN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0],xmm1[1,0]
+; ALIGN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
 ; ALIGN-NEXT:    retq
 ;
 ; UNALIGN-LABEL: t4_under_aligned:
