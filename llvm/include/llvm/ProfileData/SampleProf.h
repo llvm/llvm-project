@@ -731,6 +731,20 @@ public:
     return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
   }
 
+  // Accumulate all body samples to set total samples.
+  void updateTotalSamples() {
+    setTotalSamples(0);
+    for (const auto &I : BodySamples)
+      addTotalSamples(I.second.getSamples());
+
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.updateTotalSamples();
+        addTotalSamples(CS.second.getTotalSamples());
+      }
+    }
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
