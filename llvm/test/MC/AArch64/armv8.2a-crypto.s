@@ -7,6 +7,8 @@
 // RUN: not llvm-mc -triple aarch64 -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-SHA --check-prefix=CHECK-NO-SM < %t %s
 
+// RUN: llvm-mc -triple aarch64 -mattr=+v8r -show-encoding -o - %s | FileCheck %s --check-prefixes=CHECK-SM,CHECK-SHA
+
   sha512h   q0, q1, v2.2d
   sha512h2  q0, q1, v2.2d
   sha512su0 v11.2d, v12.2d
