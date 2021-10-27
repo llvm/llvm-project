@@ -11,12 +11,14 @@
 // template<class T> class shared_ptr
 // {
 // public:
-//     typedef T element_type;
+//     typedef T element_type; // until C++17
+//     typedef remove_extent_t<T> element_type; // since C++17
 //     typedef weak_ptr<T> weak_type; // C++17
 //     ...
 // };
 
 #include <memory>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -44,10 +46,8 @@ void test() {
   static_assert(std::is_copy_constructible<std::shared_ptr<T> >::value, "");
   static_assert(std::is_copy_assignable<std::shared_ptr<T> >::value, "");
   static_assert(has_less<std::shared_ptr<T> >::value);
-  static_assert(
-      std::is_same<typename std::shared_ptr<T[]>::element_type, T>::value, "");
-  static_assert(
-      std::is_same<typename std::shared_ptr<T[8]>::element_type, T>::value, "");
+  ASSERT_SAME_TYPE(typename std::shared_ptr<T[]>::element_type, T);
+  ASSERT_SAME_TYPE(typename std::shared_ptr<T[8]>::element_type, T);
 #endif
 }
 
@@ -56,6 +56,10 @@ int main(int, char**) {
   test<B>();
   test<int>();
   test<char*>();
+
+#if TEST_STD_VER > 14
+  ASSERT_SAME_TYPE(typename std::shared_ptr<int[][2]>::element_type, int[2]);
+#endif
 
   return 0;
 }

@@ -7,7 +7,7 @@ Finds calls to ``NSInvocation`` methods under ARC that don't have proper
 argument object lifetimes. When passing Objective-C objects as parameters
 to the ``NSInvocation`` methods ``getArgument:atIndex:`` and
 ``getReturnValue:``, the values are copied by value into the argument pointer,
-which leads to to incorrect releasing behavior if the object pointers are
+which leads to incorrect releasing behavior if the object pointers are
 not declared ``__unsafe_unretained``.
 
 For code:

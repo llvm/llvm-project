@@ -40,7 +40,10 @@ def LinalgComprehensiveModuleBufferize :
            "Only runs inplaceability analysis (for testing purposes only)">,
     Option<"allowReturnMemref", "allow-return-memref", "bool",
             /*default=*/"false",
-           "Allows the return of memrefs (for testing purposes only)">
+           "Allows the return of memrefs (for testing purposes only)">,
+    Option<"useAlloca", "use-alloca", "bool",
+           /*default=*/"false",
+           "Use stack allocations for memrefs (for testing purposes only)">
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }
@@ -308,6 +311,17 @@ def LinalgStrategyLowerVectorsPass
     : FunctionPass<"linalg-strategy-lower-vectors-pass"> {
   let summary = "Configurable pass to lower vector operations.";
   let constructor = "mlir::createLinalgStrategyLowerVectorsPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+  ];
+}
+
+def LinalgStrategyRemoveMarkersPass
+    : FunctionPass<"linalg-strategy-remove-markers-pass"> {
+  let summary = "Cleanup pass that drops markers.";
+  let constructor = "mlir::createLinalgStrategyRemoveMarkersPass()";
   let dependentDialects = ["linalg::LinalgDialect"];
   let options = [
     Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",

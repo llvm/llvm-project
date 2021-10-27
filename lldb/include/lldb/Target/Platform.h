@@ -212,7 +212,7 @@ public:
 
   bool SetOSVersion(llvm::VersionTuple os_version);
 
-  bool GetOSBuildString(std::string &s);
+  llvm::Optional<std::string> GetOSBuildString();
 
   bool GetOSKernelDescription(std::string &s);
 
@@ -223,7 +223,7 @@ public:
 
   virtual ConstString GetFullNameForDylib(ConstString basename);
 
-  virtual const char *GetDescription() = 0;
+  virtual llvm::StringRef GetDescription() = 0;
 
   /// Report the current status for this platform.
   ///
@@ -240,9 +240,8 @@ public:
   // HostInfo::GetOSVersion().
   virtual bool GetRemoteOSVersion() { return false; }
 
-  virtual bool GetRemoteOSBuildString(std::string &s) {
-    s.clear();
-    return false;
+  virtual llvm::Optional<std::string> GetRemoteOSBuildString() {
+    return llvm::None;
   }
 
   virtual bool GetRemoteOSKernelDescription(std::string &s) {

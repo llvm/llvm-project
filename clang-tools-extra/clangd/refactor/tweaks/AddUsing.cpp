@@ -278,8 +278,13 @@ bool AddUsing::prepare(const Selection &Inputs) {
       if (!QualifierToRemove)
         return false;
 
-      auto SpelledTokens =
-          TB.spelledForExpanded(TB.expandedTokens(E.getSourceRange()));
+      auto NameRange = E.getSourceRange();
+      if (auto T = E.getNamedTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
+        // Remove the template arguments from the name.
+        NameRange.setEnd(T.getLAngleLoc().getLocWithOffset(-1));
+      }
+
+      auto SpelledTokens = TB.spelledForExpanded(TB.expandedTokens(NameRange));
       if (!SpelledTokens)
         return false;
       auto SpelledRange = syntax::Token::range(SM, SpelledTokens->front(),

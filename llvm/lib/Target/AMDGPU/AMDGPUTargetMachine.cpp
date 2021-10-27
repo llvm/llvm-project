@@ -1371,6 +1371,8 @@ void GCNPassConfig::addPostRegAlloc() {
 }
 
 void GCNPassConfig::addPreSched2() {
+  if (TM->getOptLevel() > CodeGenOpt::None)
+    addPass(createSIShrinkInstructionsPass());
   addPass(&SIPostRABundlerID);
 }
 
@@ -1379,9 +1381,6 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
-
-  if (TM->getOptLevel() > CodeGenOpt::None)
-    addPass(createSIShrinkInstructionsPass());
 
   addPass(createSIModeRegisterPass());
 

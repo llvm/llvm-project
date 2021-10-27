@@ -856,7 +856,32 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!dwarf_ast)
     return nullptr;
 
-  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
+  DWARFRangeList ranges;
+  if (die.GetDIE()->GetAttributeAddressRanges(die.GetCU(), ranges,
+                                              /*check_hi_lo_pc=*/true) == 0)
+    return nullptr;
+
+  // Union of all ranges in the function DIE (if the function is
+  // discontiguous)
+  lldb::addr_t lowest_func_addr = ranges.GetMinRangeBase(0);
+  lldb::addr_t highest_func_addr = ranges.GetMaxRangeEnd(0);
+  if (lowest_func_addr == LLDB_INVALID_ADDRESS ||
+      lowest_func_addr >= highest_func_addr ||
+      lowest_func_addr < m_first_code_address)
+    return nullptr;
+
+  ModuleSP module_sp(die.GetModule());
+  AddressRange func_range;
+  func_range.GetBaseAddress().ResolveAddressUsingFileSections(
+      lowest_func_addr, module_sp->GetSectionList());
+  if (!func_range.GetBaseAddress().IsValid())
+    return nullptr;
+
+  func_range.SetByteSize(highest_func_addr - lowest_func_addr);
+  if (!FixupAddress(func_range.GetBaseAddress()))
+    return nullptr;
+
+  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, func_range);
 }
 
 lldb::addr_t SymbolFileDWARF::FixupAddress(lldb::addr_t file_addr) {
@@ -984,6 +1009,7 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
   if (offset == DW_INVALID_OFFSET)
     return false;
 
+  ElapsedTime elapsed(m_parse_time);
   llvm::DWARFDebugLine::Prologue prologue;
   if (!ParseLLVMLineTablePrologue(m_context, prologue, offset,
                                   dwarf_cu.GetOffset()))
@@ -1032,6 +1058,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
                      "SymbolFileDWARF::GetTypeUnitSupportFiles failed to parse "
                      "the line table prologue");
     };
+    ElapsedTime elapsed(m_parse_time);
     llvm::Error error = prologue.parse(data, &line_table_offset, report, ctx);
     if (error) {
       report(std::move(error));
@@ -1118,6 +1145,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   if (offset == DW_INVALID_OFFSET)
     return false;
 
+  ElapsedTime elapsed(m_parse_time);
   llvm::DWARFDebugLine line;
   const llvm::DWARFDebugLine::LineTable *line_table =
       ParseLLVMLineTable(m_context, line, offset, dwarf_cu->GetOffset());
@@ -1172,6 +1200,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   if (iter != m_debug_macros_map.end())
     return iter->second;
 
+  ElapsedTime elapsed(m_parse_time);
   const DWARFDataExtractor &debug_macro_data = m_context.getOrLoadMacroData();
   if (debug_macro_data.GetByteSize() == 0)
     return DebugMacrosSP();
@@ -2263,10 +2292,8 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
       addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
-    if (addr.IsValid() && addr.GetFileAddress() >= m_first_code_address) {
-      sc_list.Append(sc);
-      return true;
-    }
+    sc_list.Append(sc);
+    return true;
   }
 
   return false;
@@ -4072,4 +4099,10 @@ LanguageType SymbolFileDWARF::GetLanguageFamily(DWARFUnit &unit) {
   if (llvm::dwarf::isCPlusPlus(lang))
     lang = DW_LANG_C_plus_plus;
   return LanguageTypeFromDWARF(lang);
+}
+
+StatsDuration SymbolFileDWARF::GetDebugInfoIndexTime() {
+  if (m_index)
+    return m_index->GetIndexTime();
+  return StatsDuration(0.0);
 }

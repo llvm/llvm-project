@@ -15,6 +15,7 @@
 
 namespace Fortran::runtime {
 class Descriptor;
+class IoStatementState;
 } // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
@@ -33,5 +34,11 @@ public:
   std::size_t items;
   const Item *item; // in original declaration order
 };
+
+// Look ahead on input for an identifier followed by a '=', '(', or '%'
+// character; for use in disambiguating a name-like value (e.g. F or T) from a
+// NAMELIST group item name.  Always false when not reading a NAMELIST.
+bool IsNamelistName(IoStatementState &);
+
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_NAMELIST_H_

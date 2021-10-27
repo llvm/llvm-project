@@ -37,12 +37,7 @@ void DynamicLoaderWindowsDYLD::Initialize() {
 
 void DynamicLoaderWindowsDYLD::Terminate() {}
 
-ConstString DynamicLoaderWindowsDYLD::GetPluginNameStatic() {
-  static ConstString g_plugin_name("windows-dyld");
-  return g_plugin_name;
-}
-
-const char *DynamicLoaderWindowsDYLD::GetPluginDescriptionStatic() {
+llvm::StringRef DynamicLoaderWindowsDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
          "loads/unloads in Windows processes.";
 }

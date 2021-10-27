@@ -4574,6 +4574,10 @@ defm : VPatClassifyVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
 // 14.15. Vector Floating-Point Merge Instruction
 //===----------------------------------------------------------------------===//
 // We can use vmerge.vvm to support vector-vector vfmerge.
+// NOTE: Clang previously used int_riscv_vfmerge for vector-vector, but now uses
+// int_riscv_vmerge. Support both for compatibility.
+defm : VPatBinaryV_VM<"int_riscv_vmerge", "PseudoVMERGE",
+                      /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 defm : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
                       /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 defm : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",

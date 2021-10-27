@@ -12,6 +12,7 @@
 
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
@@ -49,15 +50,6 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
   }
 };
 } // end namespace llvm
-
-// Escape a string for use inside a C++ literal.
-// E.g. foo"bar -> foo\x22bar.
-static std::string escapeString(StringRef value) {
-  std::string ret;
-  llvm::raw_string_ostream os(ret);
-  os.write_escaped(value, /*use_hex_escapes=*/true);
-  return os.str();
-}
 
 //===----------------------------------------------------------------------===//
 // PatternEmitter

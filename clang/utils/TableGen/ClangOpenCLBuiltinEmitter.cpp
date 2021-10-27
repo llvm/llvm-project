@@ -496,10 +496,10 @@ void BuiltinNameEmitter::GetOverloads() {
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
     auto it =
-        std::find_if(SignaturesList.begin(), SignaturesList.end(),
-                     [&](const std::pair<std::vector<Record *>, unsigned> &a) {
-                       return a.first == Signature;
-                     });
+        llvm::find_if(SignaturesList,
+                      [&](const std::pair<std::vector<Record *>, unsigned> &a) {
+                        return a.first == Signature;
+                      });
     unsigned SignIndex;
     if (it == SignaturesList.end()) {
       VerifySignature(Signature, B);

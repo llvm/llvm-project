@@ -22,7 +22,7 @@ define internal void @bar(%pair* byval(%pair) %Data) {
 ; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]], align 4
-; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i64 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* nonnull dereferenceable(8) [[DATA_PRIV]])
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -37,7 +37,7 @@ define internal void @bar(%pair* byval(%pair) %Data) {
 ; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]], align 8
-; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i32 0, i32 1
+; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i64 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* noundef nonnull align 8 dereferenceable(8) [[DATA_PRIV]])
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -56,7 +56,7 @@ define void @zed(%pair* byval(%pair) %Data) {
 ; IS__TUNIT_NPM-SAME: (%pair* noalias nocapture nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
 ; IS__TUNIT_NPM-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
-; IS__TUNIT_NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i64 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
 ; IS__TUNIT_NPM-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -70,7 +70,7 @@ define void @zed(%pair* byval(%pair) %Data) {
 ; IS__CGSCC_NPM-SAME: (%pair* noalias nocapture nofree nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
-; IS__CGSCC_NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i32 0, i32 1
+; IS__CGSCC_NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i64 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
 ; IS__CGSCC_NPM-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
 ; IS__CGSCC_NPM-NEXT:    ret void

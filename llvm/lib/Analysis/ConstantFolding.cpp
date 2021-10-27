@@ -668,8 +668,11 @@ Constant *getConstantAtOffset(Constant *Base, APInt Offset,
   return C;
 }
 
-Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
-                                    const DataLayout &DL) {
+} // end anonymous namespace
+
+Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                          const APInt &Offset,
+                                          const DataLayout &DL) {
   if (Constant *AtOffset = getConstantAtOffset(C, Offset, DL))
     if (Constant *Result = ConstantFoldLoadThroughBitcast(AtOffset, Ty, DL))
       return Result;
@@ -681,11 +684,14 @@ Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
   return nullptr;
 }
 
-} // end anonymous namespace
+Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                          const DataLayout &DL) {
+  return ConstantFoldLoadFromConst(C, Ty, APInt(64, 0), DL);
+}
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                             APInt Offset,
                                              const DataLayout &DL) {
-  APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
   C = cast<Constant>(C->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true));
 
@@ -707,6 +713,12 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   }
 
   return nullptr;
+}
+
+Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                             const DataLayout &DL) {
+  APInt Offset(DL.getIndexTypeSizeInBits(C->getType()), 0);
+  return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
 }
 
 namespace {
@@ -1346,19 +1358,6 @@ Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
       return nullptr;
   }
   return ConstantFoldLoadThroughBitcast(C, Ty, DL);
-}
-
-Constant *
-llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                        ArrayRef<Constant *> Indices) {
-  // Loop over all of the operands, tracking down which value we are
-  // addressing.
-  for (Constant *Index : Indices) {
-    C = C->getAggregateElement(Index);
-    if (!C)
-      return nullptr;
-  }
-  return C;
 }
 
 //===----------------------------------------------------------------------===//

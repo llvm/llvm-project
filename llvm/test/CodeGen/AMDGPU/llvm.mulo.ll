@@ -236,16 +236,14 @@ define { i64, i1 } @smulo_i64_s_s(i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_subrev_co_ci_u32_e32 v10, vcc_lo, 0, v7, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v1
 ; GFX11-NEXT:    v_add3_u32 v1, v5, v4, v8
-; GFX11-NEXT:    v_cndmask_b32_e32 v6, v6, v9, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v7, v7, v10, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v7, v7, v10 :: v_dual_cndmask_b32 v6, v6, v9
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v4, 31, v1
 ; GFX11-NEXT:    v_sub_co_u32 v8, vcc_lo, v6, v0
 ; GFX11-NEXT:    v_subrev_co_ci_u32_e32 v9, vcc_lo, 0, v7, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX11-NEXT:    v_mul_lo_u32 v0, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e32 v7, v7, v9, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v6, v6, v8, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v7, v7, v9 :: v_dual_cndmask_b32 v6, v6, v8
 ; GFX11-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[6:7], v[4:5]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

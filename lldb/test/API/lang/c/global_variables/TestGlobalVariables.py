@@ -21,7 +21,7 @@ class GlobalVariablesTestCase(TestBase):
         self.shlib_names = ["a"]
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
-    @expectedFailureAll(archs=["arm64e"]) # <rdar://problem/37773624>
+    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # <rdar://problem/37773624>
     def test_without_process(self):
         """Test that static initialized variables can be inspected without
         process."""

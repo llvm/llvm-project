@@ -55,6 +55,11 @@ public:
   }
 
   static LocIdx MakeIllegalLoc() { return LocIdx(); }
+  static LocIdx MakeTombstoneLoc() {
+    LocIdx L = LocIdx();
+    --L.Location;
+    return L;
+  }
 
   bool isIllegal() const { return Location == UINT_MAX; }
 
@@ -101,36 +106,43 @@ struct SpillLoc {
 /// problematic; but by that point we should probably have bailed out of
 /// trying to analyse the function.
 class ValueIDNum {
-  uint64_t BlockNo : 20;         /// The block where the def happens.
-  uint64_t InstNo : 20;          /// The Instruction where the def happens.
-                                 /// One based, is distance from start of block.
-  uint64_t LocNo : NUM_LOC_BITS; /// The machine location where the def happens.
+  union {
+    struct {
+      uint64_t BlockNo : 20; /// The block where the def happens.
+      uint64_t InstNo : 20;  /// The Instruction where the def happens.
+                             /// One based, is distance from start of block.
+      uint64_t LocNo
+          : NUM_LOC_BITS; /// The machine location where the def happens.
+    } s;
+    uint64_t Value;
+  } u;
+
+  static_assert(sizeof(u) == 8, "Badly packed ValueIDNum?");
 
 public:
   // Default-initialize to EmptyValue. This is necessary to make IndexedMaps
   // of values to work.
-  ValueIDNum() : BlockNo(0xFFFFF), InstNo(0xFFFFF), LocNo(0xFFFFFF) {}
+  ValueIDNum() { u.Value = EmptyValue.asU64(); }
 
-  ValueIDNum(uint64_t Block, uint64_t Inst, uint64_t Loc)
-      : BlockNo(Block), InstNo(Inst), LocNo(Loc) {}
-
-  ValueIDNum(uint64_t Block, uint64_t Inst, LocIdx Loc)
-      : BlockNo(Block), InstNo(Inst), LocNo(Loc.asU64()) {}
-
-  uint64_t getBlock() const { return BlockNo; }
-  uint64_t getInst() const { return InstNo; }
-  uint64_t getLoc() const { return LocNo; }
-  bool isPHI() const { return InstNo == 0; }
-
-  uint64_t asU64() const {
-    uint64_t TmpBlock = BlockNo;
-    uint64_t TmpInst = InstNo;
-    return TmpBlock << 44ull | TmpInst << NUM_LOC_BITS | LocNo;
+  ValueIDNum(uint64_t Block, uint64_t Inst, uint64_t Loc) {
+    u.s = {Block, Inst, Loc};
   }
 
+  ValueIDNum(uint64_t Block, uint64_t Inst, LocIdx Loc) {
+    u.s = {Block, Inst, Loc.asU64()};
+  }
+
+  uint64_t getBlock() const { return u.s.BlockNo; }
+  uint64_t getInst() const { return u.s.InstNo; }
+  uint64_t getLoc() const { return u.s.LocNo; }
+  bool isPHI() const { return u.s.InstNo == 0; }
+
+  uint64_t asU64() const { return u.Value; }
+
   static ValueIDNum fromU64(uint64_t v) {
-    uint64_t L = (v & 0x3FFF);
-    return {v >> 44ull, ((v >> NUM_LOC_BITS) & 0xFFFFF), L};
+    ValueIDNum Val;
+    Val.u.Value = v;
+    return Val;
   }
 
   bool operator<(const ValueIDNum &Other) const {
@@ -138,23 +150,45 @@ public:
   }
 
   bool operator==(const ValueIDNum &Other) const {
-    return std::tie(BlockNo, InstNo, LocNo) ==
-           std::tie(Other.BlockNo, Other.InstNo, Other.LocNo);
+    return u.Value == Other.u.Value;
   }
 
   bool operator!=(const ValueIDNum &Other) const { return !(*this == Other); }
 
   std::string asString(const std::string &mlocname) const {
     return Twine("Value{bb: ")
-        .concat(Twine(BlockNo).concat(
-            Twine(", inst: ")
-                .concat((InstNo ? Twine(InstNo) : Twine("live-in"))
-                            .concat(Twine(", loc: ").concat(Twine(mlocname)))
-                            .concat(Twine("}")))))
+        .concat(Twine(u.s.BlockNo)
+                    .concat(Twine(", inst: ")
+                                .concat((u.s.InstNo ? Twine(u.s.InstNo)
+                                                    : Twine("live-in"))
+                                            .concat(Twine(", loc: ").concat(
+                                                Twine(mlocname)))
+                                            .concat(Twine("}")))))
         .str();
   }
 
   static ValueIDNum EmptyValue;
+  static ValueIDNum TombstoneValue;
+};
+
+/// Thin wrapper around an integer -- designed to give more type safety to
+/// spill location numbers.
+class SpillLocationNo {
+public:
+  explicit SpillLocationNo(unsigned SpillNo) : SpillNo(SpillNo) {}
+  unsigned SpillNo;
+  unsigned id() const { return SpillNo; }
+
+  bool operator<(const SpillLocationNo &Other) const {
+    return SpillNo < Other.SpillNo;
+  }
+
+  bool operator==(const SpillLocationNo &Other) const {
+    return SpillNo == Other.SpillNo;
+  }
+  bool operator!=(const SpillLocationNo &Other) const {
+    return !(*this == Other);
+  }
 };
 
 /// Meta qualifiers for a value. Pair of whatever expression is used to qualify
@@ -276,19 +310,35 @@ public:
 /// target machine than the actual working-set size of the function. On x86 for
 /// example, we're extremely unlikely to want to track values through control
 /// or debug registers. To avoid doing so, MLocTracker has several layers of
-/// indirection going on, with two kinds of ``location'':
-///  * A LocID uniquely identifies a register or spill location, with a
-///    predictable value.
-///  * A LocIdx is a key (in the database sense) for a LocID and a ValueIDNum.
-/// Whenever a location is def'd or used by a MachineInstr, we automagically
-/// create a new LocIdx for a location, but not otherwise. This ensures we only
-/// account for locations that are actually used or defined. The cost is another
-/// vector lookup (of LocID -> LocIdx) over any other implementation. This is
-/// fairly cheap, and the compiler tries to reduce the working-set at any one
-/// time in the function anyway.
+/// indirection going on, described below, to avoid unnecessarily tracking
+/// any location.
 ///
-/// Register mask operands completely blow this out of the water; I've just
-/// piled hacks on top of hacks to get around that.
+/// Here's a sort of diagram of the indexes, read from the bottom up:
+///
+///           Size on stack   Offset on stack
+///                 \              /
+///          Stack Idx (Where in slot is this?)
+///                         /
+///                        /
+/// Slot Num (%stack.0)   /
+/// FrameIdx => SpillNum /
+///              \      /
+///           SpillID (int)              Register number (int)
+///                      \                  /
+///                      LocationID => LocIdx
+///                                |
+///                       LocIdx => ValueIDNum
+///
+/// The aim here is that the LocIdx => ValueIDNum vector is just an array of
+/// values in numbered locations, so that later analyses can ignore whether the
+/// location is a register or otherwise. To map a register / spill location to
+/// a LocIdx, you have to use the (sparse) LocationID => LocIdx map. And to
+/// build a LocationID for a stack slot, you need to combine identifiers for
+/// which stack slot it is and where within that slot is being described.
+///
+/// Register mask operands cause trouble by technically defining every register;
+/// various hacks are used to avoid tracking registers that are never read and
+/// only written by regmasks.
 class MLocTracker {
 public:
   MachineFunction &MF;
@@ -321,8 +371,8 @@ public:
   /// keep a set of them here.
   SmallSet<Register, 8> SPAliases;
 
-  /// Unique-ification of spill slots. Used to number them -- their LocID
-  /// number is the index in SpillLocs minus one plus NumRegs.
+  /// Unique-ification of spill. Used to number them -- their LocID number is
+  /// the index in SpillLocs minus one plus NumRegs.
   UniqueVector<SpillLoc> SpillLocs;
 
   // If we discover a new machine location, assign it an mphi with this
@@ -332,11 +382,28 @@ public:
   /// Cached local copy of the number of registers the target has.
   unsigned NumRegs;
 
+  /// Number of slot indexes the target has -- distinct segments of a stack
+  /// slot that can take on the value of a subregister, when a super-register
+  /// is written to the stack.
+  unsigned NumSlotIdxes;
+
   /// Collection of register mask operands that have been observed. Second part
   /// of pair indicates the instruction that they happened in. Used to
   /// reconstruct where defs happened if we start tracking a location later
   /// on.
   SmallVector<std::pair<const MachineOperand *, unsigned>, 32> Masks;
+
+  /// Pair for describing a position within a stack slot -- first the size in
+  /// bits, then the offset.
+  typedef std::pair<unsigned short, unsigned short> StackSlotPos;
+
+  /// Map from a size/offset pair describing a position in a stack slot, to a
+  /// numeric identifier for that position. Allows easier identification of
+  /// individual positions.
+  DenseMap<StackSlotPos, unsigned> StackSlotIdxes;
+
+  /// Inverse of StackSlotIdxes.
+  DenseMap<unsigned, StackSlotPos> StackIdxesToPos;
 
   /// Iterator for locations and the values they contain. Dereferencing
   /// produces a struct/pair containing the LocIdx key for this location,
@@ -374,16 +441,57 @@ public:
   MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
               const TargetRegisterInfo &TRI, const TargetLowering &TLI);
 
-  /// Produce location ID number for indexing LocIDToLocIdx. Takes the register
-  /// or spill number, and flag for whether it's a spill or not.
-  unsigned getLocID(Register RegOrSpill, bool isSpill) {
-    return (isSpill) ? RegOrSpill.id() + NumRegs - 1 : RegOrSpill.id();
+  /// Produce location ID number for a Register. Provides some small amount of
+  /// type safety.
+  /// \param Reg The register we're looking up.
+  unsigned getLocID(Register Reg) { return Reg.id(); }
+
+  /// Produce location ID number for a spill position.
+  /// \param Spill The number of the spill we're fetching the location for.
+  /// \param SpillSubReg Subregister within the spill we're addressing.
+  unsigned getLocID(SpillLocationNo Spill, unsigned SpillSubReg) {
+    unsigned short Size = TRI.getSubRegIdxSize(SpillSubReg);
+    unsigned short Offs = TRI.getSubRegIdxOffset(SpillSubReg);
+    return getLocID(Spill, {Size, Offs});
   }
 
-  /// Accessor for reading the value at Idx.
-  ValueIDNum getNumAtPos(LocIdx Idx) const {
-    assert(Idx.asU64() < LocIdxToIDNum.size());
-    return LocIdxToIDNum[Idx];
+  /// Produce location ID number for a spill position.
+  /// \param Spill The number of the spill we're fetching the location for.
+  /// \apram SpillIdx size/offset within the spill slot to be addressed.
+  unsigned getLocID(SpillLocationNo Spill, StackSlotPos Idx) {
+    unsigned SlotNo = Spill.id() - 1;
+    SlotNo *= NumSlotIdxes;
+    assert(StackSlotIdxes.find(Idx) != StackSlotIdxes.end());
+    SlotNo += StackSlotIdxes[Idx];
+    SlotNo += NumRegs;
+    return SlotNo;
+  }
+
+  /// Given a spill number, and a slot within the spill, calculate the ID number
+  /// for that location.
+  unsigned getSpillIDWithIdx(SpillLocationNo Spill, unsigned Idx) {
+    unsigned SlotNo = Spill.id() - 1;
+    SlotNo *= NumSlotIdxes;
+    SlotNo += Idx;
+    SlotNo += NumRegs;
+    return SlotNo;
+  }
+
+  /// Return the spill number that a location ID corresponds to.
+  SpillLocationNo locIDToSpill(unsigned ID) const {
+    assert(ID >= NumRegs);
+    ID -= NumRegs;
+    // Truncate away the index part, leaving only the spill number.
+    ID /= NumSlotIdxes;
+    return SpillLocationNo(ID + 1); // The UniqueVector is one-based.
+  }
+
+  /// Returns the spill-slot size/offs that a location ID corresponds to.
+  StackSlotPos locIDToSpillIdx(unsigned ID) const {
+    assert(ID >= NumRegs);
+    ID -= NumRegs;
+    unsigned Idx = ID % NumSlotIdxes;
+    return StackIdxesToPos.find(Idx)->second;
   }
 
   unsigned getNumLocs(void) const { return LocIdxToIDNum.size(); }
@@ -425,6 +533,8 @@ public:
     // SpillLocs.reset(); XXX UniqueVector::reset assumes a SpillLoc casts from
     // 0
     SpillLocs = decltype(SpillLocs)();
+    StackSlotIdxes.clear();
+    StackIdxesToPos.clear();
 
     LocIDToLocIdx.resize(NumRegs, LocIdx::MakeIllegalLoc());
   }
@@ -433,6 +543,12 @@ public:
   void setMLoc(LocIdx L, ValueIDNum Num) {
     assert(L.asU64() < LocIdxToIDNum.size());
     LocIdxToIDNum[L] = Num;
+  }
+
+  /// Read the value of a particular location
+  ValueIDNum readMLoc(LocIdx L) {
+    assert(L.asU64() < LocIdxToIDNum.size());
+    return LocIdxToIDNum[L];
   }
 
   /// Create a LocIdx for an untracked register ID. Initialize it to either an
@@ -456,7 +572,7 @@ public:
   /// This doesn't take a ValueIDNum, because the definition and its location
   /// are synonymous.
   void defReg(Register R, unsigned BB, unsigned Inst) {
-    unsigned ID = getLocID(R, false);
+    unsigned ID = getLocID(R);
     LocIdx Idx = lookupOrTrackRegister(ID);
     ValueIDNum ValueID = {BB, Inst, Idx};
     LocIdxToIDNum[Idx] = ValueID;
@@ -465,13 +581,13 @@ public:
   /// Set a register to a value number. To be used if the value number is
   /// known in advance.
   void setReg(Register R, ValueIDNum ValueID) {
-    unsigned ID = getLocID(R, false);
+    unsigned ID = getLocID(R);
     LocIdx Idx = lookupOrTrackRegister(ID);
     LocIdxToIDNum[Idx] = ValueID;
   }
 
   ValueIDNum readReg(Register R) {
-    unsigned ID = getLocID(R, false);
+    unsigned ID = getLocID(R);
     LocIdx Idx = lookupOrTrackRegister(ID);
     return LocIdxToIDNum[Idx];
   }
@@ -481,14 +597,16 @@ public:
   /// clears the contents of the source register. (Values can only have one
   ///  machine location in VarLocBasedImpl).
   void wipeRegister(Register R) {
-    unsigned ID = getLocID(R, false);
+    unsigned ID = getLocID(R);
     LocIdx Idx = LocIDToLocIdx[ID];
     LocIdxToIDNum[Idx] = ValueIDNum::EmptyValue;
   }
 
   /// Determine the LocIdx of an existing register.
   LocIdx getRegMLoc(Register R) {
-    unsigned ID = getLocID(R, false);
+    unsigned ID = getLocID(R);
+    assert(ID < LocIDToLocIdx.size());
+    assert(LocIDToLocIdx[ID] != UINT_MAX); // Sentinal for IndexedMap.
     return LocIDToLocIdx[ID];
   }
 
@@ -498,33 +616,12 @@ public:
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID);
 
   /// Find LocIdx for SpillLoc \p L, creating a new one if it's not tracked.
-  LocIdx getOrTrackSpillLoc(SpillLoc L);
+  SpillLocationNo getOrTrackSpillLoc(SpillLoc L);
 
-  /// Set the value stored in a spill slot.
-  void setSpill(SpillLoc L, ValueIDNum ValueID) {
-    LocIdx Idx = getOrTrackSpillLoc(L);
-    LocIdxToIDNum[Idx] = ValueID;
-  }
-
-  /// Read whatever value is in a spill slot, or None if it isn't tracked.
-  Optional<ValueIDNum> readSpill(SpillLoc L) {
-    unsigned SpillID = SpillLocs.idFor(L);
-    if (SpillID == 0)
-      return None;
-
-    unsigned LocID = getLocID(SpillID, true);
-    LocIdx Idx = LocIDToLocIdx[LocID];
-    return LocIdxToIDNum[Idx];
-  }
-
-  /// Determine the LocIdx of a spill slot. Return None if it previously
-  /// hasn't had a value assigned.
-  Optional<LocIdx> getSpillMLoc(SpillLoc L) {
-    unsigned SpillID = SpillLocs.idFor(L);
-    if (SpillID == 0)
-      return None;
-    unsigned LocNo = getLocID(SpillID, true);
-    return LocIDToLocIdx[LocNo];
+  // Get LocIdx of a spill ID.
+  LocIdx getSpillMLoc(unsigned SpillID) {
+    assert(LocIDToLocIdx[SpillID] != UINT_MAX); // Sentinal for IndexedMap.
+    return LocIDToLocIdx[SpillID];
   }
 
   /// Return true if Idx is a spill machine location.
@@ -633,7 +730,7 @@ public:
 
   /// Machine location/value transfer function, a mapping of which locations
   /// are assigned which new values.
-  using MLocTransferMap = std::map<LocIdx, ValueIDNum>;
+  using MLocTransferMap = SmallDenseMap<LocIdx, ValueIDNum>;
 
   /// Live in/out structure for the variable values: a per-block map of
   /// variables to their values.
@@ -651,6 +748,7 @@ public:
 private:
   MachineDominatorTree *DomTree;
   const TargetRegisterInfo *TRI;
+  const MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
   const TargetFrameLowering *TFI;
   const MachineFrameInfo *MFI;
@@ -664,7 +762,7 @@ private:
 
   /// Object to track machine locations as we step through a block. Could
   /// probably be a field rather than a pointer, as it's always used.
-  MLocTracker *MTracker;
+  MLocTracker *MTracker = nullptr;
 
   /// Number of the current block LiveDebugValues is stepping through.
   unsigned CurBB;
@@ -675,12 +773,12 @@ private:
   /// Variable tracker -- listens to DBG_VALUEs occurring as InstrRefBasedImpl
   /// steps through a block. Reads the values at each location from the
   /// MLocTracker object.
-  VLocTracker *VTracker;
+  VLocTracker *VTracker = nullptr;
 
   /// Tracker for transfers, listens to DBG_VALUEs and transfers of values
   /// between locations during stepping, creates new DBG_VALUEs when values move
   /// location.
-  TransferTracker *TTracker;
+  TransferTracker *TTracker = nullptr;
 
   /// Blocks which are artificial, i.e. blocks which exclusively contain
   /// instructions without DebugLocs, or with line 0 locations.
@@ -733,12 +831,12 @@ private:
 
   /// If a given instruction is identified as a spill, return the spill slot
   /// and set \p Reg to the spilled register.
-  Optional<SpillLoc> isRestoreInstruction(const MachineInstr &MI,
+  Optional<SpillLocationNo> isRestoreInstruction(const MachineInstr &MI,
                                           MachineFunction *MF, unsigned &Reg);
 
-  /// Given a spill instruction, extract the register and offset used to
-  /// address the spill slot in a target independent way.
-  SpillLoc extractSpillBaseRegAndOffset(const MachineInstr &MI);
+  /// Given a spill instruction, extract the spill slot information, ensure it's
+  /// tracked, and return the spill number.
+  SpillLocationNo extractSpillBaseRegAndOffset(const MachineInstr &MI);
 
   /// Observe a single instruction while stepping through a block.
   void process(MachineInstr &MI, ValueIDNum **MLiveOuts = nullptr,
@@ -804,6 +902,10 @@ private:
   void buildMLocValueMap(MachineFunction &MF, ValueIDNum **MInLocs,
                          ValueIDNum **MOutLocs,
                          SmallVectorImpl<MLocTransferMap> &MLocTransfer);
+
+  /// Examine the stack indexes (i.e. offsets within the stack) to find the
+  /// basic units of interference -- like reg units, but for the stack.
+  void findStackIndexInterference(SmallVectorImpl<unsigned> &Slots);
 
   /// Install PHI values into the live-in array for each block, according to
   /// the IDF of each register.
@@ -900,8 +1002,50 @@ public:
   void dump_mloc_transfer(const MLocTransferMap &mloc_transfer) const;
 
   bool isCalleeSaved(LocIdx L) const;
+
+  bool hasFoldedStackStore(const MachineInstr &MI) {
+    // Instruction must have a memory operand that's a stack slot, and isn't
+    // aliased, meaning it's a spill from regalloc instead of a variable.
+    // If it's aliased, we can't guarantee its value.
+    if (!MI.hasOneMemOperand())
+      return false;
+    auto *MemOperand = *MI.memoperands_begin();
+    return MemOperand->isStore() &&
+           MemOperand->getPseudoValue() &&
+           MemOperand->getPseudoValue()->kind() == PseudoSourceValue::FixedStack
+           && !MemOperand->getPseudoValue()->isAliased(MFI);
+  }
+
+  Optional<LocIdx> findLocationForMemOperand(const MachineInstr &MI);
 };
 
 } // namespace LiveDebugValues
+
+namespace llvm {
+using namespace LiveDebugValues;
+
+template <> struct DenseMapInfo<LocIdx> {
+  static inline LocIdx getEmptyKey() { return LocIdx::MakeIllegalLoc(); }
+  static inline LocIdx getTombstoneKey() { return LocIdx::MakeTombstoneLoc(); }
+
+  static unsigned getHashValue(const LocIdx &Loc) { return Loc.asU64(); }
+
+  static bool isEqual(const LocIdx &A, const LocIdx &B) { return A == B; }
+};
+
+template <> struct DenseMapInfo<ValueIDNum> {
+  static inline ValueIDNum getEmptyKey() { return ValueIDNum::EmptyValue; }
+  static inline ValueIDNum getTombstoneKey() {
+    return ValueIDNum::TombstoneValue;
+  }
+
+  static unsigned getHashValue(const ValueIDNum &Val) { return Val.asU64(); }
+
+  static bool isEqual(const ValueIDNum &A, const ValueIDNum &B) {
+    return A == B;
+  }
+};
+
+} // end namespace llvm
 
 #endif /* LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_INSTRREFBASEDLDV_H */

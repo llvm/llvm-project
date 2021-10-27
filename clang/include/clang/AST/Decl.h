@@ -3701,6 +3701,10 @@ public:
                           bool IsFixed);
   static EnumDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
+  /// Overrides to provide correct range when there's an enum-base specifier
+  /// with forward declarations.
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
   /// When created, the EnumDecl corresponds to a
   /// forward-declared enum. This method is used to mark the
   /// declaration as being defined; its enumerators have already been

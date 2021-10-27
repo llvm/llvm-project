@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -std=c++11 -msve-vector-bits=512 -fallow-half-arguments-and-returns -Wconversion %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -std=c++11 -mvscale-min=4 -mvscale-max=4 -fallow-half-arguments-and-returns -Wconversion %s
 // expected-no-diagnostics
 
 #include <stdint.h>

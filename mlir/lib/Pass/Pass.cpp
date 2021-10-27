@@ -98,6 +98,10 @@ struct OpPassManagerImpl {
   /// operation type, it must be the same type as this pass manager.
   void addPass(std::unique_ptr<Pass> pass);
 
+  /// Clear the list of passes in this pass manager, other options are
+  /// preserved.
+  void clear();
+
   /// Coalesce adjacent AdaptorPasses into one large adaptor. This runs
   /// recursively through the pipeline graph.
   void coalesceAdjacentAdaptorPasses();
@@ -166,6 +170,8 @@ void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
 
   passes.emplace_back(std::move(pass));
 }
+
+void OpPassManagerImpl::clear() { passes.clear(); }
 
 void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
   // Bail out early if there are no adaptor passes.
@@ -260,6 +266,8 @@ OpPassManager &OpPassManager::nest(StringRef nestedName) {
 void OpPassManager::addPass(std::unique_ptr<Pass> pass) {
   impl->addPass(std::move(pass));
 }
+
+void OpPassManager::clear() { impl->clear(); }
 
 /// Returns the number of passes held by this manager.
 size_t OpPassManager::size() const { return impl->passes.size(); }

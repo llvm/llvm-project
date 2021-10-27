@@ -117,12 +117,7 @@ void EmulateInstructionARM64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString EmulateInstructionARM64::GetPluginNameStatic() {
-  ConstString g_plugin_name("lldb.emulate-instruction.arm64");
-  return g_plugin_name;
-}
-
-const char *EmulateInstructionARM64::GetPluginDescriptionStatic() {
+llvm::StringRef EmulateInstructionARM64::GetPluginDescriptionStatic() {
   return "Emulate instructions for the ARM64 architecture.";
 }
 

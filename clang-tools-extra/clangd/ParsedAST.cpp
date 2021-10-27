@@ -18,6 +18,7 @@
 #include "FeatureModule.h"
 #include "Headers.h"
 #include "HeuristicResolver.h"
+#include "IncludeCleaner.h"
 #include "IncludeFixer.h"
 #include "Preamble.h"
 #include "SourceCode.h"
@@ -515,10 +516,18 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       Diags->insert(Diags->end(), D.begin(), D.end());
     }
   }
-  return ParsedAST(Inputs.Version, std::move(Preamble), std::move(Clang),
+  ParsedAST Result(Inputs.Version, std::move(Preamble), std::move(Clang),
                    std::move(Action), std::move(Tokens), std::move(Macros),
                    std::move(Marks), std::move(ParsedDecls), std::move(Diags),
                    std::move(Includes), std::move(CanonIncludes));
+  if (Result.Diags) {
+    auto UnusedHeadersDiags =
+        issueUnusedIncludesDiagnostics(Result, Inputs.Contents);
+    Result.Diags->insert(Result.Diags->end(),
+                         make_move_iterator(UnusedHeadersDiags.begin()),
+                         make_move_iterator(UnusedHeadersDiags.end()));
+  }
+  return Result;
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;

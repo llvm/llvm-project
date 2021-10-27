@@ -1634,7 +1634,7 @@ public:
 
 private:
   static bool hasAlwaysUninitializedUse(const UsesVec* vec) {
-    return std::any_of(vec->begin(), vec->end(), [](const UninitUse &U) {
+    return llvm::any_of(*vec, [](const UninitUse &U) {
       return U.getKind() == UninitUse::Always ||
              U.getKind() == UninitUse::AfterCall ||
              U.getKind() == UninitUse::AfterDecl;

@@ -668,3 +668,11 @@ define <2 x i1> @eq_mul_constants_with_tz_splat(<2 x i32> %x, <2 x i32> %y) {
   %C = icmp eq <2 x i32> %A, %B
   ret <2 x i1> %C
 }
+
+@g = extern_weak global i32
+
+define i1 @oss_fuzz_39934(i32 %arg) {
+  %B13 = mul nsw i32 %arg, -65536
+  %C10 = icmp ne i32 mul (i32 or (i32 zext (i1 icmp eq (i32* @g, i32* null) to i32), i32 65537), i32 -65536), %B13
+  ret i1 %C10
+}

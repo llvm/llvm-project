@@ -449,6 +449,21 @@ TEST(DiagnosticTest, RespectsDiagnosticConfig) {
                                "use of undeclared identifier 'unknown'")));
 }
 
+TEST(DiagnosticTest, RespectsDiagnosticConfigInHeader) {
+  Annotations Header(R"cpp(
+    int x = "42";  // error-ok
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+  )cpp");
+  auto TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles["header.hpp"] = std::string(Header.code());
+  Config Cfg;
+  Cfg.Diagnostics.Suppress.insert("init_conversion_failed");
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 TEST(DiagnosticTest, ClangTidySuppressionComment) {
   Annotations Main(R"cpp(
     int main() {
@@ -1464,6 +1479,44 @@ TEST(Diagnostics, Tags) {
                   AllOf(Diag(Test.range("deprecated"), "'bar' is deprecated"),
                         WithTag(DiagnosticTag::Deprecated))));
 }
+
+TEST(DiagnosticsTest, IncludeCleaner) {
+  Annotations Test(R"cpp(
+$fix[[  $diag[[#include "unused.h"]]
+]]  #include "used.h"
+
+  void foo() {
+    used();
+  }
+  )cpp");
+  TestTU TU;
+  TU.Code = Test.code().str();
+  TU.AdditionalFiles["unused.h"] = R"cpp(
+    void unused() {}
+  )cpp";
+  TU.AdditionalFiles["used.h"] = R"cpp(
+    void used() {}
+  )cpp";
+  // Off by default.
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      UnorderedElementsAre(AllOf(
+          Diag(Test.range("diag"), "included header unused.h is not used"),
+          WithTag(DiagnosticTag::Unnecessary), DiagSource(Diag::Clangd),
+          WithFix(Fix(Test.range("fix"), "", "remove #include directive")))));
+  Cfg.Diagnostics.SuppressAll = true;
+  WithContextValue SuppressAllWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+  Cfg.Diagnostics.SuppressAll = false;
+  Cfg.Diagnostics.Suppress = {"unused-includes"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

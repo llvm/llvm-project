@@ -179,8 +179,7 @@ define i16 @extractelement_vgpr_v4i16_vgpr_idx(<4 x i16> addrspace(1)* %ptr, i32
 ; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 4, v2
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v1 :: v_dual_lshlrev_b32 v1, 4, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <4 x i16>, <4 x i16> addrspace(1)* %ptr
@@ -222,12 +221,11 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_vgpr_idx(<4 x i16> addrspace(4)*
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 1, v0
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s1
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, s0, v2, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, s0, v2 :: v_dual_and_b32 v0, 1, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog

@@ -544,8 +544,7 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[4:5], v[0:1]
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v6 :: v_dual_cndmask_b32 v1, v5, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result

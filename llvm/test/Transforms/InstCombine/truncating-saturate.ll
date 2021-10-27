@@ -583,3 +583,33 @@ define i8 @C0zero(i8 %X, i8 %y, i8 %z) {
   %r = select i1 %cmp, i8 %X, i8 %f
   ret i8 %r
 }
+
+define <2 x i8> @C0zeroV(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @C0zeroV(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[F:%.*]] = select <2 x i1> [[C]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[F]]
+;
+  %a = add <2 x i8> %X, <i8 10, i8 10>
+  %cmp = icmp ult <2 x i8> %a, zeroinitializer
+  %c = icmp slt <2 x i8> %X, <i8 -10, i8 -10>
+  %f = select <2 x i1> %c, <2 x i8> %y, <2 x i8> %z
+  %r = select <2 x i1> %cmp, <2 x i8> %X, <2 x i8> %f
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @C0zeroVu(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @C0zeroVu(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i8> [[X]], <i8 -11, i8 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> [[Y:%.*]], <2 x i8> [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> [[Z:%.*]], <2 x i8> [[TMP3]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = add <2 x i8> %X, <i8 10, i8 10>
+  %cmp = icmp ult <2 x i8> %a, <i8 0, i8 10>
+  %c = icmp slt <2 x i8> %X, <i8 -10, i8 -10>
+  %f = select <2 x i1> %c, <2 x i8> %y, <2 x i8> %z
+  %r = select <2 x i1> %cmp, <2 x i8> %X, <2 x i8> %f
+  ret <2 x i8> %r
+}

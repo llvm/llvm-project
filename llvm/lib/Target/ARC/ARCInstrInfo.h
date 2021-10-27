@@ -24,7 +24,6 @@ namespace llvm {
 class ARCSubtarget;
 
 class ARCInstrInfo : public ARCGenInstrInfo {
-  const ARCSubtarget &ST;
   const ARCRegisterInfo RI;
   virtual void anchor();
 

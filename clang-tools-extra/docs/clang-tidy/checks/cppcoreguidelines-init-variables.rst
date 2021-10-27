@@ -4,7 +4,7 @@ cppcoreguidelines-init-variables
 ================================
 
 Checks whether there are local variables that are declared without an initial
-value. These may lead to unexpected behaviour if there is a code path that reads
+value. These may lead to unexpected behavior if there is a code path that reads
 the variable before assigning to it.
 
 Only integers, booleans, floats, doubles and pointers are checked. The fix

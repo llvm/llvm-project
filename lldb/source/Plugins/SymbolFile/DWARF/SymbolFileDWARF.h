@@ -24,6 +24,7 @@
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/RangeMap.h"
@@ -320,6 +321,16 @@ public:
   /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
+  lldb_private::StatsDuration GetDebugInfoParseTime() override {
+    return m_parse_time;
+  }
+  lldb_private::StatsDuration GetDebugInfoIndexTime() override;
+
+  lldb_private::StatsDuration &GetDebugInfoParseTimeRef() {
+    return m_parse_time;
+  }
+
+
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;
@@ -550,6 +561,7 @@ protected:
   /// Try to filter out this debug info by comparing it to the lowest code
   /// address in the module.
   lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
+  lldb_private::StatsDuration m_parse_time{0.0};
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

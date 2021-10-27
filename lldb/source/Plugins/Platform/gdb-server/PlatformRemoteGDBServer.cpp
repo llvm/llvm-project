@@ -72,17 +72,12 @@ PlatformSP PlatformRemoteGDBServer::CreateInstance(bool force,
   return PlatformSP();
 }
 
-ConstString PlatformRemoteGDBServer::GetPluginNameStatic() {
-  static ConstString g_name("remote-gdb-server");
-  return g_name;
-}
-
-const char *PlatformRemoteGDBServer::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteGDBServer::GetDescriptionStatic() {
   return "A platform that uses the GDB remote protocol as the communication "
          "transport.";
 }
 
-const char *PlatformRemoteGDBServer::GetDescription() {
+llvm::StringRef PlatformRemoteGDBServer::GetDescription() {
   if (m_platform_description.empty()) {
     if (IsConnected()) {
       // Send the get description packet
@@ -241,8 +236,8 @@ bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
   return !m_os_version.empty();
 }
 
-bool PlatformRemoteGDBServer::GetRemoteOSBuildString(std::string &s) {
-  return m_gdb_client.GetOSBuildString(s);
+llvm::Optional<std::string> PlatformRemoteGDBServer::GetRemoteOSBuildString() {
+  return m_gdb_client.GetOSBuildString();
 }
 
 bool PlatformRemoteGDBServer::GetRemoteOSKernelDescription(std::string &s) {
@@ -305,14 +300,13 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   if (!url)
     return Status("URL is null.");
 
-  int port;
-  llvm::StringRef scheme, hostname, pathname;
-  if (!UriParser::Parse(url, scheme, hostname, port, pathname))
+  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  if (!parsed_url)
     return Status("Invalid URL: %s", url);
 
   // We're going to reuse the hostname when we connect to the debugserver.
-  m_platform_scheme = std::string(scheme);
-  m_platform_hostname = std::string(hostname);
+  m_platform_scheme = parsed_url->scheme.str();
+  m_platform_hostname = parsed_url->hostname.str();
 
   m_gdb_client.SetConnection(std::make_unique<ConnectionFileDescriptor>());
   if (repro::Reproducer::Instance().IsReplaying()) {

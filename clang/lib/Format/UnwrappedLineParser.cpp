@@ -1075,10 +1075,9 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
   if (PreviousMustBeValue || Previous->is(tok::r_paren)) {
     // If the line contains an '@' sign, the previous token might be an
     // annotation, which can precede another identifier/value.
-    bool HasAt = std::find_if(Line->Tokens.begin(), Line->Tokens.end(),
-                              [](UnwrappedLineNode &LineNode) {
-                                return LineNode.Tok->is(tok::at);
-                              }) != Line->Tokens.end();
+    bool HasAt = llvm::any_of(Line->Tokens, [](UnwrappedLineNode &LineNode) {
+      return LineNode.Tok->is(tok::at);
+    });
     if (HasAt)
       return;
   }

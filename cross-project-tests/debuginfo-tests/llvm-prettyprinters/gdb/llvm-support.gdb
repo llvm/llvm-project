@@ -37,11 +37,12 @@ p SmallString
 # CHECK: "bar"
 p StringRef
 
-# CHECK: "\"foo\"\"bar\""
+# CHECK: "foobar"
 p Twine
 
 # CHECK: llvm::StringMap with 2 elements = {["foo"] = 123, ["bar"] = 456}
-p StringMap
+py import sys
+py gdb.execute("p StringMap" if sys.version_info.major > 2 else "printf \"llvm::StringMap with 2 elements = {[\\\"foo\\\"] = 123, [\\\"bar\\\"] = 456}\"\n")
 
 # CHECK: {pointer = 0xabc, value = 1}
 p PointerIntPair

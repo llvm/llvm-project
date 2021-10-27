@@ -1,7 +1,7 @@
 # REQUIRES: lld
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: ld.lld %t.o -o %t -image-base 0x47000
+# RUN: ld.lld %t.o -o %t --image-base 0x47000
 # RUN: lldb-test object-file %t | FileCheck %s
 
 # CHECK: Plugin name: elf

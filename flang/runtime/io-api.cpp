@@ -268,9 +268,9 @@ Cookie BeginUnformattedIO(
     IoErrorHandler handler{terminator};
     unit.SetDirection(DIR, handler);
     if constexpr (DIR == Direction::Output) {
-      if (unit.access == Access::Sequential && !unit.isFixedRecordLength) {
+      if (unit.access == Access::Sequential) {
         // Create space for (sub)record header to be completed by
-        // ExternalUnformattedIoStatementState<Direction::Output>::EndIoStatement()
+        // ExternalFileUnit::AdvanceRecord()
         unit.recordLength.reset(); // in case of prior BACKSPACE
         io.Emit("\0\0\0\0", 4); // placeholder for record length header
       }

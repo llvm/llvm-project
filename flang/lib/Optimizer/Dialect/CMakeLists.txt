@@ -5,6 +5,7 @@ add_flang_library(FIRDialect
   FIRType.cpp
 
   DEPENDS
+  CanonicalizationPatternsIncGen
   FIRSupport
   FIROpsIncGen
 

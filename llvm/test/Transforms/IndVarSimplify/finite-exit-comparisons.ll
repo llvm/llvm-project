@@ -105,7 +105,7 @@ define void @slt_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -148,6 +148,63 @@ for.body:                                         ; preds = %entry, %for.body
   %iv.next = add i8 %iv, 1
   %zext = zext i8 %iv.next to i16
   %cmp = icmp slt i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; Fact holds for exiting branch, but not for earlier use
+; We could recognize the unreachable loop here, but don't currently.  Its
+; also not terribly interesting, because EarlyCSE will fold condition.
+define void @slt_neg_multiple_use(i8 %start) mustprogress {
+; CHECK-LABEL: @slt_neg_multiple_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[START:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], 254
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %zext = zext i8 %start to i16
+  %cmp = icmp slt i16 %zext, 254
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @slt_neg_multiple_use2(i8 %start, i16 %n) mustprogress {
+; CHECK-LABEL: @slt_neg_multiple_use2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[START:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %zext = zext i8 %start to i16
+  %cmp = icmp slt i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body, %entry
@@ -391,7 +448,7 @@ define void @sgt_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -445,7 +502,7 @@ define void @sle_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -499,7 +556,7 @@ define void @sge_non_constant_rhs(i16 %n) mustprogress {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[ZEXT]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i16 [[ZEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

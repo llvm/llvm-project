@@ -3104,8 +3104,7 @@ void X86FrameLowering::adjustForHiPEPrologue(
         // having a ".", such as a simple <Module>.<Function>.<Arity>, or an
         // "_", such as the BIF "suspend_0") as they are executed on another
         // stack.
-        if (F->getName().find("erlang.") != StringRef::npos ||
-            F->getName().find("bif_") != StringRef::npos ||
+        if (F->getName().contains("erlang.") || F->getName().contains("bif_") ||
             F->getName().find_first_of("._") == StringRef::npos)
           continue;
 
