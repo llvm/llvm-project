@@ -60,7 +60,7 @@ __transform_reduce_body(_RandomAccessIterator __first, _RandomAccessIterator __l
     _PSTL_PRAGMA(omp taskloop shared(__accums))
     for (std::size_t __chunk = 0; __chunk < __policy.__n_chunks; ++__chunk)
     {
-        __omp_backend::__process_chunk(__policy, __first + __num_threads, __chunk,
+        __pstl::__omp_backend::__process_chunk(__policy, __first + __num_threads, __chunk,
                                        [&](auto __chunk_first, auto __chunk_last)
                                        {
                                            auto __thread_num = omp_get_thread_num();
