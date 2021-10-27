@@ -600,21 +600,18 @@ define void @ChecksExtractScores_different_vectors(double* %storeArray, double* 
 ; CHECK-NEXT:    [[LOADVEC4:%.*]] = load <2 x double>, <2 x double>* [[VECPTR4:%.*]], align 4
 ; CHECK-NEXT:    [[EXTRB0:%.*]] = extractelement <2 x double> [[LOADVEC3]], i32 0
 ; CHECK-NEXT:    [[EXTRB1:%.*]] = extractelement <2 x double> [[LOADVEC4]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[EXTRB0]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[EXTRA1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[EXTRA0]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[TMP10]], double [[EXTRB1]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x double> [[TMP11]], [[TMP2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[EXTRA1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[EXTRB0]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[EXTRA0]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[EXTRB1]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[SIDX0:%.*]] = getelementptr inbounds double, double* [[STOREARRAY:%.*]], i64 0
 ; CHECK-NEXT:    [[SIDX1:%.*]] = getelementptr inbounds double, double* [[STOREARRAY]], i64 1
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast double* [[SIDX0]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP13]], <2 x double>* [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[SIDX0]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[TMP10]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %idx0 = getelementptr inbounds double, double* %array, i64 0
