@@ -968,7 +968,12 @@ template <class LP> void Writer::createOutputSections() {
 
   for (SyntheticSection *ssec : syntheticSections) {
     auto it = concatOutputSections.find({ssec->segname, ssec->name});
-    if (ssec->isNeeded()) {
+    // We add all LinkEdit sections here because we don't know if they are
+    // needed until their finalizeContents() methods get called later. While
+    // this means that we add some redundant sections to __LINKEDIT, there is
+    // is no redundancy in the output, as we do not emit section headers for
+    // any LinkEdit sections.
+    if (ssec->isNeeded() || ssec->segname == segment_names::linkEdit) {
       if (it == concatOutputSections.end()) {
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
       } else {
