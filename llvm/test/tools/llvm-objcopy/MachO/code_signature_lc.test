@@ -13,24 +13,26 @@
 # RUN: obj2yaml %t.copy > %t.copy.yaml
 
 ## Verify that the copy still includes the load command
-# RUN: cat %t.copy.yaml | FileCheck %s --check-prefix=CHECK-COPY
+# RUN: FileCheck %s --check-prefix=CHECK-COPY < %t.copy.yaml
 # CHECK-COPY:      - cmd:             LC_CODE_SIGNATURE
 # CHECK-COPY-NEXT:   cmdsize:         16
 # CHECK-COPY-NEXT:   dataoff:         16544
 # CHECK-COPY-NEXT:   datasize:        304
 
 ## Remove information changed by regeneration of load command:
-## - __LINKEDIT segment filesize may change
-## - LC_CODE_SIGNATURE command dataoff and datasize may change
+## - __LINKEDIT segment filesize may change (4 lines)
+## - LC_CODE_SIGNATURE command dataoff and datasize may change (3 lines)
 ## - __LINKEDIT data locations may change
+## NOTE: The {N;N;N;N;d} means delete the next four lines for BSD and GNU sed.
+##       The ,+4d is a GNU extension which seems not to work in macOS 10.15
 
-# RUN: sed -e '/__LINKEDIT/,+4d' \
-# RUN:     -e '/LC_CODE_SIGNATURE/,+3d' \ 
+# RUN: sed -e '/__LINKEDIT/{N;N;N;N;d;}' \
+# RUN:     -e '/LC_CODE_SIGNATURE/{N;N;N;d}' \
 # RUN:     -e '/n_strx/d' \ 
 # RUN:     -e '/dyld_stub_binder/d' %t.yaml > %t.clean.yaml
 
-# RUN: sed -e '/__LINKEDIT/,+4d' \
-# RUN:     -e '/LC_CODE_SIGNATURE/,+3d' \ 
+# RUN: sed -e '/__LINKEDIT/{N;N;N;N;d;}' \
+# RUN:     -e '/LC_CODE_SIGNATURE/{N;N;N;d;}' \
 # RUN:     -e '/n_strx/d' \ 
 # RUN:     -e '/dyld_stub_binder/d' %t.copy.yaml > %t.copy.clean.yaml
 
