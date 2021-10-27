@@ -112,10 +112,10 @@ Error registerObjCSelectors(
     if (auto Err = validatePointerSectionExtent("__objc_selrefs", ObjCSelRefs))
       return Err;
 
-    for (uintptr_t SelEntry : ObjCSelRefs.toSpan<uintptr_t>()) {
+    for (uintptr_t &SelEntry : ObjCSelRefs.toSpan<uintptr_t>()) {
       const char *SelName = reinterpret_cast<const char *>(SelEntry);
       auto Sel = sel_registerName(SelName);
-      *reinterpret_cast<SEL *>(SelEntry) = Sel;
+      *reinterpret_cast<SEL *>(&SelEntry) = Sel;
     }
   }
 
