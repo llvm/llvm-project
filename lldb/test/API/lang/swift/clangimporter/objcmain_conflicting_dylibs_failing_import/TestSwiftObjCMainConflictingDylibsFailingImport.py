@@ -37,6 +37,7 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
 
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
+        self.runCmd("settings set target.experimental.swift-create-module-contexts-in-parallel false")
         self.build()
 
         target, process, _, bar_breakpoint = lldbutil.run_to_source_breakpoint(

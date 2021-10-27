@@ -60,6 +60,7 @@ class TestSwiftRewriteClangPaths(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.runCmd("settings set symbols.use-swift-dwarfimporter false")
+        self.runCmd("settings set target.experimental.swift-create-module-contexts-in-parallel false")
 
         botdir = os.path.realpath(self.getBuildArtifact("buildbot"))
         userdir = os.path.realpath(self.getBuildArtifact("user"))
