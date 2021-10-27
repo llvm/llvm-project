@@ -1724,7 +1724,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     DWARFUnit &unit, const DWARFDebugInfoEntry &cu_die) {
   // If this is a Darwin-style debug map (non-.dSYM) symbol file,
   // never attempt to load ELF-style DWO files since the -gmodules
-  // support uses the same DWO machanism to specify full debug info
+  // support uses the same DWO mechanism to specify full debug info
   // files for modules. This is handled in
   // UpdateExternalModuleListIfNeeded().
   if (GetDebugMapSymfile())
@@ -2889,7 +2889,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
       }
 
       m_index->GetTypes(dwarf_decl_ctx, [&](DWARFDIE type_die) {
-        // Make sure type_die's langauge matches the type system we are
+        // Make sure type_die's language matches the type system we are
         // looking for. We don't want to find a "Foo" type from Java if we
         // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
         if (type_system &&
@@ -3351,7 +3351,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
     if (debug_map_symfile)
       // Set the module of the expression to the linked module
-      // instead of the oject file so the relocated address can be
+      // instead of the object file so the relocated address can be
       // found there.
       location.SetModule(debug_map_symfile->GetObjectFile()->GetModule());
 
@@ -3626,7 +3626,7 @@ SymbolFileDWARF::MergeBlockAbstractParameters(const DWARFDIE &block_die,
       DWARFDIE origin_of_concrete =
           GetDIE(*concrete_it).GetReferencedDIE(DW_AT_abstract_origin);
       if (origin_of_concrete == abstract_child) {
-        // The current abstract paramater is the origin of the current
+        // The current abstract parameter is the origin of the current
         // concrete parameter, just push the concrete parameter.
         merged.push_back(*concrete_it);
         ++concrete_it;
