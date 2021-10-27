@@ -1520,6 +1520,7 @@ def tTBH_JT : tPseudoInst<(outs),
 let isCall = 1, Defs = [R0, R12, LR, CPSR], Uses = [SP] in
 def tTPsoft : tPseudoInst<(outs), (ins), 4, IIC_Br,
                           [(set R0, ARMthread_pointer)]>,
+                          Requires<[IsThumb, IsReadTPSoft]>,
                           Sched<[WriteBr]>;
 
 //===----------------------------------------------------------------------===//
