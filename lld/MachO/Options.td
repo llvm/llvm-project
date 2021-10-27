@@ -557,7 +557,6 @@ def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE">;
 
 def S : Flag<["-"], "S">,
     HelpText<"Strip debug information (STABS or DWARF) from the output">,
-    Flags<[HelpHidden]>,
     Group<grp_symtab>;
 def x : Flag<["-"], "x">,
     HelpText<"Exclude non-global symbols from the output symbol table">,

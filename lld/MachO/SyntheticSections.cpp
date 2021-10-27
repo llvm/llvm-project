@@ -876,6 +876,9 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
 }
 
 void SymtabSection::emitStabs() {
+  if (config->omitDebugInfo)
+    return;
+
   for (const std::string &s : config->astPaths) {
     StabsEntry astStab(N_AST);
     astStab.strx = stringTableSection.addString(s);
