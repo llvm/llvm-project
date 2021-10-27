@@ -503,3 +503,20 @@ define void @pr50339(i8* nocapture readonly %0) {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) %0, i64 16, i1 false)
   ret void
 }
+
+; Cannot remove the second memcpy as redundant store, because %src is modified
+; in between.
+define i8 @memset_optimized_access(i8* noalias %dst, i8* noalias %src) {
+; CHECK-LABEL: @memset_optimized_access(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    store i8 99, i8* [[SRC]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[DST]], align 1
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC]], i64 16, i1 false)
+; CHECK-NEXT:    ret i8 [[L]]
+;
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 16, i1 false)
+  store i8 99, i8* %src
+  %l = load i8, i8* %dst
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 16, i1 false)
+  ret i8 %l
+}
