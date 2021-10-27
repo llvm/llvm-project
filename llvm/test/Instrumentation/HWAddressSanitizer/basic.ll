@@ -35,8 +35,7 @@ define i8 @test_load8(i8* %a) sanitize_hwaddress {
 ; RECOVER: [[SHORT]]:
 ; RECOVER: %[[LOWBITS:[^ ]*]] = and i64 %[[A]], 15
 ; RECOVER: %[[LOWBITS_I8:[^ ]*]] = trunc i64 %[[LOWBITS]] to i8
-; RECOVER: %[[LAST:[^ ]*]] = add i8 %[[LOWBITS_I8]], 0
-; RECOVER: %[[OOB:[^ ]*]] = icmp uge i8 %[[LAST]], %[[MEMTAG]]
+; RECOVER: %[[OOB:[^ ]*]] = icmp uge i8 %[[LOWBITS_I8]], %[[MEMTAG]]
 ; RECOVER: br i1 %[[OOB]], label %[[FAIL]], label %[[INBOUNDS:[0-9]*]], !prof {{.*}}
 
 ; RECOVER: [[INBOUNDS]]:
