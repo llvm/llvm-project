@@ -77,7 +77,7 @@ struct Configuration {
   llvm::Optional<std::vector<std::string>> features;
 
   // The following config options do not directly correspond to any
-  // particualr command line options.
+  // particular command line options.
 
   // True if we are creating position-independent code.
   bool isPic;

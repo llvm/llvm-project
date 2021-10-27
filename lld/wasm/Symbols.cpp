@@ -223,7 +223,7 @@ void Symbol::setHidden(bool isHidden) {
 
 bool Symbol::isExported() const {
   // Shared libraries must export all weakly defined symbols
-  // in case they contain the version that will be chosed by
+  // in case they contain the version that will be chosen by
   // the dynamic linker.
   if (config->shared && isLive() && isDefined() && isWeak())
     return true;

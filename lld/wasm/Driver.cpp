@@ -684,7 +684,7 @@ static void createOptionalSymbols() {
 
   // For non-shared memory programs we still need to define __tls_base since we
   // allow object files built with TLS to be linked into single threaded
-  // programs, and such object files can contains refernced to this symbol.
+  // programs, and such object files can contain references to this symbol.
   //
   // However, in this case __tls_base is immutable and points directly to the
   // start of the `.tdata` static segment.

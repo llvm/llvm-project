@@ -171,7 +171,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
       return 0;
     auto D = cast<DefinedData>(sym);
     // Treat non-TLS relocation against symbols that live in the TLS segment
-    // like TLS relocations.  This beaviour exists to support older object
+    // like TLS relocations.  This behaviour exists to support older object
     // files created before we introduced TLS relocations.
     // TODO(sbc): Remove this legacy behaviour one day.  This will break
     // backward compat with old object files built with `-fPIC`.
