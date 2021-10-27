@@ -674,6 +674,11 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
         return true;
       shouldSkip = true;
     }
+    if (newName == "getRegions") {
+      if (op.getNumRegions() == 1 && op.getNumVariadicRegions() == 1)
+        return true;
+      shouldSkip = true;
+    }
     if (!shouldSkip)
       return false;
 
