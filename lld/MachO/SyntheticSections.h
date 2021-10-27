@@ -562,16 +562,16 @@ public:
            !literal8Map.empty();
   }
 
-  uint64_t getLiteral16Offset(const uint8_t *buf) const {
+  uint64_t getLiteral16Offset(uintptr_t buf) const {
     return literal16Map.at(*reinterpret_cast<const UInt128 *>(buf)) * 16;
   }
 
-  uint64_t getLiteral8Offset(const uint8_t *buf) const {
+  uint64_t getLiteral8Offset(uintptr_t buf) const {
     return literal16Map.size() * 16 +
            literal8Map.at(*reinterpret_cast<const uint64_t *>(buf)) * 8;
   }
 
-  uint64_t getLiteral4Offset(const uint8_t *buf) const {
+  uint64_t getLiteral4Offset(uintptr_t buf) const {
     return literal16Map.size() * 16 + literal8Map.size() * 8 +
            literal4Map.at(*reinterpret_cast<const uint32_t *>(buf)) * 4;
   }
