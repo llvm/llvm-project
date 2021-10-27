@@ -1123,7 +1123,7 @@ static Value *getRuntimeVFAsFloat(IRBuilder<> &B, Type *FTy, ElementCount VF) {
   assert(FTy->isFloatingPointTy() && "Expected floating point type!");
   Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
   Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
-  return B.CreateSIToFP(RuntimeVF, FTy);
+  return B.CreateUIToFP(RuntimeVF, FTy);
 }
 
 void reportVectorizationFailure(const StringRef DebugMsg,
