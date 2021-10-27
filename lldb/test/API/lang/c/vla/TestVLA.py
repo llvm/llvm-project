@@ -32,26 +32,19 @@ class TestVLA(TestBase):
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec('main.c'))
 
-        # Make sure no helper expressions show up in frame variable.
-        var_opts = lldb.SBVariablesOptions()
-        var_opts.SetIncludeArguments(False)
-        var_opts.SetIncludeLocals(True)
-        var_opts.SetInScopeOnly(True)
-        var_opts.SetIncludeStatics(False)
-        var_opts.SetIncludeRuntimeSupportValues(False)
-        var_opts.SetUseDynamic(lldb.eDynamicCanRunTarget)
-        all_locals = self.frame().GetVariables(var_opts)
-        for value in all_locals:
-            self.assertFalse("vla_expr" in value.name)
-
-        def test(a, array):
+        def test(a):
+            children = []
             for i in range(a):
-                self.expect("fr v vla[%d]"%i, substrs=["int", "%d"%(a-i)])
-                self.expect("expr vla[%d]"%i, substrs=["int", "%d"%(a-i)])
-            self.expect("fr v vla", substrs=array)
+                name = "[%d]"%i
+                value = str(a-i)
+                self.expect_var_path("vla"+name, type="int", value=value)
+                self.expect_expr("vla"+name, result_type="int",
+                        result_value=value)
+                children.append(ValueCheck(name=name, value=value))
+            self.expect_var_path("vla", type="int[]", children=children)
             self.expect("expr vla", error=True, substrs=["incomplete"])
 
-        test(2, ["int[]", "[0] = 2, [1] = 1"])
+        test(2)
         process.Continue()
-        test(4, ["int[]", "[0] = 4, [1] = 3, [2] = 2, [3] = 1"])
+        test(4)
 
