@@ -314,19 +314,23 @@ class StdVectorSynthProvider:
     def has_children(self):
         return True
 
-
-class StdMapSynthProvider:
+    """
+    Set and Map have the same underlying data structure,
+    therefore we can use exactly the same implementation for the formatter.
+    """
+class StdSetOrMapSynthProvider:
 
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.count = None
-        logger >> "Providing synthetic children for a map named " + \
+        self.kind = "set" if "set" in valobj.GetTypeName() else "map"
+        logger >> "Providing synthetic children for a " + self.kind + " named " + \
             str(valobj.GetName())
 
     # we need this function as a temporary workaround for rdar://problem/10801549
     # which prevents us from extracting the std::pair<K,V> SBType out of the template
-    # arguments for _Rep_Type _M_t in the map itself - because we have to make up the
+    # arguments for _Rep_Type _M_t in the object itself - because we have to make up the
     # typename and then find it, we may hit the situation were std::string has multiple
     # names but only one is actually referenced in the debug information. hence, we need
     # to replace the longer versions of std::string with the shorter one in order to be able
@@ -349,7 +353,7 @@ class StdMapSynthProvider:
         # later
         self.count = None
         try:
-            # we will set this to True if we find out that discovering a node in the map takes more steps than the overall size of the RB tree
+            # we will set this to True if we find out that discovering a node in the object takes more steps than the overall size of the RB tree
             # if this gets set to True, then we will merrily return None for
             # any child from that moment on
             self.garbage = False
