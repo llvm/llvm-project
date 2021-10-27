@@ -12893,6 +12893,30 @@ void ScalarEvolution::verify() const {
     assert(ValidLoops.contains(AR->getLoop()) &&
            "AddRec references invalid loop");
   }
+
+  // Verify intergity of SCEV users.
+  for (const auto &S : UniqueSCEVs) {
+    SmallPtrSet<const SCEV *, 4> Ops;
+    if (const auto *NS = dyn_cast<SCEVNAryExpr>(&S))
+      Ops.insert(NS->op_begin(), NS->op_end());
+    else if (const auto *CS = dyn_cast<SCEVCastExpr>(&S))
+      Ops.insert(CS->getOperand());
+    else if (const auto *DS = dyn_cast<SCEVUDivExpr>(&S)) {
+      Ops.insert(DS->getLHS());
+      Ops.insert(DS->getRHS());
+    }
+    for (const auto *Op : Ops) {
+      // We do not store dependencies of constants.
+      if (isa<SCEVConstant>(Op))
+        continue;
+      auto It = SCEVUsers.find(Op);
+      if (It != SCEVUsers.end() && It->second.count(&S))
+        continue;
+      dbgs() << "Use of operand  " << *Op << " by user " << S
+             << " is not being tracked!\n";
+      std::abort();
+    }
+  }
 }
 
 bool ScalarEvolution::invalidate(
