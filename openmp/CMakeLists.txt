@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+if(${ENABLE_DEVEL_PACKAGE})
+  set(DEVEL_PACKAGE "devel/")
+endif()
+if(${ENABLE_RUN_PACKAGE})
+  set(RUN_PACKAGE "runtime/")
+endif()
+
 # Add cmake directory to search for custom cmake functions.
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 

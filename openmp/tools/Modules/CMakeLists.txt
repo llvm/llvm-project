@@ -12,4 +12,4 @@
 
 
 install(FILES "FindOpenMPTarget.cmake"
-              DESTINATION "${OPENMP_INSTALL_LIBDIR}/cmake/openmp")
+              DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}/cmake/openmp")

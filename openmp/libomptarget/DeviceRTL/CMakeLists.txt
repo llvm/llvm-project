@@ -302,7 +302,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
   add_dependencies("omptarget.devicertl.${target_name}" "${bclib_target_name}")
 
   # Install bitcode library under the lib destination folder.
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
 endfunction()
 
 # Generate a Bitcode library for all the compute capabilities the user requested

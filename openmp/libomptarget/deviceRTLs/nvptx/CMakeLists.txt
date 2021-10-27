@@ -248,7 +248,7 @@ foreach(sm ${nvptx_sm_list})
                     ${LIBOMPTARGET_LIBRARY_DIR})
 
   # Install bitcode library under the lib destination folder.
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
 endforeach()
 
 # Test will be enabled if the building machine supports CUDA

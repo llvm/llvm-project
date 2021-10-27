@@ -58,4 +58,4 @@ target_link_libraries(omptarget PRIVATE
 
 # Install libomptarget under the lib destination folder.
 install(TARGETS omptarget LIBRARY COMPONENT omptarget
-  DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")

@@ -77,7 +77,7 @@ add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
 
 # Install plugin under the lib destination folder.
 # When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
-install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "lib${OPENMP_LIBDIR_SUFFIX}")
+install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${RUN_PACKAGE}lib${OPENMP_LIBDIR_SUFFIX}")
 set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
