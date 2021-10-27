@@ -70,7 +70,7 @@ void enclosing() {
 void bitfield() {
   struct { int a : 3, : 4, b : 5; } a;
   auto &[x, y] = a;
-  auto &[p, q, r] = a; // expected-error {{decomposes into 2 elements, but 3 names were provided}}
+  auto &[p, q, r] = a; // expected-error-re {{type '(unnamed struct at {{.*}})' decomposes into 2 elements, but 3 names were provided}}
 }
 
 void for_range() {
