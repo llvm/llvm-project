@@ -12,7 +12,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.src.math.cosf
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
     libc.src.__support.FPUtil.fputil
 )
 
@@ -40,7 +40,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.src.math.sinf
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
     libc.src.__support.FPUtil.fputil
 )
 
@@ -68,7 +68,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.errno
     libc.src.math.sincosf
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
     libc.src.__support.FPUtil.fputil
 )
 

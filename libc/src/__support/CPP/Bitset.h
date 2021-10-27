@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_BITSET_H
-#define LLVM_LIBC_UTILS_CPP_BITSET_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_BITSET_H
+#define LLVM_LIBC_SRC_SUPPORT_CPP_BITSET_H
 
 #include <stddef.h> // For size_t.
 #include <stdint.h> // For uintptr_t.
@@ -36,4 +36,4 @@ private:
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_CPP_BITSET_H
+#endif // LLVM_LIBC_SRC_SUPPORT_CPP_BITSET_H

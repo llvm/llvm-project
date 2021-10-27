@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_TYPETRAITS_H
-#define LLVM_LIBC_UTILS_CPP_TYPETRAITS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
+#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
 
 namespace __llvm_libc {
 namespace cpp {
@@ -74,4 +74,4 @@ template <typename Type> struct IsArithmetic {
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_CPP_TYPETRAITS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H

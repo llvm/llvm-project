@@ -14,7 +14,7 @@
 #include "NormalFloat.h"
 #include "PlatformDefs.h"
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 #include <limits.h>
 #include <math.h>

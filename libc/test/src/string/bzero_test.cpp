@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/string/bzero.h"
-#include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
 using __llvm_libc::cpp::Array;

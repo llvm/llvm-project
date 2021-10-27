@@ -11,7 +11,7 @@
 
 #include "PlatformDefs.h"
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 #include "FloatProperties.h"
 #include <stdint.h>

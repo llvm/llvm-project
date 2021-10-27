@@ -12,7 +12,7 @@
 #include "FEnvUtils.h"
 #include "FPBits.h"
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 #include <math.h>
 #if math_errhandling & MATH_ERRNO

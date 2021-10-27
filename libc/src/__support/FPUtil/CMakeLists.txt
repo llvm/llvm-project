@@ -33,7 +33,7 @@ add_header_library(
     libc.include.errno
     libc.include.fenv
     libc.src.__support.common
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_library(
@@ -48,6 +48,6 @@ target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
-  libc.utils.CPP.standalone_cpp
+  libc.src.__support.CPP.standalone_cpp
   libc.src.__support.FPUtil.fputil
 )

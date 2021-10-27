@@ -12,7 +12,7 @@
 #include "FPBits.h"
 #include "Sqrt.h"
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
 namespace fputil {

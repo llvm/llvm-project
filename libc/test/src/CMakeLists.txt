@@ -90,7 +90,7 @@ set_target_properties(
 target_include_directories(
   libc-integration-test BEFORE
   PRIVATE
-    "${LIBC_SOURCE_DIR}/utils/CPP"
+    "${LIBC_SOURCE_DIR}/src/__support/CPP"
     "${LIBC_BUILD_DIR}/include"
 )
 target_compile_options(

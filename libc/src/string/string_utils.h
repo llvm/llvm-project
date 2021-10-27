@@ -9,8 +9,8 @@
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
 
+#include "src/__support/CPP/Bitset.h"
 #include "src/__support/common.h"
-#include "utils/CPP/Bitset.h"
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {

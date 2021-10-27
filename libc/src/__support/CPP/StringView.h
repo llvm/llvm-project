@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_STRINGVIEW_H
-#define LLVM_LIBC_UTILS_CPP_STRINGVIEW_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRINGVIEW_H
+#define LLVM_LIBC_SRC_SUPPORT_CPP_STRINGVIEW_H
 
 #include <stddef.h>
 
@@ -96,4 +96,4 @@ public:
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_CPP_STRINGVIEW_H
+#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRINGVIEW_H

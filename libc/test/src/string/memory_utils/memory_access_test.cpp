@@ -8,9 +8,9 @@
 
 #define LLVM_LIBC_UNITTEST_OBSERVE 1
 
+#include "src/__support/CPP/Array.h"
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/string/memory_utils/elements.h"
-#include "utils/CPP/Array.h"
-#include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
 #include <stdio.h>
