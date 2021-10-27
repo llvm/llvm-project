@@ -70,9 +70,6 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   if (sectionKind == SectionBase::Merge && rawData.size() > UINT32_MAX)
     error(toString(this) + ": section too large");
 
-  numRelocations = 0;
-  areRelocsRela = false;
-
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraints.
   uint32_t v = std::max<uint32_t>(alignment, 1);
@@ -160,6 +157,25 @@ uint64_t InputSectionBase::getOffsetInFile() const {
   const uint8_t *fileStart = (const uint8_t *)file->mb.getBufferStart();
   const uint8_t *secStart = data().begin();
   return secStart - fileStart;
+}
+
+template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
+  if (relSecIdx == 0)
+    return {};
+  RelsOrRelas<ELFT> ret;
+  const ELFFile<ELFT> obj = cast<ELFFileBase>(file)->getObj<ELFT>();
+  typename ELFT::Shdr shdr = cantFail(obj.sections())[relSecIdx];
+  if (shdr.sh_type == SHT_REL) {
+    ret.rels = makeArrayRef(reinterpret_cast<const typename ELFT::Rel *>(
+                                obj.base() + shdr.sh_offset),
+                            shdr.sh_size / sizeof(typename ELFT::Rel));
+  } else {
+    assert(shdr.sh_type == SHT_RELA);
+    ret.relas = makeArrayRef(reinterpret_cast<const typename ELFT::Rela *>(
+                                 obj.base() + shdr.sh_offset),
+                             shdr.sh_size / sizeof(typename ELFT::Rela));
+  }
+  return ret;
 }
 
 uint64_t SectionBase::getOffset(uint64_t offset) const {
@@ -993,12 +1009,15 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   }
 
   auto *sec = cast<InputSection>(this);
-  if (config->relocatable)
+  if (config->relocatable) {
     relocateNonAllocForRelocatable(sec, buf);
-  else if (sec->areRelocsRela)
-    sec->relocateNonAlloc<ELFT>(buf, sec->template relas<ELFT>());
-  else
-    sec->relocateNonAlloc<ELFT>(buf, sec->template rels<ELFT>());
+  } else {
+    const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+    if (rels.areRelocsRel())
+      sec->relocateNonAlloc<ELFT>(buf, rels.rels);
+    else
+      sec->relocateNonAlloc<ELFT>(buf, rels.relas);
+  }
 }
 
 void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
@@ -1312,10 +1331,11 @@ static unsigned getReloc(IntTy begin, IntTy size, const ArrayRef<RelTy> &rels,
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
-  if (areRelocsRela)
-    split<ELFT>(relas<ELFT>());
+  const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    split<ELFT>(rels.rels);
   else
-    split<ELFT>(rels<ELFT>());
+    split<ELFT>(rels.relas);
 }
 
 template <class ELFT, class RelTy>
@@ -1451,6 +1471,11 @@ template void InputSection::writeTo<ELF32LE>(uint8_t *);
 template void InputSection::writeTo<ELF32BE>(uint8_t *);
 template void InputSection::writeTo<ELF64LE>(uint8_t *);
 template void InputSection::writeTo<ELF64BE>(uint8_t *);
+
+template RelsOrRelas<ELF32LE> InputSectionBase::relsOrRelas<ELF32LE>() const;
+template RelsOrRelas<ELF32BE> InputSectionBase::relsOrRelas<ELF32BE>() const;
+template RelsOrRelas<ELF64LE> InputSectionBase::relsOrRelas<ELF64LE>() const;
+template RelsOrRelas<ELF64BE> InputSectionBase::relsOrRelas<ELF64BE>() const;
 
 template MergeInputSection::MergeInputSection(ObjFile<ELF32LE> &,
                                               const ELF32LE::Shdr &, StringRef);
