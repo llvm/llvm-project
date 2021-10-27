@@ -37,9 +37,6 @@ enum AsmComments {
 /// the instruction operands should be swaped to match the condition code.
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
-/// Return a setcc opcode based on whether it has a memory operand.
-unsigned getSETOpc(bool HasMemoryOperand = false);
-
 /// Return a cmov opcode for the given register size in bytes, and operand type.
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
 

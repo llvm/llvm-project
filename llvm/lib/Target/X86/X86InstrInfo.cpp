@@ -2868,11 +2868,6 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
   return std::make_pair(CC, NeedSwap);
 }
 
-/// Return a setcc opcode based on whether it has memory operand.
-unsigned X86::getSETOpc(bool HasMemoryOperand) {
-  return HasMemoryOperand ? X86::SETCCr : X86::SETCCm;
-}
-
 /// Return a cmov opcode for the given register size in bytes, and operand type.
 unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
   switch(RegBytes) {
