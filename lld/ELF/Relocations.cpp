@@ -1611,10 +1611,11 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
-  if (s.areRelocsRela)
-    scanRelocs<ELFT>(s, s.relas<ELFT>());
+  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    scanRelocs<ELFT>(s, rels.rels);
   else
-    scanRelocs<ELFT>(s, s.rels<ELFT>());
+    scanRelocs<ELFT>(s, rels.relas);
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {

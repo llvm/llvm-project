@@ -252,13 +252,12 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // referenced by .eh_frame sections, so we scan them for that here.
     if (auto *eh = dyn_cast<EhInputSection>(sec)) {
       eh->markLive();
-      if (!eh->numRelocations)
-        continue;
 
-      if (eh->areRelocsRela)
-        scanEhFrameSection(*eh, eh->template relas<ELFT>());
-      else
-        scanEhFrameSection(*eh, eh->template rels<ELFT>());
+      const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+      if (rels.areRelocsRel())
+        scanEhFrameSection(*eh, rels.rels);
+      else if (rels.relas.size())
+        scanEhFrameSection(*eh, rels.relas);
     }
 
     if (sec->flags & SHF_GNU_RETAIN) {
@@ -288,13 +287,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
   while (!queue.empty()) {
     InputSectionBase &sec = *queue.pop_back_val();
 
-    if (sec.areRelocsRela) {
-      for (const typename ELFT::Rela &rel : sec.template relas<ELFT>())
-        resolveReloc(sec, rel, false);
-    } else {
-      for (const typename ELFT::Rel &rel : sec.template rels<ELFT>())
-        resolveReloc(sec, rel, false);
-    }
+    const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+    for (const typename ELFT::Rel &rel : rels.rels)
+      resolveReloc(sec, rel, false);
+    for (const typename ELFT::Rela &rel : rels.relas)
+      resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
       enqueue(isec, 0);

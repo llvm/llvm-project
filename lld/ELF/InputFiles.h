@@ -260,7 +260,8 @@ private:
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(const Elf_Shdr &sec);
-  InputSectionBase *createInputSection(const Elf_Shdr &sec, StringRef shstrtab);
+  InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
+                                       StringRef shstrtab);
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 

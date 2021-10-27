@@ -279,9 +279,6 @@ void elf::addPPC64SaveRestore() {
 template <typename ELFT>
 static std::pair<Defined *, int64_t>
 getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
-  if (tocSec->numRelocations == 0)
-    return {};
-
   // .rela.toc contains exclusively R_PPC64_ADDR64 relocations sorted by
   // r_offset: 0, 8, 16, etc. For a given Offset, Offset / 8 gives us the
   // relocation index in most cases.
@@ -291,7 +288,10 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
   // points to a relocation with larger r_offset. Do a linear probe then.
   // Constants are extremely uncommon in .toc and the extra number of array
   // accesses can be seen as a small constant.
-  ArrayRef<typename ELFT::Rela> relas = tocSec->template relas<ELFT>();
+  ArrayRef<typename ELFT::Rela> relas =
+      tocSec->template relsOrRelas<ELFT>().relas;
+  if (relas.empty())
+    return {};
   uint64_t index = std::min<uint64_t>(offset / 8, relas.size() - 1);
   for (;;) {
     if (relas[index].r_offset == offset) {

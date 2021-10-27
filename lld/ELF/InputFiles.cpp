@@ -612,7 +612,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
               .second;
       if (keepGroup) {
         if (config->relocatable)
-          this->sections[i] = createInputSection(sec, shstrtab);
+          this->sections[i] = createInputSection(i, sec, shstrtab);
         selectedGroups.push_back(entries);
         continue;
       }
@@ -636,7 +636,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     case SHT_NULL:
       break;
     default:
-      this->sections[i] = createInputSection(sec, shstrtab);
+      this->sections[i] = createInputSection(i, sec, shstrtab);
     }
   }
 
@@ -653,7 +653,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     const Elf_Shdr &sec = objSections[i];
 
     if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
-      this->sections[i] = createInputSection(sec, shstrtab);
+      this->sections[i] = createInputSection(i, sec, shstrtab);
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.
@@ -862,7 +862,8 @@ static InputSection *toRegularSection(MergeInputSection *sec) {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec,
+InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
+                                                    const Elf_Shdr &sec,
                                                     StringRef shstrtab) {
   StringRef name = CHECK(getObj().getSectionName(sec, shstrtab), this);
 
@@ -952,22 +953,10 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec,
       this->sections[sec.sh_info] = target;
     }
 
-    if (target->firstRelocation)
+    if (target->relSecIdx != 0)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-
-    if (sec.sh_type == SHT_RELA) {
-      ArrayRef<Elf_Rela> rels = CHECK(getObj().relas(sec), this);
-      target->firstRelocation = rels.begin();
-      target->numRelocations = rels.size();
-      target->areRelocsRela = true;
-    } else {
-      ArrayRef<Elf_Rel> rels = CHECK(getObj().rels(sec), this);
-      target->firstRelocation = rels.begin();
-      target->numRelocations = rels.size();
-      target->areRelocsRela = false;
-    }
-    assert(isUInt<31>(target->numRelocations));
+    target->relSecIdx = idx;
 
     // Relocation sections are usually removed from the output, so return
     // `nullptr` for the normal case. However, if -r or --emit-relocs is
