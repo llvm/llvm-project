@@ -1104,6 +1104,8 @@ bool RISCVTargetLowering::shouldSinkOperands(
     case Instruction::FSub:
     case Instruction::FMul:
     case Instruction::FDiv:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
       return true;
     case Instruction::Shl:
     case Instruction::LShr:
