@@ -264,6 +264,25 @@ public:
                                    const char *name, ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) override;
 
+  CompilerType
+  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+
+  CompilerType
+  GetRValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+
+  CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+
+  // TODO: This method appear unused. Should they be removed?
+  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+                   Stream *s, const DataExtractor &data,
+                   lldb::offset_t data_offset, size_t data_byte_size) override {
+  }
   /// \}
 protected:
   /// Used in the logs.
