@@ -208,18 +208,6 @@ func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
 
 // -----
 
-func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
-  %c0 = arith.constant 0 : index
-  %c10 = arith.constant 10 : index
-  // expected-error @+1 {{expected result type with size = 10 instead of -1 in dim = 0}}
-  %out = memref.reinterpret_cast %in to
-           offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
-           : memref<?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-  return
-}
-
-// -----
-
 func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{element types of source and destination memref types should be the same}}

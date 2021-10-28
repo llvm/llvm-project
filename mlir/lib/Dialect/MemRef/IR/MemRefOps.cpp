@@ -1158,7 +1158,7 @@ static LogicalResult verify(ReinterpretCastOp op) {
                                  extractFromI64ArrayAttr(op.static_sizes())))) {
     int64_t resultSize = std::get<0>(en.value());
     int64_t expectedSize = std::get<1>(en.value());
-    if (resultSize != expectedSize)
+    if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
       return op.emitError("expected result type with size = ")
              << expectedSize << " instead of " << resultSize
              << " in dim = " << en.index();
@@ -1175,7 +1175,8 @@ static LogicalResult verify(ReinterpretCastOp op) {
     // Match offset in result memref type and in static_offsets attribute.
     int64_t expectedOffset =
         extractFromI64ArrayAttr(op.static_offsets()).front();
-    if (resultOffset != expectedOffset)
+    if (!ShapedType::isDynamicStrideOrOffset(resultOffset) &&
+        resultOffset != expectedOffset)
       return op.emitError("expected result type with offset = ")
              << resultOffset << " instead of " << expectedOffset;
 
@@ -1184,7 +1185,8 @@ static LogicalResult verify(ReinterpretCastOp op) {
              resultStrides, extractFromI64ArrayAttr(op.static_strides())))) {
       int64_t resultStride = std::get<0>(en.value());
       int64_t expectedStride = std::get<1>(en.value());
-      if (resultStride != expectedStride)
+      if (!ShapedType::isDynamicStrideOrOffset(resultStride) &&
+          resultStride != expectedStride)
         return op.emitError("expected result type with stride = ")
                << expectedStride << " instead of " << resultStride
                << " in dim = " << en.index();
