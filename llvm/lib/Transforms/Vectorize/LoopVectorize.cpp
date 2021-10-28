@@ -9369,7 +9369,14 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         }
 
         RecipeBuilder.setRecipe(Instr, Recipe);
-        VPBB->appendRecipe(Recipe);
+        if (isa<VPWidenIntOrFpInductionRecipe>(Recipe)) {
+          // Make sure induction recipes are all kept in the header block.
+          // VPWidenIntOrFpInductionRecipe may be generated when reaching a
+          // Trunc of an induction Phi, where Trunc may not be in the header.
+          auto *Header = Plan->getEntry()->getEntryBasicBlock();
+          Header->insert(Recipe, Header->getFirstNonPhi());
+        } else
+          VPBB->appendRecipe(Recipe);
         continue;
       }
 
