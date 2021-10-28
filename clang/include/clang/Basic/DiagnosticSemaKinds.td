@@ -833,10 +833,6 @@ def warn_fortify_source_format_overflow : Warning<
   " but format string expands to at least %2">,
   InGroup<FortifySource>;
 
-def warn_fortify_scanf_overflow : Warning<
-  "'%0' may overflow; destination buffer in argument %1 has size "
-  "%2, but the corresponding field width plus NUL byte is %3">,
-  InGroup<FortifySource>;
 
 /// main()
 // static main() is not an error in C, just in C++.
