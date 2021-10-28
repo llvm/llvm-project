@@ -492,7 +492,6 @@ enum ClauseType {
   collapseClause,
   orderClause,
   orderedClause,
-  inclusiveClause,
   memoryOrderClause,
   hintClause,
   COUNT
@@ -577,8 +576,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
     // segments
     if (clause == defaultClause || clause == procBindClause ||
         clause == nowaitClause || clause == collapseClause ||
-        clause == orderClause || clause == orderedClause ||
-        clause == inclusiveClause)
+        clause == orderClause || clause == orderedClause)
       continue;
 
     pos[clause] = currPos++;
@@ -596,7 +594,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
                           bool allowRepeat = false) -> ParseResult {
     if (!llvm::is_contained(clauses, clause))
       return parser.emitError(parser.getCurrentLocation())
-             << clauseKeyword << "is not a valid clause for the " << opName
+             << clauseKeyword << " is not a valid clause for the " << opName
              << " operation";
     if (done[clause] && !allowRepeat)
       return parser.emitError(parser.getCurrentLocation())
@@ -717,12 +715,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
           parser.parseKeyword(&order) || parser.parseRParen())
         return failure();
       auto attr = parser.getBuilder().getStringAttr(order);
-      result.addAttribute("order", attr);
-    } else if (clauseKeyword == "inclusive") {
-      if (checkAllowed(inclusiveClause))
-        return failure();
-      auto attr = UnitAttr::get(parser.getBuilder().getContext());
-      result.addAttribute("inclusive", attr);
+      result.addAttribute("order_val", attr);
     } else if (clauseKeyword == "memory_order") {
       StringRef memoryOrder;
       if (checkAllowed(memoryOrderClause) || parser.parseLParen() ||
@@ -875,11 +868,11 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
 ///
 /// wsloop ::= `omp.wsloop` loop-control clause-list
 /// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
-/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` steps
+/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` inclusive? steps
 /// steps := `step` `(`ssa-id-list`)`
 /// clause-list ::= clause clause-list | empty
 /// clause ::= private | firstprivate | lastprivate | linear | schedule |
-//             collapse | nowait | ordered | order | inclusive | reduction
+//             collapse | nowait | ordered | order | reduction
 static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
 
   // Parse an opening `(` followed by induction variables followed by `)`
@@ -905,6 +898,11 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
       parser.parseOperandList(upper, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(upper, loopVarType, result.operands))
     return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("inclusive"))) {
+    auto attr = UnitAttr::get(parser.getBuilder().getContext());
+    result.addAttribute("inclusive", attr);
+  }
 
   // Parse step values.
   SmallVector<OpAsmParser::OperandType> steps;
@@ -936,7 +934,11 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
 static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
   auto args = op.getRegion().front().getArguments();
   p << " (" << args << ") : " << args[0].getType() << " = (" << op.lowerBound()
-    << ") to (" << op.upperBound() << ") step (" << op.step() << ") ";
+    << ") to (" << op.upperBound() << ") ";
+  if (op.inclusive()) {
+    p << "inclusive ";
+  }
+  p << "step (" << op.step() << ") ";
 
   printDataVars(p, op.private_vars(), "private");
   printDataVars(p, op.firstprivate_vars(), "firstprivate");
@@ -962,13 +964,12 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
   if (auto ordered = op.ordered_val())
     p << "ordered(" << ordered << ") ";
 
+  if (auto order = op.order_val())
+    p << "order(" << order << ") ";
+
   if (!op.reduction_vars().empty()) {
     p << "reduction(";
     printReductionVarList(p, op.reductions(), op.reduction_vars());
-  }
-
-  if (op.inclusive()) {
-    p << "inclusive ";
   }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);

@@ -285,11 +285,13 @@ def OMPC_NonTemporal : Clause<"nontemporal"> {
   let isValueList = true; 
 }
 
-def OMP_ORDER_concurrent : ClauseVal<"default",2,0> { let isDefault = 1; }
+def OMP_ORDER_concurrent : ClauseVal<"concurrent",1,1> {}
+def OMP_ORDER_unknown : ClauseVal<"unknown",2,0> { let isDefault = 1; }
 def OMPC_Order : Clause<"order"> {
   let clangClass = "OMPOrderClause";
   let enumClauseValue = "OrderKind";
   let allowedClauseValues = [
+    OMP_ORDER_unknown,
     OMP_ORDER_concurrent
   ];
 }

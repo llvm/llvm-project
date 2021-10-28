@@ -69,7 +69,62 @@ func @copyin_once(%n : memref<i32>) {
 }
 
 // -----
- 
+
+func @lastprivate_not_allowed(%n : memref<i32>) {
+  // expected-error@+1 {{lastprivate is not a valid clause for the omp.parallel operation}}
+  omp.parallel lastprivate(%n : memref<i32>) {}
+  return
+}
+
+// -----
+
+func @nowait_not_allowed(%n : memref<i32>) {
+  // expected-error@+1 {{nowait is not a valid clause for the omp.parallel operation}}
+  omp.parallel nowait {}
+  return
+}
+
+// -----
+
+func @linear_not_allowed(%data_var : memref<i32>, %linear_var : i32) {
+  // expected-error@+1 {{linear is not a valid clause for the omp.parallel operation}}
+  omp.parallel linear(%data_var = %linear_var : memref<i32>)  {}
+  return
+}
+
+// -----
+
+func @schedule_not_allowed() {
+  // expected-error@+1 {{schedule is not a valid clause for the omp.parallel operation}}
+  omp.parallel schedule(static) {}
+  return
+}
+
+// -----
+
+func @collapse_not_allowed() {
+  // expected-error@+1 {{collapse is not a valid clause for the omp.parallel operation}}
+  omp.parallel collapse(3) {}
+  return
+}
+
+// -----
+
+func @order_not_allowed() {
+  // expected-error@+1 {{order is not a valid clause for the omp.parallel operation}}
+  omp.parallel order(concurrent) {}
+  return
+}
+
+// -----
+
+func @ordered_not_allowed() {
+  // expected-error@+1 {{ordered is not a valid clause for the omp.parallel operation}}
+  omp.parallel ordered(2) {}
+}
+
+// -----
+
 func @default_once() {
   // expected-error@+1 {{at most one default clause can appear on the omp.parallel operation}}
   omp.parallel default(private) default(firstprivate) {
@@ -86,6 +141,78 @@ func @proc_bind_once() {
   }
 
   return
+}
+
+// -----
+
+func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{inclusive is not a valid clause}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) nowait inclusive {
+    omp.yield
+  }
+}
+
+// -----
+
+func @order_value(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{attribute 'order_val' failed to satisfy constraint: OrderKind Clause}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) order(default) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @shared_not_allowed(%lb : index, %ub : index, %step : index, %var : memref<i32>) {
+  // expected-error @below {{shared is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) shared(%var) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @copyin(%lb : index, %ub : index, %step : index, %var : memref<i32>) {
+  // expected-error @below {{copyin is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) copyin(%var) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
+  // expected-error @below {{if is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) if(%bool_var: i1) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var : i32) {
+  // expected-error @below {{num_threads is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) num_threads(%int_var: i32) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @default_not_allowed(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{default is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) default(private) {
+    omp.yield
+  }
+}
+
+// -----
+
+func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{proc_bind is not a valid clause for the omp.wsloop operation}}
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) proc_bind(close) {
+    omp.yield
+  }
 }
 
 // -----
