@@ -17,6 +17,7 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -25,6 +26,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::wasm;
+using namespace llvm::sys;
 
 namespace lld {
 
@@ -71,7 +73,8 @@ Optional<MemoryBufferRef> readFile(StringRef path) {
   return mbref;
 }
 
-InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName) {
+InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
+                            uint64_t offsetInArchive) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::wasm_object) {
     std::unique_ptr<Binary> bin =
@@ -83,7 +86,7 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName) {
   }
 
   if (magic == file_magic::bitcode)
-    return make<BitcodeFile>(mb, archiveName);
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
 
   fatal("unknown file type: " + mb.getBufferIdentifier());
 }
@@ -709,7 +712,7 @@ void ArchiveFile::addMember(const Archive::Symbol *sym) {
             "could not get the buffer for the member defining symbol " +
                 sym->getName());
 
-  InputFile *obj = createObjectFile(mb, getName());
+  InputFile *obj = createObjectFile(mb, getName(), c.getChildOffset());
   symtab->addFile(obj);
 }
 
@@ -748,6 +751,32 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   return symtab->addDefinedData(name, flags, &f, nullptr, 0, 0);
 }
 
+BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
+                         uint64_t offsetInArchive)
+    : InputFile(BitcodeKind, m) {
+  this->archiveName = std::string(archiveName);
+
+  std::string path = mb.getBufferIdentifier().str();
+
+  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+  // name. If two archives define two members with the same name, this
+  // causes a collision which result in only one of the objects being taken
+  // into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage). So we append file offset to make
+  // filename unique.
+  StringRef name = archiveName.empty()
+                       ? saver.save(path)
+                       : saver.save(archiveName + "(" + path::filename(path) +
+                                    " at " + utostr(offsetInArchive) + ")");
+  MemoryBufferRef mbref(mb.getBuffer(), name);
+
+  obj = check(lto::InputFile::create(mbref));
+
+  // If this isn't part of an archive, it's eagerly linked, so mark it live.
+  if (archiveName.empty())
+    markLive();
+}
+
 bool BitcodeFile::doneLTO = false;
 
 void BitcodeFile::parse() {
@@ -756,8 +785,6 @@ void BitcodeFile::parse() {
     return;
   }
 
-  obj = check(lto::InputFile::create(MemoryBufferRef(
-      mb.getBuffer(), saver.save(archiveName + mb.getBufferIdentifier()))));
   Triple t(obj->getTargetTriple());
   if (!t.isWasm()) {
     error(toString(this) + ": machine type must be wasm32 or wasm64");
