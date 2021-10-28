@@ -1307,6 +1307,13 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // FIXME: we shouldn't care about lanes that are 'undef' in the end?
   switch (Cmp0.getPredicate()) {
   case ICmpInst::Predicate::ICMP_ULT:
+    // Although icmp ult %x, 0 is an unusual thing to try and should generally
+    // have been simplified, it does not verify with undef inputs so ensure we
+    // are not in a strange state.
+    if (!match(C0, m_SpecificInt_ICMP(
+                       ICmpInst::Predicate::ICMP_NE,
+                       APInt::getZero(C0->getType()->getScalarSizeInBits()))))
+      return nullptr;
     break; // Great!
   case ICmpInst::Predicate::ICMP_ULE:
     // We'd have to increment C0 by one, and for that it must not have all-ones
