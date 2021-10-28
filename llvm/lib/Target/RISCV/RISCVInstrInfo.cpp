@@ -36,6 +36,10 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "RISCVGenInstrInfo.inc"
 
+static cl::opt<bool> PreferWholeRegisterMove(
+    "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
+    cl::desc("Prefer whole register move for vector registers."));
+
 namespace llvm {
 namespace RISCVVPseudosTable {
 
@@ -116,6 +120,136 @@ static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
   return DstReg > SrcReg && (DstReg - SrcReg) < NumRegs;
 }
 
+static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
+                                   const MachineBasicBlock &MBB,
+                                   MachineBasicBlock::const_iterator MBBI,
+                                   MachineBasicBlock::const_iterator &DefMBBI,
+                                   RISCVII::VLMUL LMul) {
+  if (PreferWholeRegisterMove)
+    return false;
+
+  assert(MBBI->getOpcode() == TargetOpcode::COPY &&
+         "Unexpected COPY instruction.");
+  Register SrcReg = MBBI->getOperand(1).getReg();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+
+  bool FoundDef = false;
+  bool FirstVSetVLI = false;
+  unsigned FirstSEW = 0;
+  while (MBBI != MBB.begin()) {
+    --MBBI;
+    if (MBBI->isMetaInstruction())
+      continue;
+
+    if (MBBI->getOpcode() == RISCV::PseudoVSETVLI ||
+        MBBI->getOpcode() == RISCV::PseudoVSETVLIX0 ||
+        MBBI->getOpcode() == RISCV::PseudoVSETIVLI) {
+      // There is a vsetvli between COPY and source define instruction.
+      // vy = def_vop ...  (producing instruction)
+      // ...
+      // vsetvli
+      // ...
+      // vx = COPY vy
+      if (!FoundDef) {
+        if (!FirstVSetVLI) {
+          FirstVSetVLI = true;
+          unsigned FirstVType = MBBI->getOperand(2).getImm();
+          RISCVII::VLMUL FirstLMul = RISCVVType::getVLMUL(FirstVType);
+          FirstSEW = RISCVVType::getSEW(FirstVType);
+          // The first encountered vsetvli must have the same lmul as the
+          // register class of COPY.
+          if (FirstLMul != LMul)
+            return false;
+        }
+        // Only permit `vsetvli x0, x0, vtype` between COPY and the source
+        // define instruction.
+        if (MBBI->getOperand(0).getReg() != RISCV::X0)
+          return false;
+        if (MBBI->getOperand(1).isImm())
+          return false;
+        if (MBBI->getOperand(1).getReg() != RISCV::X0)
+          return false;
+        continue;
+      }
+
+      // MBBI is the first vsetvli before the producing instruction.
+      unsigned VType = MBBI->getOperand(2).getImm();
+      // If there is a vsetvli between COPY and the producing instruction.
+      if (FirstVSetVLI) {
+        // If SEW is different, return false.
+        if (RISCVVType::getSEW(VType) != FirstSEW)
+          return false;
+      }
+
+      // If the vsetvli is tail undisturbed, keep the whole register move.
+      if (!RISCVVType::isTailAgnostic(VType))
+        return false;
+
+      // The checking is conservative. We only have register classes for
+      // LMUL = 1/2/4/8. We should be able to convert vmv1r.v to vmv.v.v
+      // for fractional LMUL operations. However, we could not use the vsetvli
+      // lmul for widening operations. The result of widening operation is
+      // 2 x LMUL.
+      return LMul == RISCVVType::getVLMUL(VType);
+    } else if (MBBI->isInlineAsm() || MBBI->isCall()) {
+      return false;
+    } else if (MBBI->getNumDefs()) {
+      // Check all the instructions which will change VL.
+      // For example, vleff has implicit def VL.
+      if (MBBI->modifiesRegister(RISCV::VL))
+        return false;
+
+      // Go through all defined operands, including implicit defines.
+      for (const MachineOperand &MO : MBBI->operands()) {
+        if (!MO.isReg() || !MO.isDef())
+          continue;
+        if (!FoundDef && TRI->isSubRegisterEq(MO.getReg(), SrcReg)) {
+          // We only permit the source of COPY has the same LMUL as the defined
+          // operand.
+          // There are cases we need to keep the whole register copy if the LMUL
+          // is different.
+          // For example,
+          // $x0 = PseudoVSETIVLI 4, 73   // vsetivli zero, 4, e16,m2,ta,m
+          // $v28m4 = PseudoVWADD_VV_M2 $v26m2, $v8m2
+          // # The COPY may be created by vlmul_trunc intrinsic.
+          // $v26m2 = COPY renamable $v28m2, implicit killed $v28m4
+          //
+          // After widening, the valid value will be 4 x e32 elements. If we
+          // convert the COPY to vmv.v.v, it will only copy 4 x e16 elements.
+          // FIXME: The COPY of subregister of Zvlsseg register will not be able
+          // to convert to vmv.v.[v|i] under the constraint.
+          if (MO.getReg() != SrcReg)
+            return false;
+
+          // In widening reduction instructions with LMUL_1 input vector case,
+          // only checking the LMUL is insufficient due to reduction result is
+          // always LMUL_1.
+          // For example,
+          // $x11 = PseudoVSETIVLI 1, 64 // vsetivli a1, 1, e8, m1, ta, mu
+          // $v8m1 = PseudoVWREDSUM_VS_M1 $v26, $v27
+          // $v26 = COPY killed renamable $v8
+          // After widening, The valid value will be 1 x e16 elements. If we
+          // convert the COPY to vmv.v.v, it will only copy 1 x e8 elements.
+          uint64_t TSFlags = MBBI->getDesc().TSFlags;
+          if (RISCVII::isRVVWideningReduction(TSFlags))
+            return false;
+
+          // Found the definition.
+          FoundDef = true;
+          DefMBBI = MBBI;
+          // If the producing instruction does not depend on vsetvli, do not
+          // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
+          if (!RISCVII::hasSEWOp(TSFlags))
+            return false;
+          break;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  const DebugLoc &DL, MCRegister DstReg,
@@ -131,7 +265,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Opc;
   bool IsScalableVector = true;
   unsigned NF = 1;
-  unsigned LMul = 1;
+  RISCVII::VLMUL LMul = RISCVII::LMUL_1;
   unsigned SubRegIdx = RISCV::sub_vrm1_0;
   if (RISCV::FPR16RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::FSGNJ_H;
@@ -144,91 +278,157 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     IsScalableVector = false;
   } else if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV2R_V;
+    LMul = RISCVII::LMUL_2;
   } else if (RISCV::VRM4RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV4R_V;
+    LMul = RISCVII::LMUL_4;
   } else if (RISCV::VRM8RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV8R_V;
+    LMul = RISCVII::LMUL_8;
   } else if (RISCV::VRN2M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 2;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRN2M2RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV2R_V;
     SubRegIdx = RISCV::sub_vrm2_0;
     NF = 2;
-    LMul = 2;
+    LMul = RISCVII::LMUL_2;
   } else if (RISCV::VRN2M4RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV4R_V;
     SubRegIdx = RISCV::sub_vrm4_0;
     NF = 2;
-    LMul = 4;
+    LMul = RISCVII::LMUL_4;
   } else if (RISCV::VRN3M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 3;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRN3M2RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV2R_V;
     SubRegIdx = RISCV::sub_vrm2_0;
     NF = 3;
-    LMul = 2;
+    LMul = RISCVII::LMUL_2;
   } else if (RISCV::VRN4M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 4;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRN4M2RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV2R_V;
     SubRegIdx = RISCV::sub_vrm2_0;
     NF = 4;
-    LMul = 2;
+    LMul = RISCVII::LMUL_2;
   } else if (RISCV::VRN5M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 5;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRN6M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 6;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRN7M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 7;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRN8M1RegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::PseudoVMV1R_V;
     SubRegIdx = RISCV::sub_vrm1_0;
     NF = 8;
-    LMul = 1;
+    LMul = RISCVII::LMUL_1;
   } else {
     llvm_unreachable("Impossible reg-to-reg copy");
   }
 
   if (IsScalableVector) {
+    bool UseVMV_V_V = false;
+    MachineBasicBlock::const_iterator DefMBBI;
+    unsigned DefExplicitOpNum;
+    unsigned VIOpc;
+    if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
+      UseVMV_V_V = true;
+      DefExplicitOpNum = DefMBBI->getNumExplicitOperands();
+      // We only need to handle LMUL = 1/2/4/8 here because we only define
+      // vector register classes for LMUL = 1/2/4/8.
+      switch (LMul) {
+      default:
+        llvm_unreachable("Impossible LMUL for vector register copy.");
+      case RISCVII::LMUL_1:
+        Opc = RISCV::PseudoVMV_V_V_M1;
+        VIOpc = RISCV::PseudoVMV_V_I_M1;
+        break;
+      case RISCVII::LMUL_2:
+        Opc = RISCV::PseudoVMV_V_V_M2;
+        VIOpc = RISCV::PseudoVMV_V_I_M2;
+        break;
+      case RISCVII::LMUL_4:
+        Opc = RISCV::PseudoVMV_V_V_M4;
+        VIOpc = RISCV::PseudoVMV_V_I_M4;
+        break;
+      case RISCVII::LMUL_8:
+        Opc = RISCV::PseudoVMV_V_V_M8;
+        VIOpc = RISCV::PseudoVMV_V_I_M8;
+        break;
+      }
+    }
+
+    bool UseVMV_V_I = false;
+    if (UseVMV_V_V && (DefMBBI->getOpcode() == VIOpc)) {
+      UseVMV_V_I = true;
+      Opc = VIOpc;
+    }
+
     if (NF == 1) {
-      BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+      auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
+      if (UseVMV_V_I)
+        MIB = MIB.add(DefMBBI->getOperand(1));
+      else
+        MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
+      if (UseVMV_V_V) {
+        // The last two arguments of vector instructions are
+        // AVL, SEW. We also need to append the implicit-use vl and vtype.
+        MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 2)); // AVL
+        MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 1)); // SEW
+        MIB.addReg(RISCV::VL, RegState::Implicit);
+        MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+      }
     } else {
       const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
       int I = 0, End = NF, Incr = 1;
       unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
       unsigned DstEncoding = TRI->getEncodingValue(DstReg);
-      if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMul)) {
+      unsigned LMulVal;
+      bool Fractional;
+      std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
+      assert(!Fractional && "It is impossible be fractional lmul here.");
+      if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMulVal)) {
         I = NF - 1;
         End = -1;
         Incr = -1;
       }
 
       for (; I != End; I += Incr) {
-        BuildMI(MBB, MBBI, DL, get(Opc), TRI->getSubReg(DstReg, SubRegIdx + I))
-            .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
-                    getKillRegState(KillSrc));
+        auto MIB = BuildMI(MBB, MBBI, DL, get(Opc),
+                           TRI->getSubReg(DstReg, SubRegIdx + I));
+        if (UseVMV_V_I)
+          MIB = MIB.add(DefMBBI->getOperand(1));
+        else
+          MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
+                           getKillRegState(KillSrc));
+        if (UseVMV_V_V) {
+          MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 2)); // AVL
+          MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 1)); // SEW
+          MIB.addReg(RISCV::VL, RegState::Implicit);
+          MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+        }
       }
     }
   } else {

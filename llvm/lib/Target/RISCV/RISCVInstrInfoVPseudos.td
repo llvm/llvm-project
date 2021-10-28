@@ -3972,8 +3972,10 @@ defm PseudoVREDMAX     : VPseudoReductionV_VS;
 //===----------------------------------------------------------------------===//
 // 15.2. Vector Widening Integer Reduction Instructions
 //===----------------------------------------------------------------------===//
+let IsRVVWideningReduction = 1 in {
 defm PseudoVWREDSUMU   : VPseudoReductionV_VS;
 defm PseudoVWREDSUM    : VPseudoReductionV_VS;
+}
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
@@ -3988,8 +3990,10 @@ defm PseudoVFREDMAX    : VPseudoReductionV_VS;
 //===----------------------------------------------------------------------===//
 // 15.4. Vector Widening Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
+let IsRVVWideningReduction = 1 in {
 defm PseudoVFWREDUSUM  : VPseudoReductionV_VS;
 defm PseudoVFWREDOSUM  : VPseudoReductionV_VS;
+}
 
 } // Predicates = [HasVInstructionsAnyF]
 
