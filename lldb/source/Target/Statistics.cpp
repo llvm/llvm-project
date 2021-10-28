@@ -11,7 +11,9 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/UnixSignals.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -95,6 +97,13 @@ json::Value TargetStats::ToJSON(Target &target) {
     }
   }
 
+  ProcessSP process_sp = target.GetProcessSP();
+  if (process_sp) {
+    UnixSignalsSP unix_signals_sp = process_sp->GetUnixSignals();
+    if (unix_signals_sp)
+      target_metrics_json.try_emplace("signals",
+                                      unix_signals_sp->GetHitCountStatistics());
+  }
   target_metrics_json.try_emplace("breakpoints", std::move(breakpoints_array));
   target_metrics_json.try_emplace("totalBreakpointResolveTime",
                                   totalBreakpointResolveTime);

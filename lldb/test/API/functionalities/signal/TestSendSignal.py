@@ -95,6 +95,10 @@ class SendSignalTestCase(TestBase):
             thread.GetStopReasonDataAtIndex(0), lldbutil.get_signal_number('SIGUSR1'),
             "The stop signal was SIGUSR1")
 
+        self.match("statistics dump",
+                   [r'"signals": \[', r'"SIGUSR1": 1'])
+
+
     def match_state(self, process_listener, expected_state):
         num_seconds = 5
         broadcaster = self.process().GetBroadcaster()

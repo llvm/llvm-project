@@ -307,7 +307,7 @@ protected:
 
           // There's one other complication here.  We may have run an async
           // breakpoint callback that said we should stop.  We only want to
-          // override that if another breakpoint action says we shouldn't 
+          // override that if another breakpoint action says we shouldn't
           // stop.  If nobody else has an opinion, then we should stop if the
           // async callback says we should.  An example of this is the async
           // shared library load notification breakpoint and the setting
@@ -425,7 +425,7 @@ protected:
             }
 
             internal_breakpoint = bp_loc_sp->GetBreakpoint().IsInternal();
-            
+
             // First run the precondition, but since the precondition is per
             // breakpoint, only run it once per breakpoint.
             std::pair<std::unordered_set<break_id_t>::iterator, bool> result =
@@ -535,7 +535,7 @@ protected:
               else
                 actually_said_continue = true;
             }
-                  
+
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
             if (callback_says_stop && bp_loc_sp &&
@@ -579,7 +579,7 @@ protected:
         // Override should_stop decision when we have completed step plan
         // additionally to the breakpoint
         m_should_stop = true;
-        
+
         // We know we're stopping for a completed plan and we don't want to
         // show the breakpoint stop, so compute the public stop info immediately
         // here.
@@ -615,7 +615,7 @@ public:
   // performing watchpoint actions.
   class WatchpointSentry {
   public:
-    WatchpointSentry(ProcessSP p_sp, WatchpointSP w_sp) : process_sp(p_sp), 
+    WatchpointSentry(ProcessSP p_sp, WatchpointSP w_sp) : process_sp(p_sp),
                      watchpoint_sp(w_sp) {
       if (process_sp && watchpoint_sp) {
         const bool notify = false;
@@ -624,7 +624,7 @@ public:
         process_sp->AddPreResumeAction(SentryPreResumeAction, this);
       }
     }
-    
+
     void DoReenable() {
       if (process_sp && watchpoint_sp) {
         bool was_disabled = watchpoint_sp->IsDisabledDuringEphemeralMode();
@@ -637,13 +637,13 @@ public:
         }
       }
     }
-    
+
     ~WatchpointSentry() {
         DoReenable();
         if (process_sp)
             process_sp->ClearPreResumeAction(SentryPreResumeAction, this);
     }
-    
+
     static bool SentryPreResumeAction(void *sentry_void) {
         WatchpointSentry *sentry = (WatchpointSentry *) sentry_void;
         sentry->DoReenable();
@@ -724,14 +724,14 @@ protected:
     // course of this code.  Also by default we're going to stop, so set that
     // here.
     m_should_stop = true;
-    
+
 
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
 
       WatchpointSP wp_sp(
           thread_sp->CalculateTarget()->GetWatchpointList().FindByID(
-              GetValue()));      
+              GetValue()));
       if (wp_sp) {
         ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
         ProcessSP process_sp = exe_ctx.GetProcessSP();
@@ -889,12 +889,12 @@ protected:
 
           bool old_async = debugger.GetAsyncExecution();
           debugger.SetAsyncExecution(true);
-          
+
           StoppointCallbackContext context(event_ptr, exe_ctx, false);
           bool stop_requested = wp_sp->InvokeCallback(&context);
-          
+
           debugger.SetAsyncExecution(old_async);
-          
+
           // Also make sure that the callback hasn't continued the target. If
           // it did, when we'll set m_should_stop to false and get out of here.
           if (HasTargetRunSinceMe())
@@ -1272,6 +1272,7 @@ StopInfo::CreateStopReasonWithWatchpointID(Thread &thread, break_id_t watch_id,
 
 StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,
                                                 const char *description) {
+  thread.GetProcess()->GetUnixSignals()->IncrementSignalHitCount(signo);
   return StopInfoSP(new StopInfoUnixSignal(thread, signo, description));
 }
 
