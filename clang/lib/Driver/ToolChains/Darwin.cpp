@@ -1820,7 +1820,12 @@ std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
           << Triple.getOSName();
     break;
   case llvm::Triple::IOS:
-    Triple.getiOSVersion(Major, Minor, Micro);
+    if (Triple.isMacCatalystEnvironment() && !Triple.getOSMajorVersion()) {
+      Major = 13;
+      Minor = 1;
+      Micro = 0;
+    } else
+      Triple.getiOSVersion(Major, Minor, Micro);
     break;
   case llvm::Triple::TvOS:
     Triple.getOSVersion(Major, Minor, Micro);
