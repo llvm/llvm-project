@@ -11,8 +11,11 @@
 #define YK_NEW_CONTROL_POINT "yk_new_control_point"
 
 namespace llvm {
-class ModulePass;
-ModulePass *createYkControlPointPass();
+class YkControlPointPass : public PassInfoMixin<YkControlPointPass> {
+public:
+  explicit YkControlPointPass();
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 } // namespace llvm
 
 #endif

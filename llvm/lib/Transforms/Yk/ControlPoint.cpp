@@ -176,7 +176,8 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
 
   // Create block for "not tracing" case. Checks if we already compiled a trace.
   Builder.SetInsertPoint(BBNotTracing);
-  Value *GVCompiledTraceVal = Builder.CreateLoad(Type::getInt8Ty(Context), GVCompiledTrace);
+  Value *GVCompiledTraceVal =
+      Builder.CreateLoad(Type::getInt8PtrTy(Context), GVCompiledTrace);
   Value *HasTrace = Builder.CreateICmp(CmpInst::Predicate::ICMP_EQ,
                                        GVCompiledTraceVal, PtNull);
   Builder.CreateCondBr(HasTrace, BBHasNoTrace, BBHasTrace);
@@ -193,7 +194,8 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
   // Create block that checks if we've reached the same location again so we
   // can execute a compiled trace.
   Builder.SetInsertPoint(BBHasTrace);
-  Value *ValStartLoc = Builder.CreateLoad(Type::getInt32Ty(Context), GVStartLoc);
+  Value *ValStartLoc =
+      Builder.CreateLoad(Type::getInt32Ty(Context), GVStartLoc);
   Value *ExecTraceCond = Builder.CreateICmp(CmpInst::Predicate::ICMP_EQ,
                                             ValStartLoc, F->getArg(0));
   Builder.CreateCondBr(ExecTraceCond, BBExecuteTrace, BBReturn);
@@ -216,7 +218,8 @@ void createControlPoint(Module &Mod, Function *F, std::vector<Value *> LiveVars,
 
   // Create block that decides when to stop tracing.
   Builder.SetInsertPoint(BBTracing);
-  Value *ValStartLoc2 = Builder.CreateLoad(Type::getInt32Ty(Context), GVStartLoc);
+  Value *ValStartLoc2 =
+      Builder.CreateLoad(Type::getInt32Ty(Context), GVStartLoc);
   Value *StopTracingCond = Builder.CreateICmp(CmpInst::Predicate::ICMP_EQ,
                                               ValStartLoc2, F->getArg(0));
   Builder.CreateCondBr(StopTracingCond, BBStopTracing, BBReturn);
@@ -264,102 +267,86 @@ std::vector<Value *> getLiveVars(DominatorTree &DT, CallInst *OldCtrlPoint) {
   return Vec;
 }
 
-namespace {
-struct YkControlPointPass : public ModulePass {
-  static char ID;
+YkControlPointPass::YkControlPointPass() {}
 
-  YkControlPointPass() : ModulePass(ID) {}
+PreservedAnalyses YkControlPointPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  LLVMContext &Context = M.getContext();
 
-  StringRef getPassName() const override {
-    return "Control Point Patching Pass";
+  // Locate the "dummy" control point provided by the user.
+  CallInst *OldCtrlPointCall = findControlPointCall(M);
+  if (OldCtrlPointCall == nullptr) {
+    Context.emitError("ykllvm couldn't find the call to `yk_control_point()`");
+    return PreservedAnalyses::all();
   }
 
-  bool runOnModule(Module &M) override {
-    LLVMContext &Context = M.getContext();
+  // Replace old control point call.
+  IRBuilder<> Builder(OldCtrlPointCall);
 
-    // Locate the "dummy" control point provided by the user.
-    CallInst *OldCtrlPointCall = findControlPointCall(M);
-    if (OldCtrlPointCall == nullptr) {
-      Context.emitError(
-          "ykllvm couldn't find the call to `yk_control_point()`");
-      return false;
-    }
+  // Get function containing the control point.
+  Function *Caller = OldCtrlPointCall->getFunction();
 
-    // Replace old control point call.
-    IRBuilder<> Builder(OldCtrlPointCall);
-
-    // Get function containing the control point.
-    Function *Caller = OldCtrlPointCall->getFunction();
-
-    // Find all live variables just before the call to the control point.
-    DominatorTree DT(*Caller);
-    std::vector<Value *> LiveVals = getLiveVars(DT, OldCtrlPointCall);
-    if (LiveVals.size() == 0) {
-      Context.emitError(
-          "The interpreter loop has no live variables!\n"
-          "ykllvm doesn't support this scenario, as such an interpreter would "
-          "make little sense.");
-      return false;
-    }
-
-    // Generate the YkCtrlPointVars struct. This struct is used to package up a
-    // copy of all LLVM variables that are live just before the call to the
-    // control point. These are passed in to the patched control point so that
-    // they can be used as inputs and outputs to JITted trace code. The control
-    // point returns a new YkCtrlPointVars whose members may have been mutated
-    // by JITted trace code (if a trace was executed).
-    std::vector<Type *> TypeParams;
-    for (Value *V : LiveVals) {
-      TypeParams.push_back(V->getType());
-    }
-    StructType *CtrlPointReturnTy =
-        StructType::create(TypeParams, "YkCtrlPointVars");
-
-    // Create the new control point.
-    FunctionType *FType = FunctionType::get(
-        CtrlPointReturnTy, {Type::getInt32Ty(Context), CtrlPointReturnTy},
-        false);
-    Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
-                                    YK_NEW_CONTROL_POINT, M);
-
-    // Instantiate the YkCtrlPointStruct to pass in to the control point.
-    Value *InputStruct = cast<Value>(Constant::getNullValue(CtrlPointReturnTy));
-    unsigned LvIdx = 0;
-    for (Value *LV : LiveVals) {
-      InputStruct = Builder.CreateInsertValue(InputStruct, LV, LvIdx);
-      assert(LvIdx != UINT_MAX);
-      LvIdx++;
-    }
-
-    // Insert call to the new control point.
-    CallInst *CtrlPointRet = Builder.CreateCall(
-        NF, {OldCtrlPointCall->getArgOperand(0), InputStruct});
-
-    // Once the control point returns we need to extract the (potentially
-    // mutated) values from the returned YkCtrlPointStruct and reassign them to
-    // their corresponding live variables. In LLVM IR we can do this by simply
-    // replacing all future references with the new values.
-    LvIdx = 0;
-    for (Value *LV : LiveVals) {
-      Value *New = Builder.CreateExtractValue(cast<Value>(CtrlPointRet), LvIdx);
-      LV->replaceUsesWithIf(
-          New, [&](Use &U) { return DT.dominates(CtrlPointRet, U); });
-      assert(LvIdx != UINT_MAX);
-      LvIdx++;
-    }
-
-    // Replace the call to the dummy control point.
-    OldCtrlPointCall->eraseFromParent();
-
-    // Generate new control point logic.
-    createControlPoint(M, NF, LiveVals, CtrlPointReturnTy);
-
-    return true;
+  // Find all live variables just before the call to the control point.
+  DominatorTree DT(*Caller);
+  std::vector<Value *> LiveVals = getLiveVars(DT, OldCtrlPointCall);
+  if (LiveVals.size() == 0) {
+    Context.emitError(
+        "The interpreter loop has no live variables!\n"
+        "ykllvm doesn't support this scenario, as such an interpreter would "
+        "make little sense.");
+    return PreservedAnalyses::all();
   }
-};
-char YkControlPointPass::ID = 0;
-} // namespace
 
-namespace llvm {
-ModulePass *createYkControlPointPass() { return new YkControlPointPass(); }
-} // namespace llvm
+  // Generate the YkCtrlPointVars struct. This struct is used to package up a
+  // copy of all LLVM variables that are live just before the call to the
+  // control point. These are passed in to the patched control point so that
+  // they can be used as inputs and outputs to JITted trace code. The control
+  // point returns a new YkCtrlPointVars whose members may have been mutated
+  // by JITted trace code (if a trace was executed).
+  std::vector<Type *> TypeParams;
+  for (Value *V : LiveVals) {
+    TypeParams.push_back(V->getType());
+  }
+  StructType *CtrlPointReturnTy =
+      StructType::create(TypeParams, "YkCtrlPointVars");
+
+  // Create the new control point.
+  FunctionType *FType = FunctionType::get(
+      CtrlPointReturnTy, {Type::getInt32Ty(Context), CtrlPointReturnTy}, false);
+  Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
+                                  YK_NEW_CONTROL_POINT, M);
+
+  // Instantiate the YkCtrlPointStruct to pass in to the control point.
+  Value *InputStruct = cast<Value>(Constant::getNullValue(CtrlPointReturnTy));
+  unsigned LvIdx = 0;
+  for (Value *LV : LiveVals) {
+    InputStruct = Builder.CreateInsertValue(InputStruct, LV, LvIdx);
+    assert(LvIdx != UINT_MAX);
+    LvIdx++;
+  }
+
+  // Insert call to the new control point.
+  CallInst *CtrlPointRet =
+      Builder.CreateCall(NF, {OldCtrlPointCall->getArgOperand(0), InputStruct});
+
+  // Once the control point returns we need to extract the (potentially
+  // mutated) values from the returned YkCtrlPointStruct and reassign them to
+  // their corresponding live variables. In LLVM IR we can do this by simply
+  // replacing all future references with the new values.
+  LvIdx = 0;
+  for (Value *LV : LiveVals) {
+    Value *New = Builder.CreateExtractValue(cast<Value>(CtrlPointRet), LvIdx);
+    LV->replaceUsesWithIf(
+        New, [&](Use &U) { return DT.dominates(CtrlPointRet, U); });
+    assert(LvIdx != UINT_MAX);
+    LvIdx++;
+  }
+
+  // Replace the call to the dummy control point.
+  OldCtrlPointCall->eraseFromParent();
+
+  // Generate new control point logic.
+  createControlPoint(M, NF, LiveVals, CtrlPointReturnTy);
+
+  return PreservedAnalyses::none();
+}
