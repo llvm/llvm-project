@@ -12737,9 +12737,21 @@ bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
 }
 
 void ScalarEvolution::forgetMemoizedResults(ArrayRef<const SCEV *> SCEVs) {
-  for (auto *S : SCEVs)
-    forgetMemoizedResultsImpl(S);
   SmallPtrSet<const SCEV *, 8> ToForget(SCEVs.begin(), SCEVs.end());
+  SmallVector<const SCEV *, 8> Worklist(ToForget.begin(), ToForget.end());
+
+  while (!Worklist.empty()) {
+    const SCEV *Curr = Worklist.pop_back_val();
+    auto Users = SCEVUsers.find(Curr);
+    if (Users != SCEVUsers.end())
+      for (auto *User : Users->second)
+        if (ToForget.insert(User).second)
+          Worklist.push_back(User);
+  }
+
+  for (auto *S : ToForget)
+    forgetMemoizedResultsImpl(S);
+
   for (auto I = PredicatedSCEVRewrites.begin();
        I != PredicatedSCEVRewrites.end();) {
     std::pair<const SCEV *, const Loop *> Entry = I->first;
