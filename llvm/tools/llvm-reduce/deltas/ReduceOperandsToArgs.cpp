@@ -174,6 +174,8 @@ static void substituteOperandWithArgument(Function *OldF,
 static void reduceOperandsToArgs(Oracle &O, Module &Program) {
   SmallVector<Use *> OperandsToReduce;
   for (Function &F : make_early_inc_range(Program.functions())) {
+    if (!canReplaceFunction(&F))
+      continue;
     OperandsToReduce.clear();
     for (Instruction &I : instructions(&F)) {
       for (Use &Op : I.operands()) {
