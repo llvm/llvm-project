@@ -16,6 +16,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
 
 TEST(IncludeCleaner, ReferencedLocations) {
@@ -236,9 +237,8 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
 
 TEST(IncludeCleaner, VirtualBuffers) {
   TestTU TU;
-  TU.Filename = "foo.cpp";
   TU.Code = R"cpp(
-    #include "macro_spelling_in_scratch_buffer.h"
+    #include "macros.h"
 
     using flags::FLAGS_FOO;
 
@@ -251,7 +251,7 @@ TEST(IncludeCleaner, VirtualBuffers) {
   // The pasting operator in combination with DEFINE_FLAG will create
   // ScratchBuffer with `flags::FLAGS_FOO` that will have FileID but not
   // FileEntry.
-  TU.AdditionalFiles["macro_spelling_in_scratch_buffer.h"] = R"cpp(
+  TU.AdditionalFiles["macros.h"] = R"cpp(
     #define DEFINE_FLAG(X) \
     namespace flags { \
     int FLAGS_##X; \
@@ -266,18 +266,27 @@ TEST(IncludeCleaner, VirtualBuffers) {
   ParsedAST AST = TU.build();
   auto &SM = AST.getSourceManager();
   auto &Includes = AST.getIncludeStructure();
+
   auto ReferencedFiles = findReferencedFiles(findReferencedLocations(AST), SM);
-  auto Entry = SM.getFileManager().getFile(
-      testPath("macro_spelling_in_scratch_buffer.h"));
-  ASSERT_TRUE(Entry);
-  auto FID = SM.translateFile(*Entry);
-  // No "<scratch space>" FID.
-  EXPECT_THAT(ReferencedFiles, UnorderedElementsAre(FID));
-  // Should not crash due to <scratch space> "files" missing from include
-  // structure.
-  EXPECT_THAT(
-      getUnused(Includes, translateToHeaderIDs(ReferencedFiles, Includes, SM)),
-      ::testing::IsEmpty());
+  llvm::StringSet<> ReferencedFileNames;
+  for (FileID FID : ReferencedFiles)
+    ReferencedFileNames.insert(
+        SM.getPresumedLoc(SM.getLocForStartOfFile(FID)).getFilename());
+  // Note we deduped the names as _number_ of <built-in>s is uninteresting.
+  EXPECT_THAT(ReferencedFileNames.keys(),
+              UnorderedElementsAre("<built-in>", "<scratch space>",
+                                   testPath("macros.h")));
+
+  // Should not crash due to FileIDs that are not headers.
+  auto ReferencedHeaders = translateToHeaderIDs(ReferencedFiles, Includes, SM);
+  std::vector<llvm::StringRef> ReferencedHeaderNames;
+  for (IncludeStructure::HeaderID HID : ReferencedHeaders)
+    ReferencedHeaderNames.push_back(Includes.getRealPath(HID));
+  // Non-header files are gone at this point.
+  EXPECT_THAT(ReferencedHeaderNames, ElementsAre(testPath("macros.h")));
+
+  // Sanity check.
+  EXPECT_THAT(getUnused(Includes, ReferencedHeaders), ::testing::IsEmpty());
 }
 
 } // namespace

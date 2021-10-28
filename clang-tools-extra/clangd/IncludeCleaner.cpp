@@ -129,9 +129,7 @@ struct ReferencedFiles {
   void add(SourceLocation Loc) { add(SM.getFileID(Loc), Loc); }
 
   void add(FileID FID, SourceLocation Loc) {
-    // Check if Loc is not written in a physical file.
-    if (FID.isInvalid() || SM.isWrittenInBuiltinFile(Loc) ||
-        SM.isWrittenInCommandLineFile(Loc))
+    if (FID.isInvalid())
       return;
     assert(SM.isInFileID(Loc, FID));
     if (Loc.isFileID()) {
@@ -142,15 +140,9 @@ struct ReferencedFiles {
     if (!Macros.insert(FID).second)
       return;
     const auto &Exp = SM.getSLocEntry(FID).getExpansion();
-    // For token pasting operator in macros, spelling and expansion locations
-    // can be within a temporary buffer that Clang creates (scratch space or
-    // ScratchBuffer). That is not a real file we can include.
-    if (!SM.isWrittenInScratchSpace(Exp.getSpellingLoc()))
-      add(Exp.getSpellingLoc());
-    if (!SM.isWrittenInScratchSpace(Exp.getExpansionLocStart()))
-      add(Exp.getExpansionLocStart());
-    if (!SM.isWrittenInScratchSpace(Exp.getExpansionLocEnd()))
-      add(Exp.getExpansionLocEnd());
+    add(Exp.getSpellingLoc());
+    add(Exp.getExpansionLocStart());
+    add(Exp.getExpansionLocEnd());
   }
 };
 
@@ -249,6 +241,14 @@ getUnused(const IncludeStructure &Structure,
   return Unused;
 }
 
+#ifndef NDEBUG
+// Is FID a <built-in>, <scratch space> etc?
+static bool isSpecialBuffer(FileID FID, const SourceManager &SM) {
+  const SrcMgr::FileInfo &FI = SM.getSLocEntry(FID).getFile();
+  return FI.getName().startswith("<");
+}
+#endif
+
 llvm::DenseSet<IncludeStructure::HeaderID>
 translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
                      const IncludeStructure &Includes,
@@ -257,7 +257,10 @@ translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
   TranslatedHeaderIDs.reserve(Files.size());
   for (FileID FID : Files) {
     const FileEntry *FE = SM.getFileEntryForID(FID);
-    assert(FE);
+    if (!FE) {
+      assert(isSpecialBuffer(FID, SM));
+      continue;
+    }
     const auto File = Includes.getID(FE);
     assert(File);
     TranslatedHeaderIDs.insert(*File);
