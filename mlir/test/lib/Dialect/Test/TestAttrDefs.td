@@ -16,6 +16,7 @@
 // To get the test dialect definition.
 include "TestOps.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/SubElementInterfaces.td"
 
 // All of the attributes will extend this class.
 class Test_Attr<string name, list<Trait> traits = []>
@@ -99,6 +100,20 @@ def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [
     }
   }];
   let genVerifyDecl = 1;
+}
+
+def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface,
+        ["replaceImmediateSubAttribute"]>
+  ]> {
+
+  let mnemonic = "sub_elements_access";
+
+  let parameters = (ins
+    "::mlir::Attribute":$first,
+    "::mlir::Attribute":$second,
+    "::mlir::Attribute":$third
+  );
 }
 
 #endif // TEST_ATTRDEFS

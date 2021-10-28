@@ -128,6 +128,57 @@ TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// TestSubElementsAccessAttr
+//===----------------------------------------------------------------------===//
+
+Attribute TestSubElementsAccessAttr::parse(::mlir::DialectAsmParser &parser,
+                                           ::mlir::Type type) {
+  Attribute first, second, third;
+  if (parser.parseLess() || parser.parseAttribute(first) ||
+      parser.parseComma() || parser.parseAttribute(second) ||
+      parser.parseComma() || parser.parseAttribute(third) ||
+      parser.parseGreater()) {
+    return {};
+  }
+  return get(parser.getContext(), first, second, third);
+}
+
+void TestSubElementsAccessAttr::print(
+    ::mlir::DialectAsmPrinter &printer) const {
+  printer << getMnemonic() << "<" << getFirst() << ", " << getSecond() << ", "
+          << getThird() << ">";
+}
+
+void TestSubElementsAccessAttr::walkImmediateSubElements(
+    llvm::function_ref<void(mlir::Attribute)> walkAttrsFn,
+    llvm::function_ref<void(mlir::Type)> walkTypesFn) const {
+  walkAttrsFn(getFirst());
+  walkAttrsFn(getSecond());
+  walkAttrsFn(getThird());
+}
+
+SubElementAttrInterface TestSubElementsAccessAttr::replaceImmediateSubAttribute(
+    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
+  Attribute first = getFirst();
+  Attribute second = getSecond();
+  Attribute third = getThird();
+  for (auto &it : replacements) {
+    switch (it.first) {
+    case 0:
+      first = it.second;
+      break;
+    case 1:
+      second = it.second;
+      break;
+    case 2:
+      third = it.second;
+      break;
+    }
+  }
+  return get(getContext(), first, second, third);
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
