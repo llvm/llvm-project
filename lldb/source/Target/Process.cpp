@@ -2580,6 +2580,9 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
           // stopped or crashed. Directly set the state.  This is done to
           // prevent a stop message with a bunch of spurious output on thread
           // status, as well as not pop a ProcessIOHandler.
+          // We are done with the launch hijack listener, and this stop should
+          // go to the public state listener:
+          RestoreProcessEvents();
           SetPublicState(state, false);
 
           if (PrivateStateThreadIsValid())
