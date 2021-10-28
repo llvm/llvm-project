@@ -7,6 +7,7 @@
 // TODO: Fix option on Android, it hangs there for unknown reasons.
 // XFAIL: android
 
+#include <pthread.h>
 #include <stdio.h>
 #include <sys/mman.h>
 
@@ -30,6 +31,12 @@ int main(int argc, char **argv) {
                          MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
   (void)mprotect(q, 64, PROT_READ | PROT_EXEC);
   // CHECK-NOT: Sanitizer
+#if defined(__APPLE__)
+  pthread_jit_write_protect_np(false);
+  char *c = (char *)mmap(0, 128, PROT_WRITE | PROT_EXEC,
+		         MAP_ANONYMOUS | MAP_PRIVATE | MAP_JIT, -1, 0);
+  // CHECK-NOT: Sanitizer
+#endif
 
   printf("done\n");
   // CHECK-DISABLED-NOT: Sanitizer
