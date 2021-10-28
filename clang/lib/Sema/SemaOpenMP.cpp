@@ -6731,9 +6731,11 @@ void Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
   for (auto *Candidate : Lookup) {
     auto *CandidateDecl = Candidate->getUnderlyingDecl();
     FunctionDecl *UDecl = nullptr;
-    if (IsTemplated && isa<FunctionTemplateDecl>(CandidateDecl))
-      UDecl = cast<FunctionTemplateDecl>(CandidateDecl)->getTemplatedDecl();
-    else if (!IsTemplated)
+    if (IsTemplated && isa<FunctionTemplateDecl>(CandidateDecl)) {
+      auto *FTD = cast<FunctionTemplateDecl>(CandidateDecl);
+      if (FTD->getTemplateParameters()->size() == TemplateParamLists.size())
+        UDecl = FTD->getTemplatedDecl();
+    } else if (!IsTemplated)
       UDecl = dyn_cast<FunctionDecl>(CandidateDecl);
     if (!UDecl)
       continue;
