@@ -1086,16 +1086,18 @@ define i32 @or_and_not_not(i32 %a, i32 %b, i32 %c) {
   ret i32 %or3
 }
 
-define i32 @or_and_not_not_commute1(i32 %a, i32 %b, i32 %c) {
+define i32 @or_and_not_not_commute1(i32 %a, i32 %b0, i32 %c) {
 ; CHECK-LABEL: @or_and_not_not_commute1(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = sdiv i32 42, [[B0:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[A]], [[C:%.*]]
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B]], [[NOT2]]
 ; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND]], [[NOT1]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
+  %b = sdiv i32 42, %b0 ; thwart complexity-based canonicalization
   %or1 = or i32 %b, %a
   %not1 = xor i32 %or1, -1
   %or2 = or i32 %a, %c
@@ -1181,16 +1183,18 @@ define i32 @or_and_not_not_commute5(i32 %a, i32 %b, i32 %c) {
   ret i32 %or3
 }
 
-define i32 @or_and_not_not_commute6(i32 %a, i32 %b, i32 %c) {
+define i32 @or_and_not_not_commute6(i32 %a, i32 %b0, i32 %c) {
 ; CHECK-LABEL: @or_and_not_not_commute6(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = sdiv i32 42, [[B0:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[C:%.*]], [[A]]
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B]], [[NOT2]]
 ; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND]], [[NOT1]]
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
+  %b = sdiv i32 42, %b0 ; thwart complexity-based canonicalization
   %or1 = or i32 %b, %a
   %not1 = xor i32 %or1, -1
   %or2 = or i32 %c, %a
