@@ -2866,6 +2866,7 @@ the corresponding C11 operations, are:
 * ``__c11_atomic_fetch_and``
 * ``__c11_atomic_fetch_or``
 * ``__c11_atomic_fetch_xor``
+* ``__c11_atomic_fetch_nand`` (Nand is not presented in ``<stdatomic.h>``)
 * ``__c11_atomic_fetch_max``
 * ``__c11_atomic_fetch_min``
 
