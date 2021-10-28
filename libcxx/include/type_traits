@@ -852,9 +852,8 @@ inline constexpr bool is_array_v = is_array<_Tp>::value;
 
 // is_pointer
 
-// Before Clang 11 / AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
+// Before AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
 #if __has_keyword(__is_pointer) &&                                             \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1100) &&               \
     !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1205)
 
 template<class _Tp>
