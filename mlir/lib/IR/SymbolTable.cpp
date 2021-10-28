@@ -485,16 +485,30 @@ static WalkResult walkSymbolRefs(
 
   // A worklist of a container attribute and the current index into the held
   // attribute list.
-  SmallVector<Attribute, 1> attrWorklist(1, attrDict);
+  struct WorklistItem {
+    SubElementAttrInterface container;
+    SmallVector<Attribute> immediateSubElements;
+
+    explicit WorklistItem(SubElementAttrInterface container) {
+      SmallVector<Attribute> subElements;
+      container.walkImmediateSubElements(
+          [&](Attribute attr) { subElements.push_back(attr); }, [](Type) {});
+      immediateSubElements = std::move(subElements);
+    }
+  };
+
+  SmallVector<WorklistItem, 1> attrWorklist(1, WorklistItem(attrDict));
   SmallVector<int, 1> curAccessChain(1, /*Value=*/-1);
 
   // Process the symbol references within the given nested attribute range.
-  auto processAttrs = [&](int &index, auto attrRange) -> WalkResult {
-    for (Attribute attr : llvm::drop_begin(attrRange, index)) {
+  auto processAttrs = [&](int &index,
+                          WorklistItem &worklistItem) -> WalkResult {
+    for (Attribute attr :
+         llvm::drop_begin(worklistItem.immediateSubElements, index)) {
       /// Check for a nested container attribute, these will also need to be
       /// walked.
-      if (attr.isa<ArrayAttr, DictionaryAttr>()) {
-        attrWorklist.push_back(attr);
+      if (auto interface = attr.dyn_cast<SubElementAttrInterface>()) {
+        attrWorklist.emplace_back(interface);
         curAccessChain.push_back(-1);
         return WalkResult::advance();
       }
@@ -517,15 +531,12 @@ static WalkResult walkSymbolRefs(
 
   WalkResult result = WalkResult::advance();
   do {
-    Attribute attr = attrWorklist.back();
+    WorklistItem &item = attrWorklist.back();
     int &index = curAccessChain.back();
     ++index;
 
     // Process the given attribute, which is guaranteed to be a container.
-    if (auto dict = attr.dyn_cast<DictionaryAttr>())
-      result = processAttrs(index, make_second_range(dict.getValue()));
-    else
-      result = processAttrs(index, attr.cast<ArrayAttr>().getValue());
+    result = processAttrs(index, item);
   } while (!attrWorklist.empty() && !result.wasInterrupted());
   return result;
 }
@@ -811,48 +822,46 @@ bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Region *from) {
 
 /// Rebuild the given attribute container after replacing all references to a
 /// symbol with the updated attribute in 'accesses'.
-static Attribute rebuildAttrAfterRAUW(
-    Attribute container,
+static SubElementAttrInterface rebuildAttrAfterRAUW(
+    SubElementAttrInterface container,
     ArrayRef<std::pair<SmallVector<int, 1>, SymbolRefAttr>> accesses,
     unsigned depth) {
   // Given a range of Attributes, update the ones referred to by the given
   // access chains to point to the new symbol attribute.
-  auto updateAttrs = [&](auto &&attrRange) {
-    auto attrBegin = std::begin(attrRange);
-    for (unsigned i = 0, e = accesses.size(); i != e;) {
-      ArrayRef<int> access = accesses[i].first;
-      Attribute &attr = *std::next(attrBegin, access[depth]);
 
-      // Check to see if this is a leaf access, i.e. a SymbolRef.
-      if (access.size() == depth + 1) {
-        attr = accesses[i].second;
-        ++i;
-        continue;
-      }
+  SmallVector<std::pair<size_t, Attribute>> replacements;
 
-      // Otherwise, this is a container. Collect all of the accesses for this
-      // index and recurse. The recursion here is bounded by the size of the
-      // largest access array.
-      auto nestedAccesses = accesses.drop_front(i).take_while([&](auto &it) {
-        ArrayRef<int> nextAccess = it.first;
-        return nextAccess.size() > depth + 1 &&
-               nextAccess[depth] == access[depth];
-      });
-      attr = rebuildAttrAfterRAUW(attr, nestedAccesses, depth + 1);
+  SmallVector<Attribute> subElements;
+  container.walkImmediateSubElements(
+      [&](Attribute attribute) { subElements.push_back(attribute); },
+      [](Type) {});
+  for (unsigned i = 0, e = accesses.size(); i != e;) {
+    ArrayRef<int> access = accesses[i].first;
 
-      // Skip over all of the accesses that refer to the nested container.
-      i += nestedAccesses.size();
+    // Check to see if this is a leaf access, i.e. a SymbolRef.
+    if (access.size() == depth + 1) {
+      replacements.emplace_back(access.back(), accesses[i].second);
+      ++i;
+      continue;
     }
-  };
 
-  if (auto dictAttr = container.dyn_cast<DictionaryAttr>()) {
-    auto newAttrs = llvm::to_vector<4>(dictAttr.getValue());
-    updateAttrs(make_second_range(newAttrs));
-    return DictionaryAttr::get(dictAttr.getContext(), newAttrs);
+    // Otherwise, this is a container. Collect all of the accesses for this
+    // index and recurse. The recursion here is bounded by the size of the
+    // largest access array.
+    auto nestedAccesses = accesses.drop_front(i).take_while([&](auto &it) {
+      ArrayRef<int> nextAccess = it.first;
+      return nextAccess.size() > depth + 1 &&
+             nextAccess[depth] == access[depth];
+    });
+    auto result = rebuildAttrAfterRAUW(subElements[access[depth]],
+                                       nestedAccesses, depth + 1);
+    replacements.emplace_back(access[depth], result);
+
+    // Skip over all of the accesses that refer to the nested container.
+    i += nestedAccesses.size();
   }
-  auto newAttrs = llvm::to_vector<4>(container.cast<ArrayAttr>().getValue());
-  updateAttrs(newAttrs);
-  return ArrayAttr::get(container.getContext(), newAttrs);
+
+  return container.replaceImmediateSubAttribute(replacements);
 }
 
 /// Generates a new symbol reference attribute with a new leaf reference.
