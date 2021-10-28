@@ -24,6 +24,7 @@ include "llvm/Target/Target.td"
 //===----------------------------------------------------------------------===//
 
 include "M88kRegisterInfo.td"
+include "GISel/M88kRegisterBanks.td"
 include "M88kCallingConv.td"
 include "M88kSchedule.td"
 include "M88kInstrFormats.td"

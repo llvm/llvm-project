@@ -13,10 +13,16 @@
 #include "M88k.h"
 //#include "M88kTargetObjectFile.h"
 #include "TargetInfo/M88kTargetInfo.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -24,6 +30,8 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
   // Register the target.
   RegisterTargetMachine<M88kTargetMachine> X(getTheM88kTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
 }
 
 namespace {
@@ -122,6 +130,12 @@ public:
 
   bool addInstSelector() override;
   void addPreEmitPass() override;
+
+  // GlobalISEL
+  bool addIRTranslator() override;
+  bool addLegalizeMachineIR() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // namespace
 
@@ -136,4 +150,25 @@ bool M88kPassConfig::addInstSelector() {
 
 void M88kPassConfig::addPreEmitPass() {
   // TODO Add pass for div-by-zero check.
+}
+
+// Global ISEL
+bool M88kPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+bool M88kPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+bool M88kPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool M88kPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+  return false;
 }

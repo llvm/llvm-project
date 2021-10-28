@@ -19,10 +19,18 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class M88kRegisterBankInfo;
+class M88kSubtarget;
 class M88kTargetMachine;
 class FunctionPass;
+class InstructionSelector;
 
 FunctionPass *createM88kISelDag(M88kTargetMachine &TM,
                                 CodeGenOpt::Level OptLevel);
+
+InstructionSelector *
+createM88kInstructionSelector(const M88kTargetMachine &, const M88kSubtarget &,
+                              const M88kRegisterBankInfo &);
+
 } // end namespace llvm
 #endif

@@ -12,9 +12,16 @@ tablegen(LLVM M88kGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM M88kGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM M88kGenSubtargetInfo.inc -gen-subtarget)
 
+tablegen(LLVM M88kGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM M88kGenRegisterBank.inc -gen-register-bank)
+
 add_public_tablegen_target(M88kCommonTableGen)
 
 add_llvm_target(M88kCodeGen
+  GISel/M88kCallLowering.cpp
+  GISel/M88kInstructionSelector.cpp
+  GISel/M88kLegalizerInfo.cpp
+  GISel/M88kRegisterBankInfo.cpp
   M88kAsmPrinter.cpp
   M88kFrameLowering.cpp
   M88kISelDAGToDAG.cpp
@@ -38,6 +45,7 @@ add_llvm_target(M88kCodeGen
   M88kDesc
   M88kInfo
   Target
+  GlobalISel
 
   ADD_TO_COMPONENT
   M88k
