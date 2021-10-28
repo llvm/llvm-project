@@ -2334,7 +2334,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // If --thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
-  // in addCombinedLTOObject, so we are done if that's the case.
+  // in compileBitcodeFiles, so we are done if that's the case.
   // Likewise, --plugin-opt=emit-llvm and --plugin-opt=emit-asm are the
   // options to create output files in bitcode or assembly code
   // respectively. No object files are generated.
