@@ -3508,7 +3508,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
   // stuck together.
   SDValue InFlag;
 
-  for (int i = RegsToPass.size() - 1; i >= 0; --i) {
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
     Chain = CLI.DAG.getCopyToReg(Chain, CLI.DL, RegsToPass[i].first,
                                  RegsToPass[i].second, InFlag);
     InFlag = Chain.getValue(1);
@@ -3516,7 +3516,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (int i = RegsToPass.size() - 1; i >= 0; --i)
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
     Ops.push_back(CLI.DAG.getRegister(RegsToPass[i].first,
                                       RegsToPass[i].second.getValueType()));
 
