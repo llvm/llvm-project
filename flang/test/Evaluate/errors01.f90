@@ -90,4 +90,14 @@ module m
     !CHECK: error: SHIFT=65 count for shiftl is greater than 64
     integer(8), parameter :: bad6 = shiftl(1_8, 65)
   end subroutine
+  subroutine s9
+    integer, parameter :: rank15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1) = 1
+    !CHECK: error: SOURCE= argument to SPREAD has rank 15 but must have rank less than 15
+    integer, parameter :: bad1 = spread(rank15, 1, 1)
+    integer, parameter :: matrix(2, 2) = reshape([1, 2, 3, 4], [2, 2])
+    !CHECK: error: DIM=0 argument to SPREAD must be between 1 and 3
+    integer, parameter :: bad2 = spread(matrix, 0, 1)
+    !CHECK: error: DIM=4 argument to SPREAD must be between 1 and 3
+    integer, parameter :: bad3 = spread(matrix, 4, 1)
+  end subroutine
 end module
