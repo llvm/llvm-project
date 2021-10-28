@@ -9,6 +9,9 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // ALLOW_RETRIES: 2
 
+// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
+// UNSUPPORTED: linux && 32bits-on-64bits
+
 // <mutex>
 
 // template <class Mutex> class unique_lock;

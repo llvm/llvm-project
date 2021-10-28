@@ -8,9 +8,6 @@
 // TODO: Investigate this failure
 // XFAIL: 32bits-on-64bits
 
-# TODO: Investigate this failure on GCC.
-# XFAIL: gcc
-
 # The following assembly is a translation of this code:
 #
 #   _Unwind_Reason_Code callback(int, _Unwind_Action, long unsigned int,

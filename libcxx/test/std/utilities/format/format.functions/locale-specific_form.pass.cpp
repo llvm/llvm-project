@@ -10,6 +10,9 @@
 // UNSUPPORTED: libcpp-has-no-localization
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
+// TODO(mordante): Investigate these localization/format failures since updating the Docker image in CI
+// UNSUPPORTED: stdlib=libc++
+
 // REQUIRES: locale.en_US.UTF-8
 
 // <format>
