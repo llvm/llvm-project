@@ -45,10 +45,9 @@ using namespace mlir::linalg;
 ///   1. Pad op has a use that is not an input of a LinalgOp.
 ///   2. There is no immediately enclosing scf::ForOp.
 ///   3. The backward slice from the pad op to the scf::ForOp to hoist above
-///   contains
-///      an unknown op with a region.
+///      contains an unknown op with a region.
 ///   4. The backward slice from the pad op to the scf::ForOp to hoist above is
-///   empty.
+///      empty.
 /// Other cases succeed and will trigger hoisting of the pad op.
 struct HoistingAnalysis {
   HoistingAnalysis(PadTensorOp padTensorOp, int nLevels);
@@ -334,26 +333,6 @@ HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
     dynamicTensorSizes.push_back(res);
   }
   return dynamicTensorSizes;
-}
-
-/// Return success if `v` is a value that is only transitively defined by ops of
-/// type in `OpTypeList`.
-template <typename... OpTypeList>
-static bool backwardsSliceOnlyHasOpsOfType(scf::ForOp outerLimit, Value v) {
-  // Compute a backward slice up to, but not including, `outerLimit`.
-  SetVector<Operation *> backwardSlice;
-  getBackwardSlice(v, &backwardSlice, [&](Operation *op) {
-    return outerLimit->isProperAncestor(op);
-  });
-  // Traverse the backward slice and ensure we can perform the computation to
-  // hoist.
-  for (Operation *op : backwardSlice) {
-    if (isa<OpTypeList...>(op))
-      continue;
-    LLVM_DEBUG(DBGS() << "Abort: unadmissible op in slice " << *op << "\n");
-    return false;
-  }
-  return true;
 }
 
 /// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
