@@ -54,9 +54,6 @@ private:
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;
-  void findNumUsedRegistersSI(const MachineFunction &MF,
-                              unsigned &NumSGPR,
-                              unsigned &NumVGPR) const;
 
   /// Emit register usage information so that the GPU driver
   /// can correctly setup the GPU state.
