@@ -209,3 +209,21 @@ func @mismatch_addr_space() {
   // expected-error @+1 {{op the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64, 4>
 }
+
+// -----
+
+llvm.func @ctor() {
+  llvm.return
+}
+
+// CHECK: llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors { ctors = [@ctor], priorities = [0 : i32]}
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// CHECK: llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}
