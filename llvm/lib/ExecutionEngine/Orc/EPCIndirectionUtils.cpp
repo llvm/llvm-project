@@ -161,18 +161,16 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt32Write> PtrUpdates;
     for (auto &SI : StubInits)
-      PtrUpdates.push_back(
-          {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
-           static_cast<uint32_t>(SI.second.first)});
+      PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
+                            static_cast<uint32_t>(SI.second.first)});
     return MemAccess.writeUInt32s(PtrUpdates);
   }
   case 8: {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt64Write> PtrUpdates;
     for (auto &SI : StubInits)
-      PtrUpdates.push_back(
-          {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
-           static_cast<uint64_t>(SI.second.first)});
+      PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
+                            static_cast<uint64_t>(SI.second.first)});
     return MemAccess.writeUInt64s(PtrUpdates);
   }
   default:
@@ -214,11 +212,11 @@ Error EPCIndirectStubsManager::updatePointer(StringRef Name,
   auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
-    tpctypes::UInt32Write PUpdate(ExecutorAddr(PtrAddr), NewAddr);
+    tpctypes::UInt32Write PUpdate(PtrAddr, NewAddr);
     return MemAccess.writeUInt32s(PUpdate);
   }
   case 8: {
-    tpctypes::UInt64Write PUpdate(ExecutorAddr(PtrAddr), NewAddr);
+    tpctypes::UInt64Write PUpdate(PtrAddr, NewAddr);
     return MemAccess.writeUInt64s(PUpdate);
   }
   default:
