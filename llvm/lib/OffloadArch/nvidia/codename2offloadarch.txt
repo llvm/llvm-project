@@ -1,0 +1,12 @@
+k4000 sm_30
+k4200 sm_30
+gtx750 sm_50
+gtx960m sm_50
+gtx980 sm_35
+gtx1050 sm_61
+gtx1060 sm_61
+gtx1080 sm_61
+gt730 sm_35
+p100 sm_60
+gv100 sm_70
+v100 sm_70

@@ -49,7 +49,9 @@ omptarget_nvptx_ThreadPrivateContext *
 // communicate with the workers.  Since it is in shared memory, there is one
 // copy of these variables for each kernel, instance, and team.
 ////////////////////////////////////////////////////////////////////////////////
-omptarget_nvptx_WorkFn SHARED(omptarget_nvptx_workFn);
+omptarget_nvptx_WorkFn volatile SHARED(omptarget_nvptx_workFn);
+bool volatile SHARED(omptarget_workers_done);
+bool volatile SHARED(omptarget_master_ready);
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP kernel execution parameters

@@ -313,7 +313,11 @@ EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
   uint16_t &u16ref =
     omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid);
   uint16_t SHARE_ATTR * p16_shared = (uint16_t SHARE_ATTR *) &u16ref;
-  *p16_shared = (uint16_t SHARE_ATTR) num_threads;
+  // Limit threads to the number the kernel started was started with
+  uint16_t ThreadsAvailable = GetNumberOfWorkersInTeam();
+  uint16_t nthreads_for_next_parallel_region =
+      (num_threads > ThreadsAvailable) ? ThreadsAvailable : num_threads;
+  *p16_shared = (uint16_t SHARE_ATTR)nthreads_for_next_parallel_region;
 }
 
 // Do nothing. The host guarantees we started the requested number of
@@ -387,6 +391,9 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
     parallelLevel[I] +=
         (1 + (IsActiveParallelRegion ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
 
+#ifdef __AMDGCN__
+  omptarget_master_ready = true;
+#endif
   // Master signals work to activate workers.
   __kmpc_barrier_simple_spmd(ident, 0);
 
@@ -397,6 +404,14 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
   //
   // The master waits at this barrier until all workers are done.
   __kmpc_barrier_simple_spmd(ident, 0);
+#ifdef __AMDGCN__
+  while (!omptarget_workers_done)
+    __kmpc_barrier_simple_spmd(ident, 0);
+
+  // Initialize for next parallel region
+  omptarget_workers_done = false;
+  omptarget_master_ready = false;
+#endif
 
   // Decrement parallel level for non-SPMD warps.
   for (int I = 0; I < NumWarps; ++I)
