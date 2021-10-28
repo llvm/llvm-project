@@ -57,24 +57,24 @@ void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
                                 const InputInfoList &Inputs,
                                 const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CmdArgs,
-                                StringRef Arch, StringRef Target,
+                                StringRef Arch, StringRef TargetID,
                                 bool isBitCodeSDL, bool postClangLink);
 void AddStaticDeviceLibsPostLinking(const Driver &D,
                                     const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CmdArgs,
-                                    StringRef Arch, StringRef Target,
+                                    StringRef Arch, StringRef TargetID,
                                     bool isBitCodeSDL, bool postClangLink);
 void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
                          const InputInfoList *Inputs, const Driver &D,
                          const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
-                         StringRef Target, bool isBitCodeSDL,
+                         StringRef TargetID, bool isBitCodeSDL,
                          bool postClangLink);
 
 bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                llvm::opt::ArgStringList &CmdArgs,
                SmallVector<std::string, 8> LibraryPaths, std::string Lib,
-               StringRef Arch, StringRef Target, bool isBitCodeSDL,
+               StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
                bool postClangLink);
 
 bool GetSDLFromOffloadArchive(Compilation &C, const Driver &D, const Tool &T,
@@ -82,7 +82,7 @@ bool GetSDLFromOffloadArchive(Compilation &C, const Driver &D, const Tool &T,
                               const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args,
                               SmallVector<std::string, 8> LibraryPaths,
-                              StringRef Lib, StringRef Arch, StringRef Target,
+                              StringRef Lib, StringRef Arch, StringRef TargetID,
                               bool isBitCodeSDL, bool postClangLink);
 
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,

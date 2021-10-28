@@ -39,7 +39,8 @@ public:
 
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
-                             std::vector<StringRef> &Features);
+                             std::vector<StringRef> &Features,
+                             std::string TcTargetID = std::string());
 
 } // end namespace amdgpu
 } // end namespace tools

@@ -183,7 +183,7 @@ private:
 
 protected:
   // OpenMP creates a toolchain for each target arch. eg - gfx908
-  std::string OffloadArch;
+  std::string TargetID;
   MultilibSet Multilibs;
   Multilib SelectedMultilib;
 
@@ -259,7 +259,7 @@ public:
     return EffectiveTriple;
   }
 
-  const std::string getOffloadArch() const { return OffloadArch; }
+  const std::string getTargetID() const { return TargetID; }
 
   path_list &getLibraryPaths() { return LibraryPaths; }
   const path_list &getLibraryPaths() const { return LibraryPaths; }

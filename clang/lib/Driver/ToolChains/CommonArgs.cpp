@@ -348,7 +348,12 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+  Arg *A = Args.getLastArg(options::OPT_mcpu_EQ);
+  if (!A)
+    A = Args.getLastArg(options::OPT_march_EQ);
+  if (!A)
+    A = Args.getLastArg(options::OPT_offload_arch_EQ);
+  if (A) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
         .Cases("rv630", "rv635", "r600")
@@ -1690,7 +1695,7 @@ void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
 bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                       llvm::opt::ArgStringList &CC1Args,
                       SmallVector<std::string, 8> LibraryPaths, std::string Lib,
-                      StringRef Arch, StringRef Target, bool isBitCodeSDL,
+                      StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
                       bool postClangLink) {
   SmallVector<std::string, 12> SDLs;
 
@@ -1716,7 +1721,7 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
     for (StringRef Base : {LibBcPrefix, LibPrefix}) {
       const auto *Ext = Base.contains(LibBcPrefix) ? ".a" : ".bc";
 
-      for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + Target).str(),
+      for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + TargetID).str(),
                           Twine(Lib + "-" + Arch).str(), Twine(Lib).str()}) {
         SDLs.push_back(Twine(LibDeviceLoc + Base + Suffix + Ext).str());
         SDLs.push_back(Twine(Base + Suffix + Ext).str());
@@ -1731,7 +1736,7 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
 
     const auto *Ext = ".a";
 
-    for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + Target).str(),
+    for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + TargetID).str(),
                         Twine(Lib + "-" + Arch).str()}) {
       SDLs.push_back(Twine(LibDeviceLoc + LibPrefix + Suffix + Ext).str());
       SDLs.push_back(Twine(LibPrefix + Suffix + Ext).str());
@@ -1772,7 +1777,7 @@ bool tools::GetSDLFromOffloadArchive(
     Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
-    StringRef Lib, StringRef Arch, StringRef Target, bool isBitCodeSDL,
+    StringRef Lib, StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
     bool postClangLink) {
 
   // We don't support bitcode archive bundles for nvptx
@@ -1801,7 +1806,7 @@ bool tools::GetSDLFromOffloadArchive(
 
     StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
     std::string OutputLib = D.GetTemporaryPath(
-        Twine(Prefix + Lib + "-" + Arch + "-" + Target).str(), "a");
+        Twine(Prefix + Lib + "-" + Arch + "-" + TargetID).str(), "a");
 
     C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
 
@@ -1811,9 +1816,9 @@ bool tools::GetSDLFromOffloadArchive(
     DeviceTriple += '-';
     std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
     DeviceTriple += NormalizedTriple;
-    if (!Target.empty()) {
+    if (!TargetID.empty()) {
       DeviceTriple += '-';
-      DeviceTriple += Target;
+      DeviceTriple += TargetID;
     }
 
     std::string UnbundleArg("-unbundle");
@@ -1852,25 +1857,26 @@ bool tools::GetSDLFromOffloadArchive(
 
 // Wrapper function used by driver for adding SDLs during link phase.
 void tools::AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
-                                const JobAction &JA,
-                                const InputInfoList &Inputs,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL, bool postClangLink) {
+                                       const JobAction &JA,
+                                       const InputInfoList &Inputs,
+                                       const llvm::opt::ArgList &DriverArgs,
+                                       llvm::opt::ArgStringList &CC1Args,
+                                       StringRef Arch, StringRef TargetID,
+                                       bool isBitCodeSDL, bool postClangLink) {
   AddStaticDeviceLibs(&C, &T, &JA, &Inputs, C.getDriver(), DriverArgs, CC1Args,
-                      Arch, Target, isBitCodeSDL, postClangLink);
+                      Arch, TargetID, isBitCodeSDL, postClangLink);
 }
 
 // Wrapper function used for post clang linking of bitcode SDLS for nvptx by
 // the CUDA toolchain.
 void tools::AddStaticDeviceLibsPostLinking(const Driver &D,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL, bool postClangLink) {
+                                           const llvm::opt::ArgList &DriverArgs,
+                                           llvm::opt::ArgStringList &CC1Args,
+                                           StringRef Arch, StringRef TargetID,
+                                           bool isBitCodeSDL,
+                                           bool postClangLink) {
   AddStaticDeviceLibs(nullptr, nullptr, nullptr, nullptr, D, DriverArgs,
-                      CC1Args, Arch, Target, isBitCodeSDL, postClangLink);
+                      CC1Args, Arch, TargetID, isBitCodeSDL, postClangLink);
 }
 
 // User defined Static Device Libraries(SDLs) can be passed to clang for
@@ -1903,7 +1909,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
                                 const InputInfoList *Inputs, const Driver &D,
                                 const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
-                                StringRef Arch, StringRef Target,
+                                StringRef Arch, StringRef TargetID,
                                 bool isBitCodeSDL, bool postClangLink) {
 
   SmallVector<std::string, 8> LibraryPaths;
@@ -1944,10 +1950,10 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   // and may contain bundled object files.
   for (auto SDLName : SDLNames) {
     // This is the only call to SDLSearch
-    if (!SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDLName, Arch, Target,
-                   isBitCodeSDL, postClangLink)) {
+    if (!SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDLName, Arch,
+                   TargetID, isBitCodeSDL, postClangLink)) {
       GetSDLFromOffloadArchive(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args,
-                               LibraryPaths, SDLName, Arch, Target,
+                               LibraryPaths, SDLName, Arch, TargetID,
                                isBitCodeSDL, postClangLink);
     }
   }

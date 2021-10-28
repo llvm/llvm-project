@@ -6818,16 +6818,28 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     SmallString<128> TargetInfo("-fopenmp-targets=");
 
     Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
-    
-    assert(Tgts && Tgts->getNumValues() &&
-           "OpenMP offloading has to have targets specified.");
-    for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
-      if (i)
-        TargetInfo += ',';
-      // We need to get the string from the triple because it may be not exactly
-      // the same as the one we get directly from the arguments.
-      llvm::Triple T(Tgts->getValue(i));
-      TargetInfo += T.getTriple();
+
+    // Get list of device Toolchains
+    auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+
+    if (Tgts && Tgts->getNumValues()) {
+      for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
+        if (i)
+          TargetInfo += ',';
+        // We need to get the string from the triple because it may be not
+        // exactly the same as the one we get directly from the arguments.
+        llvm::Triple T(Tgts->getValue(i));
+        TargetInfo += T.getTriple();
+      }
+    } else if (OpenMPTCRange.first != OpenMPTCRange.second) {
+      for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE;
+           ++TI) {
+        auto *deviceTC = TI->second;
+        TargetInfo += deviceTC->getTriple().str();
+      }
+    } else {
+      assert("OpenMP offloading requires target devices, use either \
+              `-fopenmp-targets=` format, or `--offload-arch=` flag");
     }
     CmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
   }
@@ -7831,9 +7843,9 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
       Triples += '-';
       Triples += CurDep->getOffloadingArch();
     }
-    if (CurKind == Action::OFK_OpenMP && !CurTC->getOffloadArch().empty()) {
+    if (CurKind == Action::OFK_OpenMP && !CurTC->getTargetID().empty()) {
       Triples += '-';
-      Triples += CurTC->getOffloadArch();
+      Triples += CurTC->getTargetID();
     }
   }
   CmdArgs.push_back(TCArgs.MakeArgString(Triples));
@@ -7921,8 +7933,8 @@ static void createUnbundleArchiveCommand(Compilation &C,
       DeviceTriple += Triple.normalize();
       DeviceTriple += '-';
       if (OffloadKind == Action::OFK_OpenMP &&
-          !Dep.DependentToolChain->getOffloadArch().empty())
-        DeviceTriple += Dep.DependentToolChain->getOffloadArch();
+          !Dep.DependentToolChain->getTargetID().empty())
+        DeviceTriple += Dep.DependentToolChain->getTargetID();
       else
         DeviceTriple += Dep.DependentBoundArch;
 
@@ -8001,9 +8013,9 @@ void OffloadBundler::ConstructJobMultipleOutputs(
       Triples += Dep.DependentBoundArch;
     }
     if (OffloadKind == Action::OFK_OpenMP &&
-        !Dep.DependentToolChain->getOffloadArch().empty()) {
+        !Dep.DependentToolChain->getTargetID().empty()) {
       Triples += '-';
-      Triples += Dep.DependentToolChain->getOffloadArch();
+      Triples += Dep.DependentToolChain->getTargetID();
     }
   }
 
@@ -8052,7 +8064,7 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   auto TCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
 
-  // Add offload-arch of each image
+  // Add target id of each image
   auto II = TCs.first;
   for (const InputInfo &I : Inputs) {
     assert(I.isFilename() && "Invalid input.");
@@ -8060,9 +8072,9 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       auto TC = II->second;
       II++;
       std::string OffloadArchs("--offload-arch=");
-      OffloadArchs.append(TC->getOffloadArch());
+      OffloadArchs.append(TC->getTargetID());
 
-      // FIXME: Add other architecture OffloadArchs here
+      // FIXME: Add other architecture target ids here
       CmdArgs.push_back(Args.MakeArgString(OffloadArchs.c_str()));
     }
     CmdArgs.push_back(I.getFilename());

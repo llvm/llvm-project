@@ -666,6 +666,21 @@ bool GetTargetInfoFromMArch(Compilation &C,
           OpenMPTargetArch = VStr.split('=').second;
           StringRef OpenMPTargetTriple = StringRef(A->getValue(0));
           llvm::Triple TargetTriple(OpenMPTargetTriple);
+          llvm::StringMap<bool> Features;
+          auto ArchStr =
+              parseTargetID(TargetTriple, OpenMPTargetArch, &Features);
+          if (TargetTriple.isAMDGCN() && !ArchStr) {
+            C.getDriver().Diag(clang::diag::err_drv_bad_target_id)
+                << OpenMPTargetArch;
+            C.setContainsError();
+            return false;
+          }
+          StringRef ArchProc = OpenMPTargetArch.split(":").first;
+          if (ArchProc.empty()) {
+            C.getDriver().Diag(clang::diag::err_drv_cuda_bad_gpu_arch) << VStr;
+            C.setContainsError();
+            return false;
+          }
 
           // Append Triple and Arch to form a unique key for each instance of
           // the ToolChain
@@ -741,6 +756,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     //
     // OpenMP
     //
+    //
+    // Generate an instance of toolchain for each user specified target
+    // from the -fopenmp-targets option. The march value
+    // may now contain targetid value. This value
+    // may include features that would result in different and potentially
+    // multiple offload images.
     std::set<std::string> OffloadArchs;
 
     if (Arg *OpenMPTargets =
@@ -788,6 +809,30 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
     if (!OffloadArchs.empty()) {
 
+      // Extract targetIDs from all OffloadArchs and see if there
+      // is a conflict i.e. For a specific processor, a feature either shows
+      // up in all target IDs, or does not show up in any target IDs. Otherwise
+      // the target ID combination is invalid.
+      if (OffloadArchs.size() > 1) {
+        std::set<StringRef> OffloadArchsRef;
+        for (std::set<std::string>::iterator Arch = OffloadArchs.begin();
+             Arch != OffloadArchs.end(); Arch++) {
+          auto Loc = Arch->find('^') + 1;
+          OffloadArchsRef.insert(
+              StringRef(Arch->data() + Loc, Arch->size() - Loc));
+        }
+
+        auto &&ConflictingArchs =
+            getConflictTargetIDCombination(OffloadArchsRef);
+        if (ConflictingArchs) {
+          C.getDriver().Diag(clang::diag::err_drv_bad_offload_arch_combo)
+              << ConflictingArchs.getValue().first
+              << ConflictingArchs.getValue().second;
+          C.setContainsError();
+          return;
+        }
+      }
+
       // We expect that an offload target is always used in conjunction with
       // option -fopenmp specifying a valid runtime with offloading support,
       // i.e. libomp or libiomp.
@@ -810,7 +855,18 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         std::string TripleStr = Target.substr(0, find_loc);
         std::string OpenMPTargetArch = Target.substr(find_loc + 1);
         llvm::Triple TT(TripleStr);
-        std::string NormalizedName = Target;
+        llvm::StringMap<bool> Features;
+        StringRef IdStr(OpenMPTargetArch);
+        auto ArchStr = parseTargetID(TT, IdStr, &Features);
+        if (!ArchStr) {
+          Diag(clang::diag::err_drv_bad_target_id) << IdStr;
+          C.setContainsError();
+          return;
+        } else
+          OpenMPTargetArch = getCanonicalTargetID(ArchStr.getValue(), Features);
+
+        std::string NormalizedName =
+            Twine(TT.normalize() + "-" + OpenMPTargetArch).str();
 
         // Make sure we don't have a duplicate triple.
         auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
@@ -3187,8 +3243,8 @@ class OffloadingActionBuilder final {
         // Linking all inputs for the current GPU arch.
         // LI contains all the inputs for the linker.
         OffloadAction::DeviceDependences DeviceLinkDeps;
-        DeviceLinkDeps.add(*DeviceLinkAction, *ToolChains[0],
-            GpuArchList[I], AssociatedOffloadKind);
+        DeviceLinkDeps.add(*DeviceLinkAction, *ToolChains[0], GpuArchList[I].ID,
+                           AssociatedOffloadKind);
         AL.push_back(C.MakeAction<OffloadAction>(DeviceLinkDeps,
             DeviceLinkAction->getType()));
         ++I;
@@ -4905,7 +4961,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
         else if (TargetDeviceOffloadKind == Action::OFK_HIP)
           Arch = UI.DependentBoundArch;
         else if (TargetDeviceOffloadKind == Action::OFK_OpenMP)
-          Arch = UI.DependentToolChain->getOffloadArch();
+          Arch = UI.DependentToolChain->getTargetID();
       } else
         Arch = BoundArch;
 

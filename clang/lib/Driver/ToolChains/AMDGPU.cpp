@@ -536,10 +536,15 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
-                                     std::vector<StringRef> &Features) {
+                                     std::vector<StringRef> &Features,
+                                     std::string TcTargetID) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
   StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+
+  // Use this toolchain's TargetID if mcpu is not defined
+  if (TargetID.empty() && !TcTargetID.empty())
+    TargetID = TcTargetID;
   if (!TargetID.empty()) {
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);

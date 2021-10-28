@@ -9,6 +9,7 @@
 #include "Cuda.h"
 #include "CommonArgs.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
@@ -383,7 +384,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   if (JA.isDeviceOffloading(Action::OFK_OpenMP)) {
     GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
     if (GPUArchName.empty())
-      GPUArchName = TC.getOffloadArch();
+      GPUArchName = getProcessorFromTargetID(TC.getTriple(), TC.getTargetID());
     assert(!GPUArchName.empty() && "Must have an architecture passed in.");
   } else
     GPUArchName = JA.getOffloadingArch();
@@ -578,7 +579,8 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   StringRef GPUArch =
       Args.getLastArgValue(options::OPT_march_EQ);
   if (GPUArch.empty())
-    GPUArch = getToolChain().getOffloadArch();
+    GPUArch = getProcessorFromTargetID(getToolChain().getTriple(),
+                                       getToolChain().getTargetID());
 
   assert(!GPUArch.empty() && "At least one GPU Arch required for ptxas.");
 
@@ -653,7 +655,7 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
 CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ToolChain &HostTC, const ArgList &Args,
                              const Action::OffloadKind OK,
-                             const std::string OffloadArch)
+                             const std::string TargetID)
     : ToolChain(D, Triple, Args), HostTC(HostTC),
       CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
   if (CudaInstallation.isValid()) {
@@ -663,7 +665,7 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-  this->OffloadArch = std::move(OffloadArch);
+  this->TargetID = std::move(TargetID);
 }
 
 std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
@@ -688,7 +690,7 @@ void CudaToolChain::addClangTargetOptions(
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   if (GpuArch.empty())
-    GpuArch = getOffloadArch();
+    GpuArch = getProcessorFromTargetID(this->getTriple(), this->getTargetID());
   assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
           DeviceOffloadingKind == Action::OFK_Cuda) &&
@@ -851,7 +853,8 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
     if (Arch.empty())
-      Arch = getOffloadArch();
+      Arch = getProcessorFromTargetID(this->getTriple(), this->getTargetID());
+
     if (Arch.empty())
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                         CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
