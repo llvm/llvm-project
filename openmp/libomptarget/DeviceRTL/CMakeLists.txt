@@ -226,6 +226,5 @@ foreach(sm ${nvptx_sm_list})
 endforeach()
 
 foreach(mcpu ${amdgpu_mcpus})
-  # require D112227 or similar to enable the compilation for amdgpu
-  # compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -fvisibility=default -nogpulib)
+  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -fvisibility=default -nogpulib)
 endforeach()

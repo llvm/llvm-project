@@ -2,6 +2,7 @@
 
 // Wrong results on amdgcn
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 
 #include <iostream>
 
