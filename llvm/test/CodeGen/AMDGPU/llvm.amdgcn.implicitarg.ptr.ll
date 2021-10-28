@@ -281,7 +281,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 
 ; HSA-LABEL: - Name:            opencl_kernel_implicitarg_ptr_empty
 ; HSA: KernargSegmentSize: 48
-; HSA: KernargSegmentAlign: 4
+; HSA: KernargSegmentAlign: 8
 
 ; HSA-LABEL: - Name:            kernel_implicitarg_ptr
 ; HSA: KernargSegmentSize: 112
@@ -289,7 +289,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 
 ; HSA-LABEL: - Name:            opencl_kernel_implicitarg_ptr
 ; HSA: KernargSegmentSize: 160
-; HSA: KernargSegmentAlign: 4
+; HSA: KernargSegmentAlign: 8
 
 ; HSA-LABEL: - Name:            kernel_call_implicitarg_ptr_func_empty
 ; HSA: KernargSegmentSize: 0
@@ -301,7 +301,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 
 ; HSA-LABEL:  - Name:            opencl_kernel_call_implicitarg_ptr_func_empty
 ; HSA: KernargSegmentSize: 48
-; HSA: KernargSegmentAlign: 4
+; HSA: KernargSegmentAlign: 8
 
 ; HSA-LABEL:  - Name:            kernel_call_implicitarg_ptr_func
 ; HSA: KernargSegmentSize: 112
@@ -309,7 +309,7 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 
 ; HSA-LABEL:  - Name:            opencl_kernel_call_implicitarg_ptr_func
 ; HSA: KernargSegmentSize: 160
-; HSA: KernargSegmentAlign: 4
+; HSA: KernargSegmentAlign: 8
 
 ; HSA-LABEL: - Name:            kernel_call_kernarg_implicitarg_ptr_func
 ; HSA: KernargSegmentSize: 112
