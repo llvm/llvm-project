@@ -240,7 +240,7 @@ void InitializePlatformEarly() {
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
   if (max_vm != HiAppMemEnd()) {
     Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
-           max_vm, HiAppMemEnd());
+           (void *)max_vm, (void *)HiAppMemEnd());
     Die();
   }
 #endif

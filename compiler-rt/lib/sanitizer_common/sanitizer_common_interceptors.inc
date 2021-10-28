@@ -7418,7 +7418,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags, int fd,
             OFF_T off) {
   void *ctx;
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec(prot);
+    ReportMmapWriteExec(prot, flags);
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (void *)internal_mmap(addr, sz, prot, flags, fd, off);
   COMMON_INTERCEPTOR_ENTER(ctx, mmap, addr, sz, prot, flags, fd, off);
@@ -7428,7 +7428,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags, int fd,
 INTERCEPTOR(int, mprotect, void *addr, SIZE_T sz, int prot) {
   void *ctx;
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec(prot);
+    ReportMmapWriteExec(prot, 0);
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (int)internal_mprotect(addr, sz, prot);
   COMMON_INTERCEPTOR_ENTER(ctx, mprotect, addr, sz, prot);
@@ -7447,7 +7447,7 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags, int fd,
             OFF64_T off) {
   void *ctx;
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec(prot);
+    ReportMmapWriteExec(prot, flags);
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (void *)internal_mmap(addr, sz, prot, flags, fd, off);
   COMMON_INTERCEPTOR_ENTER(ctx, mmap64, addr, sz, prot, flags, fd, off);
