@@ -47,6 +47,15 @@ public:
     ProtocolUnixAbstract
   };
 
+  struct HostAndPort {
+    std::string hostname;
+    uint16_t port;
+
+    bool operator==(const HostAndPort &R) const {
+      return port == R.port && hostname == R.hostname;
+    }
+  };
+
   static const NativeSocket kInvalidSocketValue;
 
   ~Socket() override;
@@ -102,9 +111,8 @@ public:
   bool IsValid() const override { return m_socket != kInvalidSocketValue; }
   WaitableHandle GetWaitableHandle() override;
 
-  static llvm::Error DecodeHostAndPort(llvm::StringRef host_and_port,
-                                       std::string &host_str,
-                                       std::string &port_str, uint16_t &port);
+  static llvm::Expected<HostAndPort>
+  DecodeHostAndPort(llvm::StringRef host_and_port);
 
   // If this Socket is connected then return the URI used to connect.
   virtual std::string GetRemoteConnectionURI() const { return ""; };
@@ -128,6 +136,9 @@ protected:
   bool m_child_processes_inherit;
   bool m_should_close_fd;
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const Socket::HostAndPort &HP);
 
 } // namespace lldb_private
 
