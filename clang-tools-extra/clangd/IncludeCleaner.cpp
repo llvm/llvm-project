@@ -48,7 +48,7 @@ public:
 
   bool VisitFunctionDecl(FunctionDecl *FD) {
     // Function definition will require redeclarations to be included.
-    if (FD == FD->getDefinition())
+    if (FD->isThisDeclarationADefinition())
       add(FD);
     return true;
   }
