@@ -455,10 +455,11 @@ def : InstRW<[GenericWriteJump], (instrs JR_HB64_R6, TAILCALL64R6REG,
 // nanoMIPS
 // ========
 
-def : InstRW<[GenericWriteJump], (instrs JRC_NM)>;
+def : InstRW<[GenericWriteJump], (instrs JRC_NM, BC_NM)>;
 
 def : InstRW<[GenericWriteJump], (instrs PseudoReturnNM,
-                                         PseudoIndirectBranchNM)>;
+                                         PseudoIndirectBranchNM, TAILCALL_NM,
+                                         TAILCALLREG_NM)>;
 
 def : InstRW<[GenericWriteJumpAndLink], (instrs BALC_NM, MOVEBALC_NM, JALRC_NM,
                                                 JALRCPseudo)>;

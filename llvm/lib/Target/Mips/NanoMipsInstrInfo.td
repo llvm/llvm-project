@@ -475,12 +475,43 @@ def BLTUC_NM  : CBranchNM<"bltuc", brtarget, setult, GPR32NMOpnd>, InstSize32;
 def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>, InstSize32;
 def BNEIC_NM : CBranchImmNM<"bneic", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
 def BNEZC_NM : CBranchZeroNM<"bnezc", brtarget, setne, GPR32NMOpnd>;
-
-// Unconditional branch
-// TODO: native nanomips formats
-def BC_NM       : JumpFJ<jmptarget, "bc", br, bb, "b">, IsBranch, ISA_NANOMIPS;
-
 }
+
+class BCBase : InstNM<(outs), (ins jmptarget:$target), "bc\t$target",
+                      [(br bb:$target)], II_J>, InstSize32 {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let isCTI = 1;
+}
+def BC_NM : BCBase;
+
+class TailCallBase : PseudoInstNM<(outs), (ins calltarget:$target), []>,
+                     PseudoInstExpansion<(BC_NM jmptarget:$target)> {
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let isCTI = 1;
+}
+def TAILCALL_NM : TailCallBase;
+
+class TailCallRegBase : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs),
+                                     [(MipsTailCall GPR32NMOpnd:$rs)]>,
+                        PseudoInstExpansion<(JRC_NM GPR32NMOpnd:$rs)> {
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let isCTI = 1;
+  let hasPostISelHook = 1;
+}
+def TAILCALLREG_NM : TailCallRegBase;
+
+def : NMPat<(MipsTailCall (i32 tglobaladdr:$dst)),
+            (TAILCALL_NM tglobaladdr:$dst)>;
+def : NMPat<(MipsTailCall (i32 texternalsym:$dst)),
+            (TAILCALL_NM texternalsym:$dst)>;
 
 // Reversed branch conditions:
 def : NMPat<(brcond (i32 (setugt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),

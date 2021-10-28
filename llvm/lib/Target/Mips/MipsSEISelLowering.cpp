@@ -64,6 +64,9 @@ static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
 MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
                                            const MipsSubtarget &STI)
     : MipsTargetLowering(TM, STI) {
+  if (Subtarget.hasNanoMips() && UseMipsTailCalls.getNumOccurrences() == 0)
+    UseMipsTailCalls = true;
+
   // Set up the register classes
   if (STI.isABI_P32())
     addRegisterClass(MVT::i32, &Mips::GPR32NMRegClass);
