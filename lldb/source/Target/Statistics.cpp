@@ -80,6 +80,25 @@ json::Value TargetStats::ToJSON(Target &target) {
   }
   target_metrics_json.try_emplace("targetCreateTime", m_create_time.count());
 
+  json::Array breakpoints_array;
+  double totalBreakpointResolveTime = 0.0;
+  // Rport both the normal breakpoint list and the internal breakpoint list.
+  for (int i = 0; i < 2; ++i) {
+    BreakpointList &breakpoints = target.GetBreakpointList(i == 1);
+    std::unique_lock<std::recursive_mutex> lock;
+    breakpoints.GetListMutex(lock);
+    size_t num_breakpoints = breakpoints.GetSize();
+    for (size_t i = 0; i < num_breakpoints; i++) {
+      Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
+      breakpoints_array.push_back(bp->GetStatistics());
+      totalBreakpointResolveTime += bp->GetResolveTime().count();
+    }
+  }
+
+  target_metrics_json.try_emplace("breakpoints", std::move(breakpoints_array));
+  target_metrics_json.try_emplace("totalBreakpointResolveTime",
+                                  totalBreakpointResolveTime);
+
   return target_metrics_json;
 }
 
