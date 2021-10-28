@@ -73,7 +73,7 @@ void MachineDominatorTree::releaseMemory() {
 
 void MachineDominatorTree::verifyAnalysis() const {
   if (DT && VerifyMachineDomInfo)
-    if (!DT->verify(DomTreeT::VerificationLevel::Basic)) {
+    if (!DT->verify(MachineDomTree::VerificationLevel::Basic)) {
       errs() << "MachineDominatorTree verification failed\n";
       abort();
     }
