@@ -28,7 +28,7 @@
 #   $ docker push ldionne/libcxx-builder
 #
 
-FROM ubuntu:bionic
+FROM ubuntu:focal
 
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
