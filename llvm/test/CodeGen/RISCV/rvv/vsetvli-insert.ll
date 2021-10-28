@@ -77,13 +77,12 @@ entry:
   ret <vscale x 1 x i64> %1
 }
 
-; FIXME the second vsetvli is unnecessary.
+; Make sure we don't insert a vsetvli for the vmand instruction.
 define <vscale x 1 x i1> @test5(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i64 %avl) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
 ; CHECK-NEXT:    ret
 entry:
