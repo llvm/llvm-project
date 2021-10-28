@@ -571,6 +571,72 @@ entry:
   ret void
 }
 
+define i64 @test_umul48_i64(i64 %lhs, i64 %rhs) {
+; GCN-LABEL: test_umul48_i64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_mov_b32 s4, 0xffffff
+; GCN-NEXT:    v_and_b32_e32 v1, s4, v0
+; GCN-NEXT:    v_and_b32_e32 v3, s4, v2
+; GCN-NEXT:    v_mul_u32_u24_e32 v0, v0, v2
+; GCN-NEXT:    v_mul_hi_u32_u24_e32 v1, v1, v3
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %lhs24 = and i64 %lhs, 16777215
+  %rhs24 = and i64 %rhs, 16777215
+  %mul = mul i64 %lhs24, %rhs24
+  ret i64 %mul
+}
+
+define <2 x i64> @test_umul48_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
+; SI-LABEL: test_umul48_v2i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xffffff
+; SI-NEXT:    v_mul_u32_u24_e32 v5, v0, v4
+; SI-NEXT:    v_mul_u32_u24_e32 v7, v2, v6
+; SI-NEXT:    v_and_b32_e32 v2, s4, v2
+; SI-NEXT:    v_and_b32_e32 v0, s4, v0
+; SI-NEXT:    v_and_b32_e32 v3, s4, v6
+; SI-NEXT:    v_and_b32_e32 v1, s4, v4
+; SI-NEXT:    v_mul_hi_u32_u24_e32 v1, v0, v1
+; SI-NEXT:    v_mul_hi_u32_u24_e32 v3, v2, v3
+; SI-NEXT:    v_mov_b32_e32 v0, v5
+; SI-NEXT:    v_mov_b32_e32 v2, v7
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: test_umul48_v2i64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, 0xffffff
+; VI-NEXT:    v_and_b32_e32 v3, s4, v2
+; VI-NEXT:    v_and_b32_e32 v1, s4, v0
+; VI-NEXT:    v_and_b32_e32 v5, s4, v6
+; VI-NEXT:    v_and_b32_e32 v7, s4, v4
+; VI-NEXT:    v_mul_u32_u24_e32 v0, v0, v4
+; VI-NEXT:    v_mul_hi_u32_u24_e32 v1, v1, v7
+; VI-NEXT:    v_mul_u32_u24_e32 v2, v2, v6
+; VI-NEXT:    v_mul_hi_u32_u24_e32 v3, v3, v5
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: test_umul48_v2i64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0xffffff
+; GFX9-NEXT:    v_and_b32_e32 v3, s4, v2
+; GFX9-NEXT:    v_and_b32_e32 v1, s4, v0
+; GFX9-NEXT:    v_and_b32_e32 v5, s4, v6
+; GFX9-NEXT:    v_and_b32_e32 v7, s4, v4
+; GFX9-NEXT:    v_mul_u32_u24_e32 v0, v0, v4
+; GFX9-NEXT:    v_mul_hi_u32_u24_e32 v1, v1, v7
+; GFX9-NEXT:    v_mul_u32_u24_e32 v2, v2, v6
+; GFX9-NEXT:    v_mul_hi_u32_u24_e32 v3, v3, v5
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %lhs24 = and <2 x i64> %lhs, <i64 16777215, i64 16777215>
+  %rhs24 = and <2 x i64> %rhs, <i64 16777215, i64 16777215>
+  %mul = mul <2 x i64> %lhs24, %rhs24
+  ret <2 x i64> %mul
+}
+
 define amdgpu_kernel void @test_umul24_i64_square(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
 ; SI-LABEL: test_umul24_i64_square:
 ; SI:       ; %bb.0: ; %entry
