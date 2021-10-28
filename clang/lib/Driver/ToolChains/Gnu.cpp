@@ -1081,7 +1081,8 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
                        .flag("-m32")
                        .flag("-mabi=n32");
 
-    Multilib M32 = Multilib().flag("-m64").flag("+m32").flag("-mabi=n32");
+    Multilib M32 =
+        Multilib().gccSuffix("/32").flag("-m64").flag("+m32").flag("-mabi=n32");
 
     DebianMipsMultilibs =
         MultilibSet().Either(M32, M64, MAbiN32).FilterOut(NonExistent);
@@ -2120,11 +2121,11 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const M68kTriples[] = {
       "m68k-linux-gnu", "m68k-unknown-linux-gnu", "m68k-suse-linux"};
 
-  static const char *const MIPSLibDirs[] = {"/lib"};
+  static const char *const MIPSLibDirs[] = {"/libo32", "/lib"};
   static const char *const MIPSTriples[] = {
       "mips-linux-gnu", "mips-mti-linux", "mips-mti-linux-gnu",
       "mips-img-linux-gnu", "mipsisa32r6-linux-gnu"};
-  static const char *const MIPSELLibDirs[] = {"/lib"};
+  static const char *const MIPSELLibDirs[] = {"/libo32", "/lib"};
   static const char *const MIPSELTriples[] = {
       "mipsel-linux-gnu", "mips-img-linux-gnu", "mipsisa32r6el-linux-gnu"};
 
