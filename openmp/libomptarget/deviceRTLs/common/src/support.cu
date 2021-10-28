@@ -105,7 +105,8 @@ int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
   // omp_num_threads
   int rc;
   int Level = parallelLevel[GetWarpId()];
-  if (Level != OMP_ACTIVE_PARALLEL_LEVEL + 1) {
+  if ((Level != OMP_ACTIVE_PARALLEL_LEVEL + 1) &&
+      (Level != OMP_ACTIVE_PARALLEL_LEVEL)) {
     rc = 1;
   } else if (isSPMDExecutionMode) {
     rc = __kmpc_get_hardware_num_threads_in_block();
