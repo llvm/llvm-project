@@ -897,7 +897,7 @@ const DeclContext &SelectionTree::Node::getDeclContext() const {
       if (CurrentNode != this)
         if (auto *DC = dyn_cast<DeclContext>(Current))
           return *DC;
-      return *Current->getDeclContext();
+      return *Current->getLexicalDeclContext();
     }
   }
   llvm_unreachable("A tree must always be rooted at TranslationUnitDecl.");
