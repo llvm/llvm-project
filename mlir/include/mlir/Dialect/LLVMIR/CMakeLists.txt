@@ -33,6 +33,8 @@ add_mlir_dialect(NVVMOps nvvm)
 add_mlir_doc(NVVMOps NVVMDialect Dialects/ -gen-dialect-doc)
 set(LLVM_TARGET_DEFINITIONS NVVMOps.td)
 mlir_tablegen(NVVMConversions.inc -gen-llvmir-conversions)
+mlir_tablegen(NVVMOpsEnums.h.inc -gen-enum-decls)
+mlir_tablegen(NVVMOpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRNVVMConversionsIncGen)
 
 add_mlir_dialect(ROCDLOps rocdl)
