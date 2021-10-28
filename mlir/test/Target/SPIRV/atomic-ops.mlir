@@ -1,8 +1,8 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  // CHECK-LABEL: @atomic_compare_exchange_weak
-  spv.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 "None" {
+  // CHECK-LABEL: @test_int_atomics
+  spv.func @test_int_atomics(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 "None" {
     // CHECK: spv.AtomicCompareExchangeWeak "Workgroup" "Release" "Acquire" %{{.*}}, %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>
     %0 = spv.AtomicCompareExchangeWeak "Workgroup" "Release" "Acquire" %ptr, %value, %comparator: !spv.ptr<i32, Workgroup>
     // CHECK: spv.AtomicAnd "Device" "None" %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>
@@ -32,5 +32,12 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     // CHECK: spv.AtomicExchange "Workgroup" "Release" %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>
     %13 = spv.AtomicExchange "Workgroup" "Release" %ptr, %value: !spv.ptr<i32, Workgroup>
     spv.ReturnValue %0: i32
+  }
+
+  // CHECK-LABEL: @test_float_atomics
+  spv.func @test_float_atomics(%ptr: !spv.ptr<f32, Workgroup>, %value: f32) -> f32 "None" {
+    // CHECK: spv.AtomicFAddEXT "Workgroup" "Acquire" %{{.*}}, %{{.*}} : !spv.ptr<f32, Workgroup>
+    %0 = spv.AtomicFAddEXT "Workgroup" "Acquire" %ptr, %value : !spv.ptr<f32, Workgroup>
+    spv.ReturnValue %0: f32
   }
 }
