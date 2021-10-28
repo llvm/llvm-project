@@ -600,10 +600,11 @@ define <2 x i8> @C0zeroV(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 
 define <2 x i8> @C0zeroVu(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @C0zeroVu(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i8> [[X]], <i8 -11, i8 -1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> [[Y:%.*]], <2 x i8> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> [[Z:%.*]], <2 x i8> [[TMP3]]
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 10, i8 10>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[A]], <i8 0, i8 10>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[F:%.*]] = select <2 x i1> [[C]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[F]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %X, <i8 10, i8 10>
