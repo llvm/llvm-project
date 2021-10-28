@@ -23,9 +23,9 @@ public:
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "trace"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   ProcessTrace(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
@@ -40,9 +40,7 @@ public:
 
   SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status DoDestroy() override;
 
