@@ -2,7 +2,6 @@
 
 // amdgcn does not have printf definition
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 
 #include <stdio.h>
 
