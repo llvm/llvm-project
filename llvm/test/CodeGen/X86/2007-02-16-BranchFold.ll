@@ -67,7 +67,6 @@ define i16 @main_bb_2E_i9_2E_i_2E_i932_2E_ce(%struct.list* %l_addr.01.0.i2.i.i92
 ; CHECK-NEXT:  LBB0_6: ## %NodeBlock
 ; CHECK-NEXT:    js LBB0_9
 ; CHECK-NEXT:  ## %bb.7: ## %LeafBlock1
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne LBB0_3
 ; CHECK-NEXT:  ## %bb.8: ## %bb12.i.i935.exitStub
 ; CHECK-NEXT:    movl %edi, (%esi)
