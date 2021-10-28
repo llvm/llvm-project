@@ -866,7 +866,7 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
 }
 
 static bool hasRVVSpillWithFIs(MachineFunction &MF, const RISCVInstrInfo &TII) {
-  if (!MF.getSubtarget<RISCVSubtarget>().hasStdExtV())
+  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
     return false;
   return any_of(MF, [&TII](const MachineBasicBlock &MBB) {
     return any_of(MBB, [&TII](const MachineInstr &MI) {

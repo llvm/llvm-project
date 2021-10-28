@@ -935,7 +935,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     case Intrinsic::riscv_vsetvli:
     case Intrinsic::riscv_vsetvlimax: {
-      if (!Subtarget->hasStdExtV())
+      if (!Subtarget->hasVInstructions())
         break;
 
       bool VLMax = IntNo == Intrinsic::riscv_vsetvlimax;

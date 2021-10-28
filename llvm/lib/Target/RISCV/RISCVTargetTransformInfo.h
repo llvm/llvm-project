@@ -55,7 +55,7 @@ public:
   TargetTransformInfo::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
   bool shouldExpandReduction(const IntrinsicInst *II) const;
-  bool supportsScalableVectors() const { return ST->hasStdExtV(); }
+  bool supportsScalableVectors() const { return ST->hasVInstructions(); }
   Optional<unsigned> getMaxVScale() const;
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
@@ -64,17 +64,17 @@ public:
       return TypeSize::getFixed(ST->getXLen());
     case TargetTransformInfo::RGK_FixedWidthVector:
       return TypeSize::getFixed(
-          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
+          ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0);
     case TargetTransformInfo::RGK_ScalableVector:
       return TypeSize::getScalable(
-          ST->hasStdExtV() ? RISCV::RVVBitsPerBlock : 0);
+          ST->hasVInstructions() ? RISCV::RVVBitsPerBlock : 0);
     }
 
     llvm_unreachable("Unsupported register kind");
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
-    return ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0;
+    return ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0;
   }
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
@@ -84,7 +84,7 @@ public:
                                          const Instruction *I);
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
-    if (!ST->hasStdExtV())
+    if (!ST->hasVInstructions())
       return false;
 
     // Only support fixed vectors if we know the minimum vector size.
@@ -112,7 +112,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType, Align Alignment) {
-    if (!ST->hasStdExtV())
+    if (!ST->hasVInstructions())
       return false;
 
     // Only support fixed vectors if we know the minimum vector size.
@@ -149,7 +149,7 @@ public:
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const {
-    if (!ST->hasStdExtV())
+    if (!ST->hasVInstructions())
       return false;
 
     if (!VF.isScalable())
