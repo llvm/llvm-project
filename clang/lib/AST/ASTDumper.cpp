@@ -90,15 +90,7 @@ void ASTDumper::dumpTemplateDeclSpecialization(const SpecializationDecl *D,
     // FIXME: The redecls() range sometimes has elements of a less-specific
     // type. (In particular, ClassTemplateSpecializationDecl::redecls() gives
     // us TagDecls, and should give CXXRecordDecls).
-    auto *Redecl = dyn_cast<SpecializationDecl>(RedeclWithBadType);
-    if (!Redecl) {
-      // Found the injected-class-name for a class template. This will be dumped
-      // as part of its surrounding class so we don't need to dump it here.
-      assert(isa<CXXRecordDecl>(RedeclWithBadType) &&
-             "expected an injected-class-name");
-      continue;
-    }
-
+    auto *Redecl = cast<SpecializationDecl>(RedeclWithBadType);
     switch (Redecl->getTemplateSpecializationKind()) {
     case TSK_ExplicitInstantiationDeclaration:
     case TSK_ExplicitInstantiationDefinition:
