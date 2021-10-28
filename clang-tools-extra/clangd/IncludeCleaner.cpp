@@ -223,10 +223,10 @@ findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
 }
 
 std::vector<const Inclusion *>
-getUnused(const IncludeStructure &Structure,
+getUnused(const IncludeStructure &Includes,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles) {
   std::vector<const Inclusion *> Unused;
-  for (const Inclusion &MFI : Structure.MainFileIncludes) {
+  for (const Inclusion &MFI : Includes.MainFileIncludes) {
     // FIXME: Skip includes that are not self-contained.
     if (!MFI.HeaderID) {
       elog("File {0} not found.", MFI.Written);
