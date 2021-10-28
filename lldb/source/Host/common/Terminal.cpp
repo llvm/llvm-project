@@ -29,12 +29,19 @@ struct Terminal::Data {
 
 bool Terminal::IsATerminal() const { return m_fd >= 0 && ::isatty(m_fd); }
 
+#if !LLDB_ENABLE_TERMIOS
+static llvm::Error termiosMissingError() {
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "termios support missing in LLDB");
+}
+#endif
+
 llvm::Expected<Terminal::Data> Terminal::GetData() {
+#if LLDB_ENABLE_TERMIOS
   if (!FileDescriptorIsValid())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid fd");
 
-#if LLDB_ENABLE_TERMIOS
   if (!IsATerminal())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "fd not a terminal");
@@ -46,8 +53,7 @@ llvm::Expected<Terminal::Data> Terminal::GetData() {
         "unable to get teletype attributes");
   return data;
 #else // !LLDB_ENABLE_TERMIOS
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "termios support missing in LLDB");
+  return termiosMissingError();
 #endif // LLDB_ENABLE_TERMIOS
 }
 
@@ -62,44 +68,48 @@ llvm::Error Terminal::SetData(const Terminal::Data &data) {
         "unable to set teletype attributes");
   return llvm::Error::success();
 #else // !LLDB_ENABLE_TERMIOS
-  llvm_unreachable("SetData() should not be called if !LLDB_ENABLE_TERMIOS");
+  return termiosMissingError();
 #endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetEcho(bool enabled) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   fd_termios.c_lflag &= ~ECHO;
   if (enabled)
     fd_termios.c_lflag |= ECHO;
   return SetData(data.get());
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
 #endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetCanonical(bool enabled) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   fd_termios.c_lflag &= ~ICANON;
   if (enabled)
     fd_termios.c_lflag |= ICANON;
   return SetData(data.get());
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
 #endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetRaw() {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   ::cfmakeraw(&fd_termios);
 
@@ -109,7 +119,9 @@ llvm::Error Terminal::SetRaw() {
   fd_termios.c_cc[VTIME] = 0;
 
   return SetData(data.get());
-#endif // #if LLDB_ENABLE_TERMIOS
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
+#endif // LLDB_ENABLE_TERMIOS
 }
 
 #if LLDB_ENABLE_TERMIOS
@@ -258,11 +270,11 @@ static llvm::Optional<speed_t> baudRateToConst(unsigned int baud_rate) {
 #endif
 
 llvm::Error Terminal::SetBaudRate(unsigned int baud_rate) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   llvm::Optional<speed_t> val = baudRateToConst(baud_rate);
   if (!val) // invalid value
@@ -278,15 +290,17 @@ llvm::Error Terminal::SetBaudRate(unsigned int baud_rate) {
         std::error_code(errno, std::generic_category()),
         "setting output baud rate failed");
   return SetData(data.get());
-#endif // #if LLDB_ENABLE_TERMIOS
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
+#endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetStopBits(unsigned int stop_bits) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   switch (stop_bits) {
   case 1:
@@ -301,15 +315,17 @@ llvm::Error Terminal::SetStopBits(unsigned int stop_bits) {
         "invalid stop bit count: %d (must be 1 or 2)", stop_bits);
   }
   return SetData(data.get());
-#endif // #if LLDB_ENABLE_TERMIOS
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
+#endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetParity(Terminal::Parity parity) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   fd_termios.c_cflag &= ~(
 #if defined(CMSPAR)
@@ -332,15 +348,17 @@ llvm::Error Terminal::SetParity(Terminal::Parity parity) {
     }
   }
   return SetData(data.get());
-#endif // #if LLDB_ENABLE_TERMIOS
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
+#endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetParityCheck(Terminal::ParityCheck parity_check) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
   struct termios &fd_termios = data->m_termios;
   fd_termios.c_iflag &= ~(IGNPAR | PARMRK | INPCK);
 
@@ -352,15 +370,17 @@ llvm::Error Terminal::SetParityCheck(Terminal::ParityCheck parity_check) {
       fd_termios.c_iflag |= PARMRK;
   }
   return SetData(data.get());
-#endif // #if LLDB_ENABLE_TERMIOS
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
+#endif // LLDB_ENABLE_TERMIOS
 }
 
 llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
+#if LLDB_ENABLE_TERMIOS
   llvm::Expected<Data> data = GetData();
   if (!data)
     return data.takeError();
 
-#if LLDB_ENABLE_TERMIOS
 #if defined(CRTSCTS)
   struct termios &fd_termios = data->m_termios;
   fd_termios.c_cflag &= ~CRTSCTS;
@@ -374,7 +394,9 @@ llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
         "hardware flow control is not supported by the platform");
   return llvm::Error::success();
 #endif // defined(CRTSCTS)
-#endif // #if LLDB_ENABLE_TERMIOS
+#else // !LLDB_ENABLE_TERMIOS
+  return termiosMissingError();
+#endif // LLDB_ENABLE_TERMIOS
 }
 
 TerminalState::TerminalState(Terminal term, bool save_process_group)
