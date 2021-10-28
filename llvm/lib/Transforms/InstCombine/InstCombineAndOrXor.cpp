@@ -2805,15 +2805,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                   m_Value(C))))) {
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
-                       m_Specific(B)))))
-      return BinaryOperator::CreateAnd(Builder.CreateXor(B, C),
-                                       Builder.CreateNot(A));
+                       m_Specific(B))))) {
+      Value *Xor = Builder.CreateXor(B, C);
+      return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A));
+    }
 
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(B), m_Specific(C)))),
-                       m_Specific(A)))))
-      return BinaryOperator::CreateAnd(Builder.CreateXor(A, C),
-                                       Builder.CreateNot(B));
+                       m_Specific(A))))) {
+      Value *Xor = Builder.CreateXor(A, C);
+      return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B));
+    }
   }
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
