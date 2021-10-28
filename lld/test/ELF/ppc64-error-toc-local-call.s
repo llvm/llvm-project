@@ -8,8 +8,8 @@
 ## This test checks that the linker produces errors when it is missing the nop
 ## after a local call to a callee with st_other=1.
 
-# CHECK: (.text+0xC): call to save_callee lacks nop, can't restore toc
-# CHECK: (.text+0x1C): call to save_callee lacks nop, can't restore toc
+# CHECK:      {{.*}}.o:(.text+0xc): call to save_callee lacks nop, can't restore toc
+# CHECK-NEXT: {{.*}}.o:(.text+0x1c): call to save_callee lacks nop, can't restore toc
 
 callee:
 	.localentry	callee, 1
