@@ -341,6 +341,16 @@ void constraintManagerShouldTreatAsOpaque(int rhs) {
     *(volatile int *) 0; // no-warning
 }
 
+int sprintf_is_not_a_source(char *buf, char *msg) {
+  int x = sprintf(buf, "%s", msg); // no-warning
+  return 1 / x; // no-warning: 'sprintf' is not a taint source
+}
+
+int sprintf_propagates_taint(char *buf, char *msg) {
+  scanf("%s", msg);
+  int x = sprintf(buf, "%s", msg); // propagate taint!
+  return 1 / x; // expected-warning {{Division by a tainted value, possibly zero}}
+}
 
 // Test configuration
 int mySource1();
