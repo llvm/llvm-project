@@ -98,10 +98,10 @@ define i8 @t4(i8 %x, i1 %y) {
 
 define i8 @select_of_constants_multi_use(i1 %b) {
 ; CHECK-LABEL: @select_of_constants_multi_use(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i8 42, i8 -2
+; CHECK-NEXT:    [[S_NEG:%.*]] = select i1 [[B:%.*]], i8 -42, i8 2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B]], i8 42, i8 -2
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[N:%.*]] = sub nsw i8 0, [[S]]
-; CHECK-NEXT:    ret i8 [[N]]
+; CHECK-NEXT:    ret i8 [[S_NEG]]
 ;
   %s = select i1 %b, i8 42, i8 -2
   call void @use8(i8 %s)
@@ -111,10 +111,7 @@ define i8 @select_of_constants_multi_use(i1 %b) {
 
 define i32 @PR52261(i1 %b) {
 ; CHECK-LABEL: @PR52261(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 2, i32 -2
-; CHECK-NEXT:    [[N:%.*]] = sub nsw i32 0, [[S]]
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[S]], [[N]]
-; CHECK-NEXT:    ret i32 [[A]]
+; CHECK-NEXT:    ret i32 2
 ;
   %s = select i1 %b, i32 2, i32 -2
   %n = sub nsw i32 0, %s

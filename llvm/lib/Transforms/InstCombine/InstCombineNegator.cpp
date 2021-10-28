@@ -215,6 +215,20 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
                  : Builder.CreateSExt(I->getOperand(0), I->getType(),
                                       I->getName() + ".neg");
     break;
+  case Instruction::Select: {
+    // If both arms of the select are constants, we don't need to recurse.
+    // Therefore, this transform is not limited by uses.
+    auto *Sel = cast<SelectInst>(I);
+    Constant *TrueC, *FalseC;
+    if (match(Sel->getTrueValue(), m_ImmConstant(TrueC)) &&
+        match(Sel->getFalseValue(), m_ImmConstant(FalseC))) {
+      Constant *NegTrueC = ConstantExpr::getNeg(TrueC);
+      Constant *NegFalseC = ConstantExpr::getNeg(FalseC);
+      return Builder.CreateSelect(Sel->getCondition(), NegTrueC, NegFalseC,
+                                  I->getName() + ".neg", /*MDFrom=*/I);
+    }
+    break;
+  }
   default:
     break; // Other instructions require recursive reasoning.
   }
