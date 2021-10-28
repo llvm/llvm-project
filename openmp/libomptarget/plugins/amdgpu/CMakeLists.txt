@@ -122,3 +122,4 @@ endif()
 
 # Report to the parent scope that we are building a plugin for amdgpu
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)
+set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa-newRTL" PARENT_SCOPE)
