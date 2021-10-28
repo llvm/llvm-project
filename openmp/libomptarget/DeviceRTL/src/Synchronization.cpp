@@ -133,8 +133,6 @@ void syncWarp(__kmpc_impl_lanemask_t) {
 void syncThreads() { __builtin_amdgcn_s_barrier(); }
 void syncThreadsAligned() { syncThreads(); }
 
-void syncThreadsAligned() { syncThreads(); }
-
 void fenceTeam(int Ordering) { __builtin_amdgcn_fence(Ordering, "workgroup"); }
 
 void fenceKernel(int Ordering) { __builtin_amdgcn_fence(Ordering, "agent"); }
