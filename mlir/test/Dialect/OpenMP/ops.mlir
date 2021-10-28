@@ -123,7 +123,27 @@ func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads :
    omp.terminator
  }
 
- return
+  // CHECK: omp.parallel default(private)
+  omp.parallel default(private) {
+    omp.terminator
+  }
+
+  // CHECK: omp.parallel default(firstprivate)
+  omp.parallel default(firstprivate) {
+    omp.terminator
+  }
+
+  // CHECK: omp.parallel default(shared)
+  omp.parallel default(shared) {
+    omp.terminator
+  }
+
+  // CHECK: omp.parallel default(none)
+  omp.parallel default(none) {
+    omp.terminator
+  }
+
+  return
 }
 
 // CHECK-LABEL: omp_wsloop
@@ -204,6 +224,21 @@ func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index,
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) private({{.*}} : memref<i32>)
   omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) private(%data_var : memref<i32>) {
+    omp.yield
+  }
+
+  // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}})
+  omp.wsloop (%iv) : index = (%lb) to (%ub) inclusive step (%step) {
+    omp.yield
+  }
+
+  // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) nowait
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) nowait {
+    omp.yield
+  }
+
+  // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) nowait order(concurrent)
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) order(concurrent) nowait {
     omp.yield
   }
 
