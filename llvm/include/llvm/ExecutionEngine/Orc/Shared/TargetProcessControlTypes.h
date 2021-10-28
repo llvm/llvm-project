@@ -69,36 +69,48 @@ inline std::string getWireProtectionFlagsStr(WireProtectionFlags WPF) {
   return Result;
 }
 
-struct SupportFunctionCall {
-  using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
-                                                      size_t ArgSize);
+struct WrapperFunctionCall {
   ExecutorAddr Func;
-  ExecutorAddrRange ArgDataRange;
+  ExecutorAddrRange ArgData;
 
-  SupportFunctionCall() = default;
-  SupportFunctionCall(ExecutorAddr Func, ExecutorAddr ArgData,
+  WrapperFunctionCall() = default;
+  WrapperFunctionCall(ExecutorAddr Func, ExecutorAddr ArgData,
                       ExecutorAddrDiff ArgSize)
-      : Func(Func), ArgDataRange(ArgData, ArgSize) {}
-  SupportFunctionCall(ExecutorAddr Func, ExecutorAddrRange ArgDataRange)
-      : Func(Func), ArgDataRange(ArgDataRange) {}
+      : Func(Func), ArgData(ArgData, ArgSize) {}
+  WrapperFunctionCall(ExecutorAddr Func, ExecutorAddrRange ArgData)
+      : Func(Func), ArgData(ArgData) {}
 
-  Error run() {
-    shared::WrapperFunctionResult WFR(Func.toPtr<FnTy *>()(
-        ArgDataRange.Start.toPtr<const char *>(),
-        static_cast<size_t>(ArgDataRange.size().getValue())));
+  shared::WrapperFunctionResult run() {
+    using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
+                                                        size_t ArgSize);
+    return shared::WrapperFunctionResult(
+        Func.toPtr<FnTy *>()(ArgData.Start.toPtr<const char *>(),
+                             static_cast<size_t>(ArgData.size().getValue())));
+  }
+
+  /// Run call and deserialize result using SPS.
+  template <typename SPSRetT, typename RetT> Error runWithSPSRet(RetT &RetVal) {
+    auto WFR = run();
     if (const char *ErrMsg = WFR.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
-    if (!WFR.empty())
-      return make_error<StringError>("Unexpected result bytes from "
-                                     "support function call",
+    shared::SPSInputBuffer IB(WFR.data(), WFR.size());
+    if (!shared::SPSSerializationTraits<SPSRetT, RetT>::deserialize(IB, RetVal))
+      return make_error<StringError>("Could not deserialize result from "
+                                     "serialized wrapper function call",
                                      inconvertibleErrorCode());
     return Error::success();
+  }
+
+  /// Overload for SPS functions returning void.
+  Error runWithSPSRet() {
+    shared::SPSEmpty E;
+    return runWithSPSRet<shared::SPSEmpty>(E);
   }
 };
 
 struct AllocationActionsPair {
-  SupportFunctionCall Finalize;
-  SupportFunctionCall Deallocate;
+  WrapperFunctionCall Finalize;
+  WrapperFunctionCall Deallocate;
 };
 
 struct SegFinalizeRequest {
@@ -155,14 +167,14 @@ namespace shared {
 
 class SPSMemoryProtectionFlags {};
 
-using SPSSupportFunctionCall = SPSTuple<SPSExecutorAddr, SPSExecutorAddrRange>;
+using SPSWrapperFunctionCall = SPSTuple<SPSExecutorAddr, SPSExecutorAddrRange>;
 
 using SPSSegFinalizeRequest =
     SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddr, uint64_t,
              SPSSequence<char>>;
 
 using SPSAllocationActionsPair =
-    SPSTuple<SPSSupportFunctionCall, SPSSupportFunctionCall>;
+    SPSTuple<SPSWrapperFunctionCall, SPSWrapperFunctionCall>;
 
 using SPSFinalizeRequest = SPSTuple<SPSSequence<SPSSegFinalizeRequest>,
                                     SPSSequence<SPSAllocationActionsPair>>;
@@ -201,23 +213,23 @@ public:
 };
 
 template <>
-class SPSSerializationTraits<SPSSupportFunctionCall,
-                             tpctypes::SupportFunctionCall> {
-  using AL = SPSSupportFunctionCall::AsArgList;
+class SPSSerializationTraits<SPSWrapperFunctionCall,
+                             tpctypes::WrapperFunctionCall> {
+  using AL = SPSWrapperFunctionCall::AsArgList;
 
 public:
-  static size_t size(const tpctypes::SupportFunctionCall &SFC) {
-    return AL::size(SFC.Func, SFC.ArgDataRange);
+  static size_t size(const tpctypes::WrapperFunctionCall &WFC) {
+    return AL::size(WFC.Func, WFC.ArgData);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
-                        const tpctypes::SupportFunctionCall &SFC) {
-    return AL::serialize(OB, SFC.Func, SFC.ArgDataRange);
+                        const tpctypes::WrapperFunctionCall &WFC) {
+    return AL::serialize(OB, WFC.Func, WFC.ArgData);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
-                          tpctypes::SupportFunctionCall &SFC) {
-    return AL::deserialize(IB, SFC.Func, SFC.ArgDataRange);
+                          tpctypes::WrapperFunctionCall &WFC) {
+    return AL::deserialize(IB, WFC.Func, WFC.ArgData);
   }
 };
 
