@@ -20,9 +20,9 @@ using namespace _OMP;
 
 #pragma omp declare target
 
-extern uint32_t __omp_rtl_debug_kind; // defined by CGOpenMPRuntimeGPU
+extern uint32_t __omp_rtl_debug_kind;
 
-// TODO: We want to change the name as soon as the old runtime is gone.
+// TOOD: We want to change the name as soon as the old runtime is gone.
 DeviceEnvironmentTy CONSTANT(omptarget_device_environment)
     __attribute__((used));
 

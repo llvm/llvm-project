@@ -2,7 +2,6 @@
 
 // Fails in DAGToDAG on an address space problem
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 
 #include <cmath>
 #include <cstdio>

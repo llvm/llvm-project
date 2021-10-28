@@ -4,7 +4,6 @@
 
 // Fails on amdgcn with error: GPU Memory Error
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-newRTL
 
 #include <stdio.h>
 #include <omp.h>

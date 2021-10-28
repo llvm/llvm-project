@@ -68,23 +68,8 @@ uint64_t atomicAdd(uint64_t *Address, uint64_t Val, int Ordering) {
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-uint32_t atomicInc(uint32_t *A, uint32_t V, int Ordering) {
-  // builtin_amdgcn_atomic_inc32 should expand to this switch when
-  // passed a runtime value, but does not do so yet. Workaround here.
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case __ATOMIC_RELAXED:
-    return __builtin_amdgcn_atomic_inc32(A, V, __ATOMIC_RELAXED, "");
-  case __ATOMIC_ACQUIRE:
-    return __builtin_amdgcn_atomic_inc32(A, V, __ATOMIC_ACQUIRE, "");
-  case __ATOMIC_RELEASE:
-    return __builtin_amdgcn_atomic_inc32(A, V, __ATOMIC_RELEASE, "");
-  case __ATOMIC_ACQ_REL:
-    return __builtin_amdgcn_atomic_inc32(A, V, __ATOMIC_ACQ_REL, "");
-  case __ATOMIC_SEQ_CST:
-    return __builtin_amdgcn_atomic_inc32(A, V, __ATOMIC_SEQ_CST, "");
-  }
+uint32_t atomicInc(uint32_t *Address, uint32_t Val, int Ordering) {
+  return __builtin_amdgcn_atomic_inc32(Address, Val, Ordering, "");
 }
 
 uint32_t SHARED(namedBarrierTracker);
@@ -141,52 +126,6 @@ void namedBarrier() {
   fence::team(__ATOMIC_RELEASE);
 }
 
-// sema checking of amdgcn_fence is aggressive. Intention is to patch clang
-// so that it is usable within a template environment and so that a runtime
-// value of the memory order is expanded to this switch within clang/llvm.
-void fenceTeam(int Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case __ATOMIC_ACQUIRE:
-    return __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
-  case __ATOMIC_RELEASE:
-    return __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
-  case __ATOMIC_ACQ_REL:
-    return __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "workgroup");
-  case __ATOMIC_SEQ_CST:
-    return __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
-  }
-}
-void fenceKernel(int Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case __ATOMIC_ACQUIRE:
-    return __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
-  case __ATOMIC_RELEASE:
-    return __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent");
-  case __ATOMIC_ACQ_REL:
-    return __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "agent");
-  case __ATOMIC_SEQ_CST:
-    return __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
-  }
-}
-void fenceSystem(int Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case __ATOMIC_ACQUIRE:
-    return __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "");
-  case __ATOMIC_RELEASE:
-    return __builtin_amdgcn_fence(__ATOMIC_RELEASE, "");
-  case __ATOMIC_ACQ_REL:
-    return __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "");
-  case __ATOMIC_SEQ_CST:
-    return __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
-  }
-}
-
 void syncWarp(__kmpc_impl_lanemask_t) {
   // AMDGCN doesn't need to sync threads in a warp
 }
@@ -194,12 +133,13 @@ void syncWarp(__kmpc_impl_lanemask_t) {
 void syncThreads() { __builtin_amdgcn_s_barrier(); }
 void syncThreadsAligned() { syncThreads(); }
 
-// TODO: Don't have wavefront lane locks. Possibly can't have them.
-void unsetLock(omp_lock_t *) { __builtin_trap(); }
-int testLock(omp_lock_t *) { __builtin_trap(); }
-void initLock(omp_lock_t *) { __builtin_trap(); }
-void destroyLock(omp_lock_t *) { __builtin_trap(); }
-void setLock(omp_lock_t *) { __builtin_trap(); }
+void syncThreadsAligned() { syncThreads(); }
+
+void fenceTeam(int Ordering) { __builtin_amdgcn_fence(Ordering, "workgroup"); }
+
+void fenceKernel(int Ordering) { __builtin_amdgcn_fence(Ordering, "agent"); }
+
+void fenceSystem(int Ordering) { __builtin_amdgcn_fence(Ordering, ""); }
 
 #pragma omp end declare variant
 ///}
