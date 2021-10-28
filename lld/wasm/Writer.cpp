@@ -433,6 +433,13 @@ void Writer::populateTargetFeatures() {
   SmallSet<std::string, 8> &allowed = out.targetFeaturesSec->features;
   bool tlsUsed = false;
 
+  if (config->isPic) {
+    // This should not be necessary because all PIC objects should
+    // contain the mutable-globals feature.
+    // TODO(https://bugs.llvm.org/show_bug.cgi?id=52339)
+    allowed.insert("mutable-globals");
+  }
+
   // Only infer used features if user did not specify features
   bool inferFeatures = !config->features.hasValue();
 
