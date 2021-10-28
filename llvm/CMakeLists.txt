@@ -364,10 +364,7 @@ set(LLVM_ALL_TARGETS
   AMDGPU
   ARM
   AVR
-  # The BPF tests currently fail on our CI machine. This could be due to the
-  # kernel version that we use, but either way, the tests also fail on vanilla
-  # LLVM, so the failures are not due to our changes.
-  # BPF
+  BPF
   Hexagon
   Lanai
   Mips
