@@ -699,11 +699,11 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
     // Set a sensible insertion point so that subsequent calls to
     // MIRBuilder.
     MIRBuilder.setMBB(*MBB);
-    for (MachineBasicBlock::iterator MII = MBB->begin(), End = MBB->end();
-         MII != End;) {
-      // MI might be invalidated by the assignment, so move the
-      // iterator before hand.
-      MachineInstr &MI = *MII++;
+    SmallVector<MachineInstr *> WorkList(
+        make_pointer_range(reverse(MBB->instrs())));
+
+    while (!WorkList.empty()) {
+      MachineInstr &MI = *WorkList.pop_back_val();
 
       // Ignore target-specific post-isel instructions: they should use proper
       // regclasses.
@@ -727,18 +727,6 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
         reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
         return false;
-      }
-
-      // It's possible the mapping changed control flow, and moved the following
-      // instruction to a new block, so figure out the new parent.
-      if (MII != End) {
-        MachineBasicBlock *NextInstBB = MII->getParent();
-        if (NextInstBB != MBB) {
-          LLVM_DEBUG(dbgs() << "Instruction mapping changed control flow\n");
-          MBB = NextInstBB;
-          MIRBuilder.setMBB(*MBB);
-          End = MBB->end();
-        }
       }
     }
   }
