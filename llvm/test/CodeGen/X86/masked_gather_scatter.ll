@@ -21,6 +21,7 @@ define <16 x float> @test1(float* %base, <16 x i32> %ind) {
 ; KNL_64-LABEL: test1:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; KNL_64-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -29,6 +30,7 @@ define <16 x float> @test1(float* %base, <16 x i32> %ind) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -36,6 +38,7 @@ define <16 x float> @test1(float* %base, <16 x i32> %ind) {
 ; SKX-LABEL: test1:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -44,6 +47,7 @@ define <16 x float> @test1(float* %base, <16 x i32> %ind) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -78,6 +82,7 @@ define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_64-LABEL: test2:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kmovw %esi, %k1
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; KNL_64-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -86,6 +91,7 @@ define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -93,6 +99,7 @@ define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
 ; SKX-LABEL: test2:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -101,6 +108,7 @@ define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -119,6 +127,7 @@ define <16 x i32> @test3(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_64-LABEL: test3:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kmovw %esi, %k1
+; KNL_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k1}
 ; KNL_64-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -127,6 +136,7 @@ define <16 x i32> @test3(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -134,6 +144,7 @@ define <16 x i32> @test3(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; SKX-LABEL: test3:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k1}
 ; SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -142,6 +153,7 @@ define <16 x i32> @test3(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -161,6 +173,7 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_64-LABEL: test4:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kmovw %esi, %k1
+; KNL_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    kmovw %k1, %k2
 ; KNL_64-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k2}
 ; KNL_64-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -172,6 +185,7 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    kmovw %k1, %k2
 ; KNL_32-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k2}
 ; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -182,6 +196,7 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; SKX-LABEL: test4:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    kmovw %k1, %k2
 ; SKX-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k2}
 ; SKX-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -193,6 +208,7 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    kmovw %k1, %k2
 ; SKX_32-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k2}
 ; SKX_32-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -292,6 +308,7 @@ define <8 x i32> @test6(<8 x i32>%a1, <8 x i32*> %ptr) {
 ; KNL_64-LABEL: test6:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k2
 ; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
 ; KNL_64-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
@@ -302,6 +319,7 @@ define <8 x i32> @test6(<8 x i32>%a1, <8 x i32*> %ptr) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; KNL_32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_32-NEXT:    movw $255, %ax
 ; KNL_32-NEXT:    kmovw %eax, %k1
 ; KNL_32-NEXT:    kmovw %k1, %k2
@@ -313,6 +331,7 @@ define <8 x i32> @test6(<8 x i32>%a1, <8 x i32*> %ptr) {
 ; SKX-LABEL: test6:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    kxnorw %k0, %k0, %k2
 ; SKX-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
 ; SKX-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
@@ -322,6 +341,7 @@ define <8 x i32> @test6(<8 x i32>%a1, <8 x i32*> %ptr) {
 ; SKX_32-LABEL: test6:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k2
 ; SKX_32-NEXT:    vpgatherdd (,%ymm1), %ymm2 {%k2}
 ; SKX_32-NEXT:    vpscatterdd %ymm0, (,%ymm1) {%k1}
@@ -342,6 +362,7 @@ define <8 x i32> @test7(i32* %base, <8 x i32> %ind, i8 %mask) {
 ; KNL_64-NEXT:    kmovw %esi, %k0
 ; KNL_64-NEXT:    kshiftlw $8, %k0, %k0
 ; KNL_64-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    kmovw %k1, %k2
 ; KNL_64-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k2}
 ; KNL_64-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -357,6 +378,7 @@ define <8 x i32> @test7(i32* %base, <8 x i32> %ind, i8 %mask) {
 ; KNL_32-NEXT:    kmovw %ecx, %k0
 ; KNL_32-NEXT:    kshiftlw $8, %k0, %k0
 ; KNL_32-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    kmovw %k1, %k2
 ; KNL_32-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k2}
 ; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -367,6 +389,7 @@ define <8 x i32> @test7(i32* %base, <8 x i32> %ind, i8 %mask) {
 ; SKX-LABEL: test7:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    kmovw %k1, %k2
 ; SKX-NEXT:    vpgatherdd (%rdi,%ymm0,4), %ymm1 {%k2}
 ; SKX-NEXT:    vmovdqa %ymm1, %ymm2
@@ -378,6 +401,7 @@ define <8 x i32> @test7(i32* %base, <8 x i32> %ind, i8 %mask) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    kmovw %k1, %k2
 ; SKX_32-NEXT:    vpgatherdd (%eax,%ymm0,4), %ymm1 {%k2}
 ; SKX_32-NEXT:    vmovdqa %ymm1, %ymm2
@@ -403,20 +427,23 @@ define <16 x i32> @test8(<16 x i32*> %ptr.random, <16 x i32> %ind, i16 %mask) {
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kmovw %edi, %k1
 ; KNL_64-NEXT:    kshiftrw $8, %k1, %k2
+; KNL_64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL_64-NEXT:    kmovw %k2, %k3
-; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k3}
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm3 {%k3}
 ; KNL_64-NEXT:    kmovw %k1, %k3
-; KNL_64-NEXT:    vpgatherqd (,%zmm0), %ymm3 {%k3}
-; KNL_64-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm4
-; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
-; KNL_64-NEXT:    vpgatherqd (,%zmm0), %ymm3 {%k1}
-; KNL_64-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm0
+; KNL_64-NEXT:    vpgatherqd (,%zmm0), %ymm2 {%k3}
+; KNL_64-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm4
+; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm3 {%k2}
+; KNL_64-NEXT:    vpgatherqd (,%zmm0), %ymm2 {%k1}
+; KNL_64-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
 ; KNL_64-NEXT:    vpaddd %zmm0, %zmm4, %zmm0
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test8:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    kmovw %k1, %k2
 ; KNL_32-NEXT:    vpgatherdd (,%zmm0), %zmm1 {%k2}
 ; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -428,20 +455,23 @@ define <16 x i32> @test8(<16 x i32*> %ptr.random, <16 x i32> %ind, i16 %mask) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovw %edi, %k1
 ; SKX-NEXT:    kshiftrw $8, %k1, %k2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    kmovw %k2, %k3
-; SKX-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k3}
+; SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; SKX-NEXT:    vpgatherqd (,%zmm1), %ymm3 {%k3}
 ; SKX-NEXT:    kmovw %k1, %k3
-; SKX-NEXT:    vpgatherqd (,%zmm0), %ymm3 {%k3}
-; SKX-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm4
-; SKX-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
-; SKX-NEXT:    vpgatherqd (,%zmm0), %ymm3 {%k1}
-; SKX-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm0
+; SKX-NEXT:    vpgatherqd (,%zmm0), %ymm2 {%k3}
+; SKX-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm4
+; SKX-NEXT:    vpgatherqd (,%zmm1), %ymm3 {%k2}
+; SKX-NEXT:    vpgatherqd (,%zmm0), %ymm2 {%k1}
+; SKX-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
 ; SKX-NEXT:    vpaddd %zmm0, %zmm4, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test8:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    kmovw %k1, %k2
 ; SKX_32-NEXT:    vpgatherdd (,%zmm0), %zmm1 {%k2}
 ; SKX_32-NEXT:    vmovdqa64 %zmm1, %zmm2
@@ -478,6 +508,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; KNL_64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpaddq %zmm0, %zmm4, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
@@ -491,6 +522,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; KNL_32-NEXT:    vpmulld %ymm3, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm0, %ymm2, %ymm1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    movw $255, %ax
 ; KNL_32-NEXT:    kmovw %eax, %k1
 ; KNL_32-NEXT:    vpgatherdd 68(,%zmm1), %zmm0 {%k1}
@@ -506,6 +538,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm1
 ; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_SMALL-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; SKX_SMALL-NEXT:    retq
 ;
@@ -520,6 +553,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm1
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_LARGE-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; SKX_LARGE-NEXT:    retq
 ;
@@ -531,6 +565,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_32-NEXT:    vpaddd {{[0-9]+}}(%esp){1to8}, %ymm0, %ymm0
 ; SKX_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vpgatherdd 68(,%ymm1), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 entry:
@@ -557,6 +592,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; KNL_64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; KNL_64-NEXT:    vpaddq %zmm0, %zmm4, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
@@ -570,6 +606,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; KNL_32-NEXT:    vpmulld %ymm3, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; KNL_32-NEXT:    vpaddd %ymm0, %ymm2, %ymm1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    movw $255, %ax
 ; KNL_32-NEXT:    kmovw %eax, %k1
 ; KNL_32-NEXT:    vpgatherdd 68(,%zmm1), %zmm0 {%k1}
@@ -585,6 +622,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm1
 ; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_SMALL-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; SKX_SMALL-NEXT:    retq
 ;
@@ -599,6 +637,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm1
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_LARGE-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; SKX_LARGE-NEXT:    retq
 ;
@@ -610,6 +649,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_32-NEXT:    vpaddd {{[0-9]+}}(%esp){1to8}, %ymm0, %ymm0
 ; SKX_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vpgatherdd 68(,%ymm1), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 entry:
@@ -629,6 +669,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 ; KNL_64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
@@ -639,6 +680,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 ; KNL_32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
@@ -648,6 +690,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 ; SKX-NEXT:    leaq (%rdi,%rax,4), %rax
 ; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKX-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -658,6 +701,7 @@ define <16 x float> @test11(float* %base, i32 %ind) {
 ; SKX_32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -675,6 +719,7 @@ define <16 x float> @test12(float* %base, <16 x i32> %ind) {
 ; KNL_64-LABEL: test12:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; KNL_64-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -683,6 +728,7 @@ define <16 x float> @test12(float* %base, <16 x i32> %ind) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -690,6 +736,7 @@ define <16 x float> @test12(float* %base, <16 x i32> %ind) {
 ; SKX-LABEL: test12:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -698,6 +745,7 @@ define <16 x float> @test12(float* %base, <16 x i32> %ind) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -714,6 +762,7 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
 ; KNL_64-LABEL: test13:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; KNL_64-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -722,6 +771,7 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -729,6 +779,7 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
 ; SKX-LABEL: test13:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -737,6 +788,7 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -758,6 +810,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; KNL_64-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; KNL_64-NEXT:    vpsllq $2, %zmm0, %zmm0
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vgatherqps (%rax,%zmm0), %ymm1 {%k1}
 ; KNL_64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -767,6 +820,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; KNL_32-NEXT:    vmovd %xmm0, %eax
 ; KNL_32-NEXT:    vpslld $2, {{[0-9]+}}(%esp){1to16}, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
@@ -777,6 +831,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; SKX-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; SKX-NEXT:    vpsllq $2, %zmm0, %zmm0
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherqps (%rax,%zmm0), %ymm1 {%k1}
 ; SKX-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -786,6 +841,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; SKX_32-NEXT:    vmovd %xmm0, %eax
 ; SKX_32-NEXT:    vpslld $2, {{[0-9]+}}(%esp){1to16}, %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -895,6 +951,7 @@ define <4 x float> @test15(float* %base, <4 x i32> %ind, <4 x i1> %mask) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovd2m %xmm1, %k1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherdps (%rdi,%xmm0,4), %xmm1 {%k1}
 ; SKX-NEXT:    vmovaps %xmm1, %xmm0
 ; SKX-NEXT:    retq
@@ -904,6 +961,7 @@ define <4 x float> @test15(float* %base, <4 x i32> %ind, <4 x i1> %mask) {
 ; SKX_32-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpmovd2m %xmm1, %k1
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vgatherdps (%eax,%xmm0,4), %xmm1 {%k1}
 ; SKX_32-NEXT:    vmovaps %xmm1, %xmm0
 ; SKX_32-NEXT:    retl
@@ -2379,6 +2437,7 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
 define <16 x float> @test29(float* %base, <16 x i32> %ind) {
 ; KNL_64-LABEL: test29:
 ; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    movw $44, %ax
 ; KNL_64-NEXT:    kmovw %eax, %k1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
@@ -2388,6 +2447,7 @@ define <16 x float> @test29(float* %base, <16 x i32> %ind) {
 ; KNL_32-LABEL: test29:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    movw $44, %cx
 ; KNL_32-NEXT:    kmovw %ecx, %k1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
@@ -2396,6 +2456,7 @@ define <16 x float> @test29(float* %base, <16 x i32> %ind) {
 ;
 ; SKX-LABEL: test29:
 ; SKX:       # %bb.0:
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    movw $44, %ax
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
@@ -2405,6 +2466,7 @@ define <16 x float> @test29(float* %base, <16 x i32> %ind) {
 ; SKX_32-LABEL: test29:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    movw $44, %cx
 ; SKX_32-NEXT:    kmovw %ecx, %k1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
@@ -2668,16 +2730,19 @@ define <16 x float*> @test31(<16 x float**> %ptrs) {
 ; KNL_64-LABEL: test31:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k2
-; KNL_64-NEXT:    vpgatherqq (,%zmm0), %zmm2 {%k2}
-; KNL_64-NEXT:    vpgatherqq (,%zmm1), %zmm3 {%k1}
-; KNL_64-NEXT:    vmovdqa64 %zmm2, %zmm0
-; KNL_64-NEXT:    vmovdqa64 %zmm3, %zmm1
+; KNL_64-NEXT:    vpgatherqq (,%zmm0), %zmm3 {%k2}
+; KNL_64-NEXT:    vpgatherqq (,%zmm1), %zmm2 {%k1}
+; KNL_64-NEXT:    vmovdqa64 %zmm3, %zmm0
+; KNL_64-NEXT:    vmovdqa64 %zmm2, %zmm1
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test31:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpgatherdd (,%zmm0), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -2685,16 +2750,19 @@ define <16 x float*> @test31(<16 x float**> %ptrs) {
 ; SKX-LABEL: test31:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; SKX-NEXT:    kxnorw %k0, %k0, %k2
-; SKX-NEXT:    vpgatherqq (,%zmm0), %zmm2 {%k2}
-; SKX-NEXT:    vpgatherqq (,%zmm1), %zmm3 {%k1}
-; SKX-NEXT:    vmovdqa64 %zmm2, %zmm0
-; SKX-NEXT:    vmovdqa64 %zmm3, %zmm1
+; SKX-NEXT:    vpgatherqq (,%zmm0), %zmm3 {%k2}
+; SKX-NEXT:    vpgatherqq (,%zmm1), %zmm2 {%k1}
+; SKX-NEXT:    vmovdqa64 %zmm3, %zmm0
+; SKX-NEXT:    vmovdqa64 %zmm2, %zmm1
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test31:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpgatherdd (,%zmm0), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -3425,6 +3493,7 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovd2m %xmm1, %k1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpgatherqq (,%ymm0), %ymm1 {%k1}
 ; SKX-NEXT:    vpaddq %ymm1, %ymm1, %ymm0
 ; SKX-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
@@ -3441,6 +3510,7 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; SKX_32-NEXT:    subl $32, %esp
 ; SKX_32-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpmovd2m %xmm1, %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpgatherdq (,%xmm0), %ymm1 {%k1}
 ; SKX_32-NEXT:    vpaddq %ymm1, %ymm1, %ymm0
 ; SKX_32-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
@@ -3461,6 +3531,7 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; KNL_64-LABEL: test_global_array:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; KNL_64-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL_64-NEXT:    retq
@@ -3468,6 +3539,7 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; KNL_32-LABEL: test_global_array:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL_32-NEXT:    retl
@@ -3475,6 +3547,7 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; SKX_SMALL-LABEL: test_global_array:
 ; SKX_SMALL:       # %bb.0:
 ; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_SMALL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; SKX_SMALL-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_SMALL-NEXT:    retq
@@ -3483,6 +3556,7 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; SKX_LARGE:       # %bb.0:
 ; SKX_LARGE-NEXT:    movabsq $glob_array, %rax
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_LARGE-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
 ; SKX_LARGE-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_LARGE-NEXT:    retq
@@ -3490,6 +3564,7 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; SKX_32-LABEL: test_global_array:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; SKX_32-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_32-NEXT:    retl
@@ -3502,6 +3577,7 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; KNL_64-LABEL: test_global_array_zeroinitializer_index:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; KNL_64-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL_64-NEXT:    retq
@@ -3509,6 +3585,7 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; KNL_32-LABEL: test_global_array_zeroinitializer_index:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL_32-NEXT:    retl
@@ -3516,6 +3593,7 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; SKX_SMALL-LABEL: test_global_array_zeroinitializer_index:
 ; SKX_SMALL:       # %bb.0:
 ; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_SMALL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; SKX_SMALL-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_SMALL-NEXT:    retq
@@ -3524,6 +3602,7 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; SKX_LARGE:       # %bb.0:
 ; SKX_LARGE-NEXT:    movabsq $glob_array, %rax
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_LARGE-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
 ; SKX_LARGE-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_LARGE-NEXT:    retq
@@ -3531,6 +3610,7 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; SKX_32-LABEL: test_global_array_zeroinitializer_index:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; SKX_32-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_32-NEXT:    retl
@@ -3750,6 +3830,7 @@ define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
@@ -3758,6 +3839,7 @@ define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
@@ -3765,6 +3847,7 @@ define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -3773,6 +3856,7 @@ define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -3788,6 +3872,7 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; KNL_64-LABEL: sext_v8i8_index:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vpmovsxbd %xmm0, %ymm1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    movw $255, %ax
 ; KNL_64-NEXT:    kmovw %eax, %k1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
@@ -3798,6 +3883,7 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpmovsxbd %xmm0, %ymm1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    movw $255, %cx
 ; KNL_32-NEXT:    kmovw %ecx, %k1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
@@ -3808,6 +3894,7 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovsxbd %xmm0, %ymm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -3816,6 +3903,7 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    vpmovsxbd %xmm0, %ymm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -3833,6 +3921,7 @@ define <16 x float> @zext_i8_index(float* %base, <16 x i8> %ind) {
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
@@ -3841,6 +3930,7 @@ define <16 x float> @zext_i8_index(float* %base, <16 x i8> %ind) {
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
@@ -3848,6 +3938,7 @@ define <16 x float> @zext_i8_index(float* %base, <16 x i8> %ind) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -3856,6 +3947,7 @@ define <16 x float> @zext_i8_index(float* %base, <16 x i8> %ind) {
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -3871,6 +3963,7 @@ define <8 x float> @zext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; KNL_64-LABEL: zext_v8i8_index:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    movw $255, %ax
 ; KNL_64-NEXT:    kmovw %eax, %k1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
@@ -3881,6 +3974,7 @@ define <8 x float> @zext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    movw $255, %cx
 ; KNL_32-NEXT:    kmovw %ecx, %k1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
@@ -3891,6 +3985,7 @@ define <8 x float> @zext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -3899,6 +3994,7 @@ define <8 x float> @zext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 
@@ -4027,6 +4123,7 @@ define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
@@ -4035,6 +4132,7 @@ define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
@@ -4042,6 +4140,7 @@ define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
 ; SKX_SMALL:       # %bb.0:
 ; SKX_SMALL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKX_SMALL-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; SKX_SMALL-NEXT:    retq
 ;
@@ -4050,6 +4149,7 @@ define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
 ; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
 ; SKX_LARGE-NEXT:    vandps (%rax){1to16}, %zmm0, %zmm1
 ; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKX_LARGE-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; SKX_LARGE-NEXT:    retq
 ;
@@ -4058,6 +4158,7 @@ define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
   %ind_masked = and <16 x i32> %ind, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
@@ -4230,6 +4331,7 @@ define <16 x float> @test_sext_cse(float* %base, <16 x i32> %ind, <16 x i32>* %f
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vmovaps %zmm0, (%rsi)
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; KNL_64-NEXT:    vaddps %zmm1, %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -4240,6 +4342,7 @@ define <16 x float> @test_sext_cse(float* %base, <16 x i32> %ind, <16 x i32>* %f
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; KNL_32-NEXT:    vmovaps %zmm0, (%ecx)
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; KNL_32-NEXT:    vaddps %zmm1, %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -4248,6 +4351,7 @@ define <16 x float> @test_sext_cse(float* %base, <16 x i32> %ind, <16 x i32>* %f
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %zmm0, (%rsi)
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; SKX-NEXT:    vaddps %zmm1, %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -4258,6 +4362,7 @@ define <16 x float> @test_sext_cse(float* %base, <16 x i32> %ind, <16 x i32>* %f
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SKX_32-NEXT:    vmovaps %zmm0, (%ecx)
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vgatherdps (%eax,%zmm0,4), %zmm1 {%k1}
 ; SKX_32-NEXT:    vaddps %zmm1, %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -5112,6 +5217,7 @@ define <8 x i64> @pr45906(<8 x %struct.foo*> %ptr) {
 ; KNL_64-LABEL: pr45906:
 ; KNL_64:       # %bb.0: # %bb
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpgatherqq 8(,%zmm0), %zmm1 {%k1}
 ; KNL_64-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
@@ -5119,6 +5225,7 @@ define <8 x i64> @pr45906(<8 x %struct.foo*> %ptr) {
 ; KNL_32-LABEL: pr45906:
 ; KNL_32:       # %bb.0: # %bb
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpgatherdq 4(,%ymm0), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL_32-NEXT:    retl
@@ -5126,6 +5233,7 @@ define <8 x i64> @pr45906(<8 x %struct.foo*> %ptr) {
 ; SKX-LABEL: pr45906:
 ; SKX:       # %bb.0: # %bb
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpgatherqq 8(,%zmm0), %zmm1 {%k1}
 ; SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX-NEXT:    retq
@@ -5133,6 +5241,7 @@ define <8 x i64> @pr45906(<8 x %struct.foo*> %ptr) {
 ; SKX_32-LABEL: pr45906:
 ; SKX_32:       # %bb.0: # %bb
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpgatherdq 4(,%ymm0), %zmm1 {%k1}
 ; SKX_32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX_32-NEXT:    retl
@@ -5142,69 +5251,3 @@ bb:
   ret <8 x i64> %tmp1
 }
 declare <8 x i64> @llvm.masked.gather.v8i64.v8p0i64(<8 x i64*>, i32, <8 x i1>, <8 x i64>)
-
-%struct.ST2 = type { i32, i32 }
-
-; Make sure we don't use a displacement on the gather. The constant from the
-; struct offset should be folded into the constant pool load for the vector
-; add.
-define <8 x i32> @test_const_fold(%struct.ST2* %base, <8 x i64> %i1) {
-; KNL_64-LABEL: test_const_fold:
-; KNL_64:       # %bb.0: # %entry
-; KNL_64-NEXT:    vpsllq $3, %zmm0, %zmm0
-; KNL_64-NEXT:    vpbroadcastq %rdi, %zmm1
-; KNL_64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
-; KNL_64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
-; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm0 {%k1}
-; KNL_64-NEXT:    retq
-;
-; KNL_32-LABEL: test_const_fold:
-; KNL_32:       # %bb.0: # %entry
-; KNL_32-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL_32-NEXT:    vpslld $3, %ymm0, %ymm0
-; KNL_32-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %ymm1
-; KNL_32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; KNL_32-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
-; KNL_32-NEXT:    movw $255, %ax
-; KNL_32-NEXT:    kmovw %eax, %k1
-; KNL_32-NEXT:    vpgatherdd (,%zmm1), %zmm0 {%k1}
-; KNL_32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; KNL_32-NEXT:    retl
-;
-; SKX_SMALL-LABEL: test_const_fold:
-; SKX_SMALL:       # %bb.0: # %entry
-; SKX_SMALL-NEXT:    vpsllq $3, %zmm0, %zmm0
-; SKX_SMALL-NEXT:    vpbroadcastq %rdi, %zmm1
-; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
-; SKX_SMALL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
-; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_SMALL-NEXT:    vpgatherqd (,%zmm1), %ymm0 {%k1}
-; SKX_SMALL-NEXT:    retq
-;
-; SKX_LARGE-LABEL: test_const_fold:
-; SKX_LARGE:       # %bb.0: # %entry
-; SKX_LARGE-NEXT:    vpsllq $3, %zmm0, %zmm0
-; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm1
-; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
-; SKX_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; SKX_LARGE-NEXT:    vpaddq (%rax), %zmm0, %zmm1
-; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_LARGE-NEXT:    vpgatherqd (,%zmm1), %ymm0 {%k1}
-; SKX_LARGE-NEXT:    retq
-;
-; SKX_32-LABEL: test_const_fold:
-; SKX_32:       # %bb.0: # %entry
-; SKX_32-NEXT:    vpmovqd %zmm0, %ymm0
-; SKX_32-NEXT:    vpslld $3, %ymm0, %ymm0
-; SKX_32-NEXT:    vpaddd {{[0-9]+}}(%esp){1to8}, %ymm0, %ymm0
-; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_32-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
-; SKX_32-NEXT:    vpgatherdd (,%ymm1), %ymm0 {%k1}
-; SKX_32-NEXT:    retl
-entry:
-  %add = add <8 x i64> %i1, <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-  %arrayidx = getelementptr  %struct.ST2, %struct.ST2* %base, <8 x i64> %add, i32 1
-  %res = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> %arrayidx, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
-  ret <8 x i32> %res
-}

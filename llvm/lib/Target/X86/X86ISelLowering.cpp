@@ -31116,6 +31116,10 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     Mask = ExtendToType(Mask, MaskVT, DAG, true);
   }
 
+  // Break dependency on the data register.
+  if (PassThru.isUndef())
+    PassThru = getZeroVector(VT, Subtarget, DAG, dl);
+
   SDValue Ops[] = { N->getChain(), PassThru, Mask, N->getBasePtr(), Index,
                     N->getScale() };
   SDValue NewGather = DAG.getMemIntrinsicNode(
