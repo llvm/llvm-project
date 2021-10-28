@@ -95,8 +95,8 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; X64-NEXT:    cwtl
 ; X64-NEXT:    sarl $15, %eax
 ; X64-NEXT:    xorl $-32768, %eax # imm = 0x8000
-; X64-NEXT:    addw %di, %si
-; X64-NEXT:    cmovnol %esi, %eax
+; X64-NEXT:    addw %si, %di
+; X64-NEXT:    cmovnol %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %a = mul i16 %y, %z
@@ -131,8 +131,8 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; X64-NEXT:    leal (%rdi,%rax), %ecx
 ; X64-NEXT:    sarb $7, %cl
 ; X64-NEXT:    xorb $-128, %cl
-; X64-NEXT:    addb %dil, %al
-; X64-NEXT:    movzbl %al, %edx
+; X64-NEXT:    addb %al, %dil
+; X64-NEXT:    movzbl %dil, %edx
 ; X64-NEXT:    movzbl %cl, %eax
 ; X64-NEXT:    cmovnol %edx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax

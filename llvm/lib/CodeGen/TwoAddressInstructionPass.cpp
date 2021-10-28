@@ -134,7 +134,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
 
   bool convertInstTo3Addr(MachineBasicBlock::iterator &mi,
                           MachineBasicBlock::iterator &nmi, Register RegA,
-                          Register RegB, unsigned Dist);
+                          Register RegB, unsigned &Dist);
 
   bool isDefTooClose(Register Reg, unsigned Dist, MachineInstr *MI);
 
@@ -146,7 +146,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   bool tryInstructionTransform(MachineBasicBlock::iterator &mi,
                                MachineBasicBlock::iterator &nmi,
                                unsigned SrcIdx, unsigned DstIdx,
-                               unsigned Dist, bool shouldOnlyCommute);
+                               unsigned &Dist, bool shouldOnlyCommute);
 
   bool tryInstructionCommute(MachineInstr *MI,
                              unsigned DstOpIdx,
@@ -674,7 +674,7 @@ bool TwoAddressInstructionPass::isProfitableToConv3Addr(Register RegA,
 /// Return true if this transformation was successful.
 bool TwoAddressInstructionPass::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
-    Register RegA, Register RegB, unsigned Dist) {
+    Register RegA, Register RegB, unsigned &Dist) {
   MachineInstrSpan MIS(mi, MBB);
   MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV);
   if (!NewMI)
@@ -723,7 +723,9 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
   if (LIS && !SingleInst)
     LIS->repairIntervalsInRange(MBB, MIS.begin(), MIS.end(), OrigRegs);
 
-  DistanceMap.insert(std::make_pair(NewMI, Dist));
+  for (MachineInstr &MI : MIS)
+    DistanceMap.insert(std::make_pair(&MI, Dist++));
+  Dist--;
   mi = NewMI;
   nmi = std::next(mi);
 
@@ -1226,7 +1228,7 @@ bool TwoAddressInstructionPass::
 tryInstructionTransform(MachineBasicBlock::iterator &mi,
                         MachineBasicBlock::iterator &nmi,
                         unsigned SrcIdx, unsigned DstIdx,
-                        unsigned Dist, bool shouldOnlyCommute) {
+                        unsigned &Dist, bool shouldOnlyCommute) {
   if (OptLevel == CodeGenOpt::None)
     return false;
 
@@ -1334,6 +1336,8 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
         // look "normal" to the transformation logic.
         MBB->insert(mi, NewMIs[0]);
         MBB->insert(mi, NewMIs[1]);
+        DistanceMap.insert(std::make_pair(NewMIs[0], Dist++));
+        DistanceMap.insert(std::make_pair(NewMIs[1], Dist));
 
         LLVM_DEBUG(dbgs() << "2addr:    NEW LOAD: " << *NewMIs[0]
                           << "2addr:    NEW INST: " << *NewMIs[1]);
@@ -1389,6 +1393,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
           }
 
           MI.eraseFromParent();
+          DistanceMap.erase(&MI);
 
           // Update LiveIntervals.
           if (LIS) {
@@ -1405,6 +1410,9 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
           LLVM_DEBUG(dbgs() << "2addr: ABANDONING UNFOLD\n");
           NewMIs[0]->eraseFromParent();
           NewMIs[1]->eraseFromParent();
+          DistanceMap.erase(NewMIs[0]);
+          DistanceMap.erase(NewMIs[1]);
+          Dist--;
         }
       }
     }
