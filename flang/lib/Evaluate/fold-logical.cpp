@@ -140,6 +140,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
           },
           ix->u);
     }
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "extends_type_of") {
     // Type extension testing with EXTENDS_TYPE_OF() ignores any type
     // parameters. Returns a constant truth value when the result is known now.
@@ -231,7 +233,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: dot_product, is_iostat_end,
+  // TODO: is_iostat_end,
   // is_iostat_eor, logical, matmul, out_of_range,
   // parity
   return Expr<T>{std::move(funcRef)};

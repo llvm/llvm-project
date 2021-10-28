@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: DOT_PRODUCT, NORM2, PARITY
+// TODO: NORM2, PARITY
 
 #ifndef FORTRAN_EVALUATE_FOLD_REDUCTION_H_
 #define FORTRAN_EVALUATE_FOLD_REDUCTION_H_
@@ -15,10 +15,96 @@
 
 namespace Fortran::evaluate {
 
-// Fold and validate a DIM= argument.  Returns true (with &dim empty)
-// when DIM= is not present or (with &dim set) when DIM= is present, constant,
-// and valid.  Returns false, possibly with an error message, when
-// DIM= is present but either not constant or not valid.
+// DOT_PRODUCT
+template <typename T>
+static Expr<T> FoldDotProduct(
+    FoldingContext &context, FunctionRef<T> &&funcRef) {
+  using Element = typename Constant<T>::Element;
+  auto args{funcRef.arguments()};
+  CHECK(args.size() == 2);
+  Folder<T> folder{context};
+  Constant<T> *va{folder.Folding(args[0])};
+  Constant<T> *vb{folder.Folding(args[1])};
+  if (va && vb) {
+    CHECK(va->Rank() == 1 && vb->Rank() == 1);
+    if (va->size() != vb->size()) {
+      context.messages().Say(
+          "Vector arguments to DOT_PRODUCT have distinct extents %zd and %zd"_err_en_US,
+          va->size(), vb->size());
+      return MakeInvalidIntrinsic(std::move(funcRef));
+    }
+    Element sum{};
+    bool overflow{false};
+    if constexpr (T::category == TypeCategory::Complex) {
+      std::vector<Element> conjugates;
+      for (const Element &x : va->values()) {
+        conjugates.emplace_back(x.CONJG());
+      }
+      Constant<T> conjgA{
+          std::move(conjugates), ConstantSubscripts{va->shape()}};
+      Expr<T> products{Fold(
+          context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      Element correction; // Use Kahan summation for greater precision.
+      const auto &rounding{context.targetCharacteristics().roundingMode()};
+      for (const Element &x : cProducts.values()) {
+        auto next{correction.Add(x, rounding)};
+        overflow |= next.flags.test(RealFlag::Overflow);
+        auto added{sum.Add(next.value, rounding)};
+        overflow |= added.flags.test(RealFlag::Overflow);
+        correction = added.value.Subtract(sum, rounding)
+                         .value.Subtract(next.value, rounding)
+                         .value;
+        sum = std::move(added.value);
+      }
+    } else if constexpr (T::category == TypeCategory::Logical) {
+      Expr<T> conjunctions{Fold(context,
+          Expr<T>{LogicalOperation<T::kind>{LogicalOperator::And,
+              Expr<T>{Constant<T>{*va}}, Expr<T>{Constant<T>{*vb}}}})};
+      Constant<T> &cConjunctions{DEREF(UnwrapConstantValue<T>(conjunctions))};
+      for (const Element &x : cConjunctions.values()) {
+        if (x.IsTrue()) {
+          sum = Element{true};
+          break;
+        }
+      }
+    } else if constexpr (T::category == TypeCategory::Integer) {
+      Expr<T> products{
+          Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      for (const Element &x : cProducts.values()) {
+        auto next{sum.AddSigned(x)};
+        overflow |= next.overflow;
+        sum = std::move(next.value);
+      }
+    } else { // T::category == TypeCategory::Real
+      Expr<T> products{
+          Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      Element correction; // Use Kahan summation for greater precision.
+      const auto &rounding{context.targetCharacteristics().roundingMode()};
+      for (const Element &x : cProducts.values()) {
+        auto next{correction.Add(x, rounding)};
+        overflow |= next.flags.test(RealFlag::Overflow);
+        auto added{sum.Add(next.value, rounding)};
+        overflow |= added.flags.test(RealFlag::Overflow);
+        correction = added.value.Subtract(sum, rounding)
+                         .value.Subtract(next.value, rounding)
+                         .value;
+        sum = std::move(added.value);
+      }
+    }
+    if (overflow) {
+      context.messages().Say(
+          "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
+          T::AsFortran());
+    }
+    return Expr<T>{Constant<T>{std::move(sum)}};
+  }
+  return Expr<T>{std::move(funcRef)};
+}
+
+// Fold and validate a DIM= argument.  Returns false on error.
 bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &,
     ActualArguments &, std::optional<int> dimIndex, int rank);
 
@@ -203,13 +289,15 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
         overflow |= sum.overflow;
         element = sum.value;
       } else { // Real & Complex: use Kahan summation
-        auto next{array->At(at).Add(correction)};
+        const auto &rounding{context.targetCharacteristics().roundingMode()};
+        auto next{array->At(at).Add(correction, rounding)};
         overflow |= next.flags.test(RealFlag::Overflow);
-        auto sum{element.Add(next.value)};
+        auto sum{element.Add(next.value, rounding)};
         overflow |= sum.flags.test(RealFlag::Overflow);
         // correction = (sum - element) - next; algebraically zero
-        correction =
-            sum.value.Subtract(element).value.Subtract(next.value).value;
+        correction = sum.value.Subtract(element, rounding)
+                         .value.Subtract(next.value, rounding)
+                         .value;
         element = sum.value;
       }
     }};
