@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_ARRAY_H
-#define LLVM_LIBC_UTILS_CPP_ARRAY_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ARRAY_H
+#define LLVM_LIBC_SRC_SUPPORT_CPP_ARRAY_H
 
 #include <stddef.h> // For size_t.
 
@@ -49,4 +49,4 @@ template <class T, size_t N> struct Array {
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_CPP_ARRAY_H
+#endif // LLVM_LIBC_SRC_SUPPORT_CPP_ARRAY_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_FUNCTIONAL_H
-#define LLVM_LIBC_UTILS_CPP_FUNCTIONAL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
+#define LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
 
 namespace __llvm_libc {
 namespace cpp {
@@ -27,4 +27,4 @@ public:
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_CPP_FUNCTIONAL_H
+#endif // LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H

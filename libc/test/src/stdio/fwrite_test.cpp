@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/Array.h"
 #include "src/stdio/FILE.h"
 #include "src/stdio/fwrite.h"
-#include "utils/CPP/Array.h"
 #include "utils/UnitTest/Test.h"
 
 TEST(LlvmLibcStdio, FWriteBasic) {

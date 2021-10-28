@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_ARRAYREF_H
-#define LLVM_LIBC_UTILS_CPP_ARRAYREF_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ARRAYREF_H
+#define LLVM_LIBC_SRC_SUPPORT_CPP_ARRAYREF_H
 
 #include "Array.h"
 #include "TypeTraits.h" //RemoveCVType
@@ -136,4 +136,4 @@ public:
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_CPP_ARRAYREF_H
+#endif // LLVM_LIBC_SRC_SUPPORT_CPP_ARRAYREF_H

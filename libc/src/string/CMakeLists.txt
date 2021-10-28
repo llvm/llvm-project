@@ -5,7 +5,7 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_entrypoint_object(
@@ -188,7 +188,7 @@ add_entrypoint_object(
   HDRS
     strspn.h
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_entrypoint_object(
