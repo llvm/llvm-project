@@ -7,6 +7,9 @@
 // TODO: Fix option on Android, it hangs there for unknown reasons.
 // XFAIL: android
 
+#if defined(__APPLE__)
+#include <Availability.h>
+#endif
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -32,7 +35,10 @@ int main(int argc, char **argv) {
   (void)mprotect(q, 64, PROT_READ | PROT_EXEC);
   // CHECK-NOT: Sanitizer
 #if defined(__APPLE__)
+#  if (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
+      __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000)
   pthread_jit_write_protect_np(false);
+#  endif
   char *c = (char *)mmap(0, 128, PROT_WRITE | PROT_EXEC,
 		         MAP_ANONYMOUS | MAP_PRIVATE | MAP_JIT, -1, 0);
   // CHECK-NOT: Sanitizer
