@@ -970,7 +970,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
-  symtab->addCombinedLTOObject();
+  symtab->compileBitcodeFiles();
   if (errorCount())
     return;
 
