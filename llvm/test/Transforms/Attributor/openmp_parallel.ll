@@ -49,7 +49,7 @@ define dso_local void @func(float* nocapture %a, float* %b, i32 %N) local_unname
 ;
 ; IS__CGSCC_OPM: Function Attrs: nounwind uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@func
-; IS__CGSCC_OPM-SAME: (float* nocapture nofree readnone [[A:%.*]], float* nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_OPM-SAME: (float* nocapture nofree [[A:%.*]], float* nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 ; IS__CGSCC_OPM-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -62,7 +62,7 @@ define dso_local void @func(float* nocapture %a, float* %b, i32 %N) local_unname
 ;
 ; IS__CGSCC_NPM: Function Attrs: nounwind uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@func
-; IS__CGSCC_NPM-SAME: (float* nocapture nofree readnone [[A:%.*]], float* nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_NPM-SAME: (float* nocapture nofree [[A:%.*]], float* nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 ; IS__CGSCC_NPM-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8

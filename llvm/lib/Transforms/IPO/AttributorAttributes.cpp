@@ -7322,10 +7322,12 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use &U,
 
   case Instruction::Store:
     // Stores cause the NO_WRITES property to disappear if the use is the
-    // pointer operand. Note that we do assume that capturing was taken care of
-    // somewhere else.
+    // pointer operand. Note that while capturing was taken care of somewhere
+    // else we need to deal with stores of the value that is not looked through.
     if (cast<StoreInst>(UserI)->getPointerOperand() == U.get())
       removeAssumedBits(NO_WRITES);
+    else
+      indicatePessimisticFixpoint();
     return;
 
   case Instruction::Call:
