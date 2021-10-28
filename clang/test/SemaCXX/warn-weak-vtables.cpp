@@ -3,6 +3,9 @@
 // Check that this warning is disabled on MS ABI targets which don't have key
 // functions.
 // RUN: %clang_cc1 %s -fsyntax-only -triple %ms_abi_triple -Werror -Wweak-vtables
+//
+// -Wweak-template-vtables is deprecated but we still parse it.
+// RUN: %clang_cc1 %s -fsyntax-only -Werror -Wweak-template-vtables
 
 struct A { // expected-warning {{'A' has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit}}
   virtual void f() { } 
