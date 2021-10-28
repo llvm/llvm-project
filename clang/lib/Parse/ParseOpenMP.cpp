@@ -2375,6 +2375,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_dispatch:
   case OMPD_masked:
   case OMPD_metadirective:
+  case OMPD_loop:
     Diag(Tok, diag::err_omp_unexpected_directive)
         << 1 << getOpenMPDirectiveName(DKind);
     break;
@@ -2724,6 +2725,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   case OMPD_target_data:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
+  case OMPD_loop:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
   case OMPD_master_taskloop:
