@@ -3458,7 +3458,7 @@ multiclass VPatAMOV_WD<string intrinsic,
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions for CodeGen
@@ -3819,9 +3819,9 @@ let Uses = [VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
   defm PseudoVNCLIPU    : VPseudoBinaryV_WV_WX_WI;
 }
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
@@ -3954,9 +3954,9 @@ defm PseudoVFNCVT_F_XU : VPseudoConversionV_W;
 defm PseudoVFNCVT_F_X : VPseudoConversionV_W;
 defm PseudoVFNCVT_F_F : VPseudoConversionV_W;
 defm PseudoVFNCVT_ROD_F_F : VPseudoConversionV_W;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 // 15.1. Vector Single-Width Integer Reduction Instructions
 //===----------------------------------------------------------------------===//
@@ -3974,9 +3974,9 @@ defm PseudoVREDMAX     : VPseudoReductionV_VS;
 //===----------------------------------------------------------------------===//
 defm PseudoVWREDSUMU   : VPseudoReductionV_VS;
 defm PseudoVWREDSUM    : VPseudoReductionV_VS;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
@@ -3991,7 +3991,7 @@ defm PseudoVFREDMAX    : VPseudoReductionV_VS;
 defm PseudoVFWREDUSUM  : VPseudoReductionV_VS;
 defm PseudoVFWREDOSUM  : VPseudoReductionV_VS;
 
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 16. Vector Mask Instructions
@@ -4059,7 +4059,7 @@ defm PseudoVID : VPseudoMaskNullaryV;
 // 17.1. Integer Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach m = MxList.m in {
     let VLMul = m.value in {
@@ -4076,13 +4076,13 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     }
   }
 }
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // 17.2. Floating-Point Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach m = MxList.m in {
     foreach f = FPList.fpinfo in {
@@ -4104,22 +4104,22 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     }
   }
 }
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 17.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
   defm PseudoVSLIDEUP    : VPseudoTernaryV_VX_VI<uimm5, "@earlyclobber $rd">;
   defm PseudoVSLIDEDOWN  : VPseudoTernaryV_VX_VI<uimm5>;
   defm PseudoVSLIDE1UP   : VPseudoBinaryV_VX<"@earlyclobber $rd">;
   defm PseudoVSLIDE1DOWN : VPseudoBinaryV_VX;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
   defm PseudoVFSLIDE1UP  : VPseudoBinaryV_VF<"@earlyclobber $rd">;
   defm PseudoVFSLIDE1DOWN : VPseudoBinaryV_VF;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 17.4. Vector Register Gather Instructions
@@ -4151,15 +4151,15 @@ let Predicates = [HasStdExtZvamo] in {
   defm : VPatAMOV_WD<"int_riscv_vamomaxu", "PseudoVAMOMAXU", AllIntegerVectors>;
 } // Predicates = [HasStdExtZvamo]
 
-let Predicates = [HasStdExtZvamo, HasStdExtF] in {
+let Predicates = [HasStdExtZvamo, HasVInstructionsAnyF] in {
   defm : VPatAMOV_WD<"int_riscv_vamoswap", "PseudoVAMOSWAP", AllFloatVectors>;
-} // Predicates = [HasStdExtZvamo, HasStdExtF]
+} // Predicates = [HasStdExtZvamo, HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 // 12.1. Vector Single-Width Integer Add and Subtract
 //===----------------------------------------------------------------------===//
@@ -4475,9 +4475,9 @@ defm : VPatBinaryV_VV_VX_VI<"int_riscv_vssra", "PseudoVSSRA", AllIntegerVectors,
 defm : VPatBinaryV_WV_WX_WI<"int_riscv_vnclipu", "PseudoVNCLIPU", AllWidenableIntVectors>;
 defm : VPatBinaryV_WV_WX_WI<"int_riscv_vnclip", "PseudoVNCLIP", AllWidenableIntVectors>;
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
@@ -4623,9 +4623,9 @@ defm : VPatConversionVF_WI <"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU">;
 defm : VPatConversionVF_WI <"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X">;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F">;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 // 15.1. Vector Single-Width Integer Reduction Instructions
 //===----------------------------------------------------------------------===//
@@ -4643,9 +4643,9 @@ defm : VPatReductionV_VS<"int_riscv_vredmax", "PseudoVREDMAX">;
 //===----------------------------------------------------------------------===//
 defm : VPatReductionW_VS<"int_riscv_vwredsumu", "PseudoVWREDSUMU">;
 defm : VPatReductionW_VS<"int_riscv_vwredsum", "PseudoVWREDSUM">;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
@@ -4660,13 +4660,13 @@ defm : VPatReductionV_VS<"int_riscv_vfredmax", "PseudoVFREDMAX", /*IsFloat=*/1>;
 defm : VPatReductionW_VS<"int_riscv_vfwredusum", "PseudoVFWREDUSUM", /*IsFloat=*/1>;
 defm : VPatReductionW_VS<"int_riscv_vfwredosum", "PseudoVFWREDOSUM", /*IsFloat=*/1>;
 
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 16. Vector Mask Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 // 16.1 Vector Mask-Register Logical Instructions
 //===----------------------------------------------------------------------===//
@@ -4718,7 +4718,7 @@ defm : VPatUnaryV_M<"int_riscv_viota", "PseudoVIOTA">;
 //===----------------------------------------------------------------------===//
 defm : VPatNullaryV<"int_riscv_vid", "PseudoVID">;
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // 17. Vector Permutation Instructions
@@ -4728,19 +4728,19 @@ defm : VPatNullaryV<"int_riscv_vid", "PseudoVID">;
 // 17.1. Integer Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 foreach vti = AllIntegerVectors in {
   def : Pat<(riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVMV_X_S_" # vti.LMul.MX) $rs2, vti.Log2SEW)>;
   // vmv.s.x is handled with a custom node in RISCVInstrInfoVVLPatterns.td
 }
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // 17.2. Floating-Point Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 foreach fvti = AllFloatVectors in {
   defvar instr = !cast<Instruction>("PseudoVFMV_"#fvti.ScalarSuffix#"_S_" #
                                     fvti.LMul.MX);
@@ -4755,52 +4755,52 @@ foreach fvti = AllFloatVectors in {
              (fvti.Scalar fvti.ScalarRegClass:$rs2),
              GPR:$vl, fvti.Log2SEW)>;
 }
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 17.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
   defm : VPatTernaryV_VX_VI<"int_riscv_vslideup", "PseudoVSLIDEUP", AllIntegerVectors, uimm5>;
   defm : VPatTernaryV_VX_VI<"int_riscv_vslidedown", "PseudoVSLIDEDOWN", AllIntegerVectors, uimm5>;
   defm : VPatBinaryV_VX<"int_riscv_vslide1up", "PseudoVSLIDE1UP", AllIntegerVectors>;
   defm : VPatBinaryV_VX<"int_riscv_vslide1down", "PseudoVSLIDE1DOWN", AllIntegerVectors>;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
   defm : VPatTernaryV_VX_VI<"int_riscv_vslideup", "PseudoVSLIDEUP", AllFloatVectors, uimm5>;
   defm : VPatTernaryV_VX_VI<"int_riscv_vslidedown", "PseudoVSLIDEDOWN", AllFloatVectors, uimm5>;
   defm : VPatBinaryV_VX<"int_riscv_vfslide1up", "PseudoVFSLIDE1UP", AllFloatVectors>;
   defm : VPatBinaryV_VX<"int_riscv_vfslide1down", "PseudoVFSLIDE1DOWN", AllFloatVectors>;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 17.4. Vector Register Gather Instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
   defm : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                   AllIntegerVectors, uimm5>;
   defm : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
                                 /* eew */ 16, AllIntegerVectors>;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
   defm : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                   AllFloatVectors, uimm5>;
   defm : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16_vv", "PseudoVRGATHEREI16",
                                 /* eew */ 16, AllFloatVectors>;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // 17.5. Vector Compress Instruction
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
   defm : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllIntegerVectors>;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
   defm : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllFloatVectors>;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 // Include the non-intrinsic ISel patterns
 include "RISCVInstrInfoVSDPatterns.td"
