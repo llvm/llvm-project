@@ -888,11 +888,6 @@ def err_ptrauth_qualifier_address_discrimination_invalid : Error<
 def err_ptrauth_qualifier_extra_discriminator_invalid : Error<
   "extra discriminator for __ptrauth must be between 0 and %1; value is %0">;
 
-def warn_fortify_scanf_overflow : Warning<
-  "'%0' may overflow; destination buffer in argument %1 has size "
-  "%2, but the corresponding field width plus NUL byte is %3">,
-  InGroup<FortifySource>;
-
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
