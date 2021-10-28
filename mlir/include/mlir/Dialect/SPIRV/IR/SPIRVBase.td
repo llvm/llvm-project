@@ -3352,6 +3352,8 @@ def SPV_OC_OpBitReverse                : I32EnumAttrCase<"OpBitReverse", 204>;
 def SPV_OC_OpBitCount                  : I32EnumAttrCase<"OpBitCount", 205>;
 def SPV_OC_OpControlBarrier            : I32EnumAttrCase<"OpControlBarrier", 224>;
 def SPV_OC_OpMemoryBarrier             : I32EnumAttrCase<"OpMemoryBarrier", 225>;
+def SPV_OC_OpAtomicExchange            : I32EnumAttrCase<"OpAtomicExchange", 229>;
+def SPV_OC_OpAtomicCompareExchange     : I32EnumAttrCase<"OpAtomicCompareExchange", 230>;
 def SPV_OC_OpAtomicCompareExchangeWeak : I32EnumAttrCase<"OpAtomicCompareExchangeWeak", 231>;
 def SPV_OC_OpAtomicIIncrement          : I32EnumAttrCase<"OpAtomicIIncrement", 232>;
 def SPV_OC_OpAtomicIDecrement          : I32EnumAttrCase<"OpAtomicIDecrement", 233>;
@@ -3442,6 +3444,7 @@ def SPV_OpcodeAttr :
       SPV_OC_OpBitwiseAnd, SPV_OC_OpNot, SPV_OC_OpBitFieldInsert,
       SPV_OC_OpBitFieldSExtract, SPV_OC_OpBitFieldUExtract, SPV_OC_OpBitReverse,
       SPV_OC_OpBitCount, SPV_OC_OpControlBarrier, SPV_OC_OpMemoryBarrier,
+      SPV_OC_OpAtomicExchange, SPV_OC_OpAtomicCompareExchange,
       SPV_OC_OpAtomicCompareExchangeWeak, SPV_OC_OpAtomicIIncrement,
       SPV_OC_OpAtomicIDecrement, SPV_OC_OpAtomicIAdd, SPV_OC_OpAtomicISub,
       SPV_OC_OpAtomicSMin, SPV_OC_OpAtomicUMin, SPV_OC_OpAtomicSMax,
