@@ -2895,3 +2895,16 @@ def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
   let mayLoad = 1;
   let mayStore = 0;
 }
+
+// Generic instruction for SI_CALL, so we can select the register bank and insert a waterfall loop
+// if necessary.
+def G_SI_CALL : AMDGPUGenericInstruction {
+  let OutOperandList = (outs SReg_64:$dst);
+  let InOperandList = (ins type0:$src0, unknown:$callee);
+  let Size = 4;
+  let isCall = 1;
+  let UseNamedOperandTable = 1;
+  let SchedRW = [WriteBranch];
+  // TODO: Should really base this on the call target
+  let isConvergent = 1;
+}
