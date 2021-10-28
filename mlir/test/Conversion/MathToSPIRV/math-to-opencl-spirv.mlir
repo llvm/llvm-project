@@ -28,6 +28,8 @@ func @float32_unary_scalar(%arg0: f32) {
   %9 = math.ceil %arg0 : f32
   // CHECK: spv.OCL.floor %{{.*}}: f32
   %10 = math.floor %arg0 : f32
+  // CHECK: spv.OCL.erf %{{.*}}: f32
+  %11 = math.erf %arg0 : f32
   return
 }
 

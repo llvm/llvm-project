@@ -22,6 +22,8 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Addresses], []> {
     %8 = spv.OCL.pow %arg0, %arg0 : f32
     // CHECK: {{%.*}} = spv.OCL.rsqrt {{%.*}} : f32
     %9 = spv.OCL.rsqrt %arg0 : f32
+    // CHECK: {{%.*}} = spv.OCL.erf {{%.*}} : f32
+    %10 = spv.OCL.erf %arg0 : f32
     spv.Return
   }
 
