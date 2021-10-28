@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
 
-; Test case for PR16520. The store in %if.then is dead, because the same value
+; Test case for PR16520. The store in %if.then is redundant, because the same value
 ; has been stored earlier to the same location.
 define void @test1_pr16520(i1 %b, i8* nocapture %r) {
 ; CHECK-LABEL: @test1_pr16520(
@@ -15,7 +15,6 @@ define void @test1_pr16520(i1 %b, i8* nocapture %r) {
 ; CHECK-NEXT:    store i8 1, i8* [[R:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i8 1, i8* [[R]], align 1
 ; CHECK-NEXT:    tail call void @fn_mayread_or_clobber()
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
@@ -42,8 +41,6 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 declare void @fn_mayread_or_clobber()
-
-
 declare void @fn_readonly() readonly
 
 define void @test2(i1 %b, i8* nocapture %r) {
@@ -58,7 +55,6 @@ define void @test2(i1 %b, i8* nocapture %r) {
 ; CHECK-NEXT:    tail call void @fn_readonly()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i8 1, i8* [[R]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -75,6 +71,39 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   store i8 1, i8* %r, align 1
+  ret void
+}
+
+; Make sure volatile stores are not removed.
+define void @test2_volatile(i1 %b, i8* nocapture %r) {
+; CHECK-LABEL: @test2_volatile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store volatile i8 1, i8* [[R:%.*]], align 1
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @fn_readonly()
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    tail call void @fn_readonly()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    store volatile i8 1, i8* [[R]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  store volatile i8 1, i8* %r, align 1
+  br i1 %b, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  tail call void @fn_readonly()
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  tail call void @fn_readonly()
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  store volatile i8 1, i8* %r, align 1
   ret void
 }
 
@@ -185,7 +214,6 @@ define void @test6(i32* noalias %P) {
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
@@ -220,7 +248,6 @@ define void @test7(i32* noalias %P) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -272,7 +299,6 @@ define void @test9(i32* noalias %P) {
 ; CHECK-NEXT:    call void @fn_mayread_or_clobber()
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -475,6 +501,20 @@ define void @test13_memset_shortened(i64* %ptr) {
   %ptr.i8 = bitcast i64* %ptr to i8*
   call void @llvm.memset.p0i8.i64(i8* %ptr.i8, i8 0, i64 24, i1 false)
   store i64 0, i64* %ptr
+  ret void
+}
+
+declare i8* @strcat(i8*, i8*) nounwind argmemonly
+
+define void @test14_strcat(i8* noalias %P, i8* noalias %Q) {
+; CHECK-LABEL: @test14_strcat(
+; CHECK-NEXT:    call i8* @strcat(i8* [[P:%.*]], i8* [[Q:%.*]])
+; CHECK-NEXT:    call i8* @strcat(i8* [[P]], i8* [[Q]])
+; CHECK-NEXT:    ret void
+;
+  %call1 = call i8* @strcat(i8* %P, i8* %Q)
+  ; FIXME: Eliminate the second strcat as a "store of existing value" for this particular case, where both strcat's are identical (same source, not just same dest).
+  %call2 = call i8* @strcat(i8* %P, i8* %Q)
   ret void
 }
 
