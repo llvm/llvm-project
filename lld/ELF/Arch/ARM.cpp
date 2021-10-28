@@ -380,20 +380,25 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 // or Thumb.
 static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
   assert(!s.isFunc());
+  const ErrorPlace place = getErrorPlace(loc);
+  std::string hint;
+  if (!place.srcLoc.empty())
+    hint = "; " + place.srcLoc;
   if (s.isSection()) {
     // Section symbols must be defined and in a section. Users cannot change
     // the type. Use the section name as getName() returns an empty string.
-    warn(getErrorLocation(loc) + "branch and link relocation: " +
-         toString(relt) + " to STT_SECTION symbol " +
-         cast<Defined>(s).section->name + " ; interworking not performed");
+    warn(place.loc + "branch and link relocation: " + toString(relt) +
+         " to STT_SECTION symbol " + cast<Defined>(s).section->name +
+         " ; interworking not performed" + hint);
   } else {
     // Warn with hint on how to alter the symbol type.
     warn(getErrorLocation(loc) + "branch and link relocation: " +
          toString(relt) + " to non STT_FUNC symbol: " + s.getName() +
          " interworking not performed; consider using directive '.type " +
          s.getName() +
-         ", %function' to give symbol type STT_FUNC if"
-         " interworking between ARM and Thumb is required");
+         ", %function' to give symbol type STT_FUNC if interworking between "
+         "ARM and Thumb is required" +
+         hint);
   }
 }
 
