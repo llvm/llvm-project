@@ -1289,8 +1289,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 // Iff -C1 s<= C2 s<= C0-C1
 // Also ULT predicate can also be UGT iff C0 != -1 (+invert result)
 //      SLT predicate can also be SGT iff C2 != INT_MAX (+invert res.)
-static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
-                                          InstCombiner::BuilderTy &Builder) {
+static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
+                                    InstCombiner::BuilderTy &Builder) {
   Value *X = Sel0.getTrueValue();
   Value *Sel1 = Sel0.getFalseValue();
 
@@ -1343,6 +1343,11 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // the select in other hand should be one-use.
   if (!Sel1->hasOneUse())
     return nullptr;
+
+  // If the types do not match, look through any truncs to the underlying
+  // instruction.
+  if (Cmp00->getType() != X->getType() && X->hasOneUse())
+    match(X, m_TruncOrSelf(m_Value(X)));
 
   // We now can finish matching the condition of the outermost select:
   // it should either be the X itself, or an addition of some constant to X.
@@ -1414,15 +1419,29 @@ static Instruction *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   if (!match(Precond2, m_One()))
     return nullptr;
 
+  // If we are matching from a truncated input, we need to sext the
+  // ReplacementLow and ReplacementHigh values. Only do the transform if they
+  // are free to extend due to being constants.
+  if (X->getType() != Sel0.getType()) {
+    Constant *LowC, *HighC;
+    if (!match(ReplacementLow, m_ImmConstant(LowC)) ||
+        !match(ReplacementHigh, m_ImmConstant(HighC)))
+      return nullptr;
+    ReplacementLow = ConstantExpr::getSExt(LowC, X->getType());
+    ReplacementHigh = ConstantExpr::getSExt(HighC, X->getType());
+  }
+
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
   Value *MaybeReplacedLow =
       Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
-  Instruction *MaybeReplacedHigh =
-      SelectInst::Create(ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
 
-  return MaybeReplacedHigh;
+  // Create the final select. If we looked through a truncate above, we will
+  // need to retruncate the result.
+  Value *MaybeReplacedHigh = Builder.CreateSelect(
+      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
 // If we have
@@ -1513,8 +1532,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewAbs = canonicalizeAbsNabs(SI, *ICI, *this))
     return NewAbs;
 
-  if (Instruction *NewAbs = canonicalizeClampLike(SI, *ICI, Builder))
-    return NewAbs;
+  if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *NewSel =
           tryToReuseConstantFromSelectInComparison(SI, *ICI, *this))
