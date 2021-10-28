@@ -65,10 +65,12 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type summary clear")
 
         self.runCmd(
-            "type summary add --summary-string \"${var[]}\" -x \"int\\[[0-9]\\]")
+            "type summary add --summary-string \"${var[]}\" -x \"^int\\[[0-9]\\]")
 
         self.expect("frame variable int_array",
                     substrs=['1,2,3,4,5'])
+        self.expect("frame variable const_int_array",
+                    substrs=['11,12,13,14,15'])
 
         # this will fail if we don't do [] as regex correctly
         self.runCmd(
