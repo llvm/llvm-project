@@ -2759,9 +2759,9 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (get_ast_num_children() <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
     return impl();
+#ifndef NDEBUG
   if (ShouldSkipValidation(type))
     return impl();
-#ifndef NDEBUG
   std::string ast_child_name;
   uint32_t ast_child_byte_size = 0;
   int32_t ast_child_byte_offset = 0;
