@@ -765,3 +765,27 @@ f64x2 relaxed_max_f64x2(f64x2 a, f64x2 b) {
   // WEBASSEMBLY-SAME: <2 x double> %a, <2 x double> %b)
   // WEBASSEMBLY-NEXT: ret
 }
+
+i32x4 relaxed_trunc_s_i32x4_f32x4(f32x4 f) {
+  return __builtin_wasm_relaxed_trunc_s_i32x4_f32x4(f);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.signed(<4 x float> %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+u32x4 relaxed_trunc_u_i32x4_f32x4(f32x4 f) {
+  return __builtin_wasm_relaxed_trunc_u_i32x4_f32x4(f);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.unsigned(<4 x float> %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 relaxed_trunc_zero_s_i32x4_f64x2(f64x2 x) {
+  return __builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2(x);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.zero.signed(<2 x double> %x)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+u32x4 relaxed_trunc_zero_u_i32x4_f64x2(f64x2 x) {
+  return __builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2(x);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.zero.unsigned(<2 x double> %x)
+  // WEBASSEMBLY-NEXT: ret
+}

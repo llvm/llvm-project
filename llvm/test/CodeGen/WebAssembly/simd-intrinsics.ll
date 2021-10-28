@@ -526,6 +526,48 @@ define <4 x i32> @laneselect_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
   ret <4 x i32> %v
 }
 
+; CHECK-LABEL: relaxed_trunc_s:
+; NO-CHECK-NOT: f32x4
+; CHECK-NEXT: .functype relaxed_trunc_s (v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.relaxed_trunc_f32x4_s $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT: return $pop[[R]]
+declare <4 x i32> @llvm.wasm.relaxed.trunc.signed(<4 x float>)
+define <4 x i32> @relaxed_trunc_s(<4 x float> %x) {
+  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.signed(<4 x float> %x)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: relaxed_trunc_u:
+; NO-CHECK-NOT: f32x4
+; CHECK-NEXT: .functype relaxed_trunc_u (v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.relaxed_trunc_f32x4_u $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT: return $pop[[R]]
+declare <4 x i32> @llvm.wasm.relaxed.trunc.unsigned(<4 x float>)
+define <4 x i32> @relaxed_trunc_u(<4 x float> %x) {
+  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.unsigned(<4 x float> %x)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: relaxed_trunc_zero_s:
+; CHECK-NEXT: .functype relaxed_trunc_zero_s (v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.relaxed_trunc_f64x2_s_zero $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.relaxed.trunc.zero.signed(<2 x double>)
+define <4 x i32> @relaxed_trunc_zero_s(<2 x double> %x) {
+  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.zero.signed(<2 x double> %x)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: relaxed_trunc_zero_u:
+; CHECK-NEXT: .functype relaxed_trunc_zero_u (v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.relaxed_trunc_f64x2_u_zero $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.relaxed.trunc.zero.unsigned(<2 x double>)
+define <4 x i32> @relaxed_trunc_zero_u(<2 x double> %x) {
+  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.zero.unsigned(<2 x double> %x)
+  ret <4 x i32> %a
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================

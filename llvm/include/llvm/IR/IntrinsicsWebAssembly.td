@@ -214,6 +214,27 @@ def int_wasm_relaxed_max :
             [LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
+def int_wasm_relaxed_trunc_signed:
+  Intrinsic<[llvm_v4i32_ty],
+            [llvm_v4f32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+def int_wasm_relaxed_trunc_unsigned:
+  Intrinsic<[llvm_v4i32_ty],
+            [llvm_v4f32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+def int_wasm_relaxed_trunc_zero_signed:
+  Intrinsic<[llvm_v4i32_ty],
+            [llvm_v2f64_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+def int_wasm_relaxed_trunc_zero_unsigned:
+  Intrinsic<[llvm_v4i32_ty],
+            [llvm_v2f64_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//

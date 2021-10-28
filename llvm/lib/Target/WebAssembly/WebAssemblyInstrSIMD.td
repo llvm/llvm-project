@@ -1392,3 +1392,20 @@ multiclass SIMD_RELAXED_FMINMAX<Vec vec, bits<32> simdopMin, bits<32> simdopMax>
 
 defm "" : SIMD_RELAXED_FMINMAX<F32x4, 0xb4, 0xe2>;
 defm "" : SIMD_RELAXED_FMINMAX<F64x2, 0xd4, 0xee>;
+
+//===----------------------------------------------------------------------===//
+// Relaxed floating-point to int conversions
+//===----------------------------------------------------------------------===//
+
+multiclass SIMD_RELAXED_CONVERT<Vec vec, Vec arg, SDPatternOperator op, string name, bits<32> simdop> {
+  defm op#_#vec :
+    RELAXED_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
+              [(set (vec.vt V128:$dst), (vec.vt (op (arg.vt V128:$vec))))],
+              vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop>;
+}
+
+defm "" : SIMD_RELAXED_CONVERT<I32x4, F32x4, int_wasm_relaxed_trunc_signed, "relaxed_trunc_f32x4_s", 0xa5>;
+defm "" : SIMD_RELAXED_CONVERT<I32x4, F32x4, int_wasm_relaxed_trunc_unsigned, "relaxed_trunc_f32x4_u", 0xa6>;
+
+defm "" : SIMD_RELAXED_CONVERT<I32x4, F64x2, int_wasm_relaxed_trunc_zero_signed, "relaxed_trunc_f64x2_s_zero", 0xc5>;
+defm "" : SIMD_RELAXED_CONVERT<I32x4, F64x2, int_wasm_relaxed_trunc_zero_unsigned, "relaxed_trunc_f64x2_u_zero", 0xc6>;
