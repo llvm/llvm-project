@@ -873,7 +873,7 @@ bool DenseElementsAttr::isSplat() const {
 }
 
 /// Return if the given complex type has an integer element type.
-static bool isComplexOfIntType(Type type) {
+LLVM_ATTRIBUTE_UNUSED static bool isComplexOfIntType(Type type) {
   return type.cast<ComplexType>().getElementType().isa<IntegerType>();
 }
 
