@@ -13,12 +13,41 @@ Buildmasters
 
 There are two buildmasters running.
 
-* The main buildmaster at `<https://lab.llvm.org/buildbot>`_. All builders attached
-  to this machine will notify commit authors every time they break the build.
-* The staging buildbot at `<https://lab.llvm.org/staging>`_. All builders attached
-  to this machine will be completely silent by default when the build is broken.
-  Builders for experimental backends should generally be attached to this
-  buildmaster.
+* The main buildmaster at `<https://lab.llvm.org/buildbot>`_. All builders
+  attached to this machine will notify commit authors every time they break
+  the build.
+* The staging buildmaster at `<https://lab.llvm.org/staging>`_. All builders
+  attached to this machine will be completely silent by default when the build
+  is broken.
+
+In order to remain connected to the main buildmaster (and thus notify
+developers of failures), a builbot must:
+
+* Be building a supported configuration.  Builders for experimental backends
+  should generally be attached to staging buildmaster.
+* Be able to keep up with new commits to the main branch, or at a minimum
+  recover to tip of tree within a couple of days of falling behind.
+
+Additionally, we encourage all bot owners to point their bots towards the
+staging master during maintenance windows, instability troubleshooting, and
+such.
+
+Roles & Expectations
+====================
+
+Each buildbot has an owner who is the responsible party for addressing problems
+which arise with said buildbot.  We generally expect the bot owner to be
+reasonably responsive.
+
+For some bots, the ownership responsibility is split between a "resource owner"
+who provides the underlying machine resource, and a "configuration owner" who
+maintains the build configuration.  Generally, operational responsibility lies
+with the "config owner".  We do expect "resource owners" - who are generally
+the contact listed in a workers attributes - to proxy requests to the relevant
+"config owner" in a timely manner.
+
+Most issues with a buildbot should be addressed directly with a bot owner
+via email.  Please CC `Galina Kistanova <mailto:gkistanova@gmail.com>`_.
 
 Steps To Add Builder To LLVM Buildbot
 =====================================
