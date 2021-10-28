@@ -3402,7 +3402,7 @@ static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
 //       generates more elaborate instructions for this intrinsic since it
 //       is very conservative on the boundary conditions.
 static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
-                                   bool enableIndexOptimizations, int64_t dim,
+                                   bool indexOptimizations, int64_t dim,
                                    Value b, Value *off = nullptr) {
   auto loc = op->getLoc();
   // If we can assume all indices fit in 32-bit, we perform the vector
@@ -3410,7 +3410,7 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   // Otherwise we perform the vector comparison using 64-bit indices.
   Value indices;
   Type idxType;
-  if (enableIndexOptimizations) {
+  if (indexOptimizations) {
     indices = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI32VectorAttr(
                  llvm::to_vector<4>(llvm::seq<int32_t>(0, dim))));
@@ -3439,7 +3439,7 @@ struct MaterializeTransferMask : public OpRewritePattern<ConcreteOp> {
 public:
   explicit MaterializeTransferMask(MLIRContext *context, bool enableIndexOpt)
       : mlir::OpRewritePattern<ConcreteOp>(context),
-        enableIndexOptimizations(enableIndexOpt) {}
+        indexOptimizations(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(ConcreteOp xferOp,
                                 PatternRewriter &rewriter) const override {
@@ -3466,8 +3466,8 @@ public:
     Value off = xferOp.indices()[lastIndex];
     Value dim =
         vector::createOrFoldDimOp(rewriter, loc, xferOp.source(), lastIndex);
-    Value mask = buildVectorComparison(
-        rewriter, xferOp, enableIndexOptimizations, vecWidth, dim, &off);
+    Value mask = buildVectorComparison(rewriter, xferOp, indexOptimizations,
+                                       vecWidth, dim, &off);
 
     if (xferOp.mask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.
@@ -3483,7 +3483,7 @@ public:
   }
 
 private:
-  const bool enableIndexOptimizations;
+  const bool indexOptimizations;
 };
 
 /// Conversion pattern for a vector.create_mask (1-D only).
@@ -3493,7 +3493,7 @@ public:
   explicit VectorCreateMaskOpConversion(MLIRContext *context,
                                         bool enableIndexOpt)
       : mlir::OpRewritePattern<vector::CreateMaskOp>(context),
-        enableIndexOptimizations(enableIndexOpt) {}
+        indexOptimizations(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -3501,7 +3501,7 @@ public:
     int64_t rank = dstType.getRank();
     if (rank == 1) {
       rewriter.replaceOp(
-          op, buildVectorComparison(rewriter, op, enableIndexOptimizations,
+          op, buildVectorComparison(rewriter, op, indexOptimizations,
                                     dstType.getDimSize(0), op.getOperand(0)));
       return success();
     }
@@ -3509,7 +3509,7 @@ public:
   }
 
 private:
-  const bool enableIndexOptimizations;
+  const bool indexOptimizations;
 };
 
 // Drop inner most contiguous unit dimensions from transfer_read operand.
@@ -3587,11 +3587,11 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
 };
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
-    RewritePatternSet &patterns, bool enableIndexOptimizations) {
+    RewritePatternSet &patterns, bool indexOptimizations) {
   patterns.add<VectorCreateMaskOpConversion,
                MaterializeTransferMask<vector::TransferReadOp>,
                MaterializeTransferMask<vector::TransferWriteOp>>(
-      patterns.getContext(), enableIndexOptimizations);
+      patterns.getContext(), indexOptimizations);
 }
 
 void mlir::vector::populatePropagateVectorDistributionPatterns(
