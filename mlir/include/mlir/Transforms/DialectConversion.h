@@ -353,7 +353,7 @@ protected:
   /// Construct a conversion pattern with the given converter, and forward the
   /// remaining arguments to RewritePattern.
   template <typename... Args>
-  ConversionPattern(TypeConverter &typeConverter, Args &&... args)
+  ConversionPattern(TypeConverter &typeConverter, Args &&...args)
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
@@ -382,6 +382,9 @@ public:
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
+  LogicalResult match(Operation *op) const final {
+    return match(cast<SourceOp>(op));
+  }
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
     rewrite(cast<SourceOp>(op), OpAdaptor(operands, op->getAttrDictionary()),
@@ -395,42 +398,22 @@ public:
                            rewriter);
   }
 
-  /// Rewrite and Match methods that operate on the SourceOp type and accept the
-  /// raw operand values.
-  /// NOTICE: These methods are deprecated and will be removed. All new code
-  /// should use the adaptor methods below instead.
-  virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
+  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// overridden by the derived pattern class.
+  virtual LogicalResult match(SourceOp op) const {
+    llvm_unreachable("must override match or matchAndRewrite");
+  }
+  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override matchAndRewrite or a rewrite method");
   }
   virtual LogicalResult
-  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
     if (failed(match(op)))
       return failure();
-    rewrite(op, OpAdaptor(operands, op->getAttrDictionary()), rewriter);
+    rewrite(op, adaptor, rewriter);
     return success();
-  }
-
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
-  /// overridden by the derived pattern class.
-  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    ValueRange operands = adaptor.getOperands();
-    rewrite(op,
-            ArrayRef<Value>(operands.getBase().get<const Value *>(),
-                            operands.size()),
-            rewriter);
-  }
-  virtual LogicalResult
-  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const {
-    ValueRange operands = adaptor.getOperands();
-    return matchAndRewrite(
-        op,
-        ArrayRef<Value>(operands.getBase().get<const Value *>(),
-                        operands.size()),
-        rewriter);
   }
 
 private:
