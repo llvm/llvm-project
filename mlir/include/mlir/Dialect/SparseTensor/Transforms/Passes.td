@@ -106,6 +106,7 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let dependentDialects = [
     "arith::ArithmeticDialect",
     "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
