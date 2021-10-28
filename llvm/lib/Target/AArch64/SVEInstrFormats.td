@@ -1837,7 +1837,7 @@ multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
 }
 
 class sve_fp_ftmad<bits<2> sz, string asm, ZPRRegOp zprty>
-: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, zprty:$Zm, imm32_0_7:$imm3),
+: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, zprty:$Zm, timm32_0_7:$imm3),
   asm, "\t$Zdn, $_Zdn, $Zm, $imm3",
   "",
   []>, Sched<[]> {
@@ -1862,12 +1862,12 @@ multiclass sve_fp_ftmad<string asm, SDPatternOperator op> {
   def _S : sve_fp_ftmad<0b10, asm, ZPR32>;
   def _D : sve_fp_ftmad<0b11, asm, ZPR64>;
 
-  def : Pat<(nxv8f16 (op (nxv8f16 ZPR16:$Zn), (nxv8f16 ZPR16:$Zm), (i32 imm32_0_7:$imm))),
-            (!cast<Instruction>(NAME # _H) ZPR16:$Zn, ZPR16:$Zm, imm32_0_7:$imm)>;
-  def : Pat<(nxv4f32 (op (nxv4f32 ZPR32:$Zn), (nxv4f32 ZPR32:$Zm), (i32 imm32_0_7:$imm))),
-            (!cast<Instruction>(NAME # _S) ZPR32:$Zn, ZPR32:$Zm, imm32_0_7:$imm)>;
-  def : Pat<(nxv2f64 (op (nxv2f64 ZPR64:$Zn), (nxv2f64 ZPR64:$Zm), (i32 imm32_0_7:$imm))),
-            (!cast<Instruction>(NAME # _D) ZPR64:$Zn, ZPR64:$Zm, imm32_0_7:$imm)>;
+  def : Pat<(nxv8f16 (op (nxv8f16 ZPR16:$Zn), (nxv8f16 ZPR16:$Zm), (i32 timm32_0_7:$imm))),
+            (!cast<Instruction>(NAME # _H) ZPR16:$Zn, ZPR16:$Zm, timm32_0_7:$imm)>;
+  def : Pat<(nxv4f32 (op (nxv4f32 ZPR32:$Zn), (nxv4f32 ZPR32:$Zm), (i32 timm32_0_7:$imm))),
+            (!cast<Instruction>(NAME # _S) ZPR32:$Zn, ZPR32:$Zm, timm32_0_7:$imm)>;
+  def : Pat<(nxv2f64 (op (nxv2f64 ZPR64:$Zn), (nxv2f64 ZPR64:$Zm), (i32 timm32_0_7:$imm))),
+            (!cast<Instruction>(NAME # _D) ZPR64:$Zn, ZPR64:$Zm, timm32_0_7:$imm)>;
 }
 
 multiclass sve_fp_2op_i_p_zds_hfd<Operand imm_ty, FPImmLeaf A, FPImmLeaf B, SDPatternOperator ir_op = null_frag> {
