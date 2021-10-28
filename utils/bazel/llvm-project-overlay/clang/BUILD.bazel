@@ -29,7 +29,6 @@ cc_binary(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
-    linkopts = ["-ldl"],
     stamp = 0,
     deps = [
         "//llvm:Support",

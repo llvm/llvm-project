@@ -174,7 +174,7 @@
 #define HAVE_PTHREAD_GETSPECIFIC 1
 
 /* Define to 1 if you have the <pthread.h> header file. */
-#define HAVE_PTHREAD_H 1
+/* HAVE_PTHREAD_H defined in Bazel */
 
 /* Have pthread_mutex_lock */
 #define HAVE_PTHREAD_MUTEX_LOCK 1
@@ -186,7 +186,7 @@
 /* HAVE_SBRK defined in Bazel */
 
 /* Define to 1 if you have the `setenv' function. */
-#define HAVE_SETENV 1
+/* HAVE_SETENV defined in Bazel */
 
 /* Define to 1 if you have the `setrlimit' function. */
 #define HAVE_SETRLIMIT 1
