@@ -1732,6 +1732,17 @@ def OMP_masked : Directive<"masked"> {
     VersionedClause<OMPC_Filter>
   ];
 }
+def OMP_loop : Directive<"loop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Order>,
+  ];
+}
 def OMP_Metadirective : Directive<"metadirective"> {
   let allowedClauses = [VersionedClause<OMPC_When>];
   let allowedOnceClauses = [VersionedClause<OMPC_Default>];

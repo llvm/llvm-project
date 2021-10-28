@@ -2590,6 +2590,11 @@ void ASTStmtWriter::VisitOMPMaskedDirective(OMPMaskedDirective *D) {
   Code = serialization::STMT_OMP_MASKED_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPGenericLoopDirective(OMPGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_GENERIC_LOOP_DIRECTIVE;
+}
+
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
