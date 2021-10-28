@@ -434,8 +434,8 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE-NEXT:    leal (%rax,%rcx), %esi
 ; SSE-NEXT:    sarb $7, %sil
 ; SSE-NEXT:    xorb $-128, %sil
-; SSE-NEXT:    addb %al, %cl
-; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    addb %cl, %al
+; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movzbl %sil, %ecx
 ; SSE-NEXT:    cmovnol %eax, %ecx
 ; SSE-NEXT:    movb %cl, (%rdx)
@@ -448,8 +448,8 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; AVX-NEXT:    leal (%rax,%rcx), %esi
 ; AVX-NEXT:    sarb $7, %sil
 ; AVX-NEXT:    xorb $-128, %sil
-; AVX-NEXT:    addb %al, %cl
-; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    addb %cl, %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    movzbl %sil, %ecx
 ; AVX-NEXT:    cmovnol %eax, %ecx
 ; AVX-NEXT:    movb %cl, (%rdx)
@@ -470,9 +470,9 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; SSE-NEXT:    movswl %si, %esi
 ; SSE-NEXT:    sarl $15, %esi
 ; SSE-NEXT:    xorl $-32768, %esi # imm = 0x8000
-; SSE-NEXT:    addw %ax, %cx
-; SSE-NEXT:    cmovol %esi, %ecx
-; SSE-NEXT:    movw %cx, (%rdx)
+; SSE-NEXT:    addw %cx, %ax
+; SSE-NEXT:    cmovol %esi, %eax
+; SSE-NEXT:    movw %ax, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v1i16:
@@ -483,9 +483,9 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; AVX-NEXT:    movswl %si, %esi
 ; AVX-NEXT:    sarl $15, %esi
 ; AVX-NEXT:    xorl $-32768, %esi # imm = 0x8000
-; AVX-NEXT:    addw %ax, %cx
-; AVX-NEXT:    cmovol %esi, %ecx
-; AVX-NEXT:    movw %cx, (%rdx)
+; AVX-NEXT:    addw %cx, %ax
+; AVX-NEXT:    cmovol %esi, %eax
+; AVX-NEXT:    movw %ax, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i16>, <1 x i16>* %px
   %y = load <1 x i16>, <1 x i16>* %py
