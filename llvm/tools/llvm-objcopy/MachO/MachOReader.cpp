@@ -124,9 +124,12 @@ Error MachOReader::readLoadCommands(Object &O) const {
       O.CodeSignatureCommandIndex = O.LoadCommands.size();
       break;
     case MachO::LC_SEGMENT:
-      if (StringRef(
-              reinterpret_cast<MachO::segment_command const *>(LoadCmd.Ptr)
-                  ->segname) == TextSegmentName)
+      // LoadCmd.Ptr might not be aligned temporarily as
+      // MachO::segment_command requires, but the segname char pointer do not
+      // have alignment restrictions.
+      if (StringRef(reinterpret_cast<const char *>(
+              LoadCmd.Ptr + offsetof(MachO::segment_command, segname))) ==
+          TextSegmentName)
         O.TextSegmentCommandIndex = O.LoadCommands.size();
 
       if (Expected<std::vector<std::unique_ptr<Section>>> Sections =
@@ -137,9 +140,12 @@ Error MachOReader::readLoadCommands(Object &O) const {
         return Sections.takeError();
       break;
     case MachO::LC_SEGMENT_64:
-      if (StringRef(
-              reinterpret_cast<MachO::segment_command_64 const *>(LoadCmd.Ptr)
-                  ->segname) == TextSegmentName)
+      // LoadCmd.Ptr might not be aligned temporarily as
+      // MachO::segment_command_64 requires, but the segname char pointer do
+      // not have alignment restrictions.
+      if (StringRef(reinterpret_cast<const char *>(
+              LoadCmd.Ptr + offsetof(MachO::segment_command_64, segname))) ==
+          TextSegmentName)
         O.TextSegmentCommandIndex = O.LoadCommands.size();
 
       if (Expected<std::vector<std::unique_ptr<Section>>> Sections =
