@@ -192,6 +192,7 @@ void syncWarp(__kmpc_impl_lanemask_t) {
 }
 
 void syncThreads() { __builtin_amdgcn_s_barrier(); }
+void syncThreadsAligned() { syncThreads(); }
 
 // TODO: Don't have wavefront lane locks. Possibly can't have them.
 void unsetLock(omp_lock_t *) { __builtin_trap(); }
