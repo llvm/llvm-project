@@ -173,11 +173,11 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__
   ; GFX908:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; GFX908:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
   ; GFX908:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
+  ; GFX908:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
   ; GFX908:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[COPY8]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
-  ; GFX908:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GFX908:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX908: bb.3:
   ; GFX908:   successors: %bb.4(0x80000000)
   ; GFX908:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -217,11 +217,11 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__
   ; GFX90A:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; GFX90A:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
   ; GFX90A:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
+  ; GFX90A:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
   ; GFX90A:   [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
-  ; GFX90A:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX90A:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GFX90A:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX90A: bb.3:
   ; GFX90A:   successors: %bb.4(0x80000000)
   ; GFX90A:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -265,10 +265,10 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__
   ; GFX908:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; GFX908:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
   ; GFX908:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
-  ; GFX908:   BUFFER_ATOMIC_ADD_F32_IDXEN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX908:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX908:   BUFFER_ATOMIC_ADD_F32_IDXEN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX908:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GFX908:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX908: bb.3:
   ; GFX908:   successors: %bb.4(0x80000000)
   ; GFX908:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
@@ -306,10 +306,10 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__
   ; GFX90A:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; GFX90A:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
   ; GFX90A:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
-  ; GFX90A:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX90A:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
+  ; GFX90A:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX90A: bb.3:
   ; GFX90A:   successors: %bb.4(0x80000000)
   ; GFX90A:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
