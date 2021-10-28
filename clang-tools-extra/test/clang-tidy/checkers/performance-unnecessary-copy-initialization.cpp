@@ -12,6 +12,8 @@ struct ExpensiveToCopyType {
   ExpensiveToCopyType();
   virtual ~ExpensiveToCopyType();
   const ExpensiveToCopyType &reference() const;
+  using ConstRef = const ExpensiveToCopyType &;
+  ConstRef referenceWithAlias() const;
   const ExpensiveToCopyType *pointer() const;
   Iterator<ExpensiveToCopyType> begin() const;
   Iterator<ExpensiveToCopyType> end() const;
@@ -203,6 +205,15 @@ void positiveNonConstVarInCodeBlock(const ExpensiveToCopyType &Obj) {
     Assigned.reference();
     useAsConstReference(Assigned);
     useByValue(Assigned);
+  }
+}
+
+void positiveNonConstVarInCodeBlockWithAlias(const ExpensiveToCopyType &Obj) {
+  {
+    const ExpensiveToCopyType Assigned = Obj.referenceWithAlias();
+    // CHECK-MESSAGES: [[@LINE-1]]:31: warning: the const qualified variable
+    // CHECK-FIXES: const ExpensiveToCopyType& Assigned = Obj.referenceWithAlias();
+    useAsConstReference(Assigned);
   }
 }
 

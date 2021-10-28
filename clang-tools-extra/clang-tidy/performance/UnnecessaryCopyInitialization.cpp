@@ -84,7 +84,8 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
   // returned either points to a global static variable or to a member of the
   // called object.
   return cxxMemberCallExpr(
-      callee(cxxMethodDecl(returns(matchers::isReferenceToConst()))
+      callee(cxxMethodDecl(
+                 returns(hasCanonicalType(matchers::isReferenceToConst())))
                  .bind(MethodDeclId)),
       on(declRefExpr(to(
           varDecl(
@@ -97,7 +98,8 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // Only allow initialization of a const reference from a free function if it
   // has no arguments. Otherwise it could return an alias to one of its
   // arguments and the arguments need to be checked for const use as well.
-  return callExpr(callee(functionDecl(returns(matchers::isReferenceToConst()))
+  return callExpr(callee(functionDecl(returns(hasCanonicalType(
+                                          matchers::isReferenceToConst())))
                              .bind(FunctionDeclId)),
                   argumentCountIs(0), unless(callee(cxxMethodDecl())))
       .bind(InitFunctionCallId);
