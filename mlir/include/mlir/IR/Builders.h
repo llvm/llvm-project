@@ -281,11 +281,28 @@ public:
   class InsertionGuard {
   public:
     InsertionGuard(OpBuilder &builder)
-        : builder(builder), ip(builder.saveInsertionPoint()) {}
-    ~InsertionGuard() { builder.restoreInsertionPoint(ip); }
+        : builder(&builder), ip(builder.saveInsertionPoint()) {}
+
+    ~InsertionGuard() {
+      if (builder)
+        builder->restoreInsertionPoint(ip);
+    }
+
+    InsertionGuard(const InsertionGuard &) = delete;
+    InsertionGuard &operator=(const InsertionGuard &) = delete;
+
+    /// Implement the move constructor to clear the builder field of `other`.
+    /// That way it does not restore the insertion point upon destruction as
+    /// that should be done exclusively by the just constructed InsertionGuard.
+    InsertionGuard(InsertionGuard &&other) noexcept
+        : builder(other.builder), ip(other.ip) {
+      other.builder = nullptr;
+    }
+
+    InsertionGuard &operator=(InsertionGuard &&other) = delete;
 
   private:
-    OpBuilder &builder;
+    OpBuilder *builder;
     OpBuilder::InsertPoint ip;
   };
 
