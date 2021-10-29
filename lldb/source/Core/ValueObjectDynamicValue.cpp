@@ -36,10 +36,6 @@ ValueObjectDynamicValue::ValueObjectDynamicValue(
   SetName(parent.GetName());
 }
 
-ValueObjectDynamicValue::~ValueObjectDynamicValue() {
-  m_owning_valobj_sp.reset();
-}
-
 CompilerType ValueObjectDynamicValue::GetCompilerTypeImpl() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {

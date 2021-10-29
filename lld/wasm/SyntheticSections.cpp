@@ -558,9 +558,10 @@ void ElemSection::writeBody() {
 
 DataCountSection::DataCountSection(ArrayRef<OutputSegment *> segments)
     : SyntheticSection(llvm::wasm::WASM_SEC_DATACOUNT),
-      numSegments(std::count_if(
-          segments.begin(), segments.end(),
-          [](OutputSegment *const segment) { return !segment->isBss; })) {}
+      numSegments(std::count_if(segments.begin(), segments.end(),
+                                [](OutputSegment *const segment) {
+                                  return segment->requiredInBinary();
+                                })) {}
 
 void DataCountSection::writeBody() {
   writeUleb128(bodyOutputStream, numSegments, "data count");
@@ -716,7 +717,7 @@ unsigned NameSection::numNamedDataSegments() const {
   unsigned numNames = 0;
 
   for (const OutputSegment *s : segments)
-    if (!s->name.empty() && !s->isBss)
+    if (!s->name.empty() && s->requiredInBinary())
       ++numNames;
 
   return numNames;
@@ -789,7 +790,7 @@ void NameSection::writeBody() {
     writeUleb128(sub.os, count, "name count");
 
     for (OutputSegment *s : segments) {
-      if (!s->name.empty() && !s->isBss) {
+      if (!s->name.empty() && s->requiredInBinary()) {
         writeUleb128(sub.os, s->index, "global index");
         writeStr(sub.os, s->name, "segment name");
       }

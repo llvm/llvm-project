@@ -145,7 +145,7 @@ define <8 x i64> @vrgather_permute_shuffle_vu_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    vle16.v v16, (a0)
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV32-NEXT:    vmv4r.v v8, v12
+; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vrgather_permute_shuffle_vu_v8i64:
@@ -155,7 +155,7 @@ define <8 x i64> @vrgather_permute_shuffle_vu_v8i64(<8 x i64> %x) {
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vle64.v v16, (a0)
 ; RV64-NEXT:    vrgather.vv v12, v8, v16
-; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
   %s = shufflevector <8 x i64> %x, <8 x i64> undef, <8 x i32> <i32 1, i32 2, i32 0, i32 1, i32 7, i32 6, i32 0, i32 1>
   ret <8 x i64> %s
@@ -170,7 +170,7 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    vle16.v v16, (a0)
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV32-NEXT:    vmv4r.v v8, v12
+; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vrgather_permute_shuffle_uv_v8i64:
@@ -180,7 +180,7 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vle64.v v16, (a0)
 ; RV64-NEXT:    vrgather.vv v12, v8, v16
-; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
   %s = shufflevector <8 x i64> undef, <8 x i64> %x, <8 x i32> <i32 9, i32 10, i32 8, i32 9, i32 15, i32 8, i32 8, i32 11>
   ret <8 x i64> %s
@@ -206,7 +206,7 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v16, v12, v20, v0.t
-; RV32-NEXT:    vmv4r.v v8, v16
+; RV32-NEXT:    vmv.v.v v8, v16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
@@ -227,7 +227,7 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vrgather.vv v16, v12, v20, v0.t
-; RV64-NEXT:    vmv4r.v v8, v16
+; RV64-NEXT:    vmv.v.v v8, v16
 ; RV64-NEXT:    ret
   %s = shufflevector <8 x i64> %x, <8 x i64> %y, <8 x i32> <i32 1, i32 2, i32 10, i32 5, i32 1, i32 10, i32 3, i32 13>
   ret <8 x i64> %s
@@ -252,7 +252,7 @@ define <8 x i64> @vrgather_shuffle_xv_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    vle16.v v16, (a0)
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v12, v8, v16, v0.t
-; RV32-NEXT:    vmv4r.v v8, v12
+; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vrgather_shuffle_xv_v8i64:
@@ -266,7 +266,7 @@ define <8 x i64> @vrgather_shuffle_xv_v8i64(<8 x i64> %x) {
 ; RV64-NEXT:    vle64.v v16, (a0)
 ; RV64-NEXT:    vmv.v.i v12, -1
 ; RV64-NEXT:    vrgather.vv v12, v8, v16, v0.t
-; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
   %s = shufflevector <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, <8 x i64> %x, <8 x i32> <i32 8, i32 3, i32 6, i32 5, i32 8, i32 12, i32 14, i32 3>
   ret <8 x i64> %s
@@ -305,7 +305,7 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
 ; RV64-NEXT:    vle64.v v16, (a0)
 ; RV64-NEXT:    vmv.v.i v12, 5
 ; RV64-NEXT:    vrgather.vv v12, v8, v16, v0.t
-; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
   %s = shufflevector <8 x i64> %x, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i32> <i32 0, i32 3, i32 10, i32 9, i32 4, i32 1, i32 7, i32 14>
   ret <8 x i64> %s

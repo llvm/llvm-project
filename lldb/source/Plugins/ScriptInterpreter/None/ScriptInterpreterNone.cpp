@@ -57,11 +57,6 @@ ScriptInterpreterNone::CreateInstance(Debugger &debugger) {
   return std::make_shared<ScriptInterpreterNone>(debugger);
 }
 
-lldb_private::ConstString ScriptInterpreterNone::GetPluginNameStatic() {
-  static ConstString g_name("script-none");
-  return g_name;
-}
-
-const char *ScriptInterpreterNone::GetPluginDescriptionStatic() {
+llvm::StringRef ScriptInterpreterNone::GetPluginDescriptionStatic() {
   return "Null script interpreter";
 }

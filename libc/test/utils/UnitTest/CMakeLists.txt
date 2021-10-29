@@ -7,5 +7,5 @@ add_libc_unittest(
   SRCS
     testfilter_test.cpp
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )

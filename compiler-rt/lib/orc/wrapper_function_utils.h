@@ -104,6 +104,16 @@ public:
     return createOutOfBandError(Msg.c_str());
   }
 
+  template <typename SPSArgListT, typename... ArgTs>
+  static WrapperFunctionResult fromSPSArgs(const ArgTs &...Args) {
+    auto Result = allocate(SPSArgListT::size(Args...));
+    SPSOutputBuffer OB(Result.data(), Result.size());
+    if (!SPSArgListT::serialize(OB, Args...))
+      return createOutOfBandError(
+          "Error serializing arguments to blob in call");
+    return Result;
+  }
+
   /// If this value is an out-of-band error then this returns the error message,
   /// otherwise returns nullptr.
   const char *getOutOfBandError() const {
@@ -115,17 +125,6 @@ private:
 };
 
 namespace detail {
-
-template <typename SPSArgListT, typename... ArgTs>
-WrapperFunctionResult
-serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
-  auto Result = WrapperFunctionResult::allocate(SPSArgListT::size(Args...));
-  SPSOutputBuffer OB(Result.data(), Result.size());
-  if (!SPSArgListT::serialize(OB, Args...))
-    return WrapperFunctionResult::createOutOfBandError(
-        "Error serializing arguments to blob in call");
-  return Result;
-}
 
 template <typename RetT> class WrapperFunctionHandlerCaller {
 public:
@@ -212,15 +211,14 @@ class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
 template <typename SPSRetTagT, typename RetT> class ResultSerializer {
 public:
   static WrapperFunctionResult serialize(RetT Result) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
-        Result);
+    return WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSRetTagT>>(Result);
   }
 };
 
 template <typename SPSRetTagT> class ResultSerializer<SPSRetTagT, Error> {
 public:
   static WrapperFunctionResult serialize(Error Err) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+    return WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(Err)));
   }
 };
@@ -229,7 +227,7 @@ template <typename SPSRetTagT, typename T>
 class ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
   static WrapperFunctionResult serialize(Expected<T> E) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+    return WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(E)));
   }
 };
@@ -304,8 +302,7 @@ public:
       return make_error<StringError>("__orc_rt_jit_dispatch not set");
 
     auto ArgBuffer =
-        detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(
-            Args...);
+        WrapperFunctionResult::fromSPSArgs<SPSArgList<SPSTagTs...>>(Args...);
     if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg);
 
@@ -396,6 +393,64 @@ MethodWrapperHandler<RetT, ClassT, ArgTs...>
 makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
   return MethodWrapperHandler<RetT, ClassT, ArgTs...>(Method);
 }
+
+/// Represents a call to a wrapper function.
+struct WrapperFunctionCall {
+  ExecutorAddr Func;
+  ExecutorAddrRange ArgData;
+
+  WrapperFunctionCall() = default;
+  WrapperFunctionCall(ExecutorAddr Func, ExecutorAddrRange ArgData)
+      : Func(Func), ArgData(ArgData) {}
+
+  /// Run and return result as WrapperFunctionResult.
+  WrapperFunctionResult run() {
+    WrapperFunctionResult WFR(
+        Func.toPtr<__orc_rt_CWrapperFunctionResult (*)(const char *, size_t)>()(
+            ArgData.Start.toPtr<const char *>(),
+            static_cast<size_t>(ArgData.size().getValue())));
+    return WFR;
+  }
+
+  /// Run call and deserialize result using SPS.
+  template <typename SPSRetT, typename RetT> Error runWithSPSRet(RetT &RetVal) {
+    auto WFR = run();
+    if (const char *ErrMsg = WFR.getOutOfBandError())
+      return make_error<StringError>(ErrMsg);
+    SPSInputBuffer IB(WFR.data(), WFR.size());
+    if (!SPSSerializationTraits<SPSRetT, RetT>::deserialize(IB, RetVal))
+      return make_error<StringError>("Could not deserialize result from "
+                                     "serialized wrapper function call");
+    return Error::success();
+  }
+
+  /// Overload for SPS functions returning void.
+  Error runWithSPSRet() {
+    SPSEmpty E;
+    return runWithSPSRet<SPSEmpty>(E);
+  }
+};
+
+class SPSWrapperFunctionCall {};
+
+template <>
+class SPSSerializationTraits<SPSWrapperFunctionCall, WrapperFunctionCall> {
+public:
+  static size_t size(const WrapperFunctionCall &WFC) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddrRange>::size(WFC.Func,
+                                                                   WFC.ArgData);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const WrapperFunctionCall &WFC) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddrRange>::serialize(
+        OB, WFC.Func, WFC.ArgData);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, WrapperFunctionCall &WFC) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddrRange>::deserialize(
+        IB, WFC.Func, WFC.ArgData);
+  }
+};
 
 } // end namespace __orc_rt
 

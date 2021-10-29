@@ -1188,6 +1188,10 @@ TempFile &TempFile::operator=(TempFile &&Other) {
   FD = Other.FD;
   Other.Done = true;
   Other.FD = -1;
+#ifdef _WIN32
+  RemoveOnClose = Other.RemoveOnClose;
+  Other.RemoveOnClose = false;
+#endif
   return *this;
 }
 
@@ -1202,20 +1206,25 @@ Error TempFile::discard() {
   FD = -1;
 
 #ifdef _WIN32
-  // On windows closing will remove the file.
-  TmpName = "";
-  return Error::success();
+  // On Windows, closing will remove the file, if we set the delete
+  // disposition. If not, remove it manually.
+  bool Remove = RemoveOnClose;
 #else
-  // Always try to close and remove.
+  // Always try to remove the file.
+  bool Remove = true;
+#endif
   std::error_code RemoveEC;
-  if (!TmpName.empty()) {
+  if (Remove && !TmpName.empty()) {
     RemoveEC = fs::remove(TmpName);
+#ifndef _WIN32
     sys::DontRemoveFileOnSignal(TmpName);
+#endif
     if (!RemoveEC)
       TmpName = "";
+  } else {
+    TmpName = "";
   }
   return errorCodeToError(RemoveEC);
-#endif
 }
 
 Error TempFile::keep(const Twine &Name) {
@@ -1226,19 +1235,26 @@ Error TempFile::keep(const Twine &Name) {
   // If we can't cancel the delete don't rename.
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   std::error_code RenameEC = setDeleteDisposition(H, false);
+  bool ShouldDelete = false;
   if (!RenameEC) {
     RenameEC = rename_handle(H, Name);
     // If rename failed because it's cross-device, copy instead
     if (RenameEC ==
       std::error_code(ERROR_NOT_SAME_DEVICE, std::system_category())) {
       RenameEC = copy_file(TmpName, Name);
-      setDeleteDisposition(H, true);
+      ShouldDelete = true;
     }
   }
 
-  // If we can't rename, discard the temporary file.
+  // If we can't rename or copy, discard the temporary file.
   if (RenameEC)
-    setDeleteDisposition(H, true);
+    ShouldDelete = true;
+  if (ShouldDelete) {
+    if (!RemoveOnClose)
+      setDeleteDisposition(H, true);
+    else
+      remove(TmpName);
+  }
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
   if (RenameEC) {
@@ -1295,7 +1311,12 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode,
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);
-#ifndef _WIN32
+#ifdef _WIN32
+  auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  if (std::error_code EC = setDeleteDisposition(H, true)) {
+    Ret.RemoveOnClose = true;
+  }
+#else
   if (sys::RemoveFileOnSignal(ResultPath)) {
     // Make sure we delete the file when RemoveFileOnSignal fails.
     consumeError(Ret.discard());

@@ -177,8 +177,8 @@ EXTERN void __kmpc_kernel_end_parallel() {
 // support for parallel that goes sequential
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_serialized_parallel\n");
+static void serializedParallel(kmp_Ident *loc, uint32_t global_tid) {
+  PRINT0(LD_IO, "call to serializedParallel\n");
 
   IncParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 
@@ -215,9 +215,9 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
                                                              newTaskDescr);
 }
 
-EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
+static void endSerializedParallel(kmp_Ident *loc,
                                            uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_end_serialized_parallel\n");
+  PRINT0(LD_IO, "call to endSerializedParallel\n");
 
   DecParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 
@@ -293,9 +293,9 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
   bool InParallelRegion =
       (__kmpc_parallel_level() > __kmpc_is_spmd_exec_mode());
   if (!if_expr || InParallelRegion) {
-    __kmpc_serialized_parallel(ident, global_tid);
+    serializedParallel(ident, global_tid);
     __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
-    __kmpc_end_serialized_parallel(ident, global_tid);
+    endSerializedParallel(ident, global_tid);
     return;
   }
 

@@ -416,8 +416,7 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
 
   // Check if the file is on a network (non-local) drive. If so, don't
   // continue when DeleteFile is true, since it prevents opening the file for
-  // writes. Note -- this will leak temporary files on disk, but only when the
-  // target file is on a network drive.
+  // writes.
   SmallVector<wchar_t, 128> FinalPath;
   if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
     return EC;
@@ -427,7 +426,7 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
     return EC;
 
   if (!IsLocal)
-    return std::error_code();
+    return errc::not_supported;
 
   // The file is on a local drive, we can safely set FILE_DISPOSITION_INFO's
   // flag.
@@ -1183,12 +1182,6 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
     }
   }
 
-  if (Flags & OF_Delete) {
-    if ((EC = setDeleteDisposition(Result, true))) {
-      ::CloseHandle(Result);
-      return errorCodeToError(EC);
-    }
-  }
   return Result;
 }
 

@@ -17,7 +17,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:sreg_64(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p0) from %ir.fptr.kernarg.offset.cast, align 16, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p0) from %ir.fptr.kernarg.offset.cast, align 16, addrspace 4)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -47,7 +47,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = SI_CALL [[LOAD]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[LOAD]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   call void %fptr()
@@ -61,12 +61,12 @@ define amdgpu_gfx void @test_gfx_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:sreg_64(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = SI_CALL [[MV]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY4]]

@@ -56,12 +56,12 @@ TEST(SimpleExecutorMemoryManagerTest, AllocFinalizeFree) {
   FR.Actions.push_back(
       {/* Finalize: */
        {ExecutorAddr::fromPtr(incrementWrapper),
-        ExecutorAddr::fromPtr(FinalizeCounterAddrArgBuffer.data()),
-        FinalizeCounterAddrArgBuffer.size()},
+        {ExecutorAddr::fromPtr(FinalizeCounterAddrArgBuffer.data()),
+         ExecutorAddrDiff(FinalizeCounterAddrArgBuffer.size())}},
        /*  Deallocate: */
        {ExecutorAddr::fromPtr(incrementWrapper),
-        ExecutorAddr::fromPtr(DeallocateCounterAddrArgBuffer.data()),
-        DeallocateCounterAddrArgBuffer.size()}});
+        {ExecutorAddr::fromPtr(DeallocateCounterAddrArgBuffer.data()),
+         ExecutorAddrDiff(DeallocateCounterAddrArgBuffer.size())}}});
 
   EXPECT_EQ(FinalizeCounter, 0);
   EXPECT_EQ(DeallocateCounter, 0);

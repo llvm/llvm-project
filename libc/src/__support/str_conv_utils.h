@@ -9,8 +9,8 @@
 #ifndef LIBC_SRC_STDLIB_STDLIB_UTILS_H
 #define LIBC_SRC_STDLIB_STDLIB_UTILS_H
 
+#include "src/__support/CPP/Limits.h"
 #include "src/__support/ctype_utils.h"
-#include "utils/CPP/Limits.h"
 #include <errno.h>
 #include <limits.h>
 

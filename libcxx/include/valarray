@@ -105,6 +105,8 @@ public:
     void resize(size_t n, value_type x = value_type());
 };
 
+template<class T, size_t cnt> valarray(const T(&)[cnt], size_t) -> valarray<T>;
+
 class slice
 {
 public:
@@ -1080,6 +1082,11 @@ private:
     void __clear(size_t __capacity);
     valarray& __assign_range(const value_type* __f, const value_type* __l);
 };
+
+#if _LIBCPP_STD_VER > 14
+template<class _Tp, size_t _Size>
+valarray(const _Tp(&)[_Size], size_t) -> valarray<_Tp>;
+#endif
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void valarray<size_t>::resize(size_t, size_t))
 

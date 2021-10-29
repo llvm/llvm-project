@@ -179,7 +179,7 @@ define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 ; CHECK-NEXT:    leal (%rsi,%rcx), %edx
 ; CHECK-NEXT:    addl %esi, %edx
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    addl %esi, %ecx
+; CHECK-NEXT:    addl %ecx, %esi
 ; CHECK-NEXT:    movl %edx, (%rdi)
 ; CHECK-NEXT:    adcb $0, %al
 ; CHECK-NEXT:    retq

@@ -322,7 +322,7 @@ func @fcmp(f32, f32) -> () {
 func @index_vector(%arg0: vector<4xindex>) {
   // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xindex>) : vector<4xi64>
   %0 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-  // CHECK: %[[V:.*]] = llvm.add %1, %[[CST]] : vector<4xi64>
+  // CHECK: %[[V:.*]] = llvm.add %{{.*}}, %[[CST]] : vector<4xi64>
   %1 = arith.addi %arg0, %0 : vector<4xindex>
   std.return
 }

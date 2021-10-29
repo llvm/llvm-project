@@ -73,3 +73,24 @@ module {
   "foo.possibly_unknown_symbol_table"() ({
   }) : () -> ()
 }
+
+// -----
+
+// Check that replacement works in any implementations of SubElementsAttrInterface
+module {
+    // CHECK: func private @replaced_foo
+    func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
+
+    // CHECK: func @symbol_bar
+    func @symbol_bar() {
+      // CHECK: foo.op
+      // CHECK-SAME: non_symbol_attr,
+      // CHECK-SAME: use = [#test.sub_elements_access<[@replaced_foo], @symbol_bar, @replaced_foo>],
+      // CHECK-SAME: z_non_symbol_attr_3
+      "foo.op"() {
+        non_symbol_attr,
+        use = [#test.sub_elements_access<[@symbol_foo],@symbol_bar,@symbol_foo>],
+        z_non_symbol_attr_3
+      } : () -> ()
+    }
+}

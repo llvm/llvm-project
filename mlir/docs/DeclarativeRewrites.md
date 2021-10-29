@@ -408,7 +408,7 @@ In the above, `$_self` is substituted by the defining operation of the first
 operand of OneAttrOp. Note that we don't support binding name to
 `NativeCodeCall` in the source pattern. To carry some return values from a
 helper function, put the names (constraint is optional) in the parameter list
-and they will be bound to the variables with correspoding type. Then these names
+and they will be bound to the variables with corresponding type. Then these names
 must be either passed by reference or pointer to the variable used as argument
 so that the matched value can be returned. In the same example, `$val` will be
 bound to a variable with `Attribute` type (as `I32Attr`) and the type of the

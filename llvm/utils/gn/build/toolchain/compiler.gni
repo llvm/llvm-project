@@ -21,5 +21,5 @@ declare_args() {
   is_clang = host_os == "mac" || clang_base_path != ""
 
   # Set this to true to link with LLD instead of the default linker.
-  use_lld = clang_base_path != "" && host_os != "mac"
+  use_lld = clang_base_path != ""
 }

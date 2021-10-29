@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
 
-// This file can only include headers from utils/CPP/ or utils/testutils. No
-// other headers should be included.
+// This file can only include headers from src/__support/CPP/ or
+// utils/testutils. No other headers should be included.
 
 #include "PlatformDefs.h"
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include "utils/testutils/StreamWrapper.h"
 

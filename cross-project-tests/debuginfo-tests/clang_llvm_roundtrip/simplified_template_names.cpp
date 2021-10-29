@@ -1,7 +1,5 @@
-// RUN: rm -rf %t
-// RUN: mkdir %t
-// RUN: %clang -fblocks %s -o %t/a.out -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params 
-// RUN: llvm-dwarfdump %t/a.out --verify
+// RUN: %clang %target_itanium_abi_host_triple %s -c -o - -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params \
+// RUN:   | llvm-dwarfdump --verify -
 template<typename ...Ts>
 struct t1 {
 };

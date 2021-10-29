@@ -1128,11 +1128,18 @@ private:
 class SampleContextTrimmer {
 public:
   SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
-  // Trim and merge cold context profile when requested.
+  // Trim and merge cold context profile when requested. TrimBaseProfileOnly
+  // should only be effective when TrimColdContext is true. On top of
+  // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
+  // cold profiles or only cold base profiles. Trimming base profiles only is
+  // mainly to honor the preinliner decsion. Note that when MergeColdContext is
+  // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
+  // be ignored.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
                                        bool TrimColdContext,
                                        bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength);
+                                       uint32_t ColdContextFrameLength,
+                                       bool TrimBaseProfileOnly);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 

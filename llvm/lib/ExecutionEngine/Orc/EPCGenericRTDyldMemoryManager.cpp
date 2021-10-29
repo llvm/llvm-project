@@ -262,8 +262,11 @@ bool EPCGenericRTDyldMemoryManager::finalizeMemory(std::string *ErrMsg) {
     }
 
     for (auto &Frame : ObjAllocs.UnfinalizedEHFrames)
-      FR.Actions.push_back({{SAs.RegisterEHFrame, Frame.Addr, Frame.Size},
-                            {SAs.DeregisterEHFrame, Frame.Addr, Frame.Size}});
+      FR.Actions.push_back(
+          {{SAs.RegisterEHFrame,
+            {ExecutorAddr(Frame.Addr), ExecutorAddrDiff(Frame.Size)}},
+           {SAs.DeregisterEHFrame,
+            {ExecutorAddr(Frame.Addr), ExecutorAddrDiff(Frame.Size)}}});
 
     // We'll also need to make an extra allocation for the eh-frame wrapper call
     // arguments.

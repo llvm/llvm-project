@@ -975,6 +975,8 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
 
 llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP) {
+  if (SpelledTok.kind() != tok::identifier)
+    return None;
   SourceLocation Loc = SpelledTok.location();
   assert(Loc.isFileID());
   const auto &SM = PP.getSourceManager();

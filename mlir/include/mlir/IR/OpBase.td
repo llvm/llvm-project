@@ -1641,6 +1641,11 @@ def SymbolRefArrayAttr :
   let constBuilderCall = ?;
 }
 
+def FlatSymbolRefArrayAttr :
+  TypedArrayAttrBase<FlatSymbolRefAttr, "flat symbol ref array attribute"> {
+  let constBuilderCall = ?;
+}
+
 //===----------------------------------------------------------------------===//
 // Derive attribute kinds
 

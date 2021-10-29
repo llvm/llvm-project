@@ -664,12 +664,14 @@ define <17 x float> @test_mgather_v17f32(float* %base, <17 x i32> %index)
 ; WIDEN_SKX-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; WIDEN_SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; WIDEN_SKX-NEXT:    kxnorw %k0, %k0, %k1
-; WIDEN_SKX-NEXT:    vgatherdps (%rsi,%zmm0,4), %zmm2 {%k1}
+; WIDEN_SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; WIDEN_SKX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; WIDEN_SKX-NEXT:    vgatherdps (%rsi,%zmm0,4), %zmm3 {%k1}
 ; WIDEN_SKX-NEXT:    movw $1, %cx
 ; WIDEN_SKX-NEXT:    kmovw %ecx, %k1
-; WIDEN_SKX-NEXT:    vgatherdps (%rsi,%zmm1,4), %zmm0 {%k1}
-; WIDEN_SKX-NEXT:    vmovss %xmm0, 64(%rdi)
-; WIDEN_SKX-NEXT:    vmovaps %zmm2, (%rdi)
+; WIDEN_SKX-NEXT:    vgatherdps (%rsi,%zmm1,4), %zmm2 {%k1}
+; WIDEN_SKX-NEXT:    vmovss %xmm2, 64(%rdi)
+; WIDEN_SKX-NEXT:    vmovaps %zmm3, (%rdi)
 ; WIDEN_SKX-NEXT:    vzeroupper
 ; WIDEN_SKX-NEXT:    retq
 ;
@@ -697,12 +699,14 @@ define <17 x float> @test_mgather_v17f32(float* %base, <17 x i32> %index)
 ; WIDEN_KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; WIDEN_KNL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; WIDEN_KNL-NEXT:    kxnorw %k0, %k0, %k1
-; WIDEN_KNL-NEXT:    vgatherdps (%rsi,%zmm0,4), %zmm2 {%k1}
+; WIDEN_KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; WIDEN_KNL-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; WIDEN_KNL-NEXT:    vgatherdps (%rsi,%zmm0,4), %zmm3 {%k1}
 ; WIDEN_KNL-NEXT:    movw $1, %cx
 ; WIDEN_KNL-NEXT:    kmovw %ecx, %k1
-; WIDEN_KNL-NEXT:    vgatherdps (%rsi,%zmm1,4), %zmm0 {%k1}
-; WIDEN_KNL-NEXT:    vmovss %xmm0, 64(%rdi)
-; WIDEN_KNL-NEXT:    vmovaps %zmm2, (%rdi)
+; WIDEN_KNL-NEXT:    vgatherdps (%rsi,%zmm1,4), %zmm2 {%k1}
+; WIDEN_KNL-NEXT:    vmovss %xmm2, 64(%rdi)
+; WIDEN_KNL-NEXT:    vmovaps %zmm3, (%rdi)
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
 ;
@@ -711,32 +715,35 @@ define <17 x float> @test_mgather_v17f32(float* %base, <17 x i32> %index)
 ; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; WIDEN_AVX2-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; WIDEN_AVX2-NEXT:    movq %rdi, %rax
 ; WIDEN_AVX2-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; WIDEN_AVX2-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; WIDEN_AVX2-NEXT:    vmovd %edx, %xmm3
+; WIDEN_AVX2-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
+; WIDEN_AVX2-NEXT:    vpinsrd $2, %r8d, %xmm3, %xmm3
+; WIDEN_AVX2-NEXT:    vpinsrd $3, %r9d, %xmm3, %xmm3
+; WIDEN_AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; WIDEN_AVX2-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; WIDEN_AVX2-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; WIDEN_AVX2-NEXT:    movq %rdi, %rax
-; WIDEN_AVX2-NEXT:    vmovd %edx, %xmm2
-; WIDEN_AVX2-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; WIDEN_AVX2-NEXT:    vpinsrd $2, %r8d, %xmm2, %xmm2
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; WIDEN_AVX2-NEXT:    vpinsrd $3, %r9d, %xmm2, %xmm2
-; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; WIDEN_AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; WIDEN_AVX2-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm4, %xmm1
-; WIDEN_AVX2-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; WIDEN_AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; WIDEN_AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; WIDEN_AVX2-NEXT:    vgatherdps %ymm2, (%rsi,%ymm1,4), %ymm4
-; WIDEN_AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; WIDEN_AVX2-NEXT:    vgatherdps %ymm1, (%rsi,%ymm0,4), %ymm2
+; WIDEN_AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
+; WIDEN_AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; WIDEN_AVX2-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; WIDEN_AVX2-NEXT:    vpcmpeqd %ymm5, %ymm5, %ymm5
+; WIDEN_AVX2-NEXT:    vxorps %xmm6, %xmm6, %xmm6
+; WIDEN_AVX2-NEXT:    vgatherdps %ymm5, (%rsi,%ymm1,4), %ymm6
+; WIDEN_AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; WIDEN_AVX2-NEXT:    vgatherdps %ymm3, (%rsi,%ymm0,4), %ymm1
 ; WIDEN_AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,0,0,0]
-; WIDEN_AVX2-NEXT:    vgatherdps %ymm0, (%rsi,%ymm3,4), %ymm1
-; WIDEN_AVX2-NEXT:    vmovss %xmm1, 64(%rdi)
-; WIDEN_AVX2-NEXT:    vmovaps %ymm2, 32(%rdi)
-; WIDEN_AVX2-NEXT:    vmovaps %ymm4, (%rdi)
+; WIDEN_AVX2-NEXT:    vgatherdps %ymm0, (%rsi,%ymm2,4), %ymm4
+; WIDEN_AVX2-NEXT:    vmovss %xmm4, 64(%rdi)
+; WIDEN_AVX2-NEXT:    vmovaps %ymm1, 32(%rdi)
+; WIDEN_AVX2-NEXT:    vmovaps %ymm6, (%rdi)
 ; WIDEN_AVX2-NEXT:    vzeroupper
 ; WIDEN_AVX2-NEXT:    retq
 {

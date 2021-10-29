@@ -1451,7 +1451,10 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
                       Value v2, ArrayRef<int64_t> mask) {
   result.addOperands({v1, v2});
   auto maskAttr = getVectorSubscriptAttr(builder, mask);
-  result.addTypes(v1.getType());
+  auto v1Type = v1.getType().cast<VectorType>();
+  auto shape = llvm::to_vector<4>(v1Type.getShape());
+  shape[0] = mask.size();
+  result.addTypes(VectorType::get(shape, v1Type.getElementType()));
   result.addAttribute(getMaskAttrName(), maskAttr);
 }
 

@@ -72,11 +72,29 @@ public:
     return success();
   }
 };
+
+template <typename OpT>
+class SPIRVPassThroughConversion : public OpConversionPattern<OpT> {
+public:
+  using OpConversionPattern<OpT>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(OpT op, typename OpT::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.updateRootInPlace(op,
+                               [&] { op->setOperands(adaptor.getOperands()); });
+    return success();
+  }
+};
 } // namespace
 
 static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
   patterns.add<SPIRVGlobalVariableOpLayoutInfoDecoration,
-               SPIRVAddressOfOpLayoutInfoDecoration>(patterns.getContext());
+               SPIRVAddressOfOpLayoutInfoDecoration,
+               SPIRVPassThroughConversion<spirv::AccessChainOp>,
+               SPIRVPassThroughConversion<spirv::LoadOp>,
+               SPIRVPassThroughConversion<spirv::StoreOp>>(
+      patterns.getContext());
 }
 
 namespace {
@@ -104,8 +122,17 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
     return VulkanLayoutUtils::isLegalType(op.pointer().getType());
   });
 
-  // TODO: Change the type for the indirect users such as spv.Load, spv.Store,
-  // spv.FunctionCall and so on.
+  // Change the type for the indirect users.
+  target.addDynamicallyLegalOp<spirv::AccessChainOp, spirv::LoadOp,
+                               spirv::StoreOp>([&](Operation *op) {
+    for (Value operand : op->getOperands()) {
+      auto addrOp = operand.getDefiningOp<spirv::AddressOfOp>();
+      if (addrOp && !VulkanLayoutUtils::isLegalType(addrOp.pointer().getType()))
+        return false;
+    }
+    return true;
+  });
+
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   for (auto spirvModule : module.getOps<spirv::ModuleOp>())
     if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))

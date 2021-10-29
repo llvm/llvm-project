@@ -1,5 +1,6 @@
 // RUN: %libomp-compile -mlong-double-80 && %libomp-run
 // UNSUPPORTED: gcc
+// UNSUPPORTED: powerpc
 
 #include <stdio.h>
 #include <omp.h>

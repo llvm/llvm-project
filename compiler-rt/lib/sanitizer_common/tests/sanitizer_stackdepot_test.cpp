@@ -106,7 +106,8 @@ TEST_F(StackDepotTest, Print) {
           "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*"));
 }
 
-TEST_F(StackDepotTest, PrintNoLock) {
+// Temporarily disabled to investigate why buildbot fails to show broken tests.
+TEST_F(StackDepotTest, DISABLED_PrintNoLock) {
   u32 n = 2000;
   std::vector<u32> idx2id(n);
   for (u32 i = 0; i < n; ++i) {

@@ -710,6 +710,9 @@ Error ObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
     }
   });
 
+  if (AllocsToRemove.empty())
+    return Error::success();
+
   return MemMgr.deallocate(std::move(AllocsToRemove));
 }
 

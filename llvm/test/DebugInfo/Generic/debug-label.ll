@@ -2,16 +2,16 @@
 ;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_label
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}"top"
+; CHECK-NEXT: DW_AT_name {{.*}}"top"
 ; CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1] {{.*}}debug-label.c
 ; CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1] {{.*}}4
 ; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] {{.*}}{{0x[0-9a-f]+}}
 ; CHECK: DW_TAG_label
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}"done"
+; CHECK-NEXT: DW_AT_name {{.*}}"done"
 ; CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1] {{.*}}debug-label.c
 ; CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1] {{.*}}7
 ; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] {{.*}}{{0x[0-9a-f]+}}
-; CHECK-NOT: DW_AT_name [DW_FORM_strp] {{.*}}"top"
+; CHECK-NOT: DW_AT_name {{.*}}"top"
 ;
 ; RUN: llc -O0 -o - %s | FileCheck %s -check-prefix=ASM
 ;

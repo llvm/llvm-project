@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 # System modules
 import os
+import textwrap
 
 # Third-party modules
 import io
@@ -38,7 +39,7 @@ class CommandParser:
         new_breakpoint = True
 
         if len(parts) == 2:
-            command = parts[1].strip()  # take off whitespace
+            command = parts[1].rstrip()
             new_breakpoint = parts[0].strip() != ""
 
         return (command, new_breakpoint)
@@ -68,6 +69,8 @@ class CommandParser:
                     else:
                         current_breakpoint['command'] = current_breakpoint[
                             'command'] + "\n" + command
+        for bkpt in self.breakpoints:
+            bkpt['command'] = textwrap.dedent(bkpt['command'])
 
     def set_breakpoints(self, target):
         for breakpoint in self.breakpoints:

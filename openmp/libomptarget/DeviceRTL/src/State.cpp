@@ -41,8 +41,8 @@ namespace {
 ///{
 
 extern "C" {
-void *malloc(uint64_t Size);
-void free(void *Ptr);
+__attribute__((leaf)) void *malloc(uint64_t Size);
+__attribute__((leaf)) void free(void *Ptr);
 }
 
 ///}
@@ -263,9 +263,9 @@ struct ThreadStateTy {
     PreviousThreadState = nullptr;
   }
 
-  void init(ThreadStateTy &PreviousTS) {
-    ICVState = PreviousTS.ICVState;
-    PreviousThreadState = &PreviousTS;
+  void init(ThreadStateTy *PreviousTS) {
+    ICVState = PreviousTS ? PreviousTS->ICVState : TeamState.ICVState;
+    PreviousThreadState = PreviousTS;
   }
 };
 
@@ -369,7 +369,7 @@ void state::enterDataEnvironment() {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
-  NewThreadState->init(*ThreadStates[TId]);
+  NewThreadState->init(ThreadStates[TId]);
   ThreadStates[TId] = NewThreadState;
 }
 
@@ -445,7 +445,9 @@ int omp_get_team_size(int Level) {
   return returnValIfLevelIsActive(Level, state::ParallelTeamSize, 1);
 }
 
-int omp_get_num_threads(void) { return state::ParallelTeamSize; }
+int omp_get_num_threads(void) {
+  return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
+}
 
 int omp_get_thread_limit(void) { return mapping::getKernelSize(); }
 

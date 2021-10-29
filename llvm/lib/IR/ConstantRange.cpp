@@ -1510,20 +1510,15 @@ ConstantRange ConstantRange::smul_sat(const ConstantRange &Other) const {
   //   [-1,4) * [-2,3) = min(-1*-2, -1*2, 3*-2, 3*2) = -6.
   // Similarly for the upper bound, swapping min for max.
 
-  APInt this_min = getSignedMin().sext(getBitWidth() * 2);
-  APInt this_max = getSignedMax().sext(getBitWidth() * 2);
-  APInt Other_min = Other.getSignedMin().sext(getBitWidth() * 2);
-  APInt Other_max = Other.getSignedMax().sext(getBitWidth() * 2);
+  APInt Min = getSignedMin();
+  APInt Max = getSignedMax();
+  APInt OtherMin = Other.getSignedMin();
+  APInt OtherMax = Other.getSignedMax();
 
-  auto L = {this_min * Other_min, this_min * Other_max, this_max * Other_min,
-            this_max * Other_max};
+  auto L = {Min.smul_sat(OtherMin), Min.smul_sat(OtherMax),
+            Max.smul_sat(OtherMin), Max.smul_sat(OtherMax)};
   auto Compare = [](const APInt &A, const APInt &B) { return A.slt(B); };
-
-  // Note that we wanted to perform signed saturating multiplication,
-  // so since we performed plain multiplication in twice the bitwidth,
-  // we need to perform signed saturating truncation.
-  return getNonEmpty(std::min(L, Compare).truncSSat(getBitWidth()),
-                     std::max(L, Compare).truncSSat(getBitWidth()) + 1);
+  return getNonEmpty(std::min(L, Compare), std::max(L, Compare) + 1);
 }
 
 ConstantRange ConstantRange::ushl_sat(const ConstantRange &Other) const {

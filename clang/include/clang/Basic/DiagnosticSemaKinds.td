@@ -1643,6 +1643,9 @@ def warn_weak_vtable : Warning<
   "%0 has no out-of-line virtual method definitions; its vtable will be "
   "emitted in every translation unit">,
   InGroup<DiagGroup<"weak-vtables">>, DefaultIgnore;
+def warn_weak_template_vtable : Warning<
+  "this warning is no longer in use and will be removed in the next release">,
+  InGroup<DiagGroup<"weak-template-vtables">>, DefaultIgnore;
 
 def ext_using_undefined_std : ExtWarn<
   "using directive refers to implicitly-defined namespace 'std'">;
@@ -10800,6 +10803,9 @@ def note_omp_protected_structured_block
     : Note<"jump bypasses OpenMP structured block">;
 def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
+def err_omp_lastprivate_loop_var_non_loop_iteration : Error<
+  "only loop iteration variables are allowed in 'lastprivate' clause in "
+  "'omp loop' directives">;
 def err_omp_interop_variable_expected : Error<
   "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
 def err_omp_interop_variable_wrong_type : Error<
@@ -11306,7 +11312,8 @@ def err_builtin_launder_invalid_arg : Error<
 def err_builtin_invalid_arg_type: Error <
   "%ordinal0 argument must be a "
   "%select{vector, integer or floating point type|matrix|"
-   "pointer to a valid matrix element type}1 (was %2)">;
+   "pointer to a valid matrix element type|"
+   "signed integer or floating point type}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;

@@ -1976,6 +1976,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
+  case Builtin::BI__builtin_elementwise_abs:
+    if (SemaBuiltinElementwiseMathOneArg(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_max:
     if (SemaBuiltinElementwiseMath(TheCall))
@@ -5283,6 +5287,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__opencl_atomic_fetch_and:
   case AtomicExpr::AO__opencl_atomic_fetch_or:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
@@ -7780,11 +7785,11 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
       // }
       if (HasVAListArg) {
         if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(VD)) {
-          if (const NamedDecl *ND = dyn_cast<NamedDecl>(PV->getDeclContext())) {
+          if (const Decl *D = dyn_cast<Decl>(PV->getDeclContext())) {
             int PVIndex = PV->getFunctionScopeIndex() + 1;
-            for (const auto *PVFormat : ND->specific_attrs<FormatAttr>()) {
+            for (const auto *PVFormat : D->specific_attrs<FormatAttr>()) {
               // adjust for implicit parameter
-              if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(ND))
+              if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D))
                 if (MD->isInstance())
                   ++PVIndex;
               // We also check if the formats are compatible.
@@ -16533,6 +16538,31 @@ static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
         << 1 << /* vector, integer or float ty*/ 0 << Ty;
     return true;
   }
+  return false;
+}
+
+bool Sema::SemaBuiltinElementwiseMathOneArg(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 1))
+    return true;
+
+  ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
+  SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
+  if (A.isInvalid())
+    return true;
+
+  TheCall->setArg(0, A.get());
+  QualType TyA = A.get()->getType();
+  if (checkMathBuiltinElementType(*this, ArgLoc, TyA))
+    return true;
+
+  QualType EltTy = TyA;
+  if (auto *VecTy = EltTy->getAs<VectorType>())
+    EltTy = VecTy->getElementType();
+  if (EltTy->isUnsignedIntegerType())
+    return Diag(ArgLoc, diag::err_builtin_invalid_arg_type)
+           << 1 << /*signed integer or float ty*/ 3 << TyA;
+
+  TheCall->setType(TyA);
   return false;
 }
 

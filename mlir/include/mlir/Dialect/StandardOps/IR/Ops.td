@@ -44,33 +44,6 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-// Base class for arithmetic cast operations. Requires single operand and
-// result, but does not constrain them to specific types.
-class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic, traits # ElementwiseMappable.traits # [
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-      NoSideEffect, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>]> {
-  let arguments = (ins AnyType:$in);
-  let results = (outs AnyType:$out);
-
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Type":$destType), [{
-       impl::buildCastOp($_builder, $_state, source, destType);
-    }]>
-  ];
-
-  let parser = [{
-    return impl::parseCastOp(parser, result);
-  }];
-  let printer = [{
-    return printStandardCastOp(this->getOperation(), p);
-  }];
-
-  // Cast operations are fully verified by its traits.
-  let verifier = ?;
-}
-
 // Base class for unary ops. Requires single operand and result. Individual
 // classes will have `operand` accessor.
 class UnaryOp<string mnemonic, list<OpTrait> traits = []> :

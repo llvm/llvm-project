@@ -163,8 +163,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
 
   // Enter the catch, if there is one.
   if (S.getNumCatchStmts()) {
-    for (unsigned I = 0, N = S.getNumCatchStmts(); I != N; ++I) {
-      const ObjCAtCatchStmt *CatchStmt = S.getCatchStmt(I);
+    for (const ObjCAtCatchStmt *CatchStmt : S.catch_stmts()) {
       const VarDecl *CatchDecl = CatchStmt->getCatchParamDecl();
 
       Handlers.push_back(CatchHandler());

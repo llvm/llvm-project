@@ -67,7 +67,8 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
-- ...
+- -Wweak-template-vtables has been deprecated and no longer has any effect. The
+  flag will be removed in the next release.
 
 Modified Compiler Flags
 -----------------------

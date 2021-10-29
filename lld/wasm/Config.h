@@ -77,7 +77,7 @@ struct Configuration {
   llvm::Optional<std::vector<std::string>> features;
 
   // The following config options do not directly correspond to any
-  // particualr command line options.
+  // particular command line options.
 
   // True if we are creating position-independent code.
   bool isPic;
@@ -91,6 +91,10 @@ struct Configuration {
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
   uint32_t tableBase = 0;
+
+  // Will be set to true if bss data segments should be emitted. In most cases
+  // this is not necessary.
+  bool emitBssSegments = false;
 };
 
 // The only instance of Configuration struct.

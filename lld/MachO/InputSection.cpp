@@ -227,14 +227,14 @@ WordLiteralInputSection::WordLiteralInputSection(StringRef segname,
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
   auto *osec = cast<WordLiteralSection>(parent);
-  const uint8_t *buf = data.data();
+  const uintptr_t buf = reinterpret_cast<uintptr_t>(data.data());
   switch (sectionType(getFlags())) {
   case S_4BYTE_LITERALS:
-    return osec->getLiteral4Offset(buf + off);
+    return osec->getLiteral4Offset(buf + (off & ~3LLU)) | (off & 3);
   case S_8BYTE_LITERALS:
-    return osec->getLiteral8Offset(buf + off);
+    return osec->getLiteral8Offset(buf + (off & ~7LLU)) | (off & 7);
   case S_16BYTE_LITERALS:
-    return osec->getLiteral16Offset(buf + off);
+    return osec->getLiteral16Offset(buf + (off & ~15LLU)) | (off & 15);
   default:
     llvm_unreachable("invalid literal section type");
   }
