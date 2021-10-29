@@ -9,6 +9,9 @@ program omp_do
   integer i,j,k
   !$omp do
   do i=1,10
+    if( i == 5 ) then
+        cycle
+    end if
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
     !$omp single
     do j=1,10
@@ -20,6 +23,8 @@ program omp_do
 
   !$omp parallel do
   do i=1,10
+    if( i == 9 ) then
+    end if
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
     !$omp single
     do j=1,10
@@ -31,6 +36,9 @@ program omp_do
 
   !$omp parallel do simd
   do i=1,10
+    if( i == 5 ) then
+        cycle
+    end if
     !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
     !$omp single
@@ -44,6 +52,9 @@ program omp_do
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute parallel do
   do i=1,10
+    if( i == 3 ) then
+        cycle
+    end if
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
     !$omp single
     do j=1,10
@@ -56,6 +67,9 @@ program omp_do
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute parallel do simd
   do i=1,10
+    if( i == 3 ) then
+        cycle
+    end if
     !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
     !$omp single
