@@ -57,10 +57,8 @@ define i32 @or_and_not_constant_commute3(i32 %a, i32 %b) {
 
 define <2 x i7> @or_and_not_constant_commute0_splat(<2 x i7> %a, <2 x i7> %b) {
 ; CHECK-LABEL: @or_and_not_constant_commute0_splat(
-; CHECK-NEXT:    [[T:%.*]] = or <2 x i7> [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i7> [[T]], <i7 42, i7 42>
-; CHECK-NEXT:    [[T2:%.*]] = and <2 x i7> [[B]], <i7 -43, i7 -43>
-; CHECK-NEXT:    [[T3:%.*]] = or <2 x i7> [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i7> [[A:%.*]], <i7 42, i7 42>
+; CHECK-NEXT:    [[T3:%.*]] = or <2 x i7> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i7> [[T3]]
 ;
   %t = or <2 x i7> %b, %a

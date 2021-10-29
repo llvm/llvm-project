@@ -303,10 +303,8 @@ define i9 @or_and_xor_not_constant_commute1(i9 %a, i9 %b) {
 
 define <2 x i9> @or_and_xor_not_constant_commute2_splat(<2 x i9> %a, <2 x i9> %b) {
 ; CHECK-LABEL: @or_and_xor_not_constant_commute2_splat(
-; CHECK-NEXT:    [[OR:%.*]] = xor <2 x i9> [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i9> [[OR]], <i9 42, i9 42>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i9> [[B]], <i9 -43, i9 -43>
-; CHECK-NEXT:    [[XOR:%.*]] = or <2 x i9> [[AND2]], [[AND1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], <i9 42, i9 42>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i9> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[XOR]]
 ;
   %or = xor <2 x i9> %b, %a
@@ -318,10 +316,8 @@ define <2 x i9> @or_and_xor_not_constant_commute2_splat(<2 x i9> %a, <2 x i9> %b
 
 define <2 x i9> @or_and_xor_not_constant_commute3_splat(<2 x i9> %a, <2 x i9> %b) {
 ; CHECK-LABEL: @or_and_xor_not_constant_commute3_splat(
-; CHECK-NEXT:    [[OR:%.*]] = xor <2 x i9> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i9> [[OR]], <i9 42, i9 42>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i9> [[B]], <i9 -43, i9 -43>
-; CHECK-NEXT:    [[XOR:%.*]] = or <2 x i9> [[AND2]], [[AND1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], <i9 42, i9 42>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i9> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[XOR]]
 ;
   %or = xor <2 x i9> %a, %b
