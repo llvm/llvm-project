@@ -36,6 +36,10 @@ public:
       lldb::addr_t addr, lldb::addr_t end_addr,
       const lldb_private::MemoryRegionInfos &memory_regions) const override;
 
+  llvm::Expected<std::vector<TagRange>> MakeTaggedRanges(
+      lldb::addr_t addr, lldb::addr_t end_addr,
+      const lldb_private::MemoryRegionInfos &memory_regions) const override;
+
   llvm::Expected<std::vector<lldb::addr_t>>
   UnpackTagsData(const std::vector<uint8_t> &tags,
                  size_t granules = 0) const override;
