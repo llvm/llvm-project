@@ -342,12 +342,7 @@ void UnwindAssemblyInstEmulation::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString UnwindAssemblyInstEmulation::GetPluginNameStatic() {
-  static ConstString g_name("inst-emulation");
-  return g_name;
-}
-
-const char *UnwindAssemblyInstEmulation::GetPluginDescriptionStatic() {
+llvm::StringRef UnwindAssemblyInstEmulation::GetPluginDescriptionStatic() {
   return "Instruction emulation based unwind information.";
 }
 

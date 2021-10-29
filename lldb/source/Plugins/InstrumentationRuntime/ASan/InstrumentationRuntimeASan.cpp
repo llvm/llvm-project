@@ -47,10 +47,6 @@ void InstrumentationRuntimeASan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString InstrumentationRuntimeASan::GetPluginNameStatic() {
-  return ConstString("AddressSanitizer");
-}
-
 lldb::InstrumentationRuntimeType InstrumentationRuntimeASan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeAddressSanitizer;
 }
