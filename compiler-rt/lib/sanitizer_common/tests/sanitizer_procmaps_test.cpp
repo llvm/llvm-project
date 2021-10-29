@@ -78,6 +78,9 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
   }
 }
 
+#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+       SANITIZER_SOLARIS) &&                                       \
+      defined(_LP64)
 const char *const parse_unix_input = R"(
 7fb9862f1000-7fb9862f3000 rw-p 00000000 00:00 0 
 Size:                  8 kB
@@ -129,6 +132,7 @@ TEST(MemoryMapping, ParseUnixMemoryProfileTruncated) {
   }
   UnmapOrDie(mem, 2 * page);
 }
+#  endif
 
 }  // namespace __sanitizer
 #endif  // !defined(_WIN32)
