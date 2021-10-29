@@ -21,14 +21,7 @@ using namespace _OMP;
 #pragma omp declare target
 
 extern "C" {
-void __assert_assume(bool cond, const char *exp, const char *file, int line) {
-  if (!cond && config::isDebugMode(config::DebugKind::Assertion)) {
-    PRINTF("ASSERTION failed: %s at %s, line %d\n", exp, file, line);
-    __builtin_trap();
-  }
-
-  __builtin_assume(cond);
-}
+void __assert_assume(bool condition) { __builtin_assume(condition); }
 
 void __assert_fail(const char *assertion, const char *file, unsigned line,
                    const char *function) {

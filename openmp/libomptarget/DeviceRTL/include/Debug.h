@@ -12,16 +12,24 @@
 #ifndef OMPTARGET_DEVICERTL_DEBUG_H
 #define OMPTARGET_DEVICERTL_DEBUG_H
 
+#include "Configuration.h"
+
 /// Assertion
 ///
 /// {
 extern "C" {
-void __assert_assume(bool cond, const char *exp, const char *file, int line);
+void __assert_assume(bool condition);
 void __assert_fail(const char *assertion, const char *file, unsigned line,
                    const char *function);
 }
 
-#define ASSERT(e) __assert_assume(e, #e, __FILE__, __LINE__)
+#define ASSERT(expr)                                                           \
+  {                                                                            \
+    if (config::isDebugMode(config::DebugKind::Assertion) && !expr)            \
+      __assert_fail(#expr, __FILE__, __LINE__, __PRETTY_FUNCTION__);           \
+    else                                                                       \
+      __assert_assume(expr);                                                   \
+  }
 
 ///}
 
