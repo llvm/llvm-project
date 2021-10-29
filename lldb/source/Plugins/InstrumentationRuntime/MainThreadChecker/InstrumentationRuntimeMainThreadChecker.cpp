@@ -54,11 +54,6 @@ void InstrumentationRuntimeMainThreadChecker::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString
-InstrumentationRuntimeMainThreadChecker::GetPluginNameStatic() {
-  return ConstString("MainThreadChecker");
-}
-
 lldb::InstrumentationRuntimeType
 InstrumentationRuntimeMainThreadChecker::GetTypeStatic() {
   return eInstrumentationRuntimeTypeMainThreadChecker;
