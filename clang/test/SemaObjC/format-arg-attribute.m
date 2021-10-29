@@ -1,6 +1,14 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
 
-@class NSString;
+@interface NSString
++(instancetype)stringWithCString:(const char *)cstr __attribute__((format_arg(1)));
++(instancetype)stringWithString:(NSString *)cstr __attribute__((format_arg(1)));
+@end
+
+@protocol MaybeString
+-(instancetype)maybeString:(const char *)cstr __attribute__((format_arg(1))); // expected-error {{function does not return string type}}
+@end
+
 @class NSAttributedString;
 
 extern NSString *fa2 (const NSString *) __attribute__((format_arg(1)));
