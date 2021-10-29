@@ -494,7 +494,7 @@ bool PPCLoopInstrFormPrep::prepareBasesForCommoningChains(Bucket &CBucket) {
   // All elements are increased by FirstOffset.
   // The number of chains should be sqrt(EleNum).
   if (!SawChainSeparater)
-    ChainNum = (unsigned)sqrt(EleNum);
+    ChainNum = (unsigned)sqrt((double)EleNum);
 
   CBucket.ChainSize = (unsigned)(EleNum / ChainNum);
 
