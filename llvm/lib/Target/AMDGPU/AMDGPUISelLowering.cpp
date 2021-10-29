@@ -1332,14 +1332,6 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-bool AMDGPUTargetLowering::hasDefinedInitializer(const GlobalValue *GV) {
-  const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
-  if (!GVar || !GVar->hasInitializer())
-    return false;
-
-  return !isa<UndefValue>(GVar->getInitializer());
-}
-
 SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
                                                  SDValue Op,
                                                  SelectionDAG &DAG) const {
