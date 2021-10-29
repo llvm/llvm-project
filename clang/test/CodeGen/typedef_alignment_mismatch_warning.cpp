@@ -282,3 +282,7 @@ void test10() {
   auto *UA4ptr = new UsingAligned4(11);
   new (UA4ptr) UsingAligned4(12);
 }
+
+void testFunctionPointerArray(void (*fptr[10])(Aligned8Int *), Aligned2Int* src) {
+  fptr[0](src); // expected-warning {{passing 2-byte aligned argument to 8-byte aligned parameter 1 may result in an unaligned pointer access}}
+}
