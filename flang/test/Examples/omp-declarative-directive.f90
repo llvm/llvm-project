@@ -1,5 +1,3 @@
-! Check the flang-omp-report plugin for omp-declarative-directive.f90
-
 ! REQUIRES: plugins, examples, shell
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
@@ -31,13 +29,13 @@ end
 
 ! CHECK:---
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-declarative-directive.f90'
-! CHECK-NEXT:  line:            13
+! CHECK-NEXT:  line:            11
 ! CHECK-NEXT:  construct:       declare simd
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      aligned
 ! CHECK-NEXT:      details:     a
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-declarative-directive.f90'
-! CHECK-NEXT:  line:            23
+! CHECK-NEXT:  line:            21
 ! CHECK-NEXT:  construct:       declare target
 ! CHECK-NEXT:  clauses:         []
 ! CHECK-NEXT:...
