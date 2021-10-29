@@ -4992,9 +4992,9 @@ define void @splat_ptr_scatter(i32* %ptr, <4 x i1> %mask, <4 x i32> %val) {
 define <8 x float> @scaleidx_x86gather(float* %base, <8 x i32> %index, <8 x i32> %imask) nounwind {
 ; KNL_64-LABEL: scaleidx_x86gather:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; KNL_64-NEXT:    vgatherdps %ymm1, (%rdi,%ymm0,4), %ymm2
-; KNL_64-NEXT:    vmovaps %ymm2, %ymm0
+; KNL_64-NEXT:    vpslld $2, %ymm0, %ymm2
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_64-NEXT:    vgatherdps %ymm1, (%rdi,%ymm2), %ymm0
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: scaleidx_x86gather:
@@ -5007,9 +5007,9 @@ define <8 x float> @scaleidx_x86gather(float* %base, <8 x i32> %index, <8 x i32>
 ;
 ; SKX-LABEL: scaleidx_x86gather:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vgatherdps %ymm1, (%rdi,%ymm0,4), %ymm2
-; SKX-NEXT:    vmovaps %ymm2, %ymm0
+; SKX-NEXT:    vpslld $2, %ymm0, %ymm2
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX-NEXT:    vgatherdps %ymm1, (%rdi,%ymm2), %ymm0
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: scaleidx_x86gather:
@@ -5068,7 +5068,8 @@ define void @scaleidx_x86scatter(<16 x float> %value, float* %base, <16 x i32> %
 ; KNL_64-LABEL: scaleidx_x86scatter:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    kmovw %esi, %k1
-; KNL_64-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,4) {%k1}
+; KNL_64-NEXT:    vpaddd %zmm1, %zmm1, %zmm1
+; KNL_64-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,2) {%k1}
 ; KNL_64-NEXT:    vzeroupper
 ; KNL_64-NEXT:    retq
 ;
@@ -5083,7 +5084,8 @@ define void @scaleidx_x86scatter(<16 x float> %value, float* %base, <16 x i32> %
 ; SKX-LABEL: scaleidx_x86scatter:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovw %esi, %k1
-; SKX-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,4) {%k1}
+; SKX-NEXT:    vpaddd %zmm1, %zmm1, %zmm1
+; SKX-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,2) {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
@@ -5129,8 +5131,9 @@ define void @scaleidx_scatter(<8 x float> %value, float* %base, <8 x i32> %index
 ;
 ; SKX-LABEL: scaleidx_scatter:
 ; SKX:       # %bb.0:
+; SKX-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
 ; SKX-NEXT:    kmovw %esi, %k1
-; SKX-NEXT:    vscatterdps %ymm0, (%rdi,%ymm1,8) {%k1}
+; SKX-NEXT:    vscatterdps %ymm0, (%rdi,%ymm1,4) {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
