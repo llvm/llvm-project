@@ -197,7 +197,7 @@ simpleDecimalConversion(const char *__restrict numStart,
                         uint32_t *outputExp2) {
 
   int32_t exp2 = 0;
-  HighPrecsisionDecimal hpd = HighPrecsisionDecimal(numStart);
+  HighPrecisionDecimal hpd = HighPrecisionDecimal(numStart);
 
   if (hpd.getNumDigits() == 0) {
     *outputMantissa = 0;

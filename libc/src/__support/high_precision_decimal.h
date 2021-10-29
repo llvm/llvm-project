@@ -24,7 +24,7 @@ struct LShiftTableEntry {
 // This is based on the HPD data structure described as part of the Simple
 // Decimal Conversion algorithm by Nigel Tao, described at this link:
 // https://nigeltao.github.io/blog/2020/parse-number-f64-simple.html
-class HighPrecsisionDecimal {
+class HighPrecisionDecimal {
 
   // This precomputed table speeds up left shifts by having the number of new
   // digits that will be added by multiplying 5^i by 2^i. If the number is less
@@ -277,9 +277,8 @@ private:
 public:
   // numString is assumed to be a string of numeric characters. It doesn't
   // handle leading spaces.
-  HighPrecsisionDecimal(const char *__restrict numString) {
+  HighPrecisionDecimal(const char *__restrict numString) {
     bool sawDot = false;
-    bool sawDigit = false;
     while (isdigit(*numString) || *numString == '.') {
       if (*numString == '.') {
         if (sawDot) {
@@ -288,7 +287,6 @@ public:
         this->decimalPoint = this->numDigits;
         sawDot = true;
       } else {
-        sawDigit = true;
         if (*numString == '0' && this->numDigits == 0) {
           --this->decimalPoint;
           ++numString;
