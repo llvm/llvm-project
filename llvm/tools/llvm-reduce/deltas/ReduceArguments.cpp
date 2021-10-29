@@ -54,7 +54,7 @@ static bool shouldRemoveArguments(const Function &F) {
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractArgumentsFromModule(Oracle &O, Module &Program) {
-  std::set<Argument *> ArgsToKeep;
+  std::vector<Argument *> InitArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
   for (auto &F : Program)
@@ -62,8 +62,13 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
       Funcs.push_back(&F);
       for (auto &A : F.args())
         if (O.shouldKeep())
-          ArgsToKeep.insert(&A);
+          InitArgsToKeep.push_back(&A);
     }
+
+  // We create a vector first, then convert it to a set, so that we don't have
+  // to pay the cost of rebalancing the set frequently if the order we insert
+  // the elements doesn't match the order they should appear inside the set.
+  std::set<Argument *> ArgsToKeep(InitArgsToKeep.begin(), InitArgsToKeep.end());
 
   for (auto *F : Funcs) {
     ValueToValueMapTy VMap;
