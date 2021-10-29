@@ -3297,8 +3297,6 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       }
     }
 
-    // TODO - add BMI (TZCNT) scalar handling
-
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
         return adjustTableCost(*Entry, LT.first, ICA.getFlags());
