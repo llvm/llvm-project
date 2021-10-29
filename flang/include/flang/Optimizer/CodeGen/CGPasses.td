@@ -16,6 +16,19 @@
 
 include "mlir/Pass/PassBase.td"
 
+def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
+  let summary = "Convert FIR dialect to LLVM-IR dialect";
+  let description = [{
+    Convert the FIR dialect to the LLVM-IR dialect of MLIR. This conversion
+    will also convert ops in the standard and FIRCG dialects.
+  }];
+  let constructor = "::fir::createFIRToLLVMPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
+    "mlir::LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"
+  ];
+}
+
 def CodeGenRewrite : Pass<"cg-rewrite"> {
   let summary = "Rewrite some FIR ops into their code-gen forms.";
   let description = [{
