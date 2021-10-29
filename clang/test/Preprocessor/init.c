@@ -1467,11 +1467,9 @@
 // RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
 // RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
 // RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
-// OPENBSD-STDC:#define __STDC_NO_ATOMICS__ 1
 // OPENBSD-STDC:#define __STDC_NO_THREADS__ 1
 //
 // RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC-N %s
-// OPENBSD-STDC-N-NOT:#define __STDC_NO_ATOMICS__ 1
 // OPENBSD-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=xcore-none-none < /dev/null | FileCheck -match-full-lines -check-prefix XCORE %s
