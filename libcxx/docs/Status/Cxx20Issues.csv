@@ -274,7 +274,7 @@
 "`3363 <https://wg21.link/LWG3363>`__","``drop_while_view``\  should opt-out of ``sized_range``\ ","Prague","","","|ranges|"
 "`3364 <https://wg21.link/LWG3364>`__","Initialize data members of ranges and their iterators","Prague","","","|ranges|"
 "`3367 <https://wg21.link/LWG3367>`__","Integer-class conversions should not throw","Prague","",""
-"`3369 <https://wg21.link/LWG3369>`__","``span``\ 's deduction-guide for built-in arrays doesn't work","Prague","",""
+"`3369 <https://wg21.link/LWG3369>`__","``span``\ 's deduction-guide for built-in arrays doesn't work","Prague","|Complete|","14.0"
 "`3371 <https://wg21.link/LWG3371>`__","``visit_format_arg``\  and ``make_format_args``\  are not hidden friends","Prague","|Complete|","14.0","|format|"
 "`3372 <https://wg21.link/LWG3372>`__","``vformat_to``\  should not try to deduce ``Out``\  twice","Prague","","","|format|"
 "`3373 <https://wg21.link/LWG3373>`__","``{to,from}_chars_result``\  and ``format_to_n_result``\  need the  ""we really mean what we say"" wording","Prague","","","|format|"
