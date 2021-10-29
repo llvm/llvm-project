@@ -20,10 +20,16 @@ using namespace llvm;
 /// Removes all the GVs that aren't inside the desired Chunks.
 static void extractGVsFromModule(Oracle &O, Module &Program) {
   // Get GVs inside desired chunks
-  std::set<GlobalVariable *> GVsToKeep;
+  std::vector<GlobalVariable *> InitGVsToKeep;
   for (auto &GV : Program.globals())
     if (O.shouldKeep())
-      GVsToKeep.insert(&GV);
+      InitGVsToKeep.push_back(&GV);
+
+  // We create a vector first, then convert it to a set, so that we don't have
+  // to pay the cost of rebalancing the set frequently if the order we insert
+  // the elements doesn't match the order they should appear inside the set.
+  std::set<GlobalVariable *> GVsToKeep(InitGVsToKeep.begin(),
+                                       InitGVsToKeep.end());
 
   // Delete out-of-chunk GVs and their uses
   std::vector<GlobalVariable *> ToRemove;
