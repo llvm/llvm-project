@@ -2455,9 +2455,9 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
   FmtContext fctx;
   fctx.withBuilder("::mlir::Builder(odsAttrs.getContext())");
 
-  auto emitAttr = [&](StringRef name, Attribute attr) {
-    auto *method = adaptor.addMethodAndPrune(attr.getStorageType(), name);
-    ERROR_IF_PRUNED(method, "Adaptor::" + name, op);
+  auto emitAttr = [&](StringRef name, StringRef emitName, Attribute attr) {
+    auto *method = adaptor.addMethodAndPrune(attr.getStorageType(), emitName);
+    ERROR_IF_PRUNED(method, "Adaptor::" + emitName, op);
     auto &body = method->body();
     body << "  assert(odsAttrs && \"no attributes when constructing adapter\");"
          << "\n  " << attr.getStorageType() << " attr = "
@@ -2489,8 +2489,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     const auto &name = namedAttr.name;
     const auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr()) {
-      for (auto emitName : op.getGetterNames(name))
-        emitAttr(emitName, attr);
+      for (const auto &emitName : op.getGetterNames(name))
+        emitAttr(name, emitName, attr);
     }
   }
 
