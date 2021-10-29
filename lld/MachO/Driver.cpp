@@ -936,7 +936,7 @@ static void handleSymbolPatterns(InputArgList &args,
   }
 }
 
-void createFiles(const InputArgList &args) {
+static void createFiles(const InputArgList &args) {
   TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
