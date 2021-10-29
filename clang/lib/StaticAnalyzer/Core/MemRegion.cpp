@@ -974,7 +974,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
 
     // First handle the globals defined in system headers.
     if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
-      // Whitelist the system globals which often DO GET modified, assume the
+      //  Allow the system globals which often DO GET modified, assume the
       // rest are immutable.
       if (D->getName().contains("errno"))
         sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);

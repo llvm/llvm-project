@@ -15,7 +15,7 @@ int f1(int x, int y) {
   case 0:
     // Ensure that modifying pid is ok.
     pid = 1; // no-warning
-    // Ensure that calling whitelisted routines is ok.
+    // Ensure that calling allowlisted routines is ok.
     switch (y) {
     case 0:
       execl("", "", 0); // no-warning
@@ -65,7 +65,7 @@ int f2(int x) {
   case 0:
     // Ensure that writing pid is ok.
     pid = 1; // no-warning
-    // Ensure that calling whitelisted routines is ok.
+    // Ensure that calling allowlisted routines is ok.
     execl("", "", 0); // no-warning
     _exit(1); // no-warning
     break;
