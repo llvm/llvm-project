@@ -73,12 +73,19 @@ struct SupportFunctionCall {
   using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
                                                       size_t ArgSize);
   ExecutorAddr Func;
-  ExecutorAddr ArgData;
-  uint64_t ArgSize;
+  ExecutorAddrRange ArgDataRange;
+
+  SupportFunctionCall() = default;
+  SupportFunctionCall(ExecutorAddr Func, ExecutorAddr ArgData,
+                      ExecutorAddrDiff ArgSize)
+      : Func(Func), ArgDataRange(ArgData, ArgSize) {}
+  SupportFunctionCall(ExecutorAddr Func, ExecutorAddrRange ArgDataRange)
+      : Func(Func), ArgDataRange(ArgDataRange) {}
 
   Error run() {
-    shared::WrapperFunctionResult WFR(
-        Func.toPtr<FnTy *>()(ArgData.toPtr<const char *>(), ArgSize));
+    shared::WrapperFunctionResult WFR(Func.toPtr<FnTy *>()(
+        ArgDataRange.Start.toPtr<const char *>(),
+        static_cast<size_t>(ArgDataRange.size().getValue())));
     if (const char *ErrMsg = WFR.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
     if (!WFR.empty())
@@ -108,10 +115,9 @@ struct FinalizeRequest {
 
 template <typename T> struct UIntWrite {
   UIntWrite() = default;
-  UIntWrite(JITTargetAddress Address, T Value)
-      : Address(Address), Value(Value) {}
+  UIntWrite(ExecutorAddr Addr, T Value) : Addr(Addr), Value(Value) {}
 
-  JITTargetAddress Address = 0;
+  ExecutorAddr Addr;
   T Value = 0;
 };
 
@@ -131,10 +137,10 @@ using UInt64Write = UIntWrite<uint64_t>;
 /// For use with TargetProcessControl::MemoryAccess objects.
 struct BufferWrite {
   BufferWrite() = default;
-  BufferWrite(JITTargetAddress Address, StringRef Buffer)
-      : Address(Address), Buffer(Buffer) {}
+  BufferWrite(ExecutorAddr Addr, StringRef Buffer)
+      : Addr(Addr), Buffer(Buffer) {}
 
-  JITTargetAddress Address = 0;
+  ExecutorAddr Addr;
   StringRef Buffer;
 };
 
@@ -149,8 +155,7 @@ namespace shared {
 
 class SPSMemoryProtectionFlags {};
 
-using SPSSupportFunctionCall =
-    SPSTuple<SPSExecutorAddr, SPSExecutorAddr, uint64_t>;
+using SPSSupportFunctionCall = SPSTuple<SPSExecutorAddr, SPSExecutorAddrRange>;
 
 using SPSSegFinalizeRequest =
     SPSTuple<SPSMemoryProtectionFlags, SPSExecutorAddr, uint64_t,
@@ -202,17 +207,17 @@ class SPSSerializationTraits<SPSSupportFunctionCall,
 
 public:
   static size_t size(const tpctypes::SupportFunctionCall &SFC) {
-    return AL::size(SFC.Func, SFC.ArgData, SFC.ArgSize);
+    return AL::size(SFC.Func, SFC.ArgDataRange);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const tpctypes::SupportFunctionCall &SFC) {
-    return AL::serialize(OB, SFC.Func, SFC.ArgData, SFC.ArgSize);
+    return AL::serialize(OB, SFC.Func, SFC.ArgDataRange);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           tpctypes::SupportFunctionCall &SFC) {
-    return AL::deserialize(IB, SFC.Func, SFC.ArgData, SFC.ArgSize);
+    return AL::deserialize(IB, SFC.Func, SFC.ArgDataRange);
   }
 };
 
@@ -282,16 +287,16 @@ class SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
                              tpctypes::UIntWrite<T>> {
 public:
   static size_t size(const tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddr, T>::AsArgList::size(W.Address, W.Value);
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::size(W.Addr, W.Value);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddr, T>::AsArgList::serialize(OB, W.Address,
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::serialize(OB, W.Addr,
                                                               W.Value);
   }
 
   static bool deserialize(SPSInputBuffer &IB, tpctypes::UIntWrite<T> &W) {
-    return SPSTuple<SPSExecutorAddr, T>::AsArgList::deserialize(IB, W.Address,
+    return SPSTuple<SPSExecutorAddr, T>::AsArgList::deserialize(IB, W.Addr,
                                                                 W.Value);
   }
 };
@@ -302,17 +307,17 @@ class SPSSerializationTraits<SPSMemoryAccessBufferWrite,
 public:
   static size_t size(const tpctypes::BufferWrite &W) {
     return SPSTuple<SPSExecutorAddr, SPSSequence<char>>::AsArgList::size(
-        W.Address, W.Buffer);
+        W.Addr, W.Buffer);
   }
 
   static bool serialize(SPSOutputBuffer &OB, const tpctypes::BufferWrite &W) {
     return SPSTuple<SPSExecutorAddr, SPSSequence<char>>::AsArgList ::serialize(
-        OB, W.Address, W.Buffer);
+        OB, W.Addr, W.Buffer);
   }
 
   static bool deserialize(SPSInputBuffer &IB, tpctypes::BufferWrite &W) {
     return SPSTuple<SPSExecutorAddr,
-                    SPSSequence<char>>::AsArgList ::deserialize(IB, W.Address,
+                    SPSSequence<char>>::AsArgList ::deserialize(IB, W.Addr,
                                                                 W.Buffer);
   }
 };

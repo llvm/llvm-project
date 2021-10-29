@@ -28,8 +28,7 @@ writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
              ArgData, ArgSize,
              [](std::vector<WriteT> Ws) {
                for (auto &W : Ws)
-                 *jitTargetAddressToPointer<decltype(W.Value) *>(W.Address) =
-                     W.Value;
+                 *W.Addr.template toPtr<decltype(W.Value) *>() = W.Value;
              })
       .release();
 }
@@ -40,8 +39,8 @@ writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
              ArgData, ArgSize,
              [](std::vector<tpctypes::BufferWrite> Ws) {
                for (auto &W : Ws)
-                 memcpy(jitTargetAddressToPointer<char *>(W.Address),
-                        W.Buffer.data(), W.Buffer.size());
+                 memcpy(W.Addr.template toPtr<char *>(), W.Buffer.data(),
+                        W.Buffer.size());
              })
       .release();
 }
