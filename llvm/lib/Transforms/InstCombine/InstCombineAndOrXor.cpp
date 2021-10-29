@@ -2699,10 +2699,31 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateXor(Or, ConstantInt::get(I.getType(), *CV));
   }
 
-  // (A & C)|(B & D)
+  // (A & C) | (B & D)
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
+
+    const APInt *MaskC0, *MaskC1;
+    if (match(C, m_APInt(MaskC0)) && match(D, m_APInt(MaskC1)) &&
+        *MaskC0 == ~*MaskC1) {
+      Value *X;
+
+      // ((X | B) & C1) | (B & C2) -> (X & C1) | B iff C1 == ~C2
+      if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
+        return BinaryOperator::CreateOr(Builder.CreateAnd(X, *MaskC0), B);
+      // (A & C2) | ((X | A) & C1) -> (X & C2) | A iff C1 == ~C2
+      if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
+        return BinaryOperator::CreateOr(Builder.CreateAnd(X, *MaskC1), A);
+
+      // ((X ^ B) & C1) | (B & C2) -> (X & C1) ^ B iff C1 == ~C2
+      if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
+        return BinaryOperator::CreateXor(Builder.CreateAnd(X, *MaskC0), B);
+      // (A & C2) | ((X ^ A) & C1) -> (X & C2) ^ A iff C1 == ~C2
+      if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
+        return BinaryOperator::CreateXor(Builder.CreateAnd(X, *MaskC1), A);
+    }
+
     // (A & C1)|(B & C2)
     ConstantInt *C1, *C2;
     if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
@@ -2737,24 +2758,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           return BinaryOperator::CreateAnd(V2,
                                  Builder.getInt(C1->getValue()|C2->getValue()));
         }
-      }
-
-      if (C1->getValue() == ~C2->getValue()) {
-        Value *X;
-
-        // ((X|B)&C1)|(B&C2) -> (X&C1) | B iff C1 == ~C2
-        if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C1), B);
-        // (A&C2)|((X|A)&C1) -> (X&C2) | A iff C1 == ~C2
-        if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C2), A);
-
-        // ((X^B)&C1)|(B&C2) -> (X&C1) ^ B iff C1 == ~C2
-        if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C1), B);
-        // (A&C2)|((X^A)&C1) -> (X&C2) ^ A iff C1 == ~C2
-        if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C2), A);
       }
     }
 
