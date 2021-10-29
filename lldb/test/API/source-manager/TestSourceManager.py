@@ -146,10 +146,6 @@ class SourceManagerTestCase(TestBase):
         main_c_hidden = os.path.join(hidden, "main-copy.c")
         os.rename(self.file, main_c_hidden)
 
-        if self.TraceOn():
-            system([["ls"]])
-            system([["ls", "hidden"]])
-
         # Set source remapping with invalid replace path and verify we get an
         # error
         self.expect(
