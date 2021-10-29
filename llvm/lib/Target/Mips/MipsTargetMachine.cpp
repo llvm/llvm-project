@@ -334,7 +334,8 @@ void MipsPassConfig::addPreEmitPass() {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  addPass(createMipsBranchExpansion());
+  if (!getMipsSubtarget().hasNanoMips())
+    addPass(createMipsBranchExpansion());
 
   addPass(createMipsConstantIslandPass());
 }
