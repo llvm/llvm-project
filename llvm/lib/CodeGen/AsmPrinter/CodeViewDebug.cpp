@@ -561,6 +561,44 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
+static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
+  switch (DWLang) {
+  case dwarf::DW_LANG_C:
+  case dwarf::DW_LANG_C89:
+  case dwarf::DW_LANG_C99:
+  case dwarf::DW_LANG_C11:
+  case dwarf::DW_LANG_ObjC:
+    return SourceLanguage::C;
+  case dwarf::DW_LANG_C_plus_plus:
+  case dwarf::DW_LANG_C_plus_plus_03:
+  case dwarf::DW_LANG_C_plus_plus_11:
+  case dwarf::DW_LANG_C_plus_plus_14:
+    return SourceLanguage::Cpp;
+  case dwarf::DW_LANG_Fortran77:
+  case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran95:
+  case dwarf::DW_LANG_Fortran03:
+  case dwarf::DW_LANG_Fortran08:
+    return SourceLanguage::Fortran;
+  case dwarf::DW_LANG_Pascal83:
+    return SourceLanguage::Pascal;
+  case dwarf::DW_LANG_Cobol74:
+  case dwarf::DW_LANG_Cobol85:
+    return SourceLanguage::Cobol;
+  case dwarf::DW_LANG_Java:
+    return SourceLanguage::Java;
+  case dwarf::DW_LANG_D:
+    return SourceLanguage::D;
+  case dwarf::DW_LANG_Swift:
+    return SourceLanguage::Swift;
+  default:
+    // There's no CodeView representation for this language, and CV doesn't
+    // have an "unknown" option for the language field, so we'll use MASM,
+    // as it's very low level.
+    return SourceLanguage::Masm;
+  }
+}
+
 void CodeViewDebug::beginModule(Module *M) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
@@ -573,6 +611,13 @@ void CodeViewDebug::beginModule(Module *M) {
   MMI->setDebugInfoAvailability(true);
 
   TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
+
+  // Get the current source language.
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  const MDNode *Node = *CUs->operands().begin();
+  const auto *CU = cast<DICompileUnit>(Node);
+
+  CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
 
   collectGlobalVariableInfo();
 
@@ -731,44 +776,6 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   }
 }
 
-static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
-  switch (DWLang) {
-  case dwarf::DW_LANG_C:
-  case dwarf::DW_LANG_C89:
-  case dwarf::DW_LANG_C99:
-  case dwarf::DW_LANG_C11:
-  case dwarf::DW_LANG_ObjC:
-    return SourceLanguage::C;
-  case dwarf::DW_LANG_C_plus_plus:
-  case dwarf::DW_LANG_C_plus_plus_03:
-  case dwarf::DW_LANG_C_plus_plus_11:
-  case dwarf::DW_LANG_C_plus_plus_14:
-    return SourceLanguage::Cpp;
-  case dwarf::DW_LANG_Fortran77:
-  case dwarf::DW_LANG_Fortran90:
-  case dwarf::DW_LANG_Fortran95:
-  case dwarf::DW_LANG_Fortran03:
-  case dwarf::DW_LANG_Fortran08:
-    return SourceLanguage::Fortran;
-  case dwarf::DW_LANG_Pascal83:
-    return SourceLanguage::Pascal;
-  case dwarf::DW_LANG_Cobol74:
-  case dwarf::DW_LANG_Cobol85:
-    return SourceLanguage::Cobol;
-  case dwarf::DW_LANG_Java:
-    return SourceLanguage::Java;
-  case dwarf::DW_LANG_D:
-    return SourceLanguage::D;
-  case dwarf::DW_LANG_Swift:
-    return SourceLanguage::Swift;
-  default:
-    // There's no CodeView representation for this language, and CV doesn't
-    // have an "unknown" option for the language field, so we'll use MASM,
-    // as it's very low level.
-    return SourceLanguage::Masm;
-  }
-}
-
 namespace {
 struct Version {
   int Part[4];
@@ -798,12 +805,8 @@ void CodeViewDebug::emitCompilerInformation() {
   MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_COMPILE3);
   uint32_t Flags = 0;
 
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  const MDNode *Node = *CUs->operands().begin();
-  const auto *CU = cast<DICompileUnit>(Node);
-
   // The low byte of the flags indicates the source language.
-  Flags = MapDWLangToCVLang(CU->getSourceLanguage());
+  Flags = CurrentSourceLanguage;
   // TODO:  Figure out which other flags need to be set.
   if (MMI->getModule()->getProfileSummary(/*IsCS*/ false) != nullptr) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
@@ -814,6 +817,10 @@ void CodeViewDebug::emitCompilerInformation() {
 
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
+
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  const MDNode *Node = *CUs->operands().begin();
+  const auto *CU = cast<DICompileUnit>(Node);
 
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
@@ -1574,6 +1581,8 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
     return lowerTypeClass(cast<DICompositeType>(Ty));
   case dwarf::DW_TAG_union_type:
     return lowerTypeUnion(cast<DICompositeType>(Ty));
+  case dwarf::DW_TAG_string_type:
+    return lowerTypeString(cast<DIStringType>(Ty));
   case dwarf::DW_TAG_unspecified_type:
     if (Ty->getName() == "decltype(nullptr)")
       return TypeIndex::NullptrT();
@@ -1618,14 +1627,19 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
 
     const DISubrange *Subrange = cast<DISubrange>(Element);
     int64_t Count = -1;
-    // Calculate the count if either LowerBound is absent or is zero and
-    // either of Count or UpperBound are constant.
-    auto *LI = Subrange->getLowerBound().dyn_cast<ConstantInt *>();
-    if (!Subrange->getRawLowerBound() || (LI && (LI->getSExtValue() == 0))) {
-      if (auto *CI = Subrange->getCount().dyn_cast<ConstantInt*>())
-        Count = CI->getSExtValue();
-      else if (auto *UI = Subrange->getUpperBound().dyn_cast<ConstantInt*>())
-        Count = UI->getSExtValue() + 1; // LowerBound is zero
+
+    // If Subrange has a Count field, use it.
+    // Otherwise, if it has an upperboud, use (upperbound - lowerbound + 1),
+    // where lowerbound is from the LowerBound field of the Subrange,
+    // or the language default lowerbound if that field is unspecified.
+    if (auto *CI = Subrange->getCount().dyn_cast<ConstantInt *>())
+      Count = CI->getSExtValue();
+    else if (auto *UI = Subrange->getUpperBound().dyn_cast<ConstantInt *>()) {
+      // Fortran uses 1 as the default lowerbound; other languages use 0.
+      int64_t Lowerbound = (moduleIsInFortran()) ? 1 : 0;
+      auto *LI = Subrange->getLowerBound().dyn_cast<ConstantInt *>();
+      Lowerbound = (LI) ? LI->getSExtValue() : Lowerbound;
+      Count = UI->getSExtValue() - Lowerbound + 1;
     }
 
     // Forward declarations of arrays without a size and VLAs use a count of -1.
@@ -1649,6 +1663,26 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
   }
 
   return ElementTypeIndex;
+}
+
+// This function lowers a Fortran character type (DIStringType).
+// Note that it handles only the character*n variant (using SizeInBits
+// field in DIString to describe the type size) at the moment.
+// Other variants (leveraging the StringLength and StringLengthExp
+// fields in DIStringType) remain TBD.
+TypeIndex CodeViewDebug::lowerTypeString(const DIStringType *Ty) {
+  TypeIndex CharType = TypeIndex(SimpleTypeKind::NarrowCharacter);
+  uint64_t ArraySize = Ty->getSizeInBits() >> 3;
+  StringRef Name = Ty->getName();
+  // IndexType is size_t, which depends on the bitness of the target.
+  TypeIndex IndexType = getPointerSizeInBytes() == 8
+                            ? TypeIndex(SimpleTypeKind::UInt64Quad)
+                            : TypeIndex(SimpleTypeKind::UInt32Long);
+
+  // Create a type of character array of ArraySize.
+  ArrayRecord AR(CharType, IndexType, ArraySize, Name);
+
+  return TypeTable.writeLeafType(AR);
 }
 
 TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
@@ -2183,6 +2217,7 @@ void CodeViewDebug::clear() {
   TypeIndices.clear();
   CompleteTypeIndices.clear();
   ScopeGlobals.clear();
+  CVGlobalVariableOffsets.clear();
 }
 
 void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
@@ -3068,6 +3103,15 @@ void CodeViewDebug::collectGlobalVariableInfo() {
       const DIGlobalVariable *DIGV = GVE->getVariable();
       const DIExpression *DIE = GVE->getExpression();
 
+      if ((DIE->getNumElements() == 2) &&
+          (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
+        // Record the constant offset for the variable.
+        //
+        // A Fortran common block uses this idiom to encode the offset
+        // of a variable from the common block's starting address.
+        CVGlobalVariableOffsets.insert(
+            std::make_pair(DIGV, DIE->getElement(1)));
+
       // Emit constant global variables in a global symbol section.
       if (GlobalMap.count(GVE) == 0 && DIE->isConstant()) {
         CVGlobalVariable CVGV = {DIGV, DIE};
@@ -3232,7 +3276,11 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
           DIGV->getRawStaticDataMemberDeclaration()))
     Scope = MemberDecl->getScope();
-  std::string QualifiedName = getFullyQualifiedName(Scope, DIGV->getName());
+  // For Fortran, the scoping portion is elided in its name so that we can
+  // reference the variable in the command line of the VS debugger.
+  std::string QualifiedName =
+      (moduleIsInFortran()) ? std::string(DIGV->getName())
+                            : getFullyQualifiedName(Scope, DIGV->getName());
 
   if (const GlobalVariable *GV =
           CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
@@ -3248,7 +3296,13 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.AddComment("Type");
     OS.emitInt32(getCompleteTypeIndex(DIGV->getType()).getIndex());
     OS.AddComment("DataOffset");
-    OS.EmitCOFFSecRel32(GVSym, /*Offset=*/0);
+
+    uint64_t Offset = 0;
+    if (CVGlobalVariableOffsets.find(DIGV) != CVGlobalVariableOffsets.end())
+      // Use the offset seen while collecting info on globals.
+      Offset = CVGlobalVariableOffsets[DIGV];
+    OS.EmitCOFFSecRel32(GVSym, Offset);
+
     OS.AddComment("Segment");
     OS.EmitCOFFSectionIndex(GVSym);
     OS.AddComment("Name");
