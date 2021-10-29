@@ -1116,7 +1116,7 @@ static unsigned getFlatScratchSpillOpcode(const SIInstrInfo *TII,
 }
 
 void SIRegisterInfo::buildSpillLoadStore(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
     unsigned LoadStoreOp, int Index, Register ValueReg, bool IsKill,
     MCRegister ScratchOffsetReg, int64_t InstOffset, MachineMemOperand *MMO,
     RegScavenger *RS, LivePhysRegs *LiveRegs, bool NeedsCFI) const {
@@ -1129,7 +1129,6 @@ void SIRegisterInfo::buildSpillLoadStore(
   const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   const MCInstrDesc *Desc = &TII->get(LoadStoreOp);
-  const DebugLoc &DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
   bool IsStore = Desc->mayStore();
   bool IsFlat = TII->isFLATScratch(LoadStoreOp);
 
@@ -1402,12 +1401,12 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
   if (IsLoad) {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                           : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
-    buildSpillLoadStore(*SB.MBB, SB.MI, Opc, Index, SB.TmpVGPR, false, FrameReg,
-                        Offset * SB.EltSize, MMO, SB.RS);
+    buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, false,
+                        FrameReg, Offset * SB.EltSize, MMO, SB.RS);
   } else {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
-    buildSpillLoadStore(*SB.MBB, SB.MI, Opc, Index, SB.TmpVGPR, IsKill,
+    buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, IsKill,
                         FrameReg, Offset * SB.EltSize, MMO, SB.RS);
     // This only ever adds one VGPR spill
     SB.MFI.addToSpilledVGPRs(1);
@@ -1864,7 +1863,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                             : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
       auto MBB = MI->getParent();
       buildSpillLoadStore(
-          *MBB, MI, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
+          *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS, nullptr, NeedsCFI);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
@@ -1900,7 +1899,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                             : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
       auto MBB = MI->getParent();
       buildSpillLoadStore(
-          *MBB, MI, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
+          *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
       MI->eraseFromParent();
