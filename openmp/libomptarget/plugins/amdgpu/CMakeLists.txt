@@ -85,7 +85,10 @@ else()
   set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
 endif()
 
-set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib")
+# Don't override an externally defined RPATH
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib")
+endif()
 target_link_libraries(
   omptarget.rtl.amdgpu
   PUBLIC

@@ -177,15 +177,21 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   else
     WaveFrontSizeBC = "oclc_wavefrontsize64_off.bc";
 
+  std::string BitcodeSuffix;
+  if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                   options::OPT_fno_openmp_target_new_runtime, false))
+    BitcodeSuffix = "new-amdgpu-" + SubArchName.str();
+  else
+    BitcodeSuffix = "amdgcn-" + SubArchName.str();
   // FIXME: remove double link of hip aompextras, ockl, and WaveFrontSizeBC
   if (Args.hasArg(options::OPT_cuda_device_only))
     BCLibs.append(
-        {Args.MakeArgString("libomptarget-amdgcn-" + SubArchName + ".bc"),
+        {Args.MakeArgString("libomptarget-" + BitcodeSuffix + ".bc"),
          "hip.bc", "ockl.bc",
          std::string(WaveFrontSizeBC)});
   else {
     BCLibs.append(
-        {Args.MakeArgString("libomptarget-amdgcn-" + SubArchName + ".bc"),
+        {Args.MakeArgString("libomptarget-" + BitcodeSuffix + ".bc"),
          Args.MakeArgString("libaompextras-amdgcn-" + SubArchName + ".bc"),
          "hip.bc", "ockl.bc",
          Args.MakeArgString("libbc-hostrpc-amdgcn.a"),
@@ -621,6 +627,14 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     });
   }
 
+  std::string BitcodeSuffix;
+  if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                         options::OPT_fno_openmp_target_new_runtime, false)) {
+    BitcodeSuffix = "new-amdgpu-" + GPUArch;
+    addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
+                       getTriple());
+  }
+
   if (!DriverArgs.hasArg(options::OPT_l))
     return;
 
@@ -641,9 +655,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
       CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
     });
   }
-  // Fixme: do we need this?
-  //addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
-  //                   getTriple());
 }
 
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
