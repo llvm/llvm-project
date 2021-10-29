@@ -1,0 +1,4 @@
+RUN: not llvm-remark-size-diff %p/Inputs/empty-file.yaml %p/Inputs/1-func-2-instr-2-stack.yaml --parser=yaml 2>&1 | FileCheck %s
+RUN: not llvm-remark-size-diff %p/Inputs/1-func-2-instr-2-stack.yaml %p/Inputs/empty-file.yaml --parser=yaml 2>&1 | FileCheck %s
+
+; CHECK: error: document root is not of mapping type.

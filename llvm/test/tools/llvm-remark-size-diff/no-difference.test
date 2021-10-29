@@ -1,0 +1,7 @@
+RUN: llvm-remark-size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml | FileCheck -strict-whitespace %s
+
+; Same file passed twice -> no changes reported.
+
+; CHECK-NOT: {{[0-9]+}}
+; CHECK: instruction count: None
+; CHECK: stack byte usage: None

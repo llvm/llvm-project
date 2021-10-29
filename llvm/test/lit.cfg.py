@@ -165,11 +165,12 @@ tools.extend([
     'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
     'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump', 'llvm-otool',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-profgen', 'llvm-ranlib', 'llvm-rc', 'llvm-readelf',
-    'llvm-readobj', 'llvm-rtdyld', 'llvm-sim', 'llvm-size', 'llvm-split',
-    'llvm-stress', 'llvm-strings', 'llvm-strip', 'llvm-tblgen', 'llvm-tapi-diff',
-    'llvm-undname', 'llvm-windres', 'llvm-c-test', 'llvm-cxxfilt',
-    'llvm-xray', 'yaml2obj', 'obj2yaml', 'yaml-bench', 'verify-uselistorder',
-    'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
+    'llvm-readobj', 'llvm-remark-size-diff', 'llvm-rtdyld', 'llvm-sim',
+    'llvm-size', 'llvm-split', 'llvm-stress', 'llvm-strings', 'llvm-strip',
+    'llvm-tblgen', 'llvm-tapi-diff', 'llvm-undname', 'llvm-windres',
+    'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
+    'yaml-bench', 'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer',
+    'opt', 'sancov', 'sanstats'])
 
 # The following tools are optional
 tools.extend([
