@@ -590,7 +590,7 @@ enum Action : uint32_t {
     }                                                                          \
   }
 
-#define IMPL1(NAME, TYPE, LIB)                                                 \
+#define IMPL_SPARSEVALUES(NAME, TYPE, LIB)                                     \
   void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor) {    \
     assert(ref);                                                               \
     assert(tensor);                                                            \
@@ -602,7 +602,7 @@ enum Action : uint32_t {
     ref->strides[0] = 1;                                                       \
   }
 
-#define IMPL2(NAME, TYPE, LIB)                                                 \
+#define IMPL_GETOVERHEAD(NAME, TYPE, LIB)                                      \
   void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor,      \
                            index_t d) {                                        \
     assert(ref);                                                               \
@@ -615,7 +615,7 @@ enum Action : uint32_t {
     ref->strides[0] = 1;                                                       \
   }
 
-#define IMPL3(NAME, TYPE)                                                      \
+#define IMPL_ADDELT(NAME, TYPE)                                                \
   void *_mlir_ciface_##NAME(void *tensor, TYPE value,                          \
                             StridedMemRefType<index_t, 1> *iref,               \
                             StridedMemRefType<index_t, 1> *pref) {             \
@@ -662,7 +662,7 @@ enum Action : uint32_t {
 /// kFromCOO = returns storage, where ptr contains coordinate scheme to assign
 /// kEmptyCOO = returns empty coordinate scheme to fill and use with kFromCOO
 /// kToCOO = returns coordinate scheme from storage in ptr to use with kFromCOO
-/// kToIter = returns iterator from storage in ptr (call IMPL_GETNEXT to use)
+/// kToIter = returns iterator from storage in ptr (call getNext() to use)
 void *
 _mlir_ciface_newSparseTensor(StridedMemRefType<uint8_t, 1> *aref, // NOLINT
                              StridedMemRefType<index_t, 1> *sref,
@@ -734,31 +734,35 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<uint8_t, 1> *aref, // NOLINT
   exit(1);
 }
 
-/// Methods that provide direct access to pointers, indices, and values.
-IMPL2(sparsePointers, index_t, getPointers)
-IMPL2(sparsePointers64, uint64_t, getPointers)
-IMPL2(sparsePointers32, uint32_t, getPointers)
-IMPL2(sparsePointers16, uint16_t, getPointers)
-IMPL2(sparsePointers8, uint8_t, getPointers)
-IMPL2(sparseIndices, index_t, getIndices)
-IMPL2(sparseIndices64, uint64_t, getIndices)
-IMPL2(sparseIndices32, uint32_t, getIndices)
-IMPL2(sparseIndices16, uint16_t, getIndices)
-IMPL2(sparseIndices8, uint8_t, getIndices)
-IMPL1(sparseValuesF64, double, getValues)
-IMPL1(sparseValuesF32, float, getValues)
-IMPL1(sparseValuesI64, int64_t, getValues)
-IMPL1(sparseValuesI32, int32_t, getValues)
-IMPL1(sparseValuesI16, int16_t, getValues)
-IMPL1(sparseValuesI8, int8_t, getValues)
+/// Methods that provide direct access to pointers.
+IMPL_GETOVERHEAD(sparsePointers, index_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers64, uint64_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers32, uint32_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers16, uint16_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers8, uint8_t, getPointers)
+
+/// Methods that provide direct access to indices.
+IMPL_GETOVERHEAD(sparseIndices, index_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices64, uint64_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices32, uint32_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices16, uint16_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices8, uint8_t, getIndices)
+
+/// Methods that provide direct access to values.
+IMPL_SPARSEVALUES(sparseValuesF64, double, getValues)
+IMPL_SPARSEVALUES(sparseValuesF32, float, getValues)
+IMPL_SPARSEVALUES(sparseValuesI64, int64_t, getValues)
+IMPL_SPARSEVALUES(sparseValuesI32, int32_t, getValues)
+IMPL_SPARSEVALUES(sparseValuesI16, int16_t, getValues)
+IMPL_SPARSEVALUES(sparseValuesI8, int8_t, getValues)
 
 /// Helper to add value to coordinate scheme, one per value type.
-IMPL3(addEltF64, double)
-IMPL3(addEltF32, float)
-IMPL3(addEltI64, int64_t)
-IMPL3(addEltI32, int32_t)
-IMPL3(addEltI16, int16_t)
-IMPL3(addEltI8, int8_t)
+IMPL_ADDELT(addEltF64, double)
+IMPL_ADDELT(addEltF32, float)
+IMPL_ADDELT(addEltI64, int64_t)
+IMPL_ADDELT(addEltI32, int32_t)
+IMPL_ADDELT(addEltI16, int16_t)
+IMPL_ADDELT(addEltI8, int8_t)
 
 /// Helper to enumerate elements of coordinate scheme, one per value type.
 IMPL_GETNEXT(getNextF64, double)
@@ -769,9 +773,9 @@ IMPL_GETNEXT(getNextI16, int16_t)
 IMPL_GETNEXT(getNextI8, int8_t)
 
 #undef CASE
-#undef IMPL1
-#undef IMPL2
-#undef IMPL3
+#undef IMPL_SPARSEVALUES
+#undef IMPL_GETOVERHEAD
+#undef IMPL_ADDELT
 #undef IMPL_GETNEXT
 
 //===----------------------------------------------------------------------===//
