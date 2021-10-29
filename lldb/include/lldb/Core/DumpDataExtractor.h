@@ -76,6 +76,15 @@ class Stream;
 ///     same integer value. If the items being displayed are not
 ///     bitfields, this value should be zero.
 ///
+/// \param[in] exe_scope
+///     If provided, this will be used to lookup language specific
+///     information, address information and memory tags.
+///     (if they are requested by the other options)
+///
+/// \param[in] show_memory_tags
+///     If exe_scope and base_addr are valid, include memory tags
+///     in the output. This does not apply to certain formats.
+///
 /// \return
 ///     The offset at which dumping ended.
 lldb::offset_t
@@ -83,7 +92,8 @@ DumpDataExtractor(const DataExtractor &DE, Stream *s, lldb::offset_t offset,
                   lldb::Format item_format, size_t item_byte_size,
                   size_t item_count, size_t num_per_line, uint64_t base_addr,
                   uint32_t item_bit_size, uint32_t item_bit_offset,
-                  ExecutionContextScope *exe_scope = nullptr);
+                  ExecutionContextScope *exe_scope = nullptr,
+                  bool show_memory_tags = false);
 
 void DumpHexBytes(Stream *s, const void *src, size_t src_len,
                   uint32_t bytes_per_line, lldb::addr_t base_addr);

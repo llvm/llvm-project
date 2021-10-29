@@ -172,6 +172,9 @@ Changes to LLDB
   * ``memory tag read``
   * ``memory tag write``
 
+* The ``memory read`` command has a new option ``--show-tags``. Use this option
+  to show memory tags beside the contents of tagged memory ranges.
+
 Changes to Sanitizers
 ---------------------
 
