@@ -22,6 +22,7 @@ class CallBase;
 class Function;
 class Module;
 class OptimizationRemarkEmitter;
+struct ReplayInlinerSettings;
 
 /// There are 3 scenarios we can use the InlineAdvisor:
 /// - Default - use manual heuristics.
@@ -37,9 +38,6 @@ class OptimizationRemarkEmitter;
 /// dynamically. This mode also permits generating training logs, for offline
 /// training.
 enum class InliningAdvisorMode : int { Default, Release, Development };
-
-/// For Replay Inliner initialization
-enum class ReplayInlineScope : int { Function, Module };
 
 class InlineAdvisor;
 /// Capture state between an inlining decision having had been made, and
@@ -234,7 +232,7 @@ public:
       return !PAC.preservedWhenStateless();
     }
     bool tryCreate(InlineParams Params, InliningAdvisorMode Mode,
-                   StringRef ReplayFile, ReplayInlineScope ReplayScope);
+                   const ReplayInlinerSettings &ReplaySettings);
     InlineAdvisor *getAdvisor() const { return Advisor.get(); }
 
   private:
@@ -256,11 +254,6 @@ std::unique_ptr<InlineAdvisor>
 getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                           std::function<bool(CallBase &)> GetDefaultAdvice);
 #endif
-
-std::unique_ptr<InlineAdvisor> getReplayInlineAdvisor(
-    Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
-    std::unique_ptr<InlineAdvisor> OriginalAdvisor, StringRef RemarksFile,
-    ReplayInlineScope Scope, bool EmitRemarks);
 
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
@@ -286,9 +279,6 @@ void emitInlinedIntoBasedOnCost(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
                                 const Function &Caller, const InlineCost &IC,
                                 bool ForProfileContext = false,
                                 const char *PassName = nullptr);
-
-/// get call site location as string
-std::string getCallSiteLocation(DebugLoc DLoc);
 
 /// Add location info to ORE message.
 void addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc);
