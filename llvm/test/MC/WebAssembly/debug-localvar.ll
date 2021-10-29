@@ -101,8 +101,8 @@ attributes #2 = { nounwind }
 ; CHECK-NEXT:                  DW_AT_type	(0x00000073 "int")
 
 ; CHECK-LABEL:     DW_TAG_lexical_block
-; CHECK-NEXT:                  DW_AT_low_pc	(0x0000001e)
-; CHECK-NEXT:                  DW_AT_high_pc	(0x0000002f)
+; CHECK-NEXT:                  DW_AT_low_pc	(0x0000001c)
+; CHECK-NEXT:                  DW_AT_high_pc	(0x0000002d)
 
 ; CHECK-LABEL:       DW_TAG_variable
 ; CHECK-NEXT:                    DW_AT_location	(DW_OP_fbreg +4)
