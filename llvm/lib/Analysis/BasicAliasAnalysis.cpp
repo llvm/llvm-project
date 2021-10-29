@@ -358,6 +358,11 @@ struct LinearExpression {
     Scale = APInt(BitWidth, 1);
     Offset = APInt(BitWidth, 0);
   }
+
+  LinearExpression mul(const APInt &Other, bool MulIsNSW) const {
+    return LinearExpression(Val, Scale * Other, Offset * Other,
+                            IsNSW && (Other.isOne() || MulIsNSW));
+  }
 };
 }
 
@@ -420,14 +425,11 @@ static LinearExpression GetLinearExpression(
         E.IsNSW &= NSW;
         break;
       }
-      case Instruction::Mul: {
+      case Instruction::Mul:
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
-                                Depth + 1, AC, DT);
-        E.Offset *= RHS;
-        E.Scale *= RHS;
-        E.IsNSW &= NSW;
+                                Depth + 1, AC, DT)
+                .mul(RHS, NSW);
         break;
-      }
       case Instruction::Shl:
         // We're trying to linearize an expression of the kind:
         //   shl i8 -128, 36
@@ -645,8 +647,6 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       GepHasConstantOffset = false;
 
-      APInt Scale(MaxPointerSize,
-                  DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
       // If the integer type is smaller than the pointer size, it is implicitly
       // sign extended to pointer size.
       unsigned Width = Index->getType()->getIntegerBitWidth();
@@ -655,11 +655,12 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       LinearExpression LE = GetLinearExpression(
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
-      // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
-      // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
-      LE.IsNSW &= GEPOp->isInBounds() || Scale.isOne();
-      Decomposed.Offset += LE.Offset.sextOrTrunc(MaxPointerSize) * Scale;
-      Scale *= LE.Scale.sextOrTrunc(MaxPointerSize);
+      // Scale by the type size.
+      unsigned TypeSize =
+          DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
+      LE = LE.mul(APInt(PointerSize, TypeSize), GEPOp->isInBounds());
+      Decomposed.Offset += LE.Offset.sextOrSelf(MaxPointerSize);
+      APInt Scale = LE.Scale.sextOrSelf(MaxPointerSize);
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
