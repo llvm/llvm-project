@@ -36,9 +36,9 @@ define void @test_simple(%struct* %st, i64 %i, i64 %j, i64 %k) {
   ret void
 }
 
-; TODO: As the GEP is not inbounds, these pointers may alias due to overflow.
+; As the GEP is not inbounds, these pointers may alias due to overflow.
 ; CHECK-LABEL: test_not_inbounds
-; CHECK-DAG: NoAlias: i32* %x, i32* %y
+; CHECK: MayAlias: i32* %x, i32* %y
 define void @test_not_inbounds(%struct* %st, i64 %i, i64 %j, i64 %k) {
   %x = getelementptr %struct, %struct* %st, i64 %i, i32 0
   %y = getelementptr %struct, %struct* %st, i64 %j, i32 1
