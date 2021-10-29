@@ -1,7 +1,5 @@
-// RUN: rm -rf %t
-// RUN: mkdir %t
-// RUN: %clang -fblocks %s -o %t/a.out -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params 
-// RUN: llvm-dwarfdump %t/a.out --verify
+// RUN: %clang %s -c -o - -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params \
+// RUN:   | llvm-dwarfdump --verify -
 // REQUIRES: native
 template<typename ...Ts>
 struct t1 {
