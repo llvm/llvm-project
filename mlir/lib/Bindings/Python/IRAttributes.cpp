@@ -698,7 +698,13 @@ public:
 
   intptr_t dunderLen() { return mlirDictionaryAttrGetNumElements(*this); }
 
+  bool dunderContains(const std::string &name) {
+    return !mlirAttributeIsNull(
+        mlirDictionaryAttrGetElementByName(*this, toMlirStringRef(name)));
+  }
+
   static void bindDerived(ClassTy &c) {
+    c.def("__contains__", &PyDictAttribute::dunderContains);
     c.def("__len__", &PyDictAttribute::dunderLen);
     c.def_static(
         "get",

@@ -340,6 +340,12 @@ def testDictAttr():
     # CHECK: "string"
     print(a['stringattr'])
 
+    # CHECK: True
+    print('stringattr' in a)
+
+    # CHECK: False
+    print('not_in_dict' in a)
+
     # Check that exceptions are raised as expected.
     try:
       _ = a['does_not_exist']
