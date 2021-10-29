@@ -358,7 +358,7 @@ static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
 /// Generates a call to `iter->getNext()`.  If there is a next element,
 /// then it is copied into the out-parameters `ind` and `elemPtr`,
 /// and the return value is true.  If there isn't a next element, then
-/// the return value is false.
+/// the memory for `iter` is freed and the return value is false.
 static Value genGetNextCall(ConversionPatternRewriter &rewriter, Operation *op,
                             Value iter, Value ind, Value elemPtr) {
   Location loc = op->getLoc();
@@ -602,15 +602,18 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     if (!encDst && encSrc) {
       // This is sparse => dense conversion, which is handled as follows:
       //   dst = new Tensor(0);
-      //   iter = src->toCOO()->getIterator();
+      //   iter = src->toCOO();
+      //   iter->startIterator();
       //   while (elem = iter->getNext()) {
       //     dst[elem.indices] = elem.value;
       //   }
-      Location loc = op->getLoc();
-      RankedTensorType tensorTp = resType.dyn_cast<RankedTensorType>();
-      if (!tensorTp)
-        return failure();
-      unsigned rank = tensorTp.getRank();
+      RankedTensorType dstTensorTp = resType.cast<RankedTensorType>();
+      RankedTensorType srcTensorTp = srcType.cast<RankedTensorType>();
+      unsigned rank = dstTensorTp.getRank();
+      Type elemTp = dstTensorTp.getElementType();
+      // Fabricate a no-permutation encoding for newParams().
+      // The pointer/index types must be those of `src`.
+      // The dimLevelTypes aren't actually used by kToIter.
       encDst = SparseTensorEncodingAttr::get(
           op->getContext(),
           SmallVector<SparseTensorEncodingAttr::DimLevelType>(
@@ -618,12 +621,12 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
           AffineMap(), encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
       SmallVector<Value, 4> sizes;
       SmallVector<Value, 8> params;
-      sizesFromPtr(rewriter, sizes, op, encSrc, tensorTp, src);
+      sizesFromPtr(rewriter, sizes, op, encSrc, srcTensorTp, src);
       newParams(rewriter, params, op, encDst, kToIter, sizes, src);
       Value iter = genNewCall(rewriter, op, params);
       Value ind = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
-      Value elemPtr = genAllocaScalar(rewriter, loc, tensorTp.getElementType());
-      Value dst = allocDenseTensor(rewriter, loc, tensorTp, sizes);
+      Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
+      Value dst = allocDenseTensor(rewriter, loc, dstTensorTp, sizes);
       SmallVector<Value> noArgs;
       SmallVector<Type> noTypes;
       auto whileOp = rewriter.create<scf::WhileOp>(loc, noTypes, noArgs);
