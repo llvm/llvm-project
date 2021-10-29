@@ -78,14 +78,7 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
   }
 }
 
-TEST(MemoryMapping, ParseUnixMemoryProfile) {
-  struct entry {
-    uptr p;
-    uptr rss;
-    bool file;
-  };
-  typedef std::vector<entry> entries_t;
-  const char *input = R"(
+const char *const parse_unix_input = R"(
 7fb9862f1000-7fb9862f3000 rw-p 00000000 00:00 0 
 Size:                  8 kB
 Rss:                   4 kB
@@ -93,12 +86,22 @@ Rss:                   4 kB
 Size:                 12 kB
 Rss:                  12 kB
 )";
+
+TEST(MemoryMapping, ParseUnixMemoryProfile) {
+  struct entry {
+    uptr p;
+    uptr rss;
+    bool file;
+  };
+  typedef std::vector<entry> entries_t;
   entries_t entries;
+  std::vector<char> input(parse_unix_input,
+                          parse_unix_input + strlen(parse_unix_input));
   ParseUnixMemoryProfile(
       [](uptr p, uptr rss, bool file, uptr *mem) {
         reinterpret_cast<entries_t *>(mem)->push_back({p, rss, file});
       },
-      reinterpret_cast<uptr *>(&entries), input, strlen(input));
+      reinterpret_cast<uptr *>(&entries), &input[0], input.size());
   EXPECT_EQ(entries.size(), 2ul);
   EXPECT_EQ(entries[0].p, 0x7fb9862f1000ul);
   EXPECT_EQ(entries[0].rss, 4ul << 10);
@@ -106,6 +109,25 @@ Rss:                  12 kB
   EXPECT_EQ(entries[1].p, 0x7fb9864ae000ul);
   EXPECT_EQ(entries[1].rss, 12ul << 10);
   EXPECT_EQ(entries[1].file, true);
+}
+
+TEST(MemoryMapping, ParseUnixMemoryProfileTruncated) {
+  // ParseUnixMemoryProfile used to crash on truncated inputs.
+  // This test allocates 2 pages, protects the second one
+  // and places the input at the very end of the first page
+  // to test for over-reads.
+  uptr page = GetPageSizeCached();
+  char *mem = static_cast<char *>(
+      MmapOrDie(2 * page, "ParseUnixMemoryProfileTruncated"));
+  EXPECT_TRUE(MprotectNoAccess(reinterpret_cast<uptr>(mem + page), page));
+  const uptr len = strlen(parse_unix_input);
+  for (uptr i = 0; i < len; i++) {
+    char *smaps = mem + page - len + i;
+    memcpy(smaps, parse_unix_input, len - i);
+    ParseUnixMemoryProfile([](uptr p, uptr rss, bool file, uptr *mem) {},
+                           nullptr, smaps, len - i);
+  }
+  UnmapOrDie(mem, 2 * page);
 }
 
 }  // namespace __sanitizer
