@@ -153,6 +153,8 @@ SymbolSubKind index::getSymbolSubKind(indexstore_symbol_subkind_t K) {
       return SymbolSubKind::UsingTypename;
   case INDEXSTORE_SYMBOL_SUBKIND_USINGVALUE:
       return SymbolSubKind::UsingValue;
+  case INDEXSTORE_SYMBOL_SUBKIND_USINGENUM:
+      return SymbolSubKind::UsingEnum;
   case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORWILLSET:
     return SymbolSubKind::SwiftAccessorWillSet;
   case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORDIDSET:
@@ -377,6 +379,8 @@ indexstore_symbol_subkind_t index::getIndexStoreSubKind(SymbolSubKind K) {
     return INDEXSTORE_SYMBOL_SUBKIND_USINGTYPENAME;
   case SymbolSubKind::UsingValue:
     return INDEXSTORE_SYMBOL_SUBKIND_USINGVALUE;
+  case SymbolSubKind::UsingEnum:
+    return INDEXSTORE_SYMBOL_SUBKIND_USINGENUM;
   case SymbolSubKind::SwiftAccessorWillSet:
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORWILLSET;
   case SymbolSubKind::SwiftAccessorDidSet:
