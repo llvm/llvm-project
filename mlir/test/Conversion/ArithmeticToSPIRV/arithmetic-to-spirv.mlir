@@ -572,6 +572,15 @@ func @index_cast4(%arg0: index) {
   return
 }
 
+// CHECK-LABEL: @bit_cast
+func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
+  // CHECK: spv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
+  %0 = arith.bitcast %arg0 : vector<2xf32> to vector<2xi32>
+  // CHECK: spv.Bitcast %{{.+}} : i64 to f64
+  %1 = arith.bitcast %arg1 : i64 to f64
+  return
+}
+
 // CHECK-LABEL: @fpext1
 func @fpext1(%arg0: f16) -> f64 {
   // CHECK: spv.FConvert %{{.*}} : f16 to f64
