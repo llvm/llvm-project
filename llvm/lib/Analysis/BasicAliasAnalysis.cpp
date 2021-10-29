@@ -657,6 +657,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
+      LE.IsNSW &= GEPOp->isInBounds() || Scale.isOne();
       Decomposed.Offset += LE.Offset.sextOrTrunc(MaxPointerSize) * Scale;
       Scale *= LE.Scale.sextOrTrunc(MaxPointerSize);
 
