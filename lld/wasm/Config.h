@@ -91,6 +91,10 @@ struct Configuration {
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
   uint32_t tableBase = 0;
+
+  // Will be set to true if bss data segments should be emitted. In most cases
+  // this is not necessary.
+  bool emitBssSegments = false;
 };
 
 // The only instance of Configuration struct.
