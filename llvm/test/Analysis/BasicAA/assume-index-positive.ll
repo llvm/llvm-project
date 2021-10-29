@@ -145,12 +145,12 @@ define void @shl_of_non_negative(i8* %ptr, i64 %a) {
   ret void
 }
 
-; TODO: Unlike the previous case, %ptr.neg and %ptr.shl can't alias, because
+; Unlike the previous case, %ptr.neg and %ptr.shl can't alias, because
 ; shl nsw of non-negative is non-negative.
 define void @shl_nsw_of_non_negative(i8* %ptr, i64 %a) {
 ; CHECK-LABEL: Function: shl_nsw_of_non_negative
 ; CHECK: NoAlias: i8* %ptr.a, i8* %ptr.neg
-; CHECK: MayAlias: i8* %ptr.neg, i8* %ptr.shl
+; CHECK: NoAlias: i8* %ptr.neg, i8* %ptr.shl
   %a.cmp = icmp sge i64 %a, 0
   call void @llvm.assume(i1 %a.cmp)
   %ptr.neg = getelementptr i8, i8* %ptr, i64 -2
