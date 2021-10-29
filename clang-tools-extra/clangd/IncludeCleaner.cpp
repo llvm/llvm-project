@@ -197,6 +197,7 @@ bool mayConsiderUnused(const Inclusion *Inc) {
 } // namespace
 
 ReferencedLocations findReferencedLocations(ParsedAST &AST) {
+  trace::Span Tracer("IncludeCleaner::findReferencedLocations");
   ReferencedLocations Result;
   ReferencedLocationCrawler Crawler(Result);
   Crawler.TraverseAST(AST.getASTContext());
@@ -225,6 +226,7 @@ findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
 std::vector<const Inclusion *>
 getUnused(const IncludeStructure &Includes,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles) {
+  trace::Span Tracer("IncludeCleaner::getUnused");
   std::vector<const Inclusion *> Unused;
   for (const Inclusion &MFI : Includes.MainFileIncludes) {
     // FIXME: Skip includes that are not self-contained.
@@ -253,6 +255,7 @@ llvm::DenseSet<IncludeStructure::HeaderID>
 translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
                      const IncludeStructure &Includes,
                      const SourceManager &SM) {
+  trace::Span Tracer("IncludeCleaner::translateToHeaderIDs");
   llvm::DenseSet<IncludeStructure::HeaderID> TranslatedHeaderIDs;
   TranslatedHeaderIDs.reserve(Files.size());
   for (FileID FID : Files) {
@@ -279,6 +282,7 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code) {
+  trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   const Config &Cfg = Config::current();
   if (Cfg.Diagnostics.UnusedIncludes != Config::UnusedIncludesPolicy::Strict ||
       Cfg.Diagnostics.SuppressAll ||
