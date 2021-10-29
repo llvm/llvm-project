@@ -1085,10 +1085,13 @@ struct PadTensorOpTransformationPattern : public OpRewritePattern<PadTensorOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Try to create a static bounding box around each operand of `opToPad`.
-/// If successful, `paddedOp` will be updated to the cloned static form.
-LogicalResult
-rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
+/// Pad the operands of `opToPad` to a static bounding box. Use `paddingFunc`
+/// and `nofoldFunc` to set the padding value and the nofold attribute of the
+/// introduced PadTensorOps, respectively. Update `paddedOp` to the cloned
+/// statically shaped operation and return the extracted dynamically shaped
+/// results. If padding fails, return failure.
+FailureOr<SmallVector<Value>>
+rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
                   const PaddingValueComputationFunction &paddingFunc,
                   const PaddingNoFoldComputationFunction &nofoldFunc,
                   LinalgOp &paddedOp);
