@@ -26,7 +26,7 @@ define amdgpu_kernel void @shl() #0 {
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = shl <2 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = shl <3 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = shl <4 x i64> undef, undef
-; FAST64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = shl <5 x i64> undef, undef
+; FAST64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = shl <5 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW64-LABEL: 'shl'
@@ -49,7 +49,7 @@ define amdgpu_kernel void @shl() #0 {
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2i64 = shl <2 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3i64 = shl <3 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i64 = shl <4 x i64> undef, undef
-; SLOW64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5i64 = shl <5 x i64> undef, undef
+; SLOW64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5i64 = shl <5 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FAST64-SIZE-LABEL: 'shl'
@@ -72,7 +72,7 @@ define amdgpu_kernel void @shl() #0 {
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = shl <2 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = shl <3 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = shl <4 x i64> undef, undef
-; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = shl <5 x i64> undef, undef
+; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = shl <5 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW64-SIZE-LABEL: 'shl'
@@ -95,7 +95,7 @@ define amdgpu_kernel void @shl() #0 {
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = shl <2 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = shl <3 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = shl <4 x i64> undef, undef
-; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = shl <5 x i64> undef, undef
+; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = shl <5 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %i8 = shl i8 undef, undef
@@ -142,7 +142,7 @@ define amdgpu_kernel void @lshr() #0 {
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = lshr <2 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = lshr <3 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = lshr <4 x i64> undef, undef
-; FAST64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = lshr <5 x i64> undef, undef
+; FAST64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = lshr <5 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW64-LABEL: 'lshr'
@@ -165,7 +165,7 @@ define amdgpu_kernel void @lshr() #0 {
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2i64 = lshr <2 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3i64 = lshr <3 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i64 = lshr <4 x i64> undef, undef
-; SLOW64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5i64 = lshr <5 x i64> undef, undef
+; SLOW64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5i64 = lshr <5 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FAST64-SIZE-LABEL: 'lshr'
@@ -188,7 +188,7 @@ define amdgpu_kernel void @lshr() #0 {
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = lshr <2 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = lshr <3 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = lshr <4 x i64> undef, undef
-; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = lshr <5 x i64> undef, undef
+; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = lshr <5 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW64-SIZE-LABEL: 'lshr'
@@ -211,7 +211,7 @@ define amdgpu_kernel void @lshr() #0 {
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = lshr <2 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = lshr <3 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = lshr <4 x i64> undef, undef
-; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = lshr <5 x i64> undef, undef
+; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = lshr <5 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %i8 = lshr i8 undef, undef
@@ -258,7 +258,7 @@ define amdgpu_kernel void @ashr() #0 {
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = ashr <2 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = ashr <3 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = ashr <4 x i64> undef, undef
-; FAST64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = ashr <5 x i64> undef, undef
+; FAST64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = ashr <5 x i64> undef, undef
 ; FAST64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW64-LABEL: 'ashr'
@@ -281,7 +281,7 @@ define amdgpu_kernel void @ashr() #0 {
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2i64 = ashr <2 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3i64 = ashr <3 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i64 = ashr <4 x i64> undef, undef
-; SLOW64-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5i64 = ashr <5 x i64> undef, undef
+; SLOW64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5i64 = ashr <5 x i64> undef, undef
 ; SLOW64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FAST64-SIZE-LABEL: 'ashr'
@@ -304,7 +304,7 @@ define amdgpu_kernel void @ashr() #0 {
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = ashr <2 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = ashr <3 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = ashr <4 x i64> undef, undef
-; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = ashr <5 x i64> undef, undef
+; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = ashr <5 x i64> undef, undef
 ; FAST64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW64-SIZE-LABEL: 'ashr'
@@ -327,7 +327,7 @@ define amdgpu_kernel void @ashr() #0 {
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = ashr <2 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3i64 = ashr <3 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i64 = ashr <4 x i64> undef, undef
-; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i64 = ashr <5 x i64> undef, undef
+; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5i64 = ashr <5 x i64> undef, undef
 ; SLOW64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %i8 = ashr i8 undef, undef
