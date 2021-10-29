@@ -10863,7 +10863,7 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
     // cvt_f32_ubyte1 (srl x, 16) -> cvt_f32_ubyte3 x
     // cvt_f32_ubyte0 (srl x,  8) -> cvt_f32_ubyte1 x
     if (auto *C = dyn_cast<ConstantSDNode>(Shift.getOperand(1))) {
-      Shift = DAG.getZExtOrTrunc(Shift.getOperand(0),
+      SDValue Shifted = DAG.getZExtOrTrunc(Shift.getOperand(0),
                                  SDLoc(Shift.getOperand(0)), MVT::i32);
 
       unsigned ShiftOffset = 8 * Offset;
@@ -10874,7 +10874,7 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
 
       if (ShiftOffset < 32 && (ShiftOffset % 8) == 0) {
         return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + ShiftOffset / 8, SL,
-                           MVT::f32, Shift);
+                           MVT::f32, Shifted);
       }
     }
   }
