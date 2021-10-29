@@ -134,9 +134,12 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
     return Ptr;
   }
 
-  return memory::allocGlobal(AlignedBytes,
-                             "Slow path shared memory allocation, insufficient "
-                             "shared memory stack memory!");
+  void *GlobalMemory = memory::allocGlobal(
+      AlignedBytes, "Slow path shared memory allocation, insufficient "
+                    "shared memory stack memory!");
+  ASSERT(GlobalMemory != nullptr && "nullptr returned by malloc!");
+
+  return GlobalMemory;
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
@@ -162,7 +165,10 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
-  return malloc(Bytes);
+  void *Ptr = malloc(Bytes);
+  if (config::isDebugMode(config::DebugKind::CommonIssues) && Ptr == nullptr)
+    PRINT("nullptr returned by malloc!\n");
+  return Ptr;
 }
 
 void memory::freeGlobal(void *Ptr, const char *Reason) { free(Ptr); }
@@ -280,6 +286,7 @@ uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var) {
   if (!ThreadStates[TId]) {
     ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
         sizeof(ThreadStateTy), "ICV modification outside data environment"));
+    ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
     ThreadStates[TId]->init();
   }
   return ThreadStates[TId]->ICVState.*Var;
@@ -531,6 +538,8 @@ void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   } else {
     SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
         nArgs * sizeof(void *), "new extended args");
+    ASSERT(SharedMemVariableSharingSpacePtr != nullptr &&
+           "Nullptr returned by malloc!");
   }
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
