@@ -45,7 +45,6 @@ import os.path
 import re
 import shutil
 import signal
-import shlex
 from subprocess import *
 import sys
 import time
@@ -68,6 +67,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.support import seven
 from lldbsuite.test.builders import get_builder
 from lldbsuite.test_event import build_exception
 
@@ -1423,7 +1423,7 @@ class Base(unittest2.TestCase):
         self.runBuildCommand(command)
 
     def runBuildCommand(self, command):
-        self.trace(shlex.join(command))
+        self.trace(seven.join_for_shell(command))
         try:
             output = check_output(command, stderr=STDOUT, errors="replace")
         except CalledProcessError as cpe:

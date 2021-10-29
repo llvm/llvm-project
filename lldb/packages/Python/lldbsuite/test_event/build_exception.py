@@ -1,10 +1,10 @@
-import shlex
+from lldbsuite.support import seven
 
 class BuildError(Exception):
 
     def __init__(self, called_process_error):
         super(BuildError, self).__init__("Error when building test subject")
-        self.command = shlex.join(called_process_error.cmd)
+        self.command = seven.join_for_shell(called_process_error.cmd)
         self.build_error = called_process_error.output
 
     def __str__(self):
