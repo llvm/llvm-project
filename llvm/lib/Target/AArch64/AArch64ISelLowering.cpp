@@ -12014,7 +12014,7 @@ bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
 unsigned AArch64TargetLowering::getNumInterleavedAccesses(
     VectorType *VecTy, const DataLayout &DL, bool UseScalable) const {
   unsigned VecSize = UseScalable ? Subtarget->getMinSVEVectorSizeInBits() : 128;
-  return std::max(1UL, (DL.getTypeSizeInBits(VecTy) + 127) / VecSize);
+  return std::max<unsigned>(1, (DL.getTypeSizeInBits(VecTy) + 127) / VecSize);
 }
 
 MachineMemOperand::Flags
