@@ -9,7 +9,7 @@
 ;;  LOAD           0x000e10 0x0000000000203e10 0x0000000000203e10 0x000040 0x000058 RW  0x1000
 ;;  LOAD           0x200000 0x0000000000400000 0x0000000000400000 0x0005e8 0x0005e8 R E 0x200000
 
-; CHECK:      [main:2 @ _Z10sort_arrayv:6 @ _Z11bubble_sortPii]:434:0
+; CHECK:      [main:2 @ _Z10sort_arrayv:6 @ _Z11bubble_sortPii]:124:0
 ; CHECK-NEXT:  4: 31
 ; CHECK-NEXT:  5: 31
 ; CHECK-NEXT:  7: 31

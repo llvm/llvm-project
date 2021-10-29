@@ -10,7 +10,6 @@
 #include "ErrorHandling.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"

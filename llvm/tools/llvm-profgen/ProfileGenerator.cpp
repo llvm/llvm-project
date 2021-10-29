@@ -282,6 +282,13 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
   }
 }
 
+void ProfileGeneratorBase::updateTotalSamples() {
+  for (auto &Item : ProfileMap) {
+    FunctionSamples &FunctionProfile = Item.second;
+    FunctionProfile.updateTotalSamples();
+  }
+}
+
 FunctionSamples &
 ProfileGenerator::getTopLevelFunctionProfile(StringRef FuncName) {
   SampleContext Context(FuncName);
@@ -309,14 +316,15 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
+
+  updateTotalSamples();
 }
 
-FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
-    const SampleContextFrameVector &FrameVec, uint64_t Count) {
+FunctionSamples &ProfileGenerator::getLeafFrameProfile(
+    const SampleContextFrameVector &FrameVec) {
   // Get top level profile
   FunctionSamples *FunctionProfile =
       &getTopLevelFunctionProfile(FrameVec[0].FuncName);
-  FunctionProfile->addTotalSamples(Count);
 
   for (size_t I = 1; I < FrameVec.size(); I++) {
     LineLocation Callsite(
@@ -331,7 +339,6 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
       Ret.first->second.setContext(Context);
     }
     FunctionProfile = &Ret.first->second;
-    FunctionProfile->addTotalSamples(Count);
   }
 
   return *FunctionProfile;
@@ -370,8 +377,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
       const SampleContextFrameVector &FrameVec =
           Binary->getFrameLocationStack(Offset);
       if (!FrameVec.empty()) {
-        FunctionSamples &FunctionProfile =
-            getLeafProfileAndAddTotalSamples(FrameVec, Count);
+        FunctionSamples &FunctionProfile = getLeafFrameProfile(FrameVec);
         updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
                                             Count);
       }
@@ -408,8 +414,7 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     const SampleContextFrameVector &FrameVec =
         Binary->getFrameLocationStack(SourceOffset);
     if (!FrameVec.empty()) {
-      FunctionSamples &FunctionProfile =
-          getLeafProfileAndAddTotalSamples(FrameVec, Count);
+      FunctionSamples &FunctionProfile = getLeafFrameProfile(FrameVec);
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
           getBaseDiscriminator(FrameVec.back().Location.Discriminator),
@@ -497,6 +502,8 @@ void CSProfileGenerator::generateLineNumBasedProfile() {
   // functions, we estimate it from inlinee's profile using the entry of the
   // body sample.
   populateInferredFunctionSamples();
+
+  updateTotalSamples();
 }
 
 void CSProfileGenerator::populateBodySamplesForFunction(
@@ -524,7 +531,6 @@ void CSProfileGenerator::populateBodySamplesForFunction(
       if (LeafLoc.hasValue()) {
         // Recording body sample for this specific context
         updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
-        FunctionProfile.addTotalSamples(Count);
       }
 
       // Move to next IP within the range
@@ -619,7 +625,6 @@ void CSProfileGenerator::populateInferredFunctionSamples() {
     CallerProfile.addBodySamples(CallerLeafFrameLoc.Location.LineOffset,
                                  CallerLeafFrameLoc.Location.Discriminator,
                                  EstimatedCallCount);
-    CallerProfile.addTotalSamples(EstimatedCallCount);
   }
 }
 
