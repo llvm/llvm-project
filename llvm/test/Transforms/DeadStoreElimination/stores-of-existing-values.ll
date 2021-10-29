@@ -403,8 +403,6 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) 
 define void @test12_memset_simple(i8* %ptr) {
 ; CHECK-LABEL: @test12_memset_simple(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
-; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
-; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
