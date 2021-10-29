@@ -61,8 +61,9 @@ translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
                      const IncludeStructure &Includes, const SourceManager &SM);
 
 /// Retrieves headers that are referenced from the main file but not used.
+/// In unclear cases, headers are not marked as unused.
 std::vector<const Inclusion *>
-getUnused(const IncludeStructure &Includes,
+getUnused(ParsedAST &AST,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles);
 
 std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);

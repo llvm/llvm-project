@@ -8,12 +8,15 @@
 
 #include "IncludeCleaner.h"
 #include "Config.h"
+#include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -186,12 +189,28 @@ void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
   }
 }
 
-// FIXME(kirillbobyrev): We currently do not support the umbrella headers.
-// Standard Library headers are typically umbrella headers, and system headers
-// are likely to be the Standard Library headers. Until we have a good support
-// for umbrella headers and Standard Library headers, don't warn about them.
-bool mayConsiderUnused(const Inclusion *Inc) {
-  return Inc->Written.front() != '<';
+bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
+  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
+  // Standard Library headers are typically umbrella headers, and system
+  // headers are likely to be the Standard Library headers. Until we have a
+  // good support for umbrella headers and Standard Library headers, don't warn
+  // about them.
+  if (Inc.Written.front() == '<')
+    return false;
+  // Headers without include guards have side effects and are not
+  // self-contained, skip them.
+  assert(Inc.HeaderID);
+  auto FE = AST.getSourceManager().getFileManager().getFile(
+      AST.getIncludeStructure().getRealPath(
+          static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID)));
+  assert(FE);
+  if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
+          *FE)) {
+    dlog("{0} doesn't have header guard and will not be considered unused",
+         (*FE)->getName());
+    return false;
+  }
+  return true;
 }
 
 } // namespace
@@ -224,21 +243,23 @@ findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
 }
 
 std::vector<const Inclusion *>
-getUnused(const IncludeStructure &Includes,
+getUnused(ParsedAST &AST,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles) {
   trace::Span Tracer("IncludeCleaner::getUnused");
   std::vector<const Inclusion *> Unused;
-  for (const Inclusion &MFI : Includes.MainFileIncludes) {
-    // FIXME: Skip includes that are not self-contained.
-    if (!MFI.HeaderID) {
-      elog("File {0} not found.", MFI.Written);
+  for (const Inclusion &MFI : AST.getIncludeStructure().MainFileIncludes) {
+    if (!MFI.HeaderID)
+      continue;
+    auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
+    bool Used = ReferencedFiles.contains(IncludeID);
+    if (!Used && !mayConsiderUnused(MFI, AST)) {
+      dlog("{0} was not used, but is not eligible to be diagnosed as unused",
+           MFI.Written);
       continue;
     }
-    auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
-    if (!ReferencedFiles.contains(IncludeID))
+    if (!Used)
       Unused.push_back(&MFI);
-    dlog("{0} is {1}", MFI.Written,
-         ReferencedFiles.contains(IncludeID) ? "USED" : "UNUSED");
+    dlog("{0} is {1}", MFI.Written, Used ? "USED" : "UNUSED");
   }
   return Unused;
 }
@@ -275,9 +296,15 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
 
   auto Refs = findReferencedLocations(AST);
-  auto ReferencedFiles = translateToHeaderIDs(findReferencedFiles(Refs, SM),
-                                              AST.getIncludeStructure(), SM);
-  return getUnused(AST.getIncludeStructure(), ReferencedFiles);
+  // FIXME(kirillbobyrev): Attribute the symbols from non self-contained
+  // headers to their parents while the information about respective
+  // SourceLocations and FileIDs is not lost. It is not possible to do that
+  // later when non-guarded headers included multiple times will get same
+  // HeaderID.
+  auto ReferencedFileIDs = findReferencedFiles(Refs, SM);
+  auto ReferencedHeaders =
+      translateToHeaderIDs(ReferencedFileIDs, AST.getIncludeStructure(), SM);
+  return getUnused(AST, ReferencedHeaders);
 }
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
@@ -295,8 +322,6 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
           ->getName()
           .str();
   for (const auto *Inc : computeUnusedIncludes(AST)) {
-    if (!mayConsiderUnused(Inc))
-      continue;
     Diag D;
     D.Message =
         llvm::formatv("included header {0} is not used",
