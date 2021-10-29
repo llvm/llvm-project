@@ -248,6 +248,19 @@ def LinalgStrategyTilePass
   ];
 }
 
+def LinalgStrategyPadPass
+    : FunctionPass<"linalg-strategy-pad-pass"> {
+  let summary = "Configurable pass to apply padding and hoisting.";
+  let constructor = "mlir::createLinalgStrategyPadPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
+      "Which linalg op within the func is the anchor to latch on.">,
+  ];
+}
+
 def LinalgStrategyPromotePass
     : FunctionPass<"linalg-strategy-promote-pass"> {
   let summary = "Configurable pass to apply pattern-based linalg promotion.";
