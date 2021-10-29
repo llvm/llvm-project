@@ -18,7 +18,7 @@ class TestStopAtEntry(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # The port used by debugserver.
-    PORT = 54637
+    PORT = 54638
 
     # The number of attempts.
     ATTEMPTS = 10
