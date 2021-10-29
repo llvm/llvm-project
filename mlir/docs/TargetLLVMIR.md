@@ -146,7 +146,7 @@ memref<1x? x vector<4xf32>> -> !llvm.struct<(ptr<vector<4 x f32>>,
 #### Unranked MemRef Types
 
 Unranked memref types are converted to LLVM dialect literal structure type that
-contains the ynamic information associated with the memref object, referred to
+contains the dynamic information associated with the memref object, referred to
 as *unranked descriptor*. It contains:
 
 1.  a converted `index`-typed integer representing the dynamic rank of the

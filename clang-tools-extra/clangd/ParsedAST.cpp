@@ -222,11 +222,14 @@ private:
       const FileEntry *FE = File ? &File->getFileEntry() : nullptr;
       llvm::StringRef WrittenFilename =
           llvm::StringRef(Inc.Written).drop_front().drop_back();
-      Delegate->InclusionDirective(HashTok->location(), SynthesizedIncludeTok,
-                                   WrittenFilename, Inc.Written.front() == '<',
-                                   FileTok->range(SM).toCharRange(SM), FE,
-                                   "SearchPath", "RelPath",
-                                   /*Imported=*/nullptr, Inc.FileKind);
+      Delegate->InclusionDirective(
+          HashTok->location(), SynthesizedIncludeTok, WrittenFilename,
+          Inc.Written.front() == '<',
+          syntax::FileRange(SM, SynthesizedFilenameTok.getLocation(),
+                            SynthesizedFilenameTok.getEndLoc())
+              .toCharRange(SM),
+          FE, "SearchPath", "RelPath",
+          /*Imported=*/nullptr, Inc.FileKind);
       if (File)
         Delegate->FileSkipped(*File, SynthesizedFilenameTok, Inc.FileKind);
       else {

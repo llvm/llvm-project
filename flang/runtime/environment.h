@@ -14,6 +14,8 @@
 
 namespace Fortran::runtime {
 
+class Terminator;
+
 #if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
 #elif FLANG_LITTLE_ENDIAN
@@ -29,7 +31,8 @@ std::optional<Convert> GetConvertFromString(const char *, std::size_t);
 
 struct ExecutionEnvironment {
   void Configure(int argc, const char *argv[], const char *envp[]);
-  const char *GetEnv(const char *name, std::size_t name_length);
+  const char *GetEnv(
+      const char *name, std::size_t name_length, const Terminator &terminator);
 
   int argc;
   const char **argv;

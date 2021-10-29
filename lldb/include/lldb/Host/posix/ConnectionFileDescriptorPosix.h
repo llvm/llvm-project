@@ -16,6 +16,7 @@
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/IOObject.h"
 
@@ -73,9 +74,18 @@ protected:
   void CloseCommandPipe();
 
   lldb::ConnectionStatus
-  SocketListenAndAccept(llvm::StringRef host_and_port,
-                        socket_id_callback_type socket_id_callback,
-                        Status *error_ptr);
+  AcceptSocket(Socket::SocketProtocol socket_protocol,
+               llvm::StringRef socket_name,
+               llvm::function_ref<void(Socket &)> post_listen_callback,
+               Status *error_ptr);
+
+  lldb::ConnectionStatus ConnectSocket(Socket::SocketProtocol socket_protocol,
+                                       llvm::StringRef socket_name,
+                                       Status *error_ptr);
+
+  lldb::ConnectionStatus AcceptTCP(llvm::StringRef host_and_port,
+                                   socket_id_callback_type socket_id_callback,
+                                   Status *error_ptr);
 
   lldb::ConnectionStatus ConnectTCP(llvm::StringRef host_and_port,
                                     socket_id_callback_type socket_id_callback,
@@ -86,24 +96,24 @@ protected:
                                     Status *error_ptr);
 
   lldb::ConnectionStatus
-  NamedSocketConnect(llvm::StringRef socket_name,
+  ConnectNamedSocket(llvm::StringRef socket_name,
                      socket_id_callback_type socket_id_callback,
                      Status *error_ptr);
 
   lldb::ConnectionStatus
-  NamedSocketAccept(llvm::StringRef socket_name,
+  AcceptNamedSocket(llvm::StringRef socket_name,
                     socket_id_callback_type socket_id_callback,
                     Status *error_ptr);
 
   lldb::ConnectionStatus
-  UnixAbstractSocketAccept(llvm::StringRef socket_name,
-                           socket_id_callback_type socket_id_callback,
-                           Status *error_ptr);
+  AcceptAbstractSocket(llvm::StringRef socket_name,
+                       socket_id_callback_type socket_id_callback,
+                       Status *error_ptr);
 
   lldb::ConnectionStatus
-  UnixAbstractSocketConnect(llvm::StringRef socket_name,
-                            socket_id_callback_type socket_id_callback,
-                            Status *error_ptr);
+  ConnectAbstractSocket(llvm::StringRef socket_name,
+                        socket_id_callback_type socket_id_callback,
+                        Status *error_ptr);
 
   lldb::ConnectionStatus ConnectFD(llvm::StringRef args,
                                    socket_id_callback_type socket_id_callback,

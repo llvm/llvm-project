@@ -372,6 +372,7 @@ private:
   bool isWholeAssumedSizeArrayOk_{false};
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
+  bool inDataStmtConstant_{false};
   friend class ArgumentAnalyzer;
 };
 

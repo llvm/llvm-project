@@ -155,7 +155,7 @@ have an optional _linkage_ attribute derived from LLVM IR
 [linkage types](https://llvm.org/docs/LangRef.html#linkage-types). Linkage is
 specified by the same keyword as in LLVM IR and is located between the operation
 name (`llvm.func` or `llvm.global`) and the symbol name. If no linkage keyword
-is present, `external` linkage is assumed by default. Linakge is _distinct_ from
+is present, `external` linkage is assumed by default. Linkage is _distinct_ from
 MLIR symbol visibility.
 
 ### Attribute Pass-Through

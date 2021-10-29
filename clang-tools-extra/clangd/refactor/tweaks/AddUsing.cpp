@@ -187,7 +187,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
       return Tok.kind() == tok::l_brace;
     });
     if (Tok == Toks.end() || Tok->endLocation().isInvalid()) {
-      return error("Namespace with no {");
+      return error("Namespace with no {{");
     }
     if (!Tok->endLocation().isMacroID() && IsValidPoint(Tok->endLocation())) {
       InsertionPointData Out;

@@ -12737,9 +12737,21 @@ bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
 }
 
 void ScalarEvolution::forgetMemoizedResults(ArrayRef<const SCEV *> SCEVs) {
-  for (auto *S : SCEVs)
-    forgetMemoizedResultsImpl(S);
   SmallPtrSet<const SCEV *, 8> ToForget(SCEVs.begin(), SCEVs.end());
+  SmallVector<const SCEV *, 8> Worklist(ToForget.begin(), ToForget.end());
+
+  while (!Worklist.empty()) {
+    const SCEV *Curr = Worklist.pop_back_val();
+    auto Users = SCEVUsers.find(Curr);
+    if (Users != SCEVUsers.end())
+      for (auto *User : Users->second)
+        if (ToForget.insert(User).second)
+          Worklist.push_back(User);
+  }
+
+  for (auto *S : ToForget)
+    forgetMemoizedResultsImpl(S);
+
   for (auto I = PredicatedSCEVRewrites.begin();
        I != PredicatedSCEVRewrites.end();) {
     std::pair<const SCEV *, const Loop *> Entry = I->first;
@@ -12892,6 +12904,30 @@ void ScalarEvolution::verify() const {
       continue;
     assert(ValidLoops.contains(AR->getLoop()) &&
            "AddRec references invalid loop");
+  }
+
+  // Verify intergity of SCEV users.
+  for (const auto &S : UniqueSCEVs) {
+    SmallPtrSet<const SCEV *, 4> Ops;
+    if (const auto *NS = dyn_cast<SCEVNAryExpr>(&S))
+      Ops.insert(NS->op_begin(), NS->op_end());
+    else if (const auto *CS = dyn_cast<SCEVCastExpr>(&S))
+      Ops.insert(CS->getOperand());
+    else if (const auto *DS = dyn_cast<SCEVUDivExpr>(&S)) {
+      Ops.insert(DS->getLHS());
+      Ops.insert(DS->getRHS());
+    }
+    for (const auto *Op : Ops) {
+      // We do not store dependencies of constants.
+      if (isa<SCEVConstant>(Op))
+        continue;
+      auto It = SCEVUsers.find(Op);
+      if (It != SCEVUsers.end() && It->second.count(&S))
+        continue;
+      dbgs() << "Use of operand  " << *Op << " by user " << S
+             << " is not being tracked!\n";
+      std::abort();
+    }
   }
 }
 

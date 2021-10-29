@@ -1224,7 +1224,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
 
         // Check if the PHI operand is not dependent on the PHI itself.
-        APInt Offset(DL.getIndexTypeSizeInBits(AssociatedValue.getType()), 0);
+        // TODO: This is not great as we look at the pointer type. However, it
+        // is unclear where the Offset size comes from with typeless pointers.
+        APInt Offset(
+            DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
+            0);
         if (&AssociatedValue == CurPtr->stripAndAccumulateConstantOffsets(
                                     DL, Offset, /* AllowNonInbounds */ true)) {
           if (Offset != PtrOI.Offset) {
@@ -7318,10 +7322,12 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use &U,
 
   case Instruction::Store:
     // Stores cause the NO_WRITES property to disappear if the use is the
-    // pointer operand. Note that we do assume that capturing was taken care of
-    // somewhere else.
+    // pointer operand. Note that while capturing was taken care of somewhere
+    // else we need to deal with stores of the value that is not looked through.
     if (cast<StoreInst>(UserI)->getPointerOperand() == U.get())
       removeAssumedBits(NO_WRITES);
+    else
+      indicatePessimisticFixpoint();
     return;
 
   case Instruction::Call:

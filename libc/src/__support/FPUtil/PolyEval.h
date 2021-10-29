@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 // Evaluate polynomial using Horner's Scheme:
 // With polyeval(x, a_0, a_1, ..., a_n) = a_n * x^n + ... + a_1 * x + a_0, we

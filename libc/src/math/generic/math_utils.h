@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
+#include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/common.h"
-#include "utils/CPP/TypeTraits.h"
 #include <errno.h>
 #include <math.h>
 

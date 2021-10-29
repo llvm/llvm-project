@@ -739,6 +739,21 @@ TEST(SelectionTest, CreateAll) {
   EXPECT_EQ(1u, Seen) << "one tree for nontrivial selection";
 }
 
+TEST(SelectionTest, DeclContextIsLexical) {
+  llvm::Annotations Test("namespace a { void $1^foo(); } void a::$2^foo();");
+  auto AST = TestTU::withCode(Test.code()).build();
+  {
+    auto ST = SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
+                                         Test.point("1"), Test.point("1"));
+    EXPECT_FALSE(ST.commonAncestor()->getDeclContext().isTranslationUnit());
+  }
+  {
+    auto ST = SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
+                                         Test.point("2"), Test.point("2"));
+    EXPECT_TRUE(ST.commonAncestor()->getDeclContext().isTranslationUnit());
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

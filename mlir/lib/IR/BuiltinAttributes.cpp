@@ -53,6 +53,15 @@ void ArrayAttr::walkImmediateSubElements(
     walkAttrsFn(attr);
 }
 
+SubElementAttrInterface ArrayAttr::replaceImmediateSubAttribute(
+    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
+  std::vector<Attribute> vector = getValue().vec();
+  for (auto &it : replacements) {
+    vector[it.first] = it.second;
+  }
+  return get(getContext(), vector);
+}
+
 //===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
@@ -215,6 +224,17 @@ void DictionaryAttr::walkImmediateSubElements(
     function_ref<void(Type)> walkTypesFn) const {
   for (Attribute attr : llvm::make_second_range(getValue()))
     walkAttrsFn(attr);
+}
+
+SubElementAttrInterface DictionaryAttr::replaceImmediateSubAttribute(
+    ArrayRef<std::pair<size_t, Attribute>> replacements) const {
+  std::vector<NamedAttribute> vec = getValue().vec();
+  for (auto &it : replacements) {
+    vec[it.first].second = it.second;
+  }
+  // The above only modifies the mapped value, but not the key, and therefore
+  // not the order of the elements. It remains sorted
+  return getWithSorted(getContext(), vec);
 }
 
 //===----------------------------------------------------------------------===//
@@ -873,7 +893,7 @@ bool DenseElementsAttr::isSplat() const {
 }
 
 /// Return if the given complex type has an integer element type.
-static bool isComplexOfIntType(Type type) {
+LLVM_ATTRIBUTE_UNUSED static bool isComplexOfIntType(Type type) {
   return type.cast<ComplexType>().getElementType().isa<IntegerType>();
 }
 

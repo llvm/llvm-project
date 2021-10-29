@@ -33,65 +33,40 @@ protected:
 };
 
 TEST_P(SocketTest, DecodeHostAndPort) {
-  std::string host_str;
-  std::string port_str;
-  uint16_t port;
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("localhost:1138"),
+                       llvm::HasValue(Socket::HostAndPort{"localhost", 1138}));
 
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("localhost:1138", host_str, port_str, port),
-      llvm::Succeeded());
-  EXPECT_STREQ("localhost", host_str.c_str());
-  EXPECT_STREQ("1138", port_str.c_str());
-  EXPECT_EQ(1138, port);
-
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("google.com:65536", host_str, port_str, port),
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
           "invalid host:port specification: 'google.com:65536'"));
 
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("google.com:-1138", host_str, port_str, port),
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("google.com:-1138"),
       llvm::FailedWithMessage(
           "invalid host:port specification: 'google.com:-1138'"));
 
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("google.com:65536", host_str, port_str, port),
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("google.com:65536"),
       llvm::FailedWithMessage(
           "invalid host:port specification: 'google.com:65536'"));
 
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("12345", host_str, port_str, port),
-      llvm::Succeeded());
-  EXPECT_STREQ("", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("12345"),
+                       llvm::HasValue(Socket::HostAndPort{"", 12345}));
 
-  EXPECT_THAT_ERROR(Socket::DecodeHostAndPort("*:0", host_str, port_str, port),
-                    llvm::Succeeded());
-  EXPECT_STREQ("*", host_str.c_str());
-  EXPECT_STREQ("0", port_str.c_str());
-  EXPECT_EQ(0, port);
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:0"),
+                       llvm::HasValue(Socket::HostAndPort{"*", 0}));
 
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("*:65535", host_str, port_str, port),
-      llvm::Succeeded());
-  EXPECT_STREQ("*", host_str.c_str());
-  EXPECT_STREQ("65535", port_str.c_str());
-  EXPECT_EQ(65535, port);
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:65535"),
+                       llvm::HasValue(Socket::HostAndPort{"*", 65535}));
 
-  EXPECT_THAT_ERROR(
-      Socket::DecodeHostAndPort("[::1]:12345", host_str, port_str, port),
-      llvm::Succeeded());
-  EXPECT_STREQ("::1", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("[::1]:12345"),
+      llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
 
-  EXPECT_THAT_ERROR(Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345",
-                                              host_str, port_str, port),
-                    llvm::Succeeded());
-  EXPECT_STREQ("abcd:12fg:AF58::1", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345"),
+      llvm::HasValue(Socket::HostAndPort{"abcd:12fg:AF58::1", 12345}));
 }
 
 #if LLDB_ENABLE_POSIX

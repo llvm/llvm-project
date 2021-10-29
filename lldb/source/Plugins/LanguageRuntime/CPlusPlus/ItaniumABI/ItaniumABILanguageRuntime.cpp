@@ -405,11 +405,6 @@ void ItaniumABILanguageRuntime::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginNameStatic() {
-  static ConstString g_name("itanium");
-  return g_name;
-}
-
 BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
     const BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   return CreateExceptionResolver(bkpt, catch_bp, throw_bp, false);

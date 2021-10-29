@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -713,4 +713,31 @@ void PR30481() {
 
 void test_printf_opaque_ptr(void *op) {
   printf("%s", op); // expected-warning{{format specifies type 'char *' but the argument has type 'void *'}}
+}
+
+void test_block() {
+  void __attribute__((__format__(__printf__, 1, 2))) (^printf_arg1)(
+      const char *, ...) =
+      ^(const char *fmt, ...) __attribute__((__format__(__printf__, 1, 2))) {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+  };
+
+  printf_arg1("%s string %i\n", "aaa", 123);
+  printf_arg1("%s string\n", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+
+  void __attribute__((__format__(__printf__, 2, 3))) (^printf_arg2)(
+      const char *, const char *, ...) =
+      ^(const char *not_fmt, const char *fmt, ...)
+          __attribute__((__format__(__printf__, 2, 3))) {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(not_fmt, ap); // expected-warning{{format string is not a string literal}}
+    va_end(ap);
+  };
+
+  printf_arg2("foo", "%s string %i\n", "aaa", 123);
+  printf_arg2("%s string\n", "foo", "bar"); // expected-warning{{data argument not used by format string}}
 }

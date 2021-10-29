@@ -432,6 +432,7 @@ HANDLE_LIBCALL(MEMSET_ELEMENT_UNORDERED_ATOMIC_16, "__llvm_memset_element_unorde
 
 // Exception handling
 HANDLE_LIBCALL(UNWIND_RESUME, "_Unwind_Resume")
+HANDLE_LIBCALL(CXA_END_CLEANUP, "__cxa_end_cleanup")
 
 // Note: there are two sets of atomics libcalls; see
 // <https://llvm.org/docs/Atomics.html> for more info on the

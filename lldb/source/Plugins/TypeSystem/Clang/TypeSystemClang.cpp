@@ -4238,7 +4238,13 @@ static clang::QualType GetFullyUnqualifiedType_Impl(clang::ASTContext *ast,
   if (qual_type->isPointerType())
     qual_type = ast->getPointerType(
         GetFullyUnqualifiedType_Impl(ast, qual_type->getPointeeType()));
-  else
+  else if (const ConstantArrayType *arr =
+               ast->getAsConstantArrayType(qual_type)) {
+    qual_type = ast->getConstantArrayType(
+        GetFullyUnqualifiedType_Impl(ast, arr->getElementType()),
+        arr->getSize(), arr->getSizeExpr(), arr->getSizeModifier(),
+        arr->getIndexTypeQualifiers().getAsOpaqueValue());
+  } else
     qual_type = qual_type.getUnqualifiedType();
   qual_type.removeLocalConst();
   qual_type.removeLocalRestrict();

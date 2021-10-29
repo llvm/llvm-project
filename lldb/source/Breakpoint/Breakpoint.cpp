@@ -439,12 +439,15 @@ BreakpointOptions &Breakpoint::GetOptions() { return m_options; }
 const BreakpointOptions &Breakpoint::GetOptions() const { return m_options; }
 
 void Breakpoint::ResolveBreakpoint() {
-  if (m_resolver_sp)
+  if (m_resolver_sp) {
+    ElapsedTime elapsed(m_resolve_time);
     m_resolver_sp->ResolveBreakpoint(*m_filter_sp);
+  }
 }
 
 void Breakpoint::ResolveBreakpointInModules(
     ModuleList &module_list, BreakpointLocationCollection &new_locations) {
+  ElapsedTime elapsed(m_resolve_time);
   m_locations.StartRecordingNewLocations(new_locations);
 
   m_resolver_sp->ResolveBreakpointInModules(*m_filter_sp, module_list);
@@ -470,6 +473,7 @@ void Breakpoint::ResolveBreakpointInModules(ModuleList &module_list,
       } else
         delete new_locations_event;
     } else {
+      ElapsedTime elapsed(m_resolve_time);
       m_resolver_sp->ResolveBreakpointInModules(*m_filter_sp, module_list);
     }
   }
@@ -1085,4 +1089,35 @@ Breakpoint::BreakpointEventData::GetBreakpointLocationAtIndexFromEvent(
   }
 
   return bp_loc_sp;
+}
+
+json::Value Breakpoint::GetStatistics() {
+  json::Object bp;
+  bp.try_emplace("id", GetID());
+  bp.try_emplace("resolveTime", m_resolve_time.count());
+  bp.try_emplace("numLocations", (int64_t)GetNumLocations());
+  bp.try_emplace("numResolvedLocations", (int64_t)GetNumResolvedLocations());
+  bp.try_emplace("internal", IsInternal());
+  if (!m_kind_description.empty())
+    bp.try_emplace("kindDescription", m_kind_description);
+  // Put the full structured data for reproducing this breakpoint in a key/value
+  // pair named "details". This allows the breakpoint's details to be visible
+  // in the stats in case we need to reproduce a breakpoint that has long 
+  // resolve times
+  StructuredData::ObjectSP bp_data_sp = SerializeToStructuredData();
+  if (bp_data_sp) {
+    std::string buffer;
+    llvm::raw_string_ostream ss(buffer);
+    json::OStream json_os(ss);
+    bp_data_sp->Serialize(json_os);
+    if (auto expected_value = llvm::json::parse(ss.str())) {
+      bp.try_emplace("details", std::move(*expected_value));
+    } else {
+      std::string details_error = toString(expected_value.takeError());
+      json::Object details;
+      details.try_emplace("error", details_error);
+      bp.try_emplace("details", std::move(details));
+    }
+  }
+  return json::Value(std::move(bp));
 }

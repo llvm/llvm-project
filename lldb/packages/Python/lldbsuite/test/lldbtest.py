@@ -45,6 +45,7 @@ import os.path
 import re
 import shutil
 import signal
+import shlex
 from subprocess import *
 import sys
 import time
@@ -68,6 +69,7 @@ from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
 from lldbsuite.test.builders import get_builder
+from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
 # LLDB_COMMAND_TRACE is set from '-t' option.
@@ -469,61 +471,6 @@ class _RemoteProcess(_BaseProcess):
 
     def terminate(self):
         lldb.remote_platform.Kill(self._pid)
-
-# From 2.7's subprocess.check_output() convenience function.
-# Return a tuple (stdoutdata, stderrdata).
-
-
-def system(commands, **kwargs):
-    r"""Run an os command with arguments and return its output as a byte string.
-
-    If the exit code was non-zero it raises a CalledProcessError.  The
-    CalledProcessError object will have the return code in the returncode
-    attribute and output in the output attribute.
-
-    The arguments are the same as for the Popen constructor.  Example:
-
-    >>> check_output(["ls", "-l", "/dev/null"])
-    'crw-rw-rw- 1 root root 1, 3 Oct 18  2007 /dev/null\n'
-
-    The stdout argument is not allowed as it is used internally.
-    To capture standard error in the result, use stderr=STDOUT.
-
-    >>> check_output(["/bin/sh", "-c",
-    ...               "ls -l non_existent_file ; exit 0"],
-    ...              stderr=STDOUT)
-    'ls: non_existent_file: No such file or directory\n'
-    """
-
-    output = ""
-    error = ""
-    for shellCommand in commands:
-        if 'stdout' in kwargs:
-            raise ValueError(
-                'stdout argument not allowed, it will be overridden.')
-        process = Popen(
-            shellCommand,
-            stdout=PIPE,
-            stderr=STDOUT,
-            **kwargs)
-        pid = process.pid
-        this_output, this_error = process.communicate()
-        retcode = process.poll()
-
-        if retcode:
-            cmd = kwargs.get("args")
-            if cmd is None:
-                cmd = shellCommand
-            cpe = CalledProcessError(retcode, cmd)
-            # Ensure caller can access the stdout/stderr.
-            cpe.lldb_extensions = {
-                "combined_output": this_output,
-                "command": shellCommand
-            }
-            raise cpe
-        output = output + this_output.decode("utf-8", errors='ignore')
-    return output
-
 
 def getsource_if_available(obj):
     """
@@ -1335,11 +1282,10 @@ class Base(unittest2.TestCase):
             Supports: llvm, clang.
         """
         compiler = self.getCompilerBinary()
-        version_output = system([[compiler, "--version"]])
-        for line in version_output.split(os.linesep):
-            m = re.search('version ([0-9.]+)', line)
-            if m:
-                return m.group(1)
+        version_output = check_output([compiler, "--version"], errors="replace")
+        m = re.search('version ([0-9.]+)', version_output)
+        if m:
+            return m.group(1)
         return 'unknown'
 
     def getDwarfVersion(self):
@@ -1469,9 +1415,21 @@ class Base(unittest2.TestCase):
         testname = self.getBuildDirBasename()
 
         module = builder_module()
-        if not module.build(debug_info, architecture, compiler, dictionary,
-                testdir, testname):
+        command = builder_module().getBuildCommand(debug_info, architecture,
+                compiler, dictionary, testdir, testname)
+        if command is None:
             raise Exception("Don't know how to build binary")
+
+        self.runBuildCommand(command)
+
+    def runBuildCommand(self, command):
+        self.trace(shlex.join(command))
+        try:
+            output = check_output(command, stderr=STDOUT, errors="replace")
+        except CalledProcessError as cpe:
+            raise build_exception.BuildError(cpe)
+        self.trace(output)
+
 
     # ==================================================
     # Build methods supported through a plugin interface
@@ -1619,7 +1577,7 @@ class Base(unittest2.TestCase):
         if not yaml2obj_bin:
             self.assertTrue(False, "No valid yaml2obj executable specified")
         command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
-        system([command])
+        self.runBuildCommand(command)
 
     def getBuildFlags(
             self,

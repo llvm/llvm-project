@@ -431,10 +431,11 @@ template <class ELFT>
 void EhFrameSection::addSectionAux(EhInputSection *sec) {
   if (!sec->isLive())
     return;
-  if (sec->areRelocsRela)
-    addRecords<ELFT>(sec, sec->template relas<ELFT>());
+  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    addRecords<ELFT>(sec, rels.rels);
   else
-    addRecords<ELFT>(sec, sec->template rels<ELFT>());
+    addRecords<ELFT>(sec, rels.relas);
 }
 
 void EhFrameSection::addSection(EhInputSection *sec) {
@@ -483,12 +484,11 @@ void EhFrameSection::iterateFDEWithLSDA(
   DenseSet<size_t> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    if (sec->areRelocsRela)
-      iterateFDEWithLSDAAux<ELFT>(*sec, sec->template relas<ELFT>(),
-                                  ciesWithLSDA, fn);
+    const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+    if (rels.areRelocsRel())
+      iterateFDEWithLSDAAux<ELFT>(*sec, rels.rels, ciesWithLSDA, fn);
     else
-      iterateFDEWithLSDAAux<ELFT>(*sec, sec->template rels<ELFT>(),
-                                  ciesWithLSDA, fn);
+      iterateFDEWithLSDAAux<ELFT>(*sec, rels.relas, ciesWithLSDA, fn);
   }
 }
 

@@ -47,6 +47,7 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # rdar://84528755
     def test_ms_abi(self):
         if not self.build_and_run("ms_abi.c"):
             return

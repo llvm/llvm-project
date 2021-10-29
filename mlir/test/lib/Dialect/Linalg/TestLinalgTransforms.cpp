@@ -771,7 +771,13 @@ void TestLinalgTransforms::runOnFunction() {
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testHoistPadding) {
     getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
-      (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
+      PadTensorOp hoistedOp;
+      FailureOr<Value> newResult = linalg::hoistPaddingOnTensors(
+          padTensorOp, testHoistPadding, hoistedOp);
+      if (succeeded(newResult)) {
+        padTensorOp.getResult().replaceAllUsesWith(newResult.getValue());
+        padTensorOp->erase();
+      }
     });
   }
   if (testInterchangePattern.hasValue())

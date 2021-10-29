@@ -32,21 +32,19 @@ define <2 x i64> @build_vec_v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 
 define void @store_chain_v2i64(i64* %a, i64* %b, i64* %c) {
 ; CHECK-LABEL: @store_chain_v2i64(
-; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i64, i64* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[B_1:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[C_1:%.*]] = getelementptr i64, i64* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[V0_0:%.*]] = load i64, i64* [[A]], align 8
-; CHECK-NEXT:    [[V0_1:%.*]] = load i64, i64* [[A_1]], align 8
-; CHECK-NEXT:    [[V1_0:%.*]] = load i64, i64* [[B]], align 8
-; CHECK-NEXT:    [[V1_1:%.*]] = load i64, i64* [[B_1]], align 8
-; CHECK-NEXT:    [[TMP0_0:%.*]] = add i64 [[V0_0]], [[V1_0]]
-; CHECK-NEXT:    [[TMP0_1:%.*]] = add i64 [[V0_1]], [[V1_1]]
-; CHECK-NEXT:    [[TMP1_0:%.*]] = sub i64 [[V0_0]], [[V1_0]]
-; CHECK-NEXT:    [[TMP1_1:%.*]] = sub i64 [[V0_1]], [[V1_1]]
-; CHECK-NEXT:    [[TMP2_0:%.*]] = add i64 [[TMP0_0]], [[TMP0_1]]
-; CHECK-NEXT:    [[TMP2_1:%.*]] = add i64 [[TMP1_0]], [[TMP1_1]]
-; CHECK-NEXT:    store i64 [[TMP2_0]], i64* [[C]], align 8
-; CHECK-NEXT:    store i64 [[TMP2_1]], i64* [[C_1]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[A:%.*]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[B:%.*]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i64* [[C:%.*]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* [[TMP12]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a.0 = getelementptr i64, i64* %a, i64 0

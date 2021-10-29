@@ -2156,7 +2156,7 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define dso_local void @sink_splat_fma_scalable(float* noalias nocapture %a, float* noalias nocapture readonly %b, float %x) local_unnamed_addr #0 {
+define void @sink_splat_fma_scalable(float* noalias nocapture %a, float* noalias nocapture readonly %b, float %x) {
 ; CHECK-LABEL: sink_splat_fma_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a7, vlenb
@@ -2260,7 +2260,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
 
-define dso_local void @sink_splat_fma_commute_scalable(float* noalias nocapture %a, float* noalias nocapture readonly %b, float %x) local_unnamed_addr #0 {
+define void @sink_splat_fma_commute_scalable(float* noalias nocapture %a, float* noalias nocapture readonly %b, float %x) {
 ; CHECK-LABEL: sink_splat_fma_commute_scalable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a7, vlenb
@@ -2368,3 +2368,80 @@ declare i64 @llvm.vscale.i64()
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>)
 declare float @llvm.fma.f32(float, float, float)
+
+define void @sink_splat_icmp(i32* nocapture %x, i32 signext %y) {
+; CHECK-LABEL: sink_splat_icmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a2, zero, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB36_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmseq.vx v0, v9, a1
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
+; CHECK-NEXT:    addi a2, a2, -4
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    bnez a2, .LBB36_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %y, i32 0
+  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %0 = getelementptr inbounds i32, i32* %x, i64 %index
+  %1 = bitcast i32* %0 to <4 x i32>*
+  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
+  %2 = icmp eq <4 x i32> %wide.load, %broadcast.splat
+  %3 = bitcast i32* %0 to <4 x i32>*
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> zeroinitializer, <4 x i32>* %3, i32 4, <4 x i1> %2)
+  %index.next = add nuw i64 %index, 4
+  %4 = icmp eq i64 %index.next, 1024
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+
+define void @sink_splat_fcmp(float* nocapture %x, float %y) {
+; CHECK-LABEL: sink_splat_fcmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.w.x ft0, a1
+; CHECK-NEXT:    addi a1, zero, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB37_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmfeq.vf v0, v9, ft0
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
+; CHECK-NEXT:    addi a1, a1, -4
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    bnez a1, .LBB37_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert = insertelement <4 x float> poison, float %y, i32 0
+  %broadcast.splat = shufflevector <4 x float> %broadcast.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %0 = getelementptr inbounds float, float* %x, i64 %index
+  %1 = bitcast float* %0 to <4 x float>*
+  %wide.load = load <4 x float>, <4 x float>* %1, align 4
+  %2 = fcmp fast oeq <4 x float> %wide.load, %broadcast.splat
+  %3 = bitcast float* %0 to <4 x float>*
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> zeroinitializer, <4 x float>* %3, i32 4, <4 x i1> %2)
+  %index.next = add nuw i64 %index, 4
+  %4 = icmp eq i64 %index.next, 1024
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)

@@ -4963,19 +4963,9 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 
 static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
                                    bool ConsiderFlags) {
-  if (ConsiderFlags) {
-    // See whether I has flags that may create poison
-    if (const auto *OvOp = dyn_cast<OverflowingBinaryOperator>(Op)) {
-      if (OvOp->hasNoSignedWrap() || OvOp->hasNoUnsignedWrap())
-        return true;
-    }
-    if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(Op))
-      if (ExactOp->isExact())
-        return true;
-    if (const auto *GEP = dyn_cast<GEPOperator>(Op))
-      if (GEP->isInBounds())
-        return true;
-  }
+
+  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+    return true;
 
   // TODO: this should really be under the ConsiderFlags block, but currently
   // these are not dropped by dropPoisonGeneratingFlags

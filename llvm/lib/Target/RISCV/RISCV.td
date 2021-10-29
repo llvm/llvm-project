@@ -149,6 +149,9 @@ def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">,
                            AssemblerPredicate<(all_of FeatureStdExtV),
                            "'V' (Vector Instructions)">;
 
+def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">;
+def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">;
+
 def FeatureStdExtZvlsseg
     : SubtargetFeature<"experimental-zvlsseg", "HasStdExtZvlsseg", "true",
                        "'Zvlsseg' (Vector segment load/store instructions)",

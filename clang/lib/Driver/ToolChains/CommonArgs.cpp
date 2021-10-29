@@ -1890,12 +1890,12 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
 
   // Emit warnings for legacy options even if they are overridden.
   if (Args.hasArg(options::OPT_mno_code_object_v3_legacy))
-    D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
-                                          << "-mcode-object-version=2";
+    D.Diag(diag::warn_drv_deprecated_arg)
+        << "-mno-code-object-v3" << true << "-mcode-object-version=2";
 
   if (Args.hasArg(options::OPT_mcode_object_v3_legacy))
-    D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
-                                          << "-mcode-object-version=3";
+    D.Diag(diag::warn_drv_deprecated_arg)
+        << "-mcode-object-v3" << true << "-mcode-object-version=3";
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==

@@ -36,16 +36,23 @@ function(collect_object_file_deps target result)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
   endif()
+
+  if(${target_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})
+    # It is not possible to recursively extract deps of external dependencies.
+    # So, we just accumulate the direct dep and return.
+    get_target_property(deps ${target} "DEPS")
+    set(${result} ${deps} PARENT_SCOPE)
+    return()
+  endif()
 endfunction(collect_object_file_deps)
 
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
 #     add_entrypoint_library(
 #       DEPENDS <list of add_entrypoint_object targets>
-#       EXT_DEPS <list of external object targets, no type checking is done>
 #     )
 #
-# NOTE: If one wants an entrypoint to be availabe in a library, then they will
+# NOTE: If one wants an entrypoint to be available in a library, then they will
 # have to list the entrypoint target explicitly in the DEPENDS list. Implicit
 # entrypoint dependencies will not be added to the library.
 function(add_entrypoint_library target_name)
@@ -53,7 +60,7 @@ function(add_entrypoint_library target_name)
     "ENTRYPOINT_LIBRARY"
     "" # No optional arguments
     "" # No single value arguments
-    "DEPENDS;EXT_DEPS" # Multi-value arguments
+    "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
@@ -65,9 +72,9 @@ function(add_entrypoint_library target_name)
   set(all_deps "")
   foreach(dep IN LISTS fq_deps_list)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if(NOT (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}))
+    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
-                          "not an 'add_entrypoint_object' target.")
+                          "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
     endif()
     collect_object_file_deps(${dep} recursive_deps)
     list(APPEND all_deps ${recursive_deps})
@@ -75,10 +82,6 @@ function(add_entrypoint_library target_name)
   list(REMOVE_DUPLICATES all_deps)
   set(objects "")
   foreach(dep IN LISTS all_deps)
-    list(APPEND objects $<TARGET_OBJECTS:${dep}>)
-  endforeach(dep)
-
-  foreach(dep IN LISTS ENTRYPOINT_LIBRARY_EXT_DEPS)
     list(APPEND objects $<TARGET_OBJECTS:${dep}>)
   endforeach(dep)
 

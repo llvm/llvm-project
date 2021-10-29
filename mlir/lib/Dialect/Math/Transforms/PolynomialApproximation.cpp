@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Math/Transforms/Approximation.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -90,6 +91,101 @@ static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
   auto type = broadcast(value.getType(), shape);
   return isNonScalarShape(shape) ? builder.create<BroadcastOp>(type, value)
                                  : value;
+}
+
+//----------------------------------------------------------------------------//
+// Helper function to handle n-D vectors with 1-D operations.
+//----------------------------------------------------------------------------//
+
+// Expands and unrolls n-D vector operands into multiple fixed size 1-D vectors
+// and calls the compute function with 1-D vector operands. Stitches back all
+// results into the original n-D vector result.
+//
+// Examples: vectorWidth = 8
+//   - vector<4x8xf32> unrolled 4 times
+//   - vector<16xf32> expanded to vector<2x8xf32> and unrolled 2 times
+//   - vector<4x16xf32> expanded to vector<4x2x8xf32> and unrolled 4*2 times
+//
+// Some math approximations rely on ISA-specific operations that only accept
+// fixed size 1-D vectors (e.g. AVX expects vectors of width 8).
+//
+// It is the caller's responsibility to verify that the inner dimension is
+// divisible by the vectorWidth, and that all operands have the same vector
+// shape.
+static Value
+handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
+                              ValueRange operands, int64_t vectorWidth,
+                              std::function<Value(ValueRange)> compute) {
+  assert(!operands.empty() && "operands must be not empty");
+  assert(vectorWidth > 0 && "vector width must be larger than 0");
+
+  VectorType inputType = operands[0].getType().cast<VectorType>();
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+
+  // If input shape matches target vector width, we can just call the
+  // user-provided compute function with the operands.
+  if (inputShape == llvm::makeArrayRef(vectorWidth))
+    return compute(operands);
+
+  // Check if the inner dimension has to be expanded, or we can directly iterate
+  // over the outer dimensions of the vector.
+  int64_t innerDim = inputShape.back();
+  int64_t expansionDim = innerDim / vectorWidth;
+  assert((innerDim % vectorWidth == 0) && "invalid inner dimension size");
+
+  // Maybe expand operands to the higher rank vector shape that we'll use to
+  // iterate over and extract one dimensional vectors.
+  SmallVector<int64_t> expandedShape(inputShape.begin(), inputShape.end());
+  SmallVector<Value> expandedOperands(operands);
+
+  if (expansionDim > 1) {
+    // Expand shape from [..., innerDim] to [..., expansionDim, vectorWidth].
+    expandedShape.insert(expandedShape.end() - 1, expansionDim);
+    expandedShape.back() = vectorWidth;
+
+    for (unsigned i = 0; i < operands.size(); ++i) {
+      auto operand = operands[i];
+      auto eltType = operand.getType().cast<VectorType>().getElementType();
+      auto expandedType = VectorType::get(expandedShape, eltType);
+      expandedOperands[i] =
+          builder.create<vector::ShapeCastOp>(expandedType, operand);
+    }
+  }
+
+  // Iterate over all outer dimensions of the compute shape vector type.
+  auto iterationDims = ArrayRef<int64_t>(expandedShape).drop_back();
+  int64_t maxLinearIndex = computeMaxLinearIndex(iterationDims);
+
+  SmallVector<int64_t> ones(iterationDims.size(), 1);
+  auto strides = computeStrides(iterationDims, ones);
+
+  // Compute results for each one dimensional vector.
+  SmallVector<Value> results(maxLinearIndex);
+
+  for (int64_t i = 0; i < maxLinearIndex; ++i) {
+    auto offsets = delinearize(strides, i);
+
+    SmallVector<Value> extracted(expandedOperands.size());
+    for (auto tuple : llvm::enumerate(expandedOperands))
+      extracted[tuple.index()] =
+          builder.create<vector::ExtractOp>(tuple.value(), offsets);
+
+    results[i] = compute(extracted);
+  }
+
+  // Stitch results together into one large vector.
+  Type resultEltType = results[0].getType().cast<VectorType>().getElementType();
+  Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
+  Value result = builder.create<ConstantOp>(
+      resultExpandedType, builder.getZeroAttr(resultExpandedType));
+
+  for (int64_t i = 0; i < maxLinearIndex; ++i)
+    result = builder.create<vector::InsertOp>(results[i], result,
+                                              delinearize(strides, i));
+
+  // Reshape back to the original vector shape.
+  return builder.create<vector::ShapeCastOp>(
+      VectorType::get(inputShape, resultEltType), result);
 }
 
 //----------------------------------------------------------------------------//
@@ -943,7 +1039,7 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
                                     PatternRewriter &rewriter) const {
   auto shape = vectorShape(op.operand().getType(), isF32);
   // Only support already-vectorized rsqrt's.
-  if (!shape.hasValue() || (*shape)[0] != 8)
+  if (!shape.hasValue() || shape->back() % 8 != 0)
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
@@ -967,7 +1063,10 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   Value notNormalFiniteMask = builder.create<arith::OrIOp>(ltMinMask, infMask);
 
   // Compute an approximate result.
-  Value yApprox = builder.create<x86vector::RsqrtOp>(op.operand());
+  Value yApprox = handleMultidimensionalVectors(
+      builder, op->getOperands(), 8, [&builder](ValueRange operands) -> Value {
+        return builder.create<x86vector::RsqrtOp>(operands);
+      });
 
   // Do a single step of Newton-Raphson iteration to improve the approximation.
   // This uses the formula y_{n+1} = y_n * (1.5 - y_n * (0.5 * x) * y_n).

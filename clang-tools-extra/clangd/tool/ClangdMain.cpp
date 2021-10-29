@@ -8,6 +8,7 @@
 
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
+#include "Compiler.h"
 #include "Config.h"
 #include "ConfigProvider.h"
 #include "Feature.h"
@@ -344,8 +345,16 @@ opt<bool> Test{
     "lit-test",
     cat(Misc),
     desc("Abbreviation for -input-style=delimited -pretty -sync "
-         "-enable-test-scheme -enable-config=0 -log=verbose. "
+         "-enable-test-scheme -enable-config=0 -log=verbose -crash-pragmas. "
          "Intended to simplify lit tests"),
+    init(false),
+    Hidden,
+};
+
+opt<bool> CrashPragmas{
+    "crash-pragmas",
+    cat(Misc),
+    desc("Respect `#pragma clang __debug crash` and friends."),
     init(false),
     Hidden,
 };
@@ -707,7 +716,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview,
                                     /*Errs=*/nullptr, FlagsEnvVar);
   if (Test) {
-    Sync = true;
+    if (!Sync.getNumOccurrences())
+      Sync = true;
+    if (!CrashPragmas.getNumOccurrences())
+      CrashPragmas = true;
     InputStyle = JSONStreamStyle::Delimited;
     LogLevel = Logger::Verbose;
     PrettyPrint = true;
@@ -725,6 +737,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     static URISchemeRegistry::Add<TestScheme> X(
         "test", "Test scheme for clangd lit tests.");
   }
+  if (CrashPragmas)
+    allowCrashPragmasForTest();
 
   if (!Sync && WorkerThreadsCount == 0) {
     llvm::errs() << "A number of worker threads cannot be 0. Did you mean to "

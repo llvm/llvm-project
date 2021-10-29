@@ -134,7 +134,7 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              LanguageCreateInstance create_callback);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
@@ -143,7 +143,7 @@ public:
 
   // LanguageRuntime
   static bool RegisterPlugin(
-      ConstString name, const char *description,
+      llvm::StringRef name, llvm::StringRef description,
       LanguageRuntimeCreateInstance create_callback,
       LanguageRuntimeGetCommandObject command_callback = nullptr,
       LanguageRuntimeGetExceptionPrecondition precondition_callback = nullptr);
@@ -160,7 +160,7 @@ public:
   GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx);
 
   // SystemRuntime
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              SystemRuntimeCreateInstance create_callback);
 
   static bool UnregisterPlugin(SystemRuntimeCreateInstance create_callback);
@@ -230,7 +230,7 @@ public:
                                        CompletionRequest &request);
   // Process
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  ProcessCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
@@ -239,17 +239,17 @@ public:
   static ProcessCreateInstance GetProcessCreateCallbackAtIndex(uint32_t idx);
 
   static ProcessCreateInstance
-  GetProcessCreateCallbackForPluginName(ConstString name);
+  GetProcessCreateCallbackForPluginName(llvm::StringRef name);
 
-  static const char *GetProcessPluginNameAtIndex(uint32_t idx);
+  static llvm::StringRef GetProcessPluginNameAtIndex(uint32_t idx);
 
-  static const char *GetProcessPluginDescriptionAtIndex(uint32_t idx);
+  static llvm::StringRef GetProcessPluginDescriptionAtIndex(uint32_t idx);
 
   static void AutoCompleteProcessName(llvm::StringRef partial_name,
                                       CompletionRequest &request);
 
   // ScriptInterpreter
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              lldb::ScriptLanguage script_lang,
                              ScriptInterpreterCreateInstance create_callback);
 
@@ -297,7 +297,7 @@ public:
   /// \return
   ///    Returns true upon success; otherwise, false.
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  StructuredDataPluginCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr,
                  StructuredDataFilterLaunchInfo filter_callback = nullptr);
@@ -314,7 +314,7 @@ public:
 
   // SymbolFile
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  SymbolFileCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 

@@ -23,7 +23,7 @@ int main() {
   write(STDOUT_FILENO, "recovered\n", 10);
   // WRITE: ERROR: HWAddressSanitizer: tag-mismatch on address
   // WRITE: WRITE of size 32 at {{.*}} tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
-  // WRITE: Invalid access starting at offset [16, 32)
+  // WRITE: Invalid access starting at offset 16
   // WRITE: Memory tags around the buggy address (one tag corresponds to 16 bytes):
   // WRITE: =>{{.*}}[[PTR_TAG]]{{[[:space:]]\[}}[[MEM_TAG]]
   // WRITE-NOT: recovered
