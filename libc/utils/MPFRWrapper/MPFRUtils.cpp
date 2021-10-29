@@ -10,7 +10,8 @@
 
 #include "src/__support/CPP/StringView.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/UnitTest/FPMatcher.h"
+#include "src/__support/FPUtil/TestHelpers.h"
+#include "src/__support/architectures.h"
 
 #include <cmath>
 #include <memory>
@@ -44,7 +45,7 @@ template <> struct Precision<double> {
   static constexpr unsigned int value = 53;
 };
 
-#if !(defined(__x86_64__) || defined(__i386__))
+#if !(defined(LLVM_LIBC_ARCH_X86))
 template <> struct Precision<long double> {
   static constexpr unsigned int value = 64;
 };
@@ -100,9 +101,7 @@ public:
     mpfr_set(value, other.value, MPFR_RNDN);
   }
 
-  ~MPFRNumber() {
-    mpfr_clear(value);
-  }
+  ~MPFRNumber() { mpfr_clear(value); }
 
   MPFRNumber &operator=(const MPFRNumber &rhs) {
     mpfrPrecision = rhs.mpfrPrecision;

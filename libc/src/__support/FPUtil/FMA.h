@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 
 #include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/architectures.h"
 
-#ifdef __x86_64__
+#if defined(LLVM_LIBC_ARCH_X86_64)
 #include "x86_64/FMA.h"
-#elif defined(__aarch64__)
+#elif defined(LLVM_LIBC_ARCH_AARCH64)
 #include "aarch64/FMA.h"
 #else
 #include "generic/FMA.h"
