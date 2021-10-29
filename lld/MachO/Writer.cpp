@@ -671,10 +671,11 @@ void Writer::scanRelocations() {
 
 void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
-  for (const Symbol *sym : symtab->getSymbols()) {
-    if (const auto *defined = dyn_cast<Defined>(sym)) {
+  for (Symbol *sym : symtab->getSymbols()) {
+    if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
         continue;
+      defined->canonicalize();
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
       if (!defined->isAbsolute() && isCodeSection(defined->isec))
@@ -691,10 +692,14 @@ void Writer::scanSymbols() {
   for (const InputFile *file : inputFiles) {
     if (auto *objFile = dyn_cast<ObjFile>(file))
       for (Symbol *sym : objFile->symbols) {
-        if (auto *defined = dyn_cast_or_null<Defined>(sym))
-          if (!defined->isExternal() && defined->isLive() &&
-              !defined->isAbsolute() && isCodeSection(defined->isec))
+        if (auto *defined = dyn_cast_or_null<Defined>(sym)) {
+          if (!defined->isLive())
+            continue;
+          defined->canonicalize();
+          if (!defined->isExternal() && !defined->isAbsolute() &&
+              isCodeSection(defined->isec))
             in.unwindInfo->addSymbol(defined);
+        }
       }
   }
 }
@@ -1120,6 +1125,8 @@ template <class LP> void Writer::run() {
   treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
+  // Canonicalization of all pointers to InputSections should be handled by
+  // these two methods.
   scanSymbols();
   scanRelocations();
 

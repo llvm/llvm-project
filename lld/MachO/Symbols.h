@@ -126,6 +126,10 @@ public:
 
   uint64_t getVA() const override;
 
+  // Ensure this symbol's pointers to InputSections point to their canonical
+  // copies.
+  void canonicalize();
+
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
   InputSection *isec;

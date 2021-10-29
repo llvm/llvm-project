@@ -122,7 +122,7 @@ public:
   void writeTo(uint8_t *buf);
 
   void foldIdentical(ConcatInputSection *redundant);
-  InputSection *canonical() override {
+  ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }
 
@@ -131,7 +131,7 @@ public:
   }
 
   // Points to the surviving section after this one is folded by ICF
-  InputSection *replacement = nullptr;
+  ConcatInputSection *replacement = nullptr;
   // Equivalence-class ID for ICF
   uint64_t icfEqClass[2] = {0, 0};
 

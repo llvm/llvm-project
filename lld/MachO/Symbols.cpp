@@ -66,7 +66,7 @@ uint64_t Defined::getVA() const {
   if (isAbsolute())
     return value;
 
-  if (!isec->canonical()->isFinal) {
+  if (!isec->isFinal) {
     // A target arch that does not use thunks ought never ask for
     // the address of a function that has not yet been finalized.
     assert(target->usesThunks());
@@ -77,7 +77,14 @@ uint64_t Defined::getVA() const {
     // expedient to return a contrived out-of-range address.
     return TargetInfo::outOfRangeVA;
   }
-  return isec->canonical()->getVA(value);
+  return isec->getVA(value);
+}
+
+void Defined::canonicalize() {
+  if (compactUnwind)
+    compactUnwind = compactUnwind->canonical();
+  if (isec)
+    isec = isec->canonical();
 }
 
 uint64_t DylibSymbol::getVA() const {
