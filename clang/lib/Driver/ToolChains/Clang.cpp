@@ -8108,14 +8108,27 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     assert(I.isFilename() && "Invalid input.");
     if (I.getAction()) {
       auto TC = II->second;
+      auto TargetID = TC->getTargetID();
       II++;
+      if(TargetID.empty()) {
+        CmdArgs.push_back(I.getFilename());
+        continue;
+      }
       std::string OffloadArchs("--offload-arch=");
-      OffloadArchs.append(TC->getTargetID());
+      OffloadArchs.append(TargetID);
 
       // FIXME: Add other architecture target ids here
       CmdArgs.push_back(Args.MakeArgString(OffloadArchs.c_str()));
+
+      auto FileStem = llvm::sys::path::stem(I.getFilename());
+      auto FileName = Twine(FileStem + "-" + TargetID +
+                            llvm::sys::path::extension(I.getFilename()))
+                          .str();
+      if (C.getDriver().isSaveTempsEnabled()) {
+        FileName.append(".out");
+      }
+      CmdArgs.push_back(Args.MakeArgString(FileName.c_str()));
     }
-    CmdArgs.push_back(I.getFilename());
   }
 
   C.addCommand(std::make_unique<Command>(
