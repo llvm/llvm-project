@@ -148,8 +148,14 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// \returns True.
   bool promoteUniformBitreverseToI32(IntrinsicInst &I) const;
 
-
+  /// \returns The minimum number of bits needed to store the value of \Op as an
+  /// unsigned integer. Truncating to this size and then zero-extending to
+  /// ScalarSize will not change the value.
   unsigned numBitsUnsigned(Value *Op, unsigned ScalarSize) const;
+
+  /// \returns The minimum number of bits needed to store the value of \Op as a
+  /// signed integer. Truncating to this size and then sign-extending to
+  /// ScalarSize will not change the value.
   unsigned numBitsSigned(Value *Op, unsigned ScalarSize) const;
 
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
@@ -449,7 +455,7 @@ unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op,
                                              unsigned ScalarSize) const {
   // In order for this to be a signed 24-bit value, bit 23, must
   // be a sign bit.
-  return ScalarSize - ComputeNumSignBits(Op, *DL, 0, AC);
+  return ScalarSize - ComputeNumSignBits(Op, *DL, 0, AC) + 1;
 }
 
 static void extractValues(IRBuilder<> &Builder,
@@ -482,13 +488,13 @@ static Value *insertValues(IRBuilder<> &Builder,
 // width of the original destination.
 static Value *getMul24(IRBuilder<> &Builder, Value *LHS, Value *RHS,
                        unsigned Size, unsigned NumBits, bool IsSigned) {
-  if (Size <= 32 || (IsSigned ? NumBits <= 30 : NumBits <= 32)) {
+  if (Size <= 32 || NumBits <= 32) {
     Intrinsic::ID ID =
         IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
     return Builder.CreateIntrinsic(ID, {}, {LHS, RHS});
   }
 
-  assert(IsSigned ? NumBits <= 46 : NumBits <= 48);
+  assert(NumBits <= 48);
 
   Intrinsic::ID LoID =
       IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
@@ -530,9 +536,8 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
       (RHSBits = numBitsUnsigned(RHS, Size)) <= 24) {
     IsSigned = false;
 
-  } else if (ST->hasMulI24() &&
-             (LHSBits = numBitsSigned(LHS, Size)) < 24 &&
-             (RHSBits = numBitsSigned(RHS, Size)) < 24) {
+  } else if (ST->hasMulI24() && (LHSBits = numBitsSigned(LHS, Size)) <= 24 &&
+             (RHSBits = numBitsSigned(RHS, Size)) <= 24) {
     IsSigned = true;
 
   } else

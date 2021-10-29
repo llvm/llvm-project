@@ -53,7 +53,7 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 
   // In order for this to be a signed 24-bit value, bit 23, must
   // be a sign bit.
-  return VT.getSizeInBits() - DAG.ComputeNumSignBits(Op);
+  return VT.getSizeInBits() - DAG.ComputeNumSignBits(Op) + 1;
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
@@ -2875,7 +2875,7 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
   return VT.getSizeInBits() >= 24 && // Types less than 24-bit should be treated
                                      // as unsigned 24-bit values.
-    AMDGPUTargetLowering::numBitsSigned(Op, DAG) < 24;
+         AMDGPUTargetLowering::numBitsSigned(Op, DAG) <= 24;
 }
 
 static SDValue simplifyMul24(SDNode *Node24,
