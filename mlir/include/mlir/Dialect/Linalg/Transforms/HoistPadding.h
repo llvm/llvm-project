@@ -9,8 +9,10 @@
 #ifndef MLIR_DIALECT_LINALG_TRANSFORMS_HOIST_PADDING_H_
 #define MLIR_DIALECT_LINALG_TRANSFORMS_HOIST_PADDING_H_
 
+#include "mlir/Support/LogicalResult.h"
+
 namespace mlir {
-struct LogicalResult;
+class Value;
 
 namespace linalg {
 class PadTensorOp;
@@ -57,7 +59,8 @@ class PadTensorOp;
 ///      }
 ///    }
 /// ```
-LogicalResult hoistPaddingOnTensors(PadTensorOp &padTensorOp, int nLoops);
+FailureOr<Value> hoistPaddingOnTensors(PadTensorOp opToHoist, int numLoops,
+                                       PadTensorOp &hoistedOp);
 
 } // namespace linalg
 } // namespace mlir
