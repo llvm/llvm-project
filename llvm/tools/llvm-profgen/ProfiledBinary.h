@@ -378,6 +378,11 @@ public:
     return FRange->Func->Ranges;
   }
 
+  const std::unordered_map<std::string, BinaryFunction> &
+  getAllBinaryFunctions() {
+    return BinaryFunctions;
+  }
+
   uint32_t getFuncSizeForContext(SampleContext &Context) {
     return FuncSizeTracker.getFuncSizeForContext(Context);
   }

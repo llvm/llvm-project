@@ -36,6 +36,11 @@ static cl::opt<bool> PopulateProfileSymbolList(
     "populate-profile-symbol-list", cl::init(false), cl::Hidden,
     cl::desc("Populate profile symbol list (only meaningful for -extbinary)"));
 
+static cl::opt<bool> FillZeroForAllFuncs(
+    "fill-zero-for-all-funcs", cl::init(false), cl::Hidden,
+    cl::desc("Attribute all functions' range with zero count "
+             "even it's not hit by any samples."));
+
 static cl::opt<int32_t, true> RecursionCompression(
     "compress-recursion",
     cl::desc("Compressing recursion by deduplicating adjacent frame "
@@ -347,14 +352,22 @@ FunctionSamples &ProfileGenerator::getLeafFrameProfile(
 RangeSample
 ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
   RangeSample Ranges(RangeCounter.begin(), RangeCounter.end());
-  // For each range, we search for all ranges of the function it belongs to and
-  // initialize it with zero count, so it remains zero if doesn't hit any
-  // samples. This is to be consistent with compiler that interpret zero count
-  // as unexecuted(cold).
-  for (auto I : RangeCounter) {
-    uint64_t StartOffset = I.first.first;
-    for (const auto &Range : Binary->getRangesForOffset(StartOffset))
-      Ranges[{Range.first, Range.second - 1}] += 0;
+  if (FillZeroForAllFuncs) {
+    for (auto &FuncI : Binary->getAllBinaryFunctions()) {
+      for (auto &R : FuncI.second.Ranges) {
+        Ranges[{R.first, R.second}] += 0;
+      }
+    }
+  } else {
+    // For each range, we search for all ranges of the function it belongs to
+    // and initialize it with zero count, so it remains zero if doesn't hit any
+    // samples. This is to be consistent with compiler that interpret zero count
+    // as unexecuted(cold).
+    for (auto I : RangeCounter) {
+      uint64_t StartOffset = I.first.first;
+      for (const auto &Range : Binary->getRangesForOffset(StartOffset))
+        Ranges[{Range.first, Range.second - 1}] += 0;
+    }
   }
   RangeSample DisjointRanges;
   findDisjointRanges(DisjointRanges, Ranges);
@@ -643,7 +656,7 @@ void CSProfileGenerator::postProcessProfiles() {
       CSProfMergeColdContext = false;
   }
 
-  // Trim and merge cold context profile using cold threshold above. 
+  // Trim and merge cold context profile using cold threshold above.
   if (CSProfTrimColdContext || CSProfMergeColdContext) {
     SampleContextTrimmer(ProfileMap)
         .trimAndMergeColdContextProfiles(
