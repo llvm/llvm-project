@@ -16,6 +16,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -186,10 +187,9 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 
 AnalysisKey InlineAdvisorAnalysis::Key;
 
-bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
-                                              InliningAdvisorMode Mode,
-                                              StringRef ReplayFile,
-                                              ReplayInlineScope ReplayScope) {
+bool InlineAdvisorAnalysis::Result::tryCreate(
+    InlineParams Params, InliningAdvisorMode Mode,
+    const ReplayInlinerSettings &ReplaySettings) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   switch (Mode) {
   case InliningAdvisorMode::Default:
@@ -197,10 +197,10 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
     Advisor.reset(new DefaultInlineAdvisor(M, FAM, Params));
     // Restrict replay to default advisor, ML advisors are stateful so
     // replay will need augmentations to interleave with them correctly.
-    if (!ReplayFile.empty()) {
-      Advisor = llvm::getReplayInlineAdvisor(
-          M, FAM, M.getContext(), std::move(Advisor), ReplayFile, ReplayScope,
-          /* EmitRemarks =*/true);
+    if (!ReplaySettings.ReplayFile.empty()) {
+      Advisor = llvm::getReplayInlineAdvisor(M, FAM, M.getContext(),
+                                             std::move(Advisor), ReplaySettings,
+                                             /* EmitRemarks =*/true);
     }
     break;
   case InliningAdvisorMode::Development:
@@ -419,7 +419,8 @@ llvm::shouldInline(CallBase &CB,
   return IC;
 }
 
-std::string llvm::getCallSiteLocation(DebugLoc DLoc) {
+std::string llvm::formatCallSiteLocation(DebugLoc DLoc,
+                                         const CallSiteFormat &Format) {
   std::string Buffer;
   raw_string_ostream CallSiteLoc(Buffer);
   bool First = true;
@@ -435,9 +436,10 @@ std::string llvm::getCallSiteLocation(DebugLoc DLoc) {
     StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
       Name = DIL->getScope()->getSubprogram()->getName();
-    CallSiteLoc << Name.str() << ":" << llvm::utostr(Offset) << ":"
-                << llvm::utostr(DIL->getColumn());
-    if (Discriminator)
+    CallSiteLoc << Name.str() << ":" << llvm::utostr(Offset);
+    if (Format.outputColumn())
+      CallSiteLoc << ":" << llvm::utostr(DIL->getColumn());
+    if (Format.outputDiscriminator() && Discriminator)
       CallSiteLoc << "." << llvm::utostr(Discriminator);
     First = false;
   }
