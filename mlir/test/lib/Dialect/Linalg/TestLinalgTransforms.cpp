@@ -96,6 +96,9 @@ struct TestLinalgTransforms
   Option<int> testHoistPadding{*this, "test-hoist-padding",
                                llvm::cl::desc("Test hoist padding"),
                                llvm::cl::init(0)};
+  Option<bool> testPadPattern{*this, "test-pad-pattern",
+                              llvm::cl::desc("Test pad pattern"),
+                              llvm::cl::init(false)};
   Option<bool> testTransformPadTensor{
       *this, "test-transform-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
@@ -116,6 +119,14 @@ struct TestLinalgTransforms
   ListOption<int64_t> nofoldOperands{
       *this, "nofold-operands",
       llvm::cl::desc("Operands to set nofold when test-tile-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> packPaddings{
+      *this, "pack-paddings",
+      llvm::cl::desc("Operand packing flags when test-pad-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> hoistPaddings{
+      *this, "hoist-paddings",
+      llvm::cl::desc("Operand hoisting depths when test-pad-pattern"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
@@ -637,6 +648,30 @@ static void applyTilePattern(FuncOp funcOp, std::string loopType,
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
+static void applyPadPattern(FuncOp funcOp, ArrayRef<int64_t> packPaddings,
+                            ArrayRef<int64_t> hoistPaddings) {
+  MLIRContext *context = funcOp.getContext();
+  RewritePatternSet padPattern(context);
+  auto linalgPaddingOptions = linalg::LinalgPaddingOptions();
+  auto packFunc = [&](OpOperand &opOperand) {
+    return opOperand.getOperandNumber() < packPaddings.size()
+               ? packPaddings[opOperand.getOperandNumber()]
+               : false;
+  };
+  auto hoistingFunc = [&](OpOperand &opOperand) {
+    return opOperand.getOperandNumber() < hoistPaddings.size()
+               ? hoistPaddings[opOperand.getOperandNumber()]
+               : 0;
+  };
+  linalgPaddingOptions.setPaddingValueComputationFunction(getNeutralOfLinalgOp);
+  linalgPaddingOptions.setPaddingNoFoldComputationFunction(packFunc);
+  linalgPaddingOptions.setPaddingHoistComputationFunction(hoistingFunc);
+  padPattern.add<LinalgPaddingPattern>(
+      context, linalgPaddingOptions,
+      LinalgTransformationFilter(Identifier::get("pad", context)));
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(padPattern));
+}
+
 static void applyInterchangePattern(FuncOp funcOp,
                                     ArrayRef<unsigned> interchangeVector) {
   MLIRContext *context = funcOp.getContext();
@@ -780,6 +815,8 @@ void TestLinalgTransforms::runOnFunction() {
       }
     });
   }
+  if (testPadPattern)
+    return applyPadPattern(getFunction(), packPaddings, hoistPaddings);
   if (testInterchangePattern.hasValue())
     return applyInterchangePattern(getFunction(), testInterchangePattern);
 }
