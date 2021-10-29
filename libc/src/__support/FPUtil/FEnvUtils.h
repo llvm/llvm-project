@@ -9,11 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVUTILS_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVUTILS_H
 
-#include "src/__support/architectures.h"
-
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#ifdef __x86_64__
 #include "x86_64/FEnvImpl.h"
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(__aarch64__)
 #include "aarch64/FEnvImpl.h"
 #else
 #include "DummyFEnvImpl.h"

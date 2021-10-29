@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
 
-#include "src/__support/architectures.h"
 #include "src/string/memory_utils/elements.h"
 #include "src/string/memory_utils/utils.h"
 
@@ -50,7 +49,7 @@ namespace __llvm_libc {
 // superior for sizes that mattered.
 inline static void GeneralPurposeMemset(char *dst, unsigned char value,
                                         size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(__i386__) || defined(__x86_64__)
   using namespace ::__llvm_libc::x86;
 #else
   using namespace ::__llvm_libc::scalar;
