@@ -133,7 +133,7 @@ public:
   static constexpr Real EPSILON() {
     Real epsilon;
     epsilon.Normalize(
-        false, exponentBias - binaryPrecision, Fraction::MASKL(1));
+        false, exponentBias + 1 - binaryPrecision, Fraction::MASKL(1));
     return epsilon;
   }
   static constexpr Real HUGE() {
