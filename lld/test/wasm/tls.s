@@ -33,6 +33,17 @@ tls_align:
   global.get __tls_align
   end_function
 
+# TLS symbols can also be accessed by `global.get tls1@GOT@TLS`
+# which is the pattern emitted for non-DSO-local symbols.
+# In this case the global that holds that address must be
+# initialized by `__wasm_apply_global_tls_relocs` which is
+# called by `__wasm_init_tls`.
+.globl tls1_got_addr
+tls1_got_addr:
+  .functype tls1_got_addr () -> (i32)
+  global.get tls1@GOT@TLS
+  end_function
+
 .section  .bss.no_tls,"",@
 .globl  no_tls
 .p2align  2
@@ -114,7 +125,7 @@ tls3:
 # CHECK-NEXT:         Value:           4
 
 
-# ASM:      <__wasm_init_tls>:
+# ASM-LABEL: <__wasm_init_tls>:
 # ASM-EMPTY:
 # ASM-NEXT:   local.get 0
 # ASM-NEXT:   global.set 1
@@ -122,33 +133,43 @@ tls3:
 # ASM-NEXT:   i32.const 0
 # ASM-NEXT:   i32.const 12
 # ASM-NEXT:   memory.init 0, 0
+# call to __wasm_apply_global_tls_relocs>
+# ASM-NEXT:   call 3
 # ASM-NEXT:   end
 
-# ASM:      <tls1_addr>:
+# ASM-LABEL: <__wasm_apply_global_tls_relocs>:
+# ASM-EMPTY:
+# ASM-NEXT:   global.get      1
+# ASM-NEXT:   i32.const       0
+# ASM-NEXT:   i32.add
+# ASM-NEXT:   global.set      4
+# ASM-NEXT:   end
+
+# ASM-LABEL: <tls1_addr>:
 # ASM-EMPTY:
 # ASM-NEXT:   global.get 1
 # ASM-NEXT:   i32.const 0
 # ASM-NEXT:   i32.add
 # ASM-NEXT:   end
 
-# ASM:      <tls2_addr>:
+# ASM-LABEL: <tls2_addr>:
 # ASM-EMPTY:
 # ASM-NEXT:   global.get 1
 # ASM-NEXT:   i32.const 4
 # ASM-NEXT:   i32.add
 # ASM-NEXT:   end
 
-# ASM:      <tls3_addr>:
+# ASM-LABEL: <tls3_addr>:
 # ASM-EMPTY:
 # ASM-NEXT:   global.get 1
 # ASM-NEXT:   i32.const 8
 # ASM-NEXT:   i32.add
 # ASM-NEXT:   end
 
-# ASM:      <tls_align>:
+# ASM-LABEL: <tls_align>:
 # ASM-EMPTY:
-# ASM-NEXT:  global.get 3
-# ASM-NEXT:  end
+# ASM-NEXT:   global.get 3
+# ASM-NEXT:   end
 
 # Also verify TLS usage with --relocatable
 # RUN: wasm-ld --relocatable -o %t3.wasm %t.o
@@ -172,6 +193,8 @@ tls3:
 # RELOC-NEXT:        Name:            __tls_base
 # RELOC-NEXT:      - Index:           1
 # RELOC-NEXT:        Name:            __tls_align
+# RELOC-NEXT:      - Index:           2
+# RELOC-NEXT:        Name:            GOT.data.internal.tls1
 # RELOC-NEXT:    DataSegmentNames:
 # RELOC-NEXT:      - Index:           0
 # RELOC-NEXT:        Name:            .tdata

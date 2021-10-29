@@ -48,6 +48,9 @@ tls1:
 # RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
 
+# RUN: wasm-ld --experimental-pic --no-gc-sections --no-entry -pie -o %t-pie.wasm %t.o
+# RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
+
 #      CHECK:   - Type:            GLOBAL
 # __stack_pointer
 # CHECK-NEXT:     Globals:

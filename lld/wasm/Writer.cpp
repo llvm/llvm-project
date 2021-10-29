@@ -997,6 +997,14 @@ void Writer::createSyntheticInitFunctions() {
     WasmSym::initMemory->markLive();
   }
 
+  if (config->sharedMemory && out.globalSec->needsTLSRelocations()) {
+    WasmSym::applyGlobalTLSRelocs = symtab->addSyntheticFunction(
+        "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(nullSignature,
+                                "__wasm_apply_global_tls_relocs"));
+    WasmSym::applyGlobalTLSRelocs->markLive();
+  }
+
   if (config->isPic) {
     // For PIC code we create synthetic functions that apply relocations.
     // These get called from __wasm_call_ctors before the user-level
@@ -1011,13 +1019,6 @@ void Writer::createSyntheticInitFunctions() {
           "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
           make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
       WasmSym::applyGlobalRelocs->markLive();
-      if (config->sharedMemory) {
-        WasmSym::applyGlobalTLSRelocs = symtab->addSyntheticFunction(
-            "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-            make<SyntheticFunction>(nullSignature,
-                                    "__wasm_apply_global_tls_relocs"));
-        WasmSym::applyGlobalTLSRelocs->markLive();
-      }
     }
   }
 

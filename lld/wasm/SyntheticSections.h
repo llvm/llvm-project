@@ -287,7 +287,16 @@ public:
   // specific relocation types combined with linker relaxation which could
   // transform a `global.get` to an `i32.const`.
   void addInternalGOTEntry(Symbol *sym);
-  bool needsRelocations() { return internalGotSymbols.size(); }
+  bool needsRelocations() {
+    return llvm::find_if(internalGotSymbols, [=](Symbol *sym) {
+             return !sym->isTLS();
+           }) != internalGotSymbols.end();
+  }
+  bool needsTLSRelocations() {
+    return llvm::find_if(internalGotSymbols, [=](Symbol *sym) {
+             return sym->isTLS();
+           }) != internalGotSymbols.end();
+  }
   void generateRelocationCode(raw_ostream &os, bool TLS) const;
 
   std::vector<DefinedData *> dataAddressGlobals;

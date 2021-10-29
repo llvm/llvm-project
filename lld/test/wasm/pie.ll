@@ -91,7 +91,7 @@ declare void @external_func()
 ; RUN: obj2yaml %t.shmem.wasm | FileCheck %s --check-prefix=SHMEM
 
 ; SHMEM:         - Type:            CODE
-; SHMEM:           - Index:           7
+; SHMEM:           - Index:           6
 ; SHMEM-NEXT:        Locals:          []
 ; SHMEM-NEXT:        Body:            100310050B
 
@@ -109,13 +109,11 @@ declare void @external_func()
 ; SHMEM-NEXT:      - Index:           5
 ; SHMEM-NEXT:        Name:            __wasm_apply_global_relocs
 ; SHMEM-NEXT:      - Index:           6
-; SHMEM-NEXT:        Name:            __wasm_apply_global_tls_relocs
-; SHMEM-NEXT:      - Index:           7
 ; SHMEM-NEXT:        Name:            __wasm_start
-; SHMEM-NEXT:      - Index:           8
+; SHMEM-NEXT:      - Index:           7
 ; SHMEM-NEXT:        Name:            foo
-; SHMEM-NEXT:      - Index:           9
+; SHMEM-NEXT:      - Index:           8
 ; SHMEM-NEXT:        Name:            get_data_address
-; SHMEM-NEXT:      - Index:           10
+; SHMEM-NEXT:      - Index:           9
 ; SHMEM-NEXT:        Name:            _start
 
