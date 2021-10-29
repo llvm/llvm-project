@@ -66,8 +66,14 @@ public:
       switch ((llvm::omp::Directive)currentDirective_) {
       // exclude directives which do not need a check for unlabelled CYCLES
       case llvm::omp::Directive::OMPD_do:
-        return;
       case llvm::omp::Directive::OMPD_simd:
+      case llvm::omp::Directive::OMPD_parallel_do:
+      case llvm::omp::Directive::OMPD_parallel_do_simd:
+      case llvm::omp::Directive::OMPD_distribute_parallel_do:
+      case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
+      case llvm::omp::Directive::OMPD_distribute_parallel_for:
+      case llvm::omp::Directive::OMPD_distribute_simd:
+      case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
         return;
       default:
         break;
