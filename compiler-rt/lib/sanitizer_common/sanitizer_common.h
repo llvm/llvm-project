@@ -197,7 +197,7 @@ typedef void (*fill_profile_f)(uptr start, uptr rss, bool file,
 // Parse the contents of /proc/self/smaps and generate a memory profile.
 // |cb| is a tool-specific callback that fills the |stats| array.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats);
-void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, const char *smaps,
+void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, char *smaps,
                             uptr smaps_len);
 
 // Simple low-level (mmap-based) allocator for internal use. Doesn't have

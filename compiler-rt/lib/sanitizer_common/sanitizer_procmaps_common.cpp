@@ -155,18 +155,29 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats) {
   UnmapOrDie(smaps, smaps_cap);
 }
 
-void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, const char *smaps,
+void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, char *smaps,
                             uptr smaps_len) {
   uptr start = 0;
   bool file = false;
   const char *pos = smaps;
-  while (pos < smaps + smaps_len) {
+  char *end = smaps + smaps_len;
+  if (smaps_len < 2)
+    return;
+  // The following parsing can crash on almost every line
+  // in the case of malformed/truncated input.
+  // Fixing that is hard b/c e.g. ParseDecimal does not
+  // even accept end of the buffer and assumes well-formed input.
+  // So instead we patch end of the input a bit,
+  // it does not affect well-formed complete inputs.
+  *--end = 0;
+  *--end = '\n';
+  while (pos < end) {
     if (IsHex(pos[0])) {
       start = ParseHex(&pos);
       for (; *pos != '/' && *pos > '\n'; pos++) {}
       file = *pos == '/';
     } else if (internal_strncmp(pos, "Rss:", 4) == 0) {
-      while (!IsDecimal(*pos)) pos++;
+      while (pos < end && !IsDecimal(*pos)) pos++;
       uptr rss = ParseDecimal(&pos) * 1024;
       cb(start, rss, file, stats);
     }
