@@ -13,9 +13,8 @@ define i8 @testi16i8(i16 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 15
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
@@ -38,9 +37,8 @@ define i32 @testi64i32(i64 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    ret i32 [[COND_I]]
 ;
@@ -155,9 +153,8 @@ define i32 @testi64i32addsat(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    ret i32 [[COND_I]]
 ;
@@ -183,9 +180,8 @@ define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc <4 x i16> [[ADD]] to <4 x i8>
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr <4 x i8> [[CONV1_I]], <i8 7, i8 7, i8 7, i8 7>
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq <4 x i8> [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr <4 x i16> [[ADD]], <i16 15, i16 15, i16 15, i16 15>
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc <4 x i16> [[SHR4_I]] to <4 x i8>
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor <4 x i8> [[CONV5_I]], <i8 127, i8 127, i8 127, i8 127>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[XOR_I:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 127, i8 127, i8 127, i8 127>, <4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>
 ; CHECK-NEXT:    [[COND_I:%.*]] = select <4 x i1> [[CMP_NOT_I]], <4 x i8> [[CONV1_I]], <4 x i8> [[XOR_I]]
 ; CHECK-NEXT:    ret <4 x i8> [[COND_I]]
 ;
@@ -211,9 +207,8 @@ define <4 x i8> @testv4i16i8add(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc <4 x i16> [[ADD]] to <4 x i8>
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr <4 x i8> [[CONV1_I]], <i8 7, i8 7, i8 7, i8 7>
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq <4 x i8> [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr <4 x i16> [[ADD]], <i16 15, i16 15, i16 15, i16 15>
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc <4 x i16> [[SHR4_I]] to <4 x i8>
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor <4 x i8> [[CONV5_I]], <i8 127, i8 127, i8 127, i8 127>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[XOR_I:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 127, i8 127, i8 127, i8 127>, <4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>
 ; CHECK-NEXT:    [[COND_I:%.*]] = select <4 x i1> [[CMP_NOT_I]], <4 x i8> [[CONV1_I]], <4 x i8> [[XOR_I]]
 ; CHECK-NEXT:    ret <4 x i8> [[COND_I]]
 ;
@@ -239,9 +234,8 @@ define i8 @testi16i8_revcmp(i16 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 15
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
@@ -264,9 +258,8 @@ define i8 @testi16i8_revselect(i16 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
 ; CHECK-NEXT:    [[CMP_NOT_I_NOT:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 15
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I_NOT]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
@@ -332,9 +325,8 @@ define i8 @badimm1(i16 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 15
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
@@ -357,9 +349,8 @@ define i8 @badimm2(i16 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 6
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 15
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
@@ -407,9 +398,8 @@ define i8 @badimm4(i16 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 15
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 126
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i8 126, i8 -127
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
@@ -434,9 +424,8 @@ define i32 @oneusexor(i64 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR_I]])
 ; CHECK-NEXT:    ret i32 [[COND_I]]
@@ -461,9 +450,8 @@ define i32 @oneuseconv(i64 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    call void @use(i32 [[CONV1_I]])
 ; CHECK-NEXT:    ret i32 [[COND_I]]
@@ -488,9 +476,8 @@ define i32 @oneusecmp(i64 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    call void @use1(i1 [[CMP_NOT_I]])
 ; CHECK-NEXT:    ret i32 [[COND_I]]
@@ -515,9 +502,8 @@ define i32 @oneuseboth(i64 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR_I]])
 ; CHECK-NEXT:    call void @use(i32 [[CONV1_I]])
@@ -544,9 +530,8 @@ define i32 @oneusethree(i64 %add) {
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i64 [[ADD]] to i32
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i32 [[CONV1_I]], 31
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i32 [[SHR2_I]], [[CONV_I]]
-; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i64 [[ADD]], 63
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i64 [[SHR4_I]] to i32
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[CONV5_I]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD]], -1
+; CHECK-NEXT:    [[XOR_I:%.*]] = select i1 [[TMP1]], i32 2147483647, i32 -2147483648
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i32 [[CONV1_I]], i32 [[XOR_I]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR_I]])
 ; CHECK-NEXT:    call void @use(i32 [[CONV1_I]])
