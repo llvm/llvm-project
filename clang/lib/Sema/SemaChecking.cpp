@@ -7553,11 +7553,11 @@ bool Sema::SemaBuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
       StrippedRVType = StrippedRVType.getCanonicalType().getUnqualifiedType();
 
     // The only case where the argument type and expected type are allowed to
-    // mismatch is if the argument type is a non-void pointer and expected type
-    // is a void pointer.
+    // mismatch is if the argument type is a non-void pointer (or array) and
+    // expected type is a void pointer.
     if (StrippedRVType != ExpectedType)
       if (!(ExpectedType->isVoidPointerType() &&
-            StrippedRVType->isPointerType()))
+            (StrippedRVType->isPointerType() || StrippedRVType->isArrayType())))
         return Diag(Arg->getBeginLoc(),
                     diag::err_typecheck_convert_incompatible)
                << PassedType << ExpectedType << 1 << 0 << 0;
