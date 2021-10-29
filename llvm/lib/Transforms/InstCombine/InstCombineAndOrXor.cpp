@@ -3569,10 +3569,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;
 
-  // Use DeMorgan and reassociation to eliminate a 'not' op.
   Value *X, *Y;
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
+    // Use DeMorgan and reassociation to eliminate a 'not' op.
     Constant *C2;
     if (match(Op0, m_OneUse(m_Or(m_Not(m_Value(X)), m_Constant(C2))))) {
       // (~X | C2) ^ C1 --> ((X & ~C2) ^ -1) ^ C1 --> (X & ~C2) ^ ~C1
@@ -3583,6 +3583,21 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // (~X & C2) ^ C1 --> ((X | ~C2) ^ -1) ^ C1 --> (X | ~C2) ^ ~C1
       Value *Or = Builder.CreateOr(X, ConstantExpr::getNot(C2));
       return BinaryOperator::CreateXor(Or, ConstantExpr::getNot(C1));
+    }
+
+    // Convert xor ([trunc] (ashr X, BW-1)), C =>
+    //   select(X >s -1, C, ~C)
+    // The ashr creates "AllZeroOrAllOne's", which then optionally inverses the
+    // constant depending on whether this input is less than 0.
+    const APInt *CA;
+    if (match(Op0, m_OneUse(m_TruncOrSelf(
+                       m_AShr(m_Value(X), m_APIntAllowUndef(CA))))) &&
+        *CA == X->getType()->getScalarSizeInBits() - 1 &&
+        !C1->isAllOnesValue()) {
+      assert(!C1->isZeroValue() && "Unexpected xor with 0");
+      Value *ICmp =
+          Builder.CreateICmpSGT(X, Constant::getAllOnesValue(X->getType()));
+      return SelectInst::Create(ICmp, Op1, Builder.CreateNot(Op1));
     }
   }
 

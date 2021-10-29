@@ -7,8 +7,8 @@ declare void @use32(i32)
 
 define i8 @testi8i8(i8 %add) {
 ; CHECK-LABEL: @testi8i8(
-; CHECK-NEXT:    [[SH:%.*]] = ashr i8 [[ADD:%.*]], 7
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[SH]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8 [[ADD:%.*]], -1
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP1]], i8 127, i8 -128
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %sh = ashr i8 %add, 7
@@ -18,9 +18,8 @@ define i8 @testi8i8(i8 %add) {
 
 define i8 @testi16i8(i16 %add) {
 ; CHECK-LABEL: @testi16i8(
-; CHECK-NEXT:    [[SH:%.*]] = ashr i16 [[ADD:%.*]], 15
-; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[SH]] to i8
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[T]], 27
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 [[ADD:%.*]], -1
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP1]], i8 27, i8 -28
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %sh = ashr i16 %add, 15
@@ -31,9 +30,8 @@ define i8 @testi16i8(i16 %add) {
 
 define i32 @testi64i32(i64 %add) {
 ; CHECK-LABEL: @testi64i32(
-; CHECK-NEXT:    [[SH:%.*]] = ashr i64 [[ADD:%.*]], 63
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[SH]] to i32
-; CHECK-NEXT:    [[X:%.*]] = xor i32 [[T]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[ADD:%.*]], -1
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP1]], i32 127, i32 -128
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %sh = ashr i64 %add, 63
@@ -44,8 +42,8 @@ define i32 @testi64i32(i64 %add) {
 
 define i128 @testi128i128(i128 %add) {
 ; CHECK-LABEL: @testi128i128(
-; CHECK-NEXT:    [[SH:%.*]] = ashr i128 [[ADD:%.*]], 127
-; CHECK-NEXT:    [[X:%.*]] = xor i128 [[SH]], 27
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i128 [[ADD:%.*]], -1
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP1]], i128 27, i128 -28
 ; CHECK-NEXT:    ret i128 [[X]]
 ;
   %sh = ashr i128 %add, 127
@@ -55,9 +53,8 @@ define i128 @testi128i128(i128 %add) {
 
 define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8(
-; CHECK-NEXT:    [[SH:%.*]] = ashr <4 x i16> [[ADD:%.*]], <i16 15, i16 15, i16 15, i16 15>
-; CHECK-NEXT:    [[T:%.*]] = trunc <4 x i16> [[SH]] to <4 x i8>
-; CHECK-NEXT:    [[X:%.*]] = xor <4 x i8> [[T]], <i8 27, i8 27, i8 27, i8 27>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 27, i8 27, i8 27, i8 27>, <4 x i8> <i8 -28, i8 -28, i8 -28, i8 -28>
 ; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
   %sh = ashr <4 x i16> %add, <i16 15, i16 15, i16 15, i16 15>
@@ -68,9 +65,8 @@ define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 
 define <4 x i8> @testv4i16i8_undef(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8_undef(
-; CHECK-NEXT:    [[SH:%.*]] = ashr <4 x i16> [[ADD:%.*]], <i16 15, i16 undef, i16 15, i16 15>
-; CHECK-NEXT:    [[T:%.*]] = trunc <4 x i16> [[SH]] to <4 x i8>
-; CHECK-NEXT:    [[X:%.*]] = xor <4 x i8> [[T]], <i8 27, i8 27, i8 undef, i8 27>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 27, i8 27, i8 undef, i8 27>, <4 x i8> <i8 -28, i8 -28, i8 undef, i8 -28>
 ; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
   %sh = ashr <4 x i16> %add, <i16 15, i16 undef, i16 15, i16 15>
@@ -112,9 +108,9 @@ define i16 @extrause(i16 %add) {
 define i16 @extrause_trunc1(i32 %add) {
 ; CHECK-LABEL: @extrause_trunc1(
 ; CHECK-NEXT:    [[SH:%.*]] = ashr i32 [[ADD:%.*]], 31
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SH]] to i16
 ; CHECK-NEXT:    call void @use32(i32 [[SH]])
-; CHECK-NEXT:    [[X:%.*]] = xor i16 [[T]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[ADD]], -1
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP1]], i16 127, i16 -128
 ; CHECK-NEXT:    ret i16 [[X]]
 ;
   %sh = ashr i32 %add, 31
