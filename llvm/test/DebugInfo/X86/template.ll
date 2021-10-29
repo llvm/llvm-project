@@ -1,6 +1,6 @@
 
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | not llvm-dwarfdump -verify - | FileCheck %s --check-prefix VERIFY
+; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | llvm-dwarfdump -verify - | FileCheck %s --check-prefix VERIFY
 
 ; IR generated with `clang++ -g -emit-llvm -S` from the following code:
 ; template<typename T> T var;
@@ -13,8 +13,7 @@
 ; int glbl = func<3, &glbl, y_impl, nullptr, E, 1, 2>();
 ; y_impl<int>::nested n;
 
-; VERIFY-NOT: error: DIE has DW_AT_type with incompatible tag DW_TAG_unspecified_type
-; VERIFY: error: DIEs have overlapping address ranges
+; VERIFY-NOT: error:
 
 ; CHECK: [[INT:0x[0-9a-f]*]]:{{ *}}DW_TAG_base_type
 ; CHECK-NEXT: DW_AT_name{{.*}} = "int"

@@ -39,6 +39,8 @@ struct DWARFAddressRange {
   /// Returns true if [LowPC, HighPC) intersects with [RHS.LowPC, RHS.HighPC).
   bool intersects(const DWARFAddressRange &RHS) const {
     assert(valid() && RHS.valid());
+    if (SectionIndex != RHS.SectionIndex)
+      return false;
     // Empty ranges can't intersect.
     if (LowPC == HighPC || RHS.LowPC == RHS.HighPC)
       return false;
@@ -69,12 +71,12 @@ struct DWARFAddressRange {
 
 inline bool operator<(const DWARFAddressRange &LHS,
                       const DWARFAddressRange &RHS) {
-  return std::tie(LHS.LowPC, LHS.HighPC) < std::tie(RHS.LowPC, RHS.HighPC);
+  return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) < std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
 }
 
 inline bool operator==(const DWARFAddressRange &LHS,
                        const DWARFAddressRange &RHS) {
-  return std::tie(LHS.LowPC, LHS.HighPC) == std::tie(RHS.LowPC, RHS.HighPC);
+  return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) == std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
