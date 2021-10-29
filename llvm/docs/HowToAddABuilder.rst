@@ -133,8 +133,8 @@ Here are the steps you can follow to do so:
    reconfigured.
 
 #. Check the status of your buildbot-worker on the `Waterfall Display
-   <http://lab.llvm.org:8011/#/waterfall>`_ to make sure it is connected, and
-   ``http://lab.llvm.org:8011/#/workers`` to see if administrator contact and
-   worker information are correct.
+   <http://lab.llvm.org/buildbot/#/waterfall>`_ to make sure it is connected,
+   and the `Workers Display <http://lab.llvm.org/buildbot/#/workers>`_ to see if
+   administrator contact and worker information are correct.
 
 #. Wait for the first build to succeed and enjoy.
