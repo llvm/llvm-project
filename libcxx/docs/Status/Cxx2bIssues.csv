@@ -3,7 +3,7 @@
 "`3117 <https://wg21.link/LWG3117>`__","Missing ``packaged_task`` deduction guides","November 2020","",""
 "`3143 <https://wg21.link/LWG3143>`__","``monotonic_buffer_resource`` growth policy is unclear","November 2020","",""
 "`3195 <https://wg21.link/LWG3195>`__","What is the stored pointer value of an empty ``weak_ptr``?","November 2020","",""
-"`3211 <https://wg21.link/LWG3211>`__","``std::tuple<>`` should be trivially constructible","November 2020","",""
+"`3211 <https://wg21.link/LWG3211>`__","``std::tuple<>`` should be trivially constructible","November 2020","|Complete|","9.0"
 "`3236 <https://wg21.link/LWG3236>`__","Random access iterator requirements lack limiting relational operators domain to comparing those from the same range","November 2020","","","|ranges|"
 "`3265 <https://wg21.link/LWG3265>`__","``move_iterator``'s conversions are more broken after P1207","November 2020","Fixed by `LWG3435 <https://wg21.link/LWG3435>`__",""
 "`3435 <https://wg21.link/LWG3435>`__","``three_way_comparable_with<reverse_iterator<int*>, reverse_iterator<const int*>>``","November 2020","|Complete|","13.0"
