@@ -276,6 +276,10 @@ define <4 x i32> @combine_vec_neg_xor_consts(<4 x i32> %x) {
   ret <4 x i32> %sub
 }
 
+; With AVX, this could use broadcast (an extra load) and
+; load-folded 'add', but currently we favor the virtually
+; free pcmpeq instruction.
+
 define void @PR52032_oneuse_constant(<8 x i32>* %p) {
 ; SSE-LABEL: PR52032_oneuse_constant:
 ; SSE:       # %bb.0:
@@ -302,6 +306,9 @@ define void @PR52032_oneuse_constant(<8 x i32>* %p) {
   ret void
 }
 
+; With AVX, we don't transform 'add' to 'sub' because that prevents load folding.
+; With SSE, we do it because we can't load fold the other op without overwriting the constant op.
+
 define void @PR52032(<8 x i32>* %p) {
 ; SSE-LABEL: PR52032:
 ; SSE:       # %bb.0:
@@ -322,12 +329,10 @@ define void @PR52032(<8 x i32>* %p) {
 ;
 ; AVX-LABEL: PR52032:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX-NEXT:    vmovdqu 32(%rdi), %ymm2
-; AVX-NEXT:    vpsubd %ymm0, %ymm1, %ymm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
+; AVX-NEXT:    vpaddd (%rdi), %ymm0, %ymm1
 ; AVX-NEXT:    vmovdqu %ymm1, (%rdi)
-; AVX-NEXT:    vpsubd %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vpaddd 32(%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    vmovdqu %ymm0, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -340,6 +345,10 @@ define void @PR52032(<8 x i32>* %p) {
   store <8 x i32> %i9, <8 x i32>* %p2, align 4
   ret void
 }
+
+; Same as above, but 128-bit ops:
+; With AVX, we don't transform 'add' to 'sub' because that prevents load folding.
+; With SSE, we do it because we can't load fold the other op without overwriting the constant op.
 
 define void @PR52032_2(<4 x i32>* %p) {
 ; SSE-LABEL: PR52032_2:
@@ -355,12 +364,10 @@ define void @PR52032_2(<4 x i32>* %p) {
 ;
 ; AVX-LABEL: PR52032_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqu (%rdi), %xmm1
-; AVX-NEXT:    vmovdqu 16(%rdi), %xmm2
-; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [1,1,1,1]
+; AVX-NEXT:    vpaddd (%rdi), %xmm0, %xmm1
 ; AVX-NEXT:    vmovdqu %xmm1, (%rdi)
-; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpaddd 16(%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, 16(%rdi)
 ; AVX-NEXT:    retq
   %i3 = load <4 x i32>, <4 x i32>* %p, align 4
@@ -372,6 +379,8 @@ define void @PR52032_2(<4 x i32>* %p) {
   store <4 x i32> %i9, <4 x i32>* %p2, align 4
   ret void
 }
+
+; If we are starting with a 'sub', it is always better to do the transform.
 
 define void @PR52032_3(<4 x i32>* %p) {
 ; SSE-LABEL: PR52032_3:
@@ -402,6 +411,8 @@ define void @PR52032_3(<4 x i32>* %p) {
   store <4 x i32> %i9, <4 x i32>* %p2, align 4
   ret void
 }
+
+; If there's no chance of profitable load folding (because of extra uses), we convert 'add' to 'sub'.
 
 define void @PR52032_4(<4 x i32>* %p, <4 x i32>* %q) {
 ; SSE-LABEL: PR52032_4:

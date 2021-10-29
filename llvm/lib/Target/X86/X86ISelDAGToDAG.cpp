@@ -880,16 +880,31 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       continue;
     }
 
-    /// Convert vector increment or decrement to sub/add with an all-ones
-    /// constant:
-    /// add X, <1, 1...> --> sub X, <-1, -1...>
-    /// sub X, <1, 1...> --> add X, <-1, -1...>
-    /// The all-ones vector constant can be materialized using a pcmpeq
-    /// instruction that is commonly recognized as an idiom (has no register
-    /// dependency), so that's better/smaller than loading a splat 1 constant.
+    // Convert vector increment or decrement to sub/add with an all-ones
+    // constant:
+    // add X, <1, 1...> --> sub X, <-1, -1...>
+    // sub X, <1, 1...> --> add X, <-1, -1...>
+    // The all-ones vector constant can be materialized using a pcmpeq
+    // instruction that is commonly recognized as an idiom (has no register
+    // dependency), so that's better/smaller than loading a splat 1 constant.
+    //
+    // But don't do this if it would inhibit a potentially profitable load
+    // folding opportunity for the other operand. That only occurs with the
+    // intersection of:
+    // (1) The other operand (op0) is load foldable.
+    // (2) The op is an add (otherwise, we are *creating* an add and can still
+    //     load fold the other op).
+    // (3) The target has AVX (otherwise, we have a destructive add and can't
+    //     load fold the other op without killing the constant op).
+    // (4) The constant 1 vector has multiple uses (so it is profitable to load
+    //     into a register anyway).
+    auto mayPreventLoadFold = [&]() {
+      return X86::mayFoldLoad(N->getOperand(0), *Subtarget) &&
+             N->getOpcode() == ISD::ADD && Subtarget->hasAVX() &&
+             !N->getOperand(1).hasOneUse();
+    };
     if ((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
-        N->getSimpleValueType(0).isVector()) {
-
+        N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
       if (X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
