@@ -61,5 +61,8 @@ struct Test {
 @protocol P
 @end;
 
-using TestAlias = id<P>;
-// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:23> col:7 TestAlias 'id<P>'
+using TestObjCPointerWithoutStar = id<P>;
+// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:40> col:7 TestObjCPointerWithoutStar 'id<P>'
+
+using TestObjCPointerWithStar = A *;
+// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:35> col:7 TestObjCPointerWithStar 'A *'
