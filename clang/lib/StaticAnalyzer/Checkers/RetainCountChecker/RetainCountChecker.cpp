@@ -1188,14 +1188,14 @@ ProgramStateRef RetainCountChecker::checkRegionChanges(
   if (!invalidated)
     return state;
 
-  llvm::SmallPtrSet<SymbolRef, 8> WhitelistedSymbols;
+  llvm::SmallPtrSet<SymbolRef, 8> AllowedSymbols;
 
   for (const MemRegion *I : ExplicitRegions)
     if (const SymbolicRegion *SR = I->StripCasts()->getAs<SymbolicRegion>())
-      WhitelistedSymbols.insert(SR->getSymbol());
+      AllowedSymbols.insert(SR->getSymbol());
 
   for (SymbolRef sym : *invalidated) {
-    if (WhitelistedSymbols.count(sym))
+    if (AllowedSymbols.count(sym))
       continue;
     // Remove any existing reference-count binding.
     state = removeRefBinding(state, sym);

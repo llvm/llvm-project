@@ -29,7 +29,7 @@ class Expr;
 /// values).
 ///
 /// For more context see Static Analyzer checkers documentation - specifically
-/// webkit.UncountedCallArgsChecker checker. Whitelist of transformations:
+/// webkit.UncountedCallArgsChecker checker. Allowed list of transformations:
 /// - constructors of ref-counted types (including factory methods)
 /// - getters of ref-counted types
 /// - member overloaded operators
