@@ -6,17 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that std::tuple<> is trivially constructible. That is not
-// required by the Standard, but libc++ provides that guarantee.
-
 // UNSUPPORTED: c++03
 
 #include <tuple>
 #include <type_traits>
 
-
 static_assert(std::is_trivially_constructible<std::tuple<>>::value, "");
-
-int main(int, char**) {
-  return 0;
-}
