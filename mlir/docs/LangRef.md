@@ -439,7 +439,7 @@ For example, in a function body, block terminators must either branch to a
 different block, or return from a function where the types of the `return`
 arguments must match the result types of the function signature. Similarly, the
 function arguments must match the types and count of the region arguments. In
-general, operations with regions can define these correspondances arbitrarily.
+general, operations with regions can define these correspondences arbitrarily.
 
 ### Value Scoping
 

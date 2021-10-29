@@ -419,7 +419,7 @@ if operation1.results.types == operation2.operand.types:
 ```
 
 `OpView` subclasses for specific operations may provide leaner accessors to
-properties of an opeation. For example, named attributes, operand and results
+properties of an operation. For example, named attributes, operand and results
 are usually accessible as properties of the `OpView` subclass with the same
 name, such as `operation.const_value` instead of
 `operation.attributes["const_value"]`. If this name is a reserved Python
@@ -441,7 +441,7 @@ thus iterable, which provides access to the blocks. One can also use the
 `.blocks` property.
 
 ```python
-# Regions are directly iterable and give acceess to blocks.
+# Regions are directly iterable and give access to blocks.
 for block1, block2 in zip(operation.regions[0], operation.regions[0].blocks)
   assert block1 == block2
 ```
@@ -460,7 +460,7 @@ alive. This operation can be accessed using the `.owner` property.
 Attributes and types are (mostly) immutable context-owned objects. They are
 represented as either:
 
--   an opaque `Attribute` or `Type` object supporting printing and comparsion;
+-   an opaque `Attribute` or `Type` object supporting printing and comparison;
     or
 -   a concrete subclass thereof with access to properties of the attribute or
     type.
@@ -606,7 +606,7 @@ Python bindings also support IR creation and manipulation.
 
 Operations can be created given a `Location` and an optional `InsertionPoint`.
 It is often easier to user context managers to specify locations and insertion
-points for several operations created in a row as decribed above.
+points for several operations created in a row as described above.
 
 Concrete operations can be created by using constructors of the corresponding
 `OpView` subclasses. The generic, default form of the constructor accepts:
@@ -917,7 +917,7 @@ from ._my_dialect_ops_gen import *
 When the python bindings need to locate a wrapper module, they consult the
 `dialect_search_path` and use it to find an appropriately named module. For the
 main repository, this search path is hard-coded to include the `mlir.dialects`
-module, which is where wrappers are emitted by the abobe build rule. Out of tree
+module, which is where wrappers are emitted by the above build rule. Out of tree
 dialects and add their modules to the search path by calling:
 
 ```python
