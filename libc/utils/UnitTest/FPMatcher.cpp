@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestHelpers.h"
+#include "FPMatcher.h"
 
-#include "FPBits.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 #include <string>
 
