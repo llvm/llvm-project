@@ -25,6 +25,26 @@
 // RUN:   -fgpu-rdc \
 // RUN:   %s 2>&1 | FileCheck %s
 
+//
+// Offload-arch mode (--offload-arch) tests for TargetID
+//
+// RUN:   %clang -### -target x86_64-linux-gnu -fopenmp\
+// RUN:   --offload-arch=gfx908:xnack+:sramecc+ \
+// RUN:   --offload-arch=gfx908:xnack+:sramecc- \
+// RUN:   %s 2>&1 | FileCheck %s
+
+// RUN:   %clang -### -target x86_64-linux-gnu -fopenmp\
+// RUN:   --offload-arch=gfx908:xnack+:sramecc+ \
+// RUN:   --offload-arch=gfx908:xnack+:sramecc- \
+// RUN:   -save-temps \
+// RUN:   %s 2>&1 | FileCheck %s
+
+// RUN:   %clang -### -target x86_64-linux-gnu -fopenmp\
+// RUN:   --offload-arch=gfx908:xnack+:sramecc+ \
+// RUN:   --offload-arch=gfx908:xnack+:sramecc- \
+// RUN:   -fgpu-rdc \
+// RUN:   %s 2>&1 | FileCheck %s
+
 // CHECK: [[CLANG:"[^"]*clang[^"]*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-target-cpu" "gfx908"
 // CHECK-SAME: "-target-feature" "+sramecc"

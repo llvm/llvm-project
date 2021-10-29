@@ -648,7 +648,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
     std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
     if (LibDeviceFile.empty()) {
-      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << TargetID;
       return;
     }
 

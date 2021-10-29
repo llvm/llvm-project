@@ -194,7 +194,7 @@ int getRuntimeCapabilities(char *offload_arch_output_buffer,
   }
   size_t out_str_len = offload_arch.size();
   if (out_str_len > offload_arch_output_buffer_size) {
-    fprintf(stderr, "ERROR: strlen %ld exceeds buffer length %ld \n",
+    fprintf(stderr, "ERROR: strlen %zd exceeds buffer length %zd \n",
             out_str_len, offload_arch_output_buffer_size);
     return 1;
   }
@@ -267,8 +267,8 @@ getOffloadArchFromBinary(const std::string &input_filename) {
       const char *arch_list_ptr = Contents.data();
       std::string arch;
       // Iterate over list of requirements to extract individual requirements.
-      for (uint i = 0; i < Contents.size(); i++) {
-        for (uint j = i; arch_list_ptr[j] != '\0'; j++, i++) {
+      for (unsigned i = 0; i < Contents.size(); i++) {
+        for (unsigned j = i; arch_list_ptr[j] != '\0'; j++, i++) {
           arch.push_back(arch_list_ptr[i]);
         }
         results.push_back(arch);
