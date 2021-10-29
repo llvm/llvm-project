@@ -349,7 +349,7 @@ public:
   /// Sets the insertion point to the node after the specified value. If value
   /// has a defining operation, sets the insertion point to the node after such
   /// defining operation. This will cause subsequent insertions to go right
-  /// after it. Otherwise, value is a BlockArgumen. Sets the insertion point to
+  /// after it. Otherwise, value is a BlockArgument. Sets the insertion point to
   /// the start of its block.
   void setInsertionPointAfterValue(Value val) {
     if (Operation *op = val.getDefiningOp()) {
