@@ -11,7 +11,6 @@
 #include "src/fenv/fetestexcept.h"
 
 #include "src/__support/FPUtil/FEnvUtils.h"
-#include "src/__support/architectures.h"
 #include "utils/UnitTest/FPExceptMatcher.h"
 #include "utils/UnitTest/Test.h"
 
@@ -21,7 +20,7 @@
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
 TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
-#if defined(LLVM_LIBC_ARCH_AARCH64)
+#ifdef __aarch64__
   // Few aarch64 HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -33,7 +32,7 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   __llvm_libc::fputil::enableExcept(FE_DIVBYZERO);
   if (__llvm_libc::fputil::getExcept() == 0)
     return;
-#endif // defined(LLVM_LIBC_ARCH_AARCH64)
+#endif
 
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memcmp.h"
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
 #include "src/string/memory_utils/elements.h"
 
@@ -16,7 +15,7 @@
 namespace __llvm_libc {
 
 static int memcmp_impl(const char *lhs, const char *rhs, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(__i386__) || defined(__x86_64__)
   using namespace ::__llvm_libc::x86;
 #else
   using namespace ::__llvm_libc::scalar;

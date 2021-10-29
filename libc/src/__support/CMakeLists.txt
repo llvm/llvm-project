@@ -3,7 +3,6 @@ add_subdirectory(CPP)
 add_header_library(
   common
   HDRS
-    architectures.h
     common.h
     endian.h
     sanitizer.h
