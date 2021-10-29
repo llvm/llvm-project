@@ -10,7 +10,7 @@
 ; RUN: opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=Function -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-FUNCTION %s
 
 ;; Check behavior on non-existent replay file
-; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
+; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/non-existent-dummy.txt -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
 
 ;; Check scope inlining errors out on non <Module|Function> inputs
 ; RUN: not opt < %s -passes=inline -cgscc-inline-replay=%S/Inputs/cgscc-inline-replay.txt -cgscc-inline-replay-scope=function -pass-remarks=inline --disable-output 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s

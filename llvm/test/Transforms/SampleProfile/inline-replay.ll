@@ -15,7 +15,7 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown-inline-all.prof -sample-profile-inline-replay=%S/Inputs/inline-replay-function-scope.txt -sample-profile-inline-replay-scope=Function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ALL-FUNCTION %s
 
 ;; Check behavior on non-existent replay file
-; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
+; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/non-existent-dummy.txt -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR %s
 
 ;; Check scope inlining errors out on non <Module|Function> inputs
 ; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-inline-replay=%S/Inputs/inline-replay.txt -sample-profile-inline-replay-scope=function -sample-profile-merge-inlinee -sample-profile-top-down-load -pass-remarks=inline -S 2>&1 | FileCheck -check-prefix=REPLAY-ERROR-SCOPE %s
