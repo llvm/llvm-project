@@ -1014,8 +1014,6 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
-  // FIXME because of a bug in the FormattersContainer we need to add a summary
-  // for both X* and const X* (<rdar://problem/12717717>)
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::Char8StringSummaryProvider,
       "char8_t * summary provider", ConstString("char8_t *"), string_flags);
