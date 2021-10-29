@@ -9,6 +9,7 @@ permissions:
 jobs:
   action:
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       - uses: dessant/repo-lockdown@v2
         with:
