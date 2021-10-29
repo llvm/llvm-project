@@ -50230,16 +50230,20 @@ static SDValue combineX86GatherScatter(SDNode *N, SelectionDAG &DAG,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const X86Subtarget &Subtarget) {
   auto *MemOp = cast<X86MaskedGatherScatterSDNode>(N);
+  SDValue BasePtr = MemOp->getBasePtr();
   SDValue Index = MemOp->getIndex();
   SDValue Scale = MemOp->getScale();
   SDValue Mask = MemOp->getMask();
 
   // Attempt to fold an index scale into the scale value directly.
+  // For smaller indices, implicit sext is performed BEFORE scale, preventing
+  // this fold under most circumstances.
   // TODO: Move this into X86DAGToDAGISel::matchVectorAddressRecursively?
   if ((Index.getOpcode() == X86ISD::VSHLI ||
        (Index.getOpcode() == ISD::ADD &&
         Index.getOperand(0) == Index.getOperand(1))) &&
-      isa<ConstantSDNode>(Scale)) {
+      isa<ConstantSDNode>(Scale) &&
+      BasePtr.getScalarValueSizeInBits() == Index.getScalarValueSizeInBits()) {
     unsigned ShiftAmt =
         Index.getOpcode() == ISD::ADD ? 1 : Index.getConstantOperandVal(1);
     uint64_t ScaleAmt = cast<ConstantSDNode>(Scale)->getZExtValue();
