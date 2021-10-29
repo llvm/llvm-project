@@ -635,16 +635,18 @@ enum Action : uint32_t {
   }
 
 #define IMPL_GETNEXT(NAME, V)                                                  \
-  bool _mlir_ciface_##NAME(void *ptr, StridedMemRefType<uint64_t, 1> *iref,    \
+  bool _mlir_ciface_##NAME(void *tensor, StridedMemRefType<uint64_t, 1> *iref, \
                            StridedMemRefType<V, 0> *vref) {                    \
     assert(iref->strides[0] == 1);                                             \
     uint64_t *indx = iref->data + iref->offset;                                \
     V *value = vref->data + vref->offset;                                      \
     const uint64_t isize = iref->sizes[0];                                     \
-    auto iter = static_cast<SparseTensorCOO<V> *>(ptr);                        \
+    auto iter = static_cast<SparseTensorCOO<V> *>(tensor);                     \
     const Element<V> *elem = iter->getNext();                                  \
-    if (elem == nullptr)                                                       \
+    if (elem == nullptr) {                                                     \
+      delete iter;                                                             \
       return false;                                                            \
+    }                                                                          \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indx[r] = elem->indices[r];                                              \
     *value = elem->value;                                                      \
