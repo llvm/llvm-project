@@ -1,6 +1,5 @@
-// RUN: %clang %s -c -o - -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params \
+// RUN: %clang %target_itanium_abi_host_triple %s -c -o - -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params \
 // RUN:   | llvm-dwarfdump --verify -
-// REQUIRES: native
 template<typename ...Ts>
 struct t1 {
 };
