@@ -1125,8 +1125,6 @@ private:
 
   void transformSimpleIfRegion(RegionMRT *Region);
 
-  void eliminateDeadBranchOperands(MachineBasicBlock::instr_iterator &II);
-
   void insertUnconditionalBranch(MachineBasicBlock *MBB,
                                  MachineBasicBlock *Dest,
                                  const DebugLoc &DL = DebugLoc());
