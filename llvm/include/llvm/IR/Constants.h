@@ -1308,13 +1308,14 @@ public:
                             Type *SrcTy = nullptr) const;
 
   /// Returns an Instruction which implements the same operation as this
-  /// ConstantExpr. The instruction is not linked to any basic block.
+  /// ConstantExpr. If \p InsertBefore is not null, the new instruction is
+  /// inserted before it, otherwise it is not inserted into any basic block.
   ///
   /// A better approach to this could be to have a constructor for Instruction
   /// which would take a ConstantExpr parameter, but that would have spread
   /// implementation details of ConstantExpr outside of Constants.cpp, which
   /// would make it harder to remove ConstantExprs altogether.
-  Instruction *getAsInstruction() const;
+  Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
