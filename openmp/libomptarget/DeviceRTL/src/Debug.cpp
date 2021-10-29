@@ -12,6 +12,7 @@
 
 #include "Debug.h"
 #include "Configuration.h"
+#include "Interface.h"
 #include "Mapping.h"
 #include "Types.h"
 
@@ -41,14 +42,15 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 static uint32_t Level = 0;
 #pragma omp allocate(Level) allocator(omp_pteam_mem_alloc)
 
-DebugEntryRAII::DebugEntryRAII(const unsigned Line, const char *Function) {
+DebugEntryRAII::DebugEntryRAII(const char *File, const unsigned Line,
+                               const char *Function) {
   if (config::isDebugMode(config::DebugKind::FunctionTracing) &&
-      mapping::getThreadIdInBlock() == 0) {
+      mapping::getThreadIdInBlock() == 0 && mapping::getBlockId() == 0) {
 
     for (int I = 0; I < Level; ++I)
       PRINTF("%s", "  ");
 
-    PRINTF("Line %u: Thread %u Entering %s:%u\n", Line,
+    PRINTF("%s:%u: Thread %u Entering %s\n", File, Line,
            mapping::getThreadIdInBlock(), Function);
     Level++;
   }
@@ -56,7 +58,7 @@ DebugEntryRAII::DebugEntryRAII(const unsigned Line, const char *Function) {
 
 DebugEntryRAII::~DebugEntryRAII() {
   if (config::isDebugMode(config::DebugKind::FunctionTracing) &&
-      mapping::getThreadIdInBlock() == 0)
+      mapping::getThreadIdInBlock() == 0 && mapping::getBlockId() == 0)
     Level--;
 }
 
