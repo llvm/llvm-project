@@ -310,7 +310,7 @@ public:
       printRight(OB);
   }
 
-  // Print the "left" side of this Node into OutputString.
+  // Print the "left" side of this Node into OutputBuffer.
   virtual void printLeft(OutputBuffer &) const = 0;
 
   // Print the "right". This distinction is necessary to represent C++ types
@@ -1210,7 +1210,7 @@ public:
 class ParameterPack final : public Node {
   NodeArray Data;
 
-  // Setup OutputString for a pack expansion unless we're already expanding one.
+  // Setup OutputBuffer for a pack expansion unless we're already expanding one.
   void initializePackExpansion(OutputBuffer &OB) const {
     if (OB.CurrentPackMax == std::numeric_limits<unsigned>::max()) {
       OB.CurrentPackMax = static_cast<unsigned>(Data.size());
