@@ -35,7 +35,7 @@ ELF Improvements
 Architecture specific changes:
 
 * The x86-32 port now supports TLSDESC (``-mtls-dialect=gnu2``).
-  (`D112582 <https://reviews.llvm.org/D112582 >`_)
+  (`D112582 <https://reviews.llvm.org/D112582>`_)
 
 Breaking changes
 ----------------
