@@ -348,26 +348,14 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
 RangeSample
 ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
   RangeSample Ranges(RangeCounter.begin(), RangeCounter.end());
-  // For each range, we search for the range of the function it belongs to and
+  // For each range, we search for all ranges of the function it belongs to and
   // initialize it with zero count, so it remains zero if doesn't hit any
   // samples. This is to be consistent with compiler that interpret zero count
   // as unexecuted(cold).
   for (auto I : RangeCounter) {
-    uint64_t RangeBegin = I.first.first;
-    uint64_t RangeEnd = I.first.second;
-    // Find the function offset range the current range begin belongs to.
-    auto FuncRange = Binary->findFuncOffsetRange(RangeBegin);
-    if (FuncRange.second == 0)
-      WithColor::warning()
-          << "[" << format("%8" PRIx64, RangeBegin) << " - "
-          << format("%8" PRIx64, RangeEnd)
-          << "]: Invalid range or disassembling error in profiled binary.\n";
-    else if (RangeEnd > FuncRange.second)
-      WithColor::warning() << "[" << format("%8" PRIx64, RangeBegin) << " - "
-                           << format("%8" PRIx64, RangeEnd)
-                           << "]: Range is across different functions.\n";
-    else
-      Ranges[FuncRange] += 0;
+    uint64_t StartOffset = I.first.first;
+    for (const auto &Range : Binary->getRangesForOffset(StartOffset))
+      Ranges[{Range.first, Range.second - 1}] += 0;
   }
   RangeSample DisjointRanges;
   findDisjointRanges(DisjointRanges, Ranges);
@@ -401,21 +389,16 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
   }
 }
 
-static bool isOutlinedFunction(StringRef CalleeName) {
-  // Check whether it's from hot-cold func split or coro split.
-  return CalleeName.contains(".resume") || CalleeName.contains(".cold");
-}
-
 StringRef ProfileGeneratorBase::getCalleeNameForOffset(uint64_t TargetOffset) {
-  // Get the callee name by branch target if it's a call branch.
-  StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-      Binary->getFuncFromStartOffset(TargetOffset));
+  // Get the function range by branch target if it's a call branch.
+  auto *FRange = Binary->findFuncRangeForStartOffset(TargetOffset);
 
-  // We won't accumulate sample count againt outlined function.
-  if (CalleeName.size() == 0 || isOutlinedFunction(CalleeName))
+  // We won't accumulate sample count for a range whose start is not the real
+  // function entry such as outlined function or inner labels.
+  if (!FRange || !FRange->IsFuncEntry)
     return StringRef();
 
-  return CalleeName;
+  return FunctionSamples::getCanonicalFnName(FRange->getFuncName());
 }
 
 void ProfileGenerator::populateBoundarySamplesForAllFunctions(
@@ -482,20 +465,21 @@ void CSProfileGenerator::generateProfile() {
 void CSProfileGenerator::computeSizeForProfiledFunctions() {
   // Hash map to deduplicate the function range and the item is a pair of
   // function start and end offset.
-  std::unordered_map<uint64_t, uint64_t> FuncRanges;
+  std::unordered_map<uint64_t, uint64_t> AggregatedRanges;
   // Go through all the ranges in the CS counters, use the start of the range to
   // look up the function it belongs and record the function range.
   for (const auto &CI : SampleCounters) {
     for (auto Item : CI.second.RangeCounter) {
       // FIXME: Filter the bogus crossing function range.
-      uint64_t RangeStartOffset = Item.first.first;
-      auto FuncRange = Binary->findFuncOffsetRange(RangeStartOffset);
-      if (FuncRange.second != 0)
-        FuncRanges[FuncRange.first] = FuncRange.second;
+      uint64_t StartOffset = Item.first.first;
+      // Note that a function can be spilt into multiple ranges, so get all
+      // ranges of the function.
+      for (const auto &Range : Binary->getRangesForOffset(StartOffset))
+        AggregatedRanges[Range.first] = Range.second;
     }
   }
 
-  for (auto I : FuncRanges) {
+  for (auto I : AggregatedRanges) {
     uint64_t StartOffset = I.first;
     uint64_t EndOffset = I.second;
     Binary->computeInlinedContextSizeForRange(StartOffset, EndOffset);
