@@ -382,6 +382,9 @@ public:
     return FuncSizeTracker.getFuncSizeForContext(Context);
   }
 
+  // Load the symbols from debug table and populate into symbol list.
+  void populateSymbolListFromDWARF(ProfileSymbolList &SymbolList);
+
   const SampleContextFrameVector &
   getFrameLocationStack(uint64_t Offset, bool UseProbeDiscriminator = false) {
     auto I = Offset2LocStackMap.emplace(Offset, SampleContextFrameVector());

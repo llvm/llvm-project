@@ -11,6 +11,7 @@
 ; CHECK-SYM-LIST: Dump profile symbol list
 ; CHECK-SYM-LIST: bar
 ; CHECK-SYM-LIST: foo
+; CHECK-SYM-LIST: main
 
 ; CHECK:[main:1 @ foo]:225:0
 ; CHECK: 2.1: 14
