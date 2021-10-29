@@ -100,8 +100,7 @@ enum {
   MemCount,
 };
 
-void FillProfileCallback(uptr p, uptr rss, bool file,
-                         uptr *mem, uptr stats_size) {
+void FillProfileCallback(uptr p, uptr rss, bool file, uptr *mem) {
   mem[MemTotal] += rss;
   if (p >= ShadowBeg() && p < ShadowEnd())
     mem[MemShadow] += rss;
@@ -122,7 +121,7 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr mem[MemCount];
   internal_memset(mem, 0, sizeof(mem));
-  GetMemoryProfile(FillProfileCallback, mem, MemCount);
+  GetMemoryProfile(FillProfileCallback, mem);
   auto meta = ctx->metamap.GetMemoryStats();
   StackDepotStats stacks = StackDepotGetStats();
   uptr nthread, nlive;

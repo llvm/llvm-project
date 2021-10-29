@@ -302,9 +302,8 @@ class SizeClassAllocator64 {
     UnmapWithCallbackOrDie((uptr)address_range.base(), address_range.size());
   }
 
-  static void FillMemoryProfile(uptr start, uptr rss, bool file, uptr *stats,
-                           uptr stats_size) {
-    for (uptr class_id = 0; class_id < stats_size; class_id++)
+  static void FillMemoryProfile(uptr start, uptr rss, bool file, uptr *stats) {
+    for (uptr class_id = 0; class_id < kNumClasses; class_id++)
       if (stats[class_id] == start)
         stats[class_id] = rss;
   }
@@ -330,7 +329,7 @@ class SizeClassAllocator64 {
     uptr rss_stats[kNumClasses];
     for (uptr class_id = 0; class_id < kNumClasses; class_id++)
       rss_stats[class_id] = SpaceBeg() + kRegionSize * class_id;
-    GetMemoryProfile(FillMemoryProfile, rss_stats, kNumClasses);
+    GetMemoryProfile(FillMemoryProfile, rss_stats);
 
     uptr total_mapped = 0;
     uptr total_rss = 0;
