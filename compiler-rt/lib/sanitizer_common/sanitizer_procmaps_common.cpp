@@ -151,6 +151,12 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) {
   uptr smaps_len = 0;
   if (!ReadFileToBuffer("/proc/self/smaps", &smaps, &smaps_cap, &smaps_len))
     return;
+  ParseUnixMemoryProfile(cb, stats, stats_size, smaps, smaps_len);
+  UnmapOrDie(smaps, smaps_cap);
+}
+
+void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size,
+                            const char *smaps, uptr smaps_len) {
   uptr start = 0;
   bool file = false;
   const char *pos = smaps;
@@ -166,7 +172,6 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) {
     }
     while (*pos++ != '\n') {}
   }
-  UnmapOrDie(smaps, smaps_cap);
 }
 
 } // namespace __sanitizer
