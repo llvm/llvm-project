@@ -99,7 +99,8 @@ struct SampleProfTest : ::testing::Test {
       auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
         return PE.Cutoff == Cutoff;
       };
-      std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
+      const std::vector<ProfileSummaryEntry> &Details =
+          Summary.getDetailedSummary();
       auto EightyPerc = find_if(Details, Predicate);
       Cutoff = 900000;
       auto NinetyPerc = find_if(Details, Predicate);

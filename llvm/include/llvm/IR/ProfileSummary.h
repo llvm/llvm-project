@@ -48,9 +48,9 @@ public:
 
 private:
   const Kind PSK;
-  SummaryEntryVector DetailedSummary;
-  uint64_t TotalCount, MaxCount, MaxInternalCount, MaxFunctionCount;
-  uint32_t NumCounts, NumFunctions;
+  const SummaryEntryVector DetailedSummary;
+  const uint64_t TotalCount, MaxCount, MaxInternalCount, MaxFunctionCount;
+  const uint32_t NumCounts, NumFunctions;
   /// If 'Partial' is false, it means the profile being used to optimize
   /// a target is collected from the same target.
   /// If 'Partial' is true, it means the profile is for common/shared
@@ -68,7 +68,7 @@ private:
 public:
   static const int Scale = 1000000;
 
-  ProfileSummary(Kind K, SummaryEntryVector DetailedSummary,
+  ProfileSummary(Kind K, const SummaryEntryVector &DetailedSummary,
                  uint64_t TotalCount, uint64_t MaxCount,
                  uint64_t MaxInternalCount, uint64_t MaxFunctionCount,
                  uint32_t NumCounts, uint32_t NumFunctions,
@@ -85,7 +85,7 @@ public:
                   bool AddPartialProfileRatioField = true);
   /// Construct profile summary from metdata.
   static ProfileSummary *getFromMD(Metadata *MD);
-  SummaryEntryVector &getDetailedSummary() { return DetailedSummary; }
+  const SummaryEntryVector &getDetailedSummary() { return DetailedSummary; }
   uint32_t getNumFunctions() const { return NumFunctions; }
   uint64_t getMaxFunctionCount() const { return MaxFunctionCount; }
   uint32_t getNumCounts() const { return NumCounts; }
