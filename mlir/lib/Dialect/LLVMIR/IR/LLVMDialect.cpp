@@ -328,24 +328,24 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op,
 }
 
 static LogicalResult verify(SwitchOp op) {
-  if ((!op.case_values() && !op.caseDestinations().empty()) ||
-      (op.case_values() &&
-       op.case_values()->size() !=
-           static_cast<int64_t>(op.caseDestinations().size())))
+  if ((!op.getCaseValues() && !op.getCaseDestinations().empty()) ||
+      (op.getCaseValues() &&
+       op.getCaseValues()->size() !=
+           static_cast<int64_t>(op.getCaseDestinations().size())))
     return op.emitOpError("expects number of case values to match number of "
                           "case destinations");
-  if (op.branch_weights() &&
-      op.branch_weights()->size() != op.getNumSuccessors())
+  if (op.getBranchWeights() &&
+      op.getBranchWeights()->size() != op.getNumSuccessors())
     return op.emitError("expects number of branch weights to match number of "
                         "successors: ")
-           << op.branch_weights()->size() << " vs " << op.getNumSuccessors();
+           << op.getBranchWeights()->size() << " vs " << op.getNumSuccessors();
   return success();
 }
 
 Optional<MutableOperandRange>
 SwitchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == 0 ? defaultOperandsMutable()
+  return index == 0 ? getDefaultOperandsMutable()
                     : getCaseOperandsMutable(index - 1);
 }
 
@@ -440,11 +440,11 @@ void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
 
 static void printLoadOp(OpAsmPrinter &p, LoadOp &op) {
   p << ' ';
-  if (op.volatile_())
+  if (op.getVolatile_())
     p << "volatile ";
-  p << op.addr();
+  p << op.getAddr();
   p.printOptionalAttrDict(op->getAttrs(), {kVolatileAttrName});
-  p << " : " << op.addr().getType();
+  p << " : " << op.getAddr().getType();
 }
 
 // Extract the pointee type from the LLVM pointer type wrapped in MLIR.  Return
@@ -502,11 +502,11 @@ void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
 
 static void printStoreOp(OpAsmPrinter &p, StoreOp &op) {
   p << ' ';
-  if (op.volatile_())
+  if (op.getVolatile_())
     p << "volatile ";
-  p << op.value() << ", " << op.addr();
+  p << op.getValue() << ", " << op.getAddr();
   p.printOptionalAttrDict(op->getAttrs(), {kVolatileAttrName});
-  p << " : " << op.addr().getType();
+  p << " : " << op.getAddr().getType();
 }
 
 // <operation> ::= `llvm.store` `volatile` ssa-use `,` ssa-use
@@ -543,14 +543,15 @@ static ParseResult parseStoreOp(OpAsmParser &parser, OperationState &result) {
 Optional<MutableOperandRange>
 InvokeOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == 0 ? normalDestOperandsMutable() : unwindDestOperandsMutable();
+  return index == 0 ? getNormalDestOperandsMutable()
+                    : getUnwindDestOperandsMutable();
 }
 
 static LogicalResult verify(InvokeOp op) {
   if (op.getNumResults() > 1)
     return op.emitOpError("must have 0 or 1 result");
 
-  Block *unwindDest = op.unwindDest();
+  Block *unwindDest = op.getUnwindDest();
   if (unwindDest->empty())
     return op.emitError(
         "must have at least one operation in unwind destination");
@@ -564,7 +565,7 @@ static LogicalResult verify(InvokeOp op) {
 }
 
 static void printInvokeOp(OpAsmPrinter &p, InvokeOp op) {
-  auto callee = op.callee();
+  auto callee = op.getCallee();
   bool isDirect = callee.hasValue();
 
   p << ' ';
@@ -577,9 +578,9 @@ static void printInvokeOp(OpAsmPrinter &p, InvokeOp op) {
 
   p << '(' << op.getOperands().drop_front(isDirect ? 0 : 1) << ')';
   p << " to ";
-  p.printSuccessorAndUseList(op.normalDest(), op.normalDestOperands());
+  p.printSuccessorAndUseList(op.getNormalDest(), op.getNormalDestOperands());
   p << " unwind ";
-  p.printSuccessorAndUseList(op.unwindDest(), op.unwindDestOperands());
+  p.printSuccessorAndUseList(op.getUnwindDest(), op.getUnwindDestOperands());
 
   p.printOptionalAttrDict(op->getAttrs(),
                           {InvokeOp::getOperandSegmentSizeAttr(), "callee"});
@@ -690,12 +691,12 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
 static LogicalResult verify(LandingpadOp op) {
   Value value;
   if (LLVMFuncOp func = op->getParentOfType<LLVMFuncOp>()) {
-    if (!func.personality().hasValue())
+    if (!func.getPersonality().hasValue())
       return op.emitError(
           "llvm.landingpad needs to be in a function with a personality");
   }
 
-  if (!op.cleanup() && op.getOperands().empty())
+  if (!op.getCleanup() && op.getOperands().empty())
     return op.emitError("landingpad instruction expects at least one clause or "
                         "cleanup attribute");
 
@@ -728,7 +729,7 @@ static LogicalResult verify(LandingpadOp op) {
 }
 
 static void printLandingpadOp(OpAsmPrinter &p, LandingpadOp &op) {
-  p << (op.cleanup() ? " cleanup " : " ");
+  p << (op.getCleanup() ? " cleanup " : " ");
 
   // Clauses
   for (auto value : op.getOperands()) {
@@ -1152,9 +1153,9 @@ static ParseResult parseExtractValueOp(OpAsmParser &parser,
 OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   while (insertValueOp) {
-    if (getPosition() == insertValueOp.position())
-      return insertValueOp.value();
-    insertValueOp = insertValueOp.container().getDefiningOp<InsertValueOp>();
+    if (getPosition() == insertValueOp.getPosition())
+      return insertValueOp.getValue();
+    insertValueOp = insertValueOp.getContainer().getDefiningOp<InsertValueOp>();
   }
   return {};
 }
@@ -1178,10 +1179,10 @@ static LogicalResult verify(ExtractValueOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printInsertElementOp(OpAsmPrinter &p, InsertElementOp &op) {
-  p << ' ' << op.value() << ", " << op.vector() << "[" << op.position() << " : "
-    << op.position().getType() << "]";
+  p << ' ' << op.getValue() << ", " << op.getVector() << "[" << op.getPosition()
+    << " : " << op.getPosition().getType() << "]";
   p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op.vector().getType();
+  p << " : " << op.getVector().getType();
 }
 
 // <operation> ::= `llvm.insertelement` ssa-use `,` ssa-use `,` ssa-use
@@ -1216,11 +1217,11 @@ static ParseResult parseInsertElementOp(OpAsmParser &parser,
 }
 
 static LogicalResult verify(InsertElementOp op) {
-  Type valueType = LLVM::getVectorElementType(op.vector().getType());
-  if (valueType != op.value().getType())
+  Type valueType = LLVM::getVectorElementType(op.getVector().getType());
+  if (valueType != op.getValue().getType())
     return op.emitOpError()
-           << "Type mismatch: cannot insert " << op.value().getType()
-           << " into " << op.vector().getType();
+           << "Type mismatch: cannot insert " << op.getValue().getType()
+           << " into " << op.getVector().getType();
   return success();
 }
 //===----------------------------------------------------------------------===//
@@ -1228,9 +1229,9 @@ static LogicalResult verify(InsertElementOp op) {
 //===----------------------------------------------------------------------===//
 
 static void printInsertValueOp(OpAsmPrinter &p, InsertValueOp &op) {
-  p << ' ' << op.value() << ", " << op.container() << op.position();
+  p << ' ' << op.getValue() << ", " << op.getContainer() << op.getPosition();
   p.printOptionalAttrDict(op->getAttrs(), {"position"});
-  p << " : " << op.container().getType();
+  p << " : " << op.getContainer().getType();
 }
 
 // <operation> ::= `llvm.insertvaluevalue` ssa-use `,` ssa-use
@@ -1266,15 +1267,15 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
 }
 
 static LogicalResult verify(InsertValueOp op) {
-  Type valueType = getInsertExtractValueElementType(op.container().getType(),
-                                                    op.positionAttr(), op);
+  Type valueType = getInsertExtractValueElementType(op.getContainer().getType(),
+                                                    op.getPositionAttr(), op);
   if (!valueType)
     return failure();
 
-  if (op.value().getType() != valueType)
+  if (op.getValue().getType() != valueType)
     return op.emitOpError()
-           << "Type mismatch: cannot insert " << op.value().getType()
-           << " into " << op.container().getType();
+           << "Type mismatch: cannot insert " << op.getValue().getType()
+           << " into " << op.getContainer().getType();
 
   return success();
 }
@@ -1698,9 +1699,9 @@ void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
 }
 
 static void printShuffleVectorOp(OpAsmPrinter &p, ShuffleVectorOp &op) {
-  p << ' ' << op.v1() << ", " << op.v2() << " " << op.mask();
+  p << ' ' << op.getV1() << ", " << op.getV2() << " " << op.getMask();
   p.printOptionalAttrDict(op->getAttrs(), {"mask"});
-  p << " : " << op.v1().getType() << ", " << op.v2().getType();
+  p << " : " << op.getV1().getType() << ", " << op.getV2().getType();
 }
 
 // <operation> ::= `llvm.shufflevector` ssa-use `, ` ssa-use
@@ -1862,8 +1863,8 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
 // the external linkage since it is the default value.
 static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
   p << ' ';
-  if (op.linkage() != LLVM::Linkage::External)
-    p << stringifyLinkage(op.linkage()) << ' ';
+  if (op.getLinkage() != LLVM::Linkage::External)
+    p << stringifyLinkage(op.getLinkage()) << ' ';
   p.printSymbolName(op.getName());
 
   LLVMFunctionType fnType = op.getType();
@@ -1883,7 +1884,7 @@ static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
       p, op, argTypes.size(), resTypes.size(), {getLinkageAttrName()});
 
   // Print the body if this is not an external function.
-  Region &body = op.body();
+  Region &body = op.getBody();
   if (!body.empty())
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
@@ -1924,14 +1925,14 @@ unsigned LLVMFuncOp::getNumFuncResults() {
 // - vararg is (currently) only supported for external functions;
 // - entry block arguments are of LLVM types and match the function signature.
 static LogicalResult verify(LLVMFuncOp op) {
-  if (op.linkage() == LLVM::Linkage::Common)
+  if (op.getLinkage() == LLVM::Linkage::Common)
     return op.emitOpError()
            << "functions cannot have '"
            << stringifyLinkage(LLVM::Linkage::Common) << "' linkage";
 
   if (op.isExternal()) {
-    if (op.linkage() != LLVM::Linkage::External &&
-        op.linkage() != LLVM::Linkage::ExternWeak)
+    if (op.getLinkage() != LLVM::Linkage::External &&
+        op.getLinkage() != LLVM::Linkage::ExternWeak)
       return op.emitOpError()
              << "external functions must have '"
              << stringifyLinkage(LLVM::Linkage::External) << "' or '"
