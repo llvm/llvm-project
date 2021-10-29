@@ -582,8 +582,18 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       SmallVector<Value, 8> params;
       sizesFromPtr(rewriter, sizes, op, encSrc, srcType.cast<ShapedType>(),
                    src);
-      newParams(rewriter, params, op, encDst, kToCOO, sizes, src);
+      // Set up encoding with right mix of src and dst so that the two
+      // method calls can share most parameters, while still providing
+      // the correct sparsity information to either of them.
+      auto enc = SparseTensorEncodingAttr::get(
+          op->getContext(), encDst.getDimLevelType(), encDst.getDimOrdering(),
+          encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
+      newParams(rewriter, params, op, enc, kToCOO, sizes, src);
       Value coo = genNewCall(rewriter, op, params);
+      params[3] = constantI32(
+          rewriter, loc, getOverheadTypeEncoding(encDst.getPointerBitWidth()));
+      params[4] = constantI32(
+          rewriter, loc, getOverheadTypeEncoding(encDst.getIndexBitWidth()));
       params[6] = constantI32(rewriter, loc, kFromCOO);
       params[7] = coo;
       rewriter.replaceOp(op, genNewCall(rewriter, op, params));
