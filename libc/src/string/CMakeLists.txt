@@ -154,6 +154,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strndup
+  SRCS
+    strndup.cpp
+  HDRS
+    strndup.h
+  DEPENDS
+    .memcpy
+    .string_utils
+    libc.include.stdlib
+)
+
+add_entrypoint_object(
   strnlen
   SRCS
     strnlen.cpp
