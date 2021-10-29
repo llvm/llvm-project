@@ -11,10 +11,14 @@
 //===----------------------------------------------------------------------===//
 #if !defined(_WIN32)  // There are no /proc/maps on Windows.
 
-#include "sanitizer_common/sanitizer_procmaps.h"
-#include "gtest/gtest.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
 
-#include <stdlib.h>
+#  include <stdlib.h>
+#  include <string.h>
+
+#  include <vector>
+
+#  include "gtest/gtest.h"
 
 static void noop() {}
 extern const char *argv0;
@@ -72,6 +76,36 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
       EXPECT_NE(memcmp(null_uuid, uuid, kModuleUUIDSize), 0);
     }
   }
+}
+
+TEST(MemoryMapping, ParseUnixMemoryProfile) {
+  struct entry {
+    uptr p;
+    uptr rss;
+    bool file;
+  };
+  typedef std::vector<entry> entries_t;
+  const char *input = R"(
+7fb9862f1000-7fb9862f3000 rw-p 00000000 00:00 0 
+Size:                  8 kB
+Rss:                   4 kB
+7fb9864ae000-7fb9864b1000 r--p 001ba000 fd:01 22413919                   /lib/x86_64-linux-gnu/libc-2.32.so
+Size:                 12 kB
+Rss:                  12 kB
+)";
+  entries_t entries;
+  ParseUnixMemoryProfile(
+      [](uptr p, uptr rss, bool file, uptr *mem) {
+        reinterpret_cast<entries_t *>(mem)->push_back({p, rss, file});
+      },
+      reinterpret_cast<uptr *>(&entries), input, strlen(input));
+  EXPECT_EQ(entries.size(), 2ul);
+  EXPECT_EQ(entries[0].p, 0x7fb9862f1000ul);
+  EXPECT_EQ(entries[0].rss, 4ul << 10);
+  EXPECT_EQ(entries[0].file, false);
+  EXPECT_EQ(entries[1].p, 0x7fb9864ae000ul);
+  EXPECT_EQ(entries[1].rss, 12ul << 10);
+  EXPECT_EQ(entries[1].file, true);
 }
 
 }  // namespace __sanitizer
