@@ -58,9 +58,24 @@
 ;; actual archive at Foo.framework/Versions/Current, but we skip that here so
 ;; that this test can run on Windows.
 ; RUN: llvm-ar rcs %t/Foo.framework/Foo %t/foo.o
-; RUN: llc %t/objfile1.ll -o %t/objfile1.o -filetype=obj
+; RUN: llc %t/load-framework-foo.ll -o %t/load-framework-foo.o -filetype=obj
 ; RUN: llc %t/main.ll -o %t/main.o -filetype=obj
-; RUN: %lld %t/objfile1.o %t/main.o -o /dev/null -F%t
+; RUN: %lld %t/load-framework-foo.o %t/main.o -o %t/main -F%t
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS
+
+;; Make sure -all_load and -ObjC have no effect on libraries loaded via
+;; LC_LINKER_OPTION flags.
+; RUN: llc %t/load-library-foo.ll -o %t/load-library-foo.o -filetype=obj
+; RUN: llvm-ar rcs %t/libfoo.a %t/foo.o
+; RUN: %lld -all_load -ObjC %t/load-framework-foo.o %t/load-library-foo.o \
+; RUN:   %t/main.o -o %t/main -F%t -L%t
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS
+
+;; Note that _OBJC_CLASS_$_TestClass is *not* included here.
+; SYMS:       SYMBOL TABLE:
+; SYMS-NEXT:  g     F __TEXT,__text _main
+; SYMS-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-EMPTY:
 
 ;--- framework.ll
 target triple = "x86_64-apple-macosx10.15.0"
@@ -105,11 +120,18 @@ define void @main() {
   ret void
 }
 
-;--- objfile1.ll
+;--- load-framework-foo.ll
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 !0 = !{!"-framework", !"Foo"}
+!llvm.linker.options = !{!0}
+
+;--- load-library-foo.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+!0 = !{!"-lfoo"}
 !llvm.linker.options = !{!0}
 
 ;--- main.ll
@@ -127,6 +149,5 @@ define void @main() {
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo() {
-  ret void
-}
+%struct._class_t = type {}
+@"OBJC_CLASS_$_TestClass" = global %struct._class_t {}, section "__DATA, __objc_data", align 8
