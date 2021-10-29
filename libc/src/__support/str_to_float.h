@@ -209,7 +209,7 @@ simpleDecimalConversion(const char *__restrict numStart,
   // float, return inf.
   if (hpd.getDecimalPoint() > 0 &&
       exp10ToExp2(hpd.getDecimalPoint() - 1) >
-          static_cast<int32_t>(fputil::FloatProperties<T>::exponentBias)) {
+          static_cast<int64_t>(fputil::FloatProperties<T>::exponentBias)) {
     *outputMantissa = 0;
     *outputExp2 = fputil::FPBits<T>::maxExponent;
     errno = ERANGE; // NOLINT
@@ -218,7 +218,7 @@ simpleDecimalConversion(const char *__restrict numStart,
   // If the exponent is too small even for a subnormal, return 0.
   if (hpd.getDecimalPoint() < 0 &&
       exp10ToExp2(-hpd.getDecimalPoint()) >
-          static_cast<int32_t>(fputil::FloatProperties<T>::exponentBias +
+          static_cast<int64_t>(fputil::FloatProperties<T>::exponentBias +
                                fputil::FloatProperties<T>::mantissaWidth)) {
     *outputMantissa = 0;
     *outputExp2 = 0;
@@ -304,6 +304,83 @@ simpleDecimalConversion(const char *__restrict numStart,
   *outputExp2 = exp2;
 }
 
+// This class is used for templating the constants for Clinger's Fast Path,
+// described as a method of approximation in
+// Clinger WD. How to Read Floating Point Numbers Accurately. SIGPLAN Not 1990
+// Jun;25(6):92–101. https://doi.org/10.1145/93548.93557.
+// As well as the additions by Gay that extend the useful range by the number of
+// exact digits stored by the float type, described in
+// Gay DM, Correctly rounded binary-decimal and decimal-binary conversions;
+// 1990. AT&T Bell Laboratories Numerical Analysis Manuscript 90-10.
+template <class T> class ClingerConsts;
+
+template <> class ClingerConsts<float> {
+public:
+  static constexpr float powersOfTenArray[] = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5,
+                                               1e6, 1e7, 1e8, 1e9, 1e10};
+  static constexpr int32_t exactPowersOfTen = 10;
+  static constexpr int32_t digitsInMantissa = 7;
+  static constexpr float maxExactInt = 16777215.0;
+};
+
+template <> class ClingerConsts<double> {
+public:
+  static constexpr double powersOfTenArray[] = {
+      1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+      1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
+  static constexpr int32_t exactPowersOfTen = 22;
+  static constexpr int32_t digitsInMantissa = 15;
+  static constexpr double maxExactInt = 9007199254740991.0;
+};
+
+// Take an exact mantissa and exponent and attempt to convert it using only
+// exact floating point arithmetic. This only handles numbers with low
+// exponents, but handles them quickly. This is an implementation of Clinger's
+// Fast Path, as described above.
+template <class T>
+static inline bool
+clingerFastPath(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
+                typename fputil::FPBits<T>::UIntType *outputMantissa,
+                uint32_t *outputExp2) {
+  if (mantissa >> fputil::FloatProperties<T>::mantissaWidth > 0) {
+    return false;
+  }
+
+  fputil::FPBits<T> result;
+  T floatMantissa = static_cast<T>(mantissa);
+
+  if (exp10 == 0) {
+    result = fputil::FPBits<T>(floatMantissa);
+  }
+  if (exp10 > 0) {
+    if (exp10 > ClingerConsts<T>::exactPowersOfTen +
+                    ClingerConsts<T>::digitsInMantissa) {
+      return false;
+    }
+    if (exp10 > ClingerConsts<T>::exactPowersOfTen) {
+      floatMantissa =
+          floatMantissa *
+          ClingerConsts<
+              T>::powersOfTenArray[exp10 - ClingerConsts<T>::exactPowersOfTen];
+      exp10 = ClingerConsts<T>::exactPowersOfTen;
+    }
+    if (floatMantissa > ClingerConsts<T>::maxExactInt) {
+      return false;
+    }
+    result = fputil::FPBits<T>(floatMantissa *
+                               ClingerConsts<T>::powersOfTenArray[exp10]);
+  } else if (exp10 < 0) {
+    if (-exp10 > ClingerConsts<T>::exactPowersOfTen) {
+      return false;
+    }
+    result = fputil::FPBits<T>(floatMantissa /
+                               ClingerConsts<T>::powersOfTenArray[-exp10]);
+  }
+  *outputMantissa = result.getMantissa();
+  *outputExp2 = result.getUnbiasedExponent();
+  return true;
+}
+
 // Takes a mantissa and base 10 exponent and converts it into its closest
 // floating point type T equivalient. First we try the Eisel-Lemire algorithm,
 // then if that fails then we fall back to a more accurate algorithm for
@@ -315,8 +392,33 @@ decimalExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
                   const char *__restrict numStart, bool truncated,
                   typename fputil::FPBits<T>::UIntType *outputMantissa,
                   uint32_t *outputExp2) {
+  // If the exponent is too large and can't be represented in this size of
+  // float, return inf. These bounds are very loose, but are mostly serving as a
+  // first pass. Some close numbers getting through is okay.
+  if (exp10 >
+      static_cast<int64_t>(fputil::FloatProperties<T>::exponentBias) / 3) {
+    *outputMantissa = 0;
+    *outputExp2 = fputil::FPBits<T>::maxExponent;
+    errno = ERANGE; // NOLINT
+    return;
+  }
+  // If the exponent is too small even for a subnormal, return 0.
+  if (exp10 < 0 &&
+      -static_cast<int64_t>(exp10) >
+          static_cast<int64_t>(fputil::FloatProperties<T>::exponentBias +
+                               fputil::FloatProperties<T>::mantissaWidth) /
+              2) {
+    *outputMantissa = 0;
+    *outputExp2 = 0;
+    errno = ERANGE; // NOLINT
+    return;
+  }
 
-  // TODO: Implement Clinger's fast path, as well as other shortcuts here.
+  if (!truncated) {
+    if (clingerFastPath<T>(mantissa, exp10, outputMantissa, outputExp2)) {
+      return;
+    }
+  }
 
   // Try Eisel-Lemire
   if (eiselLemire<T>(mantissa, exp10, outputMantissa, outputExp2)) {
@@ -462,6 +564,11 @@ static inline T strtofloatingpoint(const char *__restrict src,
         ++src;
         char *tempStrEnd;
         int32_t add_to_exponent = strtointeger<int32_t>(src, &tempStrEnd, 10);
+        if (add_to_exponent > 100000) {
+          add_to_exponent = 100000;
+        } else if (add_to_exponent < -100000) {
+          add_to_exponent = -100000;
+        }
         src += tempStrEnd - src;
         exponent += add_to_exponent;
       }
