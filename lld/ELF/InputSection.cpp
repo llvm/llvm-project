@@ -818,7 +818,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
     // Just return A, which matches R_ABS, and the behavior of some dynamic
     // loaders.
-    if (sym.isUndefined() || sym.isLazy())
+    if (sym.isUndefined())
       return a;
     return getTlsTpOffset(sym) + a;
   case R_RELAX_TLS_GD_TO_LE_NEG:
