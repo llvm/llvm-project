@@ -902,12 +902,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       RegularExpression("^std::map<.+> >(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
-          "lldb.formatters.cpp.gnu_libstdcpp.StdSetOrMapSynthProvider")));
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
       RegularExpression("^std::set<.+> >(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
-          "lldb.formatters.cpp.gnu_libstdcpp.StdSetOrMapSynthProvider")));
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
+  cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
+      RegularExpression("^std::multimap<.+> >(( )?&)?$"),
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_deref_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
       RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$"),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
@@ -929,6 +934,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpression("^std::set<.+> >(( )?&)?$"),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression("^std::multimap<.+> >(( )?&)?$"),
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
