@@ -1591,6 +1591,26 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     EnumConstantDecl *D1,
+                                     EnumConstantDecl *D2) {
+  const llvm::APSInt &FromVal = D1->getInitVal();
+  const llvm::APSInt &ToVal = D2->getInitVal();
+  if (FromVal.isSigned() != ToVal.isSigned())
+    return false;
+  if (FromVal.getBitWidth() != ToVal.getBitWidth())
+    return false;
+  if (FromVal != ToVal)
+    return false;
+
+  if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
+    return false;
+
+  // Init expressions are the most expensive check, so do them last.
+  return IsStructurallyEquivalent(Context, D1->getInitExpr(),
+                                  D2->getInitExpr());
+}
+
 /// Determine structural equivalence of two enums.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      EnumDecl *D1, EnumDecl *D2) {
