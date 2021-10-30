@@ -530,6 +530,12 @@ protected:
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
 
+  /// Get division representation for each local identifier. If no local
+  /// representation exists for the `i^th` local identifier, denominator[i] is
+  /// set to 0.
+  void getLocalIdsReprs(std::vector<SmallVector<int64_t, 8>> &reprs,
+                        SmallVector<unsigned, 8> &denominator);
+
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
