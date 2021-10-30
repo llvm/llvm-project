@@ -455,8 +455,8 @@ LogicalResult MemRefAccess::getAccessRelation(FlatAffineRelation &rel) const {
 
   // Append domain constraints to `ret`.
   domainRel.appendRangeId(rel.getNumRangeDims());
-  domainRel.mergeLocalIds(rel);
   domainRel.mergeSymbolIds(rel);
+  domainRel.mergeLocalIds(rel);
   rel.append(domainRel);
 
   return success();
