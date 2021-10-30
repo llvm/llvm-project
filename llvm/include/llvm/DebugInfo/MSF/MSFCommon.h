@@ -93,6 +93,9 @@ inline bool isValidBlockSize(uint32_t Size) {
   case 1024:
   case 2048:
   case 4096:
+  case 8192:
+  case 16384:
+  case 32768:
     return true;
   }
   return false;

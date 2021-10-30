@@ -175,6 +175,26 @@ void parseMerge(StringRef s) {
   }
 }
 
+void parsePDBPageSize(StringRef s) {
+  int v;
+  if (s.getAsInteger(0, v)) {
+    error("/pdbpagesize: invalid argument: " + s);
+    return;
+  }
+  if (v != 4096 && v != 8192 && v != 16384 && v != 32768) {
+    error("/pdbpagesize: invalid argument: " + s);
+    return;
+  }
+
+  // FIXME: Remove this once other page sizes work.
+  if (v != 4096) {
+    warn("/pdbpagesize: page sizes != 4096 not yet implemented, ignoring flag");
+    v = 4096;
+  }
+
+  config->pdbPageSize = v;
+}
+
 static uint32_t parseSectionAttributes(StringRef s) {
   uint32_t ret = 0;
   for (char c : s.lower()) {

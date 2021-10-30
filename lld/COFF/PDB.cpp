@@ -1588,7 +1588,7 @@ void lld::coff::createPDB(COFFLinkerContext &ctx,
 }
 
 void PDBLinker::initialize(llvm::codeview::DebugInfo *buildId) {
-  exitOnErr(builder.initialize(4096)); // 4096 is blocksize
+  exitOnErr(builder.initialize(config->pdbPageSize));
 
   buildId->Signature.CVSignature = OMF::Signature::PDB70;
   // Signature is set to a hash of the PDB contents when the PDB is done.
