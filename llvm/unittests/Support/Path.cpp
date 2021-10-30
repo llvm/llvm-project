@@ -23,6 +23,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -2324,5 +2325,62 @@ TEST_F(FileSystemTest, FileLocker) {
   ASSERT_NO_ERROR(fs::unlockFile(FD));
 }
 #endif
+
+TEST_F(FileSystemTest, CopyFile) {
+  unittest::TempDir RootTestDirectory("CopyFileTest", /*Unique=*/true);
+
+  SmallVector<std::string> Data;
+  SmallVector<SmallString<128>> Sources;
+  for (int I = 0, E = 3; I != E; ++I) {
+    Data.push_back(Twine(I).str());
+    Sources.emplace_back(RootTestDirectory.path());
+    path::append(Sources.back(), "source" + Data.back() + ".txt");
+    createFileWithData(Sources.back(), /*ShouldExistBefore=*/false,
+                       fs::CD_CreateNew, Data.back());
+  }
+
+  // Copy the first file to a non-existing file.
+  SmallString<128> Destination(RootTestDirectory.path());
+  path::append(Destination, "destination");
+  ASSERT_FALSE(fs::exists(Destination));
+  fs::copy_file(Sources[0], Destination);
+  verifyFileContents(Destination, Data[0]);
+
+  // Copy the second file to an existing file.
+  fs::copy_file(Sources[1], Destination);
+  verifyFileContents(Destination, Data[1]);
+
+  // Note: The remaining logic is targeted at a potential failure case related
+  // to file cloning and symlinks on Darwin. On Windows, fs::create_link() does
+  // not return success here so the test is skipped.
+#if !defined(_WIN32)
+  // Set up a symlink to the third file.
+  SmallString<128> Symlink(RootTestDirectory.path());
+  path::append(Symlink, "symlink");
+  ASSERT_NO_ERROR(fs::create_link(path::filename(Sources[2]), Symlink));
+  verifyFileContents(Symlink, Data[2]);
+
+  // fs::getUniqueID() should follow symlinks. Otherwise, this isn't good test
+  // coverage.
+  fs::UniqueID SymlinkID;
+  fs::UniqueID Data2ID;
+  ASSERT_NO_ERROR(fs::getUniqueID(Symlink, SymlinkID));
+  ASSERT_NO_ERROR(fs::getUniqueID(Sources[2], Data2ID));
+  ASSERT_EQ(SymlinkID, Data2ID);
+
+  // Copy the third file through the symlink.
+  fs::copy_file(Symlink, Destination);
+  verifyFileContents(Destination, Data[2]);
+
+  // Confirm the destination is not a link to the original file, and not a
+  // symlink.
+  bool IsDestinationSymlink;
+  ASSERT_NO_ERROR(fs::is_symlink_file(Destination, IsDestinationSymlink));
+  ASSERT_FALSE(IsDestinationSymlink);
+  fs::UniqueID DestinationID;
+  ASSERT_NO_ERROR(fs::getUniqueID(Destination, DestinationID));
+  ASSERT_NE(SymlinkID, DestinationID);
+#endif
+}
 
 } // anonymous namespace
