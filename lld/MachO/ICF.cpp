@@ -105,6 +105,9 @@ static bool equalsConstant(const ConcatInputSection *ia,
       return false;
 
     InputSection *isecA, *isecB;
+
+    uint64_t valueA = 0;
+    uint64_t valueB = 0;
     if (ra.referent.is<Symbol *>()) {
       const auto *sa = ra.referent.get<Symbol *>();
       const auto *sb = rb.referent.get<Symbol *>();
@@ -121,7 +124,9 @@ static bool equalsConstant(const ConcatInputSection *ia,
         return da->value == db->value;
       }
       isecA = da->isec;
+      valueA = da->value;
       isecB = db->isec;
+      valueB = db->value;
     } else {
       isecA = ra.referent.get<InputSection *>();
       isecB = rb.referent.get<InputSection *>();
@@ -136,7 +141,8 @@ static bool equalsConstant(const ConcatInputSection *ia,
       return true;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+    return isecA->getOffset(valueA + ra.addend) ==
+           isecB->getOffset(valueB + rb.addend);
   };
   return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
                     f);
