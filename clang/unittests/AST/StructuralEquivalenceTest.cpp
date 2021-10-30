@@ -956,6 +956,48 @@ TEST_F(StructuralEquivalenceEnumTest, EnumsWithDifferentBody) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+struct StructuralEquivalenceEnumConstantTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithSameValues) {
+  auto t = makeNamedDecls("enum foo { foo = 1 };", "enum foo { foo = 1 };",
+                          Lang_C89);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest,
+       EnumConstantsWithDifferentValues) {
+  auto t =
+      makeNamedDecls("enum e { foo = 1 };", "enum e { foo = 2 };", Lang_C89);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest,
+       EnumConstantsWithDifferentExprsButSameValues) {
+  auto t = makeNamedDecls("enum e { foo = 1 + 1 };", "enum e { foo = 2 };",
+                          Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest,
+       EnumConstantsWithDifferentSignedness) {
+  auto t = makeNamedDecls("enum e : unsigned { foo = 1 };",
+                          "enum e : int { foo = 1 };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithDifferentWidth) {
+  auto t = makeNamedDecls("enum e : short { foo = 1 };",
+                          "enum e : int { foo = 1 };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithDifferentName) {
+  auto t =
+      makeDecls<EnumConstantDecl>("enum e { foo = 1 };", "enum e { bar = 1 };",
+                                  Lang_CXX11, enumConstantDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 struct StructuralEquivalenceTemplateTest : StructuralEquivalenceTest {};
 
 TEST_F(StructuralEquivalenceTemplateTest, ExactlySameTemplates) {
