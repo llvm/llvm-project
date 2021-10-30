@@ -153,14 +153,11 @@ private:
     using InitSymbolDepMap =
         DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
 
-    void addInitializerSupportPasses(MaterializationResponsibility &MR,
-                                     jitlink::PassConfiguration &Config);
-
-    void addMachOHeaderSupportPasses(MaterializationResponsibility &MR,
-                                     jitlink::PassConfiguration &Config);
-
     void addEHAndTLVSupportPasses(MaterializationResponsibility &MR,
                                   jitlink::PassConfiguration &Config);
+
+    Error associateJITDylibHeaderSymbol(jitlink::LinkGraph &G,
+                                        MaterializationResponsibility &MR);
 
     Error preserveInitSections(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
@@ -171,6 +168,8 @@ private:
     Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
+
+    Error registerEHAndTLVSections(jitlink::LinkGraph &G);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
