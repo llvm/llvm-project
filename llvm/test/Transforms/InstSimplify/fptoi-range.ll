@@ -14,9 +14,7 @@ define i1 @f16_si_max1(half %f) {
 
 define i1 @f16_si_max2(half %f) {
 ; CHECK-LABEL: @f16_si_max2(
-; CHECK-NEXT:    [[I:%.*]] = fptosi half [[F:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[I]], 65504
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = fptosi half %f to i32
   %c = icmp sgt i32 %i, 65504
@@ -36,9 +34,7 @@ define i1 @f16_si16_max2(half %f) {
 
 define i1 @f16_si_min1(half %f) {
 ; CHECK-LABEL: @f16_si_min1(
-; CHECK-NEXT:    [[I:%.*]] = fptosi half [[F:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[I]], -65504
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i = fptosi half %f to i32
   %c = icmp sge i32 %i, -65504
@@ -80,9 +76,7 @@ define i1 @f16_ui_max1(half %f) {
 
 define i1 @f16_ui_max2(half %f) {
 ; CHECK-LABEL: @f16_ui_max2(
-; CHECK-NEXT:    [[I:%.*]] = fptoui half [[F:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[I]], 65504
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i = fptoui half %f to i32
   %c = icmp sgt i32 %i, 65504
@@ -102,9 +96,7 @@ define i1 @f16_ui16_max2(half %f) {
 
 define i1 @f16_ui16_max3(half %f) {
 ; CHECK-LABEL: @f16_ui16_max3(
-; CHECK-NEXT:    [[I:%.*]] = fptoui half [[F:%.*]] to i16
-; CHECK-NEXT:    [[C:%.*]] = icmp ule i16 [[I]], -32
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i = fptoui half %f to i16
   %c = icmp ule i16 %i, 65504
@@ -113,9 +105,7 @@ define i1 @f16_ui16_max3(half %f) {
 
 define i1 @f16_ui_min1(half %f) {
 ; CHECK-LABEL: @f16_ui_min1(
-; CHECK-NEXT:    [[I:%.*]] = fptoui half [[F:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[I]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i = fptoui half %f to i32
   %c = icmp sge i32 %i, 0
@@ -159,9 +149,7 @@ define <2 x i1> @v2f16_si_max(<2 x half> %f) {
 
 define <2 x i1> @v2f16_si_max2(<2 x half> %f) {
 ; CHECK-LABEL: @v2f16_si_max2(
-; CHECK-NEXT:    [[I:%.*]] = fptosi <2 x half> [[F:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[I]], <i32 65504, i32 65504>
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %i = fptosi <2 x half> %f to <2 x i32>
   %c = icmp sgt <2 x i32> %i, <i32 65504, i32 65504>
@@ -181,9 +169,7 @@ define <2 x i1> @v2f16_si16_max2(<2 x half> %f) {
 
 define <2 x i1> @v2f16_si_min1(<2 x half> %f) {
 ; CHECK-LABEL: @v2f16_si_min1(
-; CHECK-NEXT:    [[I:%.*]] = fptosi <2 x half> [[F:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i32> [[I]], <i32 -65504, i32 -65504>
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %i = fptosi <2 x half> %f to <2 x i32>
   %c = icmp sge <2 x i32> %i, <i32 -65504, i32 -65504>
@@ -225,9 +211,7 @@ define <2 x i1> @v2f16_ui_max1(<2 x half> %f) {
 
 define <2 x i1> @v2f16_ui_max2(<2 x half> %f) {
 ; CHECK-LABEL: @v2f16_ui_max2(
-; CHECK-NEXT:    [[I:%.*]] = fptoui <2 x half> [[F:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[I]], <i32 65504, i32 65504>
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %i = fptoui <2 x half> %f to <2 x i32>
   %c = icmp sgt <2 x i32> %i, <i32 65504, i32 65504>
@@ -247,9 +231,7 @@ define <2 x i1> @v2f16_ui16_max2(<2 x half> %f) {
 
 define <2 x i1> @v2f16_ui16_max3(<2 x half> %f) {
 ; CHECK-LABEL: @v2f16_ui16_max3(
-; CHECK-NEXT:    [[I:%.*]] = fptoui <2 x half> [[F:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[C:%.*]] = icmp ule <2 x i16> [[I]], <i16 -32, i16 -32>
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %i = fptoui <2 x half> %f to <2 x i16>
   %c = icmp ule <2 x i16> %i, <i16 65504, i16 65504>
@@ -258,9 +240,7 @@ define <2 x i1> @v2f16_ui16_max3(<2 x half> %f) {
 
 define <2 x i1> @v2f16_ui_min1(<2 x half> %f) {
 ; CHECK-LABEL: @v2f16_ui_min1(
-; CHECK-NEXT:    [[I:%.*]] = fptoui <2 x half> [[F:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i32> [[I]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %i = fptoui <2 x half> %f to <2 x i32>
   %c = icmp sge <2 x i32> %i, <i32 0, i32 0>
