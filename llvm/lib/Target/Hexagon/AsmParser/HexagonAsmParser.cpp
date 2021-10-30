@@ -211,10 +211,6 @@ struct HexagonOperand : public MCParsedAsmOperand {
     const MCExpr *Val;
   };
 
-  struct InstTy {
-    OperandVector *SubInsts;
-  };
-
   union {
     struct TokTy Tok;
     struct RegTy Reg;
