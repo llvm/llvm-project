@@ -86,11 +86,6 @@ TEST(is_style_Style, Works) {
   EXPECT_TRUE(is_style_posix(Style::native));
   EXPECT_FALSE(is_style_windows(Style::native));
 #endif
-
-  // Check is_style_native().
-  EXPECT_TRUE(is_style_native(Style::native));
-  EXPECT_EQ(is_style_posix(Style::native), is_style_native(Style::posix));
-  EXPECT_EQ(is_style_windows(Style::native), is_style_native(Style::windows));
 }
 
 TEST(is_separator, Works) {
