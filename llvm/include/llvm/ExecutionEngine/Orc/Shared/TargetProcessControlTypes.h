@@ -81,8 +81,8 @@ struct WrapperFunctionCall {
       : Func(Func), ArgData(ArgData) {}
 
   shared::WrapperFunctionResult run() {
-    using FnTy = shared::detail::CWrapperFunctionResult(const char *ArgData,
-                                                        size_t ArgSize);
+    using FnTy =
+        shared::CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
     return shared::WrapperFunctionResult(
         Func.toPtr<FnTy *>()(ArgData.Start.toPtr<const char *>(),
                              static_cast<size_t>(ArgData.size().getValue())));

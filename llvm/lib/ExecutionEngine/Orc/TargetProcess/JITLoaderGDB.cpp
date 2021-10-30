@@ -93,7 +93,7 @@ static void registerJITLoaderGDBImpl(ExecutorAddrRange DebugObjRange) {
   __jit_debug_register_code();
 }
 
-extern "C" orc::shared::detail::CWrapperFunctionResult
+extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
   using namespace orc::shared;
   return WrapperFunction<void(SPSExecutorAddrRange)>::handle(

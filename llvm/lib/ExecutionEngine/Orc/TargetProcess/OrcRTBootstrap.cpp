@@ -22,7 +22,7 @@ namespace orc {
 namespace rt_bootstrap {
 
 template <typename WriteT, typename SPSWriteT>
-static llvm::orc::shared::detail::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionResult
 writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
              ArgData, ArgSize,
@@ -33,7 +33,7 @@ writeUIntsWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::detail::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionResult
 writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
              ArgData, ArgSize,
@@ -45,7 +45,7 @@ writeBuffersWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-static llvm::orc::shared::detail::CWrapperFunctionResult
+static llvm::orc::shared::CWrapperFunctionResult
 runAsMainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSRunAsMainSignature>::handle(
              ArgData, ArgSize,

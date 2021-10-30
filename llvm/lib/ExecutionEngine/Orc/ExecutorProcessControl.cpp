@@ -125,7 +125,7 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                                   IncomingWFRHandler SendResult,
                                                   ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
-      shared::detail::CWrapperFunctionResult (*)(const char *Data, size_t Size);
+      shared::CWrapperFunctionResult (*)(const char *Data, size_t Size);
   auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
   SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
 }
@@ -170,7 +170,7 @@ void SelfExecutorProcessControl::writeBuffersAsync(
   OnWriteComplete(Error::success());
 }
 
-shared::detail::CWrapperFunctionResult
+shared::CWrapperFunctionResult
 SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
     void *Ctx, const void *FnTag, const char *Data, size_t Size) {
 
