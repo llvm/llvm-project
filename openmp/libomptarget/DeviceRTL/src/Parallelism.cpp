@@ -123,6 +123,11 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
       synchronize::threadsAligned();
     }
 
+    // Synchronize all threads to make sure every thread exits the scope above;
+    // otherwise the following assertions and the assumption in
+    // __kmpc_target_deinit may not hold.
+    synchronize::threadsAligned();
+
     ASSERT(state::ParallelTeamSize == 1u);
     ASSERT(icv::ActiveLevel == 0u);
     ASSERT(icv::Level == 0u);
