@@ -1557,41 +1557,15 @@ TEST(ConstantRange, MakeSatisfyingICmpRegion) {
       ConstantRange(APInt(8, 4), APInt(8, -128)));
 }
 
-static bool icmp(CmpInst::Predicate Pred, const APInt &LHS, const APInt &RHS) {
-  switch (Pred) {
-  case CmpInst::Predicate::ICMP_EQ:
-    return LHS.eq(RHS);
-  case CmpInst::Predicate::ICMP_NE:
-    return LHS.ne(RHS);
-  case CmpInst::Predicate::ICMP_UGT:
-    return LHS.ugt(RHS);
-  case CmpInst::Predicate::ICMP_UGE:
-    return LHS.uge(RHS);
-  case CmpInst::Predicate::ICMP_ULT:
-    return LHS.ult(RHS);
-  case CmpInst::Predicate::ICMP_ULE:
-    return LHS.ule(RHS);
-  case CmpInst::Predicate::ICMP_SGT:
-    return LHS.sgt(RHS);
-  case CmpInst::Predicate::ICMP_SGE:
-    return LHS.sge(RHS);
-  case CmpInst::Predicate::ICMP_SLT:
-    return LHS.slt(RHS);
-  case CmpInst::Predicate::ICMP_SLE:
-    return LHS.sle(RHS);
-  default:
-    llvm_unreachable("Not an ICmp predicate!");
-  }
-}
-
 void ICmpTestImpl(CmpInst::Predicate Pred) {
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(
       Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
         bool Exhaustive = true;
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-          ForeachNumInConstantRange(
-              CR2, [&](const APInt &N2) { Exhaustive &= icmp(Pred, N1, N2); });
+          ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+            Exhaustive &= ICmpInst::compare(N1, N2, Pred);
+          });
         });
         EXPECT_EQ(CR1.icmp(Pred, CR2), Exhaustive);
       });

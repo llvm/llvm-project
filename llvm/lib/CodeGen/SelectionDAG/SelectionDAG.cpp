@@ -28,6 +28,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -2312,19 +2313,8 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
       const APInt &C1 = N1C->getAPIntValue();
 
-      switch (Cond) {
-      default: llvm_unreachable("Unknown integer setcc!");
-      case ISD::SETEQ:  return getBoolConstant(C1 == C2, dl, VT, OpVT);
-      case ISD::SETNE:  return getBoolConstant(C1 != C2, dl, VT, OpVT);
-      case ISD::SETULT: return getBoolConstant(C1.ult(C2), dl, VT, OpVT);
-      case ISD::SETUGT: return getBoolConstant(C1.ugt(C2), dl, VT, OpVT);
-      case ISD::SETULE: return getBoolConstant(C1.ule(C2), dl, VT, OpVT);
-      case ISD::SETUGE: return getBoolConstant(C1.uge(C2), dl, VT, OpVT);
-      case ISD::SETLT:  return getBoolConstant(C1.slt(C2), dl, VT, OpVT);
-      case ISD::SETGT:  return getBoolConstant(C1.sgt(C2), dl, VT, OpVT);
-      case ISD::SETLE:  return getBoolConstant(C1.sle(C2), dl, VT, OpVT);
-      case ISD::SETGE:  return getBoolConstant(C1.sge(C2), dl, VT, OpVT);
-      }
+      return getBoolConstant(ICmpInst::compare(C1, C2, getICmpCondCode(Cond)),
+                             dl, VT, OpVT);
     }
   }
 
