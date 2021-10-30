@@ -1,12 +1,11 @@
 # Windows command prompt doesn't support ANSI escape sequences.
 # REQUIRES: shell
 
-# RUN: not %lld -xyz --color-diagnostics /nosuchfile 2>&1 \
+# RUN: not %lld --color-diagnostics /nosuchfile 2>&1 \
 # RUN:   | FileCheck -check-prefix=COLOR %s
-# RUN: not %lld -xyz --color-diagnostics=always /nosuchfile 2>&1 \
+# RUN: not %lld --color-diagnostics=always /nosuchfile 2>&1 \
 # RUN:   | FileCheck -check-prefix=COLOR %s
 
-# COLOR: {{lld: .\[0;31merror: .\[0munknown argument '-xyz'}}
 # COLOR: {{lld: .\[0;31merror: .\[0mcannot open /nosuchfile}}
 
 # RUN: not %lld --color-diagnostics=foobar 2>&1 | FileCheck -check-prefix=ERR %s
