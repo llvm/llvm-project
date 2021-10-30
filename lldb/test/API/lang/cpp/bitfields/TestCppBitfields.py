@@ -145,8 +145,6 @@ class CppBitfieldsTestCase(TestBase):
         self.expect_expr("base_with_vtable", result_children=base_with_vtable_children)
         self.expect_var_path("base_with_vtable", children=base_with_vtable_children)
 
-    # FIXME: These all crash due the vtable ptr.
-    @skipIf
     @no_debug_info_test
     def test_bitfield_behind_vtable_ptr(self):
         self.build()
@@ -164,7 +162,7 @@ class CppBitfieldsTestCase(TestBase):
 
         # Test a class with a vtable ptr and unnamed bitfield directly after.
         with_vtable_and_unnamed_children = [
-            ValueCheck(name="", type="unsigned int:4", value="0"),
+            ValueCheck(name="", type="int:4", value="0"),
             ValueCheck(name="b", type="unsigned int:4", value="0"),
             ValueCheck(name="c", type="unsigned int:4", value="5")
         ]
