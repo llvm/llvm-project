@@ -86,9 +86,9 @@ message(STATUS "Toolchain target triple: ${TARGET_TRIPLE}")
 set(CMAKE_CROSSCOMPILING                    ON CACHE BOOL "")
 set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRING "")
 # Required if COMPILER_RT_DEFAULT_TARGET_ONLY is ON
-set(CMAKE_C_COMPILER_TARGET 				"${TARGET_TRIPLE}" CACHE STRING "")
+set(CMAKE_C_COMPILER_TARGET         "${TARGET_TRIPLE}" CACHE STRING "")
 
-set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR		ON CACHE BOOL "")
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR    ON CACHE BOOL "")
 set(LLVM_DEFAULT_TARGET_TRIPLE              "${TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_TARGET_ARCH                        "${TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_LIT_ARGS                           "-vv ${LLVM_LIT_ARGS}" CACHE STRING "" FORCE)
@@ -156,6 +156,9 @@ if(DEFINED REMOTE_TEST_HOST)
   if(NOT DEFINED LIBUNWIND_EXECUTOR)
     set(LIBUNWIND_EXECUTOR                  "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
   endif()
+  #NOTE: temporary workaround to fix the remote execution for libunwind tests.
+  # https://reviews.llvm.org/D112082
+  set(LIBUNWIND_TEST_CONFIG                 "${LLVM_PROJECT_DIR}/libunwind/test/lit.site.cfg.in" CACHE PATH "")  
   if(NOT DEFINED LIBCXXABI_TARGET_INFO)
     set(LIBCXXABI_TARGET_INFO               "${DEFAULT_TEST_TARGET_INFO}" CACHE STRING "")
   endif()
