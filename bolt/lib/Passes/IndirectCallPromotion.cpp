@@ -13,7 +13,6 @@
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
-#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "ICP"

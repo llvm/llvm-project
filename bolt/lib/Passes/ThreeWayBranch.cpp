@@ -12,8 +12,6 @@
 
 #include "bolt/Passes/ThreeWayBranch.h"
 
-#include <numeric>
-
 using namespace llvm;
 
 namespace llvm {
