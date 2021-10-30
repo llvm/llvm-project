@@ -164,18 +164,28 @@ uint32_t getWarpSize() { return getGridValue().GV_Warp_Size; }
 } // namespace impl
 } // namespace _OMP
 
-bool mapping::isMainThreadInGenericMode(bool IsSPMD) {
-  if (IsSPMD || icv::Level)
-    return false;
-
-  // Check if this is the last warp in the block.
+static bool isInLastWarp() {
   uint32_t MainTId = (mapping::getNumberOfProcessorElements() - 1) &
                      ~(mapping::getWarpSize() - 1);
   return mapping::getThreadIdInBlock() == MainTId;
 }
 
+bool mapping::isMainThreadInGenericMode(bool IsSPMD) {
+  if (IsSPMD || icv::Level)
+    return false;
+
+  // Check if this is the last warp in the block.
+  return isInLastWarp();
+}
+
 bool mapping::isMainThreadInGenericMode() {
   return mapping::isMainThreadInGenericMode(mapping::isSPMDMode());
+}
+
+bool mapping::isInitialThreadInLevel0(bool IsSPMD) {
+  if (IsSPMD)
+    return mapping::getThreadIdInBlock() == 0;
+  return isInLastWarp();
 }
 
 bool mapping::isLeaderInWarp() {
@@ -220,7 +230,7 @@ uint32_t mapping::getNumberOfWarpsInBlock() {
 static int SHARED(IsSPMDMode);
 
 void mapping::init(bool IsSPMD) {
-  if (!mapping::getThreadIdInBlock())
+  if (mapping::isInitialThreadInLevel0(IsSPMD))
     IsSPMDMode = IsSPMD;
 }
 

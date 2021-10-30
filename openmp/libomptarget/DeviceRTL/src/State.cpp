@@ -366,7 +366,7 @@ void *&state::lookupPtr(ValueKind Kind, bool IsReadonly) {
 
 void state::init(bool IsSPMD) {
   SharedMemorySmartStack.init(IsSPMD);
-  if (!mapping::getThreadIdInBlock())
+  if (mapping::isInitialThreadInLevel0(IsSPMD))
     TeamState.init(IsSPMD);
 
   ThreadStates[mapping::getThreadIdInBlock()] = nullptr;
