@@ -613,3 +613,22 @@ define <2 x i8> @C0zeroVu(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
   %r = select <2 x i1> %cmp, <2 x i8> %X, <2 x i8> %f
   ret <2 x i8> %r
 }
+
+define i8 @f(i32 %value, i8 %call.i) {
+; CHECK-LABEL: @f(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[VALUE:%.*]], 0
+; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], i8 [[CALL_I:%.*]], i8 0
+; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp ult i32 [[VALUE]], 256
+; CHECK-NEXT:    [[CONV4:%.*]] = trunc i32 [[VALUE]] to i8
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_I_I]], i8 [[CONV4]], i8 [[COND_I]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+entry:
+  %cmp.i = icmp slt i32 %value, 0
+  %cond.i = select i1 %cmp.i, i8 %call.i, i8 0
+  %cmp.i.i = icmp ult i32 %value, 256
+  %conv4 = trunc i32 %value to i8
+  %cond = select i1 %cmp.i.i, i8 %conv4, i8 %cond.i
+  ret i8 %cond
+}
