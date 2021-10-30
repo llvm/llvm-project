@@ -490,7 +490,7 @@ private:
   }
 
   bool isPredictableValue(Value *InpVal, SmallSet<Value *, 16> &SeenValues) {
-    if (SeenValues.find(InpVal) != SeenValues.end())
+    if (SeenValues.contains(InpVal))
       return true;
 
     if (isa<ConstantInt>(InpVal))
@@ -505,7 +505,7 @@ private:
 
   void addInstToQueue(Value *Val, std::deque<Instruction *> &Q,
                       SmallSet<Value *, 16> &SeenValues) {
-    if (SeenValues.find(Val) != SeenValues.end())
+    if (SeenValues.contains(Val))
       return;
     if (Instruction *I = dyn_cast<Instruction>(Val))
       Q.push_back(I);
@@ -668,7 +668,7 @@ private:
 
       for (Value *Incoming : CurPhi->incoming_values()) {
         if (Incoming == FirstDef || isa<ConstantInt>(Incoming) ||
-            SeenValues.find(Incoming) != SeenValues.end()) {
+            SeenValues.contains(Incoming)) {
           continue;
         }
 

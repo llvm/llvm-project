@@ -624,8 +624,8 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   B.IRSC.getBasicBlocks(BasicBlockB);
   
   // Determine if the block is contained in the region.
-  bool AContained = BasicBlockA.find(ABB) != BasicBlockA.end();
-  bool BContained = BasicBlockB.find(BBB) != BasicBlockB.end();
+  bool AContained = BasicBlockA.contains(ABB);
+  bool BContained = BasicBlockB.contains(BBB);
 
   // Both blocks need to be contained in the region, or both need to be outside
   // the reigon.
@@ -895,14 +895,14 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
       bool Found = false;
       for (unsigned Val : GVNMapping.second) {
         // We make sure the target value number hasn't already been reserved.
-        if (UsedGVNs.find(Val) != UsedGVNs.end())
+        if (UsedGVNs.contains(Val))
           continue;
 
         // We make sure that the opposite mapping is still consistent.
         DenseMap<unsigned, DenseSet<unsigned>>::iterator It =
             FromSourceMapping.find(Val);
 
-        if (It->second.find(SourceGVN) == It->second.end())
+        if (!It->second.contains(SourceGVN))
           continue;
 
         // We pick the first item that satisfies these conditions.
