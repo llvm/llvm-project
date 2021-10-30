@@ -343,6 +343,7 @@ public:
   }
 
   static uint32_t getInstanceCount() { return instanceCount; }
+  static void resetInstanceCount() { instanceCount = 0; }
 
 private:
   LoadCommandType type;
@@ -1152,6 +1153,8 @@ template <class LP> void Writer::run() {
 }
 
 template <class LP> void macho::writeResult() { Writer().run<LP>(); }
+
+void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();

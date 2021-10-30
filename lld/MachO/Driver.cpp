@@ -1068,7 +1068,25 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
-  errorHandler().cleanupCallback = []() { freeArena(); };
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+
+    concatOutputSections.clear();
+    inputFiles.clear();
+    inputSections.clear();
+    loadedArchives.clear();
+    syntheticSections.clear();
+    thunkMap.clear();
+
+    firstTLVDataSection = nullptr;
+    tar = nullptr;
+    memset(&in, 0, sizeof(in));
+
+    resetLoadedDylibs();
+    resetOutputSegments();
+    resetWriter();
+    InputFile::resetIdCount();
+  };
 
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
@@ -1392,6 +1410,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         reexportHandler(arg, extensions);
     }
 
+    cl::ResetAllOptionOccurrences();
+
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
       parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
@@ -1476,5 +1496,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  errorHandler().reset();
+  return ret;
 }

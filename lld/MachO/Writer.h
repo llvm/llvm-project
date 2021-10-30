@@ -26,6 +26,7 @@ public:
 };
 
 template <class LP> void writeResult();
+void resetWriter();
 
 void createSyntheticSections();
 
