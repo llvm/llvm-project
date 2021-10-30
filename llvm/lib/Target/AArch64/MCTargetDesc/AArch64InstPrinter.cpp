@@ -1545,6 +1545,28 @@ void AArch64InstPrinter::printBarriernXSOption(const MCInst *MI, unsigned OpNo,
     O << "#" << Val;
 }
 
+static bool isValidSysReg(const AArch64SysReg::SysReg *Reg, bool Read,
+                          const MCSubtargetInfo &STI) {
+  return (Reg && (Read ? Reg->Readable : Reg->Writeable) &&
+          Reg->haveFeatures(STI.getFeatureBits()));
+}
+
+// Looks up a system register either by encoding or by name. Some system
+// registers share the same encoding between different architectures,
+// therefore a tablegen lookup by encoding will return an entry regardless
+// of the register's predication on a specific subtarget feature. To work
+// around this problem we keep an alternative name for such registers and
+// look them up by that name if the first lookup was unsuccessful.
+static const AArch64SysReg::SysReg *lookupSysReg(unsigned Val, bool Read,
+                                                 const MCSubtargetInfo &STI) {
+  const AArch64SysReg::SysReg *Reg = AArch64SysReg::lookupSysRegByEncoding(Val);
+
+  if (Reg && !isValidSysReg(Reg, Read, STI))
+    Reg = AArch64SysReg::lookupSysRegByName(Reg->AltName);
+
+  return Reg;
+}
+
 void AArch64InstPrinter::printMRSSystemRegister(const MCInst *MI, unsigned OpNo,
                                                 const MCSubtargetInfo &STI,
                                                 raw_ostream &O) {
@@ -1564,8 +1586,9 @@ void AArch64InstPrinter::printMRSSystemRegister(const MCInst *MI, unsigned OpNo,
     return;
   }
 
-  const AArch64SysReg::SysReg *Reg = AArch64SysReg::lookupSysRegByEncoding(Val);
-  if (Reg && Reg->Readable && Reg->haveFeatures(STI.getFeatureBits()))
+  const AArch64SysReg::SysReg *Reg = lookupSysReg(Val, true /*Read*/, STI);
+
+  if (isValidSysReg(Reg, true /*Read*/, STI))
     O << Reg->Name;
   else
     O << AArch64SysReg::genericRegisterString(Val);
@@ -1590,8 +1613,9 @@ void AArch64InstPrinter::printMSRSystemRegister(const MCInst *MI, unsigned OpNo,
     return;
   }
 
-  const AArch64SysReg::SysReg *Reg = AArch64SysReg::lookupSysRegByEncoding(Val);
-  if (Reg && Reg->Writeable && Reg->haveFeatures(STI.getFeatureBits()))
+  const AArch64SysReg::SysReg *Reg = lookupSysReg(Val, false /*Read*/, STI);
+
+  if (isValidSysReg(Reg, false /*Read*/, STI))
     O << Reg->Name;
   else
     O << AArch64SysReg::genericRegisterString(Val);

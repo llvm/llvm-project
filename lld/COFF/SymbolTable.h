@@ -81,7 +81,7 @@ public:
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
-  void addCombinedLTOObjects();
+  void compileBitcodeFiles();
 
   // Creates an Undefined symbol for a given name.
   Symbol *addUndefined(StringRef name);

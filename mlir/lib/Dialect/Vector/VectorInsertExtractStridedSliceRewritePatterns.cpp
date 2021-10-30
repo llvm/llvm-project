@@ -121,9 +121,10 @@ public:
     if (op.offsets().getValue().empty())
       return failure();
 
-    int64_t rankDiff = dstType.getRank() - srcType.getRank();
-    assert(rankDiff >= 0);
-    if (rankDiff != 0)
+    int64_t srcRank = srcType.getRank();
+    int64_t dstRank = dstType.getRank();
+    assert(dstRank >= srcRank);
+    if (dstRank != srcRank)
       return failure();
 
     if (srcType == dstType) {
@@ -139,6 +140,34 @@ public:
 
     auto loc = op.getLoc();
     Value res = op.dest();
+
+    if (srcRank == 1) {
+      int nSrc = srcType.getShape().front();
+      int nDest = dstType.getShape().front();
+      // 1. Scale source to destType so we can shufflevector them together.
+      SmallVector<int64_t> offsets(nDest, 0);
+      for (int64_t i = 0; i < nSrc; ++i)
+        offsets[i] = i;
+      Value scaledSource =
+          rewriter.create<ShuffleOp>(loc, op.source(), op.source(), offsets);
+
+      // 2. Create a mask where we take the value from scaledSource of dest
+      // depending on the offset.
+      offsets.clear();
+      for (int64_t i = 0, e = offset + size * stride; i < nDest; ++i) {
+        if (i < offset || i >= e || (i - offset) % stride != 0)
+          offsets.push_back(nDest + i);
+        else
+          offsets.push_back((i - offset) / stride);
+      }
+
+      // 3. Replace with a ShuffleOp.
+      rewriter.replaceOpWithNewOp<ShuffleOp>(op, scaledSource, op.dest(),
+                                             offsets);
+
+      return success();
+    }
+
     // For each slice of the source vector along the most major dimension.
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {

@@ -195,13 +195,6 @@ template <typename SPSElementTagT> class SPSSequence;
 /// SPS tag type for strings, which are equivalent to sequences of chars.
 using SPSString = SPSSequence<char>;
 
-/// SPS tag type for executor addresseses.
-class SPSExecutorAddr {};
-
-template <>
-class SPSSerializationTraits<SPSExecutorAddr, uint64_t>
-    : public SPSSerializationTraits<uint64_t, uint64_t> {};
-
 /// SPS tag type for maps.
 ///
 /// SPS maps are just sequences of (Key, Value) tuples.

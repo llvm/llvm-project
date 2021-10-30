@@ -81,6 +81,9 @@ struct ModuleStats {
   std::string triple;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
+  double debug_parse_time = 0.0;
+  double debug_index_time = 0.0;
+  uint64_t debug_info_size = 0;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.

@@ -59,6 +59,10 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) || isa<ConstantExpr>(V);
   }
+
+  /// Return true if this operator has flags which may cause this operator
+  /// to evaluate to poison despite having non-poison inputs.
+  bool hasPoisonGeneratingFlags() const;
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
@@ -242,6 +246,9 @@ public:
   }
   void operator|=(const FastMathFlags &OtherFlags) {
     Flags |= OtherFlags.Flags;
+  }
+  bool operator!=(const FastMathFlags &OtherFlags) const {
+    return Flags != OtherFlags.Flags;
   }
 };
 

@@ -108,6 +108,7 @@ public:
     // Assume we are in teams region or that we use a single block
     // per target region
     ST numberOfActiveOMPThreads = GetNumberOfOmpThreads(IsSPMDExecutionMode);
+    int32_t schedtype_nomod = SCHEDULE_WITHOUT_MODIFIERS(schedtype);
 
     // All warps that are in excess of the maximum requested, do
     // not execute the loop
@@ -116,8 +117,11 @@ public:
           "%d, num tids %d\n",
           (int)gtid, (int)schedtype, (long long)chunk, (int)gtid,
           (int)numberOfActiveOMPThreads);
-    ASSERT(LT_FUSSY, (gtid < numberOfActiveOMPThreads),
-           "for_static_init: current thread %d (%d) is not needed here; error",
+    ASSERT(LT_FUSSY, (gtid < numberOfActiveOMPThreads) ||
+           (schedtype_nomod == kmp_sched_distr_static_chunk) ||
+           (schedtype_nomod == kmp_sched_distr_static_nochunk) ||
+           (schedtype_nomod == kmp_sched_distr_static_chunk_sched_static_chunkone),
+           "for_static_init: current thread %d (%d) is not needed here; error\n",
            gtid, numberOfActiveOMPThreads);
 
     // copy
@@ -126,7 +130,7 @@ public:
     T ub = *pupper;
     ST stride = *pstride;
     // init
-    switch (SCHEDULE_WITHOUT_MODIFIERS(schedtype)) {
+    switch (schedtype_nomod) {
     case kmp_sched_static_chunk: {
       if (chunk > 0) {
         ForStaticChunk(lastiter, lb, ub, stride, chunk, gtid,

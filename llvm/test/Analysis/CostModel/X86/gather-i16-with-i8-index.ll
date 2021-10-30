@@ -57,7 +57,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; AVX512: LV: Found an estimated cost of 444 for VF 32 For instruction:   %valB = load i16, i16* %inB, align 2
 ; AVX512: LV: Found an estimated cost of 888 for VF 64 For instruction:   %valB = load i16, i16* %inB, align 2
 ;
-; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %valB = load i16, i16* %inB, align 4
+; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF {{[0-9]+}} For instruction:   %valB = load i16, i16* %inB, align 2
 define void @test() {
 entry:
   br label %for.body

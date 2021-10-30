@@ -55,4 +55,14 @@ struct Test {
     // CHECK-NEXT:               CXXThisExpr {{.*}} <col:8> 'Test *' this
   }
   void yada();
+  // CHECK:      CXXMethodDecl {{.*}} <line:[[@LINE-1]]:3, col:13> col:8 used yada 'void ()'
 };
+
+@protocol P
+@end;
+
+using TestObjCPointerWithoutStar = id<P>;
+// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:40> col:7 TestObjCPointerWithoutStar 'id<P>'
+
+using TestObjCPointerWithStar = A *;
+// CHECK:      TypeAliasDecl {{.+}} <{{.+}}:[[@LINE-1]]:1, col:35> col:7 TestObjCPointerWithStar 'A *'

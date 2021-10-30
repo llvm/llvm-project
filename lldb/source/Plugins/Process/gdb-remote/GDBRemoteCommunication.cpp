@@ -101,7 +101,7 @@ size_t GDBRemoteCommunication::SendAck() {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '+';
-  const size_t bytes_written = Write(&ch, 1, status, nullptr);
+  const size_t bytes_written = WriteAll(&ch, 1, status, nullptr);
   LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
@@ -111,7 +111,7 @@ size_t GDBRemoteCommunication::SendNack() {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
   ConnectionStatus status = eConnectionStatusSuccess;
   char ch = '-';
-  const size_t bytes_written = Write(&ch, 1, status, nullptr);
+  const size_t bytes_written = WriteAll(&ch, 1, status, nullptr);
   LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
   m_history.AddPacket(ch, GDBRemotePacket::ePacketTypeSend, bytes_written);
   return bytes_written;
@@ -137,7 +137,7 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
     ConnectionStatus status = eConnectionStatusSuccess;
     const char *packet_data = packet.data();
     const size_t packet_length = packet.size();
-    size_t bytes_written = Write(packet_data, packet_length, status, nullptr);
+    size_t bytes_written = WriteAll(packet_data, packet_length, status, nullptr);
     if (log) {
       size_t binary_start_offset = 0;
       if (strncmp(packet_data, "$vFile:pwrite:", strlen("$vFile:pwrite:")) ==
@@ -893,8 +893,13 @@ GDBRemoteCommunication::ListenThread(lldb::thread_arg_t arg) {
 
   if (connection) {
     // Do the listen on another thread so we can continue on...
-    if (connection->Connect(comm->m_listen_url.c_str(), &error) !=
-        eConnectionStatusSuccess)
+    if (connection->Connect(
+            comm->m_listen_url.c_str(), [comm](llvm::StringRef port_str) {
+              uint16_t port = 0;
+              llvm::to_integer(port_str, port, 10);
+              comm->m_port_promise.set_value(port);
+            },
+            &error) != eConnectionStatusSuccess)
       comm->SetConnection(nullptr);
   }
   return {};
@@ -1056,10 +1061,12 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
           return error;
         }
 
-        ConnectionFileDescriptor *connection =
-            (ConnectionFileDescriptor *)GetConnection();
         // Wait for 10 seconds to resolve the bound port
-        uint16_t port_ = connection->GetListeningPort(std::chrono::seconds(10));
+        std::future<uint16_t> port_future = m_port_promise.get_future();
+        uint16_t port_ = port_future.wait_for(std::chrono::seconds(10)) ==
+                                 std::future_status::ready
+                             ? port_future.get()
+                             : 0;
         if (port_ > 0) {
           char port_cstr[32];
           snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", port_);

@@ -22,11 +22,10 @@ static Error createInvalidPlugInError(StringRef plugin_name) {
 }
 
 Expected<lldb::TraceExporterUP>
-TraceExporter::FindPlugin(llvm::StringRef plugin_name) {
-  ConstString name(plugin_name);
+TraceExporter::FindPlugin(llvm::StringRef name) {
   if (auto create_callback =
           PluginManager::GetTraceExporterCreateCallback(name))
     return create_callback();
 
-  return createInvalidPlugInError(plugin_name);
+  return createInvalidPlugInError(name);
 }

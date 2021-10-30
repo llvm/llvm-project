@@ -455,6 +455,7 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
       furthestPositionInRecord = *recordLength;
     }
     if (!(isFixedRecordLength && access == Access::Direct)) {
+      positionInRecord = furthestPositionInRecord;
       if (isUnformatted.value_or(false)) {
         // Append the length of a sequential unformatted variable-length record
         // as its footer, then overwrite the reserved first four bytes of the
@@ -464,7 +465,6 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         // headers &/or footers
         std::uint32_t length;
         length = furthestPositionInRecord - sizeof length;
-        positionInRecord = furthestPositionInRecord;
         ok = ok &&
             Emit(reinterpret_cast<const char *>(&length), sizeof length,
                 sizeof length, handler);

@@ -139,14 +139,6 @@ def RetCC_SI_Shader : CallingConv<[
   ]>>
 ]>;
 
-def CSR_AMDGPU_VGPRs_24_255 : CalleeSavedRegs<
-  (sequence "VGPR%u", 24, 255)
->;
-
-def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
-  (sequence "VGPR%u", 32, 255)
->;
-
 def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
   // The CSRs & scratch-registers are interleaved at a split boundary of 8.
   (add (sequence "VGPR%u", 40, 47),

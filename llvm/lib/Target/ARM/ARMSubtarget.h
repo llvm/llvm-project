@@ -792,14 +792,7 @@ public:
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
-    return (TargetTriple.getEnvironment() == Triple::EABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::MuslEABI ||
-            TargetTriple.getEnvironment() == Triple::EABIHF ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-            isTargetAndroid()) &&
-           !isTargetDarwin() && !isTargetWindows();
+    return TargetTriple.isTargetEHABICompatible();
   }
 
   bool isTargetHardFloat() const;

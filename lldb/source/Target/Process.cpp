@@ -363,9 +363,8 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
   if (!plugin_name.empty()) {
-    ConstString const_plugin_name(plugin_name);
     create_callback =
-        PluginManager::GetProcessCreateCallbackForPluginName(const_plugin_name);
+        PluginManager::GetProcessCreateCallbackForPluginName(plugin_name);
     if (create_callback) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);
@@ -2581,6 +2580,9 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
           // stopped or crashed. Directly set the state.  This is done to
           // prevent a stop message with a bunch of spurious output on thread
           // status, as well as not pop a ProcessIOHandler.
+          // We are done with the launch hijack listener, and this stop should
+          // go to the public state listener:
+          RestoreProcessEvents();
           SetPublicState(state, false);
 
           if (PrivateStateThreadIsValid())

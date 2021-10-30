@@ -68,6 +68,39 @@ struct LinalgStrategyTilePass
   LinalgTransformationFilter filter;
 };
 
+/// Configurable pass to apply hoisting and padding.
+struct LinalgStrategyPadPass
+    : public LinalgStrategyPadPassBase<LinalgStrategyPadPass> {
+
+  LinalgStrategyPadPass() = default;
+
+  LinalgStrategyPadPass(StringRef opName, LinalgPaddingOptions opt,
+                        LinalgTransformationFilter filt)
+      : options(opt), filter(filt) {
+    this->anchorOpName.setValue(opName.str());
+  }
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+
+    RewritePatternSet paddingPattern(funcOp.getContext());
+    if (!anchorOpName.empty()) {
+      paddingPattern.add<LinalgPaddingPattern>(
+          anchorOpName, funcOp.getContext(), options, filter);
+    } else {
+      paddingPattern.add<LinalgPaddingPattern>(funcOp.getContext(), options,
+                                               filter);
+    }
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(paddingPattern))))
+      signalPassFailure();
+  }
+
+  LinalgPaddingOptions options;
+  LinalgTransformationFilter filter;
+};
+
 /// Configurable pass to apply pattern-based linalg generalization.
 struct LinalgStrategyGeneralizePass
     : public LinalgStrategyGeneralizePassBase<LinalgStrategyGeneralizePass> {
@@ -264,34 +297,44 @@ struct LinalgStrategyLowerVectorsPass
     MLIRContext *context = funcOp.getContext();
     RewritePatternSet patterns(context);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
-    if (options.transferLowering) {
-      vector::populateVectorTransferLoweringPatterns(patterns,
-                                                     options.maxTransferRank);
-    }
-    if (options.transposeLowering) {
-      vector::populateVectorTransposeLoweringPatterns(
-          patterns, options.vectorTransformOptions);
-    }
-    if (options.multiReductionLowering) {
-      vector::populateVectorMultiReductionLoweringPatterns(
-          patterns,
-          options.vectorTransformOptions.vectorMultiReductionLowering);
-    }
+    // In a progressive lowering of vectors, this would be the 1st step.
     if (options.contractionLowering) {
       patterns.add<ContractionOpToOuterProductOpLowering,
                    ContractionOpToMatmulOpLowering, ContractionOpLowering>(
           options.vectorTransformOptions, context);
       vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
     }
+    // In a progressive lowering of vectors, this would be the 2nd step.
+    if (options.multiReductionLowering) {
+      vector::populateVectorMultiReductionLoweringPatterns(
+          patterns,
+          options.vectorTransformOptions.vectorMultiReductionLowering);
+    }
+    // In a progressive lowering of vectors, this would be the 3rd step.
     if (options.transferPartialRewrite) {
       patterns.add<vector::VectorTransferFullPartialRewriter>(
           context, options.vectorTransformOptions);
     }
-    if (options.transferToSCFConversion) {
-      populateVectorToSCFConversionPatterns(patterns,
-                                            options.vectorTransferToSCFOptions);
+    // In a progressive lowering of vectors, this would be the 4th step.
+    if (options.transferLowering) {
+      vector::populateVectorTransferLoweringPatterns(patterns,
+                                                     options.maxTransferRank);
     }
-    vector::populateVectorShapeCastLoweringPatterns(patterns);
+    // In a progressive lowering of vectors, this would be the 5th step.
+    if (options.transferToSCFConversion) {
+      populateVectorToSCFConversionPatterns(
+          patterns, options.vectorTransferToSCFOptions.setTargetRank(
+                        options.maxTransferRank));
+    }
+    // In a progressive lowering of vectors, this would be the 6th step.
+    if (options.shapeCastLowering) {
+      vector::populateVectorShapeCastLoweringPatterns(patterns);
+    }
+    // In a progressive lowering of vectors, this would be the 7th step.
+    if (options.transposeLowering) {
+      vector::populateVectorTransposeLoweringPatterns(
+          patterns, options.vectorTransformOptions);
+    }
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   }
 
@@ -320,6 +363,13 @@ std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgStrategyTilePass(StringRef opName, LinalgTilingOptions opt,
                                    LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyTilePass>(opName, opt, filter);
+}
+
+/// Create a LinalgStrategyPadPass.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyPadPass(StringRef opName, LinalgPaddingOptions opt,
+                                  LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyPadPass>(opName, opt, filter);
 }
 
 /// Create a LinalgStrategyPromotePass.

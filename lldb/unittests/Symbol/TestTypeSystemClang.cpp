@@ -912,6 +912,32 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   EXPECT_EQ(method->getDeclName().getObjCSelector().getAsString(), "foo");
 }
 
+TEST_F(TestTypeSystemClang, GetFullyUnqualifiedType) {
+  CompilerType bool_ = m_ast->GetBasicType(eBasicTypeBool);
+  CompilerType cv_bool = bool_.AddConstModifier().AddVolatileModifier();
+
+  // const volatile bool -> bool
+  EXPECT_EQ(bool_, cv_bool.GetFullyUnqualifiedType());
+
+  // const volatile bool[47] -> bool[47]
+  EXPECT_EQ(bool_.GetArrayType(47),
+            cv_bool.GetArrayType(47).GetFullyUnqualifiedType());
+
+  // const volatile bool[47][42] -> bool[47][42]
+  EXPECT_EQ(
+      bool_.GetArrayType(42).GetArrayType(47),
+      cv_bool.GetArrayType(42).GetArrayType(47).GetFullyUnqualifiedType());
+
+  // const volatile bool * -> bool *
+  EXPECT_EQ(bool_.GetPointerType(),
+            cv_bool.GetPointerType().GetFullyUnqualifiedType());
+
+  // const volatile bool *[47] -> bool *[47]
+  EXPECT_EQ(
+      bool_.GetPointerType().GetArrayType(47),
+      cv_bool.GetPointerType().GetArrayType(47).GetFullyUnqualifiedType());
+}
+
 TEST(TestScratchTypeSystemClang, InferSubASTFromLangOpts) {
   LangOptions lang_opts;
   EXPECT_EQ(

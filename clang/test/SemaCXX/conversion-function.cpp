@@ -189,7 +189,7 @@ namespace source_locations {
   template<typename T>
   struct E2 {
     operator T
-    * // expected-error{{pointer to a reference}}
+    * // expected-error{{'operator type-parameter-0-0 *' declared as a pointer to a reference of type 'int &'}}
     () const;
   };
 

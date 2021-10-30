@@ -14,6 +14,9 @@ from math import ceil
 from collections import OrderedDict
 from subprocess import Popen, PIPE
 
+# This special value has been used to mark statistics that overflowed.
+TAINT_VALUE = "tainted"
+
 # Initialize the plot.
 def init_plot(plt):
   plt.title('Debug Location Statistics', fontweight='bold')
@@ -44,6 +47,9 @@ class LocationStats:
 
   # Get the PC ranges coverage.
   def get_pc_coverage(self):
+    if self.scope_bytes_covered == TAINT_VALUE or \
+       self.scope_bytes == TAINT_VALUE:
+      return TAINT_VALUE
     pc_ranges_covered = int(ceil(self.scope_bytes_covered * 100.0) \
                 / self.scope_bytes)
     return pc_ranges_covered
@@ -57,9 +63,14 @@ class LocationStats:
     pc_ranges_covered = self.get_pc_coverage()
     variables_coverage_per_map = {}
     for cov_bucket in coverage_buckets():
-      variables_coverage_per_map[cov_bucket] = \
-        int(ceil(self.variables_coverage_map[cov_bucket] * 100.0) \
-                 / self.variables_total_locstats)
+      variables_coverage_per_map[cov_bucket] = None
+      if self.variables_coverage_map[cov_bucket] == TAINT_VALUE or \
+         self.variables_total_locstats == TAINT_VALUE:
+        variables_coverage_per_map[cov_bucket] = TAINT_VALUE
+      else:
+        variables_coverage_per_map[cov_bucket] = \
+          int(ceil(self.variables_coverage_map[cov_bucket] * 100.0) \
+                   / self.variables_total_locstats)
 
     print (' =================================================')
     print ('            Debug Location Statistics       ')
@@ -67,9 +78,15 @@ class LocationStats:
     print ('     cov%           samples         percentage(~)  ')
     print (' -------------------------------------------------')
     for cov_bucket in coverage_buckets():
-      print ('   {0:10}     {1:8d}              {2:3d}%'. \
-        format(cov_bucket, self.variables_coverage_map[cov_bucket], \
-               variables_coverage_per_map[cov_bucket]))
+      if self.variables_coverage_map[cov_bucket] or \
+         self.variables_total_locstats == TAINT_VALUE:
+        print ('   {0:10}     {1:8}              {2:3}%'. \
+          format(cov_bucket, self.variables_coverage_map[cov_bucket], \
+                 variables_coverage_per_map[cov_bucket]))
+      else:
+        print ('   {0:10}     {1:8d}              {2:3d}%'. \
+          format(cov_bucket, self.variables_coverage_map[cov_bucket], \
+                 variables_coverage_per_map[cov_bucket]))
     print (' =================================================')
     print (' -the number of debug variables processed: ' \
       + str(self.variables_total_locstats))
@@ -78,8 +95,13 @@ class LocationStats:
     # Only if we are processing all the variables output the total
     # availability.
     if self.variables_total and self.variables_with_loc:
-      total_availability = int(ceil(self.variables_with_loc * 100.0) \
-                                    / self.variables_total)
+      total_availability = None
+      if self.variables_total == TAINT_VALUE or \
+         self.variables_with_loc == TAINT_VALUE:
+        total_availability = TAINT_VALUE
+      else:
+        total_availability = int(ceil(self.variables_with_loc * 100.0) \
+                                      / self.variables_total)
       print (' -------------------------------------------------')
       print (' -total availability: ' + str(total_availability) + '%')
     print (' =================================================')
@@ -179,6 +201,8 @@ def parse_locstats(opts, binary):
                   universal_newlines = True)
   cmd_stdout, cmd_stderr = subproc.communicate()
 
+  # TODO: Handle errors that are coming from llvm-dwarfdump.
+
   # Get the JSON and parse it.
   json_parsed = None
 
@@ -190,84 +214,97 @@ def parse_locstats(opts, binary):
 
   # TODO: Parse the statistics Version from JSON.
 
+  def init_field(name):
+    if json_parsed[name] == 'overflowed':
+      print ('warning: "' + name + '" field overflowed.')
+      return TAINT_VALUE
+    return json_parsed[name]
+
   if opts.only_variables:
     # Read the JSON only for local variables.
     variables_total_locstats = \
-      json_parsed['#local vars processed by location statistics']
+      init_field('#local vars processed by location statistics')
     variables_scope_bytes_covered = \
-      json_parsed['sum_all_local_vars(#bytes in parent scope covered' \
-                  ' by DW_AT_location)']
+      init_field('sum_all_local_vars(#bytes in parent scope covered' \
+                  ' by DW_AT_location)')
     variables_scope_bytes = \
-      json_parsed['sum_all_local_vars(#bytes in parent scope)']
+      init_field('sum_all_local_vars(#bytes in parent scope)')
     if not opts.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
         cov_category = "#local vars with {} of parent scope covered " \
                        "by DW_AT_location".format(cov_bucket)
-        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
+        variables_coverage_map[cov_bucket] = init_field(cov_category)
     else:
       variables_scope_bytes_entry_values = \
-        json_parsed['sum_all_local_vars(#bytes in parent scope ' \
-                    'covered by DW_OP_entry_value)']
-      variables_scope_bytes_covered = variables_scope_bytes_covered \
-         - variables_scope_bytes_entry_values
+        init_field('sum_all_local_vars(#bytes in parent scope ' \
+                    'covered by DW_OP_entry_value)')
+      if variables_scope_bytes_covered != TAINT_VALUE and \
+         variables_scope_bytes_entry_values != TAINT_VALUE:
+        variables_scope_bytes_covered = variables_scope_bytes_covered \
+           - variables_scope_bytes_entry_values
       for cov_bucket in coverage_buckets():
         cov_category = \
           "#local vars - entry values with {} of parent scope " \
           "covered by DW_AT_location".format(cov_bucket)
-        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
+        variables_coverage_map[cov_bucket] = init_field(cov_category)
   elif opts.only_formal_parameters:
     # Read the JSON only for formal parameters.
     variables_total_locstats = \
-      json_parsed['#params processed by location statistics']
+      init_field('#params processed by location statistics')
     variables_scope_bytes_covered = \
-      json_parsed['sum_all_params(#bytes in parent scope covered ' \
-                  'by DW_AT_location)']
+      init_field('sum_all_params(#bytes in parent scope covered ' \
+                  'by DW_AT_location)')
     variables_scope_bytes = \
-      json_parsed['sum_all_params(#bytes in parent scope)']
+      init_field('sum_all_params(#bytes in parent scope)')
     if not opts.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
         cov_category = "#params with {} of parent scope covered " \
                        "by DW_AT_location".format(cov_bucket)
-        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
+        variables_coverage_map[cov_bucket] = init_field(cov_category)
     else:
       variables_scope_bytes_entry_values = \
-        json_parsed['sum_all_params(#bytes in parent scope covered ' \
-                    'by DW_OP_entry_value)']
-      variables_scope_bytes_covered = variables_scope_bytes_covered \
-        - variables_scope_bytes_entry_values
+        init_field('sum_all_params(#bytes in parent scope covered ' \
+                    'by DW_OP_entry_value)')
+      if variables_scope_bytes_covered != TAINT_VALUE and \
+         variables_scope_bytes_entry_values != TAINT_VALUE:
+        variables_scope_bytes_covered = variables_scope_bytes_covered \
+          - variables_scope_bytes_entry_values
       for cov_bucket in coverage_buckets():
         cov_category = \
           "#params - entry values with {} of parent scope covered" \
           " by DW_AT_location".format(cov_bucket)
-        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
+        variables_coverage_map[cov_bucket] = init_field(cov_category)
   else:
     # Read the JSON for both local variables and formal parameters.
     variables_total = \
-      json_parsed['#source variables']
-    variables_with_loc = json_parsed['#source variables with location']
+      init_field('#source variables')
+    variables_with_loc = init_field('#source variables with location')
     variables_total_locstats = \
-      json_parsed['#variables processed by location statistics']
+      init_field('#variables processed by location statistics')
     variables_scope_bytes_covered = \
-      json_parsed['sum_all_variables(#bytes in parent scope covered ' \
-                  'by DW_AT_location)']
+      init_field('sum_all_variables(#bytes in parent scope covered ' \
+                  'by DW_AT_location)')
     variables_scope_bytes = \
-      json_parsed['sum_all_variables(#bytes in parent scope)']
+      init_field('sum_all_variables(#bytes in parent scope)')
+
     if not opts.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
         cov_category = "#variables with {} of parent scope covered " \
                        "by DW_AT_location".format(cov_bucket)
-        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
+        variables_coverage_map[cov_bucket] = init_field(cov_category)
     else:
       variables_scope_bytes_entry_values = \
-        json_parsed['sum_all_variables(#bytes in parent scope covered ' \
-                    'by DW_OP_entry_value)']
-      variables_scope_bytes_covered = variables_scope_bytes_covered \
-        - variables_scope_bytes_entry_values
+        init_field('sum_all_variables(#bytes in parent scope covered ' \
+                    'by DW_OP_entry_value)')
+      if variables_scope_bytes_covered != TAINT_VALUE and \
+         variables_scope_bytes_entry_values != TAINT_VALUE:
+        variables_scope_bytes_covered = variables_scope_bytes_covered \
+          - variables_scope_bytes_entry_values
       for cov_bucket in coverage_buckets():
         cov_category = \
           "#variables - entry values with {} of parent scope covered " \
           "by DW_AT_location".format(cov_bucket)
-        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
+        variables_coverage_map[cov_bucket] = init_field(cov_category)
 
   return LocationStats(binary, variables_total, variables_total_locstats,
                        variables_with_loc, variables_scope_bytes_covered,

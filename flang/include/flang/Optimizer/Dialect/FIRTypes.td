@@ -419,7 +419,9 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     bool hasConstantInterior() const;
 
     // Is the shape of the sequence constant?
-    bool hasConstantShape() const { return getConstantRows() == getDimension(); }
+    bool hasConstantShape() const {
+      return getConstantRows() == getDimension();
+    }
 
     // Does the sequence have unknown shape? (`array<* x T>`)
     bool hasUnknownShape() const { return getShape().empty(); }

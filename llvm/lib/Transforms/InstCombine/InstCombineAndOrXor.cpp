@@ -2699,10 +2699,32 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateXor(Or, ConstantInt::get(I.getType(), *CV));
   }
 
-  // (A & C)|(B & D)
+  // (A & C) | (B & D)
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
+
+    // (A & MaskC0) | (B & MaskC1)
+    const APInt *MaskC0, *MaskC1;
+    if (match(C, m_APInt(MaskC0)) && match(D, m_APInt(MaskC1)) &&
+        *MaskC0 == ~*MaskC1) {
+      Value *X;
+
+      // ((X | B) & MaskC) | (B & ~MaskC) -> (X & MaskC) | B
+      if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
+        return BinaryOperator::CreateOr(Builder.CreateAnd(X, *MaskC0), B);
+      // (A & MaskC) | ((X | A) & ~MaskC) -> (X & ~MaskC) | A
+      if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
+        return BinaryOperator::CreateOr(Builder.CreateAnd(X, *MaskC1), A);
+
+      // ((X ^ B) & MaskC) | (B & ~MaskC) -> (X & MaskC) ^ B
+      if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
+        return BinaryOperator::CreateXor(Builder.CreateAnd(X, *MaskC0), B);
+      // (A & MaskC) | ((X ^ A) & ~MaskC) -> (X & ~MaskC) ^ A
+      if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
+        return BinaryOperator::CreateXor(Builder.CreateAnd(X, *MaskC1), A);
+    }
+
     // (A & C1)|(B & C2)
     ConstantInt *C1, *C2;
     if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
@@ -2737,24 +2759,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           return BinaryOperator::CreateAnd(V2,
                                  Builder.getInt(C1->getValue()|C2->getValue()));
         }
-      }
-
-      if (C1->getValue() == ~C2->getValue()) {
-        Value *X;
-
-        // ((X|B)&C1)|(B&C2) -> (X&C1) | B iff C1 == ~C2
-        if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C1), B);
-        // (A&C2)|((X|A)&C1) -> (X&C2) | A iff C1 == ~C2
-        if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C2), A);
-
-        // ((X^B)&C1)|(B&C2) -> (X&C1) ^ B iff C1 == ~C2
-        if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C1), B);
-        // (A&C2)|((X^A)&C1) -> (X&C2) ^ A iff C1 == ~C2
-        if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C2), A);
       }
     }
 
@@ -2795,6 +2799,42 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // ((B | C) & A) | B -> B | (A & C)
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
+
+  // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
+  // TODO: One use checks are conservative. We have 7 operations in the source
+  //       expression and 3 in the target. We could allow 3 multiple used values
+  //       in RHS and LHS combined, but there is no common infrastructure to
+  //       conveniently do so no.
+  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
+                                  m_Value(C))))) {
+    if (match(Op1, m_OneUse(m_c_And(
+                       m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
+                       m_Specific(B))))) {
+      Value *Xor = Builder.CreateXor(B, C);
+      return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A));
+    }
+
+    if (match(Op1, m_OneUse(m_c_And(
+                       m_OneUse(m_Not(m_c_Or(m_Specific(B), m_Specific(C)))),
+                       m_Specific(A))))) {
+      Value *Xor = Builder.CreateXor(A, C);
+      return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B));
+    }
+  }
+
+  // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
+  // TODO: One use checks are conservative. We just need to check that a total
+  //       number of multiple used values does not exceed 3.
+  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
+                                  m_Value(C))))) {
+    if (match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(C)))))
+      return BinaryOperator::CreateNot(
+          Builder.CreateOr(Builder.CreateAnd(B, C), A));
+
+    if (match(Op1, m_Not(m_c_Or(m_Specific(B), m_Specific(C)))))
+      return BinaryOperator::CreateNot(
+          Builder.CreateOr(Builder.CreateAnd(A, C), B));
+  }
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
     return DeMorgan;
@@ -3547,10 +3587,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;
 
-  // Use DeMorgan and reassociation to eliminate a 'not' op.
   Value *X, *Y;
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
+    // Use DeMorgan and reassociation to eliminate a 'not' op.
     Constant *C2;
     if (match(Op0, m_OneUse(m_Or(m_Not(m_Value(X)), m_Constant(C2))))) {
       // (~X | C2) ^ C1 --> ((X & ~C2) ^ -1) ^ C1 --> (X & ~C2) ^ ~C1
@@ -3561,6 +3601,21 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // (~X & C2) ^ C1 --> ((X | ~C2) ^ -1) ^ C1 --> (X | ~C2) ^ ~C1
       Value *Or = Builder.CreateOr(X, ConstantExpr::getNot(C2));
       return BinaryOperator::CreateXor(Or, ConstantExpr::getNot(C1));
+    }
+
+    // Convert xor ([trunc] (ashr X, BW-1)), C =>
+    //   select(X >s -1, C, ~C)
+    // The ashr creates "AllZeroOrAllOne's", which then optionally inverses the
+    // constant depending on whether this input is less than 0.
+    const APInt *CA;
+    if (match(Op0, m_OneUse(m_TruncOrSelf(
+                       m_AShr(m_Value(X), m_APIntAllowUndef(CA))))) &&
+        *CA == X->getType()->getScalarSizeInBits() - 1 &&
+        !C1->isAllOnesValue()) {
+      assert(!C1->isZeroValue() && "Unexpected xor with 0");
+      Value *ICmp =
+          Builder.CreateICmpSGT(X, Constant::getAllOnesValue(X->getType()));
+      return SelectInst::Create(ICmp, Op1, Builder.CreateNot(Op1));
     }
   }
 

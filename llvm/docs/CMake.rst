@@ -485,19 +485,20 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_ENABLE_PROJECTS**:STRING
   Semicolon-separated list of projects to build, or *all* for building all
-  (clang, libcxx, libcxxabi, lldb, compiler-rt, lld, polly, etc) projects.
-  This flag assumes that projects are checked out side-by-side and not nested,
-  i.e. clang needs to be in parallel of llvm instead of nested in `llvm/tools`.
+  (clang, lldb, compiler-rt, lld, polly, etc) projects. This flag assumes
+  that projects are checked out side-by-side and not nested, i.e. clang
+  needs to be in parallel of llvm instead of nested in `llvm/tools`.
   This feature allows to have one build for only LLVM and another for clang+llvm
   using the same source checkout.
   The full list is:
-  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;openmp;polly;pstl``
+  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
 
 **LLVM_ENABLE_RUNTIMES**:STRING
   Build libc++, libc++abi or other projects using that a just-built compiler.
   This is the correct way to build libc++ when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
-  correct dependency ordering.
+  correct dependency ordering. If you want to build the runtimes using a system
+  compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
   Note: the list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
   The full list is:
   ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp``

@@ -228,12 +228,7 @@ void SymbolFileDWARFDebugMap::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SymbolFileDWARFDebugMap::GetPluginNameStatic() {
-  static ConstString g_name("dwarf-debugmap");
-  return g_name;
-}
-
-const char *SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader (debug map).";
 }
 
@@ -528,8 +523,8 @@ SymbolFileDWARFDebugMap::GetSymbolFileByOSOIndex(uint32_t oso_idx) {
 
 SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file) {
-  if (sym_file && sym_file->GetPluginName() ==
-                      SymbolFileDWARF::GetPluginNameStatic().GetStringRef())
+  if (sym_file &&
+      sym_file->GetPluginName() == SymbolFileDWARF::GetPluginNameStatic())
     return static_cast<SymbolFileDWARF *>(sym_file);
   return nullptr;
 }
@@ -1433,4 +1428,55 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
     }
   }
   return num_line_entries_added;
+}
+
+uint64_t SymbolFileDWARFDebugMap::GetDebugInfoSize() {
+  uint64_t debug_info_size = 0;
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
+    if (!oso_objfile)
+      return false; // Keep iterating
+    ModuleSP module_sp = oso_objfile->GetModule();
+    if (!module_sp)
+      return false; // Keep iterating
+    SectionList *section_list = module_sp->GetSectionList();
+    if (section_list)
+      debug_info_size += section_list->GetDebugInfoSize();
+    return false; // Keep iterating
+  });
+  return debug_info_size;
+}
+
+StatsDuration SymbolFileDWARFDebugMap::GetDebugInfoParseTime() {
+  StatsDuration elapsed(0.0);
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
+    if (oso_objfile) {
+      ModuleSP module_sp = oso_objfile->GetModule();
+      if (module_sp) {
+        SymbolFile *symfile = module_sp->GetSymbolFile();
+        if (symfile)
+          elapsed += symfile->GetDebugInfoParseTime();
+      }
+    }
+    return false; // Keep iterating
+  });
+  return elapsed;
+}
+
+StatsDuration SymbolFileDWARFDebugMap::GetDebugInfoIndexTime() {
+  StatsDuration elapsed(0.0);
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    ObjectFile *oso_objfile = oso_dwarf->GetObjectFile();
+    if (oso_objfile) {
+      ModuleSP module_sp = oso_objfile->GetModule();
+      if (module_sp) {
+        SymbolFile *symfile = module_sp->GetSymbolFile();
+        if (symfile)
+          elapsed += symfile->GetDebugInfoIndexTime();
+      }
+    }
+    return false; // Keep iterating
+  });
+  return elapsed;
 }

@@ -25,7 +25,7 @@ int main(int, char**)
     {
 //  optional(T)
     std::optional opt(5);
-    static_assert(std::is_same_v<decltype(opt), std::optional<int>>, "");
+    ASSERT_SAME_TYPE(decltype(opt), std::optional<int>);
     assert(static_cast<bool>(opt));
     assert(*opt == 5);
     }
@@ -33,8 +33,35 @@ int main(int, char**)
     {
 //  optional(T)
     std::optional opt(A{});
-    static_assert(std::is_same_v<decltype(opt), std::optional<A>>, "");
+    ASSERT_SAME_TYPE(decltype(opt), std::optional<A>);
     assert(static_cast<bool>(opt));
+    }
+
+    {
+//  optional(const T&);
+    const int& source = 5;
+    std::optional opt(source);
+    ASSERT_SAME_TYPE(decltype(opt), std::optional<int>);
+    assert(static_cast<bool>(opt));
+    assert(*opt == 5);
+    }
+
+    {
+//  optional(T*);
+    const int* source = nullptr;
+    std::optional opt(source);
+    ASSERT_SAME_TYPE(decltype(opt), std::optional<const int*>);
+    assert(static_cast<bool>(opt));
+    assert(*opt == nullptr);
+    }
+
+    {
+//  optional(T[]);
+    int source[] = {1, 2, 3};
+    std::optional opt(source);
+    ASSERT_SAME_TYPE(decltype(opt), std::optional<int*>);
+    assert(static_cast<bool>(opt));
+    assert((*opt)[0] == 1);
     }
 
 //  Test the implicit deduction guides
@@ -42,7 +69,7 @@ int main(int, char**)
 //  optional(optional);
     std::optional<char> source('A');
     std::optional opt(source);
-    static_assert(std::is_same_v<decltype(opt), std::optional<char>>, "");
+    ASSERT_SAME_TYPE(decltype(opt), std::optional<char>);
     assert(static_cast<bool>(opt) == static_cast<bool>(source));
     assert(*opt == *source);
     }

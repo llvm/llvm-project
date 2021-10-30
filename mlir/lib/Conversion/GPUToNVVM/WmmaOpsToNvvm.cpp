@@ -75,18 +75,7 @@ struct WmmaLoadOpToNVVMLowering
     if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
-    unsigned indexTypeBitwidth =
-        this->getTypeConverter()->getIndexTypeBitwidth();
-
-    // The corresponding intrinsics expects leadDimension to be a 32-bit
-    // integer, so all the calculations of linearizing the load address
-    // must also follow this restriction.
-    if (indexTypeBitwidth != 32)
-      return rewriter.notifyMatchFailure(
-          op, "Expected indices to the memref to be 32-bit wide.");
     Location loc = op->getLoc();
-
-    auto leadDimension = subgroupMmaLoadMatrixOp.leadDimensionAttr();
 
     // MemRefDescriptor to extract alignedPtr and offset.
     MemRefDescriptor promotedSrcOp(adaptor.srcMemref());
@@ -95,21 +84,21 @@ struct WmmaLoadOpToNVVMLowering
     // `srcOffsetJ`. The actualOffset is (memrefOffset + (alignedPtr +
     // ((leadDimension * srcOffsetI) + srcOffsetJ)). The memrefs here are
     // assumed to be normalized and hence the simple conversion works.
+    IntegerAttr leadDimension = subgroupMmaLoadMatrixOp.leadDimensionAttr();
     SmallVector<Value> indices(adaptor.indices());
     Value srcOffsetIVal = indices[0];
     Value srcOffsetJVal = indices[1];
-    Type i32Ty = rewriter.getI32Type();
-    Value leadingDim32 =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Ty, leadDimension);
+    Value leadingDim = rewriter.create<LLVM::ConstantOp>(
+        loc, srcOffsetIVal.getType(), leadDimension);
     Value numElemsLeadDim =
-        rewriter.create<LLVM::MulOp>(loc, i32Ty, leadingDim32, srcOffsetIVal);
-    Value loadOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, numElemsLeadDim,
-                                                    srcOffsetJVal);
+        rewriter.create<LLVM::MulOp>(loc, leadingDim, srcOffsetIVal);
+    Value loadOffset =
+        rewriter.create<LLVM::AddOp>(loc, numElemsLeadDim, srcOffsetJVal);
 
     Value promotedSrcOpToUse;
     promotedSrcOpToUse = promotedSrcOp.offset(rewriter, loc);
-    Value actualOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, loadOffset,
-                                                      promotedSrcOpToUse);
+    Value actualOffset =
+        rewriter.create<LLVM::AddOp>(loc, loadOffset, promotedSrcOpToUse);
     Value loadAddress = rewriter.create<LLVM::GEPOp>(
         loc, promotedSrcOp.getElementPtrType(),
         promotedSrcOp.alignedPtr(rewriter, loc), ArrayRef<Value>{actualOffset});
@@ -120,7 +109,8 @@ struct WmmaLoadOpToNVVMLowering
     Value loadAddressCasted = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(
-            i32Ty, promotedSrcOp.getElementPtrType().getAddressSpace()),
+            rewriter.getI32Type(),
+            promotedSrcOp.getElementPtrType().getAddressSpace()),
         loadAddress);
 
     // Get the shape of the MMAMatrix type being returned. The shape will
@@ -133,6 +123,8 @@ struct WmmaLoadOpToNVVMLowering
     StringRef operandStr = retType.getOperand();
 
     // Create nvvm.mma_load op according to the operand types.
+    Value leadingDim32 = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getI32Type(), leadDimension);
     SmallVector<Value, 2> loadOpOperands({loadAddressCasted, leadingDim32});
     if (operandStr.equals("AOp")) {
       if (retTypeShape[0] == 16 && retTypeShape[1] == 16) {
@@ -182,40 +174,29 @@ struct WmmaStoreOpToNVVMLowering
     if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
-    unsigned indexTypeBitwidth =
-        this->getTypeConverter()->getIndexTypeBitwidth();
-    // The corresponding intrinsics expects leadDimension to be a 32-bit
-    // integer, so all the calculations of linearizing the store address
-    // must also follow this restriction.
-    if (indexTypeBitwidth != 32)
-      return rewriter.notifyMatchFailure(
-          op, "expected indices to the memref to be 32-bit wide.");
-
     Location loc = op->getLoc();
 
     // MemRefDescriptor to extract alignedPtr and offset.
     MemRefDescriptor promotedDstOp(adaptor.dstMemref());
 
-    auto leadDimension = subgroupMmaStoreMatrixOp.leadDimensionAttr();
-
     // Emit ops which compute the store offset using `dstOffsetI`,
     // `dstOffsetJ`. The actualOffset is (memrefOffset + (alignedPtr +
     // ((leadDimension * dstOffsetI) + dstOffsetJ)).
+    auto leadDimension = subgroupMmaStoreMatrixOp.leadDimensionAttr();
     SmallVector<Value> indices(adaptor.indices());
     Value dstOffsetIVal = indices[0];
     Value dstOffsetJVal = indices[1];
-    Type i32Ty = rewriter.getI32Type();
-    Value leadingDim32 =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Ty, leadDimension);
+    Value leadingDim = rewriter.create<LLVM::ConstantOp>(
+        loc, dstOffsetIVal.getType(), leadDimension);
     Value numElemsLeadDim =
-        rewriter.create<LLVM::MulOp>(loc, i32Ty, leadingDim32, dstOffsetIVal);
-    Value loadOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, numElemsLeadDim,
-                                                    dstOffsetJVal);
+        rewriter.create<LLVM::MulOp>(loc, leadingDim, dstOffsetIVal);
+    Value loadOffset =
+        rewriter.create<LLVM::AddOp>(loc, numElemsLeadDim, dstOffsetJVal);
 
     Value promotedDstOpToUse;
     promotedDstOpToUse = promotedDstOp.offset(rewriter, loc);
-    Value actualOffset = rewriter.create<LLVM::AddOp>(loc, i32Ty, loadOffset,
-                                                      promotedDstOpToUse);
+    Value actualOffset =
+        rewriter.create<LLVM::AddOp>(loc, loadOffset, promotedDstOpToUse);
     Value storeAddress = rewriter.create<LLVM::GEPOp>(
         loc, promotedDstOp.getElementPtrType(),
         promotedDstOp.alignedPtr(rewriter, loc), ArrayRef<Value>{actualOffset});
@@ -226,7 +207,8 @@ struct WmmaStoreOpToNVVMLowering
     Value storeAddressCasted = rewriter.create<LLVM::BitcastOp>(
         loc,
         LLVM::LLVMPointerType::get(
-            i32Ty, promotedDstOp.getElementPtrType().getAddressSpace()),
+            rewriter.getI32Type(),
+            promotedDstOp.getElementPtrType().getAddressSpace()),
         storeAddress);
 
     SmallVector<Value, 4> storeOpOperands;
@@ -245,6 +227,8 @@ struct WmmaStoreOpToNVVMLowering
           rewriter.getI32ArrayAttr(i));
       storeOpOperands.push_back(toUse);
     }
+    Value leadingDim32 = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getI32Type(), leadDimension);
     storeOpOperands.push_back(leadingDim32);
     // Unpack the results from the source.
     if (srcType.getElementType().isF16()) {

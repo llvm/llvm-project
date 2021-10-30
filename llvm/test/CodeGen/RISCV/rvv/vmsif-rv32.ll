@@ -136,7 +136,7 @@ define <vscale x 8 x i1> @intrinsic_vmsif_m_nxv8i1(<vscale x 8 x i1> %0, i32 %1)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsif.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i1> @llvm.riscv.vmsif.nxv8i1(

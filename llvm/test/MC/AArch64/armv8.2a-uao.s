@@ -1,5 +1,7 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a < %s 2> %t | FileCheck %s
 // RUN: FileCheck --check-prefix=CHECK-ERROR %s < %t
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8r -o - %s 2> %t | FileCheck %s
+// RUN: FileCheck --check-prefix=CHECK-ERROR %s < %t
 
   msr uao, #0
   msr uao, #1

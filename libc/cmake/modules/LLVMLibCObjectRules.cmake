@@ -258,6 +258,36 @@ function(add_entrypoint_object target_name)
 
 endfunction(add_entrypoint_object)
 
+set(ENTRYPOINT_EXT_TARGET_TYPE "ENTRYPOINT_EXT")
+
+# A rule for external entrypoint targets.
+# Usage:
+#     add_entrypoint_external(
+#       <target_name>
+#       DEPENDS <list of dependencies>
+#     )
+function(add_entrypoint_external target_name)
+  cmake_parse_arguments(
+    "ADD_ENTRYPOINT_EXT"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS"  # Multi value arguments
+    ${ARGN}
+  )
+  get_fq_target_name(${target_name} fq_target_name)
+  set(entrypoint_name ${target_name})
+
+  add_custom_target(${fq_target_name})
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      "ENTRYPOINT_NAME" ${entrypoint_name}
+      "TARGET_TYPE" ${ENTRYPOINT_EXT_TARGET_TYPE}
+      "DEPS" "${ADD_ENTRYPOINT_EXT_DEPENDS}"
+  )
+
+endfunction(add_entrypoint_external)
+
 # Rule build a redirector object file.
 function(add_redirector_object target_name)
   cmake_parse_arguments(

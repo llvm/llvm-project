@@ -418,8 +418,12 @@ static std::optional<Procedure> CharacterizeProcedure(
               // attempts to use impermissible intrinsic procedures as the
               // interfaces of procedure pointers are caught and flagged in
               // declaration checking in Semantics.
-              return context.intrinsics().IsSpecificIntrinsicFunction(
-                  symbol.name().ToString());
+              auto intrinsic{context.intrinsics().IsSpecificIntrinsicFunction(
+                  symbol.name().ToString())};
+              if (intrinsic && intrinsic->isRestrictedSpecific) {
+                intrinsic.reset(); // Exclude intrinsics from table 16.3.
+              }
+              return intrinsic;
             }
             const semantics::ProcInterface &interface{proc.interface()};
             if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {

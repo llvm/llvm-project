@@ -153,7 +153,7 @@ public:
   // are unreferenced except by other bitcode objects.
   bool isUsedInRegularObj : 1;
 
-  // True if ths symbol is explicitly marked for export (i.e. via the
+  // True if this symbol is explicitly marked for export (i.e. via the
   // -e/--export command line flag)
   bool forceExport : 1;
 

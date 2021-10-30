@@ -74,6 +74,7 @@ protected:
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
                                            const SampleContextFrame &LeafLoc,
                                            uint64_t Count);
+  void updateTotalSamples();
   StringRef getCalleeNameForOffset(uint64_t TargetOffset);
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
@@ -99,8 +100,7 @@ private:
   // inline stack and meanwhile it adds the total samples for each frame's
   // function profile.
   FunctionSamples &
-  getLeafProfileAndAddTotalSamples(const SampleContextFrameVector &FrameVec,
-                                   uint64_t Count);
+  getLeafFrameProfile(const SampleContextFrameVector &FrameVec);
   void populateBodySamplesForAllFunctions(const RangeSample &RangeCounter);
   void
   populateBoundarySamplesForAllFunctions(const BranchSample &BranchCounters);

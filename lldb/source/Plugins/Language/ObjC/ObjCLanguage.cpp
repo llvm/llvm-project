@@ -48,11 +48,6 @@ void ObjCLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjCLanguage::GetPluginNameStatic() {
-  static ConstString g_name("objc");
-  return g_name;
-}
-
 // Static Functions
 
 Language *ObjCLanguage::CreateInstance(lldb::LanguageType language) {

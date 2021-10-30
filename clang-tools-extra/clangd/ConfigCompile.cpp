@@ -414,6 +414,16 @@ struct FragmentCompiler {
               C.Diagnostics.Suppress.insert(N);
           });
 
+    if (F.UnusedIncludes)
+      if (auto Val = compileEnum<Config::UnusedIncludesPolicy>(
+                         "UnusedIncludes", **F.UnusedIncludes)
+                         .map("Strict", Config::UnusedIncludesPolicy::Strict)
+                         .map("None", Config::UnusedIncludesPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Diagnostics.UnusedIncludes = *Val;
+        });
+
     compile(std::move(F.ClangTidy));
   }
 

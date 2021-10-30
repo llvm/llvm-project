@@ -52,10 +52,6 @@ void InstrumentationRuntimeTSan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString InstrumentationRuntimeTSan::GetPluginNameStatic() {
-  return ConstString("ThreadSanitizer");
-}
-
 lldb::InstrumentationRuntimeType InstrumentationRuntimeTSan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeThreadSanitizer;
 }

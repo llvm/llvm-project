@@ -65,7 +65,7 @@ enum {
 class PluginProperties : public Properties {
 public:
   static ConstString GetSettingName() {
-    return ProcessKDP::GetPluginNameStatic();
+    return ConstString(ProcessKDP::GetPluginNameStatic());
   }
 
   PluginProperties() : Properties() {
@@ -91,12 +91,7 @@ static PluginProperties &GetGlobalPluginProperties() {
 
 static const lldb::tid_t g_kernel_tid = 1;
 
-ConstString ProcessKDP::GetPluginNameStatic() {
-  static ConstString g_name("kdp-remote");
-  return g_name;
-}
-
-const char *ProcessKDP::GetPluginDescriptionStatic() {
+llvm::StringRef ProcessKDP::GetPluginDescriptionStatic() {
   return "KDP Remote protocol based debugging plug-in for darwin kernel "
          "debugging.";
 }

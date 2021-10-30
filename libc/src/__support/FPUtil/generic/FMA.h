@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
 namespace fputil {
