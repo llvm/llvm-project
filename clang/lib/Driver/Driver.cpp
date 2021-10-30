@@ -655,6 +655,50 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
+bool GetTargetInfoFromOffloadArch(Compilation &C, const char *OpenMPTarget,
+                                  std::set<std::string> &OffloadArchs,
+                                  bool erase = false) {
+  StringRef DeviceTripleStr;
+  if (!std::strncmp(OpenMPTarget, "gfx", 3)) {
+    DeviceTripleStr = "amdgcn-amd-amdhsa";
+
+    if (erase)
+      OffloadArchs.erase(
+          DeviceTripleStr.str().append("^").append(OpenMPTarget));
+    else {
+      llvm::Triple TT(DeviceTripleStr);
+      llvm::StringMap<bool> Features;
+      StringRef IdStr(OpenMPTarget);
+      auto Arch = parseTargetID(TT, IdStr, &Features);
+      if (!Arch) {
+        C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << IdStr;
+        C.setContainsError();
+        return false;
+      }
+      OffloadArchs.insert(
+          DeviceTripleStr.str().append("^").append(OpenMPTarget));
+    }
+  } else if (!std::strncmp(OpenMPTarget, "sm_", 3)) {
+    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    const llvm::Triple &HostTriple = HostTC->getTriple();
+    DeviceTripleStr = HostTriple.isArch64Bit() ? "nvptx64-nvidia-cuda^"
+                                               : "nvptx-nvidia-cuda^";
+    if (erase)
+      OffloadArchs.erase(DeviceTripleStr.str().append(OpenMPTarget));
+    else
+      OffloadArchs.insert(DeviceTripleStr.str().append(OpenMPTarget));
+  } else {
+    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    const llvm::Triple &HostTriple = HostTC->getTriple();
+    StringRef HostTripleStr = HostTriple.str();
+    if (erase)
+      OffloadArchs.erase(HostTripleStr.str().append("^").append(OpenMPTarget));
+    else
+      OffloadArchs.insert(HostTripleStr.str().append("^").append(OpenMPTarget));
+  }
+  return true;
+}
+
 bool GetTargetInfoFromMArch(Compilation &C,
                             std::set<std::string> &OffloadArchs) {
   StringRef OpenMPTargetArch;
@@ -666,6 +710,21 @@ bool GetTargetInfoFromMArch(Compilation &C,
           OpenMPTargetArch = VStr.split('=').second;
           StringRef OpenMPTargetTriple = StringRef(A->getValue(0));
           llvm::Triple TargetTriple(OpenMPTargetTriple);
+          llvm::StringMap<bool> Features;
+          auto ArchStr =
+              parseTargetID(TargetTriple, OpenMPTargetArch, &Features);
+          if (TargetTriple.isAMDGCN() && !ArchStr) {
+            C.getDriver().Diag(clang::diag::err_drv_bad_target_id)
+                << OpenMPTargetArch;
+            C.setContainsError();
+            return false;
+          }
+          StringRef ArchProc = OpenMPTargetArch.split(":").first;
+          if (ArchProc.empty()) {
+            C.getDriver().Diag(clang::diag::err_drv_cuda_bad_gpu_arch) << VStr;
+            C.setContainsError();
+            return false;
+          }
 
           // Append Triple and Arch to form a unique key for each instance of
           // the ToolChain
@@ -676,6 +735,38 @@ bool GetTargetInfoFromMArch(Compilation &C,
         A->claim();
       }
     }
+  }
+  return true;
+}
+
+bool GetTargetInfoFromOffloadArchOpts(Compilation &C,
+                                      std::set<std::string> &OffloadArchs) {
+  for (Arg *A : C.getInputArgs()) {
+    if (!(A->getOption().matches(options::OPT_offload_arch_EQ) ||
+          A->getOption().matches(options::OPT_no_offload_arch_EQ))) {
+      continue;
+    }
+    A->claim();
+
+    StringRef ArchStr = A->getValue();
+
+    if (A->getOption().matches(options::OPT_no_offload_arch_EQ) &&
+        ArchStr == "all") {
+      OffloadArchs.clear();
+      continue;
+    }
+    if (ArchStr.empty())
+      continue;
+    else if (A->getOption().matches(options::OPT_offload_arch_EQ)) {
+      auto status =
+          GetTargetInfoFromOffloadArch(C, ArchStr.str().c_str(), OffloadArchs);
+      if (!status)
+        return false;
+    } else if (A->getOption().matches(options::OPT_no_offload_arch_EQ))
+      GetTargetInfoFromOffloadArch(C, ArchStr.str().c_str(), OffloadArchs,
+                                   /* erase */ true);
+    else
+      llvm_unreachable("Unexpected option.");
   }
   return true;
 }
@@ -741,6 +832,15 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     //
     // OpenMP
     //
+    // OpenMP Offloading is active when -offload-arch, -offload-archs, or
+    // legacy options -fopenmp-targets= are specified. We first build a list
+    // of OffloadArchs from command line options.
+    //
+    // Generate an instance of toolchain for each user specified target
+    // from the -fopenmp-targets option. The march value
+    // may now contain targetid value. This value
+    // may include features that would result in different and potentially
+    // multiple offload images.
     std::set<std::string> OffloadArchs;
 
     if (Arg *OpenMPTargets =
@@ -786,7 +886,35 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         return;
     }
 
+    auto status = GetTargetInfoFromOffloadArchOpts(C, OffloadArchs);
+    if (!status)
+      return;
+
     if (!OffloadArchs.empty()) {
+
+      // Extract targetIDs from all OffloadArchs and see if there
+      // is a conflict i.e. For a specific processor, a feature either shows
+      // up in all target IDs, or does not show up in any target IDs. Otherwise
+      // the target ID combination is invalid.
+      if (OffloadArchs.size() > 1) {
+        std::set<StringRef> OffloadArchsRef;
+        for (std::set<std::string>::iterator Arch = OffloadArchs.begin();
+             Arch != OffloadArchs.end(); Arch++) {
+          auto Loc = Arch->find('^') + 1;
+          OffloadArchsRef.insert(
+              StringRef(Arch->data() + Loc, Arch->size() - Loc));
+        }
+
+        auto &&ConflictingArchs =
+            getConflictTargetIDCombination(OffloadArchsRef);
+        if (ConflictingArchs) {
+          C.getDriver().Diag(clang::diag::err_drv_bad_offload_arch_combo)
+              << ConflictingArchs.getValue().first
+              << ConflictingArchs.getValue().second;
+          C.setContainsError();
+          return;
+        }
+      }
 
       // We expect that an offload target is always used in conjunction with
       // option -fopenmp specifying a valid runtime with offloading support,
@@ -810,7 +938,18 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         std::string TripleStr = Target.substr(0, find_loc);
         std::string OpenMPTargetArch = Target.substr(find_loc + 1);
         llvm::Triple TT(TripleStr);
-        std::string NormalizedName = Target;
+        llvm::StringMap<bool> Features;
+        StringRef IdStr(OpenMPTargetArch);
+        auto ArchStr = parseTargetID(TT, IdStr, &Features);
+        if (!ArchStr) {
+          Diag(clang::diag::err_drv_bad_target_id) << IdStr;
+          C.setContainsError();
+          return;
+        } else
+          OpenMPTargetArch = getCanonicalTargetID(ArchStr.getValue(), Features);
+
+        std::string NormalizedName =
+            Twine(TT.normalize() + "-" + OpenMPTargetArch).str();
 
         // Make sure we don't have a duplicate triple.
         auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
@@ -3187,8 +3326,8 @@ class OffloadingActionBuilder final {
         // Linking all inputs for the current GPU arch.
         // LI contains all the inputs for the linker.
         OffloadAction::DeviceDependences DeviceLinkDeps;
-        DeviceLinkDeps.add(*DeviceLinkAction, *ToolChains[0],
-            GpuArchList[I], AssociatedOffloadKind);
+        DeviceLinkDeps.add(*DeviceLinkAction, *ToolChains[0], GpuArchList[I].ID,
+                           AssociatedOffloadKind);
         AL.push_back(C.MakeAction<OffloadAction>(DeviceLinkDeps,
             DeviceLinkAction->getType()));
         ++I;
@@ -4905,7 +5044,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
         else if (TargetDeviceOffloadKind == Action::OFK_HIP)
           Arch = UI.DependentBoundArch;
         else if (TargetDeviceOffloadKind == Action::OFK_OpenMP)
-          Arch = UI.DependentToolChain->getOffloadArch();
+          Arch = UI.DependentToolChain->getTargetID();
       } else
         Arch = BoundArch;
 

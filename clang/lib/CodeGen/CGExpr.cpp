@@ -5288,6 +5288,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // FIXME: Only call EmitHostrpcVargsFn for variadic functions that actually
   //        that have a hostrpc stub and service function.
   if ((CGM.getTriple().isAMDGCN()) && CGM.getLangOpts().OpenMP &&
+      dyn_cast<FunctionProtoType>(FnType) &&
       dyn_cast<FunctionProtoType>(FnType)->isVariadic())
     return EmitHostrpcVargsFn(
         E, E->getDirectCallee()->getNameAsString().append("_allocate").c_str(),
