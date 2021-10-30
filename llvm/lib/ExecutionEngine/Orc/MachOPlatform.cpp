@@ -603,21 +603,48 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, jitlink::LinkGraph &LG,
     jitlink::PassConfiguration &Config) {
 
-  // If the initializer symbol is the MachOHeader start symbol then just add
-  // the macho header support passes.
-  if (MR.getInitializerSymbol() == MP.MachOHeaderStartSymbol) {
-    addMachOHeaderSupportPasses(MR, Config);
-    // The header materialization unit doesn't require any other support, so we
-    // can bail out early.
-    return;
+  // --- Handle Initializers ---
+  if (auto InitSymbol = MR.getInitializerSymbol()) {
+
+    // If the initializer symbol is the MachOHeader start symbol then just
+    // register it and then bail out -- the header materialization unit
+    // definitely doesn't need any other passes.
+    if (InitSymbol == MP.MachOHeaderStartSymbol) {
+      Config.PostAllocationPasses.push_back([this, &MR](jitlink::LinkGraph &G) {
+        return associateJITDylibHeaderSymbol(G, MR);
+      });
+      return;
+    }
+
+    // If the object contains an init symbol other than the header start symbol
+    // then add passes to preserve, process and register the init
+    // sections/symbols.
+    Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) {
+      if (auto Err = preserveInitSections(G, MR))
+        return Err;
+      return processObjCImageInfo(G, MR);
+    });
+
+    Config.PostFixupPasses.push_back(
+        [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
+          return registerInitSections(G, JD);
+        });
   }
 
-  // If the object contains initializers then add passes to record them.
-  if (MR.getInitializerSymbol())
-    addInitializerSupportPasses(MR, Config);
+  // --- Add passes for eh-frame and TLV support ---
 
-  // Add passes for eh-frame and TLV support.
-  addEHAndTLVSupportPasses(MR, Config);
+  // Insert TLV lowering at the start of the PostPrunePasses, since we want
+  // it to run before GOT/PLT lowering.
+  Config.PostPrunePasses.insert(
+      Config.PostPrunePasses.begin(),
+      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
+        return fixTLVSectionsAndEdges(G, JD);
+      });
+
+  // Add a pass to register the final addresses of the eh-frame and TLV sections
+  // with the runtime.
+  Config.PostFixupPasses.push_back(
+      [this](jitlink::LinkGraph &G) { return registerEHAndTLVSections(G); });
 }
 
 ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
@@ -634,110 +661,22 @@ MachOPlatform::MachOPlatformPlugin::getSyntheticSymbolDependencies(
   return SyntheticSymbolDependenciesMap();
 }
 
-void MachOPlatform::MachOPlatformPlugin::addInitializerSupportPasses(
-    MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
+Error MachOPlatform::MachOPlatformPlugin::associateJITDylibHeaderSymbol(
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
 
-  /// Preserve init sections.
-  Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) {
-    if (auto Err = preserveInitSections(G, MR))
-      return Err;
-    return processObjCImageInfo(G, MR);
+  auto I = llvm::find_if(G.defined_symbols(), [this](jitlink::Symbol *Sym) {
+    return Sym->getName() == *MP.MachOHeaderStartSymbol;
   });
+  assert(I != G.defined_symbols().end() && "Missing MachO header start symbol");
 
-  Config.PostFixupPasses.push_back(
-      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
-        return registerInitSections(G, JD);
-      });
-}
-
-void MachOPlatform::MachOPlatformPlugin::addMachOHeaderSupportPasses(
-    MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
-
-  Config.PostAllocationPasses.push_back([this, &JD = MR.getTargetJITDylib()](
-                                            jitlink::LinkGraph &G) -> Error {
-    auto I = llvm::find_if(G.defined_symbols(), [this](jitlink::Symbol *Sym) {
-      return Sym->getName() == *MP.MachOHeaderStartSymbol;
-    });
-    assert(I != G.defined_symbols().end() &&
-           "Missing MachO header start symbol");
-    {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      JITTargetAddress HeaderAddr = (*I)->getAddress();
-      MP.HeaderAddrToJITDylib[HeaderAddr] = &JD;
-      assert(!MP.InitSeqs.count(&JD) && "InitSeq entry for JD already exists");
-      MP.InitSeqs.insert(std::make_pair(
-          &JD,
-          MachOJITDylibInitializers(JD.getName(), ExecutorAddr(HeaderAddr))));
-    }
-    return Error::success();
-  });
-}
-
-void MachOPlatform::MachOPlatformPlugin::addEHAndTLVSupportPasses(
-    MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
-
-  // Insert TLV lowering at the start of the PostPrunePasses, since we want
-  // it to run before GOT/PLT lowering.
-  Config.PostPrunePasses.insert(
-      Config.PostPrunePasses.begin(),
-      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
-        return fixTLVSectionsAndEdges(G, JD);
-      });
-
-  // Add a pass to register the final addresses of the eh-frame and TLV sections
-  // with the runtime.
-  Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
-    MachOPerObjectSectionsToRegister POSR;
-
-    if (auto *EHFrameSection = G.findSectionByName(EHFrameSectionName)) {
-      jitlink::SectionRange R(*EHFrameSection);
-      if (!R.empty())
-        POSR.EHFrameSection = {ExecutorAddr(R.getStart()),
-                               ExecutorAddr(R.getEnd())};
-    }
-
-    // Get a pointer to the thread data section if there is one. It will be used
-    // below.
-    jitlink::Section *ThreadDataSection =
-        G.findSectionByName(ThreadDataSectionName);
-
-    // Handle thread BSS section if there is one.
-    if (auto *ThreadBSSSection = G.findSectionByName(ThreadBSSSectionName)) {
-      // If there's already a thread data section in this graph then merge the
-      // thread BSS section content into it, otherwise just treat the thread
-      // BSS section as the thread data section.
-      if (ThreadDataSection)
-        G.mergeSections(*ThreadDataSection, *ThreadBSSSection);
-      else
-        ThreadDataSection = ThreadBSSSection;
-    }
-
-    // Having merged thread BSS (if present) and thread data (if present),
-    // record the resulting section range.
-    if (ThreadDataSection) {
-      jitlink::SectionRange R(*ThreadDataSection);
-      if (!R.empty())
-        POSR.ThreadDataSection = {ExecutorAddr(R.getStart()),
-                                  ExecutorAddr(R.getEnd())};
-    }
-
-    if (POSR.EHFrameSection.Start || POSR.ThreadDataSection.Start) {
-
-      // If we're still bootstrapping the runtime then just record this
-      // frame for now.
-      if (!MP.RuntimeBootstrapped) {
-        std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-        MP.BootstrapPOSRs.push_back(POSR);
-        return Error::success();
-      }
-
-      // Otherwise register it immediately.
-      if (auto Err = MP.registerPerObjectSections(POSR))
-        return Err;
-    }
-
-    return Error::success();
-  });
+  auto &JD = MR.getTargetJITDylib();
+  std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+  JITTargetAddress HeaderAddr = (*I)->getAddress();
+  MP.HeaderAddrToJITDylib[HeaderAddr] = &JD;
+  assert(!MP.InitSeqs.count(&JD) && "InitSeq entry for JD already exists");
+  MP.InitSeqs.insert(std::make_pair(
+      &JD, MachOJITDylibInitializers(JD.getName(), ExecutorAddr(HeaderAddr))));
+  return Error::success();
 }
 
 Error MachOPlatform::MachOPlatformPlugin::preserveInitSections(
@@ -938,6 +877,60 @@ Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
           jitlink::x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable)
         E.setKind(jitlink::x86_64::
                       RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable);
+
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::registerEHAndTLVSections(
+    jitlink::LinkGraph &G) {
+  MachOPerObjectSectionsToRegister POSR;
+
+  if (auto *EHFrameSection = G.findSectionByName(EHFrameSectionName)) {
+    jitlink::SectionRange R(*EHFrameSection);
+    if (!R.empty())
+      POSR.EHFrameSection = {ExecutorAddr(R.getStart()),
+                             ExecutorAddr(R.getEnd())};
+  }
+
+  // Get a pointer to the thread data section if there is one. It will be used
+  // below.
+  jitlink::Section *ThreadDataSection =
+      G.findSectionByName(ThreadDataSectionName);
+
+  // Handle thread BSS section if there is one.
+  if (auto *ThreadBSSSection = G.findSectionByName(ThreadBSSSectionName)) {
+    // If there's already a thread data section in this graph then merge the
+    // thread BSS section content into it, otherwise just treat the thread
+    // BSS section as the thread data section.
+    if (ThreadDataSection)
+      G.mergeSections(*ThreadDataSection, *ThreadBSSSection);
+    else
+      ThreadDataSection = ThreadBSSSection;
+  }
+
+  // Having merged thread BSS (if present) and thread data (if present),
+  // record the resulting section range.
+  if (ThreadDataSection) {
+    jitlink::SectionRange R(*ThreadDataSection);
+    if (!R.empty())
+      POSR.ThreadDataSection = {ExecutorAddr(R.getStart()),
+                                ExecutorAddr(R.getEnd())};
+  }
+
+  if (POSR.EHFrameSection.Start || POSR.ThreadDataSection.Start) {
+
+    // If we're still bootstrapping the runtime then just record this
+    // frame for now.
+    if (!MP.RuntimeBootstrapped) {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      MP.BootstrapPOSRs.push_back(POSR);
+      return Error::success();
+    }
+
+    // Otherwise register it immediately.
+    if (auto Err = MP.registerPerObjectSections(POSR))
+      return Err;
+  }
 
   return Error::success();
 }
