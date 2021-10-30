@@ -837,6 +837,21 @@ public:
     lldb::SBTypeMemberFunction
     GetMemberFunctionAtIndex (uint32_t idx);
 
+    %feature("docstring",
+    "Returns true if the type is completely defined.
+
+    Language-specific behaviour:
+
+    * C: Returns false for struct types that were only forward declared in the
+      type's `SBTarget`/`SBModule`. Otherwise returns true.
+    * C++: Returns false for template/non-template struct/class types and
+      scoped enums that were only forward declared inside the type's
+      `SBTarget`/`SBModule`. Otherwise returns true.
+    * Objective-C: Follows the same behavior as C for struct types. Objective-C
+      classes are considered complete unless they were only forward declared via
+      ``@class ClassName`` in the type's `SBTarget`/`SBModule`. Otherwise
+      returns true.
+    ") IsTypeComplete;
     bool
     IsTypeComplete ();
 
