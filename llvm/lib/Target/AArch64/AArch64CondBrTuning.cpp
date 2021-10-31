@@ -295,10 +295,7 @@ bool AArch64CondBrTuning::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     bool LocalChange = false;
-    for (MachineBasicBlock::iterator I = MBB.getFirstTerminator(),
-                                     E = MBB.end();
-         I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : MBB.terminators()) {
       switch (MI.getOpcode()) {
       default:
         break;

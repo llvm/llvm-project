@@ -141,13 +141,11 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
 
   // Copy any terminator instructions to the new kernel, and update
   // names as needed.
-  for (MachineBasicBlock::iterator I = BB->getFirstTerminator(),
-                                   E = BB->instr_end();
-       I != E; ++I) {
-    MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+  for (MachineInstr &MI : BB->terminators()) {
+    MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
     updateInstruction(NewMI, false, MaxStageCount, 0, VRMap);
     KernelBB->push_back(NewMI);
-    InstrMap[NewMI] = &*I;
+    InstrMap[NewMI] = &MI;
   }
 
   NewKernel = KernelBB;

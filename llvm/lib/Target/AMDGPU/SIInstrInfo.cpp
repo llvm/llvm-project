@@ -2464,19 +2464,15 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
 unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                    int *BytesRemoved) const {
-  MachineBasicBlock::iterator I = MBB.getFirstTerminator();
-
   unsigned Count = 0;
   unsigned RemovedSize = 0;
-  while (I != MBB.end()) {
-    MachineBasicBlock::iterator Next = std::next(I);
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB.terminators())) {
     // Skip over artificial terminators when removing instructions.
-    if (I->isBranch() || I->isReturn()) {
-      RemovedSize += getInstSizeInBytes(*I);
-      I->eraseFromParent();
+    if (MI.isBranch() || MI.isReturn()) {
+      RemovedSize += getInstSizeInBytes(MI);
+      MI.eraseFromParent();
       ++Count;
     }
-    I = Next;
   }
 
   if (BytesRemoved)
