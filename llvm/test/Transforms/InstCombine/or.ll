@@ -341,9 +341,9 @@ define i32 @test30(i32 %A) {
 ; CHECK-NEXT:    [[E:%.*]] = or i32 [[D]], 32962
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
-  %B = or i32 %A, 32962
-  %C = and i32 %A, -65536
-  %D = and i32 %B, 40186
+  %B = or i32 %A, 32962   ; 0b1000_0000_1100_0010
+  %C = and i32 %A, -65536 ; 0xffff0000
+  %D = and i32 %B, 40186  ; 0b1001_1100_1111_1010
   %E = or i32 %D, %C
   ret i32 %E
 }
