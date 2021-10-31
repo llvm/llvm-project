@@ -450,6 +450,7 @@ __OMP_RTL(__kmpc_get_shared_variables, false, Void, VoidPtrPtrPtr)
 __OMP_RTL(__kmpc_parallel_level, false, Int8, )
 __OMP_RTL(__kmpc_is_spmd_exec_mode, false, Int8, )
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_barrier_simple_generic, false, Void, IdentPtr, Int32)
 
 __OMP_RTL(__kmpc_warp_active_thread_mask, false, Int64,)
 __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
@@ -592,6 +593,8 @@ __OMP_ATTRS_SET(ReturnAlignedPtrAttrs,
 __OMP_RTL_ATTRS(__kmpc_barrier, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_barrier_simple_spmd, BarrierAttrs, AttributeSet(),
+                ParamAttrs(ReadOnlyPtrAttrs))
+__OMP_RTL_ATTRS(__kmpc_barrier_simple_generic, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_warp_active_thread_mask, BarrierAttrs, AttributeSet(),
                 ParamAttrs())

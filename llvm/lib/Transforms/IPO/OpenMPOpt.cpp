@@ -1877,6 +1877,8 @@ private:
                                     OMPRTL___kmpc_kernel_end_parallel);
     ExternalizationRAII BarrierSPMD(OMPInfoCache,
                                     OMPRTL___kmpc_barrier_simple_spmd);
+    ExternalizationRAII BarrierGeneric(OMPInfoCache,
+                                       OMPRTL___kmpc_barrier_simple_generic);
     ExternalizationRAII ThreadId(OMPInfoCache,
                                  OMPRTL___kmpc_get_hardware_thread_id_in_block);
 
@@ -3448,7 +3450,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     //                       InitCB = __kmpc_target_init(...)
     //                       bool IsWorker = InitCB >= 0;
     //                       if (IsWorker) {
-    // SMBeginBB:               __kmpc_barrier_simple_spmd(...);
+    // SMBeginBB:               __kmpc_barrier_simple_generic(...);
     //                         void *WorkFn;
     //                         bool Active = __kmpc_kernel_parallel(&WorkFn);
     //                         if (!WorkFn) return;
@@ -3462,7 +3464,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     //                              ((WorkFnTy*)WorkFn)(...);
     // SMEndParallelBB:           __kmpc_kernel_end_parallel(...);
     //                          }
-    // SMDoneBB:                __kmpc_barrier_simple_spmd(...);
+    // SMDoneBB:                __kmpc_barrier_simple_generic(...);
     //                          goto SMBeginBB;
     //                       }
     // UserCodeEntryBB:      // user code
@@ -3530,7 +3532,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     FunctionCallee BarrierFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
-            M, OMPRTL___kmpc_barrier_simple_spmd);
+            M, OMPRTL___kmpc_barrier_simple_generic);
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineBeginBB)
         ->setDebugLoc(DLoc);
 

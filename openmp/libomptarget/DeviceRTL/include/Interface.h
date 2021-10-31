@@ -249,6 +249,8 @@ void __kmpc_barrier(IdentTy *Loc_ref, int32_t TId);
 
 void __kmpc_barrier_simple_spmd(IdentTy *Loc_ref, int32_t TId);
 
+void __kmpc_barrier_simple_generic(IdentTy *Loc_ref, int32_t TId);
+
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId);
 
 void __kmpc_end_master(IdentTy *Loc, int32_t TId);
