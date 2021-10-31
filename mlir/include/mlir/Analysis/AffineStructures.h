@@ -441,10 +441,11 @@ public:
   /// variables.
   void convertDimToLocal(unsigned dimStart, unsigned dimLimit);
 
-  /// Merge local ids of `this` and `other`. This is done by appending local ids
-  /// of `other` to `this` and inserting local ids of `this` to `other` at start
-  /// of its local ids. Number of dimension and symbol ids should match in
-  /// `this` and `other`.
+  /// Merge and align local ids of `this` and `other`. Any local identifiers
+  /// which can be represented as divisions in terms of dimension and symbol
+  /// ids with constant denominator are extracted and local ids with same
+  /// division representation are merged. Number of dimension and symbol ids
+  /// should match in `this` and `other`.
   void mergeLocalIds(FlatAffineConstraints &other);
 
   /// Removes all equalities and inequalities.
