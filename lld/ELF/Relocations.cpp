@@ -224,20 +224,16 @@ static bool isRelExpr(RelExpr expr) {
 static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
                                      InputSectionBase &s, uint64_t relOff) {
   // These expressions always compute a constant
-  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_TLSLD_GOT_OFF,
-            R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
-            R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
+  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
+            R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
-            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
-            R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
-            R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT,
-            R_AARCH64_GOT_PAGE>(e))
+            R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
+            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
-  if (e == R_GOT || e == R_PLT || e == R_TLSDESC)
+  if (e == R_GOT || e == R_PLT)
     return target->usesOnlyLowPageBits(type) || !config->isPic;
 
   if (sym.isPreemptible)
@@ -1293,7 +1289,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
       if (!sym.isInGot())
         addTpOffsetGotEntry(sym);
       // R_GOT may not be a link-time constant.
-      processRelocAux<ELFT>(c, expr, type, offset, sym, addend);
+      if (expr == R_GOT)
+        processRelocAux<ELFT>(c, expr, type, offset, sym, addend);
+      else
+        c.relocations.push_back({expr, type, offset, addend, &sym});
     }
     return 1;
   }
