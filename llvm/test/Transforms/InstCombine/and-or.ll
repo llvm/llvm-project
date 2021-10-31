@@ -124,7 +124,7 @@ define <2 x i8> @or_and_or_commute1_splat(<2 x i8> %x) {
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
 ; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], <i8 64, i8 64>
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X2]], [[X1]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], <i8 123, i8 123>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %xn = or <2 x i8> %x, <i8 16, i8 16>
@@ -169,7 +169,7 @@ define <2 x i8> @or_and_or_commute2_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
 ; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[X]], <i8 64, i8 64>
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X1]], [[X2]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[XN]], <i8 -5, i8 -5>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %n = lshr <2 x i8> %y, <i8 6, i8 6>
