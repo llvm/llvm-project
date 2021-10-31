@@ -18,7 +18,7 @@ hidden:
 # CHECK: error: relocation R_X86_64_32 cannot be used against local symbol; recompile with -fPIC
 
 # PIE: error: cannot preempt symbol: hidden
-# SHARED: error: relocation R_X86_64_32 cannot be used against symbol hidden; recompile with -fPIC
+# SHARED: error: relocation R_X86_64_32 cannot be used against symbol 'hidden'; recompile with -fPIC
 
 .data
 .byte local     # R_X86_64_8

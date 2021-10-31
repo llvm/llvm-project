@@ -2,12 +2,12 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: not ld.lld -shared --vs-diagnostics %t.o -o /dev/null 2>&1 | FileCheck %s
 
-// CHECK: dyn.s(15): error: can't create dynamic relocation R_X86_64_64 against local symbol in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
+// CHECK: dyn.s(15): error: relocation R_X86_64_64 cannot be used against local symbol; recompile with -fPIC
 // CHECK-NEXT: >>> defined in {{.*}}.o
 // CHECK-NEXT: >>> referenced by dyn.s:15
 // CHECK-NEXT: >>>{{.*}}.o:(.text+0x{{.+}})
 
-// CHECK: /tmp{{/|\\}}dyn.s(20): error: can't create dynamic relocation {{.*}}
+// CHECK: /tmp{{/|\\}}dyn.s(20): error: relocation R_X86_64_64 cannot be used against local symbol; recompile with -fPIC
 // CHECK-NEXT: >>> defined in {{.*}}.o
 // CHECK-NEXT: >>> referenced by dyn.s:20 (/tmp{{/|\\}}dyn.s:20)
 // CHECK-NEXT: >>>{{.*}}.o:(.text+0x{{.+}})

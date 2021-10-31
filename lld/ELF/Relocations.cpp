@@ -1095,19 +1095,10 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
   }
 
   if (config->isPic) {
-    if (!canWrite && !isRelExpr(expr))
-      errorOrWarn(
-          "can't create dynamic relocation " + toString(type) + " against " +
-          (sym.getName().empty() ? "local symbol"
-                                 : "symbol: " + toString(sym)) +
-          " in readonly segment; recompile object files with -fPIC "
-          "or pass '-Wl,-z,notext' to allow text relocations in the output" +
-          getLocation(sec, sym, offset));
-    else
-      errorOrWarn(
-          "relocation " + toString(type) + " cannot be used against " +
-          (sym.getName().empty() ? "local symbol" : "symbol " + toString(sym)) +
-          "; recompile with -fPIC" + getLocation(sec, sym, offset));
+    errorOrWarn("relocation " + toString(type) + " cannot be used against " +
+                (sym.getName().empty() ? "local symbol"
+                                       : "symbol '" + toString(sym) + "'") +
+                "; recompile with -fPIC" + getLocation(sec, sym, offset));
     return;
   }
 
