@@ -172,7 +172,7 @@ void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
   //
   // FIXME: Use a more efficient way to find a matching context.
   for (auto &Context : Contexts) {
-    if (Context.UsingTargetDecls.count(D->getCanonicalDecl()) > 0)
+    if (Context.UsingTargetDecls.contains(D->getCanonicalDecl()))
       Context.IsUsed = true;
   }
 }
