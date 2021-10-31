@@ -1,20 +1,20 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -o - < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -o - < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Radar 7833483
 ; Do not emit a separate out-of-line definition DIE for the function-local 'foo'
 ; function (member of the function local 'A' type)
 ; CHECK: DW_TAG_class_type
 ; CHECK: DW_TAG_class_type
-; CHECK-NEXT: DW_AT_name {{.*}} "A"
+; CHECK-NEXT: DW_AT_name ("A")
 ; Check that the subprogram inside the class definition has low_pc, only
 ; attached to the definition.
 ; CHECK: [[FOO_INL:0x........]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_low_pc
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "foo"
+; CHECK: DW_AT_name ("foo")
 ; And just double check that there's no out of line definition that references
 ; this subprogram.
-; CHECK-NOT: DW_AT_specification {{.*}} {[[FOO_INL]]}
+; CHECK-NOT: DW_AT_specification ([[FOO_INL]]
 
 %class.A = type { i8 }
 %class.B = type { i8 }

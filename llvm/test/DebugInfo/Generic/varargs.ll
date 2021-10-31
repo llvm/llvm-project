@@ -1,5 +1,5 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj -o %t.o %s
-; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
 ;
 ; Test debug info for variadic function arguments.
 ; Created from tools/clang/tests/CodeGenCXX/debug-info-varargs.cpp
@@ -12,7 +12,7 @@
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "a"
+; CHECK: DW_AT_name ("a")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
@@ -22,7 +22,7 @@
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "b"
+; CHECK: DW_AT_name ("b")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG

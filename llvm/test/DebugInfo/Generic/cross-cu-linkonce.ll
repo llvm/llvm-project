@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Built from source:
 ; $ clang++ a.cpp b.cpp -g -c -emit-llvm
@@ -19,7 +19,7 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "func"
+; CHECK:     DW_AT_name ("func")
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG_subprogram
 

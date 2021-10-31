@@ -1,7 +1,7 @@
 ; For some reason, the output when targetting sparc is not quite as expected.
 ; XFAIL: sparc
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; IR generated from clang -O0 with:
 ; struct C {
@@ -13,23 +13,23 @@
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "C"
+; CHECK:   DW_AT_name ("C")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "~C"
+; CHECK:     DW_AT_name ("~C")
 
 ; CHECK:  DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZN1CD1Ev"
+; CHECK:   DW_AT_linkage_name ("_ZN1CD1Ev")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:  DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "this"
+; CHECK:     DW_AT_name ("this")
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "fun4"
+; CHECK:   DW_AT_name ("fun4")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_inlined_subroutine
 ; CHECK-NOT: DW_TAG

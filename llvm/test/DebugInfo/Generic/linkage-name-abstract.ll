@@ -1,8 +1,8 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Abstract < %s | llvm-dwarfdump -v -debug-info - > %t
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Abstract < %s | llvm-dwarfdump -debug-info - > %t
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
 ; Verify tuning for SCE gets us Abstract only.
-; RUN: %llc_dwarf -O0 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -v -debug-info - > %t
+; RUN: %llc_dwarf -O0 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - > %t
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
 
@@ -31,9 +31,9 @@
 ; Show that the only linkage names are for the inlined functions,
 ; because those are the ones with an abstract origin.
 ; ONENAME-NOT: {{DW_AT(_MIPS)?_linkage_name}}
-; ONENAME:     {{DW_AT(_MIPS)?_linkage_name}} {{.*}} "_Z2f2v"
+; ONENAME:     {{DW_AT(_MIPS)?_linkage_name}} ("_Z2f2v")
 ; ONENAME-NOT: {{DW_AT(_MIPS)?_linkage_name}}
-; ONENAME:     {{DW_AT(_MIPS)?_linkage_name}} {{.*}} "_ZN2F42f5Ev"
+; ONENAME:     {{DW_AT(_MIPS)?_linkage_name}} ("_ZN2F42f5Ev")
 ; ONENAME-NOT: {{DW_AT(_MIPS)?_linkage_name}}
 
 ; For f2() we see the definition pointing to an abstract origin DIE,
@@ -42,30 +42,30 @@
 ; The order of these DIEs is not important of course, just the links.
 ; REF:      DW_TAG_subprogram
 ; REF-NOT:  {{DW_TAG|NULL}}
-; REF:      DW_AT_abstract_origin {{.*}} {[[F2:0x.*]]} "_Z2f2v"
+; REF:      DW_AT_abstract_origin ([[F2:0x.*]] "_Z2f2v")
 ; REF:      [[F2]]: DW_TAG_subprogram
-; REF-NEXT: linkage_name {{.*}} "_Z2f2v"
+; REF-NEXT: linkage_name ("_Z2f2v")
 ; REF:      DW_TAG_inlined_subroutine
 ; REF-NOT:  {{DW_TAG|NULL}}
-; REF:      DW_AT_abstract_origin {{.*}} {[[F2]]}
+; REF:      DW_AT_abstract_origin ([[F2]]
 
 ; For F4::f5(), first we see the in-class declaration,
 ; then the definition, abstract origin, and the inlined_subroutine.
 ; REF:      DW_TAG_structure_type
-; REF-NEXT: DW_AT_name {{.*}} "F4"
+; REF-NEXT: DW_AT_name ("F4")
 ; REF-NOT:  {{DW_TAG|NULL}}
 ; REF:      [[F5_DECL:0x.*]]: DW_TAG_subprogram
-; REF-NEXT: DW_AT_name {{.*}} "f5"
+; REF-NEXT: DW_AT_name ("f5")
 ; REF:      DW_TAG_subprogram
 ; REF-NOT:  {{DW_TAG|NULL}}
-; REF:      DW_AT_abstract_origin {{.*}} {[[F5_ABS:0x.*]]} "_ZN2F42f5Ev"
+; REF:      DW_AT_abstract_origin ([[F5_ABS:0x.*]] "_ZN2F42f5Ev")
 ; REF:      [[F5_ABS]]: DW_TAG_subprogram
 ; REF-NOT:  {{DW_TAG|NULL}}
-; REF:      linkage_name {{.*}} "_ZN2F42f5Ev"
-; REF-NEXT: DW_AT_specification {{.*}} {[[F5_DECL]]}
+; REF:      linkage_name ("_ZN2F42f5Ev")
+; REF-NEXT: DW_AT_specification ([[F5_DECL]]
 ; REF:      DW_TAG_inlined_subroutine
 ; REF-NOT:  {{DW_TAG|NULL}}
-; REF:      DW_AT_abstract_origin {{.*}} {[[F5_ABS]]}
+; REF:      DW_AT_abstract_origin ([[F5_ABS]]
 
 
 ; Function Attrs: alwaysinline uwtable

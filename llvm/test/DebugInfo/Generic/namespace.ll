@@ -1,67 +1,67 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump - | FileCheck %s
 ; CHECK: debug_info contents
-; CHECK: DW_AT_name{{.*}}= [[F1:.*]])
+; CHECK: DW_AT_name {{.*}}[[F1:.*]])
 ; CHECK: [[NS1:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
 ; CHECK-NOT: DW_AT_decl_file
 ; CHECK-NOT: DW_AT_decl_line
 ; CHECK-NOT: NULL
 ; CHECK: [[NS2:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
-; CHECK-NEXT: DW_AT_name{{.*}} = "B"
+; CHECK-NEXT: DW_AT_name ("B")
 ; CHECK-NOT: DW_AT_decl_file
 ; CHECK-NOT: DW_AT_decl_line
 ; CHECK-NOT: NULL
 ; CHECK: [[I:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
-; CHECK-NEXT: DW_AT_name{{.*}}= "i"
+; CHECK-NEXT: DW_AT_name ("i")
 ; CHECK: [[VAR_FWD:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
-; CHECK-NEXT: DW_AT_name{{.*}}= "var_fwd"
+; CHECK-NEXT: DW_AT_name ("var_fwd")
 ; CHECK-NOT: NULL
 ; CHECK: [[FOO:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name{{.*}}= "foo"
+; CHECK-NEXT: DW_AT_name ("foo")
 ; CHECK-NEXT: DW_AT_declaration
 ; CHECK-NOT: NULL
 ; CHECK: [[BAR:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name{{.*}}= "bar"
+; CHECK-NEXT: DW_AT_name ("bar")
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "f1"
+; CHECK: DW_AT_name ("f1")
 ; CHECK: [[FUNC1:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "f1"
+; CHECK: DW_AT_name ("f1")
 ; CHECK: [[BAZ:0x[0-9a-f]*]]:{{.*}}DW_TAG_typedef
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "baz"
+; CHECK: DW_AT_name ("baz")
 ; CHECK: [[VAR_DECL:0x[0-9a-f]*]]:{{.*}}DW_TAG_variable
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "var_decl"
+; CHECK: DW_AT_name ("var_decl")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_declaration
 ; CHECK: [[FUNC_DECL:0x[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "func_decl"
+; CHECK: DW_AT_name ("func_decl")
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_declaration
 ; CHECK: [[FUNC_FWD:0x[0-9a-f]*]]:{{.*}}DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "func_fwd"
+; CHECK: DW_AT_name ("func_fwd")
 ; CHECK-NOT: DW_AT_declaration
 ; CHECK: NULL
 
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(15)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS2]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2:.*]])
+; CHECK-NEXT: DW_AT_decl_line (15)
+; CHECK-NEXT: DW_AT_import ([[NS2]])
 ; CHECK: NULL
 ; CHECK-NOT: NULL
 
 ; CHECK: DW_TAG_imported_module
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(18)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2:.*]])
+; CHECK-NEXT: DW_AT_decl_line (18)
+; CHECK-NEXT: DW_AT_import ([[NS1]])
 ; CHECK-NOT: NULL
 
 ; CHECK: DW_TAG_subprogram
@@ -70,73 +70,73 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "func"
+; CHECK: DW_AT_name ("func")
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(26)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2:.*]])
+; CHECK-NEXT: DW_AT_decl_line (26)
+; CHECK-NEXT: DW_AT_import ([[NS1]])
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(27)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[FOO]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (27)
+; CHECK-NEXT: DW_AT_import ([[FOO]])
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(28)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[BAR]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (28)
+; CHECK-NEXT: DW_AT_import ([[BAR]])
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(29)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[FUNC1]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (29)
+; CHECK-NEXT: DW_AT_import ([[FUNC1]])
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(30)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[I]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (30)
+; CHECK-NEXT: DW_AT_import ([[I]])
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(31)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[BAZ]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (31)
+; CHECK-NEXT: DW_AT_import ([[BAZ]])
 ; CHECK-NOT: NULL
 ; CHECK: [[X:0x[0-9a-f]*]]:{{ *}}DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(32)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
-; CHECK-NEXT: DW_AT_name{{.*}}"X"
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (32)
+; CHECK-NEXT: DW_AT_import ([[NS1]])
+; CHECK-NEXT: DW_AT_name ("X")
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(33)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[X]]})
-; CHECK-NEXT: DW_AT_name{{.*}}"Y"
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (33)
+; CHECK-NEXT: DW_AT_import ([[X]])
+; CHECK-NEXT: DW_AT_name ("Y")
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(34)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[VAR_DECL]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (34)
+; CHECK-NEXT: DW_AT_import ([[VAR_DECL]])
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(35)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[FUNC_DECL]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (35)
+; CHECK-NEXT: DW_AT_import ([[FUNC_DECL]])
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(36)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[VAR_FWD]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (36)
+; CHECK-NEXT: DW_AT_import ([[VAR_FWD]])
 ; CHECK: DW_TAG_imported_declaration
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(37)
-; CHECK-NEXT: DW_AT_import{{.*}}=> {[[FUNC_FWD]]})
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (37)
+; CHECK-NEXT: DW_AT_import ([[FUNC_FWD]])
 
 ; CHECK: DW_TAG_lexical_block
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(23)
-; CHECK-NEXT: DW_AT_import{{.*}}=>
+; CHECK-NEXT: DW_AT_decl_file ([[F2]])
+; CHECK-NEXT: DW_AT_decl_line (23)
+; CHECK-NEXT: DW_AT_import {{.*}}
 ; CHECK: NULL
 ; CHECK: NULL
 ; CHECK: NULL

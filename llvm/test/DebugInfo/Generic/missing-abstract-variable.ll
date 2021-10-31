@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
 ; powerpc64 (and on x86_64 at at least -O2). Presumably this is a SelectionDAG
@@ -38,25 +38,25 @@
 
 ; CHECK: [[X_DECL:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "x"
+; CHECK:   DW_AT_name ("x")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "b"
+; CHECK:     DW_AT_name ("b")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:       DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_variable
 ; CHECK-NOT: DW_TAG
-; CHECK:         DW_AT_name {{.*}} "s"
+; CHECK:         DW_AT_name ("s")
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "b"
+; CHECK:   DW_AT_name ("b")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_inlined_subroutine
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_abstract_origin {{.*}} {[[X_DECL]]}
+; CHECK:     DW_AT_abstract_origin {{.*}}[[X_DECL]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
@@ -71,13 +71,13 @@
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "a"
+; CHECK:   DW_AT_name ("a")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_inlined_subroutine
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_abstract_origin {{.*}} {[[X_DECL]]}
+; CHECK:     DW_AT_abstract_origin {{.*}}[[X_DECL]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; FIXME: This formal parameter goes missing at least at -O2 (& on
 ; mips/powerpc), maybe before that. Perhaps SelectionDAG is to blame (and
