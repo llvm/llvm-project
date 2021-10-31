@@ -505,7 +505,7 @@ void Operation::moveAfter(Operation *existingOp) {
 void Operation::moveAfter(Block *block,
                           llvm::iplist<Operation>::iterator iterator) {
   assert(iterator != block->end() && "cannot move after end of block");
-  moveBefore(&*std::next(iterator));
+  moveBefore(block, std::next(iterator));
 }
 
 /// This drops all operand uses from this operation, which is an essential

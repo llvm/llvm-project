@@ -875,6 +875,24 @@ py::object PyOperationBase::getAsm(bool binary,
   return fileObject.attr("getvalue")();
 }
 
+void PyOperationBase::moveAfter(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  mlirOperationMoveAfter(operation, otherOp);
+  operation.parentKeepAlive = otherOp.parentKeepAlive;
+}
+
+void PyOperationBase::moveBefore(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  mlirOperationMoveBefore(operation, otherOp);
+  operation.parentKeepAlive = otherOp.parentKeepAlive;
+}
+
 llvm::Optional<PyOperationRef> PyOperation::getParentOperation() {
   checkValid();
   if (!isAttached())
@@ -2185,7 +2203,25 @@ void mlir::python::populateIRCore(py::module &m) {
             return mlirOperationVerify(self.getOperation());
           },
           "Verify the operation and return true if it passes, false if it "
-          "fails.");
+          "fails.")
+      .def("move_after", &PyOperationBase::moveAfter, py::arg("other"),
+           "Puts self immediately after the other operation in its parent "
+           "block.")
+      .def("move_before", &PyOperationBase::moveBefore, py::arg("other"),
+           "Puts self immediately before the other operation in its parent "
+           "block.")
+      .def(
+          "detach_from_parent",
+          [](PyOperationBase &self) {
+            PyOperation &operation = self.getOperation();
+            operation.checkValid();
+            if (!operation.isAttached())
+              throw py::value_error("Detached operation has no parent.");
+
+            operation.detachFromParent();
+            return operation.createOpView();
+          },
+          "Detaches the operation from its parent block.");
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation", py::module_local())
       .def_static("create", &PyOperation::create, py::arg("name"),
@@ -2380,7 +2416,20 @@ void mlir::python::populateIRCore(py::module &m) {
                            printAccum.getUserData());
             return printAccum.join();
           },
-          "Returns the assembly form of the block.");
+          "Returns the assembly form of the block.")
+      .def(
+          "append",
+          [](PyBlock &self, PyOperationBase &operation) {
+            if (operation.getOperation().isAttached())
+              operation.getOperation().detachFromParent();
+
+            MlirOperation mlirOperation = operation.getOperation().get();
+            mlirBlockAppendOwnedOperation(self.get(), mlirOperation);
+            operation.getOperation().setAttached(
+                self.getParentOperation().getObject());
+          },
+          "Appends an operation to this block. If the operation is currently "
+          "in another block, it will be moved.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyInsertionPoint.
