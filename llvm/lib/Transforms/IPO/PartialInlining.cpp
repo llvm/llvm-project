@@ -441,9 +441,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   };
 
   auto BBProfileCount = [BFI](BasicBlock *BB) {
-    return BFI->getBlockProfileCount(BB)
-               ? BFI->getBlockProfileCount(BB).getValue()
-               : 0;
+    return BFI->getBlockProfileCount(BB).getValueOr(0);
   };
 
   // Use the same computeBBInlineCost function to compute the cost savings of

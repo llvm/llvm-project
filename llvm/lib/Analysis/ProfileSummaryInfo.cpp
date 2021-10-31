@@ -316,11 +316,11 @@ bool ProfileSummaryInfo::isColdCountNthPercentile(int PercentileCutoff,
 }
 
 uint64_t ProfileSummaryInfo::getOrCompHotCountThreshold() const {
-  return HotCountThreshold ? HotCountThreshold.getValue() : UINT64_MAX;
+  return HotCountThreshold.getValueOr(UINT64_MAX);
 }
 
 uint64_t ProfileSummaryInfo::getOrCompColdCountThreshold() const {
-  return ColdCountThreshold ? ColdCountThreshold.getValue() : 0;
+  return ColdCountThreshold.getValueOr(0);
 }
 
 bool ProfileSummaryInfo::isHotBlock(const BasicBlock *BB,
