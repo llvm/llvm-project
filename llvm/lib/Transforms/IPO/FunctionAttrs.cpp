@@ -1439,7 +1439,7 @@ static bool InstrBreaksNonConvergent(Instruction &I,
   // Breaks non-convergent assumption if CS is a convergent call to a function
   // not in the SCC.
   return CB && CB->isConvergent() &&
-         SCCNodes.count(CB->getCalledFunction()) == 0;
+         !SCCNodes.contains(CB->getCalledFunction());
 }
 
 /// Helper for NoUnwind inference predicate InstrBreaksAttribute.

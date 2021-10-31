@@ -1710,16 +1710,12 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   auto &OuterInnerReductions = LIL.getOuterInnerReductions();
   // Now update the reduction PHIs in the inner and outer loop headers.
   SmallVector<PHINode *, 4> InnerLoopPHIs, OuterLoopPHIs;
-  for (PHINode &PHI : InnerLoopHeader->phis()) {
-    if (OuterInnerReductions.find(&PHI) == OuterInnerReductions.end())
-      continue;
-    InnerLoopPHIs.push_back(cast<PHINode>(&PHI));
-  }
-  for (PHINode &PHI : OuterLoopHeader->phis()) {
-    if (OuterInnerReductions.find(&PHI) == OuterInnerReductions.end())
-      continue;
-    OuterLoopPHIs.push_back(cast<PHINode>(&PHI));
-  }
+  for (PHINode &PHI : InnerLoopHeader->phis())
+    if (OuterInnerReductions.contains(&PHI))
+      InnerLoopPHIs.push_back(cast<PHINode>(&PHI));
+  for (PHINode &PHI : OuterLoopHeader->phis())
+    if (OuterInnerReductions.contains(&PHI))
+      OuterLoopPHIs.push_back(cast<PHINode>(&PHI));
 
   // Now move the remaining reduction PHIs from outer to inner loop header and
   // vice versa. The PHI nodes must be part of a reduction across the inner and
