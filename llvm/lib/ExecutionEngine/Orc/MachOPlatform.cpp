@@ -288,6 +288,19 @@ MachOPlatform::MachOPlatform(
 
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
 
+  // Force linking of eh-frame registration functions.
+  if (auto Err2 = lookupAndRecordAddrs(
+          ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
+          {{ES.intern("___orc_rt_macho_register_ehframe_section"),
+            &orc_rt_macho_register_ehframe_section},
+           {ES.intern("___orc_rt_macho_deregister_ehframe_section"),
+            &orc_rt_macho_deregister_ehframe_section}})) {
+    Err = std::move(Err2);
+    return;
+  }
+
+  State = BootstrapPhase2;
+
   // PlatformJD hasn't been 'set-up' by the platform yet (since we're creating
   // the platform now), so set it up.
   if (auto E2 = setupJITDylib(PlatformJD)) {
@@ -311,6 +324,8 @@ MachOPlatform::MachOPlatform(
     Err = std::move(E2);
     return;
   }
+
+  State = Initialized;
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
@@ -496,37 +511,21 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 }
 
 Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
-
   if (auto Err = lookupAndRecordAddrs(
           ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
           {{ES.intern("___orc_rt_macho_platform_bootstrap"),
             &orc_rt_macho_platform_bootstrap},
            {ES.intern("___orc_rt_macho_platform_shutdown"),
             &orc_rt_macho_platform_shutdown},
-           {ES.intern("___orc_rt_macho_register_object_sections"),
-            &orc_rt_macho_register_object_sections},
+           {ES.intern("___orc_rt_macho_register_thread_data_section"),
+            &orc_rt_macho_register_thread_data_section},
+           {ES.intern("___orc_rt_macho_deregister_thread_data_section"),
+            &orc_rt_macho_deregister_thread_data_section},
            {ES.intern("___orc_rt_macho_create_pthread_key"),
             &orc_rt_macho_create_pthread_key}}))
     return Err;
 
-  if (auto Err = ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap))
-    return Err;
-
-  // FIXME: Ordering is fuzzy here. We're probably best off saying
-  // "behavior is undefined if code that uses the runtime is added before
-  // the platform constructor returns", then move all this to the constructor.
-  RuntimeBootstrapped = true;
-  std::vector<MachOPerObjectSectionsToRegister> DeferredPOSRs;
-  {
-    std::lock_guard<std::mutex> Lock(PlatformMutex);
-    DeferredPOSRs = std::move(BootstrapPOSRs);
-  }
-
-  for (auto &D : DeferredPOSRs)
-    if (auto Err = registerPerObjectSections(D))
-      return Err;
-
-  return Error::success();
+  return ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap);
 }
 
 Error MachOPlatform::registerInitInfo(
@@ -568,23 +567,6 @@ Error MachOPlatform::registerInitInfo(
   return Error::success();
 }
 
-Error MachOPlatform::registerPerObjectSections(
-    const MachOPerObjectSectionsToRegister &POSR) {
-
-  if (!orc_rt_macho_register_object_sections)
-    return make_error<StringError>("Attempting to register per-object "
-                                   "sections, but runtime support has not "
-                                   "been loaded yet",
-                                   inconvertibleErrorCode());
-
-  Error ErrResult = Error::success();
-  if (auto Err = ES.callSPSWrapper<shared::SPSError(
-                     SPSMachOPerObjectSectionsToRegister)>(
-          orc_rt_macho_register_object_sections, ErrResult, POSR))
-    return Err;
-  return ErrResult;
-}
-
 Expected<uint64_t> MachOPlatform::createPThreadKey() {
   if (!orc_rt_macho_create_pthread_key)
     return make_error<StringError>(
@@ -602,6 +584,8 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
 void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, jitlink::LinkGraph &LG,
     jitlink::PassConfiguration &Config) {
+
+  auto PS = MP.State.load();
 
   // --- Handle Initializers ---
   if (auto InitSymbol = MR.getInitializerSymbol()) {
@@ -632,6 +616,11 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
   }
 
   // --- Add passes for eh-frame and TLV support ---
+  if (PS == MachOPlatform::BootstrapPhase1) {
+    Config.PostFixupPasses.push_back(
+        [this](jitlink::LinkGraph &G) { return registerEHSectionsPhase1(G); });
+    return;
+  }
 
   // Insert TLV lowering at the start of the PostPrunePasses, since we want
   // it to run before GOT/PLT lowering.
@@ -883,13 +872,17 @@ Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
 
 Error MachOPlatform::MachOPlatformPlugin::registerEHAndTLVSections(
     jitlink::LinkGraph &G) {
-  MachOPerObjectSectionsToRegister POSR;
 
+  // Add a pass to register the final addresses of the eh-frame and TLV sections
+  // with the runtime.
   if (auto *EHFrameSection = G.findSectionByName(EHFrameSectionName)) {
     jitlink::SectionRange R(*EHFrameSection);
     if (!R.empty())
-      POSR.EHFrameSection = {ExecutorAddr(R.getStart()),
-                             ExecutorAddr(R.getEnd())};
+      G.allocActions().push_back(
+          {{MP.orc_rt_macho_register_ehframe_section.getValue(), R.getStart(),
+            R.getSize()},
+           {MP.orc_rt_macho_deregister_ehframe_section.getValue(), R.getStart(),
+            R.getSize()}});
   }
 
   // Get a pointer to the thread data section if there is one. It will be used
@@ -912,25 +905,67 @@ Error MachOPlatform::MachOPlatformPlugin::registerEHAndTLVSections(
   // record the resulting section range.
   if (ThreadDataSection) {
     jitlink::SectionRange R(*ThreadDataSection);
-    if (!R.empty())
-      POSR.ThreadDataSection = {ExecutorAddr(R.getStart()),
-                                ExecutorAddr(R.getEnd())};
-  }
+    if (!R.empty()) {
+      if (MP.State != MachOPlatform::Initialized)
+        return make_error<StringError>("__thread_data section encountered, but "
+                                       "MachOPlatform has not finished booting",
+                                       inconvertibleErrorCode());
 
-  if (POSR.EHFrameSection.Start || POSR.ThreadDataSection.Start) {
-
-    // If we're still bootstrapping the runtime then just record this
-    // frame for now.
-    if (!MP.RuntimeBootstrapped) {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      MP.BootstrapPOSRs.push_back(POSR);
-      return Error::success();
+      G.allocActions().push_back(
+          {{MP.orc_rt_macho_register_thread_data_section.getValue(),
+            R.getStart(), R.getSize()},
+           {MP.orc_rt_macho_deregister_thread_data_section.getValue(),
+            R.getStart(), R.getSize()}});
     }
-
-    // Otherwise register it immediately.
-    if (auto Err = MP.registerPerObjectSections(POSR))
-      return Err;
   }
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::registerEHSectionsPhase1(
+    jitlink::LinkGraph &G) {
+
+  // If there's no eh-frame there's nothing to do.
+  auto *EHFrameSection = G.findSectionByName(EHFrameSectionName);
+  if (!EHFrameSection)
+    return Error::success();
+
+  // If the eh-frame section is empty there's nothing to do.
+  jitlink::SectionRange R(*EHFrameSection);
+  if (R.empty())
+    return Error::success();
+
+  // Since we're linking the object containing the registration code now the
+  // addresses won't be ready in the platform. We'll have to find them in this
+  // graph instead.
+  ExecutorAddr orc_rt_macho_register_ehframe_section;
+  ExecutorAddr orc_rt_macho_deregister_ehframe_section;
+  for (auto *Sym : G.defined_symbols()) {
+    if (!Sym->hasName())
+      continue;
+    if (Sym->getName() == "___orc_rt_macho_register_ehframe_section")
+      orc_rt_macho_register_ehframe_section = ExecutorAddr(Sym->getAddress());
+    else if (Sym->getName() == "___orc_rt_macho_deregister_ehframe_section")
+      orc_rt_macho_deregister_ehframe_section = ExecutorAddr(Sym->getAddress());
+
+    if (orc_rt_macho_register_ehframe_section &&
+        orc_rt_macho_deregister_ehframe_section)
+      break;
+  }
+
+  // If we failed to find the required functions then bail out.
+  if (!orc_rt_macho_register_ehframe_section ||
+      !orc_rt_macho_deregister_ehframe_section)
+    return make_error<StringError>("Could not find eh-frame registration "
+                                   "functions during platform bootstrap",
+                                   inconvertibleErrorCode());
+
+  // Otherwise, add allocation actions to the graph to register eh-frames for
+  // this object.
+  G.allocActions().push_back(
+      {{orc_rt_macho_register_ehframe_section.getValue(), R.getStart(),
+        R.getSize()},
+       {orc_rt_macho_deregister_ehframe_section.getValue(), R.getStart(),
+        R.getSize()}});
 
   return Error::success();
 }
