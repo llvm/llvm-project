@@ -68,6 +68,39 @@ struct LinalgStrategyTilePass
   LinalgTransformationFilter filter;
 };
 
+/// Configurable pass to apply hoisting and padding.
+struct LinalgStrategyPadPass
+    : public LinalgStrategyPadPassBase<LinalgStrategyPadPass> {
+
+  LinalgStrategyPadPass() = default;
+
+  LinalgStrategyPadPass(StringRef opName, LinalgPaddingOptions opt,
+                        LinalgTransformationFilter filt)
+      : options(opt), filter(filt) {
+    this->anchorOpName.setValue(opName.str());
+  }
+
+  void runOnFunction() override {
+    auto funcOp = getFunction();
+    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
+      return;
+
+    RewritePatternSet paddingPattern(funcOp.getContext());
+    if (!anchorOpName.empty()) {
+      paddingPattern.add<LinalgPaddingPattern>(
+          anchorOpName, funcOp.getContext(), options, filter);
+    } else {
+      paddingPattern.add<LinalgPaddingPattern>(funcOp.getContext(), options,
+                                               filter);
+    }
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(paddingPattern))))
+      signalPassFailure();
+  }
+
+  LinalgPaddingOptions options;
+  LinalgTransformationFilter filter;
+};
+
 /// Configurable pass to apply pattern-based linalg generalization.
 struct LinalgStrategyGeneralizePass
     : public LinalgStrategyGeneralizePassBase<LinalgStrategyGeneralizePass> {
@@ -330,6 +363,13 @@ std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgStrategyTilePass(StringRef opName, LinalgTilingOptions opt,
                                    LinalgTransformationFilter filter) {
   return std::make_unique<LinalgStrategyTilePass>(opName, opt, filter);
+}
+
+/// Create a LinalgStrategyPadPass.
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgStrategyPadPass(StringRef opName, LinalgPaddingOptions opt,
+                                  LinalgTransformationFilter filter) {
+  return std::make_unique<LinalgStrategyPadPass>(opName, opt, filter);
 }
 
 /// Create a LinalgStrategyPromotePass.

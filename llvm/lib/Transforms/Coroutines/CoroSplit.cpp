@@ -1355,7 +1355,7 @@ static bool hasCallsInBlocksBetween(BasicBlock *SaveBB, BasicBlock *ResDesBB) {
     auto *BB = Worklist.pop_back_val();
     Set.insert(BB);
     for (auto *Pred : predecessors(BB))
-      if (Set.count(Pred) == 0)
+      if (!Set.contains(Pred))
         Worklist.push_back(Pred);
   }
 

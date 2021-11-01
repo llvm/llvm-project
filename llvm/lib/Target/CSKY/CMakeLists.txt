@@ -4,21 +4,36 @@ set(LLVM_TARGET_DEFINITIONS CSKY.td)
 
 tablegen(LLVM CSKYGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM CSKYGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM CSKYGenCallingConv.inc -gen-callingconv)
+tablegen(LLVM CSKYGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM CSKYGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM CSKYGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM CSKYGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM CSKYGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM CSKYGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(CSKYCommonTableGen)
 
 add_llvm_target(CSKYCodeGen
+  CSKYAsmPrinter.cpp
+  CSKYFrameLowering.cpp
+  CSKYInstrInfo.cpp
+  CSKYISelDAGToDAG.cpp
+  CSKYISelLowering.cpp
+  CSKYMCInstLower.cpp
+  CSKYRegisterInfo.cpp
   CSKYSubtarget.cpp
   CSKYTargetMachine.cpp
 
   LINK_COMPONENTS
+  Analysis
+  AsmPrinter
   Core
   CodeGen
+  CSKYDesc
   CSKYInfo
+  MC
+  SelectionDAG
   Support
   Target
 

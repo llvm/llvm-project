@@ -315,18 +315,25 @@ class StdVectorSynthProvider:
         return True
 
     """
-    Set and Map have the same underlying data structure,
-    therefore we can use exactly the same implementation for the formatter.
+     This formatter can be applied to all
+     map-like structures (map, multimap, set, multiset)
     """
-class StdSetOrMapSynthProvider:
+class StdMapLikeSynthProvider:
 
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.count = None
-        self.kind = "set" if "set" in valobj.GetTypeName() else "map"
+        self.kind = self.get_object_kind(valobj)
         logger >> "Providing synthetic children for a " + self.kind + " named " + \
             str(valobj.GetName())
+
+    def get_object_kind(self, valobj):
+        type_name = valobj.GetTypeName()
+        for kind in ["multiset", "multimap", "set", "map"]:
+           if kind in type_name:
+              return kind
+        return type_name
 
     # we need this function as a temporary workaround for rdar://problem/10801549
     # which prevents us from extracting the std::pair<K,V> SBType out of the template

@@ -3573,15 +3573,23 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
     auto loc = readOp.getLoc();
     SmallVector<int64_t> offsets(srcType.getRank(), 0);
     SmallVector<int64_t> strides(srcType.getRank(), 1);
+
+    ArrayAttr inBounds =
+        readOp.in_bounds()
+            ? rewriter.getArrayAttr(
+                  readOp.in_boundsAttr().getValue().drop_back(dimsToDrop))
+            : ArrayAttr();
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, readOp.source(), offsets, srcType.getShape(),
         strides);
+    auto permMap = getTransferMinorIdentityMap(
+        rankedReducedView.getType().cast<ShapedType>(), resultTargetVecType);
     Value result = rewriter.create<vector::TransferReadOp>(
         loc, resultTargetVecType, rankedReducedView,
-        readOp.indices().drop_back(dimsToDrop));
+        readOp.indices().drop_back(dimsToDrop), permMap, readOp.padding(),
+        inBounds);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
                                                      result);
-
     return success();
   }
 };

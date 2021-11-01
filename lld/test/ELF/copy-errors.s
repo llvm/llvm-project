@@ -8,7 +8,7 @@
 // CHECK: >>> defined in {{.*}}.so
 // CHECK: >>> referenced by {{.*}}.o:(.text+0x1)
 
-// CHECK: error: symbol 'zed' has no type
+// CHECK: error: relocation R_X86_64_PC32 cannot be used against symbol 'zed'; recompile with -fPIC
 // CHECK-NEXT: >>> defined in {{.*}}.so
 // CHECK-NEXT: >>> referenced by {{.*}}.o:(.text+0x6)
 
@@ -16,7 +16,7 @@
 // NOINHIBIT: warning: cannot preempt symbol: bar
 // NOINHIBIT-NEXT: >>> defined in {{.*}}.so
 // NOINHIBIT-NEXT: >>> referenced by {{.*}}.o:(.text+0x1)
-// NOINHIBIT: warning: symbol 'zed' has no type
+// NOINHIBIT: warning: relocation R_X86_64_PC32 cannot be used against symbol 'zed'; recompile with -fPIC
 // NOINHIBIT-NEXT: >>> defined in {{.*}}.so
 // NOINHIBIT-NEXT: >>> referenced by {{.*}}.o:(.text+0x6)
 

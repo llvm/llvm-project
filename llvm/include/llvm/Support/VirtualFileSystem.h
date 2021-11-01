@@ -788,12 +788,7 @@ private:
   /// Whether to perform case-sensitive comparisons.
   ///
   /// Currently, case-insensitive matching only works correctly with ASCII.
-  bool CaseSensitive =
-#ifdef _WIN32
-      false;
-#else
-      true;
-#endif
+  bool CaseSensitive = is_style_posix(sys::path::Style::native);
 
   /// IsRelativeOverlay marks whether a ExternalContentsPrefixDir path must
   /// be prefixed in every 'external-contents' when reading from YAML files.

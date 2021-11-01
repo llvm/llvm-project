@@ -460,6 +460,47 @@ using PaddingValueComputationFunction =
 /// OpOperand shall be marked as nofold to enable packing.
 using PaddingNoFoldComputationFunction = std::function<bool(OpOperand &)>;
 
+/// Callback returning the number of loops to hoist the pad tensor operation
+/// defining the given OpOperand.
+using PaddingHoistComputationFunction = std::function<int64_t(OpOperand &)>;
+
+struct LinalgPaddingOptions {
+  /// Callback returning the padding value to use for a given OpOperand or
+  /// failure for no padding. Padding operations are introduced if
+  /// `paddingValueComputationFunction` is set and does not return failure.
+  /// Padding all operands guarantees the operation is statically shaped and
+  /// thus can be vectorized.
+  PaddingValueComputationFunction paddingValueComputationFunction = nullptr;
+
+  LinalgPaddingOptions &
+  setPaddingValueComputationFunction(PaddingValueComputationFunction fun) {
+    paddingValueComputationFunction = std::move(fun);
+    return *this;
+  }
+
+  /// Callback returning true if the pad tensor operation defining the given
+  /// OpOperand shall be marked as nofold to enable packing. A padding operation
+  /// is only marked nofold if `paddingNoFoldComputationFunction` is set and
+  /// returns true. Otherwise, the nofold attribute is set to false.
+  PaddingNoFoldComputationFunction paddingNoFoldComputationFunction = nullptr;
+
+  LinalgPaddingOptions &
+  setPaddingNoFoldComputationFunction(PaddingNoFoldComputationFunction fun) {
+    paddingNoFoldComputationFunction = std::move(fun);
+    return *this;
+  }
+
+  /// Callback returning the number of loops to hoist the pad tensor operation
+  /// defining the given OpOperand.
+  PaddingHoistComputationFunction paddingHoistComputationFunction = nullptr;
+
+  LinalgPaddingOptions &
+  setPaddingHoistComputationFunction(PaddingHoistComputationFunction fun) {
+    paddingHoistComputationFunction = std::move(fun);
+    return *this;
+  }
+};
+
 struct LinalgTilingOptions {
   /// Computation function that returns the tile sizes for each operation.
   /// Delayed construction of constant tile sizes should occur to interoperate
@@ -648,6 +689,35 @@ struct LinalgGenericTilingPattern : public LinalgBaseTilingPattern {
       rewriter.replaceOp(op, tiledLinalgOp.tensorResults);
     return success();
   }
+};
+
+///
+/// Linalg padding pattern.
+///
+/// Apply the `padding` transformation as a pattern.
+/// `filter` controls LinalgTransformMarker matching and update when specified.
+/// See `padding` for more details.
+struct LinalgPaddingPattern : public RewritePattern {
+  // Entry point to match any LinalgOp OpInterface.
+  LinalgPaddingPattern(
+      MLIRContext *context,
+      LinalgPaddingOptions options = LinalgPaddingOptions(),
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1);
+  // Entry point to match a specific LinalgOp.
+  LinalgPaddingPattern(
+      StringRef opName, MLIRContext *context,
+      LinalgPaddingOptions options = LinalgPaddingOptions(),
+      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1);
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  LinalgTransformationFilter filter;
+  /// Options to control padding and hoisting.
+  LinalgPaddingOptions options;
 };
 
 struct LinalgFusionOptions {

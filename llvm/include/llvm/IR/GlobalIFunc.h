@@ -80,6 +80,10 @@ public:
         static_cast<const GlobalIFunc *>(this)->getResolverFunction());
   }
 
+  static FunctionType *getResolverFunctionType(Type *IFuncValTy) {
+    return FunctionType::get(IFuncValTy->getPointerTo(), false);
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalIFuncVal;

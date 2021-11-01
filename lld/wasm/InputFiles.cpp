@@ -169,18 +169,12 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32: {
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
-    // Treat non-TLS relocation against symbols that live in the TLS segment
-    // like TLS relocations.  This behaviour exists to support older object
-    // files created before we introduced TLS relocations.
-    // TODO(sbc): Remove this legacy behaviour one day.  This will break
-    // backward compat with old object files built with `-fPIC`.
-    if (D->segment && D->segment->outputSeg->isTLS())
-      return D->getOutputSegmentOffset() + reloc.Addend;
-
     uint64_t value = D->getVA() + reloc.Addend;
     if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
       const auto *segment = cast<InputSegment>(chunk);
@@ -190,12 +184,6 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     }
     return value;
   }
-  case R_WASM_MEMORY_ADDR_TLS_SLEB:
-  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-    if (isa<UndefinedData>(sym) || sym->isUndefWeak())
-      return 0;
-    // TLS relocations are relative to the start of the TLS output segment
-    return cast<DefinedData>(sym)->getOutputSegmentOffset() + reloc.Addend;
   case R_WASM_TYPE_INDEX_LEB:
     return typeMap[reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:

@@ -213,19 +213,18 @@ define void @insert_v2i64_nxv16i64(<2 x i64> %sv0, <2 x i64> %sv1, <vscale x 16 
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    str q1, [sp, #32]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, #1, mul vl]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8, #2, mul vl]
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x8, #3, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [sp]
-; CHECK-NEXT:    st1d { z2.d }, p0, [x0, #3, mul vl]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #2, mul vl]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1d { z3.d }, p0, [x0]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [sp, #2, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p0/z, [sp, #3, mul vl]
+; CHECK-NEXT:    st1d { z3.d }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st1d { z2.d }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -256,13 +255,12 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    str q0, [sp, #16]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, #1, mul vl]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [sp]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1, #1, mul vl]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -319,11 +317,10 @@ define <vscale x 8 x half> @insert_nxv8f16_nxv2f16(<vscale x 8 x half> %vec, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    st1h { z1.d }, p1, [x8, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.d }, p1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -446,15 +443,14 @@ define <vscale x 6 x i32>  @insert_nxv6i32_nxv2i32(<vscale x 2 x i32> %sv0, <vsc
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    st1w { z2.d }, p0, [x8, #2, mul vl]
-; CHECK-NEXT:    st1w { z0.s }, p1, [sp]
-; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x8, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p1/z, [sp]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
+; CHECK-NEXT:    st1w { z1.d }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [sp]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

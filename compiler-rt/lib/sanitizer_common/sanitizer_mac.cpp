@@ -1311,7 +1311,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 }
 
 // FIXME implement on this platform.
-void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
 void SignalContext::DumpAllRegisters(void *context) {
   Report("Register values:\n");

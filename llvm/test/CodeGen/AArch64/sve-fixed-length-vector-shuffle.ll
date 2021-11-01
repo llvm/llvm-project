@@ -939,7 +939,6 @@ define void @shuffle_ext_invalid(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    mov z2.d, z1.d[1]
@@ -947,7 +946,7 @@ define void @shuffle_ext_invalid(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    mov z1.d, z0.d[3]
 ; CHECK-NEXT:    mov z0.d, z0.d[2]
 ; CHECK-NEXT:    stp d0, d1, [sp]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload

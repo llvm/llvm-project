@@ -29,11 +29,6 @@ ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_get_initializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_get_deinitializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_symbol_lookup_tag)
 
-// eh-frame registration functions.
-// We expect these to be available for all processes.
-extern "C" void __register_frame(const void *);
-extern "C" void __deregister_frame(const void *);
-
 // Objective-C types.
 struct objc_class;
 struct objc_image_info;
@@ -65,28 +60,6 @@ extern "C" void swift_registerProtocolConformances(
     const ProtocolConformanceRecord *end) ORC_RT_WEAK_IMPORT;
 
 namespace {
-
-template <typename HandleFDEFn>
-void walkEHFrameSection(span<const char> EHFrameSection,
-                        HandleFDEFn HandleFDE) {
-  const char *CurCFIRecord = EHFrameSection.data();
-  uint64_t Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
-
-  while (CurCFIRecord != EHFrameSection.end() && Size != 0) {
-    const char *OffsetField = CurCFIRecord + (Size == 0xffffffff ? 12 : 4);
-    if (Size == 0xffffffff)
-      Size = *reinterpret_cast<const uint64_t *>(CurCFIRecord + 4) + 12;
-    else
-      Size += 4;
-    uint32_t Offset = *reinterpret_cast<const uint32_t *>(OffsetField);
-
-    if (Offset != 0)
-      HandleFDE(CurCFIRecord);
-
-    CurCFIRecord += Size;
-    Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
-  }
-}
 
 Error validatePointerSectionExtent(const char *SectionName,
                                    const ExecutorAddrRange &SE) {
@@ -250,8 +223,8 @@ public:
   MachOPlatformRuntimeState(MachOPlatformRuntimeState &&) = delete;
   MachOPlatformRuntimeState &operator=(MachOPlatformRuntimeState &&) = delete;
 
-  Error registerObjectSections(MachOPerObjectSectionsToRegister POSR);
-  Error deregisterObjectSections(MachOPerObjectSectionsToRegister POSR);
+  Error registerThreadDataSection(span<const char> ThreadDataSec);
+  Error deregisterThreadDataSection(span<const char> ThreadDataSec);
 
   const char *dlerror();
   void *dlopen(string_view Name, int Mode);
@@ -269,8 +242,6 @@ private:
   PerJITDylibState *getJITDylibStateByHeaderAddr(void *DSOHandle);
   PerJITDylibState *getJITDylibStateByName(string_view Path);
   PerJITDylibState &getOrCreateJITDylibState(MachOJITDylibInitializers &MOJDIs);
-
-  Error registerThreadDataSection(span<const char> ThreadDataSec);
 
   Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
                                                 string_view Symbol);
@@ -320,27 +291,28 @@ void MachOPlatformRuntimeState::destroy() {
   delete MOPS;
 }
 
-Error MachOPlatformRuntimeState::registerObjectSections(
-    MachOPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.Start)
-    walkEHFrameSection(POSR.EHFrameSection.toSpan<const char>(),
-                       __register_frame);
-
-  if (POSR.ThreadDataSection.Start) {
-    if (auto Err = registerThreadDataSection(
-            POSR.ThreadDataSection.toSpan<const char>()))
-      return Err;
+Error MachOPlatformRuntimeState::registerThreadDataSection(
+    span<const char> ThreadDataSection) {
+  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
+  auto I = ThreadDataSections.upper_bound(ThreadDataSection.data());
+  if (I != ThreadDataSections.begin()) {
+    auto J = std::prev(I);
+    if (J->first + J->second > ThreadDataSection.data())
+      return make_error<StringError>("Overlapping __thread_data sections");
   }
-
+  ThreadDataSections.insert(
+      I, std::make_pair(ThreadDataSection.data(), ThreadDataSection.size()));
   return Error::success();
 }
 
-Error MachOPlatformRuntimeState::deregisterObjectSections(
-    MachOPerObjectSectionsToRegister POSR) {
-  if (POSR.EHFrameSection.Start)
-    walkEHFrameSection(POSR.EHFrameSection.toSpan<const char>(),
-                       __deregister_frame);
-
+Error MachOPlatformRuntimeState::deregisterThreadDataSection(
+    span<const char> ThreadDataSection) {
+  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
+  auto I = ThreadDataSections.find(ThreadDataSection.end());
+  if (I == ThreadDataSections.end())
+    return make_error<StringError>("Attempt to deregister unknown thread data "
+                                   "section");
+  ThreadDataSections.erase(I);
   return Error::success();
 }
 
@@ -462,20 +434,6 @@ MachOPlatformRuntimeState::getOrCreateJITDylibState(
   return JDS;
 }
 
-Error MachOPlatformRuntimeState::registerThreadDataSection(
-    span<const char> ThreadDataSection) {
-  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
-  auto I = ThreadDataSections.upper_bound(ThreadDataSection.data());
-  if (I != ThreadDataSections.begin()) {
-    auto J = std::prev(I);
-    if (J->first + J->second > ThreadDataSection.data())
-      return make_error<StringError>("Overlapping __thread_data sections");
-  }
-  ThreadDataSections.insert(
-      I, std::make_pair(ThreadDataSection.data(), ThreadDataSection.size()));
-  return Error::success();
-}
-
 Expected<ExecutorAddr>
 MachOPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
                                                   string_view Sym) {
@@ -587,6 +545,13 @@ void destroyMachOTLVMgr(void *MachOTLVMgr) {
   delete static_cast<MachOPlatformRuntimeTLVManager *>(MachOTLVMgr);
 }
 
+Error runWrapperFunctionCalls(std::vector<WrapperFunctionCall> WFCs) {
+  for (auto &WFC : WFCs)
+    if (auto Err = WFC.runWithSPSRet())
+      return Err;
+  return Error::success();
+}
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -605,27 +570,38 @@ __orc_rt_macho_platform_shutdown(char *ArgData, size_t ArgSize) {
   return WrapperFunctionResult().release();
 }
 
-/// Wrapper function for registering metadata on a per-object basis.
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
-__orc_rt_macho_register_object_sections(char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSError(SPSMachOPerObjectSectionsToRegister)>::handle(
-             ArgData, ArgSize,
-             [](MachOPerObjectSectionsToRegister &POSR) {
-               return MachOPlatformRuntimeState::get().registerObjectSections(
-                   std::move(POSR));
+__orc_rt_macho_register_thread_data_section(char *ArgData, size_t ArgSize) {
+  // NOTE: Does not use SPS to deserialize arg buffer, instead the arg buffer
+  // is taken to be the range of the thread data section.
+  return WrapperFunction<SPSError()>::handle(
+             nullptr, 0,
+             [&]() {
+               return MachOPlatformRuntimeState::get()
+                   .registerThreadDataSection(
+                       span<const char>(ArgData, ArgSize));
              })
       .release();
 }
 
-/// Wrapper for releasing per-object metadat.
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
-__orc_rt_macho_deregister_object_sections(char *ArgData, size_t ArgSize) {
-  return WrapperFunction<SPSError(SPSMachOPerObjectSectionsToRegister)>::handle(
-             ArgData, ArgSize,
-             [](MachOPerObjectSectionsToRegister &POSR) {
-               return MachOPlatformRuntimeState::get().deregisterObjectSections(
-                   std::move(POSR));
+__orc_rt_macho_deregister_thread_data_section(char *ArgData, size_t ArgSize) {
+  // NOTE: Does not use SPS to deserialize arg buffer, instead the arg buffer
+  // is taken to be the range of the thread data section.
+  return WrapperFunction<SPSError()>::handle(
+             nullptr, 0,
+             [&]() {
+               return MachOPlatformRuntimeState::get()
+                   .deregisterThreadDataSection(
+                       span<const char>(ArgData, ArgSize));
              })
+      .release();
+}
+
+ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+__orc_rt_macho_run_wrapper_function_calls(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSError(SPSSequence<SPSWrapperFunctionCall>)>::handle(
+             ArgData, ArgSize, runWrapperFunctionCalls)
       .release();
 }
 

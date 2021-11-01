@@ -756,7 +756,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     parseSpecialCaseListArg(
         D, Args, CoverageAllowlistFiles,
         options::OPT_fsanitize_coverage_allowlist, OptSpecifier(),
-        clang::diag::err_drv_malformed_sanitizer_coverage_whitelist);
+        clang::diag::err_drv_malformed_sanitizer_coverage_allowlist);
     parseSpecialCaseListArg(
         D, Args, CoverageIgnorelistFiles,
         options::OPT_fsanitize_coverage_ignorelist, OptSpecifier(),

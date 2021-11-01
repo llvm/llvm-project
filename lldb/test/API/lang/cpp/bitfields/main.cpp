@@ -97,7 +97,7 @@ WithVTable with_vtable;
 
 struct WithVTableAndUnnamed {
   virtual ~WithVTableAndUnnamed() {}
-  unsigned a : 4;
+  unsigned : 4;
   unsigned b : 4;
   unsigned c : 4;
 };
@@ -146,7 +146,6 @@ int main(int argc, char const *argv[]) {
   with_vtable.b = 0;
   with_vtable.c = 5;
 
-  with_vtable_and_unnamed.a = 5;
   with_vtable_and_unnamed.b = 0;
   with_vtable_and_unnamed.c = 5;
 

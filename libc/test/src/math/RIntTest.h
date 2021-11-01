@@ -11,8 +11,8 @@
 
 #include "src/__support/FPUtil/FEnvUtils.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>

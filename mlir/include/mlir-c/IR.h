@@ -346,6 +346,10 @@ MLIR_CAPI_EXPORTED MlirOperation mlirOperationClone(MlirOperation op);
 /// Takes an operation owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirOperationDestroy(MlirOperation op);
 
+/// Removes the given operation from its parent block. The operation is not
+/// destroyed. The ownership of the operation is transferred to the caller.
+MLIR_CAPI_EXPORTED void mlirOperationRemoveFromParent(MlirOperation op);
+
 /// Checks whether the underlying operation is null.
 static inline bool mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 
@@ -455,6 +459,19 @@ MLIR_CAPI_EXPORTED void mlirOperationDump(MlirOperation op);
 /// Verify the operation and return true if it passes, false if it fails.
 MLIR_CAPI_EXPORTED bool mlirOperationVerify(MlirOperation op);
 
+/// Moves the given operation immediately after the other operation in its
+/// parent block. The given operation may be owned by the caller or by its
+/// current block. The other operation must belong to a block. In any case, the
+/// ownership is transferred to the block of the other operation.
+MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
+                                               MlirOperation other);
+
+/// Moves the given operation immediately before the other operation in its
+/// parent block. The given operation may be owner by the caller or by its
+/// current block. The other operation must belong to a block. In any case, the
+/// ownership is transferred to the block of the other operation.
+MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
+                                                MlirOperation other);
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//

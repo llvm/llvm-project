@@ -104,6 +104,10 @@ void AArch64Subtarget::initializeProperties() {
   case CortexX1:
     PrefFunctionLogAlignment = 4;
     break;
+  case CortexX2:
+    PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
+    break;
   case A64FX:
     CacheLineSize = 256;
     PrefFunctionLogAlignment = 3;

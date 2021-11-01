@@ -6,7 +6,7 @@
 ; PR46647
 ; XFAIL: arm64-apple
 
-; .debug_frame is not emitted for targeting Windows x64 or arm64.
+; .debug_frame is not emitted for targeting Windows x64, arm64, or AIX.
 ; REQUIRES: debug_frame
 ; REQUIRES: default_triple
 

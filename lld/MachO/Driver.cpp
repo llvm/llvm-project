@@ -226,7 +226,7 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
 
 static DenseMap<StringRef, ArchiveFile *> loadedArchives;
 
-static InputFile *addFile(StringRef path, bool forceLoadArchive,
+static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
                           bool isExplicit = true, bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
@@ -253,11 +253,13 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       error(path + ": archive has no index; run ranlib to add one");
 
     auto *file = make<ArchiveFile>(std::move(archive));
-    if (config->allLoad || forceLoadArchive) {
+    if ((forceLoadArchive == ForceLoad::Default && config->allLoad) ||
+        forceLoadArchive == ForceLoad::Yes) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
-          StringRef reason = forceLoadArchive ? "-force_load" : "-all_load";
+          StringRef reason =
+              forceLoadArchive == ForceLoad::Yes ? "-force_load" : "-all_load";
           if (Error e = file->fetch(c, reason))
             error(toString(file) + ": " + reason +
                   " failed to load archive member: " + toString(std::move(e)));
@@ -266,7 +268,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
           error(toString(file) +
                 ": Archive::children failed: " + toString(std::move(e)));
       }
-    } else if (config->forceLoadObjC) {
+    } else if (forceLoadArchive == ForceLoad::Default &&
+               config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->getArchive().symbols())
         if (sym.getName().startswith(objc::klass))
           file->fetch(sym);
@@ -331,10 +334,11 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
 }
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
-                       bool isReexport, bool isExplicit, bool forceLoad) {
+                       bool isReexport, bool isExplicit,
+                       ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoad, isExplicit))) {
+            addFile(*path, forceLoadArchive, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -350,10 +354,11 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
 }
 
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
-                         bool isReexport, bool isExplicit) {
+                         bool isReexport, bool isExplicit,
+                         ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findFramework(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
+            addFile(*path, forceLoadArchive, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -392,15 +397,16 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
     switch (arg->getOption().getID()) {
     case OPT_l: {
       StringRef name = arg->getValue();
-      bool forceLoad =
-          config->forceLoadSwift ? name.startswith("swift") : false;
+      ForceLoad forceLoadArchive =
+          config->forceLoadSwift && name.startswith("swift") ? ForceLoad::Yes
+                                                             : ForceLoad::No;
       addLibrary(name, /*isNeeded=*/false, /*isWeak=*/false,
-                 /*isReexport=*/false, /*isExplicit=*/false, forceLoad);
+                 /*isReexport=*/false, /*isExplicit=*/false, forceLoadArchive);
       break;
     }
     case OPT_framework:
       addFramework(arg->getValue(), /*isNeeded=*/false, /*isWeak=*/false,
-                   /*isReexport=*/false, /*isExplicit=*/false);
+                   /*isReexport=*/false, /*isExplicit=*/false, ForceLoad::No);
       break;
     default:
       error(arg->getSpelling() + " is not allowed in LC_LINKER_OPTION");
@@ -414,7 +420,7 @@ static void addFileList(StringRef path) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), /*forceLoadArchive=*/false);
+    addFile(rerootPath(path), ForceLoad::Default);
 }
 
 // An order file has one entry per line, in the following format:
@@ -653,10 +659,12 @@ static PlatformKind parsePlatformVersion(const ArgList &args) {
 // Has the side-effect of setting Config::target.
 static TargetInfo *createTargetInfo(InputArgList &args) {
   StringRef archName = args.getLastArgValue(OPT_arch);
-  if (archName.empty())
-    fatal("must specify -arch");
-  PlatformKind platform = parsePlatformVersion(args);
+  if (archName.empty()) {
+    error("must specify -arch");
+    return nullptr;
+  }
 
+  PlatformKind platform = parsePlatformVersion(args);
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 
@@ -674,7 +682,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_ARM:
     return createARMTargetInfo(cpuSubtype);
   default:
-    fatal("missing or unsupported -arch " + archName);
+    error("missing or unsupported -arch " + archName);
+    return nullptr;
   }
 }
 
@@ -947,30 +956,30 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/false);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Default);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), false)))
+              addFile(rerootPath(arg->getValue()), ForceLoad::Default)))
         dylibFile->forceNeeded = true;
       break;
     case OPT_reexport_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(
-              rerootPath(arg->getValue()), /*forceLoadArchive=*/false))) {
+      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+              addFile(rerootPath(arg->getValue()), ForceLoad::Default))) {
         config->hasReexports = true;
         dylibFile->reexport = true;
       }
       break;
     case OPT_weak_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/false)))
+              addFile(rerootPath(arg->getValue()), ForceLoad::Default)))
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
-      addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/true);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Yes);
       break;
     case OPT_l:
     case OPT_needed_l:
@@ -978,7 +987,7 @@ static void createFiles(const InputArgList &args) {
     case OPT_weak_l:
       addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
                  opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
-                 /*isExplicit=*/true, /*forceLoad=*/false);
+                 /*isExplicit=*/true, ForceLoad::Default);
       break;
     case OPT_framework:
     case OPT_needed_framework:
@@ -986,7 +995,8 @@ static void createFiles(const InputArgList &args) {
     case OPT_weak_framework:
       addFramework(arg->getValue(), opt.getID() == OPT_needed_framework,
                    opt.getID() == OPT_weak_framework,
-                   opt.getID() == OPT_reexport_framework, /*isExplicit=*/true);
+                   opt.getID() == OPT_reexport_framework, /*isExplicit=*/true,
+                   ForceLoad::Default);
       break;
     default:
       break;
@@ -1061,7 +1071,25 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
-  errorHandler().cleanupCallback = []() { freeArena(); };
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+
+    concatOutputSections.clear();
+    inputFiles.clear();
+    inputSections.clear();
+    loadedArchives.clear();
+    syntheticSections.clear();
+    thunkMap.clear();
+
+    firstTLVDataSection = nullptr;
+    tar = nullptr;
+    memset(&in, 0, sizeof(in));
+
+    resetLoadedDylibs();
+    resetOutputSegments();
+    resetWriter();
+    InputFile::resetIdCount();
+  };
 
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
@@ -1093,6 +1121,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   target = createTargetInfo(args);
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
+  if (errorCount())
+    return false;
 
   config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
   if (!config->osoPrefix.empty()) {
@@ -1175,7 +1205,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), /*forceLoadArchive=*/false, /*isExplicit=*/false,
+    addFile(arg->getValue(), ForceLoad::Default, /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
   if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
@@ -1385,6 +1415,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         reexportHandler(arg, extensions);
     }
 
+    cl::ResetAllOptionOccurrences();
+
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
       parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
@@ -1469,5 +1501,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  errorHandler().reset();
+  return ret;
 }

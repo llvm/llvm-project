@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 USE_LIBSTDCPP = "USE_LIBSTDCPP"
 USE_LIBCPP = "USE_LIBCPP"
 
-class LibcxxSetDataFormatterTestCase(TestBase):
+class GenericSetDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
