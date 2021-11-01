@@ -1114,6 +1114,8 @@ public:
 
   void onEndOfFunction(SMLoc ErrorLoc) {
     TC.endOfFunction(ErrorLoc);
+    // Reset the type checker state.
+    TC.Clear();
 
     // Automatically output a .size directive, so it becomes optional for the
     // user.
