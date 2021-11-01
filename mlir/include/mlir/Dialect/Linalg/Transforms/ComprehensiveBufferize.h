@@ -122,23 +122,17 @@ public:
   void dumpEquivalences() const;
 
 private:
-  /// llvm::EquivalenceClasses wants comparable elements because it uses
-  /// std::set as the underlying impl.
-  /// ValueWrapper wraps Value and uses pointer comparison on the defining op.
-  /// This is a poor man's comparison but it's not like UnionFind needs ordering
-  /// anyway ..
-  struct ValueWrapper {
-    ValueWrapper(Value val) : v(val) {}
-    operator Value() const { return v; }
-    bool operator<(const ValueWrapper &wrap) const {
-      return v.getImpl() < wrap.v.getImpl();
+  /// llvm::EquivalenceClasses wants comparable elements. This comparator uses
+  /// uses pointer comparison on the defining op. This is a poor man's
+  /// comparison but it's not like UnionFind needs ordering anyway.
+  struct ValueComparator {
+    bool operator()(const Value &lhs, const Value &rhs) const {
+      return lhs.getImpl() < rhs.getImpl();
     }
-    bool operator==(const ValueWrapper &wrap) const { return v == wrap.v; }
-    Value v;
   };
 
   using EquivalenceClassRangeType = llvm::iterator_range<
-      llvm::EquivalenceClasses<ValueWrapper>::member_iterator>;
+      llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
 
@@ -164,10 +158,10 @@ private:
   /// Auxiliary structure to store all the values a given value aliases with.
   /// These are the conservative cases that can further decompose into
   /// "equivalent" buffer relationships.
-  llvm::EquivalenceClasses<ValueWrapper> aliasInfo;
+  llvm::EquivalenceClasses<Value, ValueComparator> aliasInfo;
 
   /// Auxiliary structure to store all the equivalent buffer classes.
-  llvm::EquivalenceClasses<ValueWrapper> equivalentInfo;
+  llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
 };
 
 /// Analyze the `ops` to determine which OpResults are inplaceable.
