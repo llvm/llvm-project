@@ -374,13 +374,18 @@ void SimpleRemoteEPC::handleCallWrapper(
     uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   assert(ES && "No ExecutionSession attached");
-  ES->runJITDispatchHandler(
-      [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
-        if (auto Err = sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
-          getExecutionSession().reportError(std::move(Err));
+  D->dispatch(makeGenericNamedTask(
+      [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
+        ES->runJITDispatchHandler(
+            [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
+              if (auto Err =
+                      sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
+                                  ExecutorAddr(), {WFR.data(), WFR.size()}))
+                getExecutionSession().reportError(std::move(Err));
+            },
+            TagAddr.getValue(), ArgBytes);
       },
-      TagAddr.getValue(), ArgBytes);
+      "callWrapper task"));
 }
 
 Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
