@@ -3101,6 +3101,50 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(V);
   }
 
+  case Builtin::BI__builtin_elementwise_abs: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result;
+    if (Op0->getType()->isIntOrIntVectorTy())
+      Result = Builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, Op0, Builder.getFalse(), nullptr, "elt.abs");
+    else
+      Result = Builder.CreateUnaryIntrinsic(llvm::Intrinsic::fabs, Op0, nullptr,
+                                            "elt.abs");
+    return RValue::get(Result);
+  }
+  case Builtin::BI__builtin_elementwise_max: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result;
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      QualType Ty = E->getArg(0)->getType();
+      if (auto *VecTy = Ty->getAs<VectorType>())
+        Ty = VecTy->getElementType();
+      Result = Builder.CreateBinaryIntrinsic(Ty->isSignedIntegerType()
+                                                 ? llvm::Intrinsic::smax
+                                                 : llvm::Intrinsic::umax,
+                                             Op0, Op1, nullptr, "elt.max");
+    } else
+      Result = Builder.CreateMaxNum(Op0, Op1, "elt.max");
+    return RValue::get(Result);
+  }
+  case Builtin::BI__builtin_elementwise_min: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result;
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      QualType Ty = E->getArg(0)->getType();
+      if (auto *VecTy = Ty->getAs<VectorType>())
+        Ty = VecTy->getElementType();
+      Result = Builder.CreateBinaryIntrinsic(Ty->isSignedIntegerType()
+                                                 ? llvm::Intrinsic::smin
+                                                 : llvm::Intrinsic::umin,
+                                             Op0, Op1, nullptr, "elt.min");
+    } else
+      Result = Builder.CreateMinNum(Op0, Op1, "elt.min");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_matrix_transpose: {
     const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
     Value *MatValue = EmitScalarExpr(E->getArg(0));
@@ -18346,6 +18390,31 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     }
     Function *Callee = CGM.getIntrinsic(IntNo, LHS->getType());
     return Builder.CreateCall(Callee, {LHS, RHS});
+  }
+  case WebAssembly::BI__builtin_wasm_relaxed_trunc_s_i32x4_f32x4:
+  case WebAssembly::BI__builtin_wasm_relaxed_trunc_u_i32x4_f32x4:
+  case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2:
+  case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_relaxed_trunc_s_i32x4_f32x4:
+      IntNo = Intrinsic::wasm_relaxed_trunc_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_relaxed_trunc_u_i32x4_f32x4:
+      IntNo = Intrinsic::wasm_relaxed_trunc_unsigned;
+      break;
+    case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2:
+      IntNo = Intrinsic::wasm_relaxed_trunc_zero_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2:
+      IntNo = Intrinsic::wasm_relaxed_trunc_zero_unsigned;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo);
+    return Builder.CreateCall(Callee, {Vec});
   }
   default:
     return nullptr;

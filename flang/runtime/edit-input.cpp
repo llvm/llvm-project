@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "edit-input.h"
+#include "namelist.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
@@ -69,6 +70,10 @@ bool EditIntegerInput(
   RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
+    if (IsNamelistName(io)) {
+      return false;
+    }
+    break;
   case 'G':
   case 'I':
     break;
@@ -78,6 +83,9 @@ bool EditIntegerInput(
     return EditBOZInput(io, edit, n, 8, kind << 3);
   case 'Z':
     return EditBOZInput(io, edit, n, 16, kind << 3);
+  case 'A': // legacy extension
+    return EditDefaultCharacterInput(
+        io, edit, reinterpret_cast<char *>(n), kind);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
@@ -298,6 +306,10 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
+    if (IsNamelistName(io)) {
+      return false;
+    }
+    return EditCommonRealInput<KIND>(io, edit, n);
   case DataEdit::ListDirectedRealPart:
   case DataEdit::ListDirectedImaginaryPart:
   case 'F':
@@ -314,6 +326,9 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   case 'Z':
     return EditBOZInput(
         io, edit, n, 16, common::BitsForBinaryPrecision(binaryPrecision));
+  case 'A': // legacy extension
+    return EditDefaultCharacterInput(
+        io, edit, reinterpret_cast<char *>(n), KIND);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used for REAL input",
@@ -326,6 +341,10 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
 bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
+    if (IsNamelistName(io)) {
+      return false;
+    }
+    break;
   case 'L':
   case 'G':
     break;
@@ -406,6 +425,9 @@ static bool EditListDirectedDefaultCharacterInput(
   if (ch && (*ch == '\'' || *ch == '"')) {
     io.HandleRelativePosition(1);
     return EditDelimitedCharacterInput(io, x, length, *ch);
+  }
+  if (IsNamelistName(io)) {
+    return false;
   }
   // Undelimited list-directed character input: stop at a value separator
   // or the end of the current record.

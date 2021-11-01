@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target armv6m-none-eabi \
 // RUN:     -T semihosted.lds \

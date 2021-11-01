@@ -76,3 +76,21 @@ entry:
 
   ret <vscale x 1 x i64> %1
 }
+
+; FIXME the second vsetvli is unnecessary.
+define <vscale x 1 x i1> @test5(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i64 %avl) nounwind {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vmseq.vv v8, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
+  %a = call <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %vl)
+  %b = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> %a, <vscale x 1 x i1> %2, i64 %vl)
+  ret <vscale x 1 x i1> %b
+}
+declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64)
+declare <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1>, <vscale x 1 x i1>, i64)

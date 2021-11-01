@@ -76,7 +76,7 @@ struct X0 {
 
 template X0::operator const char*() const; // expected-note{{'X0::operator const char *<char>' requested here}}
 template X0::operator const int*(); // expected-note{{'X0::operator const int *<const int>' requested here}}
-template X0::operator float*() const; // expected-error{{explicit instantiation of undefined function template}}
+template X0::operator float*() const; // expected-error{{explicit instantiation of undefined function template 'operator type-parameter-0-0 *'}}
 
 void test_X0(X0 x0, const X0 &x0c) {
   x0.operator const int*(); // expected-note{{in instantiation of function template specialization}}

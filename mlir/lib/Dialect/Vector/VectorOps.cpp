@@ -57,7 +57,7 @@ static MaskFormat get1DMaskFormat(Value mask) {
     // Inspect constant dense values. We count up for bits that
     // are set, count down for bits that are cleared, and bail
     // when a mix is detected.
-    if (auto denseElts = c.value().dyn_cast<DenseIntElementsAttr>()) {
+    if (auto denseElts = c.getValue().dyn_cast<DenseIntElementsAttr>()) {
       int64_t val = 0;
       for (bool b : denseElts.getValues<bool>())
         if (b && val >= 0)
@@ -371,16 +371,28 @@ Value mlir::vector::getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder,
                                                builder.getStringAttr("mul"),
                                                vector, ValueRange{});
   case AtomicRMWKind::minf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("minf"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::mins:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("minsi"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("min"),
+                                               builder.getStringAttr("minui"),
                                                vector, ValueRange{});
   case AtomicRMWKind::maxf:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("maxf"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::maxs:
+    return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
+                                               builder.getStringAttr("maxsi"),
+                                               vector, ValueRange{});
   case AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
-                                               builder.getStringAttr("max"),
+                                               builder.getStringAttr("maxui"),
                                                vector, ValueRange{});
   // TODO: Add remaining reduction operations.
   default:
@@ -790,7 +802,7 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
         return vector::ContractionOp();
       if (auto maybeZero = dyn_cast_or_null<arith::ConstantOp>(
               contractionOp.acc().getDefiningOp())) {
-        if (maybeZero.value() ==
+        if (maybeZero.getValue() ==
             rewriter.getZeroAttr(contractionOp.acc().getType())) {
           BlockAndValueMapping bvm;
           bvm.map(contractionOp.acc(), otherOperand);
@@ -1439,7 +1451,10 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
                       Value v2, ArrayRef<int64_t> mask) {
   result.addOperands({v1, v2});
   auto maskAttr = getVectorSubscriptAttr(builder, mask);
-  result.addTypes(v1.getType());
+  auto v1Type = v1.getType().cast<VectorType>();
+  auto shape = llvm::to_vector<4>(v1Type.getShape());
+  shape[0] = mask.size();
+  result.addTypes(VectorType::get(shape, v1Type.getElementType()));
   result.addAttribute(getMaskAttrName(), maskAttr);
 }
 
@@ -2193,7 +2208,7 @@ public:
         extractStridedSliceOp.vector().getDefiningOp<arith::ConstantOp>();
     if (!constantOp)
       return failure();
-    auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
     if (!dense)
       return failure();
     auto newAttr = DenseElementsAttr::get(extractStridedSliceOp.getType(),
@@ -2256,7 +2271,7 @@ public:
     auto splat = op.vector().getDefiningOp<SplatOp>();
     if (!splat)
       return failure();
-    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.input());
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.getInput());
     return success();
   }
 };
@@ -3652,7 +3667,7 @@ public:
     if (!constantOp)
       return failure();
     // Only handle splat for now.
-    auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
     if (!dense)
       return failure();
     auto newAttr = DenseElementsAttr::get(

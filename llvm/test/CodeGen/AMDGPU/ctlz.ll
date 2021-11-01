@@ -90,11 +90,10 @@ define amdgpu_kernel void @s_ctlz_i32(i32 addrspace(1)* noalias %out, i32 %val) 
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clz_i32_u32 s2, s2
 ; GFX11-NEXT:    s_min_u32 s2, s2, 32
-; GFX11-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %ctlz = call i32 @llvm.ctlz.i32(i32 %val, i1 false) nounwind readnone

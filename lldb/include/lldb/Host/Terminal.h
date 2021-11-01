@@ -10,7 +10,6 @@
 #define LLDB_HOST_TERMINAL_H
 #if defined(__cplusplus)
 
-#include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
 
@@ -25,6 +24,18 @@ public:
     Even,
     Odd,
     Space,
+    Mark,
+  };
+
+  enum class ParityCheck {
+    // No parity checking
+    No,
+    // Replace erraneous bytes with NUL
+    ReplaceWithNUL,
+    // Ignore erraneous bytes
+    Ignore,
+    // Mark erraneous bytes by prepending them with \xFF\x00; real \xFF
+    // is escaped to \xFF\xFF
     Mark,
   };
 
@@ -53,6 +64,8 @@ public:
   llvm::Error SetStopBits(unsigned int stop_bits);
 
   llvm::Error SetParity(Parity parity);
+
+  llvm::Error SetParityCheck(ParityCheck parity_check);
 
   llvm::Error SetHardwareFlowControl(bool enabled);
 

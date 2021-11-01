@@ -3707,11 +3707,9 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX11-NEXT:    v_mul_lo_u32 v0, v0, v8
 ; GFX11-NEXT:    v_add3_u32 v5, v22, v10, v7
 ; GFX11-NEXT:    v_add3_u32 v1, v3, v2, v1
-; GFX11-NEXT:    v_mov_b32_e32 v2, v17
-; GFX11-NEXT:    v_mov_b32_e32 v3, v18
+; GFX11-NEXT:    v_dual_mov_b32 v2, v17 :: v_dual_mov_b32 v3, v18
 ; GFX11-NEXT:    v_add3_u32 v7, v1, v4, v5
-; GFX11-NEXT:    v_mov_b32_e32 v1, v16
-; GFX11-NEXT:    v_mov_b32_e32 v4, v19
+; GFX11-NEXT:    v_dual_mov_b32 v1, v16 :: v_dual_mov_b32 v4, v19
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v20
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = mul i256 %num, %den

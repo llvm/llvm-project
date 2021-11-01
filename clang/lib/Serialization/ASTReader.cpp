@@ -7701,24 +7701,17 @@ void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
 void ASTReader::PrintStats() {
   std::fprintf(stderr, "*** AST File Statistics:\n");
 
-  unsigned NumTypesLoaded
-    = TypesLoaded.size() - std::count(TypesLoaded.begin(), TypesLoaded.end(),
-                                      QualType());
-  unsigned NumDeclsLoaded
-    = DeclsLoaded.size() - std::count(DeclsLoaded.begin(), DeclsLoaded.end(),
-                                      (Decl *)nullptr);
-  unsigned NumIdentifiersLoaded
-    = IdentifiersLoaded.size() - std::count(IdentifiersLoaded.begin(),
-                                            IdentifiersLoaded.end(),
-                                            (IdentifierInfo *)nullptr);
-  unsigned NumMacrosLoaded
-    = MacrosLoaded.size() - std::count(MacrosLoaded.begin(),
-                                       MacrosLoaded.end(),
-                                       (MacroInfo *)nullptr);
-  unsigned NumSelectorsLoaded
-    = SelectorsLoaded.size() - std::count(SelectorsLoaded.begin(),
-                                          SelectorsLoaded.end(),
-                                          Selector());
+  unsigned NumTypesLoaded =
+      TypesLoaded.size() - llvm::count(TypesLoaded, QualType());
+  unsigned NumDeclsLoaded =
+      DeclsLoaded.size() - llvm::count(DeclsLoaded, (Decl *)nullptr);
+  unsigned NumIdentifiersLoaded =
+      IdentifiersLoaded.size() -
+      llvm::count(IdentifiersLoaded, (IdentifierInfo *)nullptr);
+  unsigned NumMacrosLoaded =
+      MacrosLoaded.size() - llvm::count(MacrosLoaded, (MacroInfo *)nullptr);
+  unsigned NumSelectorsLoaded =
+      SelectorsLoaded.size() - llvm::count(SelectorsLoaded, Selector());
 
   if (unsigned TotalNumSLocEntries = getTotalNumSLocs())
     std::fprintf(stderr, "  %u/%u source location entries read (%f%%)\n",

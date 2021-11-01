@@ -7,7 +7,7 @@
 # REQUIRES: lld
 
 # RUN: llvm-mc -dwarf-version=5 -triple x86_64-pc-linux %s -filetype=obj >%t.o
-# RUN: ld.lld %t.o -o %t -image-base=0x47000 -z separate-code
+# RUN: ld.lld %t.o -o %t --image-base=0x47000 -z separate-code
 # RUN: %lldb %t -o "image lookup -a 0x48000 -v" -o exit | FileCheck %s
 
 # CHECK:   CompileUnit: id = {0x00000001}, file = "/tmp/a.cc", language = "c++"

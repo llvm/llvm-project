@@ -81,12 +81,13 @@ define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ;
 ; GFX11-LABEL: sample_d_3d:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_lshlrev_b32 v4, 16, v4
-; GFX11-NEXT:    v_dual_mov_b32 v10, v3 :: v_dual_lshlrev_b32 v1, 16, v1
+; GFX11-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v10, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v11, 0xffff
+; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX11-NEXT:    s_lshl_b32 s12, s0, 16
-; GFX11-NEXT:    v_and_or_b32 v2, v0, v11, v1
 ; GFX11-NEXT:    v_and_or_b32 v3, v9, v11, s12
+; GFX11-NEXT:    v_and_or_b32 v2, v0, v11, v1
 ; GFX11-NEXT:    v_and_or_b32 v4, v10, v11, v4
 ; GFX11-NEXT:    v_and_or_b32 v5, v5, v11, s12
 ; GFX11-NEXT:    image_sample_d_g16 v[0:3], v[2:8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
@@ -145,8 +146,8 @@ define amdgpu_ps <4 x float> @sample_c_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX11-LABEL: sample_c_d_2d:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_dual_mov_b32 v7, 0xffff :: v_dual_lshlrev_b32 v4, 16, v4
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX11-NEXT:    v_dual_mov_b32 v7, 0xffff :: v_dual_lshlrev_b32 v2, 16, v2
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX11-NEXT:    v_and_or_b32 v1, v1, v7, v2
 ; GFX11-NEXT:    v_and_or_b32 v2, v3, v7, v4
 ; GFX11-NEXT:    image_sample_c_d_g16 v[0:3], [v0, v1, v2, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -279,10 +280,11 @@ define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ;
 ; GFX11-LABEL: sample_c_d_cl_2d:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v8, v2
-; GFX11-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_lshlrev_b32 v4, 16, v4
+; GFX11-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v9, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0xffff :: v_dual_lshlrev_b32 v3, 16, v8
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 16, v8
 ; GFX11-NEXT:    v_and_or_b32 v4, v9, v0, v4
 ; GFX11-NEXT:    v_and_or_b32 v3, v1, v0, v3
 ; GFX11-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -312,14 +314,13 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ;
 ; GFX11-LABEL: sample_c_d_o_2darray_V1:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v9, v3
-; GFX11-NEXT:    v_mov_b32_e32 v10, v2
+; GFX11-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v10, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v4
-; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_lshlrev_b32 v5, 16, v5
-; GFX11-NEXT:    v_mov_b32_e32 v3, v1
+; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0xffff :: v_dual_lshlrev_b32 v1, 16, v9
-; GFX11-NEXT:    v_and_or_b32 v5, v11, v0, v5
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX11-NEXT:    v_and_or_b32 v4, v10, v0, v1
+; GFX11-NEXT:    v_and_or_b32 v5, v11, v0, v5
 ; GFX11-NEXT:    image_sample_c_d_o_g16 v0, v[2:8], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -347,14 +348,13 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ;
 ; GFX11-LABEL: sample_c_d_o_2darray_V2:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v9, v3
-; GFX11-NEXT:    v_mov_b32_e32 v10, v2
+; GFX11-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v10, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v4
-; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_lshlrev_b32 v5, 16, v5
-; GFX11-NEXT:    v_mov_b32_e32 v3, v1
+; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0xffff :: v_dual_lshlrev_b32 v1, 16, v9
-; GFX11-NEXT:    v_and_or_b32 v5, v11, v0, v5
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX11-NEXT:    v_and_or_b32 v4, v10, v0, v1
+; GFX11-NEXT:    v_and_or_b32 v5, v11, v0, v5
 ; GFX11-NEXT:    image_sample_c_d_o_g16 v[0:1], v[2:8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog

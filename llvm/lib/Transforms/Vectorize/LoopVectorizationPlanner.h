@@ -268,12 +268,6 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// The best number of elements of the vector types used in the
-  /// transformed loop. BestVF = None means that vectorization is
-  /// disabled.
-  Optional<ElementCount> BestVF = None;
-  unsigned BestUF = 0;
-
 public:
   LoopVectorizationPlanner(Loop *L, LoopInfo *LI, const TargetLibraryInfo *TLI,
                            const TargetTransformInfo *TTI,
@@ -295,12 +289,13 @@ public:
   /// VF and its cost.
   VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
-  /// Finalize the best decision and dispose of all other VPlans.
-  void setBestPlan(ElementCount VF, unsigned UF);
+  /// Return the best VPlan for \p VF.
+  VPlan &getBestPlanFor(ElementCount VF) const;
 
   /// Generate the IR code for the body of the vectorized loop according to the
-  /// best selected VPlan.
-  void executePlan(InnerLoopVectorizer &LB, DominatorTree *DT);
+  /// best selected \p VF, \p UF and VPlan \p BestPlan.
+  void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+                   InnerLoopVectorizer &LB, DominatorTree *DT);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);

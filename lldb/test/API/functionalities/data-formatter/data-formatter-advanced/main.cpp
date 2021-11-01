@@ -144,7 +144,8 @@ int main (int argc, const char * argv[])
     cool_array[2].character = 'Q';
     
     int int_array[] = {1,2,3,4,5};
-    
+    const int const_int_array[] = {11, 12, 13, 14, 15};
+
     IWrapPointers wrapper;
         
     *int_array = -1;

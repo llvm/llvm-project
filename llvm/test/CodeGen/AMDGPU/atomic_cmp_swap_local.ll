@@ -15,8 +15,11 @@
 ; GFX11-DAG: s_load_b32 [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x4c
 ; GFX11-DAG: s_load_b32 [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
 ; GCN-DAG: v_mov_b32_e32 [[VCMP:v[0-9]+]], 7
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GCN-DAG: v_mov_b32_e32 [[VSWAP:v[0-9]+]], [[SWAP]]
+; SICIVI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; SICIVI-DAG: v_mov_b32_e32 [[VSWAP:v[0-9]+]], [[SWAP]]
+; GFX9-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX9-DAG: v_mov_b32_e32 [[VSWAP:v[0-9]+]], [[SWAP]]
+; GFX11-DAG: v_dual_mov_b32 [[VPTR:v[0-9]+]], [[PTR]] :: v_dual_mov_b32 [[VSWAP:v[0-9]+]], [[SWAP]]
 ; SICIVI: ds_cmpst_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[VCMP]], [[VSWAP]] offset:16
 ; GFX9: ds_cmpst_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[VCMP]], [[VSWAP]] offset:16
 ; GFX11: ds_cmpstore_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[VSWAP]], [[VCMP]] offset:16
@@ -42,8 +45,11 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_offset(i32 addrspace(1)* %
 ; GCN-DAG: v_mov_b32_e32 v[[LOVCMP:[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GCN-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
-; GCN-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
+; SICIVI-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
+; SICIVI-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
+; GFX9-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
+; GFX9-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
+; GFX11-DAG: v_dual_mov_b32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]] ::  v_dual_mov_b32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
 ; SICI: ds_cmpst_rtn_b64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}}, v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}} offset:32
 ; GFX89: ds_cmpst_rtn_b64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}}, v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}} offset:32
 ; GFX11: ds_cmpstore_rtn_b64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}}, v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}} offset:32
@@ -85,8 +91,11 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_bad_si_offset(i32 addrspac
 ; GFX89-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x48
 ; GFX11-DAG: s_load_b32 [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; GFX11-DAG: s_load_b32 [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x48
-; GCN-DAG: v_mov_b32_e32 [[VCMP:v[0-9]+]], 7
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; SICIVI-DAG: v_mov_b32_e32 [[VCMP:v[0-9]+]], 7
+; SICIVI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX9-DAG: v_mov_b32_e32 [[VCMP:v[0-9]+]], 7
+; GFX9-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX11-DAG: v_dual_mov_b32 [[VCMP:v[0-9]+]], 7 :: v_dual_mov_b32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GCN-DAG: v_mov_b32_e32 [[VSWAP:v[0-9]+]], [[SWAP]]
 ; SICI: ds_cmpst_b32 [[VPTR]], [[VCMP]], [[VSWAP]] offset:16
 ; GFX89: ds_cmpst_b32 [[VPTR]], [[VCMP]], [[VSWAP]] offset:16
@@ -110,10 +119,16 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_noret_i32_offset(i32 addrspace(3)*
 ; GFX11-DAG: s_load_b32 [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; GFX11-DAG: s_load_b64 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN-DAG: v_mov_b32_e32 v[[LOVCMP:[0-9]+]], 7
-; GCN-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GCN-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
-; GCN-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
+; SICIVI-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
+; SICIVI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; SICIVI-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
+; SICIVI-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
+; GFX9-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
+; GFX9-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX9-DAG: v_mov_b32_e32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
+; GFX9-DAG: v_mov_b32_e32 v[[HISWAPV:[0-9]+]], s[[HISWAP]]
+; GFX11-DAG: v_dual_mov_b32 v[[HIVCMP:[0-9]+]], 0 :: v_dual_mov_b32 [[VPTR:v[0-9]+]], [[PTR]]
+; GFX11-DAG: v_dual_mov_b32 v[[HISWAPV:[0-9]+]], s[[HISWAP]] :: v_dual_mov_b32 v[[LOSWAPV:[0-9]+]], s[[LOSWAP]]
 ; SICI: ds_cmpst_b64 [[VPTR]], v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}}, v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}} offset:32
 ; GFX89: ds_cmpst_b64 [[VPTR]], v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}}, v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}} offset:32
 ; GFX11: ds_cmpstore_b64 [[VPTR]], v{{\[}}[[LOSWAPV]]:[[HISWAPV]]{{\]}}, v{{\[}}[[LOVCMP]]:[[HIVCMP]]{{\]}} offset:32

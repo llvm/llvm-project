@@ -956,13 +956,7 @@ def Arith_CmpIOp : Arith_CompareOp<"cmpi"> {
   ];
 
   let extraClassDeclaration = [{
-    static StringRef getPredicateAttrName() { return "predicate"; }
     static arith::CmpIPredicate getPredicateByName(StringRef name);
-
-    arith::CmpIPredicate getPredicate() {
-      return (arith::CmpIPredicate) (*this)->getAttrOfType<IntegerAttr>(
-          getPredicateAttrName()).getInt();
-    }
   }];
 
   let hasFolder = 1;
@@ -1012,13 +1006,7 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
   ];
 
   let extraClassDeclaration = [{
-    static StringRef getPredicateAttrName() { return "predicate"; }
     static arith::CmpFPredicate getPredicateByName(StringRef name);
-
-    arith::CmpFPredicate getPredicate() {
-      return (arith::CmpFPredicate) (*this)->getAttrOfType<IntegerAttr>(
-          getPredicateAttrName()).getInt();
-    }
   }];
 
   let hasFolder = 1;

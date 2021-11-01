@@ -48,12 +48,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ProcessMachCore)
 
-ConstString ProcessMachCore::GetPluginNameStatic() {
-  static ConstString g_name("mach-o-core");
-  return g_name;
-}
-
-const char *ProcessMachCore::GetPluginDescriptionStatic() {
+llvm::StringRef ProcessMachCore::GetPluginDescriptionStatic() {
   return "Mach-O core file debugging plug-in.";
 }
 
@@ -116,7 +111,7 @@ ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
     : PostMortemProcess(target_sp, listener_sp), m_core_aranges(),
       m_core_range_infos(), m_core_module_sp(), m_core_file(core_file),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
-      m_mach_kernel_addr(LLDB_INVALID_ADDRESS), m_dyld_plugin_name() {}
+      m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
 // Destructor
 ProcessMachCore::~ProcessMachCore() {
@@ -468,7 +463,7 @@ Status ProcessMachCore::DoLoadCore() {
     }
   }
 
-  if (m_dyld_plugin_name.IsEmpty()) {
+  if (m_dyld_plugin_name.empty()) {
     // If we found both a user-process dyld and a kernel binary, we need to
     // decide which to prefer.
     if (GetCorefilePreference() == eKernelCorefile) {
@@ -538,9 +533,7 @@ Status ProcessMachCore::DoLoadCore() {
 
 lldb_private::DynamicLoader *ProcessMachCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, m_dyld_plugin_name.IsEmpty() ? nullptr
-                                           : m_dyld_plugin_name.GetCString()));
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, m_dyld_plugin_name));
   return m_dyld_up.get();
 }
 

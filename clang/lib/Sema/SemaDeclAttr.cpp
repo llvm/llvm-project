@@ -3388,6 +3388,12 @@ static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   Ty = getFunctionOrMethodResultType(D);
+  // replace instancetype with the class type
+  if (Ty.getTypePtr() == S.Context.getObjCInstanceTypeDecl()->getTypeForDecl())
+    if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
+      if (auto *Interface = OMD->getClassInterface())
+        Ty = S.Context.getObjCObjectPointerType(
+            QualType(Interface->getTypeForDecl(), 0));
   if (!isNSStringType(Ty, S.Context, /*AllowNSAttributedString=*/true) &&
       !isCFStringType(Ty, S.Context) &&
       (!Ty->isPointerType() ||
@@ -6316,13 +6322,12 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
       // might be because we've transformed some of them. Check for potential
       // "out" parameters and err on the side of not warning.
       unsigned MaybeOutParamCount =
-          std::count_if(Params.begin(), Params.end(),
-                        [](const ParmVarDecl *Param) -> bool {
-        QualType ParamTy = Param->getType();
-        if (ParamTy->isReferenceType() || ParamTy->isPointerType())
-          return !ParamTy->getPointeeType().isConstQualified();
-        return false;
-      });
+          llvm::count_if(Params, [](const ParmVarDecl *Param) -> bool {
+            QualType ParamTy = Param->getType();
+            if (ParamTy->isReferenceType() || ParamTy->isPointerType())
+              return !ParamTy->getPointeeType().isConstQualified();
+            return false;
+          });
 
       ParamCountValid = SwiftParamCount + MaybeOutParamCount >= ParamCount;
     }

@@ -29,7 +29,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(shape::CstrRequireOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.create<AssertOp>(op.getLoc(), op.pred(), op.msgAttr());
+    rewriter.create<AssertOp>(op.getLoc(), op.getPred(), op.getMsgAttr());
     rewriter.replaceOpWithNewOp<shape::ConstWitnessOp>(op, true);
     return success();
   }

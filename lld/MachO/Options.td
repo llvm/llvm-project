@@ -557,7 +557,6 @@ def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE">;
 
 def S : Flag<["-"], "S">,
     HelpText<"Strip debug information (STABS or DWARF) from the output">,
-    Flags<[HelpHidden]>,
     Group<grp_symtab>;
 def x : Flag<["-"], "x">,
     HelpText<"Exclude non-global symbols from the output symbol table">,
@@ -576,7 +575,6 @@ def non_global_symbols_no_strip_list : Separate<["-"], "non_global_symbols_no_st
 def oso_prefix : Separate<["-"], "oso_prefix">,
     MetaVarName<"<path>">,
     HelpText<"Remove the prefix <path> from OSO symbols in the debug map">,
-    Flags<[HelpHidden]>,
     Group<grp_symtab>;
 def add_ast_path : Separate<["-"], "add_ast_path">,
     MetaVarName<"<path>">,

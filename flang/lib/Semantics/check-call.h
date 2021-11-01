@@ -45,6 +45,7 @@ parser::Messages CheckExplicitInterface(
 
 // Checks actual arguments for the purpose of resolving a generic interface.
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,
-    evaluate::ActualArguments &, const evaluate::FoldingContext &);
+    evaluate::ActualArguments &, const evaluate::FoldingContext &,
+    bool allowIntegerConversions = false);
 } // namespace Fortran::semantics
 #endif

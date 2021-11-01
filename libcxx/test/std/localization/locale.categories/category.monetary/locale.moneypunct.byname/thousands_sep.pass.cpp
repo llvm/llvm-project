@@ -5,11 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
 // XFAIL: LIBCXX-WINDOWS-FIXME
+
+// TODO(mordante): Investigate these localization/format failures since updating the Docker image in CI
+// UNSUPPORTED: stdlib=libc++
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8

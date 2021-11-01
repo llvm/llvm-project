@@ -1061,11 +1061,6 @@ void AppleObjCRuntimeV2::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString AppleObjCRuntimeV2::GetPluginNameStatic() {
-  static ConstString g_name("apple-objc-v2");
-  return g_name;
-}
-
 BreakpointResolverSP
 AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp) {

@@ -1643,6 +1643,9 @@ def warn_weak_vtable : Warning<
   "%0 has no out-of-line virtual method definitions; its vtable will be "
   "emitted in every translation unit">,
   InGroup<DiagGroup<"weak-vtables">>, DefaultIgnore;
+def warn_weak_template_vtable : Warning<
+  "this warning is no longer in use and will be removed in the next release">,
+  InGroup<DiagGroup<"weak-template-vtables">>, DefaultIgnore;
 
 def ext_using_undefined_std : ExtWarn<
   "using directive refers to implicitly-defined namespace 'std'">;
@@ -10747,9 +10750,14 @@ def err_omp_declare_variant_diff : Error<
   "function with '#pragma omp declare variant' has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
   "linkage}0">;
+def err_omp_declare_variant_prototype_required : Error<
+  "function with '#pragma omp declare variant' must have a prototype when "
+  "'append_args' is used">;
+def err_omp_interop_type_not_found : Error<
+  "'omp_interop_t' must be defined when 'append_args' clause is used; include <omp.h>">;
 def err_omp_declare_variant_incompat_types : Error<
-  "variant in '#pragma omp declare variant' with type %0 is incompatible with type %1"
-  >;
+  "variant in '#pragma omp declare variant' with type %0 is incompatible with"
+  " type %1%select{| with appended arguments}2">;
 def warn_omp_declare_variant_marked_as_declare_variant : Warning<
   "variant function in '#pragma omp declare variant' is itself marked as '#pragma omp declare variant'"
   >, InGroup<SourceUsesOpenMP>;
@@ -10795,6 +10803,9 @@ def note_omp_protected_structured_block
     : Note<"jump bypasses OpenMP structured block">;
 def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
+def err_omp_lastprivate_loop_var_non_loop_iteration : Error<
+  "only loop iteration variables are allowed in 'lastprivate' clause in "
+  "'omp loop' directives">;
 def err_omp_interop_variable_expected : Error<
   "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
 def err_omp_interop_variable_wrong_type : Error<
@@ -10818,6 +10829,8 @@ def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
 def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
+def err_omp_append_args_with_varargs : Error<
+  "'append_args' is not allowed with varargs functions">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -11296,6 +11309,12 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_builtin_invalid_arg_type: Error <
+  "%ordinal0 argument must be a "
+  "%select{vector, integer or floating point type|matrix|"
+   "pointer to a valid matrix element type|"
+   "signed integer or floating point type}1 (was %2)">;
+
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_matrix_index_not_integer: Error<
@@ -11308,11 +11327,8 @@ def err_matrix_separate_incomplete_index: Error<
   "matrix row and column subscripts cannot be separated by any expression">;
 def err_matrix_subscript_comma: Error<
   "comma expressions are not allowed as indices in matrix subscript expressions">;
-def err_builtin_matrix_arg: Error<"1st argument must be a matrix">;
 def err_builtin_matrix_scalar_unsigned_arg: Error<
   "%0 argument must be a constant unsigned integer expression">;
-def err_builtin_matrix_pointer_arg: Error<
-  "%ordinal0 argument must be a pointer to a valid matrix element type">;
 def err_builtin_matrix_pointer_arg_mismatch: Error<
   "the pointee of the 2nd argument must match the element type of the 1st argument (%0 != %1)">;
 def err_builtin_matrix_store_to_const: Error<

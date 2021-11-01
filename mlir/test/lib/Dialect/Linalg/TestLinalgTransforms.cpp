@@ -536,7 +536,7 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
     RewritePatternSet canonicalizationPatterns(funcOp.getContext());
     vector::populateVectorTransferPermutationMapLoweringPatterns(
         canonicalizationPatterns);
-    vector::populateVetorReductionToContractPatterns(canonicalizationPatterns);
+    vector::populateVectorReductionToContractPatterns(canonicalizationPatterns);
     stage1Patterns.push_back(std::move(canonicalizationPatterns));
   }
   SmallVector<FrozenRewritePatternSet, 4> frozenStage1Patterns;
@@ -771,7 +771,13 @@ void TestLinalgTransforms::runOnFunction() {
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testHoistPadding) {
     getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
-      (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
+      PadTensorOp hoistedOp;
+      FailureOr<Value> newResult = linalg::hoistPaddingOnTensors(
+          padTensorOp, testHoistPadding, hoistedOp);
+      if (succeeded(newResult)) {
+        padTensorOp.getResult().replaceAllUsesWith(newResult.getValue());
+        padTensorOp->erase();
+      }
     });
   }
   if (testInterchangePattern.hasValue())

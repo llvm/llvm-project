@@ -1030,14 +1030,14 @@ define amdgpu_ps float @atomic_add_i32_2darraymsaa(<8 x i32> inreg %rsrc, i32 %d
 ;
 ; GFX11-LABEL: atomic_add_i32_2darraymsaa:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_dual_mov_b32 v5, 0xffff :: v_dual_lshlrev_b32 v4, 16, v4
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX11-NEXT:    v_dual_mov_b32 v5, 0xffff :: v_dual_lshlrev_b32 v2, 16, v2
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX11-NEXT:    s_mov_b32 s0, s2
 ; GFX11-NEXT:    s_mov_b32 s1, s3
 ; GFX11-NEXT:    s_mov_b32 s2, s4
-; GFX11-NEXT:    s_mov_b32 s3, s5
 ; GFX11-NEXT:    v_and_or_b32 v1, v1, v5, v2
 ; GFX11-NEXT:    v_and_or_b32 v2, v3, v5, v4
+; GFX11-NEXT:    s_mov_b32 s3, s5
 ; GFX11-NEXT:    s_mov_b32 s4, s6
 ; GFX11-NEXT:    s_mov_b32 s5, s7
 ; GFX11-NEXT:    s_mov_b32 s6, s8

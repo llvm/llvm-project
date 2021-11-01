@@ -1522,6 +1522,13 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
   KA_TRACE(20, ("GOMP_parallel_sections: T#%d\n", gtid));
 
 #if OMPT_SUPPORT
+  ompt_frame_t *task_frame;
+  kmp_info_t *thr;
+  if (ompt_enabled.enabled) {
+    thr = __kmp_threads[gtid];
+    task_frame = &(thr->th.th_current_task->ompt_task_info.frame);
+    task_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+  }
   OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
@@ -1537,9 +1544,31 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
 
     KMP_DISPATCH_INIT(&loc, gtid, kmp_nm_dynamic_chunked, 1, count, 1, 1, TRUE);
   }
+
+#if OMPT_SUPPORT
+  ompt_frame_t *child_frame;
+  if (ompt_enabled.enabled) {
+    child_frame = &(thr->th.th_current_task->ompt_task_info.frame);
+    child_frame->exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+  }
+#endif
+
   task(data);
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    child_frame->exit_frame = ompt_data_none;
+  }
+#endif
+
   KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();
   KA_TRACE(20, ("GOMP_parallel_sections exit: T#%d\n", gtid));
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    task_frame->enter_frame = ompt_data_none;
+  }
+#endif
 }
 
 #define PARALLEL_LOOP(func, schedule, ompt_pre, ompt_post)                     \

@@ -41,9 +41,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "kdp-remote"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   // Constructors and Destructors
   ProcessKDP(lldb::TargetSP target_sp, lldb::ListenerSP listener);
@@ -85,9 +85,7 @@ public:
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // Process Control
   lldb_private::Status WillResume() override;
@@ -172,7 +170,7 @@ protected:
   CommunicationKDP m_comm;
   lldb_private::Broadcaster m_async_broadcaster;
   lldb_private::HostThread m_async_thread;
-  lldb_private::ConstString m_dyld_plugin_name;
+  llvm::StringRef m_dyld_plugin_name;
   lldb::addr_t m_kernel_load_addr;
   lldb::CommandObjectSP m_command_sp;
   lldb::ThreadWP m_kernel_thread_wp;

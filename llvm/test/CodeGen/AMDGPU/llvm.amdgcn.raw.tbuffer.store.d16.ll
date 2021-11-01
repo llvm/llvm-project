@@ -48,8 +48,11 @@ main_body:
 
 
 ; PACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
-; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
-; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+; PREGFX10-PACKED-DAG:  v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; GFX10-PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+; GFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
+; GFX11-DAG: v_dual_mov_b32 v[[LO:[0-9]+]], s[[S_DATA_0]] :: v_dual_mov_b32 v[[HI:[0-9]+]], [[MASKED0]]
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
 ; GFX11: tbuffer_store_d16_format_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]
@@ -74,8 +77,11 @@ main_body:
 ; PREGFX10-UNPACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 
 
-; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
-; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; PREGFX10-PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+; GFX10-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
+; GFX10-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
+; GFX11-DAG: v_dual_mov_b32 v[[LO:[0-9]+]], s[[S_DATA_0]] :: v_dual_mov_b32 v[[HI:[0-9]+]], s[[S_DATA_1]]
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
 ; GFX11: tbuffer_store_d16_format_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]

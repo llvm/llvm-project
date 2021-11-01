@@ -2,8 +2,8 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-ARTIFICIAL-BRANCH
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t  --skip-symbolization --use-offset=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t
-; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK
 
 ; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t
 ; RUN: llvm-profdata show -show-prof-sym-list -sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST

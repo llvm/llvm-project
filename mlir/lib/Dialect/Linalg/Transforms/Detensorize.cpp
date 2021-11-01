@@ -24,6 +24,9 @@ using namespace mlir::linalg;
 static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
                                            ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
+  if (inputs[0].getType().isa<TensorType>())
+    return nullptr;
+
   // A detensored value is converted back by creating a new tensor from its
   // element(s).
   auto createNewTensorOp = builder.create<tensor::FromElementsOp>(

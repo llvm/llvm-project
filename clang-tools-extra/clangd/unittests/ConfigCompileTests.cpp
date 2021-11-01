@@ -244,6 +244,25 @@ TEST_F(ConfigCompileTests, PathSpecMatch) {
   }
 }
 
+TEST_F(ConfigCompileTests, DiagnosticsIncludeCleaner) {
+  // Defaults to None.
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
+            Config::UnusedIncludesPolicy::None);
+
+  Frag = {};
+  Frag.Diagnostics.UnusedIncludes.emplace("None");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
+            Config::UnusedIncludesPolicy::None);
+
+  Frag = {};
+  Frag.Diagnostics.UnusedIncludes.emplace("Strict");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
+            Config::UnusedIncludesPolicy::Strict);
+}
+
 TEST_F(ConfigCompileTests, DiagnosticSuppression) {
   Frag.Diagnostics.Suppress.emplace_back("bugprone-use-after-move");
   Frag.Diagnostics.Suppress.emplace_back("unreachable-code");

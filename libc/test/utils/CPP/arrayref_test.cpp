@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/CPP/ArrayRef.h"
+#include "src/__support/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {

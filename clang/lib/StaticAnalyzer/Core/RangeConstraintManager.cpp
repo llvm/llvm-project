@@ -20,8 +20,8 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -602,10 +602,9 @@ public:
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
 
   /// Iterate over all symbols and try to simplify them.
-  LLVM_NODISCARD static inline ProgramStateRef simplify(SValBuilder &SVB,
-                                                        RangeSet::Factory &F,
-                                                        ProgramStateRef State,
-                                                        EquivalenceClass Class);
+  LLVM_NODISCARD static inline ProgramStateRef
+  simplify(SValBuilder &SVB, RangeSet::Factory &F, RangedConstraintManager &RCM,
+           ProgramStateRef State, EquivalenceClass Class);
 
   void dumpToStream(ProgramStateRef State, raw_ostream &os) const;
   LLVM_DUMP_METHOD void dump(ProgramStateRef State) const {
@@ -955,7 +954,18 @@ private:
   }
 
   RangeSet VisitBinaryOperator(RangeSet LHS, BinaryOperator::Opcode Op,
-                               RangeSet RHS, QualType T);
+                               RangeSet RHS, QualType T) {
+    switch (Op) {
+    case BO_Or:
+      return VisitBinaryOperator<BO_Or>(LHS, RHS, T);
+    case BO_And:
+      return VisitBinaryOperator<BO_And>(LHS, RHS, T);
+    case BO_Rem:
+      return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
+    default:
+      return infer(T);
+    }
+  }
 
   //===----------------------------------------------------------------------===//
   //                         Ranges and operators
@@ -1221,29 +1231,6 @@ private:
 //===----------------------------------------------------------------------===//
 
 template <>
-RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_NE>(RangeSet LHS,
-                                                           RangeSet RHS,
-                                                           QualType T) {
-  // When both the RangeSets are non-overlapping then all possible pairs of
-  // (x, y) in LHS, RHS respectively, will satisfy expression (x != y).
-  if ((LHS.getMaxValue() < RHS.getMinValue()) ||
-      (LHS.getMinValue() > RHS.getMaxValue())) {
-    return getTrueRange(T);
-  }
-
-  // If both RangeSets contain only one Point which is equal then the
-  // expression will always return true.
-  if ((LHS.getMinValue() == RHS.getMaxValue()) &&
-      (LHS.getMaxValue() == RHS.getMaxValue()) &&
-      (LHS.getMinValue() == RHS.getMinValue())) {
-    return getFalseRange(T);
-  }
-
-  // In all other cases, the resulting range cannot be deduced.
-  return infer(T);
-}
-
-template <>
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Or>(Range LHS, Range RHS,
                                                            QualType T) {
   APSIntType ResultType = ValueFactory.getAPSIntType(T);
@@ -1401,23 +1388,6 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
   // Nevertheless, the symmetrical range for RHS is a conservative estimate
   // for any sign of either LHS, or RHS.
   return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
-}
-
-RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
-                                                    BinaryOperator::Opcode Op,
-                                                    RangeSet RHS, QualType T) {
-  switch (Op) {
-  case BO_NE:
-    return VisitBinaryOperator<BO_NE>(LHS, RHS, T);
-  case BO_Or:
-    return VisitBinaryOperator<BO_Or>(LHS, RHS, T);
-  case BO_And:
-    return VisitBinaryOperator<BO_And>(LHS, RHS, T);
-  case BO_Rem:
-    return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
-  default:
-    return infer(T);
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1644,14 +1614,14 @@ public:
   bool handleRemainderOp(const SymT *Sym, RangeSet Constraint) {
     if (Sym->getOpcode() != BO_Rem)
       return true;
-    const SymbolRef LHS = Sym->getLHS();
-    const llvm::APSInt &Zero =
-        Builder.getBasicValueFactory().getValue(0, Sym->getType());
     // a % b != 0 implies that a != 0.
     if (!Constraint.containsZero()) {
-      State = RCM.assumeSymNE(State, LHS, Zero, Zero);
-      if (!State)
-        return false;
+      SVal SymSVal = Builder.makeSymbolVal(Sym->getLHS());
+      if (auto NonLocSymSVal = SymSVal.getAs<nonloc::SymbolVal>()) {
+        State = State->assume(*NonLocSymSVal, true);
+        if (!State)
+          return false;
+      }
     }
     return true;
   }
@@ -1758,7 +1728,8 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   ClassMembersTy Members = State->get<ClassMembers>();
   for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
     EquivalenceClass Class = ClassToSymbolSet.first;
-    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
+    State =
+        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
     if (!State)
       return false;
     SimplifiedClasses.insert(Class);
@@ -1772,7 +1743,8 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
     EquivalenceClass Class = ClassConstraint.first;
     if (SimplifiedClasses.count(Class)) // Already simplified.
       continue;
-    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
+    State =
+        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
     if (!State)
       return false;
   }
@@ -2155,9 +2127,9 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
 // class to this class. This way, we simplify not just the symbols but the
 // classes as well: we strive to keep the number of the classes to be the
 // absolute minimum.
-LLVM_NODISCARD ProgramStateRef
-EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
-                           ProgramStateRef State, EquivalenceClass Class) {
+LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
+    SValBuilder &SVB, RangeSet::Factory &F, RangedConstraintManager &RCM,
+    ProgramStateRef State, EquivalenceClass Class) {
   SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
 
@@ -2178,9 +2150,30 @@ EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
       // The simplified symbol should be the member of the original Class,
       // however, it might be in another existing class at the moment. We
       // have to merge these classes.
+      ProgramStateRef OldState = State;
       State = merge(F, State, MemberSym, SimplifiedMemberSym);
       if (!State)
         return nullptr;
+      // No state change, no merge happened actually.
+      if (OldState == State)
+        continue;
+
+      // Initiate the reorganization of the equality information. E.g., if we
+      // have `c + 1 == 0` then we'd like to express that `c == -1`. It makes
+      // sense to do this only with `SymIntExpr`s.
+      // TODO Handle `IntSymExpr` as well, once computeAdjustment can handle
+      // them.
+      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SimplifiedMemberSym)) {
+        if (const RangeSet *ClassConstraint = getConstraint(State, Class)) {
+          // Overestimate the individual Ranges with the RangeSet' lowest and
+          // highest values.
+          State = RCM.assumeSymInclusiveRange(
+              State, SIE, ClassConstraint->getMinValue(),
+              ClassConstraint->getMaxValue(), /*InRange=*/true);
+          if (!State)
+            return nullptr;
+        }
+      }
     }
   }
   return State;

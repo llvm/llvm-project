@@ -37,9 +37,6 @@ enum AsmComments {
 /// the instruction operands should be swaped to match the condition code.
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
-/// Return a setcc opcode based on whether it has a memory operand.
-unsigned getSETOpc(bool HasMemoryOperand = false);
-
 /// Return a cmov opcode for the given register size in bytes, and operand type.
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
 
@@ -629,6 +626,22 @@ private:
                                      unsigned &SrcOpIdx1,
                                      unsigned &SrcOpIdx2,
                                      bool IsIntrinsic = false) const;
+
+  /// Returns true when instruction \p FlagI produces the same flags as \p OI.
+  /// The caller should pass in the results of calling analyzeCompare on \p OI:
+  /// \p SrcReg, \p SrcReg2, \p ImmMask, \p ImmValue.
+  /// If the flags match \p OI as if it had the input operands swapped then the
+  /// function succeeds and sets \p IsSwapped to true.
+  ///
+  /// Examples of OI, FlagI pairs returning true:
+  ///   CMP %1, 42   and  CMP %1, 42
+  ///   CMP %1, %2   and  %3 = SUB %1, %2
+  ///   TEST %1, %1  and  %2 = SUB %1, 0
+  ///   CMP %1, %2   and  %3 = SUB %2, %1  ; IsSwapped=true
+  bool isRedundantFlagInstr(const MachineInstr &FlagI, Register SrcReg,
+                            Register SrcReg2, int64_t ImmMask, int64_t ImmValue,
+                            const MachineInstr &OI, bool *IsSwapped,
+                            int64_t *ImmDelta) const;
 };
 
 } // namespace llvm

@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // Test that an @import inside a module is not represented in the debug info.
 
 // REQUIRES: asserts

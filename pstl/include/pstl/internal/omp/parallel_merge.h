@@ -50,11 +50,13 @@ __parallel_merge_body(std::size_t __size_x, std::size_t __size_y, _RandomAccessI
 
     _PSTL_PRAGMA(omp task untied mergeable default(none)
                      firstprivate(__xs, __xm, __ys, __ym, __zs, __comp, __leaf_merge))
-    __parallel_merge_body(__xm - __xs, __ym - __ys, __xs, __xm, __ys, __ym, __zs, __comp, __leaf_merge);
+    __pstl::__omp_backend::__parallel_merge_body(__xm - __xs, __ym - __ys, __xs, __xm, __ys, __ym, __zs, __comp,
+                                                      __leaf_merge);
 
     _PSTL_PRAGMA(omp task untied mergeable default(none)
                      firstprivate(__xm, __xe, __ym, __ye, __zm, __comp, __leaf_merge))
-    __parallel_merge_body(__xe - __xm, __ye - __ym, __xm, __xe, __ym, __ye, __zm, __comp, __leaf_merge);
+    __pstl::__omp_backend::__parallel_merge_body(__xe - __xm, __ye - __ym, __xm, __xe, __ym, __ye, __zm, __comp,
+                                                      __leaf_merge);
 
     _PSTL_PRAGMA(omp taskwait)
 }
@@ -77,14 +79,16 @@ __parallel_merge(_ExecutionPolicy&& /*__exec*/, _RandomAccessIterator1 __xs, _Ra
 
     if (omp_in_parallel())
     {
-        __parallel_merge_body(__size_x, __size_y, __xs, __xe, __ys, __ye, __zs, __comp, __leaf_merge);
+        __pstl::__omp_backend::__parallel_merge_body(__size_x, __size_y, __xs, __xe, __ys, __ye, __zs, __comp,
+                                                          __leaf_merge);
     }
     else
     {
         _PSTL_PRAGMA(omp parallel)
         {
             _PSTL_PRAGMA(omp single nowait)
-            __parallel_merge_body(__size_x, __size_y, __xs, __xe, __ys, __ye, __zs, __comp, __leaf_merge);
+            __pstl::__omp_backend::__parallel_merge_body(__size_x, __size_y, __xs, __xe, __ys, __ye, __zs, __comp,
+                                                              __leaf_merge);
         }
     }
 }

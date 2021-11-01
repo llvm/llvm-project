@@ -659,12 +659,8 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
     return;
 
   auto &GEPVector = VecI->second;
-  const auto &I =
-      llvm::find_if(GEPVector, [=](auto &Elt) { return Elt.first == GEP; });
-  if (I == GEPVector.end())
-    return;
+  llvm::erase_if(GEPVector, [=](auto &Elt) { return Elt.first == GEP; });
 
-  GEPVector.erase(I);
   if (GEPVector.empty())
     LargeOffsetGEPMap.erase(VecI);
 }

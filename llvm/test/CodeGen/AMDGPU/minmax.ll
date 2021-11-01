@@ -18,10 +18,9 @@ define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; SDAG-LABEL: s_test_minmax_i32:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_max_i32 s0, s0, s1
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-NEXT:    s_min_i32 s0, s0, s2
 ; SDAG-NEXT:    s_mov_b32 s5, s4
-; SDAG-NEXT:    v_mov_b32_e32 v1, s0
+; SDAG-NEXT:    s_min_i32 s0, s0, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
 ; SDAG-NEXT:    s_endpgm
@@ -29,11 +28,10 @@ define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; GISEL-LABEL: s_test_minmax_i32:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_max_i32 s0, s0, s1
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    s_min_i32 s0, s0, s2
 ; GISEL-NEXT:    s_mov_b32 s6, s3
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-NEXT:    s_min_i32 s0, s0, s2
 ; GISEL-NEXT:    s_mov_b32 s7, s4
+; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[6:7]
 ; GISEL-NEXT:    s_endpgm
   %smax = call i32 @llvm.smax.i32(i32 %a, i32 %b)
@@ -111,10 +109,9 @@ define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; SDAG-LABEL: s_test_minmax_u32:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_max_u32 s0, s0, s1
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-NEXT:    s_min_u32 s0, s0, s2
 ; SDAG-NEXT:    s_mov_b32 s5, s4
-; SDAG-NEXT:    v_mov_b32_e32 v1, s0
+; SDAG-NEXT:    s_min_u32 s0, s0, s2
+; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
 ; SDAG-NEXT:    s_endpgm
@@ -122,11 +119,10 @@ define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; GISEL-LABEL: s_test_minmax_u32:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_max_u32 s0, s0, s1
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    s_min_u32 s0, s0, s2
 ; GISEL-NEXT:    s_mov_b32 s6, s3
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-NEXT:    s_min_u32 s0, s0, s2
 ; GISEL-NEXT:    s_mov_b32 s7, s4
+; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[6:7]
 ; GISEL-NEXT:    s_endpgm
   %smax = call i32 @llvm.umax.i32(i32 %a, i32 %b)
@@ -214,8 +210,7 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg %b, float inreg %c, float addrspace(1)* inreg %out) {
 ; SDAG-LABEL: s_test_minmax_f32_ieee_false:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
 ; SDAG-NEXT:    s_mov_b32 s5, s4
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    v_maxmin_f32 v0, s0, s1, v0
@@ -224,8 +219,7 @@ define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg 
 ;
 ; GISEL-LABEL: s_test_minmax_f32_ieee_false:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
 ; GISEL-NEXT:    s_mov_b32 s6, s3
 ; GISEL-NEXT:    s_mov_b32 s7, s4
 ; GISEL-NEXT:    v_maxmin_f32 v0, s0, s1, v0
@@ -310,8 +304,7 @@ define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
 define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b, half inreg %c, half addrspace(1)* inreg %out) {
 ; SDAG-LABEL: s_test_minmax_f16_ieee_false:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
 ; SDAG-NEXT:    s_mov_b32 s5, s4
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    v_maxmin_f16 v0, s0, s1, v0
@@ -320,8 +313,7 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ;
 ; GISEL-LABEL: s_test_minmax_f16_ieee_false:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
 ; GISEL-NEXT:    s_mov_b32 s6, s3
 ; GISEL-NEXT:    s_mov_b32 s7, s4
 ; GISEL-NEXT:    v_maxmin_f16 v0, s0, s1, v0

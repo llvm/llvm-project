@@ -21,21 +21,10 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/TypeUtilities.h"
-#include "mlir/IR/Types.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -48,6 +37,7 @@
 #define DEBUG_TYPE "vector-to-vector"
 
 using namespace mlir;
+using namespace mlir::vector;
 
 // Helper to find an index in an affine map.
 static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
@@ -1978,9 +1968,41 @@ static Value createInBoundsCond(OpBuilder &b,
   });
   return inBoundsCond;
 }
-
-LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
-    VectorTransferOpInterface xferOp) {
+/// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
+/// masking) fastpath and a slowpath.
+/// If `ifOp` is not null and the result is `success, the `ifOp` points to the
+/// newly created conditional upon function return.
+/// To accomodate for the fact that the original vector.transfer indexing may be
+/// arbitrary and the slow path indexes @[0...0] in the temporary buffer, the
+/// scf.if op returns a view and values of type index.
+/// At this time, only vector.transfer_read case is implemented.
+///
+/// Example (a 2-D vector.transfer_read):
+/// ```
+///    %1 = vector.transfer_read %0[...], %pad : memref<A...>, vector<...>
+/// ```
+/// is transformed into:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      // fastpath, direct cast
+///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view : compatibleMemRefType, index, index
+///    } else {
+///      // slowpath, not in-bounds vector.transfer or linalg.copy.
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4 : compatibleMemRefType, index, index
+//     }
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {in_bounds = [true ... true]}
+/// ```
+/// where `alloc` is a top of the function alloca'ed buffer of one vector.
+///
+/// Preconditions:
+///  1. `xferOp.permutation_map()` must be a minor identity map
+///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
+///  must be equal. This will be relaxed in the future but requires
+///  rank-reducing subviews.
+static LogicalResult
+splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp) {
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
@@ -2860,240 +2882,6 @@ struct TransferWriteToVectorStoreLowering
   llvm::Optional<unsigned> maxTransferRank;
 };
 
-/// Transpose a vector transfer op's `in_bounds` attribute according to given
-/// indices.
-static ArrayAttr
-transposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
-                      const SmallVector<unsigned> &permutation) {
-  SmallVector<bool> newInBoundsValues;
-  for (unsigned pos : permutation)
-    newInBoundsValues.push_back(
-        attr.getValue()[pos].cast<BoolAttr>().getValue());
-  return builder.getBoolArrayAttr(newInBoundsValues);
-}
-
-/// Lower transfer_read op with permutation into a transfer_read with a
-/// permutation map composed of leading zeros followed by a minor identiy +
-/// vector.transpose op.
-/// Ex:
-///     vector.transfer_read ...
-///         permutation_map: (d0, d1, d2) -> (0, d1)
-/// into:
-///     %v = vector.transfer_read ...
-///         permutation_map: (d0, d1, d2) -> (d1, 0)
-///     vector.transpose %v, [1, 0]
-///
-///     vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (0, 0, 0, d1, d3)
-/// into:
-///     %v = vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (0, 0, d1, 0, d3)
-///     vector.transpose %v, [0, 1, 3, 2, 4]
-/// Note that an alternative is to transform it to linalg.transpose +
-/// vector.transfer_read to do the transpose in memory instead.
-struct TransferReadPermutationLowering
-    : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::TransferReadOp op,
-                                PatternRewriter &rewriter) const override {
-    SmallVector<unsigned> permutation;
-    AffineMap map = op.permutation_map();
-    if (map.getNumResults() == 0)
-      return failure();
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
-    AffineMap permutationMap =
-        map.getPermutationMap(permutation, op.getContext());
-    if (permutationMap.isIdentity())
-      return failure();
-
-    permutationMap = map.getPermutationMap(permutation, op.getContext());
-    // Caluclate the map of the new read by applying the inverse permutation.
-    permutationMap = inversePermutation(permutationMap);
-    AffineMap newMap = permutationMap.compose(map);
-    // Apply the reverse transpose to deduce the type of the transfer_read.
-    ArrayRef<int64_t> originalShape = op.getVectorType().getShape();
-    SmallVector<int64_t> newVectorShape(originalShape.size());
-    for (auto pos : llvm::enumerate(permutation)) {
-      newVectorShape[pos.value()] = originalShape[pos.index()];
-    }
-
-    // Transpose mask operand.
-    Value newMask;
-    if (op.mask()) {
-      // Remove unused dims from the permutation map. E.g.:
-      // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, 0, d3, 0, d2)
-      // comp = (d0, d1, d2) -> (d2, 0, d1, 0 d0)
-      auto comp = compressUnusedDims(map);
-      // Get positions of remaining result dims.
-      // E.g.:  (d0, d1, d2) -> (d2, 0, d1, 0 d0)
-      // maskTransposeIndices = [ 2,     1,    0]
-      SmallVector<int64_t> maskTransposeIndices;
-      for (unsigned i = 0; i < comp.getNumResults(); ++i) {
-        if (auto expr = comp.getResult(i).dyn_cast<AffineDimExpr>())
-          maskTransposeIndices.push_back(expr.getPosition());
-      }
-
-      newMask = rewriter.create<vector::TransposeOp>(op.getLoc(), op.mask(),
-                                                     maskTransposeIndices);
-    }
-
-    // Transpose in_bounds attribute.
-    ArrayAttr newInBounds =
-        op.in_bounds() ? transposeInBoundsAttr(
-                             rewriter, op.in_bounds().getValue(), permutation)
-                       : ArrayAttr();
-
-    // Generate new transfer_read operation.
-    VectorType newReadType =
-        VectorType::get(newVectorShape, op.getVectorType().getElementType());
-    Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), newMask, newInBounds);
-
-    // Transpose result of transfer_read.
-    SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    rewriter.replaceOpWithNewOp<vector::TransposeOp>(op, newRead,
-                                                     transposePerm);
-    return success();
-  }
-};
-
-/// Lower transfer_write op with permutation into a transfer_write with a
-/// minor identity permutation map. (transfer_write ops cannot have broadcasts.)
-/// Ex:
-///     vector.transfer_write %v ...
-///         permutation_map: (d0, d1, d2) -> (d2, d0, d1)
-/// into:
-///     %tmp = vector.transpose %v, [2, 0, 1]
-///     vector.transfer_write %tmp ...
-///         permutation_map: (d0, d1, d2) -> (d0, d1, d2)
-///
-///     vector.transfer_write %v ...
-///         permutation_map: (d0, d1, d2, d3) -> (d3, d2)
-/// into:
-///     %tmp = vector.transpose %v, [1, 0]
-///     %v = vector.transfer_write %tmp ...
-///         permutation_map: (d0, d1, d2, d3) -> (d2, d3)
-struct TransferWritePermutationLowering
-    : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::TransferWriteOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.isZeroD())
-      return failure();
-
-    SmallVector<unsigned> permutation;
-    AffineMap map = op.permutation_map();
-    if (map.isMinorIdentity())
-      return failure();
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
-
-    // Remove unused dims from the permutation map. E.g.:
-    // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, d3, d4)
-    // comp = (d0, d1, d2) -> (d2, d0, d1)
-    auto comp = compressUnusedDims(map);
-    // Get positions of remaining result dims.
-    SmallVector<int64_t> indices;
-    llvm::transform(comp.getResults(), std::back_inserter(indices),
-                    [](AffineExpr expr) {
-                      return expr.dyn_cast<AffineDimExpr>().getPosition();
-                    });
-
-    // Transpose mask operand.
-    Value newMask = op.mask() ? rewriter.create<vector::TransposeOp>(
-                                    op.getLoc(), op.mask(), indices)
-                              : Value();
-
-    // Transpose in_bounds attribute.
-    ArrayAttr newInBounds =
-        op.in_bounds() ? transposeInBoundsAttr(
-                             rewriter, op.in_bounds().getValue(), permutation)
-                       : ArrayAttr();
-
-    // Generate new transfer_write operation.
-    Value newVec =
-        rewriter.create<vector::TransposeOp>(op.getLoc(), op.vector(), indices);
-    auto newMap = AffineMap::getMinorIdentityMap(
-        map.getNumDims(), map.getNumResults(), rewriter.getContext());
-    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        op, Type(), newVec, op.source(), op.indices(), newMap, newMask,
-        newInBounds);
-
-    return success();
-  }
-};
-
-/// Lower transfer_read op with broadcast in the leading dimensions into
-/// transfer_read of lower rank + vector.broadcast.
-/// Ex: vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (0, d1, 0, d3)
-/// into:
-///     %v = vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
-///     vector.broadcast %v
-struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::TransferReadOp op,
-                                PatternRewriter &rewriter) const override {
-    AffineMap map = op.permutation_map();
-    unsigned numLeadingBroadcast = 0;
-    for (auto expr : map.getResults()) {
-      auto dimExpr = expr.dyn_cast<AffineConstantExpr>();
-      if (!dimExpr || dimExpr.getValue() != 0)
-        break;
-      numLeadingBroadcast++;
-    }
-    // If there are no leading zeros in the map there is nothing to do.
-    if (numLeadingBroadcast == 0)
-      return failure();
-    VectorType originalVecType = op.getVectorType();
-    unsigned reducedShapeRank = originalVecType.getRank() - numLeadingBroadcast;
-    // Calculate new map, vector type and masks without the leading zeros.
-    AffineMap newMap = AffineMap::get(
-        map.getNumDims(), 0, map.getResults().take_back(reducedShapeRank),
-        op.getContext());
-    // Only remove the leading zeros if the rest of the map is a minor identity
-    // with broadasting. Otherwise we first want to permute the map.
-    if (!newMap.isMinorIdentityWithBroadcasting())
-      return failure();
-
-    // TODO: support zero-dimension vectors natively.  See:
-    // https://llvm.discourse.group/t/should-we-have-0-d-vectors/3097.
-    // In the meantime, lower these to a scalar load when they pop up.
-    if (reducedShapeRank == 0) {
-      Value newRead = rewriter.create<memref::LoadOp>(
-          op.getLoc(), originalVecType.getElementType(), op.source(),
-          op.indices());
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
-                                                       newRead);
-      return success();
-    }
-    SmallVector<int64_t> newShape = llvm::to_vector<4>(
-        originalVecType.getShape().take_back(reducedShapeRank));
-    // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
-    if (newShape.empty())
-      return failure();
-    VectorType newReadType =
-        VectorType::get(newShape, originalVecType.getElementType());
-    ArrayAttr newInBounds =
-        op.in_bounds()
-            ? rewriter.getArrayAttr(
-                  op.in_boundsAttr().getValue().take_back(reducedShapeRank))
-            : ArrayAttr();
-    Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), op.mask(), newInBounds);
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
-                                                     newRead);
-    return success();
-  }
-};
-
 // Trims leading one dimensions from `oldType` and returns the result type.
 // Returns `vector<1xT>` if `oldType` only has one element.
 static VectorType trimLeadingOneDims(VectorType oldType) {
@@ -3614,7 +3402,7 @@ static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
 //       generates more elaborate instructions for this intrinsic since it
 //       is very conservative on the boundary conditions.
 static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
-                                   bool enableIndexOptimizations, int64_t dim,
+                                   bool indexOptimizations, int64_t dim,
                                    Value b, Value *off = nullptr) {
   auto loc = op->getLoc();
   // If we can assume all indices fit in 32-bit, we perform the vector
@@ -3622,7 +3410,7 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   // Otherwise we perform the vector comparison using 64-bit indices.
   Value indices;
   Type idxType;
-  if (enableIndexOptimizations) {
+  if (indexOptimizations) {
     indices = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI32VectorAttr(
                  llvm::to_vector<4>(llvm::seq<int32_t>(0, dim))));
@@ -3651,7 +3439,7 @@ struct MaterializeTransferMask : public OpRewritePattern<ConcreteOp> {
 public:
   explicit MaterializeTransferMask(MLIRContext *context, bool enableIndexOpt)
       : mlir::OpRewritePattern<ConcreteOp>(context),
-        enableIndexOptimizations(enableIndexOpt) {}
+        indexOptimizations(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(ConcreteOp xferOp,
                                 PatternRewriter &rewriter) const override {
@@ -3678,8 +3466,8 @@ public:
     Value off = xferOp.indices()[lastIndex];
     Value dim =
         vector::createOrFoldDimOp(rewriter, loc, xferOp.source(), lastIndex);
-    Value mask = buildVectorComparison(
-        rewriter, xferOp, enableIndexOptimizations, vecWidth, dim, &off);
+    Value mask = buildVectorComparison(rewriter, xferOp, indexOptimizations,
+                                       vecWidth, dim, &off);
 
     if (xferOp.mask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.
@@ -3695,7 +3483,7 @@ public:
   }
 
 private:
-  const bool enableIndexOptimizations;
+  const bool indexOptimizations;
 };
 
 /// Conversion pattern for a vector.create_mask (1-D only).
@@ -3705,7 +3493,7 @@ public:
   explicit VectorCreateMaskOpConversion(MLIRContext *context,
                                         bool enableIndexOpt)
       : mlir::OpRewritePattern<vector::CreateMaskOp>(context),
-        enableIndexOptimizations(enableIndexOpt) {}
+        indexOptimizations(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -3713,7 +3501,7 @@ public:
     int64_t rank = dstType.getRank();
     if (rank == 1) {
       rewriter.replaceOp(
-          op, buildVectorComparison(rewriter, op, enableIndexOptimizations,
+          op, buildVectorComparison(rewriter, op, indexOptimizations,
                                     dstType.getDimSize(0), op.getOperand(0)));
       return success();
     }
@@ -3721,7 +3509,7 @@ public:
   }
 
 private:
-  const bool enableIndexOptimizations;
+  const bool indexOptimizations;
 };
 
 // Drop inner most contiguous unit dimensions from transfer_read operand.
@@ -3799,11 +3587,11 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
 };
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
-    RewritePatternSet &patterns, bool enableIndexOptimizations) {
+    RewritePatternSet &patterns, bool indexOptimizations) {
   patterns.add<VectorCreateMaskOpConversion,
                MaterializeTransferMask<vector::TransferReadOp>,
                MaterializeTransferMask<vector::TransferWriteOp>>(
-      patterns.getContext(), enableIndexOptimizations);
+      patterns.getContext(), indexOptimizations);
 }
 
 void mlir::vector::populatePropagateVectorDistributionPatterns(
@@ -3863,27 +3651,10 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
   patterns.add<TransposeOpLowering>(options, patterns.getContext());
 }
 
-void mlir::vector::populateVetorReductionToContractPatterns(
+void mlir::vector::populateVectorReductionToContractPatterns(
     RewritePatternSet &patterns) {
   patterns.add<MultiReduceToContract, CombineContractBroadcast,
                CombineContractTranspose>(patterns.getContext());
-}
-
-void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<TransferReadPermutationLowering,
-               TransferWritePermutationLowering, TransferOpReduceRank>(
-      patterns.getContext());
-}
-
-void mlir::vector::populateVectorTransferLoweringPatterns(
-    RewritePatternSet &patterns, llvm::Optional<unsigned> maxTransferRank) {
-  patterns.add<TransferReadToVectorLoadLowering,
-               TransferWriteToVectorStoreLowering>(patterns.getContext(),
-                                                   maxTransferRank);
-  patterns
-      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
-          patterns.getContext());
 }
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -3897,4 +3668,14 @@ void mlir::vector::
     populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
         RewritePatternSet &patterns) {
   patterns.add<DropInnerMostUnitDims>(patterns.getContext());
+}
+
+void mlir::vector::populateVectorTransferLoweringPatterns(
+    RewritePatternSet &patterns, llvm::Optional<unsigned> maxTransferRank) {
+  patterns.add<TransferReadToVectorLoadLowering,
+               TransferWriteToVectorStoreLowering>(patterns.getContext(),
+                                                   maxTransferRank);
+  patterns
+      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
+          patterns.getContext());
 }

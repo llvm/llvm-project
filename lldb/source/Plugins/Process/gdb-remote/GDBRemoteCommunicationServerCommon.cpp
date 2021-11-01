@@ -267,18 +267,18 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   }
 #endif
 
-  std::string s;
-  if (HostInfo::GetOSBuildString(s)) {
+  if (llvm::Optional<std::string> s = HostInfo::GetOSBuildString()) {
     response.PutCString("os_build:");
-    response.PutStringAsRawHex8(s);
+    response.PutStringAsRawHex8(*s);
     response.PutChar(';');
   }
-  if (HostInfo::GetOSKernelDescription(s)) {
+  if (llvm::Optional<std::string> s = HostInfo::GetOSKernelDescription()) {
     response.PutCString("os_kernel:");
-    response.PutStringAsRawHex8(s);
+    response.PutStringAsRawHex8(*s);
     response.PutChar(';');
   }
 
+  std::string s;
 #if defined(__APPLE__)
 
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)

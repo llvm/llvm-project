@@ -399,3 +399,91 @@ declare <vscale x 6 x i16> @llvm.experimental.vector.insert.nxv6i16.nxv1i16(<vsc
 declare <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.nxv2i16(<vscale x 8 x i16>, <vscale x 2 x i16>, i64)
 
 declare <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half>, <vscale x 2 x half>, i64)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  Upacked types that need result widening
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+define <vscale x 3 x i32> @insert_nxv3i32_nxv2i32(<vscale x 2 x i32> %sv0) {
+; CHECK-LABEL: insert_nxv3i32_nxv2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z1.d, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 3 x i32> @llvm.experimental.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32> undef, <vscale x 2 x i32> %sv0, i64 0)
+ ret <vscale x 3 x i32> %v0
+}
+
+;; Check that the Subvector is not widen so it does not crash.
+define <vscale x 3 x i32> @insert_nxv3i32_nxv2i32_2(<vscale x 3 x i32> %sv0, <vscale x 2 x i32> %sv1) {
+; CHECK-LABEL: insert_nxv3i32_nxv2i32_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 3 x i32> @llvm.experimental.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32> %sv0, <vscale x 2 x i32> %sv1, i64 0)
+  ret <vscale x 3 x i32> %v0
+}
+
+define <vscale x 3 x float> @insert_nxv3f32_nxv2f32(<vscale x 2 x float> %sv0) nounwind {
+; CHECK-LABEL: insert_nxv3f32_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [sp]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 3 x float> @llvm.experimental.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float> undef, <vscale x 2 x float> %sv0, i64 0)
+ ret <vscale x 3 x float> %v0
+}
+
+define <vscale x 6 x i32>  @insert_nxv6i32_nxv2i32(<vscale x 2 x i32> %sv0, <vscale x 2 x i32> %sv1) nounwind {
+; CHECK-LABEL: insert_nxv6i32_nxv2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    st1w { z2.d }, p0, [x8, #2, mul vl]
+; CHECK-NEXT:    st1w { z0.s }, p1, [sp]
+; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x8, #1, mul vl]
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 6 x i32> @llvm.experimental.vector.insert.nxv6i32.nxv2i32(<vscale x 6 x i32> undef, <vscale x 2 x i32> %sv0, i64 0)
+  %v1 = call <vscale x 6 x i32> @llvm.experimental.vector.insert.nxv6i32.nxv2i32(<vscale x 6 x i32> %v0, <vscale x 2 x i32> %sv1, i64 2)
+  ret <vscale x 6 x i32> %v1
+}
+
+;; This only works because the input vector is undef and index is zero
+define  <vscale x 6 x i32> @insert_nxv6i32_nxv3i32(<vscale x 3 x i32> %sv0) {
+; CHECK-LABEL: insert_nxv6i32_nxv3i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 6 x i32> @llvm.experimental.vector.insert.nxv6i32.nxv3i32(<vscale x 6 x i32> undef, <vscale x 3 x i32> %sv0, i64 0)
+  ret <vscale x 6 x i32> %v0
+}
+
+define <vscale x 12 x i32> @insert_nxv12i32_nxv4i32(<vscale x 4 x i32> %sv0, <vscale x 4 x i32> %sv1, <vscale x 4 x i32> %sv2) {
+; CHECK-LABEL: insert_nxv12i32_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 12 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> undef, <vscale x 4 x i32> %sv0, i64 0)
+  %v1 = call <vscale x 12 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> %v0, <vscale x 4 x i32> %sv1, i64 4)
+  %v2 = call <vscale x 12 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> %v1, <vscale x 4 x i32> %sv2, i64 8)
+  ret <vscale x 12 x i32> %v2
+}
+
+declare <vscale x 3 x i32> @llvm.experimental.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32>, <vscale x 2 x i32>, i64)
+declare <vscale x 3 x float> @llvm.experimental.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 6 x i32> @llvm.experimental.vector.insert.nxv6i32.nxv2i32(<vscale x 6 x i32>, <vscale x 2 x i32>, i64)
+declare <vscale x 6 x i32> @llvm.experimental.vector.insert.nxv6i32.nxv3i32(<vscale x 6 x i32>, <vscale x 3 x i32>, i64)
+declare <vscale x 12 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32>, <vscale x 4 x i32>, i64)

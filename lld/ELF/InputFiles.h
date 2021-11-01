@@ -43,8 +43,7 @@ using llvm::object::Archive;
 
 class Symbol;
 
-// If -reproduce option is given, all input files are written
-// to this tar archive.
+// If --reproduce is specified, all input files are written to this tar archive.
 extern std::unique_ptr<llvm::TarWriter> tar;
 
 // Opens a given file.
@@ -261,8 +260,8 @@ private:
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(const Elf_Shdr &sec);
-  InputSectionBase *createInputSection(const Elf_Shdr &sec);
-  StringRef getSectionName(const Elf_Shdr &sec);
+  InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
+                                       StringRef shstrtab);
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
@@ -279,9 +278,6 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
-
-  // .shstrtab contents.
-  StringRef sectionStringTable;
 
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a
@@ -361,7 +357,7 @@ public:
 class SharedFile : public ELFFileBase {
 public:
   SharedFile(MemoryBufferRef m, StringRef defaultSoName)
-      : ELFFileBase(SharedKind, m), soName(std::string(defaultSoName)),
+      : ELFFileBase(SharedKind, m), soName(defaultSoName),
         isNeeded(!config->asNeeded) {}
 
   // This is actually a vector of Elf_Verdef pointers.
@@ -375,7 +371,7 @@ public:
   static unsigned vernauxNum;
 
   std::vector<StringRef> dtNeeded;
-  std::string soName;
+  StringRef soName;
 
   static bool classof(const InputFile *f) { return f->kind() == SharedKind; }
 

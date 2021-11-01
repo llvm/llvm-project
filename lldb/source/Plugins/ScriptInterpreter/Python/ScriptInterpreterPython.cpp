@@ -436,12 +436,7 @@ void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
 #endif
 }
 
-lldb_private::ConstString ScriptInterpreterPython::GetPluginNameStatic() {
-  static ConstString g_name("script-python");
-  return g_name;
-}
-
-const char *ScriptInterpreterPython::GetPluginDescriptionStatic() {
+llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
   return "Embedded Python interpreter";
 }
 

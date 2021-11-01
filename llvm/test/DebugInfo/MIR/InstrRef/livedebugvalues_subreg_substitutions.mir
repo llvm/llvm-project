@@ -86,13 +86,16 @@ body:  |
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)
     $rax = MOV64ri 0, debug-location !12
     ; CHECK:      $rax = MOV64ri 0
-    ; The value is now located in a spill slot; currently InstrRefBasedLDV
-    ; can't express subregister locations inside spills. These should all
-    ; end up being $noreg, but could be improved in the future.
+    ; The value is now located in a spill slot, as a subregister within the
+    ; slot, which InstrRefBasedLDV should be able to find.
     DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
     ; CHECK-NEXT: DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $rsp, 0, !{{[0-9]*}}, !DIExpression(DW_OP_constu, 8, DW_OP_minus)
     DBG_INSTR_REF 5, 0, !11, !DIExpression(), debug-location !12
+    ; This and the next DBG_INSTR_REF refer to a value that is on the stack, but
+    ; is located at a non-zero offset from the start of the slot -- $ah within
+    ; $rax is 8 bits in. Today, InstrRefBasedLDV can't express this. It also
+    ; doesn't seem likely to be profitable.
     ; CHECK-NEXT: DBG_INSTR_REF 5, 0
     ; CHECK-NEXT: DBG_VALUE $noreg
     DBG_INSTR_REF 8, 0, !11, !DIExpression(), debug-location !12

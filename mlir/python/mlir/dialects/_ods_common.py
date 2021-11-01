@@ -124,7 +124,7 @@ def get_default_loc_context(location=None):
 
 
 def get_op_result_or_value(
-    arg: _Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]
+    arg: _Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value, _cext.ir.OpResultList]
 ) -> _cext.ir.Value:
   """Returns the given value or the single result of the given op.
 
@@ -136,6 +136,8 @@ def get_op_result_or_value(
     return arg.operation.result
   elif isinstance(arg, _cext.ir.Operation):
     return arg.result
+  elif isinstance(arg, _cext.ir.OpResultList):
+    return arg[0]
   else:
     assert isinstance(arg, _cext.ir.Value)
     return arg

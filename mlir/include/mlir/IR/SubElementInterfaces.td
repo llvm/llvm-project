@@ -33,6 +33,20 @@ class SubElementInterfaceBase<string interfaceName, string derivedValue> {
       (ins "llvm::function_ref<void(mlir::Attribute)>":$walkAttrsFn,
            "llvm::function_ref<void(mlir::Type)>":$walkTypesFn)
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Replace the attributes identified by the indices with the corresponding
+        value. The index is derived from the order of the attributes returned by
+        the attribute callback of `walkImmediateSubElements`. An index of 0 would
+        replace the very first attribute given by `walkImmediateSubElements`.
+        The new instance with the values replaced is returned.
+      }], cppNamespace # "::" # interfaceName, "replaceImmediateSubAttribute",
+      (ins "::llvm::ArrayRef<std::pair<size_t, ::mlir::Attribute>>":$replacements),
+      [{}],
+      /*defaultImplementation=*/[{
+        llvm_unreachable("Attribute or Type does not support replacing attributes");
+      }]
+    >,
   ];
 
   code extraClassDeclaration = [{

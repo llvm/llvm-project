@@ -729,6 +729,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
   ``DataFlow``, and ``Address;Undefined``. Defaults to empty string.
 
+**LLVM_USE_SPLIT_DWARF**:BOOL
+  If enabled CMake will pass ``-gsplit-dwarf`` to the compiler. This option
+  reduces link-time memory usage by reducing the amount of debug information that
+  the linker needs to resolve. It is recommended for platforms using the ELF object
+  format, like Linux systems when linker memory usage is too high.
+
 **SPHINX_EXECUTABLE**:STRING
   The path to the ``sphinx-build`` executable detected by CMake.
   For installation instructions, see

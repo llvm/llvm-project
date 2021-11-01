@@ -1212,11 +1212,13 @@ PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
 /// one as another.
 class SameOperandMatcher : public OperandPredicateMatcher {
   std::string MatchingName;
+  unsigned OrigOpIdx;
 
 public:
-  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName)
+  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName,
+                     unsigned OrigOpIdx)
       : OperandPredicateMatcher(OPM_SameOperand, InsnVarID, OpIdx),
-        MatchingName(MatchingName) {}
+        MatchingName(MatchingName), OrigOpIdx(OrigOpIdx) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_SameOperand;
@@ -1227,6 +1229,7 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
+           OrigOpIdx == cast<SameOperandMatcher>(&B)->OrigOpIdx &&
            MatchingName == cast<SameOperandMatcher>(&B)->MatchingName;
   }
 };
@@ -3291,7 +3294,8 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
 
   // If the operand is already defined, then we must ensure both references in
   // the matcher have the exact same node.
-  OM.addPredicate<SameOperandMatcher>(OM.getSymbolicName());
+  OM.addPredicate<SameOperandMatcher>(
+      OM.getSymbolicName(), getOperandMatcher(OM.getSymbolicName()).getOpIdx());
 }
 
 void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {

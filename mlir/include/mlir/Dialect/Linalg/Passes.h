@@ -127,6 +127,10 @@ createLinalgStrategyLowerVectorsPass(linalg::LinalgVectorLoweringOptions opt =
                                          linalg::LinalgVectorLoweringOptions(),
                                      linalg::LinalgTransformationFilter filter =
                                          linalg::LinalgTransformationFilter());
+
+/// Create a LinalgStrategyRemoveMarkersPass.
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyRemoveMarkersPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

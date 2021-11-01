@@ -468,6 +468,30 @@ func @loop_nest_operand2() {
   return
 }
 
+// UNROLL-BY-4-LABEL: func @floordiv_mod_ub
+func @floordiv_mod_ub(%M : index, %N : index) {
+  affine.for %i = 0 to %N step 4 {
+    // A cleanup should be generated here.
+    affine.for %j = 0 to min affine_map<(d0)[s0] -> ((16 * d0) floordiv (4 * s0))>(%i)[%N] {
+      "test.foo"() : () -> ()
+    }
+  }
+  // UNROLL-BY-4-NEXT: affine.for
+  // UNROLL-BY-4-NEXT:   affine.for %{{.*}} = 0 to {{.*}} step 4
+  // UNROLL-BY-4:      affine.for
+  affine.for %i = 0 to %N step 4 {
+    // No cleanup needed here.
+    affine.for %j = 0 to min affine_map<(d0)[s0] -> ((16 * d0) mod (4 * s0))>(%i)[%N] {
+      "test.foo"() : () -> ()
+    }
+  }
+  // UNROLL-BY-4:       affine.for
+  // UNROLL-BY-4-NEXT:    affine.for %{{.*}} = 0 to {{.*}} step 4
+  // UNROLL-BY-4-NOT:     affine.for
+  // UNROLL-BY-4:       return
+    return
+}
+
 // Difference between loop bounds is constant, but not a multiple of unroll
 // factor. The cleanup loop happens to be a single iteration one and is promoted.
 // UNROLL-BY-4-LABEL: func @loop_nest_operand3() {

@@ -27,6 +27,7 @@ def StandardOps_Dialect : Dialect {
   let cppNamespace = "::mlir";
   let dependentDialects = ["arith::ArithmeticDialect"];
   let hasConstantMaterializer = 1;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // Base class for Standard dialect ops.
@@ -41,33 +42,6 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{ return ::print(p, *this); }];
   let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-}
-
-// Base class for arithmetic cast operations. Requires single operand and
-// result, but does not constrain them to specific types.
-class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic, traits # ElementwiseMappable.traits # [
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-      NoSideEffect, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>]> {
-  let arguments = (ins AnyType:$in);
-  let results = (outs AnyType:$out);
-
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Type":$destType), [{
-       impl::buildCastOp($_builder, $_state, source, destType);
-    }]>
-  ];
-
-  let parser = [{
-    return impl::parseCastOp(parser, result);
-  }];
-  let printer = [{
-    return printStandardCastOp(this->getOperation(), p);
-  }];
-
-  // Cast operations are fully verified by its traits.
-  let verifier = ?;
 }
 
 // Base class for unary ops. Requires single operand and result. Individual
@@ -295,15 +269,18 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   let results = (outs
       AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
 
-  let regions = (region AnyRegion:$body);
+  let regions = (region AnyRegion:$atomic_body);
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "Value":$memref, "ValueRange":$ivs)>];
 
   let extraClassDeclaration = [{
+    // TODO: remove post migrating callers.
+    Region &body() { return getRegion(); }
+
     // The value stored in memref[ivs].
     Value getCurrentValue() {
-      return body().getArgument(0);
+      return getRegion().getArgument(0);
     }
     MemRefType getMemRefType() {
       return memref().getType().cast<MemRefType>();
@@ -363,7 +340,6 @@ def BranchOp : Std_Op<"br",
   let verifier = ?;
 
   let extraClassDeclaration = [{
-    Block *getDest();
     void setDest(Block *block);
 
     /// Erase the operand at 'index' from the operand list.
@@ -423,8 +399,6 @@ def CallOp : Std_Op<"call",
     }]>];
 
   let extraClassDeclaration = [{
-    StringRef getCallee() { return callee(); }
-    StringAttr getCalleeAttr() { return calleeAttr().getAttr(); }
     FunctionType getCalleeType();
 
     /// Get the argument operands to the called function.
@@ -454,7 +428,7 @@ def CallOp : Std_Op<"call",
 def CallIndirectOp : Std_Op<"call_indirect", [
       CallOpInterface,
       TypesMatchWith<"callee input types match argument types",
-                     "callee", "operands",
+                     "callee", "callee_operands",
                      "$_self.cast<FunctionType>().getInputs()">,
       TypesMatchWith<"callee result types match result types",
                      "callee", "results",
@@ -478,7 +452,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     ```
   }];
 
-  let arguments = (ins FunctionType:$callee, Variadic<AnyType>:$operands);
+  let arguments = (ins FunctionType:$callee,
+                       Variadic<AnyType>:$callee_operands);
   let results = (outs Variadic<AnyType>:$results);
 
   let builders = [
@@ -489,7 +464,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
     }]>];
 
   let extraClassDeclaration = [{
-    Value getCallee() { return getOperand(0); }
+    // TODO: Remove once migrated callers.
+    ValueRange operands() { return getCalleeOperands(); }
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
@@ -506,7 +482,8 @@ def CallIndirectOp : Std_Op<"call_indirect", [
   let verifier = ?;
   let hasCanonicalizeMethod = 1;
 
-  let assemblyFormat = "$callee `(` $operands `)` attr-dict `:` type($callee)";
+  let assemblyFormat =
+    "$callee `(` $callee_operands `)` attr-dict `:` type($callee)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -570,19 +547,6 @@ def CondBranchOp : Std_Op<"cond_br",
     // These are the indices into the dests list.
     enum { trueIndex = 0, falseIndex = 1 };
 
-    // The condition operand is the first operand in the list.
-    Value getCondition() { return getOperand(0); }
-
-    /// Return the destination if the condition is true.
-    Block *getTrueDest() {
-      return getSuccessor(trueIndex);
-    }
-
-    /// Return the destination if the condition is false.
-    Block *getFalseDest() {
-      return getSuccessor(falseIndex);
-    }
-
     // Accessors for operands to the 'true' destination.
     Value getTrueOperand(unsigned idx) {
       assert(idx < getNumTrueOperands());
@@ -593,8 +557,6 @@ def CondBranchOp : Std_Op<"cond_br",
       assert(idx < getNumTrueOperands());
       setOperand(getTrueDestOperandIndex() + idx, value);
     }
-
-    operand_range getTrueOperands() { return trueDestOperands(); }
 
     unsigned getNumTrueOperands()  { return getTrueOperands().size(); }
 
@@ -613,7 +575,8 @@ def CondBranchOp : Std_Op<"cond_br",
       setOperand(getFalseDestOperandIndex() + idx, value);
     }
 
-    operand_range getFalseOperands() { return falseDestOperands(); }
+    operand_range getTrueOperands() { return getTrueDestOperands(); }
+    operand_range getFalseOperands() { return getFalseDestOperands(); }
 
     unsigned getNumFalseOperands() { return getFalseOperands().size(); }
 
@@ -694,8 +657,6 @@ def ConstantOp : Std_Op<"constant",
   ];
 
   let extraClassDeclaration = [{
-    Attribute getValue() { return (*this)->getAttr("value"); }
-
     /// Returns true if a constant operation can be built with the given value
     /// and result type.
     static bool isBuildableWith(Attribute value, Type type);
@@ -970,12 +931,6 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
       $_state.addOperands({condition, trueValue, falseValue});
       $_state.addTypes(trueValue.getType());
     }]>];
-
-  let extraClassDeclaration = [{
-      Value getCondition() { return condition(); }
-      Value getTrueValue() { return true_value(); }
-      Value getFalseValue() { return false_value(); }
-  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;

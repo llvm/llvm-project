@@ -495,25 +495,29 @@ public:
       State = UnknownContext;
       Name = ContextStr;
     } else {
-      // Remove encapsulating '[' and ']' if any
-      ContextStr = ContextStr.substr(1, ContextStr.size() - 2);
       CSNameTable.emplace_back();
       SampleContextFrameVector &Context = CSNameTable.back();
-      /// Create a context vector from a given context string and save it in
-      /// `Context`.
-      StringRef ContextRemain = ContextStr;
-      StringRef ChildContext;
-      StringRef CalleeName;
-      while (!ContextRemain.empty()) {
-        auto ContextSplit = ContextRemain.split(" @ ");
-        ChildContext = ContextSplit.first;
-        ContextRemain = ContextSplit.second;
-        LineLocation CallSiteLoc(0, 0);
-        decodeContextString(ChildContext, CalleeName, CallSiteLoc);
-        Context.emplace_back(CalleeName, CallSiteLoc);
-      }
-
+      createCtxVectorFromStr(ContextStr, Context);
       setContext(Context, CState);
+    }
+  }
+
+  /// Create a context vector from a given context string and save it in
+  /// `Context`.
+  static void createCtxVectorFromStr(StringRef ContextStr,
+                                     SampleContextFrameVector &Context) {
+    // Remove encapsulating '[' and ']' if any
+    ContextStr = ContextStr.substr(1, ContextStr.size() - 2);
+    StringRef ContextRemain = ContextStr;
+    StringRef ChildContext;
+    StringRef CalleeName;
+    while (!ContextRemain.empty()) {
+      auto ContextSplit = ContextRemain.split(" @ ");
+      ChildContext = ContextSplit.first;
+      ContextRemain = ContextSplit.second;
+      LineLocation CallSiteLoc(0, 0);
+      decodeContextString(ChildContext, CalleeName, CallSiteLoc);
+      Context.emplace_back(CalleeName, CallSiteLoc);
     }
   }
 
@@ -1124,11 +1128,18 @@ private:
 class SampleContextTrimmer {
 public:
   SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
-  // Trim and merge cold context profile when requested.
+  // Trim and merge cold context profile when requested. TrimBaseProfileOnly
+  // should only be effective when TrimColdContext is true. On top of
+  // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
+  // cold profiles or only cold base profiles. Trimming base profiles only is
+  // mainly to honor the preinliner decsion. Note that when MergeColdContext is
+  // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
+  // be ignored.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
                                        bool TrimColdContext,
                                        bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength);
+                                       uint32_t ColdContextFrameLength,
+                                       bool TrimBaseProfileOnly);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 

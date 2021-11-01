@@ -101,8 +101,11 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
   if (rel.sym && !rel.sym->isLocal())
-    hint = "; references " + lld::toString(*rel.sym) +
-           getDefinedLocation(*rel.sym);
+    hint = "; references " + lld::toString(*rel.sym);
+  if (!errPlace.srcLoc.empty())
+    hint += "\n>>> referenced by " + errPlace.srcLoc;
+  if (rel.sym && !rel.sym->isLocal())
+    hint += getDefinedLocation(*rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
     hint += "; consider recompiling with -fdebug-types-section to reduce size "
@@ -124,36 +127,27 @@ void elf::reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
               Twine(llvm::maxIntN(n)) + "]" + hint);
 }
 
-namespace {
-// Build a bitmask with one bit set for each RelExpr.
-//
-// Constexpr function arguments can't be used in static asserts, so we
-// use template arguments to build the mask.
-// But function template partial specializations don't exist (needed
-// for base case of the recursion), so we need a dummy struct.
-template <RelExpr... Exprs> struct RelExprMaskBuilder {
-  static inline uint64_t build() { return 0; }
-};
+// Build a bitmask with one bit set for each 64 subset of RelExpr.
+static constexpr uint64_t buildMask() { return 0; }
 
-// Specialization for recursive case.
-template <RelExpr Head, RelExpr... Tail>
-struct RelExprMaskBuilder<Head, Tail...> {
-  static inline uint64_t build() {
-    static_assert(0 <= Head && Head < 64,
-                  "RelExpr is too large for 64-bit mask!");
-    return (uint64_t(1) << Head) | RelExprMaskBuilder<Tail...>::build();
-  }
-};
-} // namespace
+template <typename... Tails>
+static constexpr uint64_t buildMask(int head, Tails... tails) {
+  return (0 <= head && head < 64 ? uint64_t(1) << head : 0) |
+         buildMask(tails...);
+}
 
 // Return true if `Expr` is one of `Exprs`.
-// There are fewer than 64 RelExpr's, so we can represent any set of
-// RelExpr's as a constant bit mask and test for membership with a
-// couple cheap bitwise operations.
-template <RelExpr... Exprs> bool oneof(RelExpr expr) {
-  assert(0 <= expr && (int)expr < 64 &&
-         "RelExpr is too large for 64-bit mask!");
-  return (uint64_t(1) << expr) & RelExprMaskBuilder<Exprs...>::build();
+// There are more than 64 but less than 128 RelExprs, so we divide the set of
+// exprs into [0, 64) and [64, 128) and represent each range as a constant
+// 64-bit mask. Then we decide which mask to test depending on the value of
+// expr and use a simple shift and bitwise-and to test for membership.
+template <RelExpr... Exprs> static bool oneof(RelExpr expr) {
+  assert(0 <= expr && (int)expr < 128 &&
+         "RelExpr is too large for 128-bit mask!");
+
+  if (expr >= 64)
+    return (uint64_t(1) << (expr - 64)) & buildMask((Exprs - 64)...);
+  return (uint64_t(1) << expr) & buildMask(Exprs...);
 }
 
 static RelType getMipsPairType(RelType type, bool isLocal) {
@@ -197,7 +191,8 @@ static bool isAbsoluteValue(const Symbol &sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr expr) {
-  return oneof<R_PLT_PC, R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PLT>(expr);
+  return oneof<R_PLT, R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT>(
+      expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -233,11 +228,11 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
             R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
             R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC32_PLTREL,
-            R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD, R_TLSDESC_CALL,
-            R_TLSDESC_PC, R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT,
-            R_AARCH64_GOT_PAGE>(
-          e))
+            R_PLT_PC, R_PLT_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
+            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
+            R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
+            R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT,
+            R_AARCH64_GOT_PAGE>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -309,6 +304,8 @@ static RelExpr fromPlt(RelExpr expr) {
     return R_PPC64_CALL;
   case R_PLT:
     return R_ABS;
+  case R_PLT_GOTPLT:
+    return R_GOTPLTREL;
   default:
     return expr;
   }
@@ -1161,8 +1158,8 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
 
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC>(
-          expr) &&
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+            R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
     if (in.got->addDynTlsEntry(sym)) {
       uint64_t off = in.got->getGlobalDynOffset(sym);
@@ -1239,7 +1236,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   }
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
+            R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
     if (!toExecRelax) {
       if (in.got->addDynTlsEntry(sym)) {
         uint64_t off = in.got->getGlobalDynOffset(sym);
@@ -1403,8 +1400,9 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   // If the relocation does not emit a GOT or GOTPLT entry but its computation
   // uses their addresses, we need GOT or GOTPLT to be created.
   //
-  // The 4 types that relative GOTPLT are all x86 and x86-64 specific.
-  if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
+  // The 5 types that relative GOTPLT are all x86 and x86-64 specific.
+  if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_PLT_GOTPLT,
+            R_TLSDESC_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
     in.gotPlt->hasGotPltOffRel = true;
   } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC64_TOCBASE, R_PPC64_RELAX_TOC>(
                  expr)) {
@@ -1617,10 +1615,11 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
-  if (s.areRelocsRela)
-    scanRelocs<ELFT>(s, s.relas<ELFT>());
+  const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    scanRelocs<ELFT>(s, rels.rels);
   else
-    scanRelocs<ELFT>(s, s.rels<ELFT>());
+    scanRelocs<ELFT>(s, rels.relas);
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {

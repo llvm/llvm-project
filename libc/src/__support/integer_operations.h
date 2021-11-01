@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
 #define LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
 

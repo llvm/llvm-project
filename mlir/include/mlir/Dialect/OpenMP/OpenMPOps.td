@@ -136,6 +136,18 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
   let assemblyFormat = "attr-dict";
 }
 
+def OMP_SCHEDULE_MOD_None : StrEnumAttrCase<"none", 0>;
+def OMP_SCHEDULE_MOD_Monotonic : StrEnumAttrCase<"monotonic", 1>;
+def OMP_SCHEDULE_MOD_Nonmonotonic : StrEnumAttrCase<"nonmonotonic", 2>;
+
+def ScheduleModifier : StrEnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier",
+                                         [OMP_SCHEDULE_MOD_None,
+                                          OMP_SCHEDULE_MOD_Monotonic,
+                                          OMP_SCHEDULE_MOD_Nonmonotonic]>
+{
+    let cppNamespace = "::mlir::omp";
+}
+
 //===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
@@ -214,6 +226,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKind>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
+             OptionalAttr<ScheduleModifier>:$schedule_modifier,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
              UnitAttr:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
@@ -484,6 +497,37 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.17.7 atomic construct
+//===----------------------------------------------------------------------===//
+
+// In the OpenMP Specification, atomic construct has an `atomic-clause` which
+// can take the values `read`, `write`, `update` and `capture`. These four
+// kinds of atomic constructs are fundamentally independent and are handled
+// separately while lowering. Having four separate operations (one for each
+// value of the clause) here decomposes handling of this construct into a
+// two-step process.
+
+def AtomicReadOp : OpenMP_Op<"atomic.read"> {
+  let arguments = (ins OpenMP_PointerLikeType:$address,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let results = (outs AnyType);
+  let parser = [{ return parseAtomicReadOp(parser, result); }];
+  let printer = [{ return printAtomicReadOp(p, *this); }];
+  let verifier = [{ return verifyAtomicReadOp(*this); }];
+}
+
+def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
+  let arguments = (ins OpenMP_PointerLikeType:$address,
+                       AnyType:$value,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let parser = [{ return parseAtomicWriteOp(parser, result); }];
+  let printer = [{ return printAtomicWriteOp(p, *this); }];
+  let verifier = [{ return verifyAtomicWriteOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//

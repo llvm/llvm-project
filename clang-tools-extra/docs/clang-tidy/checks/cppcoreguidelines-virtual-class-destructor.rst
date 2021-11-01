@@ -5,7 +5,7 @@ cppcoreguidelines-virtual-class-destructor
 
 Finds virtual classes whose destructor is neither public and virtual
 nor protected and non-virtual. A virtual class's destructor should be specified
-in one of these ways to prevent undefined behaviour.
+in one of these ways to prevent undefined behavior.
 
 This check implements
 `C.35 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-dtor-virtual>`_

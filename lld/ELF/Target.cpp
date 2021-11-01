@@ -106,8 +106,14 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
       assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");
       continue;
     }
-    if (isecLoc <= loc && loc < isecLoc + isec->getSize())
-      return {isec, isec->template getLocation<ELFT>(loc - isecLoc) + ": "};
+    if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
+      auto objLoc = isec->template getLocation<ELFT>(loc - isecLoc);
+      // Return object file location and source file location.
+      // TODO: Refactor getSrcMsg not to take a variable.
+      Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+      return {isec, objLoc + ": ",
+              isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
+    }
   }
   return {};
 }
@@ -187,7 +193,7 @@ void TargetInfo::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 }
 
 uint64_t TargetInfo::getImageBase() const {
-  // Use -image-base if set. Fall back to the target default if not.
+  // Use --image-base if set. Fall back to the target default if not.
   if (config->imageBase)
     return *config->imageBase;
   return config->isPic ? 0 : defaultImageBase;

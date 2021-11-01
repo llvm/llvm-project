@@ -213,6 +213,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   else if (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
+  else
+    // Default to 'A' profile if the architecture is not specified.
+    success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Features);
 
   if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
     success =

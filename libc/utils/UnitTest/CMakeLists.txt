@@ -5,7 +5,7 @@ add_library(
   LibcTest.h
 )
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
-add_dependencies(LibcUnitTest libc.utils.CPP.standalone_cpp)
+add_dependencies(LibcUnitTest libc.src.__support.CPP.standalone_cpp)
 target_link_libraries(LibcUnitTest PUBLIC libc_test_utils)
 
 add_library(
@@ -14,6 +14,6 @@ add_library(
 )
 
 target_include_directories(LibcUnitTestMain PUBLIC ${LIBC_SOURCE_DIR})
-add_dependencies(LibcUnitTestMain LibcUnitTest libc.utils.CPP.standalone_cpp)
+add_dependencies(LibcUnitTestMain LibcUnitTest libc.src.__support.CPP.standalone_cpp)
 target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest libc_test_utils)
 

@@ -4335,7 +4335,6 @@ define amdgpu_ps <2 x i128> @s_usubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX11-NEXT:    v_cmp_lt_u64_e64 s1, s[4:5], s[12:13]
 ; GFX11-NEXT:    s_subb_u32 s10, s6, s14
 ; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s1
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
@@ -4346,7 +4345,7 @@ define amdgpu_ps <2 x i128> @s_usubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX11-NEXT:    s_and_b32 s0, 1, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s1
 ; GFX11-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v2, v1 :: v_dual_and_b32 v0, 1, v0
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, s16, 0, vcc_lo

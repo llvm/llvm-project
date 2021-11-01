@@ -304,8 +304,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     // TODO: refactor function type creation which usually occurs in std-LLVM
     // conversion.
     SmallVector<Type, 8> operandTypes;
-    operandTypes.reserve(inlineAsmOp.operands().size());
-    for (auto t : inlineAsmOp.operands().getTypes())
+    operandTypes.reserve(inlineAsmOp.getOperands().size());
+    for (auto t : inlineAsmOp.getOperands().getTypes())
       operandTypes.push_back(t);
 
     Type resultType;
@@ -330,7 +330,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                   inlineAsmOp.asm_string(), inlineAsmOp.constraints(),
                   inlineAsmOp.has_side_effects(), inlineAsmOp.is_align_stack());
     llvm::Value *result = builder.CreateCall(
-        inlineAsmInst, moduleTranslation.lookupValues(inlineAsmOp.operands()));
+        inlineAsmInst,
+        moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
     if (opInst.getNumResults() != 0)
       moduleTranslation.mapValue(opInst.getResult(0), result);
     return success();
@@ -383,7 +384,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    auto weights = condbrOp.branch_weights();
+    auto weights = condbrOp.getBranchWeights();
     llvm::MDNode *branchWeights = nullptr;
     if (weights) {
       // Map weight attributes to LLVM metadata.

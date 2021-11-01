@@ -1968,14 +1968,12 @@ define amdgpu_kernel void @shuffle_scalar_load_v8i32_0123(<8 x i32> addrspace(4)
 ; GFX11-LABEL: shuffle_scalar_load_v8i32_0123:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s4
-; GFX11-NEXT:    v_mov_b32_e32 v1, s5
-; GFX11-NEXT:    v_mov_b32_e32 v2, s6
-; GFX11-NEXT:    v_mov_b32_e32 v3, s7
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s7
+; GFX11-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX11-NEXT:    s_endpgm
   %ld8 = load <8 x i32>, <8 x i32> addrspace(4)* %in, align 16

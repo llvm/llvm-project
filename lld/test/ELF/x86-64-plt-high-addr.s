@@ -4,7 +4,7 @@
 // RUN: ld.lld -o %t.so -shared %t1.o -soname=so
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
-// RUN: ld.lld -o %t1.exe %t2.o %t.so -image-base=0xcafe00000000
+// RUN: ld.lld -o %t1.exe %t2.o %t.so --image-base=0xcafe00000000
 // RUN: llvm-objdump -s -j .got.plt %t1.exe | FileCheck %s
 
 // CHECK:      Contents of section .got.plt:
@@ -12,7 +12,7 @@
 // CHECK-NEXT: cafe00003390 00000000 00000000 a6120000 feca0000
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
-// RUN: ld.lld -o %t2.exe %t2.o %t.so -image-base=0xcafe00000000 -z retpolineplt
+// RUN: ld.lld -o %t2.exe %t2.o %t.so --image-base=0xcafe00000000 -z retpolineplt
 // RUN: llvm-objdump -s -j .got.plt %t2.exe | FileCheck --check-prefix=RETPOLINE %s
 
 // RETPOLINE:      Contents of section .got.plt:

@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8,GFX8-OPT,GCN-OPT %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -O0 -mattr=-flat-for-global -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8,GFX8-NOOPT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10,GCN-OPT %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX11,GCN-OPT %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX11,GCN-OPT %s
 
 ; GCN-LABEL: {{^}}dpp_test:
 ; GCN:  v_mov_b32_e32 [[DST:v[0-9]+]], s{{[0-9]+}}
@@ -67,7 +67,7 @@ define amdgpu_kernel void @update_dpp64_test(i64 addrspace(1)* %arg, i64 %in1, i
 ; GCN-LABEL: {{^}}update_dpp64_imm_old_test:
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], 0x3afaedd9
 ; GFX8-OPT-DAG,GFX10-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
-; GFX11-DAG: v_dual_mov_b32 v[[OLD_HI:[0-9]+]], 0x7047 :: v_dual_lshlrev_b32
+; GFX11-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
 ; GFX8-NOOPT-DAG: s_mov_b32 s[[SOLD_LO:[0-9]+]], 0x3afaedd9
 ; GFX8-NOOPT-DAG: s_mov_b32 s[[SOLD_HI:[0-9]+]], 0x7047
 ; GCN-DAG: load_{{dwordx2|b64}} v{{\[}}[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]

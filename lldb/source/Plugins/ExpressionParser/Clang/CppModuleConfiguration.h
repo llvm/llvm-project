@@ -16,9 +16,9 @@ namespace lldb_private {
 
 /// A Clang configuration when importing C++ modules.
 ///
-/// Includes a list of include paths that should be used when importing
-/// and a list of modules that can be imported. Currently only used when
-/// importing the 'std' module and its dependencies.
+/// This class computes a list of include paths and module names that can be
+/// imported given a list of source files. Currently only used when importing
+/// the 'std' module and its dependencies.
 class CppModuleConfiguration {
   /// Utility class for a path that can only be set once.
   class SetOncePath {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/string/memmove.h"
-#include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
 class LlvmLibcMemmoveTest : public __llvm_libc::testing::Test {

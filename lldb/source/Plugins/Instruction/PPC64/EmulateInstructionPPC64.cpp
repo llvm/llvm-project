@@ -39,12 +39,7 @@ void EmulateInstructionPPC64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString EmulateInstructionPPC64::GetPluginNameStatic() {
-  ConstString g_plugin_name("lldb.emulate-instruction.ppc64");
-  return g_plugin_name;
-}
-
-const char *EmulateInstructionPPC64::GetPluginDescriptionStatic() {
+llvm::StringRef EmulateInstructionPPC64::GetPluginDescriptionStatic() {
   return "Emulate instructions for the PPC64 architecture.";
 }
 

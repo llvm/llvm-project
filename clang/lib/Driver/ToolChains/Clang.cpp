@@ -1822,11 +1822,25 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
     StringRef Val = A->getValue();
     const Driver &D = getToolChain().getDriver();
     if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
-        Val.equals("1024") || Val.equals("2048"))
+        Val.equals("1024") || Val.equals("2048") || Val.equals("128+") ||
+        Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
+        Val.equals("2048+")) {
+      unsigned Bits = 0;
+      if (Val.endswith("+"))
+        Val = Val.substr(0, Val.size() - 1);
+      else {
+        bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
+        assert(!Invalid && "Failed to parse value");
+        CmdArgs.push_back(
+            Args.MakeArgString("-mvscale-max=" + llvm::Twine(Bits / 128)));
+      }
+
+      bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
+      assert(!Invalid && "Failed to parse value");
       CmdArgs.push_back(
-          Args.MakeArgString(llvm::Twine("-msve-vector-bits=") + Val));
+          Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
     // Silently drop requests for vector-length agnostic code as it's implied.
-    else if (!Val.equals("scalable"))
+    } else if (!Val.equals("scalable"))
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Val;
@@ -4691,10 +4705,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fdiscard_value_names,
                    options::OPT_fno_discard_value_names, !IsAssertBuild)) {
     if (Args.hasArg(options::OPT_fdiscard_value_names) &&
-        (std::any_of(Inputs.begin(), Inputs.end(),
-                     [](const clang::driver::InputInfo &II) {
-                       return types::isLLVMIR(II.getType());
-                     }))) {
+        llvm::any_of(Inputs, [](const clang::driver::InputInfo &II) {
+          return types::isLLVMIR(II.getType());
+        })) {
       D.Diag(diag::warn_ignoring_fdiscard_for_bitcode);
     }
     CmdArgs.push_back("-discard-value-names");
@@ -6378,12 +6391,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
-  // -frelaxed-template-template-args is off by default, as it is a severe
-  // breaking change until a corresponding change to template partial ordering
-  // is provided.
-  if (Args.hasFlag(options::OPT_frelaxed_template_template_args,
-                   options::OPT_fno_relaxed_template_template_args, false))
-    CmdArgs.push_back("-frelaxed-template-template-args");
+  // -frelaxed-template-template-args is deprecated and on by default.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_frelaxed_template_template_args,
+                          options::OPT_fno_relaxed_template_template_args)) {
+    D.Diag(diag::warn_drv_deprecated_arg) << A->getAsString(Args) << false;
+    if (A->getOption().matches(options::OPT_fno_relaxed_template_template_args))
+      CmdArgs.push_back("-fno-relaxed-template-template-args");
+  }
 
   // -fsized-deallocation is off by default, as it is an ABI-breaking change for
   // most platforms.

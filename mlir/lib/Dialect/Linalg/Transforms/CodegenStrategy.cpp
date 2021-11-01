@@ -44,31 +44,7 @@ void mlir::linalg::CodegenStrategy::configurePassPipeline(
                       : linalg::LinalgTransformationFilter(
                             t->filter, currentState, nextState);
     t->addToPassPipeline(pm, filter);
-    pm.addPass(createLinalgStrategyEnablePass());
+    pm.addPass(createLinalgStrategyEnablePass(linalgEnablingOptions));
   }
-  LinalgVectorLoweringOptions vectorLoweringOptions;
-  vectorLoweringOptions.maxTransferRank =
-      lateCodegenStrategyOptions.maxTransferRank;
-  vectorLoweringOptions.enableVectorTransferLowering =
-      lateCodegenStrategyOptions.enableVectorTransferLowering;
-  vectorLoweringOptions.enableVectorTransferPartialRewrite =
-      lateCodegenStrategyOptions.enableVectorTransferPartialRewrite;
-  vectorLoweringOptions.enableVectorContractLowering =
-      lateCodegenStrategyOptions.enableVectorContractLowering;
-  vectorLoweringOptions.enableVectorToSCFConversion =
-      lateCodegenStrategyOptions.enableVectorToSCFConversion;
-  vectorLoweringOptions.vectorTransformOptions = vectorTransformOptions;
-  vectorLoweringOptions.vectorTransferToSCFOptions = vectorToSCFOptions;
-  pm.addPass(createLinalgStrategyLowerVectorsPass(vectorLoweringOptions));
-}
-
-LogicalResult mlir::linalg::CodegenStrategy::transform(FuncOp funcOp) const {
-  PassManager pm(funcOp.getContext(), funcOp.getOperationName());
-  configurePassPipeline(pm, funcOp.getContext());
-  LogicalResult res = pm.run(funcOp);
-  // Ensure we drop the marker in the end.
-  funcOp.walk([](LinalgOp op) {
-    op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-  });
-  return res;
+  pm.addPass(createLinalgStrategyRemoveMarkersPass());
 }

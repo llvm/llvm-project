@@ -65,29 +65,14 @@ llvm::VersionTuple HostInfoLinux::GetOSVersion() {
   return g_fields->m_os_version;
 }
 
-bool HostInfoLinux::GetOSBuildString(std::string &s) {
+llvm::Optional<std::string> HostInfoLinux::GetOSBuildString() {
   struct utsname un;
   ::memset(&un, 0, sizeof(utsname));
-  s.clear();
 
   if (uname(&un) < 0)
-    return false;
+    return llvm::None;
 
-  s.assign(un.release);
-  return true;
-}
-
-bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
-  struct utsname un;
-
-  ::memset(&un, 0, sizeof(utsname));
-  s.clear();
-
-  if (uname(&un) < 0)
-    return false;
-
-  s.assign(un.version);
-  return true;
+  return std::string(un.release);
 }
 
 llvm::StringRef HostInfoLinux::GetDistributionId() {

@@ -11713,11 +11713,11 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
   assert(!Sizes.empty() && "Unable to determine NDS and WDS.");
   // The LS of a function parameter / return value can only be a power
   // of 2, starting from 8 bits, up to 128.
-  assert(std::all_of(Sizes.begin(), Sizes.end(),
-                     [](unsigned Size) {
-                       return Size == 8 || Size == 16 || Size == 32 ||
-                              Size == 64 || Size == 128;
-                     }) &&
+  assert(llvm::all_of(Sizes,
+                      [](unsigned Size) {
+                        return Size == 8 || Size == 16 || Size == 32 ||
+                               Size == 64 || Size == 128;
+                      }) &&
          "Invalid size");
 
   return std::make_tuple(*std::min_element(std::begin(Sizes), std::end(Sizes)),

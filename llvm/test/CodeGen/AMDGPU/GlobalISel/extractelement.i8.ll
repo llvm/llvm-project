@@ -1208,25 +1208,25 @@ define amdgpu_ps i8 @extractelement_vgpr_v8i8_sgpr_idx(<8 x i8> addrspace(1)* %p
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_movk_i32 s0, 0xff
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_bfe_u32 v3, v0, 8, 8
 ; GFX11-NEXT:    v_bfe_u32 v5, v1, 8, 8
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 24, v0
-; GFX11-NEXT:    v_bfe_u32 v4, v0, 16, 8
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 24, v1
 ; GFX11-NEXT:    v_bfe_u32 v7, v1, 16, 8
-; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
+; GFX11-NEXT:    v_bfe_u32 v3, v0, 8, 8
+; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 24, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 24, v6
-; GFX11-NEXT:    v_and_or_b32 v0, v0, s0, v3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; GFX11-NEXT:    v_bfe_u32 v4, v0, 16, 8
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
 ; GFX11-NEXT:    v_and_or_b32 v1, v1, s0, v5
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX11-NEXT:    v_or3_b32 v1, v1, v7, v6
+; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
+; GFX11-NEXT:    v_and_or_b32 v0, v0, s0, v3
 ; GFX11-NEXT:    s_lshr_b32 s0, s2, 2
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s0, 1
-; GFX11-NEXT:    v_or3_b32 v0, v0, v4, v2
-; GFX11-NEXT:    v_or3_b32 v1, v1, v7, v6
 ; GFX11-NEXT:    s_and_b32 s0, s2, 3
+; GFX11-NEXT:    v_or3_b32 v0, v0, v4, v2
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, s0, v0
@@ -1370,25 +1370,24 @@ define i8 @extractelement_vgpr_v8i8_vgpr_idx(<8 x i8> addrspace(1)* %ptr, i32 %i
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfe_u32 v4, v0, 8, 8
 ; GFX11-NEXT:    v_bfe_u32 v6, v1, 8, 8
-; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
-; GFX11-NEXT:    v_bfe_u32 v5, v0, 16, 8
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
 ; GFX11-NEXT:    v_bfe_u32 v8, v1, 16, 8
+; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 8, v6
-; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
+; GFX11-NEXT:    v_bfe_u32 v5, v0, 16, 8
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 24, v7
 ; GFX11-NEXT:    v_and_or_b32 v0, v0, s0, v4
 ; GFX11-NEXT:    v_and_or_b32 v1, v1, s0, v6
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 2, v2
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GFX11-NEXT:    v_and_b32_e32 v2, 3, v2
-; GFX11-NEXT:    v_or3_b32 v0, v0, v5, v3
 ; GFX11-NEXT:    v_or3_b32 v1, v1, v8, v7
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v4
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 3, v2
+; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
+; GFX11-NEXT:    v_or3_b32 v0, v0, v5, v3
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v1 :: v_dual_lshlrev_b32 v1, 3, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
@@ -1479,9 +1478,7 @@ define amdgpu_ps i8 @extractelement_sgpr_v8i8_vgpr_idx(<8 x i8> addrspace(4)* in
 ; GFX11-NEXT:    s_movk_i32 s2, 0xff
 ; GFX11-NEXT:    s_mov_b32 s4, 0x80010
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 2, v0
-; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_bfe_u32 s8, s0, s3
 ; GFX11-NEXT:    s_bfe_u32 s3, s1, s3
@@ -1492,19 +1489,20 @@ define amdgpu_ps i8 @extractelement_sgpr_v8i8_vgpr_idx(<8 x i8> addrspace(4)* in
 ; GFX11-NEXT:    s_lshl_b32 s3, s3, 8
 ; GFX11-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX11-NEXT:    s_or_b32 s2, s2, s3
-; GFX11-NEXT:    s_lshl_b32 s3, s6, 24
-; GFX11-NEXT:    s_or_b32 s1, s2, s1
 ; GFX11-NEXT:    s_lshr_b32 s5, s0, 24
 ; GFX11-NEXT:    s_bfe_u32 s0, s0, s4
 ; GFX11-NEXT:    s_lshl_b32 s4, s8, 8
-; GFX11-NEXT:    s_or_b32 s1, s1, s3
+; GFX11-NEXT:    s_lshl_b32 s3, s6, 24
+; GFX11-NEXT:    s_or_b32 s1, s2, s1
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX11-NEXT:    s_or_b32 s1, s1, s3
 ; GFX11-NEXT:    s_or_b32 s3, s7, s4
-; GFX11-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX11-NEXT:    s_lshl_b32 s2, s5, 24
 ; GFX11-NEXT:    s_or_b32 s0, s3, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX11-NEXT:    s_or_b32 s0, s0, s2
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, s0, v2, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, s0, v2 :: v_dual_and_b32 v0, 3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -3123,8 +3121,7 @@ define amdgpu_ps i8 @extractelement_vgpr_v16i8_sgpr_idx(<16 x i8> addrspace(1)* 
 ; GFX11-NEXT:    v_or3_b32 v2, v2, v14, v7
 ; GFX11-NEXT:    v_and_or_b32 v3, v3, v4, v9
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v11
-; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 24, v8
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v1 :: v_dual_lshlrev_b32 v5, 24, v8
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s0, 2
 ; GFX11-NEXT:    v_or3_b32 v1, v3, v4, v5
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
@@ -3394,8 +3391,7 @@ define i8 @extractelement_vgpr_v16i8_vgpr_idx(<16 x i8> addrspace(1)* %ptr, i32 
 ; GFX11-NEXT:    v_or3_b32 v0, v0, v13, v7
 ; GFX11-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v1
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 3, v2
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v3, v0 :: v_dual_lshlrev_b32 v1, 3, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <16 x i8>, <16 x i8> addrspace(1)* %ptr

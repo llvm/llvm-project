@@ -206,11 +206,10 @@ define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_nc_i32 v0, s4, s5 clamp
 ; GFX11-NEXT:    s_add_i32 s4, s4, s5
-; GFX11-NEXT:    v_mov_b32_e32 v2, s4
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s4
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s4, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v1, v2, s[0:1]
@@ -427,14 +426,13 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX11-LABEL: s_saddo_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_add_u32 s8, s4, s6
 ; GFX11-NEXT:    s_addc_u32 s9, s5, s7
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s6, s[6:7], 0
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s4, s[8:9], s[4:5]
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s8
-; GFX11-NEXT:    v_mov_b32_e32 v1, s9
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s9
 ; GFX11-NEXT:    s_xor_b32 s4, s6, s4
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

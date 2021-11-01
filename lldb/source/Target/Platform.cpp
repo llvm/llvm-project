@@ -294,8 +294,8 @@ PlatformSP Platform::Create(ConstString name, Status &error) {
     if (name == g_host_platform_name)
       return GetHostPlatform();
 
-    create_callback =
-        PluginManager::GetPlatformCreateCallbackForPluginName(name);
+    create_callback = PluginManager::GetPlatformCreateCallbackForPluginName(
+        name.GetStringRef());
     if (create_callback)
       platform_sp = create_callback(true, nullptr);
     else
@@ -398,7 +398,6 @@ Platform::Platform(bool is_host)
 Platform::~Platform() = default;
 
 void Platform::GetStatus(Stream &strm) {
-  std::string s;
   strm.Format("  Platform: {0}\n", GetPluginName());
 
   ArchSpec arch(GetSystemArchitecture());
@@ -414,8 +413,8 @@ void Platform::GetStatus(Stream &strm) {
   if (!os_version.empty()) {
     strm.Format("OS Version: {0}", os_version.getAsString());
 
-    if (GetOSBuildString(s))
-      strm.Printf(" (%s)", s.c_str());
+    if (llvm::Optional<std::string> s = GetOSBuildString())
+      strm.Format(" ({0})", *s);
 
     strm.EOL();
   }
@@ -440,8 +439,8 @@ void Platform::GetStatus(Stream &strm) {
   if (!specific_info.empty())
     strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
 
-  if (GetOSKernelDescription(s))
-    strm.Printf("    Kernel: %s\n", s.c_str());
+  if (llvm::Optional<std::string> s = GetOSKernelDescription())
+    strm.Format("    Kernel: {0}\n", *s);
 }
 
 llvm::VersionTuple Platform::GetOSVersion(Process *process) {
@@ -486,18 +485,16 @@ llvm::VersionTuple Platform::GetOSVersion(Process *process) {
   return llvm::VersionTuple();
 }
 
-bool Platform::GetOSBuildString(std::string &s) {
-  s.clear();
-
+llvm::Optional<std::string> Platform::GetOSBuildString() {
   if (IsHost())
-    return HostInfo::GetOSBuildString(s);
-  return GetRemoteOSBuildString(s);
+    return HostInfo::GetOSBuildString();
+  return GetRemoteOSBuildString();
 }
 
-bool Platform::GetOSKernelDescription(std::string &s) {
+llvm::Optional<std::string> Platform::GetOSKernelDescription() {
   if (IsHost())
-    return HostInfo::GetOSKernelDescription(s);
-  return GetRemoteOSKernelDescription(s);
+    return HostInfo::GetOSKernelDescription();
+  return GetRemoteOSKernelDescription();
 }
 
 void Platform::AddClangModuleCompilationOptions(

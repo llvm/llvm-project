@@ -21,8 +21,8 @@ public:
   static void Initialize();
   static void Terminate() {}
 
-  static ConstString GetPluginNameStatic();
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "wasm-dyld"; }
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
 
@@ -37,9 +37,7 @@ public:
 
   /// PluginInterface protocol.
   /// \{
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
   /// \}
 };
 

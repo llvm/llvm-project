@@ -1,6 +1,10 @@
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
+if (MLIR_ENABLE_BINDINGS_PYTHON)
+  add_subdirectory(python)
+endif()
+
 # Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
 # can find MLIR's CMake configuration
 set(MLIR_CMAKE_DIR
@@ -124,7 +128,6 @@ endif()
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRPythonModules
-    MLIRPythonTestModules
   )
 endif()
 

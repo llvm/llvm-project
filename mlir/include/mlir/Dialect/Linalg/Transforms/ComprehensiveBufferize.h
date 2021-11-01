@@ -90,6 +90,11 @@ public:
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
+    // Return `false` if we have no information about `v1` or `v2`.
+    if (equivalentInfo.findValue(v1) == equivalentInfo.end() ||
+        equivalentInfo.findValue(v2) == equivalentInfo.end())
+      return false;
+
     return equivalentInfo.getLeaderValue(v1) ==
            equivalentInfo.getLeaderValue(v2);
   }
@@ -168,7 +173,30 @@ private:
 /// Analyze the `ops` to determine which OpResults are inplaceable.
 LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                               BufferizationAliasInfo &aliasInfo,
-                              const DominanceInfo &domInfo);
+                              const DominanceInfo &domInfo,
+                              unsigned analysisFuzzerSeed = 0);
+
+/// Default allocation function that is used by the comprehensive bufferization
+/// pass. The default currently creates a ranked memref using `memref.alloc`.
+Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
+                                    Value shapedValue);
+
+/// Default deallocation function that is used by the comprehensive
+/// bufferization pass. It expects to recieve back the value called from the
+/// `defaultAllocationFn`.
+void defaultDeallocationFn(OpBuilder &b, Location loc, Value allocatedBuffer);
+
+/// Callback functions that are used by the comprehensive bufferization pass to
+/// allocate/deallocate memory. These default to use the
+/// `defaultAllocationFn`/`defaultDeallocationFn`, but can be overridden by the
+/// caller. The `deallocationFn` is gauranteed to recieve the `Value` returned
+/// by the `allocationFn`.
+struct AllocationCallbacks {
+  std::function<Optional<Value>(OpBuilder &b, Location loc, Value shapedValue)>
+      allocationFn = defaultAllocationFn;
+  std::function<void(OpBuilder &b, Location loc, Value v)> deallocationFn =
+      defaultDeallocationFn;
+};
 
 /// Bufferize one particular op.
 /// `bufferizedFunctionTypes` (resp. `globalCreator`) are expected to be
@@ -176,8 +204,8 @@ LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
 LogicalResult
 bufferizeOp(Operation *op, BlockAndValueMapping &bvm,
             BufferizationAliasInfo &aliasInfo,
-            DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr,
-            GlobalCreator *globalCreator = nullptr);
+            AllocationCallbacks allocationFns,
+            DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr);
 
 } // namespace linalg
 } // namespace mlir

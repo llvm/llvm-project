@@ -91,7 +91,7 @@ Name prefix            Description
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by :program:`clang-tidy` and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect
-compilation arguments, so it can not turn on Clang warnings which are not
+compilation arguments, so it cannot turn on Clang warnings which are not
 already turned on in build configuration. The ``-warnings-as-errors=`` option
 upgrades any warnings emitted under the ``-checks=`` flag to errors (but it
 does not enable any checks itself).
@@ -281,10 +281,10 @@ Suppressing Undesired Diagnostics
 =================================
 
 :program:`clang-tidy` diagnostics are intended to call out code that does not
-adhere to a coding standard, or is otherwise problematic in some way.  However,
+adhere to a coding standard, or is otherwise problematic in some way. However,
 if the code is known to be correct, it may be useful to silence the warning.
 Some clang-tidy checks provide a check-specific way to silence the diagnostics,
-e.g.  `bugprone-use-after-move <checks/bugprone-use-after-move.html>`_ can be
+e.g. `bugprone-use-after-move <checks/bugprone-use-after-move.html>`_ can be
 silenced by re-initializing the variable after it has been moved out,
 `bugprone-string-integer-assignment
 <checks/bugprone-string-integer-assignment.html>`_ can be suppressed by

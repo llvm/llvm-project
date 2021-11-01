@@ -578,7 +578,7 @@ public:
 
     Block *cont = rewriter.splitBlock(op->getBlock(), Block::iterator(op));
     rewriter.setInsertionPointToEnd(cont->getPrevNode());
-    rewriter.create<CondBranchOp>(loc, adaptor.arg(),
+    rewriter.create<CondBranchOp>(loc, adaptor.getArg(),
                                   /*trueDest=*/cont,
                                   /*trueArgs=*/ArrayRef<Value>(),
                                   /*falseDest=*/setupSetErrorBlock(coro),

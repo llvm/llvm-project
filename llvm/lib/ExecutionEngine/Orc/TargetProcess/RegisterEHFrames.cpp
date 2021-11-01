@@ -176,14 +176,12 @@ llvm_orc_deregisterEHFrameSectionCustomDirectWrapper(
   return llvm::orc::shared::detail::CWrapperFunctionResult();
 }
 
-static Error registerEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
-  return llvm::orc::registerEHFrameSection(
-      jitTargetAddressToPointer<const void *>(Addr), Size);
+static Error registerEHFrameWrapper(ExecutorAddr Addr, uint64_t Size) {
+  return llvm::orc::registerEHFrameSection(Addr.toPtr<const void *>(), Size);
 }
 
-static Error deregisterEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
-  return llvm::orc::deregisterEHFrameSection(
-      jitTargetAddressToPointer<const void *>(Addr), Size);
+static Error deregisterEHFrameWrapper(ExecutorAddr Addr, uint64_t Size) {
+  return llvm::orc::deregisterEHFrameSection(Addr.toPtr<const void *>(), Size);
 }
 
 extern "C" orc::shared::detail::CWrapperFunctionResult

@@ -85,7 +85,7 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 
 // -----
 
-// expected-error @+1 {{requires attribute 'type'}}
+// expected-error @+1 {{requires attribute 'global_type'}}
 "llvm.mlir.global"() ({}) {sym_name = "foo", constant, value = 42 : i64} : () -> ()
 
 // -----
@@ -96,12 +96,12 @@ llvm.mlir.global internal constant @constant(37.0) : !llvm.label
 // -----
 
 // expected-error @+1 {{'addr_space' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
-"llvm.mlir.global"() ({}) {sym_name = "foo", type = i64, value = 42 : i64, addr_space = -1 : i32, linkage = #llvm.linkage<private>} : () -> ()
+"llvm.mlir.global"() ({}) {sym_name = "foo", global_type = i64, value = 42 : i64, addr_space = -1 : i32, linkage = #llvm.linkage<private>} : () -> ()
 
 // -----
 
 // expected-error @+1 {{'addr_space' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
-"llvm.mlir.global"() ({}) {sym_name = "foo", type = i64, value = 42 : i64, addr_space = 1.0 : f32, linkage = #llvm.linkage<private>} : () -> ()
+"llvm.mlir.global"() ({}) {sym_name = "foo", global_type = i64, value = 42 : i64, addr_space = 1.0 : f32, linkage = #llvm.linkage<private>} : () -> ()
 
 // -----
 
@@ -209,3 +209,21 @@ func @mismatch_addr_space() {
   // expected-error @+1 {{op the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64, 4>
 }
+
+// -----
+
+llvm.func @ctor() {
+  llvm.return
+}
+
+// CHECK: llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors { ctors = [@ctor], priorities = [0 : i32]}
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// CHECK: llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}

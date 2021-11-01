@@ -121,6 +121,7 @@ struct Configuration {
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupLiterals = true;
+  bool omitDebugInfo = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
@@ -173,6 +174,8 @@ struct Configuration {
   SymbolPatterns unexportedSymbols;
 
   bool zeroModTime = false;
+
+  llvm::StringRef osoPrefix;
 
   llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
 

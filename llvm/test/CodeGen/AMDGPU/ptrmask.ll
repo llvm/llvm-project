@@ -50,8 +50,7 @@ define i8 addrspace(1)* @v_ptrmask_global_variable_i32(i8 addrspace(1)* %ptr, i3
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %masked = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i32(i8 addrspace(1)* %ptr, i32 %mask)
   ret i8 addrspace(1)* %masked

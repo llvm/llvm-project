@@ -14,6 +14,12 @@
 #ifndef FORTRAN_DIALECT_FIR_DIALECT
 #define FORTRAN_DIALECT_FIR_DIALECT
 
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+
 def fir_Dialect : Dialect {
   let name = "fir";
   let cppNamespace = "::fir";

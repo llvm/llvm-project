@@ -195,8 +195,17 @@ class FuncOp:
           # Coerce return values, add ReturnOp and rewrite func type.
           if return_values is None:
             return_values = []
+          elif isinstance(return_values, tuple):
+            return_values = list(return_values)
           elif isinstance(return_values, Value):
+            # Returning a single value is fine, coerce it into a list.
             return_values = [return_values]
+          elif isinstance(return_values, OpView):
+            # Returning a single operation is fine, coerce its results a list.
+            return_values = return_values.operation.results
+          elif isinstance(return_values, Operation):
+            # Returning a single operation is fine, coerce its results a list.
+            return_values = return_values.results
           else:
             return_values = list(return_values)
           std.ReturnOp(return_values)

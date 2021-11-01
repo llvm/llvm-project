@@ -151,14 +151,6 @@ static std::string replaceAllSubstrs(std::string str, const std::string &match,
   return str;
 }
 
-// Escape a string using LLVM/MLIR encoding. E.g. foo"bar -> foo\22bar.
-static std::string escapeString(StringRef value) {
-  std::string ret;
-  llvm::raw_string_ostream os(ret);
-  llvm::printEscapedString(value, os);
-  return os.str();
-}
-
 // Returns whether the record has a value of the given name that can be returned
 // via getValueAsString.
 static inline bool hasStringAttribute(const Record &record,
@@ -2451,7 +2443,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     ERROR_IF_PRUNED(m, "getOperands", op);
     m->body() << "  return odsOperands;";
   }
-  std::string attr = op.getGetterName("operand_segment_sizes");
+  std::string attr = "operand_segment_sizes";
   std::string sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode, attr);
   generateNamedOperandGetters(op, adaptor,
                               /*isAdaptor=*/true, sizeAttrInit,
@@ -2514,16 +2506,18 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
       continue;
 
     // Generate the accessors for a variadic region.
-    if (region.isVariadic()) {
-      auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", region.name);
-      ERROR_IF_PRUNED(m, "Adaptor::" + region.name, op);
-      m->body() << formatv("  return odsRegions.drop_front({0});", i);
-      continue;
-    }
+    for (StringRef name : op.getGetterNames(region.name)) {
+      if (region.isVariadic()) {
+        auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", name);
+        ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
+        m->body() << formatv("  return odsRegions.drop_front({0});", i);
+        continue;
+      }
 
-    auto *m = adaptor.addMethodAndPrune("::mlir::Region &", region.name);
-    ERROR_IF_PRUNED(m, "Adaptor::" + region.name, op);
-    m->body() << formatv("  return *odsRegions[{0}];", i);
+      auto *m = adaptor.addMethodAndPrune("::mlir::Region &", name);
+      ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
+      m->body() << formatv("  return *odsRegions[{0}];", i);
+    }
   }
 
   // Add verification function.

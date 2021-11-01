@@ -3000,8 +3000,6 @@ public:
             }
           }
 
-          // Cast to output type.
-
           rewriter.create<linalg::YieldOp>(loc, poolVal);
         });
 

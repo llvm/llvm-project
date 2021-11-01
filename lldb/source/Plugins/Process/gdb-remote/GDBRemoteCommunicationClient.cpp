@@ -355,7 +355,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
     // configuration of the transport before attaching/launching the process.
     m_qSupported_response = response.GetStringRef().str();
 
-    for (llvm::StringRef x : llvm::Split(response.GetStringRef(), ';')) {
+    for (llvm::StringRef x : llvm::split(response.GetStringRef(), ';')) {
       if (x == "qXfer:auxv:read+")
         m_supports_qXfer_auxv_read = eLazyBoolYes;
       else if (x == "qXfer:libraries-svr4:read+")
@@ -970,26 +970,21 @@ llvm::VersionTuple GDBRemoteCommunicationClient::GetMacCatalystVersion() {
   return m_maccatalyst_version;
 }
 
-bool GDBRemoteCommunicationClient::GetOSBuildString(std::string &s) {
+llvm::Optional<std::string> GDBRemoteCommunicationClient::GetOSBuildString() {
   if (GetHostInfo()) {
-    if (!m_os_build.empty()) {
-      s = m_os_build;
-      return true;
-    }
+    if (!m_os_build.empty())
+      return m_os_build;
   }
-  s.clear();
-  return false;
+  return llvm::None;
 }
 
-bool GDBRemoteCommunicationClient::GetOSKernelDescription(std::string &s) {
+llvm::Optional<std::string>
+GDBRemoteCommunicationClient::GetOSKernelDescription() {
   if (GetHostInfo()) {
-    if (!m_os_kernel.empty()) {
-      s = m_os_kernel;
-      return true;
-    }
+    if (!m_os_kernel.empty())
+      return m_os_kernel;
   }
-  s.clear();
-  return false;
+  return llvm::None;
 }
 
 bool GDBRemoteCommunicationClient::GetHostname(std::string &s) {
@@ -1543,17 +1538,17 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
                    region_info.GetRange().IsValid()) {
           saw_permissions = true;
           if (region_info.GetRange().Contains(addr)) {
-            if (value.find('r') != llvm::StringRef::npos)
+            if (value.contains('r'))
               region_info.SetReadable(MemoryRegionInfo::eYes);
             else
               region_info.SetReadable(MemoryRegionInfo::eNo);
 
-            if (value.find('w') != llvm::StringRef::npos)
+            if (value.contains('w'))
               region_info.SetWritable(MemoryRegionInfo::eYes);
             else
               region_info.SetWritable(MemoryRegionInfo::eNo);
 
-            if (value.find('x') != llvm::StringRef::npos)
+            if (value.contains('x'))
               region_info.SetExecutable(MemoryRegionInfo::eYes);
             else
               region_info.SetExecutable(MemoryRegionInfo::eNo);
@@ -1609,7 +1604,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           error.SetErrorString(error_string.c_str());
         } else if (name.equals("dirty-pages")) {
           std::vector<addr_t> dirty_page_list;
-          for (llvm::StringRef x : llvm::Split(value, ',')) {
+          for (llvm::StringRef x : llvm::split(value, ',')) {
             addr_t page;
             x.consume_front("0x");
             if (llvm::to_integer(x, page, 16))

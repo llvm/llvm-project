@@ -4670,8 +4670,7 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, v6, 0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s1, 0x80000000, v6, s1
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result
@@ -4790,14 +4789,13 @@ define amdgpu_ps i64 @s_saddsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_add_u32 s4, s0, s2
 ; GFX11-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    s_and_b32 s5, s5, 1
 ; GFX11-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX11-NEXT:    s_addc_u32 s5, s1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, s[4:5], s[0:1]
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s1, s[2:3], 0
 ; GFX11-NEXT:    s_ashr_i32 s2, s5, 31
-; GFX11-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX11-NEXT:    s_xor_b32 s3, s1, s0
 ; GFX11-NEXT:    s_add_u32 s0, s2, 0
 ; GFX11-NEXT:    s_cselect_b32 s1, 1, 0
@@ -4886,8 +4884,7 @@ define amdgpu_ps <2 x float> @saddsat_i64_sv(i64 inreg %lhs, i64 %rhs) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, v4, 0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s1, 0x80000000, v4, s1
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   %cast = bitcast i64 %result to <2 x float>
@@ -4967,8 +4964,7 @@ define amdgpu_ps <2 x float> @saddsat_i64_vs(i64 %lhs, i64 inreg %rhs) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, v4, 0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, s0, 0x80000000, v4, s0
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s1, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   %cast = bitcast i64 %result to <2 x float>
@@ -5099,11 +5095,9 @@ define <2 x i64> @v_saddsat_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GFX11-NEXT:    v_add_co_u32 v2, s3, v0, 0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s3, 0x80000000, v0, s3
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v8, v1, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v8, v1 :: v_dual_cndmask_b32 v1, v9, v4
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s2, s1
-; GFX11-NEXT:    v_cndmask_b32_e32 v2, v10, v2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v3, v11, v3, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v2, v10, v2 :: v_dual_cndmask_b32 v3, v11, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %lhs, <2 x i64> %rhs)
   ret <2 x i64> %result
@@ -5320,13 +5314,12 @@ define amdgpu_ps <2 x i64> @s_saddsat_v2i64(<2 x i64> inreg %lhs, <2 x i64> inre
 ; GFX11-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s4, s[4:5], 0
 ; GFX11-NEXT:    s_and_b32 s9, s9, 1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s8
-; GFX11-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX11-NEXT:    s_brev_b32 s10, 1
+; GFX11-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX11-NEXT:    s_addc_u32 s9, s1, s5
+; GFX11-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s9
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, s[8:9], s[0:1]
 ; GFX11-NEXT:    s_ashr_i32 s1, s9, 31
-; GFX11-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX11-NEXT:    s_xor_b32 s8, s4, s0
 ; GFX11-NEXT:    s_add_u32 s0, s1, 0
 ; GFX11-NEXT:    s_cselect_b32 s4, 1, 0
@@ -5668,8 +5661,8 @@ define amdgpu_ps i128 @s_saddsat_i128(i128 inreg %lhs, i128 inreg %rhs) {
 ; GFX11-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX11-NEXT:    s_and_b32 s1, s1, 1
 ; GFX11-NEXT:    v_xor_b32_e32 v0, v1, v0
-; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s4
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s1, s3, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -6894,8 +6887,8 @@ define amdgpu_ps <2 x i128> @s_saddsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX11-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX11-NEXT:    s_and_b32 s1, s1, 1
 ; GFX11-NEXT:    v_xor_b32_e32 v0, v1, v0
-; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s8
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s1, s3, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0

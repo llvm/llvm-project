@@ -887,8 +887,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_1(i8* %p) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:1 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
@@ -928,8 +927,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(i8* %p) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:2047 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
@@ -969,8 +967,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(i8* %p) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0
@@ -1182,8 +1179,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(i8* %p) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_load_u8 v0, v[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v0

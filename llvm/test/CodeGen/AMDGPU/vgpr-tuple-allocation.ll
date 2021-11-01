@@ -78,10 +78,8 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX11-NEXT: scratch_store_b32 off, v43, s33 offset:4 ; 4-byte Folded Spill
 ; GFX11-NEXT: scratch_store_b32 off, v44, s33         ; 4-byte Folded Spill
 
-; GFX11: v_mov_b32_e32 v36, v16
-; GFX11-NEXT: v_mov_b32_e32 v35, v15
-; GFX11-NEXT: v_mov_b32_e32 v34, v14
-; GFX11-NEXT: v_mov_b32_e32 v33, v13
+; GFX11: v_dual_mov_b32 v36, v16 :: v_dual_mov_b32 v35, v15
+; GFX11-NEXT: v_dual_mov_b32 v34, v14 :: v_dual_mov_b32 v33, v13
 ; GFX11-NEXT: v_mov_b32_e32 v32, v12
 
 ; GFX11: ;;#ASMSTART
@@ -204,11 +202,9 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX11-NEXT: s_getpc_b64 s[0:1]
 ; GFX11-NEXT: s_add_u32 s0, s0, extern_func@gotpcrel32@lo+4
 ; GFX11-NEXT: s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12
-; GFX11-NEXT: v_mov_b32_e32 v41, v16
+; GFX11-NEXT: v_dual_mov_b32 v41, v16 :: v_dual_mov_b32 v42, v15
 ; GFX11: s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT: v_mov_b32_e32 v42, v15
-; GFX11-NEXT: v_mov_b32_e32 v43, v14
-; GFX11-NEXT: v_mov_b32_e32 v44, v13
+; GFX11-NEXT: v_dual_mov_b32 v43, v14 :: v_dual_mov_b32 v44, v13
 ; GFX11-NEXT: v_mov_b32_e32 v45, v12
 ; GFX11-NEXT: s_waitcnt vmcnt(0)
 ; GFX11-NEXT: global_store_b128 v[0:1], v[0:3], off

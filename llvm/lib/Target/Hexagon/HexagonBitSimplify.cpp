@@ -1305,8 +1305,7 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
     return false;
   bool Changed = false;
 
-  for (auto I = B.begin(), E = B.end(), NextI = I; I != E; ++I) {
-    NextI = std::next(I);
+  for (auto I = B.begin(), E = B.end(); I != E; ++I) {
     MachineInstr *MI = &*I;
 
     if (MI->getOpcode() == TargetOpcode::COPY)
@@ -1598,9 +1597,7 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
   bool Changed = false;
   RegisterSet Defs;
 
-  for (auto I = B.begin(), E = B.end(), NextI = I; I != E;
-       ++I, AVB.insert(Defs)) {
-    NextI = std::next(I);
+  for (auto I = B.begin(), E = B.end(); I != E; ++I, AVB.insert(Defs)) {
     Defs.clear();
     HBS::getInstrDefs(*I, Defs);
 
@@ -3252,7 +3249,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     auto LoopInpEq = [G] (const PhiInfo &P) -> bool {
       return G.Out.Reg == P.LR.Reg;
     };
-    if (llvm::find_if(Phis, LoopInpEq) == Phis.end())
+    if (llvm::none_of(Phis, LoopInpEq))
       continue;
 
     G.Inp.Reg = Inputs.find_first();

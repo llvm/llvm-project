@@ -37,7 +37,7 @@ class BreakpointRange:
     """
 
     def __init__(self, expression: str, path: str, range_from: int, range_to: int,
-                 values: list, hit_count: int):
+                 values: list, hit_count: int, finish_on_remove: bool):
         self.expression = expression
         self.path = path
         self.range_from = range_from
@@ -45,6 +45,7 @@ class BreakpointRange:
         self.conditional_values = values
         self.max_hit_count = hit_count
         self.current_hit_count = 0
+        self.finish_on_remove = finish_on_remove
 
     def has_conditions(self):
         return self.expression != None
@@ -91,10 +92,23 @@ class ConditionalController(DebuggerControllerBase):
                   lc.from_line,
                   lc.to_line,
                   lc.values,
-                  lc.hit_count)
+                  lc.hit_count,
+                  False)
                 self._bp_ranges.append(bpr)
         except KeyError:
             raise DebuggerException('Missing DexLimitSteps commands, cannot conditionally step.')
+        if 'DexFinishTest' in commands:
+            finish_commands = commands['DexFinishTest']
+            for ic in finish_commands:
+                bpr = BreakpointRange(
+                  ic.expression,
+                  ic.path,
+                  ic.on_line,
+                  ic.on_line,
+                  ic.values,
+                  ic.hit_count + 1,
+                  True)
+                self._bp_ranges.append(bpr)
 
     def _set_leading_bps(self):
         # Set a leading breakpoint for each BreakpointRange, building a
@@ -125,6 +139,9 @@ class ConditionalController(DebuggerControllerBase):
 
         self.debugger.launch()
         time.sleep(self._pause_between_steps)
+
+        exit_desired = False
+
         while not self.debugger.is_finished:
             while self.debugger.is_running:
                 pass
@@ -147,6 +164,8 @@ class ConditionalController(DebuggerControllerBase):
 
                 bpr.add_hit()
                 if bpr.should_be_removed():
+                    if bpr.finish_on_remove:
+                        exit_desired = True
                     bp_to_delete.append(bp_id)
                     del self._leading_bp_handles[bp_id]
                 # Add a range of trailing breakpoints covering the lines
@@ -160,5 +179,7 @@ class ConditionalController(DebuggerControllerBase):
             for bp_id in bp_to_delete:
                 self.debugger.delete_breakpoint(bp_id)
 
+            if exit_desired:
+                break
             self.debugger.go()
             time.sleep(self._pause_between_steps)

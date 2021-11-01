@@ -403,8 +403,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
 
 static bool isOutlinedFunction(StringRef CalleeName) {
   // Check whether it's from hot-cold func split or coro split.
-  return CalleeName.find(".resume") != StringRef::npos ||
-         CalleeName.find(".cold") != StringRef::npos;
+  return CalleeName.contains(".resume") || CalleeName.contains(".cold");
 }
 
 StringRef ProfileGeneratorBase::getCalleeNameForOffset(uint64_t TargetOffset) {
@@ -658,16 +657,17 @@ void CSProfileGenerator::postProcessProfiles() {
   if (EnableCSPreInliner) {
     CSPreInliner(ProfileMap, *Binary, HotCountThreshold, ColdCountThreshold)
         .run();
+    // Turn off the profile merger by default unless it is explicitly enabled.
+    if (!CSProfMergeColdContext.getNumOccurrences())
+      CSProfMergeColdContext = false;
   }
 
-  // Trim and merge cold context profile using cold threshold above. By default,
-  // we skip such merging and trimming when preinliner is on.
-  if (!EnableCSPreInliner || CSProfTrimColdContext.getNumOccurrences() ||
-      CSProfMergeColdContext.getNumOccurrences()) {
+  // Trim and merge cold context profile using cold threshold above. 
+  if (CSProfTrimColdContext || CSProfMergeColdContext) {
     SampleContextTrimmer(ProfileMap)
         .trimAndMergeColdContextProfiles(
             HotCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
-            CSProfMaxColdContextDepth);
+            CSProfMaxColdContextDepth, EnableCSPreInliner);
   }
 }
 

@@ -41,7 +41,7 @@ public:
 
   void addFile(InputFile *file);
 
-  void addCombinedLTOObject();
+  void compileBitcodeFiles();
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
 

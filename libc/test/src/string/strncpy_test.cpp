@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/string/strncpy.h"
-#include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 

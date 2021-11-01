@@ -603,7 +603,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
       auto fArgs = F->getFunctionType()->params();
       Type *Tys[] = {fArgs[0], fArgs[1]};
-      if (Name.find("lane") == StringRef::npos)
+      if (!Name.contains("lane"))
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           StoreInts[fArgs.size() - 3], Tys);
       else

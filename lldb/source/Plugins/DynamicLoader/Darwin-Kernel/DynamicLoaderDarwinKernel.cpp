@@ -510,8 +510,8 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
       m_kext_summary_header(), m_known_kexts(), m_mutex(),
       m_break_id(LLDB_INVALID_BREAK_ID) {
   Status error;
-  PlatformSP platform_sp(
-      Platform::Create(PlatformDarwinKernel::GetPluginNameStatic(), error));
+  PlatformSP platform_sp(Platform::Create(
+      ConstString(PlatformDarwinKernel::GetPluginNameStatic()), error));
   if (platform_sp.get())
     process->GetTarget().SetPlatform(platform_sp);
 }
@@ -1548,12 +1548,7 @@ void DynamicLoaderDarwinKernel::DebuggerInitialize(
   }
 }
 
-lldb_private::ConstString DynamicLoaderDarwinKernel::GetPluginNameStatic() {
-  static ConstString g_name("darwin-kernel");
-  return g_name;
-}
-
-const char *DynamicLoaderDarwinKernel::GetPluginDescriptionStatic() {
+llvm::StringRef DynamicLoaderDarwinKernel::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library loads/unloads "
          "in the MacOSX kernel.";
 }

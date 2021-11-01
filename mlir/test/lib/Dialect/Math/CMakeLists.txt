@@ -11,4 +11,5 @@ add_mlir_library(MLIRMathTestPasses
   MLIRPass
   MLIRTransformUtils
   MLIRVector
+  MLIRX86Vector
   )

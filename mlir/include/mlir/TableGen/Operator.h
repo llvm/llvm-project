@@ -138,6 +138,9 @@ public:
 
   // Op attribute accessors.
   NamedAttribute &getAttribute(int index) { return attributes[index]; }
+  const NamedAttribute &getAttribute(int index) const {
+    return attributes[index];
+  }
 
   // Op operand iterators.
   value_iterator operand_begin();

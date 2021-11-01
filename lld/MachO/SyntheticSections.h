@@ -345,6 +345,7 @@ public:
   ExportSection();
   void finalizeContents() override;
   uint64_t getRawSize() const override { return size; }
+  bool isNeeded() const override { return size; }
   void writeTo(uint8_t *buf) const override;
 
   bool hasWeakSymbol = false;
@@ -476,6 +477,8 @@ public:
 // The code signature comes at the very end of the linked output file.
 class CodeSignatureSection final : public LinkEditSection {
 public:
+  // NOTE: These values are duplicated in llvm-objcopy's MachO/Object.h file
+  // and any changes here, should be repeated there.
   static constexpr uint8_t blockSizeShift = 12;
   static constexpr size_t blockSize = (1 << blockSizeShift); // 4 KiB
   static constexpr size_t hashSize = 256 / 8;
@@ -560,16 +563,16 @@ public:
            !literal8Map.empty();
   }
 
-  uint64_t getLiteral16Offset(const uint8_t *buf) const {
+  uint64_t getLiteral16Offset(uintptr_t buf) const {
     return literal16Map.at(*reinterpret_cast<const UInt128 *>(buf)) * 16;
   }
 
-  uint64_t getLiteral8Offset(const uint8_t *buf) const {
+  uint64_t getLiteral8Offset(uintptr_t buf) const {
     return literal16Map.size() * 16 +
            literal8Map.at(*reinterpret_cast<const uint64_t *>(buf)) * 8;
   }
 
-  uint64_t getLiteral4Offset(const uint8_t *buf) const {
+  uint64_t getLiteral4Offset(uintptr_t buf) const {
     return literal16Map.size() * 16 + literal8Map.size() * 8 +
            literal4Map.at(*reinterpret_cast<const uint32_t *>(buf)) * 4;
   }

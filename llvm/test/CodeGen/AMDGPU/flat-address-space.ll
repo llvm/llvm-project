@@ -1,17 +1,18 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck -check-prefixes=CHECK,CIVI %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,CIVI-HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX10PLUS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX10PLUS %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck -check-prefixes=CHECK,CIVI,CIVI910 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,CIVI910 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,CIVI-HSA,CIVI910 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX9,CIVI910 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX10PLUS,CIVI910 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX10PLUS,GFX11 %s
 
 ; CHECK-LABEL: {{^}}store_flat_i32:
 ; CHECK-DAG: s_load_{{dwordx2|b64}} s{{\[}}[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],
 ; CHECK-DAG: s_load_{{dword|b32}} s[[SDATA:[0-9]+]],
 ; CHECK: s_waitcnt lgkmcnt(0)
 ; CHECK-DAG: v_mov_b32_e32 v[[DATA:[0-9]+]], s[[SDATA]]
-; CHECK-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], s[[LO_SREG]]
-; CHECK-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], s[[HI_SREG]]
+; CIVI910-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], s[[LO_SREG]]
+; CIVI910-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], s[[HI_SREG]]
+; GFX11-DAG: v_dual_mov_b32 v[[LO_VREG:[0-9]+]], s[[LO_SREG]] :: v_dual_mov_b32 v[[HI_VREG:[0-9]+]], s[[HI_SREG]]
 ; CHECK: flat_store_{{dword|b32}} v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}, v[[DATA]]
 define amdgpu_kernel void @store_flat_i32(i32 addrspace(1)* %gptr, i32 %x) #0 {
   %fptr = addrspacecast i32 addrspace(1)* %gptr to i32*

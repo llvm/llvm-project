@@ -443,7 +443,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       DeclareOpInterfaceMethods<BranchOpInterface>,
                       Terminator]> {
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-                   Variadic<LLVM_Type>:$operands,
+                   Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands);
   let results = (outs Variadic<LLVM_Type>);
@@ -1006,7 +1006,7 @@ def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
   let arguments = (ins
-    TypeAttr:$type,
+    TypeAttr:$global_type,
     UnitAttr:$constant,
     StrAttr:$sym_name,
     Linkage:$linkage,
@@ -1128,7 +1128,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   let extraClassDeclaration = [{
     /// Return the LLVM type of the global.
     Type getType() {
-      return type();
+      return getGlobalType();
     }
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() {
@@ -1151,6 +1151,66 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   let printer = "printGlobalOp(p, *this);";
   let parser = "return parseGlobalOp(parser, result);";
   let verifier = "return ::verify(*this);";
+}
+
+def LLVM_GlobalCtorsOp : LLVM_Op<"mlir.global_ctors", [
+                           DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins FlatSymbolRefArrayAttr
+                   : $ctors, I32ArrayAttr
+                   : $priorities);
+  let summary = "LLVM dialect global_ctors.";
+  let description = [{
+    Specifies a list of constructor functions and priorities. The functions
+    referenced by this array will be called in ascending order of priority (i.e.
+    lowest first) when the module is loaded. The order of functions with the
+    same priority is not defined. This operation is translated to LLVM's
+    global_ctors global variable. The initializer functions are run at load
+    time. The `data` field present in LLVM's global_ctors variable is not
+    modeled here.
+
+    Examples:
+
+    ```mlir
+    llvm.mlir.global_ctors {@ctor}
+
+    llvm.func @ctor() {
+      ...
+      llvm.return
+    }
+    ```
+
+  }];
+  let verifier = [{ return ::verify(*this); }];
+  let assemblyFormat = "attr-dict";
+}
+
+def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
+                           DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins
+    FlatSymbolRefArrayAttr:$dtors,
+    I32ArrayAttr:$priorities
+  );
+  let summary = "LLVM dialect global_dtors.";
+  let description = [{
+    Specifies a list of destructor functions and priorities. The functions
+    referenced by this array will be called in descending order of priority (i.e.
+    highest first) when the module is unloaded. The order of functions with the
+    same priority is not defined. This operation is translated to LLVM's
+    global_dtors global variable. The `data` field present in LLVM's
+    global_dtors variable is not modeled here.
+
+    Examples:
+
+    ```mlir
+    llvm.func @dtor() {
+      llvm.return
+    }
+    llvm.mlir.global_dtors {@dtor}
+    ```
+
+  }];
+  let verifier = [{ return ::verify(*this); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func",

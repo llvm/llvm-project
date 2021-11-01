@@ -154,7 +154,7 @@ void scanRelocations(InputChunk *chunk) {
       case R_WASM_MEMORY_ADDR_I64:
         // These relocation types are only present in the data section and
         // will be converted into code by `generateRelocationCode`.  This code
-        // requires the symbols to have GOT entires.
+        // requires the symbols to have GOT entries.
         if (requiresGOTAccess(sym))
           addGOTEntry(sym);
         break;

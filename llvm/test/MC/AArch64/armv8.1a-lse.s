@@ -6,6 +6,8 @@
 // RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mcpu=tsv110 -show-encoding < %s 2> %t | FileCheck %s
 // RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r -show-encoding < %s 2> %t | FileCheck %s
+// RUN: FileCheck -check-prefix=CHECK-ERROR < %t %s
   .text
 
   cas w0, w1, [x2]

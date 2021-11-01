@@ -130,8 +130,7 @@ define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 a
 ; GFX11-LABEL: global_store_2xi16_align2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 1
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 1
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
@@ -276,8 +275,7 @@ define amdgpu_kernel void @global_store_2xi16_align1(i16 addrspace(1)* %p, i16 a
 ; GFX11-LABEL: global_store_2xi16_align1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0x20001
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -403,8 +401,7 @@ define amdgpu_kernel void @global_store_2xi16_align4(i16 addrspace(1)* %p, i16 a
 ; GFX11-LABEL: global_store_2xi16_align4:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0x20001
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x20001
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm

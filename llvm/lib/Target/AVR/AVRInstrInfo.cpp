@@ -560,19 +560,19 @@ bool AVRInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   }
 }
 
-unsigned AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
-                                            MachineBasicBlock &NewDestBB,
-                                            const DebugLoc &DL,
-                                            int64_t BrOffset,
-                                            RegScavenger *RS) const {
+void AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                        MachineBasicBlock &NewDestBB,
+                                        MachineBasicBlock &RestoreBB,
+                                        const DebugLoc &DL, int64_t BrOffset,
+                                        RegScavenger *RS) const {
   // This method inserts a *direct* branch (JMP), despite its name.
   // LLVM calls this method to fixup unconditional branches; it never calls
   // insertBranch or some hypothetical "insertDirectBranch".
   // See lib/CodeGen/RegisterRelaxation.cpp for details.
   // We end up here when a jump is too long for a RJMP instruction.
-  auto &MI = *BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
+  BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
 
-  return getInstSizeInBytes(MI);
+  return;
 }
 
 } // end of namespace llvm

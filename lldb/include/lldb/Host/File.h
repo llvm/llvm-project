@@ -439,6 +439,7 @@ public:
   struct Options {
     llvm::Optional<unsigned int> BaudRate = llvm::None;
     llvm::Optional<Terminal::Parity> Parity = llvm::None;
+    llvm::Optional<Terminal::ParityCheck> ParityCheck = llvm::None;
     llvm::Optional<unsigned int> StopBits = llvm::None;
   };
 

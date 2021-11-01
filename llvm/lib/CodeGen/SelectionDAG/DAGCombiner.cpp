@@ -3319,11 +3319,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
 
     // Convert 0 - abs(x).
-    SDValue Result;
     if (N1->getOpcode() == ISD::ABS &&
-        !TLI.isOperationLegalOrCustom(ISD::ABS, VT) &&
-        TLI.expandABS(N1.getNode(), Result, DAG, true))
-      return Result;
+        !TLI.isOperationLegalOrCustom(ISD::ABS, VT))
+      if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
+        return Result;
 
     // Fold neg(splat(neg(x)) -> splat(x)
     if (VT.isVector()) {
@@ -5634,12 +5633,15 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
 
-  // Canonicalize xor as operand 0.
-  if (N1.getOpcode() == ISD::XOR)
+  // Canonicalize SRA as operand 1.
+  if (N0.getOpcode() == ISD::SRA)
     std::swap(N0, N1);
 
-  if (N0.getOpcode() != ISD::XOR || N1.getOpcode() != ISD::SRA ||
-      !N0.hasOneUse() || !N1.hasOneUse() ||
+  // xor/add with SMIN (signmask) are logically equivalent.
+  if (N0.getOpcode() != ISD::XOR && N0.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  if (N1.getOpcode() != ISD::SRA || !N0.hasOneUse() || !N1.hasOneUse() ||
       N0.getOperand(0) != N1.getOperand(0))
     return SDValue();
 
@@ -5651,6 +5653,7 @@ static SDValue foldAndToUsubsat(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // (i8 X ^ 128) & (i8 X s>> 7) --> usubsat X, 128
+  // (i8 X + 128) & (i8 X s>> 7) --> usubsat X, 128
   SDLoc DL(N);
   SDValue SignMask = DAG.getConstant(XorC->getAPIntValue(), DL, VT);
   return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0), SignMask);
@@ -13058,7 +13061,7 @@ static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
          N->getFlags().hasAllowContract();
 }
 
-// Return true if `N` can assume no infinities involved in it's computation.
+// Returns true if `N` can assume no infinities involved in its computation.
 static bool hasNoInfs(const TargetOptions &Options, SDValue N) {
   return Options.NoInfsFPMath || N.getNode()->getFlags().hasNoInfs();
 }
@@ -20502,9 +20505,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Extract->getOperand(0));
-  auto *ExtIdx = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
-  if (!Ld || Ld->getExtensionType() || !Ld->isSimple() ||
-      !ExtIdx)
+  if (!Ld || Ld->getExtensionType() || !Ld->isSimple())
     return SDValue();
 
   // Allow targets to opt-out.
@@ -20514,7 +20515,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   if (!VT.isByteSized())
     return SDValue();
 
-  unsigned Index = ExtIdx->getZExtValue();
+  unsigned Index = Extract->getConstantOperandVal(1);
   unsigned NumElts = VT.getVectorMinNumElements();
 
   // The definition of EXTRACT_SUBVECTOR states that the index must be a

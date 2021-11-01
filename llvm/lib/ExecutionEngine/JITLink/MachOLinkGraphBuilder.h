@@ -125,13 +125,12 @@ protected:
   /// given index is out of range, or if no symbol has been added for the given
   /// index.
   Expected<NormalizedSymbol &> findSymbolByIndex(uint64_t Index) {
-    if (Index >= IndexToSymbol.size())
-      return make_error<JITLinkError>("Symbol index out of range");
-    auto *Sym = IndexToSymbol[Index];
-    if (!Sym)
+    auto I = IndexToSymbol.find(Index);
+    if (I == IndexToSymbol.end())
       return make_error<JITLinkError>("No symbol at index " +
                                       formatv("{0:d}", Index));
-    return *Sym;
+    assert(I->second && "Null symbol at index");
+    return *I->second;
   }
 
   /// Returns the symbol with the highest address not greater than the search

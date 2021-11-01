@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-ar crs %t/foo.a %t/foo.o
-# RUN: not %lld -o /dev/null %t/main.o 2>&1 | \
+# RUN: not %lld --icf=all -o /dev/null %t/main.o 2>&1 | \
 # RUN:     FileCheck %s -DSYM=_foo -DFILENAME=%t/main.o
 # RUN: not %lld -o /dev/null %t/main.o %t/foo.a 2>&1 | \
 # RUN:     FileCheck %s -DSYM=_bar -DFILENAME='%t/foo.a(foo.o)'

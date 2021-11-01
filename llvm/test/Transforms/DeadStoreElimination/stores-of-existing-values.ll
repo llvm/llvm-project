@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
 
-; Test case for PR16520. The store in %if.then is dead, because the same value
+; Test case for PR16520. The store in %if.then is redundant, because the same value
 ; has been stored earlier to the same location.
 define void @test1_pr16520(i1 %b, i8* nocapture %r) {
 ; CHECK-LABEL: @test1_pr16520(
@@ -15,7 +15,6 @@ define void @test1_pr16520(i1 %b, i8* nocapture %r) {
 ; CHECK-NEXT:    store i8 1, i8* [[R:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i8 1, i8* [[R]], align 1
 ; CHECK-NEXT:    tail call void @fn_mayread_or_clobber()
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
@@ -42,8 +41,6 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 declare void @fn_mayread_or_clobber()
-
-
 declare void @fn_readonly() readonly
 
 define void @test2(i1 %b, i8* nocapture %r) {
@@ -58,7 +55,6 @@ define void @test2(i1 %b, i8* nocapture %r) {
 ; CHECK-NEXT:    tail call void @fn_readonly()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i8 1, i8* [[R]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -75,6 +71,39 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   store i8 1, i8* %r, align 1
+  ret void
+}
+
+; Make sure volatile stores are not removed.
+define void @test2_volatile(i1 %b, i8* nocapture %r) {
+; CHECK-LABEL: @test2_volatile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store volatile i8 1, i8* [[R:%.*]], align 1
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @fn_readonly()
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    tail call void @fn_readonly()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    store volatile i8 1, i8* [[R]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  store volatile i8 1, i8* %r, align 1
+  br i1 %b, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  tail call void @fn_readonly()
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  tail call void @fn_readonly()
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  store volatile i8 1, i8* %r, align 1
   ret void
 }
 
@@ -185,7 +214,6 @@ define void @test6(i32* noalias %P) {
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
@@ -220,7 +248,6 @@ define void @test7(i32* noalias %P) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -235,7 +262,7 @@ bb3:
 }
 
 ; Make sure the store in %bb3 won't be eliminated because it may be clobbered before.
-define void @test8(i32* noalias %P) {
+define void @test8(i32* %P) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
@@ -272,7 +299,6 @@ define void @test9(i32* noalias %P) {
 ; CHECK-NEXT:    call void @fn_mayread_or_clobber()
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -284,6 +310,211 @@ bb2:
   ret void
 bb3:
   store i32 0, i32* %P
+  ret void
+}
+
+; The store in bb3 can be eliminated, because the store in bb1 cannot alias it.
+define void @test10(i32* noalias %P, i32* %Q, i1 %c) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    store i32 10, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %P
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  store i32 10, i32* %Q
+  br label %bb3
+
+bb2:
+  ret void
+
+bb3:
+  store i32 0, i32* %P
+  ret void
+}
+
+define void @test11_smaller_later_store(i32* noalias %P, i32* %Q, i1 %c) {
+; CHECK-LABEL: @test11_smaller_later_store(
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[P]] to i8*
+; CHECK-NEXT:    store i8 0, i8* [[BC]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %P
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  br label %bb3
+
+bb2:
+  ret void
+
+bb3:
+  %bc = bitcast i32* %P to i8*
+  store i8 0, i8* %bc
+  ret void
+}
+
+define void @test11_smaller_earlier_store(i32* noalias %P, i32* %Q, i1 %c) {
+; CHECK-LABEL: @test11_smaller_earlier_store(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    store i8 0, i8* [[BC]], align 1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %bc = bitcast i32* %P to i8*
+  store i8 0, i8* %bc
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  br label %bb3
+
+bb2:
+  ret void
+
+bb3:
+  store i32 0, i32* %P
+  ret void
+}
+
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+
+define void @test12_memset_simple(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_simple(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 4
+  store i8 0, i8* %ptr.5
+  ret void
+}
+
+define void @test12_memset_other_store_in_between(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_other_store_in_between(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 8, i8* [[PTR_4]], align 1
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 5
+; CHECK-NEXT:    store i8 0, i8* [[PTR_5]], align 1
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 5
+  store i8 0, i8* %ptr.5
+  ret void
+}
+
+define void @test12_memset_other_store_in_between_partial_overlap(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_other_store_in_between_partial_overlap(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[PTR:%.*]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    [[BC_4:%.*]] = bitcast i8* [[PTR_4]] to i16*
+; CHECK-NEXT:    store i16 8, i16* [[BC_4]], align 2
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 5
+; CHECK-NEXT:    [[BC_5:%.*]] = bitcast i8* [[PTR_5]] to i16*
+; CHECK-NEXT:    store i16 0, i16* [[BC_5]], align 2
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  %bc.4 = bitcast i8* %ptr.4 to i16*
+  store i16 8, i16* %bc.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 5
+  %bc.5 = bitcast i8* %ptr.5 to i16*
+  store i16 0, i16* %bc.5
+  ret void
+}
+
+define void @test12_memset_later_store_exceeds_memset(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_later_store_exceeds_memset(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR:%.*]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, i8* [[PTR]], i64 4
+; CHECK-NEXT:    store i8 8, i8* [[PTR_4]], align 1
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, i8* [[PTR]], i64 8
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[PTR_5]] to i64*
+; CHECK-NEXT:    store i64 0, i64* [[BC]], align 8
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %ptr, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %ptr.5 = getelementptr i8, i8* %ptr, i64 8
+  %bc = bitcast i8* %ptr.5 to i64*
+  store i64 0, i64* %bc
+  ret void
+}
+
+define void @test12_memset_later_store_before_memset(i8* %ptr) {
+; CHECK-LABEL: @test12_memset_later_store_before_memset(
+; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[PTR_1]], i64 7
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[PTR]] to i64*
+; CHECK-NEXT:    store i64 0, i64* [[BC]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr.1 = getelementptr i8, i8* %ptr, i64 1
+  call void @llvm.memset.p0i8.i64(i8* %ptr.1, i8 0, i64 10, i1 false)
+  %ptr.4 = getelementptr i8, i8* %ptr, i64 4
+  store i8 8, i8* %ptr.4
+  %bc = bitcast i8* %ptr to i64*
+  store i64 0, i64* %bc
+  ret void
+}
+
+; The memset will be shortened and the store will not be redundant afterwards.
+; It cannot be eliminated.
+define void @test13_memset_shortened(i64* %ptr) {
+; CHECK-LABEL: @test13_memset_shortened(
+; CHECK-NEXT:    [[PTR_I8:%.*]] = bitcast i64* [[PTR:%.*]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[PTR_I8]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    store i64 0, i64* [[PTR]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr.i8 = bitcast i64* %ptr to i8*
+  call void @llvm.memset.p0i8.i64(i8* %ptr.i8, i8 0, i64 24, i1 false)
+  store i64 0, i64* %ptr
+  ret void
+}
+
+declare i8* @strcat(i8*, i8*) nounwind argmemonly
+
+define void @test14_strcat(i8* noalias %P, i8* noalias %Q) {
+; CHECK-LABEL: @test14_strcat(
+; CHECK-NEXT:    call i8* @strcat(i8* [[P:%.*]], i8* [[Q:%.*]])
+; CHECK-NEXT:    call i8* @strcat(i8* [[P]], i8* [[Q]])
+; CHECK-NEXT:    ret void
+;
+  %call1 = call i8* @strcat(i8* %P, i8* %Q)
+  ; FIXME: Eliminate the second strcat as a "store of existing value" for this particular case, where both strcat's are identical (same source, not just same dest).
+  %call2 = call i8* @strcat(i8* %P, i8* %Q)
   ret void
 }
 
@@ -301,7 +532,6 @@ define void @pr49927(i32* %q, i32* %p) {
   ret void
 }
 
-
 define void @pr50339(i8* nocapture readonly %0) {
 ; CHECK-LABEL: @pr50339(
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) [[TMP0:%.*]], i64 16, i1 false)
@@ -312,4 +542,21 @@ define void @pr50339(i8* nocapture readonly %0) {
   ; FIXME: Eliminate the second memcpy as a "store of existing value" for this particular case, where both memcpy's are identical (same source, not just same dest).
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), i8* noundef nonnull align 1 dereferenceable(16) %0, i64 16, i1 false)
   ret void
+}
+
+; Cannot remove the second memcpy as redundant store, because %src is modified
+; in between.
+define i8 @memset_optimized_access(i8* noalias %dst, i8* noalias %src) {
+; CHECK-LABEL: @memset_optimized_access(
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    store i8 99, i8* [[SRC]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[DST]], align 1
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC]], i64 16, i1 false)
+; CHECK-NEXT:    ret i8 [[L]]
+;
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 16, i1 false)
+  store i8 99, i8* %src
+  %l = load i8, i8* %dst
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 16, i1 false)
+  ret i8 %l
 }

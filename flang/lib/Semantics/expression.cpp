@@ -190,13 +190,14 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
     } else if (auto interface{context_.intrinsics().IsSpecificIntrinsicFunction(
-                   symbol.name().ToString())}) {
+                   symbol.name().ToString())};
+               interface && !interface->isRestrictedSpecific) {
       SpecificIntrinsic intrinsic{
           symbol.name().ToString(), std::move(*interface)};
       intrinsic.isRestrictedSpecific = interface->isRestrictedSpecific;
       return Expr<SomeType>{ProcedureDesignator{std::move(intrinsic)}};
     } else {
-      Say("'%s' is not a specific intrinsic procedure"_err_en_US,
+      Say("'%s' is not an unrestricted specific intrinsic procedure"_err_en_US,
           symbol.name());
     }
     return std::nullopt;
@@ -235,7 +236,7 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
       for (const auto &expr : ref.subscript()) {
         subscriptRank += expr.Rank();
       }
-      if (subscriptRank > 0) {
+      if (subscriptRank > 0) { // C919a
         Say("Subscripts of component '%s' of rank-%d derived type "
             "array have rank %d but must all be scalar"_err_en_US,
             symbol.name(), baseRank, subscriptRank);
@@ -292,7 +293,7 @@ MaybeExpr ExpressionAnalyzer::TopLevelChecks(DataRef &&dataRef) {
     int componentRank{symbol.Rank()};
     if (componentRank > 0) {
       int baseRank{component->base().Rank()};
-      if (baseRank > 0) {
+      if (baseRank > 0) { // C919a
         Say("Reference to whole rank-%d component '%%%s' of "
             "rank-%d array of derived type is not allowed"_err_en_US,
             componentRank, symbol.name(), baseRank);
@@ -936,7 +937,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
     } else if (baseExpr->Rank() == 0) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {
-          Say("'%s' is not an array"_err_en_US, symbol->name());
+          if (inDataStmtConstant_) {
+            // Better error for NULL(X) with a MOLD= argument
+            Say("'%s' must be an array or structure constructor if used with non-empty parentheses as a DATA statement constant"_err_en_US,
+                symbol->name());
+          } else {
+            Say("'%s' is not an array"_err_en_US, symbol->name());
+          }
           context_.SetError(*symbol);
         }
       }
@@ -972,8 +979,11 @@ static NamedEntity IgnoreAnySubscripts(Designator<SomeDerived> &&designator) {
 }
 
 // Components of parent derived types are explicitly represented as such.
-static std::optional<Component> CreateComponent(
+std::optional<Component> ExpressionAnalyzer::CreateComponent(
     DataRef &&base, const Symbol &component, const semantics::Scope &scope) {
+  if (IsAllocatableOrPointer(component) && base.Rank() > 0) { // C919b
+    Say("An allocatable or pointer component reference must be applied to a scalar base"_err_en_US);
+  }
   if (&component.owner() == &scope) {
     return Component{std::move(base), component};
   }
@@ -2018,8 +2028,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           continue;
         }
       }
-      if (semantics::CheckInterfaceForGeneric(
-              *procedure, localActuals, GetFoldingContext()) &&
+      if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+              GetFoldingContext(), false /* no integer conversions */) &&
           CheckCompatibleArguments(*procedure, localActuals)) {
         if ((procedure->IsElemental() && elemental) ||
             (!procedure->IsElemental() && nonElemental)) {
@@ -2943,6 +2953,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
+  auto restorer{common::ScopedSet(inDataStmtConstant_, true)};
   return ExprOrVariable(x, x.source);
 }
 

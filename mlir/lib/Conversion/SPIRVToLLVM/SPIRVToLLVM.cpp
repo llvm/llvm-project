@@ -218,7 +218,7 @@ static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
 }
 
 /// Utility for `spv.Load` and `spv.Store` conversion.
-static LogicalResult replaceWithLoadOrStore(Operation *op,
+static LogicalResult replaceWithLoadOrStore(Operation *op, ValueRange operands,
                                             ConversionPatternRewriter &rewriter,
                                             LLVMTypeConverter &typeConverter,
                                             unsigned alignment, bool isVolatile,
@@ -228,12 +228,14 @@ static LogicalResult replaceWithLoadOrStore(Operation *op,
     if (!dstType)
       return failure();
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-        loadOp, dstType, loadOp.ptr(), alignment, isVolatile, isNonTemporal);
+        loadOp, dstType, spirv::LoadOpAdaptor(operands).ptr(), alignment,
+        isVolatile, isNonTemporal);
     return success();
   }
   auto storeOp = cast<spirv::StoreOp>(op);
-  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, storeOp.value(),
-                                             storeOp.ptr(), alignment,
+  spirv::StoreOpAdaptor adaptor(operands);
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, adaptor.value(),
+                                             adaptor.ptr(), alignment,
                                              isVolatile, isNonTemporal);
   return success();
 }
@@ -308,7 +310,7 @@ public:
     if (!dstType)
       return failure();
     // To use GEP we need to add a first 0 index to go through the pointer.
-    auto indices = llvm::to_vector<4>(op.indices());
+    auto indices = llvm::to_vector<4>(adaptor.indices());
     Type indexType = op.indices().front().getType();
     auto llvmIndexType = typeConverter.convertType(indexType);
     if (!llvmIndexType)
@@ -316,7 +318,7 @@ public:
     Value zero = rewriter.create<LLVM::ConstantOp>(
         op.getLoc(), llvmIndexType, rewriter.getIntegerAttr(indexType, 0));
     indices.insert(indices.begin(), zero);
-    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, op.base_ptr(),
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, adaptor.base_ptr(),
                                              indices);
     return success();
   }
@@ -572,11 +574,11 @@ public:
       IntegerAttr value = op.indices()[0].cast<IntegerAttr>();
       Value index = createI32ConstantOf(loc, rewriter, value.getInt());
       rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
-          op, dstType, op.composite(), index);
+          op, dstType, adaptor.composite(), index);
       return success();
     }
     rewriter.replaceOpWithNewOp<LLVM::ExtractValueOp>(
-        op, dstType, op.composite(), op.indices());
+        op, dstType, adaptor.composite(), op.indices());
     return success();
   }
 };
@@ -602,11 +604,11 @@ public:
       IntegerAttr value = op.indices()[0].cast<IntegerAttr>();
       Value index = createI32ConstantOf(loc, rewriter, value.getInt());
       rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-          op, dstType, op.composite(), op.object(), index);
+          op, dstType, adaptor.composite(), adaptor.object(), index);
       return success();
     }
     rewriter.replaceOpWithNewOp<LLVM::InsertValueOp>(
-        op, dstType, op.composite(), op.object(), op.indices());
+        op, dstType, adaptor.composite(), adaptor.object(), op.indices());
     return success();
   }
 };
@@ -897,9 +899,10 @@ public:
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (!op.memory_access().hasValue()) {
-      return replaceWithLoadOrStore(
-          op, rewriter, this->typeConverter, /*alignment=*/0,
-          /*isVolatile=*/false, /*isNonTemporal=*/false);
+      return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
+                                    this->typeConverter, /*alignment=*/0,
+                                    /*isVolatile=*/false,
+                                    /*isNonTemporal=*/false);
     }
     auto memoryAccess = op.memory_access().getValue();
     switch (memoryAccess) {
@@ -911,8 +914,9 @@ public:
           memoryAccess == spirv::MemoryAccess::Aligned ? *op.alignment() : 0;
       bool isNonTemporal = memoryAccess == spirv::MemoryAccess::Nontemporal;
       bool isVolatile = memoryAccess == spirv::MemoryAccess::Volatile;
-      return replaceWithLoadOrStore(op, rewriter, this->typeConverter,
-                                    alignment, isVolatile, isNonTemporal);
+      return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
+                                    this->typeConverter, alignment, isVolatile,
+                                    isNonTemporal);
     }
     default:
       // There is no support of other memory access attributes.
@@ -1178,13 +1182,13 @@ public:
     Value extended;
     if (isUnsignedIntegerOrVector(op2Type)) {
       extended = rewriter.template create<LLVM::ZExtOp>(loc, dstType,
-                                                        operation.operand2());
+                                                        adaptor.operand2());
     } else {
       extended = rewriter.template create<LLVM::SExtOp>(loc, dstType,
-                                                        operation.operand2());
+                                                        adaptor.operand2());
     }
     Value result = rewriter.template create<LLVMOp>(
-        loc, dstType, operation.operand1(), extended);
+        loc, dstType, adaptor.operand1(), extended);
     rewriter.replaceOp(operation, result);
     return success();
   }
@@ -1268,7 +1272,7 @@ public:
       return success();
     }
     Value allocated = rewriter.create<LLVM::AllocaOp>(loc, dstType, size);
-    rewriter.create<LLVM::StoreOp>(loc, init, allocated);
+    rewriter.create<LLVM::StoreOp>(loc, adaptor.initializer(), allocated);
     rewriter.replaceOp(varOp, allocated);
     return success();
   }

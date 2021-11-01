@@ -152,7 +152,7 @@ static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
 }
 
 template <typename LoopTy>
-static Optional<TiledLinalgOp>
+static FailureOr<TiledLinalgOp>
 tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
                  const LinalgTilingOptions &options) {
   auto nLoops = op.getNumLoops();
@@ -160,13 +160,13 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   tileSizes = tileSizes.take_front(nLoops);
 
   if (llvm::all_of(tileSizes, isZero))
-    return llvm::None;
+    return failure();
 
   // 1. Build the tiled loop ranges.
   auto allShapeSizes = op.createFlatListOfOperandDims(b, op.getLoc());
   AffineMap shapeSizesToLoopsMap = op.getShapesToLoopsMap();
   if (!shapeSizesToLoopsMap)
-    return llvm::None;
+    return failure();
 
   SmallVector<Range, 4> loopRanges;
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
@@ -291,13 +291,13 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
 }
 
 template <typename LoopTy>
-Optional<TiledLinalgOp> static tileLinalgOpImpl(
+FailureOr<TiledLinalgOp> static tileLinalgOpImpl(
     OpBuilder &b, LinalgOp op, const LinalgTilingOptions &options) {
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
 
   if (!options.tileSizeComputationFunction)
-    return llvm::None;
+    return failure();
 
   // Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of
@@ -313,7 +313,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   return tileLinalgOpImpl<LoopTy>(b, op, tileSizeVector, options);
 }
 
-Optional<TiledLinalgOp>
+FailureOr<TiledLinalgOp>
 mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
                            const LinalgTilingOptions &options) {
   switch (options.loopType) {
@@ -325,7 +325,7 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
     return tileLinalgOpImpl<linalg::TiledLoopOp>(b, op, options);
   default:;
   }
-  return llvm::None;
+  return failure();
 }
 
 /// Generate a loop nest around a given PadTensorOp (for tiling). `newPadOp`

@@ -7,9 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncludeCleaner.h"
+#include "Config.h"
+#include "Protocol.h"
+#include "SourceCode.h"
 #include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 namespace clangd {
@@ -36,6 +43,13 @@ public:
 
   bool VisitTagType(TagType *TT) {
     add(TT->getDecl());
+    return true;
+  }
+
+  bool VisitFunctionDecl(FunctionDecl *FD) {
+    // Function definition will require redeclarations to be included.
+    if (FD->isThisDeclarationADefinition())
+      add(FD);
     return true;
   }
 
@@ -67,16 +81,23 @@ public:
   }
 
   bool TraverseType(QualType T) {
-    if (isNew(T.getTypePtrOrNull())) { // don't care about quals
+    if (isNew(T.getTypePtrOrNull())) // don't care about quals
       Base::TraverseType(T);
-    }
     return true;
   }
 
   bool VisitUsingDecl(UsingDecl *D) {
-    for (const auto *Shadow : D->shadows()) {
+    for (const auto *Shadow : D->shadows())
       add(Shadow->getTargetDecl());
-    }
+    return true;
+  }
+
+  // Enums may be usefully forward-declared as *complete* types by specifying
+  // an underlying type. In this case, the definition should see the declaration
+  // so they can be checked for compatibility.
+  bool VisitEnumDecl(EnumDecl *D) {
+    if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
+      add(D);
     return true;
   }
 
@@ -84,12 +105,10 @@ private:
   using Base = RecursiveASTVisitor<ReferencedLocationCrawler>;
 
   void add(const Decl *D) {
-    if (!D || !isNew(D->getCanonicalDecl())) {
+    if (!D || !isNew(D->getCanonicalDecl()))
       return;
-    }
-    for (const Decl *Redecl : D->redecls()) {
+    for (const Decl *Redecl : D->redecls())
       Result.insert(Redecl->getLocation());
-    }
   }
 
   bool isNew(const void *P) { return P && Visited.insert(P).second; }
@@ -121,17 +140,59 @@ struct ReferencedFiles {
     if (!Macros.insert(FID).second)
       return;
     const auto &Exp = SM.getSLocEntry(FID).getExpansion();
-    // For token pasting operator in macros, spelling and expansion locations
-    // can be within a temporary buffer that Clang creates (scratch space or
-    // ScratchBuffer). That is not a real file we can include.
-    if (!SM.isWrittenInScratchSpace(Exp.getSpellingLoc()))
-      add(Exp.getSpellingLoc());
-    if (!SM.isWrittenInScratchSpace(Exp.getExpansionLocStart()))
-      add(Exp.getExpansionLocStart());
-    if (!SM.isWrittenInScratchSpace(Exp.getExpansionLocEnd()))
-      add(Exp.getExpansionLocEnd());
+    add(Exp.getSpellingLoc());
+    add(Exp.getExpansionLocStart());
+    add(Exp.getExpansionLocEnd());
   }
 };
+
+// Returns the range starting at '#' and ending at EOL. Escaped newlines are not
+// handled.
+clangd::Range getDiagnosticRange(llvm::StringRef Code, unsigned HashOffset) {
+  clangd::Range Result;
+  Result.end = Result.start = offsetToPosition(Code, HashOffset);
+
+  // Span the warning until the EOL or EOF.
+  Result.end.character +=
+      lspLength(Code.drop_front(HashOffset).take_until([](char C) {
+        return C == '\n' || C == '\r';
+      }));
+  return Result;
+}
+
+// Finds locations of macros referenced from within the main file. That includes
+// references that were not yet expanded, e.g `BAR` in `#define FOO BAR`.
+void findReferencedMacros(ParsedAST &AST, ReferencedLocations &Result) {
+  trace::Span Tracer("IncludeCleaner::findReferencedMacros");
+  auto &SM = AST.getSourceManager();
+  auto &PP = AST.getPreprocessor();
+  // FIXME(kirillbobyrev): The macros from the main file are collected in
+  // ParsedAST's MainFileMacros. However, we can't use it here because it
+  // doesn't handle macro references that were not expanded, e.g. in macro
+  // definitions or preprocessor-disabled sections.
+  //
+  // Extending MainFileMacros to collect missing references and switching to
+  // this mechanism (as opposed to iterating through all tokens) will improve
+  // the performance of findReferencedMacros and also improve other features
+  // relying on MainFileMacros.
+  for (const syntax::Token &Tok :
+       AST.getTokens().spelledTokens(SM.getMainFileID())) {
+    auto Macro = locateMacroAt(Tok, PP);
+    if (!Macro)
+      continue;
+    auto Loc = Macro->Info->getDefinitionLoc();
+    if (Loc.isValid())
+      Result.insert(Loc);
+  }
+}
+
+// FIXME(kirillbobyrev): We currently do not support the umbrella headers.
+// Standard Library headers are typically umbrella headers, and system headers
+// are likely to be the Standard Library headers. Until we have a good support
+// for umbrella headers and Standard Library headers, don't warn about them.
+bool mayConsiderUnused(const Inclusion *Inc) {
+  return Inc->Written.front() != '<';
+}
 
 } // namespace
 
@@ -139,7 +200,7 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST) {
   ReferencedLocations Result;
   ReferencedLocationCrawler Crawler(Result);
   Crawler.TraverseAST(AST.getASTContext());
-  // FIXME(kirillbobyrev): Handle macros.
+  findReferencedMacros(AST, Result);
   return Result;
 }
 
@@ -162,24 +223,31 @@ findReferencedFiles(const llvm::DenseSet<SourceLocation> &Locs,
 }
 
 std::vector<const Inclusion *>
-getUnused(const IncludeStructure &Structure,
+getUnused(const IncludeStructure &Includes,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles) {
   std::vector<const Inclusion *> Unused;
-  for (const Inclusion &MFI : Structure.MainFileIncludes) {
+  for (const Inclusion &MFI : Includes.MainFileIncludes) {
     // FIXME: Skip includes that are not self-contained.
     if (!MFI.HeaderID) {
       elog("File {0} not found.", MFI.Written);
       continue;
     }
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
-    if (!ReferencedFiles.contains(IncludeID)) {
+    if (!ReferencedFiles.contains(IncludeID))
       Unused.push_back(&MFI);
-    }
     dlog("{0} is {1}", MFI.Written,
          ReferencedFiles.contains(IncludeID) ? "USED" : "UNUSED");
   }
   return Unused;
 }
+
+#ifndef NDEBUG
+// Is FID a <built-in>, <scratch space> etc?
+static bool isSpecialBuffer(FileID FID, const SourceManager &SM) {
+  const SrcMgr::FileInfo &FI = SM.getSLocEntry(FID).getFile();
+  return FI.getName().startswith("<");
+}
+#endif
 
 llvm::DenseSet<IncludeStructure::HeaderID>
 translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
@@ -189,7 +257,10 @@ translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
   TranslatedHeaderIDs.reserve(Files.size());
   for (FileID FID : Files) {
     const FileEntry *FE = SM.getFileEntryForID(FID);
-    assert(FE);
+    if (!FE) {
+      assert(isSpecialBuffer(FID, SM));
+      continue;
+    }
     const auto File = Includes.getID(FE);
     assert(File);
     TranslatedHeaderIDs.insert(*File);
@@ -204,6 +275,50 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST) {
   auto ReferencedFiles = translateToHeaderIDs(findReferencedFiles(Refs, SM),
                                               AST.getIncludeStructure(), SM);
   return getUnused(AST.getIncludeStructure(), ReferencedFiles);
+}
+
+std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
+                                                 llvm::StringRef Code) {
+  const Config &Cfg = Config::current();
+  if (Cfg.Diagnostics.UnusedIncludes != Config::UnusedIncludesPolicy::Strict ||
+      Cfg.Diagnostics.SuppressAll ||
+      Cfg.Diagnostics.Suppress.contains("unused-includes"))
+    return {};
+  std::vector<Diag> Result;
+  std::string FileName =
+      AST.getSourceManager()
+          .getFileEntryForID(AST.getSourceManager().getMainFileID())
+          ->getName()
+          .str();
+  for (const auto *Inc : computeUnusedIncludes(AST)) {
+    if (!mayConsiderUnused(Inc))
+      continue;
+    Diag D;
+    D.Message =
+        llvm::formatv("included header {0} is not used",
+                      llvm::sys::path::filename(
+                          Inc->Written.substr(1, Inc->Written.size() - 2),
+                          llvm::sys::path::Style::posix));
+    D.Name = "unused-includes";
+    D.Source = Diag::DiagSource::Clangd;
+    D.File = FileName;
+    D.Severity = DiagnosticsEngine::Warning;
+    D.Tags.push_back(Unnecessary);
+    D.Range = getDiagnosticRange(Code, Inc->HashOffset);
+    // FIXME(kirillbobyrev): Removing inclusion might break the code if the
+    // used headers are only reachable transitively through this one. Suggest
+    // including them directly instead.
+    // FIXME(kirillbobyrev): Add fix suggestion for adding IWYU pragmas
+    // (keep/export) remove the warning once we support IWYU pragmas.
+    D.Fixes.emplace_back();
+    D.Fixes.back().Message = "remove #include directive";
+    D.Fixes.back().Edits.emplace_back();
+    D.Fixes.back().Edits.back().range.start.line = Inc->HashLine;
+    D.Fixes.back().Edits.back().range.end.line = Inc->HashLine + 1;
+    D.InsideMainFile = true;
+    Result.push_back(std::move(D));
+  }
+  return Result;
 }
 
 } // namespace clangd

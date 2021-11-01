@@ -311,6 +311,15 @@ The following options are implemented only for the PE/COFF file format.
 
  Display the .rsrc section.
 
+XCOFF SPECIFIC OPTIONS
+----------------------
+
+The following options are implemented only for the XCOFF file format.
+
+.. option:: --auxiliary-header
+
+  Display XCOFF Auxiliary header.
+
 EXIT STATUS
 -----------
 
