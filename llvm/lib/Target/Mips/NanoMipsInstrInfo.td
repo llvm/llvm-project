@@ -260,6 +260,10 @@ class ReadHardwareNM<RegisterOperand CPURegOperand, RegisterOperand RO> :
   let isCodeGenOnly = 1;
 }
 
+class SignExtInRegNM<string opstr, ValueType vt, RegisterOperand RO> :
+  InstNM<(outs RO:$rd), (ins RO:$rt), !strconcat(opstr, "\t$rd, $rt"),
+         [(set RO:$rd, (sext_inreg RO:$rt, vt))]>, InstSize32;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -309,6 +313,9 @@ def INS_NM : InsBaseNM;
 
 def ADDiu_NM : ArithLogicINM<"addiu", uimm16_simm12, GPR32NMOpnd,
                              imm32SExt12OrZExt16, add>;
+
+def SEB_NM : SignExtInRegNM<"seb", i8, GPR32NMOpnd>;
+def SEH_NM : SignExtInRegNM<"seh", i16, GPR32NMOpnd>;
 
 // P.TRAP pool of instructions.
 def TEQ_NM : Trap<"teq">;

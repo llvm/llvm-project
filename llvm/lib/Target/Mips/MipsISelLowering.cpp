@@ -480,7 +480,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::ATOMIC_STORE,    MVT::i64,   Expand);
   }
 
-  if (!Subtarget.hasMips32r2()) {
+  if (!Subtarget.hasMips32r2() && !Subtarget.hasNanoMips()) {
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8,  Expand);
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
   }
