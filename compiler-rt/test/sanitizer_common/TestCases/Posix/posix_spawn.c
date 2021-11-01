@@ -1,4 +1,7 @@
 // RUN: %clang %s -o %t && %run %t 2>&1 | FileCheck %s
+//
+// Older versions of Android do not have certain posix_spawn* functions.
+// UNSUPPORTED: android
 
 #include <assert.h>
 #include <spawn.h>
