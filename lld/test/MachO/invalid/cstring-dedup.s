@@ -1,3 +1,7 @@
+## We're intentionally testing fatal errors (for malformed input files), and
+## fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
+
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/not-terminated.s -o %t/not-terminated.o
