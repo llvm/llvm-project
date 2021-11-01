@@ -239,6 +239,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
+    libc.src.string.strndup
   )
 endif()
 
