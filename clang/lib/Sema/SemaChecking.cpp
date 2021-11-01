@@ -4887,7 +4887,7 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
   if (ArgAlign < ParamAlign)
     Diag(Loc, diag::warn_param_mismatched_alignment)
         << (int)ArgAlign.getQuantity() << (int)ParamAlign.getQuantity()
-        << ParamName << FDecl;
+        << ParamName << (FDecl != nullptr) << FDecl;
 }
 
 /// Handles the checks for format strings, non-POD arguments to vararg

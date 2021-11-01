@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -467,6 +468,64 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
   rewriter.updateRootInPlace(op, [&]() {
     originalOpMarker.replaceLinalgTransformationFilter(rewriter, op);
   });
+  return success();
+}
+
+/// Linalg padding pattern.
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    MLIRContext *context, LinalgPaddingOptions options,
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
+      options(options) {}
+
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(filter),
+      options(options) {}
+
+LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
+  if (!linalgOp.hasTensorSemantics())
+    return failure();
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+
+  // Pad the operation.
+  LinalgOp paddedOp;
+  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
+      rewriter, linalgOp, options.paddingValueComputationFunction,
+      options.paddingNoFoldComputationFunction, paddedOp);
+  if (failed(newResults))
+    return failure();
+
+  // Compute the desired hoisting depths.
+  SmallVector<int64_t> depths;
+  if (options.paddingHoistComputationFunction) {
+    for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands())
+      depths.push_back(options.paddingHoistComputationFunction(*opOperand));
+  }
+
+  // Hoist the padding.
+  for (auto en : enumerate(depths)) {
+    OpOperand &opOperand = paddedOp->getOpOperand(en.index());
+    auto padTensorOp = opOperand.get().getDefiningOp<PadTensorOp>();
+    if (!padTensorOp || en.value() == 0)
+      continue;
+    PadTensorOp hoistedOp;
+    FailureOr<Value> newResult =
+        hoistPaddingOnTensors(padTensorOp, en.value(), hoistedOp);
+    if (failed(newResult))
+      continue;
+    rewriter.replaceOp(padTensorOp, newResult.getValue());
+  }
+
+  // Replace the original operation to pad.
+  rewriter.replaceOp(op, newResults.getValue());
+  filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
   return success();
 }
 

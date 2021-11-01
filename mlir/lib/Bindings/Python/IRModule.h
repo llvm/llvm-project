@@ -399,6 +399,10 @@ public:
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope);
 
+  /// Moves the operation before or after the other operation.
+  void moveAfter(PyOperationBase &other);
+  void moveBefore(PyOperationBase &other);
+
   /// Each must provide access to the raw Operation.
   virtual PyOperation &getOperation() = 0;
 };
@@ -428,6 +432,14 @@ public:
   createDetached(PyMlirContextRef contextRef, MlirOperation operation,
                  pybind11::object parentKeepAlive = pybind11::object());
 
+  /// Detaches the operation from its parent block and updates its state
+  /// accordingly.
+  void detachFromParent() {
+    mlirOperationRemoveFromParent(getOperation());
+    setDetached();
+    parentKeepAlive = pybind11::object();
+  }
+
   /// Gets the backing operation.
   operator MlirOperation() const { return get(); }
   MlirOperation get() const {
@@ -441,9 +453,13 @@ public:
   }
 
   bool isAttached() { return attached; }
-  void setAttached() {
+  void setAttached(pybind11::object parent = pybind11::object()) {
     assert(!attached && "operation already attached");
     attached = true;
+  }
+  void setDetached() {
+    assert(attached && "operation already detached");
+    attached = false;
   }
   void checkValid() const;
 
@@ -495,6 +511,8 @@ private:
   pybind11::object parentKeepAlive;
   bool attached = true;
   bool valid = true;
+
+  friend class PyOperationBase;
 };
 
 /// A PyOpView is equivalent to the C++ "Op" wrappers: these are the basis for

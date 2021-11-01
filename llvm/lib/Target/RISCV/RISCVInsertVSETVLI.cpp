@@ -178,6 +178,26 @@ public:
     return getSEWLMULRatio() == Other.getSEWLMULRatio();
   }
 
+  bool hasCompatibleVTYPE(const VSETVLIInfo &InstrInfo, bool Strict) const {
+    // Simple case, see if full VTYPE matches.
+    if (hasSameVTYPE(InstrInfo))
+      return true;
+
+    if (Strict)
+      return false;
+
+    // If this is a mask reg operation, it only cares about VLMAX.
+    // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
+    // than "InstrInfo".
+    // FIXME: The policy bits can probably be ignored for mask reg operations.
+    if (InstrInfo.MaskRegOp && hasSameVLMAX(InstrInfo) &&
+        TailAgnostic == InstrInfo.TailAgnostic &&
+        MaskAgnostic == InstrInfo.MaskAgnostic)
+      return true;
+
+    return false;
+  }
+
   // Determine whether the vector instructions requirements represented by
   // InstrInfo are compatible with the previous vsetvli instruction represented
   // by this.
@@ -206,23 +226,15 @@ public:
     if (!hasSameAVL(InstrInfo))
       return false;
 
-    // Simple case, see if full VTYPE matches.
-    if (hasSameVTYPE(InstrInfo))
+    if (hasCompatibleVTYPE(InstrInfo, Strict))
       return true;
 
     // Strict matches must ensure a full VTYPE match.
     if (Strict)
       return false;
 
-    // If this is a mask reg operation, it only cares about VLMAX.
-    // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
-    // than "InstrInfo".
-    if (InstrInfo.MaskRegOp && hasSameVLMAX(InstrInfo) &&
-        TailAgnostic == InstrInfo.TailAgnostic &&
-        MaskAgnostic == InstrInfo.MaskAgnostic)
-      return true;
-
     // Store instructions don't use the policy fields.
+    // TODO: Move into hasCompatibleVTYPE?
     if (InstrInfo.StoreOp && VLMul == InstrInfo.VLMul && SEW == InstrInfo.SEW)
       return true;
 
@@ -564,7 +576,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
   // VSETVLI here.
   if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
       Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
-      Require.hasSameVTYPE(CurInfo)) {
+      CurInfo.hasCompatibleVTYPE(Require, /*Strict*/ false)) {
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (DefMI->getOpcode() == RISCV::PseudoVSETVLI ||
           DefMI->getOpcode() == RISCV::PseudoVSETVLIX0 ||

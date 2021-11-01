@@ -21,10 +21,6 @@
 
 namespace llvm {
 
-/// Create a replacement instruction for constant expression \p CE and insert
-/// it before \p Instr.
-Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr);
-
 /// The given instruction \p I contains given constant expression \p CE as one
 /// of its operands, possibly nested within constant expression trees. Convert
 /// all reachable paths from contant expression operands of \p I to \p CE into

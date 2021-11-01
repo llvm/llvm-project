@@ -46,10 +46,10 @@ public:
 private:
   using DylibsMap = DenseMap<uint64_t, sys::DynamicLibrary>;
 
-  static llvm::orc::shared::detail::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionResult
   openWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::detail::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionResult
   lookupWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;

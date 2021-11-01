@@ -209,7 +209,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
       // Add all fields between current field up until the next initializer.
       for (; Decl != std::end(OrderedDecls) && *Decl != InitDecl; ++Decl) {
         if (const auto *D = dyn_cast<T>(*Decl)) {
-          if (DeclsToInit.count(D) > 0)
+          if (DeclsToInit.contains(D))
             Insertions.back().Initializers.emplace_back(getName(D));
         }
       }
@@ -221,7 +221,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
   // Add remaining decls that require initialization.
   for (; Decl != std::end(OrderedDecls); ++Decl) {
     if (const auto *D = dyn_cast<T>(*Decl)) {
-      if (DeclsToInit.count(D) > 0)
+      if (DeclsToInit.contains(D))
         Insertions.back().Initializers.emplace_back(getName(D));
     }
   }

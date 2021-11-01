@@ -2200,10 +2200,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
       def _imm : Pat<(Store (Ty ZPR:$val), (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
                      (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
     }
-    let AddedComplexity = 3 in {
-      def _fi : Pat<(Store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
-                    (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
-    }
 
     def : Pat<(Store (Ty ZPR:$val), GPR64:$base),
               (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
@@ -2238,10 +2234,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
     }
     let AddedComplexity = 2 in {
       def _imm: Pat<(Ty (Load  (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset))),
-                    (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
-    }
-    let AddedComplexity = 3 in {
-      def _fi : Pat<(Ty (Load  (am_sve_fi GPR64sp:$base, simm4s1:$offset))),
                     (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
     }
 

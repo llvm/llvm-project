@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Generate from clang with the following source. Note that the definition of
 ; the inline function follows its use to workaround another bug that should be
@@ -11,11 +11,11 @@
 ; int __attribute__((always_inline)) ns::func(int i) { return i * 2; }
 
 ; CHECK: DW_TAG_namespace
-; CHECK-NEXT: DW_AT_name {{.*}} "ns"
+; CHECK-NEXT: DW_AT_name ("ns")
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZN2ns4funcEi"
+; CHECK:   DW_AT_linkage_name ("_ZN2ns4funcEi")
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK:   NULL

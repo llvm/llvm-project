@@ -1955,10 +1955,32 @@ struct DSEState {
       auto *UpperDef = dyn_cast<MemoryDef>(Def->getDefiningAccess());
       if (!UpperDef || MSSA.isLiveOnEntryDef(UpperDef))
         continue;
-      auto *DefInst = Def->getMemoryInst();
-      auto *UpperInst = UpperDef->getMemoryInst();
+
+      Instruction *DefInst = Def->getMemoryInst();
+      Instruction *UpperInst = UpperDef->getMemoryInst();
+      auto IsRedundantStore = [this, DefInst,
+                               UpperInst](MemoryLocation UpperLoc) {
+        if (DefInst->isIdenticalTo(UpperInst))
+          return true;
+        if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
+          if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
+            auto MaybeDefLoc = getLocForWriteEx(DefInst);
+            if (!MaybeDefLoc)
+              return false;
+            int64_t InstWriteOffset = 0;
+            int64_t DepWriteOffset = 0;
+            auto OR = isOverwrite(UpperInst, DefInst, UpperLoc, *MaybeDefLoc,
+                                  InstWriteOffset, DepWriteOffset);
+            Value *StoredByte = isBytewiseValue(SI->getValueOperand(), DL);
+            return StoredByte && StoredByte == MemSetI->getOperand(1) &&
+                   OR == OW_Complete;
+          }
+        }
+        return false;
+      };
+
       auto MaybeUpperLoc = getLocForWriteEx(UpperInst);
-      if (!MaybeUpperLoc || !DefInst->isIdenticalTo(UpperInst) ||
+      if (!MaybeUpperLoc || !IsRedundantStore(*MaybeUpperLoc) ||
           isReadClobber(*MaybeUpperLoc, DefInst))
         continue;
       LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *DefInst

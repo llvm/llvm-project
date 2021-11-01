@@ -841,6 +841,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return u ? imm12 : -imm12;
   }
   case R_ARM_NONE:
+  case R_ARM_V4BX:
   case R_ARM_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
     return 0;

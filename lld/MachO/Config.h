@@ -198,6 +198,13 @@ struct SymbolPriorityEntry {
   llvm::DenseMap<llvm::StringRef, size_t> objectFiles;
 };
 
+// Whether to force-load an archive.
+enum class ForceLoad {
+  Default, // Apply -all_load or -ObjC behaviors if those flags are enabled
+  Yes,     // Always load the archive, regardless of other flags
+  No,      // Never load the archive, regardless of other flags
+};
+
 extern Configuration *config;
 
 } // namespace macho

@@ -80,7 +80,7 @@ const ArrayRef<uint32_t> ProfileSummaryBuilder::DefaultCutoffs =
     DefaultCutoffsData;
 
 const ProfileSummaryEntry &
-ProfileSummaryBuilder::getEntryForPercentile(SummaryEntryVector &DS,
+ProfileSummaryBuilder::getEntryForPercentile(const SummaryEntryVector &DS,
                                              uint64_t Percentile) {
   auto It = partition_point(DS, [=](const ProfileSummaryEntry &Entry) {
     return Entry.Cutoff < Percentile;
@@ -154,7 +154,8 @@ void ProfileSummaryBuilder::computeDetailedSummary() {
   }
 }
 
-uint64_t ProfileSummaryBuilder::getHotCountThreshold(SummaryEntryVector &DS) {
+uint64_t
+ProfileSummaryBuilder::getHotCountThreshold(const SummaryEntryVector &DS) {
   auto &HotEntry =
       ProfileSummaryBuilder::getEntryForPercentile(DS, ProfileSummaryCutoffHot);
   uint64_t HotCountThreshold = HotEntry.MinCount;
@@ -163,7 +164,8 @@ uint64_t ProfileSummaryBuilder::getHotCountThreshold(SummaryEntryVector &DS) {
   return HotCountThreshold;
 }
 
-uint64_t ProfileSummaryBuilder::getColdCountThreshold(SummaryEntryVector &DS) {
+uint64_t
+ProfileSummaryBuilder::getColdCountThreshold(const SummaryEntryVector &DS) {
   auto &ColdEntry = ProfileSummaryBuilder::getEntryForPercentile(
       DS, ProfileSummaryCutoffCold);
   uint64_t ColdCountThreshold = ColdEntry.MinCount;

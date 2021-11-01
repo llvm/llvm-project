@@ -670,6 +670,9 @@ bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {
     if (RC && SIRegisterInfo::isAGPRClass(RC)) {
       UsesAGPRs = true;
       return true;
+    } else if (!RC && !MRI.use_empty(Reg) && MRI.getType(Reg).isValid()) {
+      // Defer caching UsesAGPRs, function might not yet been regbank selected.
+      return true;
     }
   }
 

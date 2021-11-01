@@ -1349,6 +1349,10 @@ public:
     Op<0>().swap(Op<1>());
   }
 
+  /// Return result of `LHS Pred RHS` comparison.
+  static bool compare(const APInt &LHS, const APInt &RHS,
+                      ICmpInst::Predicate Pred);
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::ICmp;

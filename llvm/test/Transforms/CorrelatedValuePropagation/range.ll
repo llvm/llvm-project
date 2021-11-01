@@ -64,7 +64,7 @@ define i32 @test3(i32 %c) nounwind {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[C]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[C]], 3
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END8:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br i1 true, label [[IF_THEN4:%.*]], label [[IF_END6:%.*]]

@@ -25,12 +25,13 @@ using namespace llvm;
 
 ReplayInlineAdvisor::ReplayInlineAdvisor(
     Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
-    std::unique_ptr<InlineAdvisor> OriginalAdvisor, StringRef RemarksFile,
-    ReplayInlineScope Scope, bool EmitRemarks)
+    std::unique_ptr<InlineAdvisor> OriginalAdvisor,
+    const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks)
     : InlineAdvisor(M, FAM), OriginalAdvisor(std::move(OriginalAdvisor)),
-      HasReplayRemarks(false), Scope(Scope), EmitRemarks(EmitRemarks) {
+      HasReplayRemarks(false), ReplaySettings(ReplaySettings),
+      EmitRemarks(EmitRemarks) {
 
-  auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(RemarksFile);
+  auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ReplaySettings.ReplayFile);
   std::error_code EC = BufferOrErr.getError();
   if (EC) {
     Context.emitError("Could not open remarks file: " + EC.message());
@@ -42,11 +43,19 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
   //   main:3:1.1;
   // We use the callsite string after `at callsite` to replay inlining.
   line_iterator LineIt(*BufferOrErr.get(), /*SkipBlanks=*/true);
+  const std::string PositiveRemark = "' inlined into '";
+  const std::string NegativeRemark = "' will not be inlined into '";
+
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;
     auto Pair = Line.split(" at callsite ");
 
-    auto CalleeCaller = Pair.first.split("' inlined into '");
+    bool IsPositiveRemark = true;
+    if (Pair.first.contains(NegativeRemark))
+      IsPositiveRemark = false;
+
+    auto CalleeCaller =
+        Pair.first.split(IsPositiveRemark ? PositiveRemark : NegativeRemark);
 
     StringRef Callee = CalleeCaller.first.rsplit(": '").second;
     StringRef Caller = CalleeCaller.second.rsplit("'").first;
@@ -59,8 +68,8 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
     }
 
     std::string Combined = (Callee + CallSite).str();
-    InlineSitesFromRemarks[Combined] = false;
-    if (Scope == ReplayInlineScope::Function)
+    InlineSitesFromRemarks[Combined] = IsPositiveRemark;
+    if (ReplaySettings.ReplayScope == ReplayInlinerSettings::Scope::Function)
       CallersToReplay.insert(Caller);
   }
 
@@ -69,11 +78,10 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
 
 std::unique_ptr<InlineAdvisor> llvm::getReplayInlineAdvisor(
     Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
-    std::unique_ptr<InlineAdvisor> OriginalAdvisor, StringRef RemarksFile,
-    ReplayInlineScope Scope, bool EmitRemarks) {
+    std::unique_ptr<InlineAdvisor> OriginalAdvisor,
+    const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks) {
   auto Advisor = std::make_unique<ReplayInlineAdvisor>(
-      M, FAM, Context, std::move(OriginalAdvisor), RemarksFile, Scope,
-      EmitRemarks);
+      M, FAM, Context, std::move(OriginalAdvisor), ReplaySettings, EmitRemarks);
   if (!Advisor->areReplayRemarksLoaded())
     Advisor.reset();
   return Advisor;
@@ -85,25 +93,58 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   Function &Caller = *CB.getCaller();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
-  Optional<InlineCost> InlineRecommended;
-
-  if (Scope == ReplayInlineScope::Module ||
-      CallersToReplay.count(CB.getFunction()->getName())) {
-    std::string CallSiteLoc = getCallSiteLocation(CB.getDebugLoc());
-    StringRef Callee = CB.getCalledFunction()->getName();
-    std::string Combined = (Callee + CallSiteLoc).str();
-
-    auto Iter = InlineSitesFromRemarks.find(Combined);
-    if (Iter != InlineSitesFromRemarks.end()) {
-      InlineSitesFromRemarks[Combined] = true;
-      InlineRecommended = llvm::InlineCost::getAlways("previously inlined");
-    }
-  } else if (Scope == ReplayInlineScope::Function) {
+  // Decision not made by replay system
+  if (!hasInlineAdvice(*CB.getFunction())) {
+    // If there's a registered original advisor, return its decision
     if (OriginalAdvisor)
       return OriginalAdvisor->getAdvice(CB);
+
+    // If no decision is made above, return non-decision
     return {};
   }
 
-  return std::make_unique<DefaultInlineAdvice>(this, CB, InlineRecommended, ORE,
-                                               EmitRemarks);
+  std::string CallSiteLoc =
+      formatCallSiteLocation(CB.getDebugLoc(), ReplaySettings.ReplayFormat);
+  StringRef Callee = CB.getCalledFunction()->getName();
+  std::string Combined = (Callee + CallSiteLoc).str();
+
+  // Replay decision, if it has one
+  auto Iter = InlineSitesFromRemarks.find(Combined);
+  if (Iter != InlineSitesFromRemarks.end()) {
+    if (InlineSitesFromRemarks[Combined]) {
+      LLVM_DEBUG(dbgs() << "Replay Inliner: Inlined " << Callee << " @ "
+                        << CallSiteLoc << "\n");
+      return std::make_unique<DefaultInlineAdvice>(
+          this, CB, llvm::InlineCost::getAlways("previously inlined"), ORE,
+          EmitRemarks);
+    } else {
+      LLVM_DEBUG(dbgs() << "Replay Inliner: Not Inlined " << Callee << " @ "
+                        << CallSiteLoc << "\n");
+      // A negative inline is conveyed by "None" Optional<InlineCost>
+      return std::make_unique<DefaultInlineAdvice>(this, CB, None, ORE,
+                                                   EmitRemarks);
+    }
+  }
+
+  // Fallback decisions
+  if (ReplaySettings.ReplayFallback ==
+      ReplayInlinerSettings::Fallback::AlwaysInline)
+    return std::make_unique<DefaultInlineAdvice>(
+        this, CB, llvm::InlineCost::getAlways("AlwaysInline Fallback"), ORE,
+        EmitRemarks);
+  else if (ReplaySettings.ReplayFallback ==
+           ReplayInlinerSettings::Fallback::NeverInline)
+    // A negative inline is conveyed by "None" Optional<InlineCost>
+    return std::make_unique<DefaultInlineAdvice>(this, CB, None, ORE,
+                                                 EmitRemarks);
+  else {
+    assert(ReplaySettings.ReplayFallback ==
+           ReplayInlinerSettings::Fallback::Original);
+    // If there's a registered original advisor, return its decision
+    if (OriginalAdvisor)
+      return OriginalAdvisor->getAdvice(CB);
+  }
+
+  // If no decision is made above, return non-decision
+  return {};
 }

@@ -124,6 +124,7 @@ struct Configuration {
   std::vector<std::string> natvisFiles;
   llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;
+  int pdbPageSize = 4096;
   llvm::SmallString<128> pdbPath;
   llvm::SmallString<128> pdbSourcePath;
   std::vector<llvm::StringRef> argv;

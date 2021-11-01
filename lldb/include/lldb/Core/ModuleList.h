@@ -159,7 +159,7 @@ public:
   ///     ModulesDidLoad may be deferred when adding multiple Modules
   ///     to the Target, but it must be called at the end,
   ///     before resuming execution.
-  bool AppendIfNeeded(const lldb::ModuleSP &module_sp, bool notify = true);
+  bool AppendIfNeeded(const lldb::ModuleSP &new_module, bool notify = true);
 
   void Append(const ModuleList &module_list);
 

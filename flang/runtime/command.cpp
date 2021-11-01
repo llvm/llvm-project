@@ -24,9 +24,9 @@ std::int32_t RTNAME(ArgumentCount)() {
   return 0;
 }
 
-// Returns the length of the \p n'th argument. Assumes \p n is valid.
-static std::int64_t ArgumentLength(std::int32_t n) {
-  std::size_t length{std::strlen(executionEnvironment.argv[n])};
+// Returns the length of the \p string. Assumes \p string is valid.
+static std::int64_t StringLength(const char *string) {
+  std::size_t length{std::strlen(string)};
   if constexpr (sizeof(std::size_t) <= sizeof(std::int64_t)) {
     return static_cast<std::int64_t>(length);
   } else {
@@ -37,11 +37,12 @@ static std::int64_t ArgumentLength(std::int32_t n) {
 }
 
 std::int64_t RTNAME(ArgumentLength)(std::int32_t n) {
-  if (n < 0 || n >= executionEnvironment.argc) {
+  if (n < 0 || n >= executionEnvironment.argc ||
+      !executionEnvironment.argv[n]) {
     return 0;
   }
 
-  return ArgumentLength(n);
+  return StringLength(executionEnvironment.argv[n]);
 }
 
 static bool IsValidCharDescriptor(const Descriptor *value) {
@@ -52,6 +53,20 @@ static bool IsValidCharDescriptor(const Descriptor *value) {
 
 static void FillWithSpaces(const Descriptor *value) {
   std::memset(value->OffsetElement(), ' ', value->ElementBytes());
+}
+
+static std::int32_t CopyToDescriptor(const Descriptor &value,
+    const char *rawValue, std::int64_t rawValueLength,
+    const Descriptor *errmsg) {
+  std::int64_t toCopy{std::min(
+      rawValueLength, static_cast<std::int64_t>(value.ElementBytes()))};
+  std::memcpy(value.OffsetElement(), rawValue, toCopy);
+
+  if (rawValueLength > toCopy) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  return StatOk;
 }
 
 std::int32_t RTNAME(ArgumentValue)(
@@ -65,18 +80,13 @@ std::int32_t RTNAME(ArgumentValue)(
   }
 
   if (IsValidCharDescriptor(value)) {
-    std::int64_t argLen{ArgumentLength(n)};
+    const char *arg{executionEnvironment.argv[n]};
+    std::int64_t argLen{StringLength(arg)};
     if (argLen <= 0) {
       return ToErrmsg(errmsg, StatMissingArgument);
     }
 
-    std::int64_t toCopy{
-        std::min(argLen, static_cast<std::int64_t>(value->ElementBytes()))};
-    std::memcpy(value->OffsetElement(), executionEnvironment.argv[n], toCopy);
-
-    if (argLen > toCopy) {
-      return ToErrmsg(errmsg, StatValueTooShort);
-    }
+    return CopyToDescriptor(*value, arg, argLen, errmsg);
   }
 
   return StatOk;
@@ -90,20 +100,45 @@ static std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
   return s + 1;
 }
 
-std::int64_t RTNAME(EnvVariableLength)(
+static const char *GetEnvVariableValue(
     const Descriptor &name, bool trim_name, const char *sourceFile, int line) {
   std::size_t nameLength{
       trim_name ? LengthWithoutTrailingSpaces(name) : name.ElementBytes()};
   if (nameLength == 0) {
-    return 0;
+    return nullptr;
   }
 
   Terminator terminator{sourceFile, line};
   const char *value{executionEnvironment.GetEnv(
       name.OffsetElement(), nameLength, terminator)};
+  return value;
+}
+
+std::int32_t RTNAME(EnvVariableValue)(const Descriptor &name,
+    const Descriptor *value, bool trim_name, const Descriptor *errmsg,
+    const char *sourceFile, int line) {
+  if (IsValidCharDescriptor(value)) {
+    FillWithSpaces(value);
+  }
+
+  const char *rawValue{GetEnvVariableValue(name, trim_name, sourceFile, line)};
+  if (!rawValue) {
+    return ToErrmsg(errmsg, StatMissingEnvVariable);
+  }
+
+  if (IsValidCharDescriptor(value)) {
+    return CopyToDescriptor(*value, rawValue, StringLength(rawValue), errmsg);
+  }
+
+  return StatOk;
+}
+
+std::int64_t RTNAME(EnvVariableLength)(
+    const Descriptor &name, bool trim_name, const char *sourceFile, int line) {
+  const char *value{GetEnvVariableValue(name, trim_name, sourceFile, line)};
   if (!value) {
     return 0;
   }
-  return std::strlen(value);
+  return StringLength(value);
 }
 } // namespace Fortran::runtime

@@ -107,7 +107,7 @@ void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
           // section,
           // remove those as well as nothing will include them (and we can't
           // leave them dangling).
-          if (RemovedSections.count(Sym.AssociativeComdatTargetSectionId) == 1)
+          if (RemovedSections.contains(Sym.AssociativeComdatTargetSectionId))
             AssociatedSections.insert(Sym.TargetSectionId);
           return RemovedSections.contains(Sym.TargetSectionId);
         });

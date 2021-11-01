@@ -17,13 +17,6 @@
 #include "llvm/IR/NoFolder.h"
 
 namespace llvm {
-// Replace a constant expression by instructions with equivalent operations at
-// a specified location.
-Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  auto *CEInstr = CE->getAsInstruction();
-  CEInstr->insertBefore(Instr);
-  return CEInstr;
-}
 
 void convertConstantExprsToInstructions(Instruction *I, ConstantExpr *CE,
                                         SmallPtrSetImpl<Instruction *> *Insts) {
@@ -63,8 +56,7 @@ void convertConstantExprsToInstructions(
       for (auto *CE : Path) {
         if (!Visited.insert(CE).second)
           continue;
-        auto *NI = CE->getAsInstruction();
-        NI->insertBefore(BI);
+        auto *NI = CE->getAsInstruction(BI);
         II->replaceUsesOfWith(CE, NI);
         CE->removeDeadConstantUsers();
         BI = II = NI;

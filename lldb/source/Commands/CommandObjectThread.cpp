@@ -1929,15 +1929,14 @@ public:
             "process to different formats.",
             "thread trace export <export-plugin> [<subcommand objects>]") {
 
-    for (uint32_t i = 0; true; i++) {
-      if (const char *plugin_name =
-              PluginManager::GetTraceExporterPluginNameAtIndex(i)) {
-        if (ThreadTraceExportCommandCreator command_creator =
-                PluginManager::GetThreadTraceExportCommandCreatorAtIndex(i)) {
-          LoadSubCommand(plugin_name, command_creator(interpreter));
-        }
-      } else {
-        break;
+    unsigned i = 0;
+    for (llvm::StringRef plugin_name =
+             PluginManager::GetTraceExporterPluginNameAtIndex(i++);
+         !plugin_name.empty();
+         plugin_name = PluginManager::GetTraceExporterPluginNameAtIndex(i++)) {
+      if (ThreadTraceExportCommandCreator command_creator =
+              PluginManager::GetThreadTraceExportCommandCreatorAtIndex(i)) {
+        LoadSubCommand(plugin_name, command_creator(interpreter));
       }
     }
   }

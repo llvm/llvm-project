@@ -1,9 +1,9 @@
 ; Make sure the backend generates a single DIE and uses ref_addr.
 ; CHECK: 0x[[BASE:.*]]: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name {{.*}} = "Base"
+; CHECK-NEXT: DW_AT_name {{.*}}"Base"
 ; CHECK-NOT: DW_TAG_structure_type
 ; CHECK: 0x[[INT:.*]]: DW_TAG_base_type
-; CHECK-NEXT: DW_AT_name {{.*}} = "int"
+; CHECK-NEXT: DW_AT_name {{.*}}"int"
 ; CHECK-NOT: DW_TAG_base_type
 
 ; CHECK: DW_TAG_compile_unit
