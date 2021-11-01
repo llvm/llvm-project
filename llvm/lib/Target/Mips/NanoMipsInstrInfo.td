@@ -324,8 +324,10 @@ def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 def MOVEBALC_NM : MoveBalcBase;
 
+let isReMaterializable = 1 in {
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
+} // isReMaterializable = 1
 
 def LEA_ADDiu_NM : EffectiveAddressNM<"addiu", GPR32NMOpnd>, InstSize32;
 
