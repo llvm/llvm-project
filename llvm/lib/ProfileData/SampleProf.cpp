@@ -245,9 +245,13 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
     else
       Discriminator = DIL->getBaseDiscriminator();
 
+    // Use C++ linkage name if possible.
+    StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
+    if (Name.empty())
+      Name = PrevDIL->getScope()->getSubprogram()->getName();
+
     S.push_back(
-        std::make_pair(LineLocation(getOffset(DIL), Discriminator),
-                       PrevDIL->getScope()->getSubprogram()->getLinkageName()));
+        std::make_pair(LineLocation(getOffset(DIL), Discriminator), Name));
     PrevDIL = DIL;
   }
   if (S.size() == 0)
