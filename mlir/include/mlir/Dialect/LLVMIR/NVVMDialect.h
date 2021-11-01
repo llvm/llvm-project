@@ -18,6 +18,16 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
+
+#include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
+
+/// Return the element type and number of elements associated with a wmma matrix
+/// of given chracteristics. This matches the logic in IntrinsicsNVVM.td
+/// WMMA_REGS structure.
+std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
+                                             mlir::NVVM::MMAFrag frag,
+                                             mlir::MLIRContext *context);
 
 ///// Ops /////
 #define GET_OP_CLASSES

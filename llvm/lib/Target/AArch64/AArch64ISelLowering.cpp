@@ -12684,7 +12684,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
 
 bool AArch64TargetLowering::generateFMAsInMachineCombiner(
     EVT VT, CodeGenOpt::Level OptLevel) const {
-  return (OptLevel >= CodeGenOpt::Aggressive) && !VT.isScalableVector();
+  return (OptLevel >= CodeGenOpt::Aggressive) && !VT.isScalableVector() &&
+         !useSVEForFixedLengthVectorVT(VT);
 }
 
 const MCPhysReg *
