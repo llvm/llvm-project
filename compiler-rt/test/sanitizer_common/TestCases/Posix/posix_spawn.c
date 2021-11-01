@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <spawn.h>
 #include <stdio.h>
-#include <wait.h>
+#include <sys/wait.h>
 
 int main(int argc, char **argv) {
   if (argc > 1) {
