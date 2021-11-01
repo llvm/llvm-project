@@ -506,7 +506,8 @@ class DebugCommunication(object):
                        initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None,
                        attachCommands=None, terminateCommands=None,
-                       coreFile=None, postRunCommands=None):
+                       coreFile=None, postRunCommands=None,
+                       sourceMap=None):
         args_dict = {}
         if pid is not None:
             args_dict['pid'] = pid
@@ -533,6 +534,8 @@ class DebugCommunication(object):
             args_dict['coreFile'] = coreFile
         if postRunCommands:
             args_dict['postRunCommands'] = postRunCommands
+        if sourceMap:
+            args_dict['sourceMap'] = sourceMap
         command_dict = {
             'command': 'attach',
             'type': 'request',

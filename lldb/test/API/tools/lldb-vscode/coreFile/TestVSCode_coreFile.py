@@ -41,3 +41,18 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
 
         self.vscode.request_next(threadId=32259)
         self.assertEquals(self.get_stackFrames(), expected_frames)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_core_file_source_mapping(self):
+        ''' Test that sourceMap property is correctly applied when loading a core '''
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        exe_file = os.path.join(current_dir, "linux-x86_64.out")
+        core_file = os.path.join(current_dir, "linux-x86_64.core")
+
+        self.create_debug_adaptor()
+
+        source_map = [["/home/labath/test", current_dir]]
+        self.attach(exe_file, coreFile=core_file, sourceMap=source_map)
+
+        self.assertTrue(current_dir in self.get_stackFrames()[0]['source']['path'])
