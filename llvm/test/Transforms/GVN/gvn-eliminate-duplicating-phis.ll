@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 declare void @escape(i32* %ptr)
 
-declare void @foo(i64 %v)
+declare void @foo(i64 %v) readonly
 
 define void @non_local_load(i32* %ptr) {
 ; CHECK-LABEL: @non_local_load(
@@ -44,17 +44,14 @@ define void @non_local_load_with_iv_zext(i32* %ptr) {
 ; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ [[VAL_PRE:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL_INC:%.*]] = add i32 [[VAL]], 1
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ [[VAL_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[VAL_INC]] = add nuw nsw i32 [[VAL]], 1
 ; CHECK-NEXT:    store i32 [[VAL_INC]], i32* [[PTR]], align 4
 ; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1000
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP_LOOP_CRIT_EDGE]]
-; CHECK:       loop.loop_crit_edge:
-; CHECK-NEXT:    [[VAL_PRE]] = load i32, i32* [[PTR]], align 4
-; CHECK-NEXT:    br label [[LOOP]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -85,21 +82,15 @@ define void @two_non_local_loads(i32* %ptr1) {
 ; CHECK-NEXT:    store i32 0, i32* [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[VAL2:%.*]] = phi i32 [ [[VAL2_PRE:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL1:%.*]] = phi i32 [ [[VAL1_PRE:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL1_INC:%.*]] = add i32 [[VAL1]], 1
-; CHECK-NEXT:    store i32 [[VAL1_INC]], i32* [[PTR1]], align 4
-; CHECK-NEXT:    [[VAL2_INC:%.*]] = add i32 [[VAL2]], 1
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[VAL2:%.*]] = phi i32 [ [[VAL2_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[VAL2_INC]] = add nuw nsw i32 [[VAL2]], 1
+; CHECK-NEXT:    store i32 [[VAL2_INC]], i32* [[PTR1]], align 4
 ; CHECK-NEXT:    store i32 [[VAL2_INC]], i32* [[PTR2]], align 4
 ; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1000
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP_LOOP_CRIT_EDGE]]
-; CHECK:       loop.loop_crit_edge:
-; CHECK-NEXT:    [[VAL1_PRE]] = load i32, i32* [[PTR1]], align 4
-; CHECK-NEXT:    [[VAL2_PRE]] = load i32, i32* [[PTR2]], align 4
-; CHECK-NEXT:    br label [[LOOP]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
