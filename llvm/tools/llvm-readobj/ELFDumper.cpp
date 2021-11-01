@@ -5331,6 +5331,14 @@ const NoteType FreeBSDNoteTypes[] = {
      "NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)"},
 };
 
+const NoteType OpenBSDCoreNoteTypes[] = {
+    {ELF::NT_OPENBSD_PROCINFO, "NT_OPENBSD_PROCINFO (procinfo structure)"},
+    {ELF::NT_OPENBSD_AUXV, "NT_OPENBSD_AUXV (ELF auxiliary vector data)"},
+    {ELF::NT_OPENBSD_REGS, "NT_OPENBSD_REGS (regular registers)"},
+    {ELF::NT_OPENBSD_FPREGS, "NT_OPENBSD_FPREGS (floating point registers)"},
+    {ELF::NT_OPENBSD_WCOOKIE, "NT_OPENBSD_WCOOKIE (window cookie)"},
+};
+
 const NoteType AMDNoteTypes[] = {
     {ELF::NT_AMD_HSA_CODE_OBJECT_VERSION,
      "NT_AMD_HSA_CODE_OBJECT_VERSION (AMD HSA Code Object Version)"},
@@ -5442,6 +5450,13 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     } else {
       return FindNote(FreeBSDNoteTypes);
     }
+  }
+  if (Name.startswith("OpenBSD") && ELFType == ELF::ET_CORE) {
+    // OpenBSD also places the generic core notes in the OpenBSD namespace.
+    StringRef Result = FindNote(OpenBSDCoreNoteTypes);
+    if (!Result.empty())
+      return Result;
+    return FindNote(CoreNoteTypes);
   }
   if (Name == "AMD")
     return FindNote(AMDNoteTypes);

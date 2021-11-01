@@ -155,6 +155,13 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_FREEBSD_PROCSTAT_OSREL);
   ECase(NT_FREEBSD_PROCSTAT_PSSTRINGS);
   ECase(NT_FREEBSD_PROCSTAT_AUXV);
+  // OpenBSD core note types.
+  ECase(NT_OPENBSD_PROCINFO);
+  ECase(NT_OPENBSD_AUXV);
+  ECase(NT_OPENBSD_REGS);
+  ECase(NT_OPENBSD_FPREGS);
+  ECase(NT_OPENBSD_XFPREGS);
+  ECase(NT_OPENBSD_WCOOKIE);
   // AMD specific notes. (Code Object V2)
   ECase(NT_AMD_HSA_CODE_OBJECT_VERSION);
   ECase(NT_AMD_HSA_HSAIL);
