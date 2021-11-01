@@ -87,6 +87,7 @@ def iHas10E60 : Predicate<"Subtarget->has10E60()">,
 //===----------------------------------------------------------------------===//
 
 include "CSKYRegisterInfo.td"
+include "CSKYCallingConv.td"
 include "CSKYInstrInfo.td"
 
 //===----------------------------------------------------------------------===//

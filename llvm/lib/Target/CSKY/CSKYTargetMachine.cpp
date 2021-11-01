@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYTargetMachine.h"
+#include "CSKY.h"
+#include "CSKYSubtarget.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
@@ -50,6 +53,34 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
   initAsmInfo();
 }
 
+const CSKYSubtarget *
+CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  std::string CPU =
+      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
+  std::string FS =
+      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  std::string Key = CPU + TuneCPU + FS;
+  auto &I = SubtargetMap[Key];
+  if (!I) {
+    // This needs to be done before we create a new subtarget since any
+    // creation will depend on the TM and the code generation flags on the
+    // function that reside in TargetOptions.
+    resetTargetOptions(F);
+    I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS, *this);
+    if (I->useHardFloat() && !I->hasAnyFloatExt())
+      errs() << "Hard-float can't be used with current CPU,"
+                " set to Soft-float\n";
+  }
+  return I.get();
+}
+
 namespace {
 class CSKYPassConfig : public TargetPassConfig {
 public:
@@ -59,10 +90,18 @@ public:
   CSKYTargetMachine &getCSKYTargetMachine() const {
     return getTM<CSKYTargetMachine>();
   }
+
+  bool addInstSelector() override;
 };
 
 } // namespace
 
 TargetPassConfig *CSKYTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new CSKYPassConfig(*this, PM);
+}
+
+bool CSKYPassConfig::addInstSelector() {
+  addPass(createCSKYISelDag(getCSKYTargetMachine()));
+
+  return false;
 }

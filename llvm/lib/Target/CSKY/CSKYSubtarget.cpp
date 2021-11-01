@@ -29,6 +29,17 @@ CSKYSubtarget &CSKYSubtarget::initializeSubtargetDependencies(
   if (TuneCPUName.empty())
     TuneCPUName = CPUName;
 
+  UseHardFloat = false;
+  UseHardFloatABI = false;
+  HasFPUv2SingleFloat = false;
+  HasFPUv2DoubleFloat = false;
+  HasFPUv3SingleFloat = false;
+  HasFPUv3DoubleFloat = false;
+
+  HasExtendLrw = false;
+  HasDoloop = false;
+  HasHighRegisters = false;
+
   HasE1 = false;
   HasE2 = false;
   Has2E3 = false;
@@ -50,3 +61,13 @@ CSKYSubtarget::CSKYSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
     : CSKYGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS)),
       InstrInfo(*this), RegInfo(), TLInfo(TM, *this) {}
+
+bool CSKYSubtarget::useHardFloatABI() const {
+  auto FloatABI = getTargetLowering()->getTargetMachine().Options.FloatABIType;
+
+  if (FloatABI == FloatABI::Default)
+    return UseHardFloatABI;
+  else
+    return FloatABI == FloatABI::Hard;
+}
+
