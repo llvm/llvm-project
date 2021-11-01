@@ -609,7 +609,9 @@ def GPU_AllReduceOperationAttr : StrEnumAttr<"AllReduceOperationAttr",
       GPU_AllReduceOpMul,
       GPU_AllReduceOpOr,
       GPU_AllReduceOpXor
-    ]>;
+    ]>{
+  let cppNamespace = "::mlir::gpu";
+}
 
 def GPU_AllReduceOp : GPU_Op<"all_reduce",
     [SameOperandsAndResultType, IsolatedFromAbove]>,
@@ -650,7 +652,10 @@ def GPU_ShuffleModeAttr : StrEnumAttr<"ShuffleModeAttr",
     "Indexing modes supported by gpu.shuffle.",
     [
       GPU_ShuffleOpXor,
-    ]>;
+    ]>{
+  let cppNamespace = "::mlir::gpu";
+}
+
 
 def GPU_ShuffleOp : GPU_Op<"shuffle", [NoSideEffect]>,
     Arguments<(ins AnyType:$value, I32:$offset, I32:$width,
