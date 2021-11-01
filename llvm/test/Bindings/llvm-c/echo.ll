@@ -29,11 +29,11 @@ module asm "classical GAS"
 @aliased4 = weak alias i32, i32* @var
 @aliased5 = weak_odr alias i32, i32* @var
 
-@ifunc = ifunc i32 (i32), i64 ()* @ifunc_resolver
+@ifunc = ifunc i32 (i32), i32 (i32)* ()* @ifunc_resolver
 
-define i64 @ifunc_resolver() {
+define i32 (i32)* @ifunc_resolver() {
 entry:
-  ret i64 0
+  ret i32 (i32)* null
 }
 
 define { i64, %S* } @unpackrepack(%S %s) {

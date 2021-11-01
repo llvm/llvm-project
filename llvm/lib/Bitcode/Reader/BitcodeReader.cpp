@@ -2279,7 +2279,11 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
           return error("Alias and aliasee types don't match");
         GA->setAliasee(C);
       } else if (auto *GI = dyn_cast<GlobalIFunc>(GV)) {
-        GI->setResolver(C);
+        Type *ResolverFTy =
+            GlobalIFunc::getResolverFunctionType(GI->getValueType());
+        // Transparently fix up the type for compatiblity with older bitcode
+        GI->setResolver(
+            ConstantExpr::getBitCast(C, ResolverFTy->getPointerTo()));
       } else {
         return error("Expected an alias or an ifunc");
       }

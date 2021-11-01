@@ -415,6 +415,9 @@ public:
     for (const GlobalAlias &GA : M.aliases())
       visitGlobalAlias(GA);
 
+    for (const GlobalIFunc &GI : M.ifuncs())
+      visitGlobalIFunc(GI);
+
     for (const NamedMDNode &NMD : M.named_metadata())
       visitNamedMDNode(NMD);
 
@@ -440,6 +443,7 @@ private:
   void visitGlobalValue(const GlobalValue &GV);
   void visitGlobalVariable(const GlobalVariable &GV);
   void visitGlobalAlias(const GlobalAlias &GA);
+  void visitGlobalIFunc(const GlobalIFunc &GI);
   void visitAliaseeSubExpr(const GlobalAlias &A, const Constant &C);
   void visitAliaseeSubExpr(SmallPtrSetImpl<const GlobalAlias *> &Visited,
                            const GlobalAlias &A, const Constant &C);
@@ -821,6 +825,23 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
   visitAliaseeSubExpr(GA, *Aliasee);
 
   visitGlobalValue(GA);
+}
+
+void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
+  // Pierce through ConstantExprs and GlobalAliases and check that the resolver
+  // is a Function definition
+  const Function *Resolver = GI.getResolverFunction();
+  Assert(Resolver, "IFunc must have a Function resolver", &GI);
+  Assert(!Resolver->isDeclarationForLinker(),
+         "IFunc resolver must be a definition", &GI);
+
+  // Check that the immediate resolver operand (prior to any bitcasts) has the
+  // correct type
+  const Type *ResolverTy = GI.getResolver()->getType();
+  const Type *ResolverFuncTy =
+      GlobalIFunc::getResolverFunctionType(GI.getValueType());
+  Assert(ResolverTy == ResolverFuncTy->getPointerTo(),
+         "IFunc resolver has incorrect type", &GI);
 }
 
 void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {

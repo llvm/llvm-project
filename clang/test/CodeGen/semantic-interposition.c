@@ -10,13 +10,13 @@
 
 // CHECK: @var = global i32 0, align 4
 // CHECK: @ext_var = external global i32, align 4
-// CHECK: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()*)
+// CHECK: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()* ()*)
 // CHECK: define dso_local i32 @func()
 // CHECK: declare i32 @ext()
 
 // PREEMPT: @var = global i32 0, align 4
 // PREEMPT: @ext_var = external global i32, align 4
-// PREEMPT: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()*)
+// PREEMPT: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()* ()*)
 // PREEMPT: define i32 @func()
 // PREEMPT: declare i32 @ext()
 
