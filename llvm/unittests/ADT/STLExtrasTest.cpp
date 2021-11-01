@@ -307,6 +307,13 @@ TEST(STLExtrasTest, ToVector) {
     EXPECT_EQ(I, Enumerated[I].index());
     EXPECT_EQ(v[I], Enumerated[I].value());
   }
+
+  auto EnumeratedImplicitSize = to_vector(enumerate(v));
+  ASSERT_EQ(3u, EnumeratedImplicitSize.size());
+  for (size_t I = 0; I < v.size(); ++I) {
+    EXPECT_EQ(I, EnumeratedImplicitSize[I].index());
+    EXPECT_EQ(v[I], EnumeratedImplicitSize[I].value());
+  }
 }
 
 TEST(STLExtrasTest, ConcatRange) {
