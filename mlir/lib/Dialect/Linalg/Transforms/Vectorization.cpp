@@ -1458,60 +1458,86 @@ struct Conv1D_NWC_WCF_Generator : public StructuredGenerator<LinalgOp> {
     // When strideW == 1, we can batch the contiguous loads and avoid unrolling
     int64_t wSizeStep = strideW == 1 ? wSize : 1;
 
-    VectorType lhsType = VectorType::get({nSize, wSizeStep, cSize},
-                                         lhsShapedType.getElementType());
-    VectorType rhsType =
-        VectorType::get({cSize, fSize}, rhsShapedType.getElementType());
-    VectorType resType = VectorType::get({nSize, wSizeStep, fSize},
-                                         resShapedType.getElementType());
+    Type lhsEltType = lhsShapedType.getElementType();
+    Type rhsEltType = rhsShapedType.getElementType();
+    Type resEltType = resShapedType.getElementType();
+    VectorType lhsType = VectorType::get(
+        {nSize, (wSize - 1) * strideW + 1 + (kwSize - 1) * dilationW + 1,
+         cSize},
+        lhsEltType);
+    VectorType rhsType = VectorType::get({kwSize, cSize, fSize}, rhsEltType);
+    VectorType resType = VectorType::get({nSize, wSize, fSize}, resEltType);
 
-    SmallVector<Value> lhsVals, rhsVals, resVals;
+    // Read lhs slice of size {w * strideW + kw * dilationW, c, f} @ [0, 0, 0].
+    Value lhs = builder.create<vector::TransferReadOp>(
+        loc, lhsType, lhsShaped, ValueRange{zero, zero, zero});
+    // Read rhs slice of size {kw, c, f} @ [0, 0, 0].
+    Value rhs = builder.create<vector::TransferReadOp>(
+        loc, rhsType, rhsShaped, ValueRange{zero, zero, zero});
+    // Read res slice of size {n, w, f} @ [0, 0, 0].
+    Value res = builder.create<vector::TransferReadOp>(
+        loc, resType, resShaped, ValueRange{zero, zero, zero});
+
+    //===------------------------------------------------------------------===//
+    // Begin vector-only rewrite part
+    //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
-    // Alternatively we could preload both 3-d slices and extract smaller slices
-    // iteratively without touching memory. But this will quickly spill.
+    SmallVector<Value> lhsVals, rhsVals, resVals;
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      // Read rhs slice of size {c, f} @ [kw, 0, 0].
-      Value kwVal = builder.create<arith::ConstantIndexOp>(loc, kw);
-      rhsVals.push_back(builder.create<vector::TransferReadOp>(
-          loc, rhsType, rhsShaped, ValueRange{kwVal, zero, zero}));
+      // Extract rhs slice of size {c, f} @ [kw].
+      rhsVals.push_back(builder.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
 
-      for (int64_t w_iv = 0; w_iv < wSize; w_iv += wSizeStep) {
-        // Read lhs slice of size {n, wSizeStep, c}
+      for (int64_t w = 0; w < wSize; w += wSizeStep) {
+        // Extract lhs slice of size {n, wSizeStep, c}
         //   @ [0, sw * w + dw * kw, 0].
-        Value lhsStridedIdx = builder.create<arith::ConstantIndexOp>(
-            loc, strideW * w_iv + dilationW * kw);
-        lhsVals.push_back(builder.create<vector::TransferReadOp>(
-            loc, lhsType, lhsShaped, ValueRange{zero, lhsStridedIdx, zero}));
+        lhsVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+            loc, lhs,
+            /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
+            /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
+            /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
 
-        // Read res slice: {n, wSizeStep, f} @ [0, w, 0].
-        Value wVal = builder.create<arith::ConstantIndexOp>(loc, w_iv);
-        // When operating on tensors, reading from the updated value is required
-        // for vector.transfer_read/write hoisting to function as expected.
-        resVals.push_back(builder.create<vector::TransferReadOp>(
-            loc, resType, resShaped, ValueRange{zero, wVal, zero}));
-      }
-    }
-    for (int64_t kw = 0; kw < kwSize; ++kw) {
-      for (int64_t w_iv = 0; w_iv < wSize; w_iv += wSizeStep) {
-        // Compute contraction: I{n, w, c} * F{c, f} -> O{n, w, f}
-        resVals[kw * (wSize / wSizeStep) + w_iv] = conv1dSliceAsContraction(
-            builder, loc, lhsVals[kw * (wSize / wSizeStep) + w_iv], rhsVals[kw],
-            resVals[kw * (wSize / wSizeStep) + w_iv]);
-      }
-    }
-    for (int64_t kw = 0; kw < kwSize; ++kw) {
-      for (int64_t w_iv = 0; w_iv < wSize; w_iv += wSizeStep) {
-        Value wVal = builder.create<arith::ConstantIndexOp>(loc, w_iv);
-        // Write back res slice: {n, wSizeStep, f} @ [0, w, 0].
-        write = builder.create<vector::TransferWriteOp>(
-            loc, resVals[kw * (wSize / wSizeStep) + w_iv], resShaped,
-            ValueRange{zero, wVal, zero});
-        if (write.getNumResults() == 1)
-          resShaped = write->getResult(0);
+        // This does not depend on kw.
+        if (kw == 0) {
+          // Extract res slice: {n, wSizeStep, f} @ [0, w, 0].
+          resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+              loc, res,
+              /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+              /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, fSize},
+              /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
+        }
       }
     }
 
-    return write.getOperation();
+    auto linearIndex = [&](int64_t kw, int64_t w) {
+      return kw * (wSize / wSizeStep) + w;
+    };
+
+    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f}
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      for (int64_t w = 0; w < wSize; w += wSizeStep) {
+        resVals[w] = conv1dSliceAsContraction(
+            builder, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
+      }
+    }
+
+    // Write back res slice: {n, wSizeStep, f} @ [0, w, 0].
+    // This does not depend on kw.
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      res = builder.create<vector::InsertStridedSliceOp>(
+          loc, resVals[w], res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          /*strides=*/ArrayRef<int64_t>{1, 1, 1});
+    }
+    //===------------------------------------------------------------------===//
+    // End vector-only rewrite part
+    //===------------------------------------------------------------------===//
+
+    // Write back res slice of size {n, w, f} @ [0, 0, 0].
+    return builder
+        .create<vector::TransferWriteOp>(loc, res, resShaped,
+                                         ValueRange{zero, zero, zero})
+        .getOperation();
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
