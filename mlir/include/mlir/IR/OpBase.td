@@ -1187,11 +1187,11 @@ class EnumAttrCaseInfo<string sym, int intVal, string strVal> {
 }
 
 // An enum attribute case stored with StringAttr.
-class StrEnumAttrCase<string sym, int val = -1> :
-    EnumAttrCaseInfo<sym, val, sym>,
+class StrEnumAttrCase<string sym, int val = -1, string str = sym> :
+    EnumAttrCaseInfo<sym, val, str>,
     StringBasedAttr<
-      CPred<"$_self.cast<::mlir::StringAttr>().getValue() == \"" # sym # "\"">,
-      "case " # sym>;
+      CPred<"$_self.cast<::mlir::StringAttr>().getValue() == \"" # str # "\"">,
+      "case " # str>;
 
 // An enum attribute case stored with IntegerAttr, which has an integer value,
 // its representation as a string and a C++ symbol name which may be different.
