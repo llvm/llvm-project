@@ -224,7 +224,7 @@ static bool isRelExpr(RelExpr expr) {
 static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
                                      InputSectionBase &s, uint64_t relOff) {
   // These expressions always compute a constant
-  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
+  if (oneof<R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
             R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
             R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
@@ -1197,9 +1197,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (expr == R_DTPREL && toExecRelax) {
-    c.relocations.push_back({target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE),
-                             type, offset, addend, &sym});
+  if (expr == R_DTPREL) {
+    if (toExecRelax)
+      expr = target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
+    c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
 
