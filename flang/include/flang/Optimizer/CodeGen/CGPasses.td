@@ -54,7 +54,10 @@ def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Override module's target triple.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
-           "Disable target-specific conversion of CHARACTER.">
+           "Disable target-specific conversion of CHARACTER.">,
+    Option<"noComplexConversion", "no-complex-conversion",
+           "bool", /*default=*/"false",
+           "Disable target-specific conversion of COMPLEX.">
   ];
 }
 

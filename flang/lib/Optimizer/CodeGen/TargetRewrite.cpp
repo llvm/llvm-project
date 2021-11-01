@@ -35,7 +35,15 @@ namespace {
 
 /// Fixups for updating a FuncOp's arguments and return values.
 struct FixupTy {
-  enum class Codes { CharPair, Trailing };
+  enum class Codes {
+    ArgumentAsLoad,
+    ArgumentType,
+    CharPair,
+    ReturnAsStore,
+    ReturnType,
+    Split,
+    Trailing
+  };
 
   FixupTy(Codes code, std::size_t index, std::size_t second = 0)
       : code{code}, index{index}, second{second} {}
@@ -60,6 +68,7 @@ class TargetRewrite : public TargetRewriteBase<TargetRewrite> {
 public:
   TargetRewrite(const TargetRewriteOptions &options) {
     noCharacterConversion = options.noCharacterConversion;
+    noComplexConversion = options.noComplexConversion;
   }
 
   void runOnOperation() override final {
@@ -99,6 +108,76 @@ public:
 
   mlir::ModuleOp getModule() { return getOperation(); }
 
+  template <typename A, typename B, typename C>
+  std::function<mlir::Value(mlir::Operation *)>
+  rewriteCallComplexResultType(A ty, B &newResTys, B &newInTys, C &newOpers) {
+    auto m = specifics->complexReturnType(ty.getElementType());
+    // Currently targets mandate COMPLEX is a single aggregate or packed
+    // scalar, including the sret case.
+    assert(m.size() == 1 && "target lowering of complex return not supported");
+    auto resTy = std::get<mlir::Type>(m[0]);
+    auto attr = std::get<CodeGenSpecifics::Attributes>(m[0]);
+    auto loc = mlir::UnknownLoc::get(resTy.getContext());
+    if (attr.isSRet()) {
+      assert(isa_ref_type(resTy));
+      mlir::Value stack =
+          rewriter->create<fir::AllocaOp>(loc, dyn_cast_ptrEleTy(resTy));
+      newInTys.push_back(resTy);
+      newOpers.push_back(stack);
+      return [=](mlir::Operation *) -> mlir::Value {
+        auto memTy = ReferenceType::get(ty);
+        auto cast = rewriter->create<ConvertOp>(loc, memTy, stack);
+        return rewriter->create<fir::LoadOp>(loc, cast);
+      };
+    }
+    newResTys.push_back(resTy);
+    return [=](mlir::Operation *call) -> mlir::Value {
+      auto mem = rewriter->create<fir::AllocaOp>(loc, resTy);
+      rewriter->create<fir::StoreOp>(loc, call->getResult(0), mem);
+      auto memTy = ReferenceType::get(ty);
+      auto cast = rewriter->create<ConvertOp>(loc, memTy, mem);
+      return rewriter->create<fir::LoadOp>(loc, cast);
+    };
+  }
+
+  template <typename A, typename B, typename C>
+  void rewriteCallComplexInputType(A ty, mlir::Value oper, B &newInTys,
+                                   C &newOpers) {
+    auto m = specifics->complexArgumentType(ty.getElementType());
+    auto *ctx = ty.getContext();
+    auto loc = mlir::UnknownLoc::get(ctx);
+    if (m.size() == 1) {
+      // COMPLEX is a single aggregate
+      auto resTy = std::get<mlir::Type>(m[0]);
+      auto attr = std::get<CodeGenSpecifics::Attributes>(m[0]);
+      auto oldRefTy = ReferenceType::get(ty);
+      if (attr.isByVal()) {
+        auto mem = rewriter->create<fir::AllocaOp>(loc, ty);
+        rewriter->create<fir::StoreOp>(loc, oper, mem);
+        newOpers.push_back(rewriter->create<ConvertOp>(loc, resTy, mem));
+      } else {
+        auto mem = rewriter->create<fir::AllocaOp>(loc, resTy);
+        auto cast = rewriter->create<ConvertOp>(loc, oldRefTy, mem);
+        rewriter->create<fir::StoreOp>(loc, oper, cast);
+        newOpers.push_back(rewriter->create<fir::LoadOp>(loc, mem));
+      }
+      newInTys.push_back(resTy);
+    } else {
+      assert(m.size() == 2);
+      // COMPLEX is split into 2 separate arguments
+      for (auto e : llvm::enumerate(m)) {
+        auto &tup = e.value();
+        auto ty = std::get<mlir::Type>(tup);
+        auto index = e.index();
+        auto idx = rewriter->getIntegerAttr(rewriter->getIndexType(), index);
+        auto val = rewriter->create<ExtractValueOp>(
+            loc, ty, oper, rewriter->getArrayAttr(idx));
+        newInTys.push_back(ty);
+        newOpers.push_back(val);
+      }
+    }
+  }
+
   // Convert fir.call and fir.dispatch Ops.
   template <typename A>
   void convertCallOp(A callOp) {
@@ -124,7 +203,16 @@ public:
     llvm::Optional<std::function<mlir::Value(mlir::Operation *)>> wrap;
     if (fnTy.getResults().size() == 1) {
       mlir::Type ty = fnTy.getResult(0);
-      newResTys.push_back(ty);
+      llvm::TypeSwitch<mlir::Type>(ty)
+          .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+            wrap = rewriteCallComplexResultType(cmplx, newResTys, newInTys,
+                                                newOpers);
+          })
+          .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+            wrap = rewriteCallComplexResultType(cmplx, newResTys, newInTys,
+                                                newOpers);
+          })
+          .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     } else if (fnTy.getResults().size() > 1) {
       TODO(loc, "multiple results not supported yet");
     }
@@ -169,6 +257,12 @@ public:
               }
             }
           })
+          .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+            rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
+          })
+          .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+            rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
+          })
           .Default([&](mlir::Type ty) {
             newInTys.push_back(ty);
             newOpers.push_back(oper);
@@ -198,6 +292,33 @@ public:
       TODO(loc, "dispatch not implemented");
     }
   }
+
+  // Result type fixup for fir::ComplexType and mlir::ComplexType
+  template <typename A, typename B>
+  void lowerComplexSignatureRes(A cmplx, B &newResTys, B &newInTys) {
+    if (noComplexConversion) {
+      newResTys.push_back(cmplx);
+    } else {
+      for (auto &tup : specifics->complexReturnType(cmplx.getElementType())) {
+        auto argTy = std::get<mlir::Type>(tup);
+        if (std::get<CodeGenSpecifics::Attributes>(tup).isSRet())
+          newInTys.push_back(argTy);
+        else
+          newResTys.push_back(argTy);
+      }
+    }
+  }
+
+  // Argument type fixup for fir::ComplexType and mlir::ComplexType
+  template <typename A, typename B>
+  void lowerComplexSignatureArg(A cmplx, B &newInTys) {
+    if (noComplexConversion)
+      newInTys.push_back(cmplx);
+    else
+      for (auto &tup : specifics->complexArgumentType(cmplx.getElementType()))
+        newInTys.push_back(std::get<mlir::Type>(tup));
+  }
+
   /// Convert the type signatures on all the functions present in the module.
   /// As the type signature is being changed, this must also update the
   /// function itself to use any new arguments, etc.
@@ -215,12 +336,14 @@ public:
     assert(signature.isa<mlir::FunctionType>());
     auto func = signature.dyn_cast<mlir::FunctionType>();
     for (auto ty : func.getResults())
-      if ((ty.isa<BoxCharType>() && !noCharacterConversion)) {
+      if ((ty.isa<BoxCharType>() && !noCharacterConversion) ||
+          (isa_complex(ty) && !noComplexConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
     for (auto ty : func.getInputs())
-      if ((ty.isa<BoxCharType>() && !noCharacterConversion)) {
+      if ((ty.isa<BoxCharType>() && !noCharacterConversion) ||
+          (isa_complex(ty) && !noComplexConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
@@ -239,7 +362,20 @@ public:
 
     // Convert return value(s)
     for (auto ty : funcTy.getResults())
-      newResTys.push_back(ty);
+      llvm::TypeSwitch<mlir::Type>(ty)
+          .Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+            if (noComplexConversion)
+              newResTys.push_back(cmplx);
+            else
+              doComplexReturn(func, cmplx, newResTys, newInTys, fixups);
+          })
+          .Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+            if (noComplexConversion)
+              newResTys.push_back(cmplx);
+            else
+              doComplexReturn(func, cmplx, newResTys, newInTys, fixups);
+          })
+          .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
 
     // Convert arguments
     llvm::SmallVector<mlir::Type> trailingTys;
@@ -276,6 +412,18 @@ public:
               }
             }
           })
+          .Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+            if (noComplexConversion)
+              newInTys.push_back(cmplx);
+            else
+              doComplexArg(func, cmplx, newInTys, fixups);
+          })
+          .Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+            if (noComplexConversion)
+              newInTys.push_back(cmplx);
+            else
+              doComplexArg(func, cmplx, newInTys, fixups);
+          })
           .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
     }
 
@@ -289,6 +437,37 @@ public:
       for (std::remove_const_t<decltype(fixupSize)> i = 0; i < fixupSize; ++i) {
         const auto &fixup = fixups[i];
         switch (fixup.code) {
+        case FixupTy::Codes::ArgumentAsLoad: {
+          // Argument was pass-by-value, but is now pass-by-reference and
+          // possibly with a different element type.
+          auto newArg =
+              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          rewriter->setInsertionPointToStart(&func.front());
+          auto oldArgTy = ReferenceType::get(oldArgTys[fixup.index - offset]);
+          auto cast = rewriter->create<ConvertOp>(loc, oldArgTy, newArg);
+          auto load = rewriter->create<fir::LoadOp>(loc, cast);
+          func.getArgument(fixup.index + 1).replaceAllUsesWith(load);
+          func.front().eraseArgument(fixup.index + 1);
+        } break;
+        case FixupTy::Codes::ArgumentType: {
+          // Argument is pass-by-value, but its type has likely been modified to
+          // suit the target ABI convention.
+          auto newArg =
+              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          rewriter->setInsertionPointToStart(&func.front());
+          auto mem =
+              rewriter->create<fir::AllocaOp>(loc, newInTys[fixup.index]);
+          rewriter->create<fir::StoreOp>(loc, newArg, mem);
+          auto oldArgTy = ReferenceType::get(oldArgTys[fixup.index - offset]);
+          auto cast = rewriter->create<ConvertOp>(loc, oldArgTy, mem);
+          mlir::Value load = rewriter->create<fir::LoadOp>(loc, cast);
+          func.getArgument(fixup.index + 1).replaceAllUsesWith(load);
+          func.front().eraseArgument(fixup.index + 1);
+          LLVM_DEBUG(llvm::dbgs()
+                     << "old argument: " << oldArgTy.getEleTy()
+                     << ", repl: " << load << ", new argument: "
+                     << func.getArgument(fixup.index).getType() << '\n');
+        } break;
         case FixupTy::Codes::CharPair: {
           // The FIR boxchar argument has been split into a pair of distinct
           // arguments that are in juxtaposition to each other.
@@ -300,6 +479,59 @@ public:
             auto box = rewriter->create<EmboxCharOp>(
                 loc, boxTy, func.front().getArgument(fixup.index - 1), newArg);
             func.getArgument(fixup.index + 1).replaceAllUsesWith(box);
+            func.front().eraseArgument(fixup.index + 1);
+            offset++;
+          }
+        } break;
+        case FixupTy::Codes::ReturnAsStore: {
+          // The value being returned is now being returned in memory (callee
+          // stack space) through a hidden reference argument.
+          auto newArg =
+              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          offset++;
+          func.walk([&](mlir::ReturnOp ret) {
+            rewriter->setInsertionPoint(ret);
+            auto oldOper = ret.getOperand(0);
+            auto oldOperTy = ReferenceType::get(oldOper.getType());
+            auto cast = rewriter->create<ConvertOp>(loc, oldOperTy, newArg);
+            rewriter->create<fir::StoreOp>(loc, oldOper, cast);
+            rewriter->create<mlir::ReturnOp>(loc);
+            ret.erase();
+          });
+        } break;
+        case FixupTy::Codes::ReturnType: {
+          // The function is still returning a value, but its type has likely
+          // changed to suit the target ABI convention.
+          func.walk([&](mlir::ReturnOp ret) {
+            rewriter->setInsertionPoint(ret);
+            auto oldOper = ret.getOperand(0);
+            auto oldOperTy = ReferenceType::get(oldOper.getType());
+            auto mem =
+                rewriter->create<fir::AllocaOp>(loc, newResTys[fixup.index]);
+            auto cast = rewriter->create<ConvertOp>(loc, oldOperTy, mem);
+            rewriter->create<fir::StoreOp>(loc, oldOper, cast);
+            mlir::Value load = rewriter->create<fir::LoadOp>(loc, mem);
+            rewriter->create<mlir::ReturnOp>(loc, load);
+            ret.erase();
+          });
+        } break;
+        case FixupTy::Codes::Split: {
+          // The FIR argument has been split into a pair of distinct arguments
+          // that are in juxtaposition to each other. (For COMPLEX value.)
+          auto newArg =
+              func.front().insertArgument(fixup.index, newInTys[fixup.index]);
+          if (fixup.second == 1) {
+            rewriter->setInsertionPointToStart(&func.front());
+            auto cplxTy = oldArgTys[fixup.index - offset - fixup.second];
+            auto undef = rewriter->create<UndefOp>(loc, cplxTy);
+            auto zero = rewriter->getIntegerAttr(rewriter->getIndexType(), 0);
+            auto one = rewriter->getIntegerAttr(rewriter->getIndexType(), 1);
+            auto cplx1 = rewriter->create<InsertValueOp>(
+                loc, cplxTy, undef, func.front().getArgument(fixup.index - 1),
+                rewriter->getArrayAttr(zero));
+            auto cplx = rewriter->create<InsertValueOp>(
+                loc, cplxTy, cplx1, newArg, rewriter->getArrayAttr(one));
+            func.getArgument(fixup.index + 1).replaceAllUsesWith(cplx);
             func.front().eraseArgument(fixup.index + 1);
             offset++;
           }
@@ -339,6 +571,81 @@ public:
     if (auto attr = func.getArgAttrOfType<mlir::UnitAttr>(index, "llvm.sret"))
       return true;
     return false;
+  }
+
+  /// Convert a complex return value. This can involve converting the return
+  /// value to a "hidden" first argument or packing the complex into a wide
+  /// GPR.
+  template <typename A, typename B, typename C>
+  void doComplexReturn(mlir::FuncOp func, A cmplx, B &newResTys, B &newInTys,
+                       C &fixups) {
+    if (noComplexConversion) {
+      newResTys.push_back(cmplx);
+      return;
+    }
+    auto m = specifics->complexReturnType(cmplx.getElementType());
+    assert(m.size() == 1);
+    auto &tup = m[0];
+    auto attr = std::get<CodeGenSpecifics::Attributes>(tup);
+    auto argTy = std::get<mlir::Type>(tup);
+    if (attr.isSRet()) {
+      unsigned argNo = newInTys.size();
+      fixups.emplace_back(
+          FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::FuncOp func) {
+            func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
+          });
+      newInTys.push_back(argTy);
+      return;
+    }
+    fixups.emplace_back(FixupTy::Codes::ReturnType, newResTys.size());
+    newResTys.push_back(argTy);
+  }
+
+  /// Convert a complex argument value. This can involve storing the value to
+  /// a temporary memory location or factoring the value into two distinct
+  /// arguments.
+  template <typename A, typename B, typename C>
+  void doComplexArg(mlir::FuncOp func, A cmplx, B &newInTys, C &fixups) {
+    if (noComplexConversion) {
+      newInTys.push_back(cmplx);
+      return;
+    }
+    auto m = specifics->complexArgumentType(cmplx.getElementType());
+    const auto fixupCode =
+        m.size() > 1 ? FixupTy::Codes::Split : FixupTy::Codes::ArgumentType;
+    for (auto e : llvm::enumerate(m)) {
+      auto &tup = e.value();
+      auto index = e.index();
+      auto attr = std::get<CodeGenSpecifics::Attributes>(tup);
+      auto argTy = std::get<mlir::Type>(tup);
+      auto argNo = newInTys.size();
+      if (attr.isByVal()) {
+        if (auto align = attr.getAlignment())
+          fixups.emplace_back(
+              FixupTy::Codes::ArgumentAsLoad, argNo, [=](mlir::FuncOp func) {
+                func.setArgAttr(argNo, "llvm.byval", rewriter->getUnitAttr());
+                func.setArgAttr(argNo, "llvm.align",
+                                rewriter->getIntegerAttr(
+                                    rewriter->getIntegerType(32), align));
+              });
+        else
+          fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, newInTys.size(),
+                              [=](mlir::FuncOp func) {
+                                func.setArgAttr(argNo, "llvm.byval",
+                                                rewriter->getUnitAttr());
+                              });
+      } else {
+        if (auto align = attr.getAlignment())
+          fixups.emplace_back(fixupCode, argNo, index, [=](mlir::FuncOp func) {
+            func.setArgAttr(
+                argNo, "llvm.align",
+                rewriter->getIntegerAttr(rewriter->getIntegerType(32), align));
+          });
+        else
+          fixups.emplace_back(fixupCode, argNo, index);
+      }
+      newInTys.push_back(argTy);
+    }
   }
 
 private:

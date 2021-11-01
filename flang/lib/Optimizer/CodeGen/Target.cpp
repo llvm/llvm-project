@@ -20,6 +20,15 @@
 
 using namespace fir;
 
+// Reduce a REAL/float type to the floating point semantics.
+static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
+                                                  mlir::Type type) {
+  assert(isa_real(type));
+  if (auto ty = type.dyn_cast<fir::RealType>())
+    return kindMap.getFloatSemantics(ty.getFKind());
+  return type.cast<mlir::FloatType>().getFloatSemantics();
+}
+
 namespace {
 template <typename S>
 struct GenericTarget : public CodeGenSpecifics {
@@ -35,7 +44,8 @@ struct GenericTarget : public CodeGenSpecifics {
     // split format with all pointers first (in the declared position) and all
     // LEN arguments appended after all of the dummy arguments.
     // NB: Other conventions/ABIs can/should be supported via options.
-    marshal.emplace_back(idxTy, AT{/*append=*/!sret});
+    marshal.emplace_back(idxTy, AT{/*alignment=*/0, /*byval=*/false,
+                                   /*sret=*/sret, /*append=*/!sret});
     return marshal;
   }
 };
@@ -50,6 +60,39 @@ struct TargetI386 : public GenericTarget<TargetI386> {
   using GenericTarget::GenericTarget;
 
   static constexpr int defaultWidth = 32;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // { t, t }   struct of 2 eleTy, byval, align 4
+    mlir::TypeRange range = {eleTy, eleTy};
+    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    marshal.emplace_back(fir::ReferenceType::get(structTy),
+                         AT{/*alignment=*/4, /*byval=*/true});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle()) {
+      // i64   pack both floats in a 64-bit GPR
+      marshal.emplace_back(mlir::IntegerType::get(eleTy.getContext(), 64),
+                           AT{});
+    } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // { t, t }   struct of 2 eleTy, sret, align 4
+      mlir::TypeRange range = {eleTy, eleTy};
+      auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+      marshal.emplace_back(fir::ReferenceType::get(structTy),
+                           AT{/*alignment=*/4, /*byval=*/false, /*sret=*/true});
+    } else {
+      llvm::report_fatal_error("complex for this precision not implemented");
+    }
+    return marshal;
+  }
 };
 } // namespace
 
@@ -62,6 +105,41 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
   using GenericTarget::GenericTarget;
 
   static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle()) {
+      // <2 x t>   vector of 2 eleTy
+      marshal.emplace_back(fir::VectorType::get(2, eleTy), AT{});
+    } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // two distinct double arguments
+      marshal.emplace_back(eleTy, AT{});
+      marshal.emplace_back(eleTy, AT{});
+    } else {
+      llvm::report_fatal_error("complex for this precision not implemented");
+    }
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle()) {
+      // <2 x t>   vector of 2 eleTy
+      marshal.emplace_back(fir::VectorType::get(2, eleTy), AT{});
+    } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // ( t, t )   tuple of 2 eleTy
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
+                           AT{});
+    } else {
+      llvm::report_fatal_error("complex for this precision not implemented");
+    }
+    return marshal;
+  }
 };
 } // namespace
 
@@ -74,6 +152,36 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   using GenericTarget::GenericTarget;
 
   static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // [2 x t]   array of 2 eleTy
+      marshal.emplace_back(fir::SequenceType::get({2}, eleTy), AT{});
+    } else {
+      llvm::report_fatal_error("complex for this precision not implemented");
+    }
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // ( t, t )   tuple of 2 eleTy
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
+                           AT{});
+    } else {
+      llvm::report_fatal_error("complex for this precision not implemented");
+    }
+    return marshal;
+  }
 };
 } // namespace
 
@@ -86,6 +194,24 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
   using GenericTarget::GenericTarget;
 
   static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // two distinct element type arguments (re, im)
+    marshal.emplace_back(eleTy, AT{});
+    marshal.emplace_back(eleTy, AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // ( t, t )   tuple of 2 element type
+    mlir::TypeRange range = {eleTy, eleTy};
+    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    return marshal;
+  }
 };
 } // namespace
 
