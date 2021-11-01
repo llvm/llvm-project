@@ -38,14 +38,14 @@ end
 ! Descriptors with length parameters
 subroutine s5(n)
   integer :: n
-  type :: t1(l)
-    integer, len :: l
-    real :: a(l)
+  type :: t1(n)
+    integer, len :: n
+    real :: a(n)
   end type
-  type :: t2(l1, l2)
-    integer, len :: l1
-    integer, len :: l2
-    real :: b(l1, l2)
+  type :: t2(n1, n2)
+    integer, len :: n1
+    integer, len :: n2
+    real :: b(n1, n2)
   end type
   type(t1(n))   :: x1 !CHECK: x1 size=40 offset=
   type(t2(n,n)) :: x2 !CHECK: x2 size=48 offset=
