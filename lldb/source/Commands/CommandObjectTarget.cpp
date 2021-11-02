@@ -1047,8 +1047,7 @@ protected:
           }
           bool last_pair = ((argc - i) == 2);
           target->GetImageSearchPathList().Append(
-              ConstString(from), ConstString(to),
-              last_pair); // Notify if this is the last pair
+              from, to, last_pair); // Notify if this is the last pair
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         } else {
           if (from[0])
@@ -1175,8 +1174,8 @@ protected:
 
         if (from[0] && to[0]) {
           bool last_pair = ((argc - i) == 2);
-          target->GetImageSearchPathList().Insert(
-              ConstString(from), ConstString(to), insert_idx, last_pair);
+          target->GetImageSearchPathList().Insert(from, to, insert_idx,
+                                                  last_pair);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         } else {
           if (from[0])
