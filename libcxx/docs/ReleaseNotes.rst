@@ -78,6 +78,10 @@ API Changes
   exceeds the maximum supported size, as required by the C++ standard.
   Previously the type ``std::length_error`` was used.
 
+- Removed the nonstandard methods ``std::chrono::file_clock::to_time_t`` and
+  ``std::chrono::file_clock::from_time_t``; neither libstdc++ nor MSVC STL
+  had such methods.
+
 ABI Changes
 -----------
 
