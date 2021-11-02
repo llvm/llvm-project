@@ -4,6 +4,7 @@
 set(ORC_SOURCES
   extensible_rtti.cpp
   log_error_to_stderr.cpp
+  macho_ehframe_registration.cpp
   macho_platform.cpp
   elfnix_platform.cpp
   run_program_wrapper.cpp
