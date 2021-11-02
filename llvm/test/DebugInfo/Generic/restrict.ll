@@ -1,12 +1,12 @@
-; RUN: %llc_dwarf -dwarf-version=2 -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V2 %s
-; RUN: %llc_dwarf -dwarf-version=3 -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V3 %s
+; RUN: %llc_dwarf -dwarf-version=2 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V2 %s
+; RUN: %llc_dwarf -dwarf-version=3 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V3 %s
 
-; CHECK: DW_AT_name {{.*}} "dst"
-; V2: DW_AT_type {{.*}} {[[PTR:0x.*]]}
-; V3: DW_AT_type {{.*}} {[[RESTRICT:0x.*]]}
-; V3: [[RESTRICT]]: {{.*}}DW_TAG_restrict_type
-; V3-NEXT: DW_AT_type {{.*}} {[[PTR:0x.*]]}
-; CHECK: [[PTR]]: {{.*}}DW_TAG_pointer_type
+; CHECK: DW_AT_name ("dst")
+; V2: DW_AT_type ([[PTR:0x........]]
+; V3: DW_AT_type ([[RESTRICT:0x........]]
+; V3: [[RESTRICT]]: DW_TAG_restrict_type
+; V3-NEXT: DW_AT_type ([[PTR:0x........]]
+; CHECK: [[PTR]]: DW_TAG_pointer_type
 ; CHECK-NOT: DW_AT_type
 
 ; Generated with clang from:
