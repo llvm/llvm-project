@@ -6980,10 +6980,7 @@ SDValue DAGCombiner::MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos,
 // a rot[lr]. This also matches funnel shift patterns, similar to rotation but
 // with different shifted sources.
 SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
-  // Must be a legal type.  Expanded 'n promoted things won't work with rotates.
   EVT VT = LHS.getValueType();
-  if (!TLI.isTypeLegal(VT))
-    return SDValue();
 
   // The target must have at least one rotate/funnel flavor.
   bool HasROTL = hasOperation(ISD::ROTL, VT);
