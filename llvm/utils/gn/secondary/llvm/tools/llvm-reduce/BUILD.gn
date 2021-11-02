@@ -1,5 +1,6 @@
 executable("llvm-reduce") {
   deps = [
+    "//llvm/lib/CodeGen/MIRParser",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Support",
