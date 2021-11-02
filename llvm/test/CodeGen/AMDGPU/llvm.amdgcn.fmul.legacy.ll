@@ -64,6 +64,20 @@ define amdgpu_kernel void @test_mad_legacy_f32(float addrspace(1)* %out, float %
   ret void
 }
 
+; GCN-LABEL: {{^}}test_mad_legacy_f32_imm:
+; GFX6: v_mac_legacy_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX8: v_mad_legacy_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX9: v_mad_legacy_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX101: v_mac_legacy_f32_e64 v{{[0-9]+}}, 0x41200000, s{{[0-9]+}}
+; GFX103: v_mul_legacy_f32_e64 v{{[0-9]+}}, 0x41200000, s{{[0-9]+}}
+; GFX103: v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+define amdgpu_kernel void @test_mad_legacy_f32_imm(float addrspace(1)* %out, float %a, float %c) #2 {
+  %mul = call float @llvm.amdgcn.fmul.legacy(float %a, float 10.0)
+  %add = fadd float %mul, %c
+  store float %add, float addrspace(1)* %out, align 4
+  ret void
+}
+
 ; GCN-LABEL: {{^}}test_mad_legacy_fneg_f32:
 ; MADMACF32: v_mad_legacy_f32 v{{[0-9]+}}, -s{{[0-9]+}}, -{{[sv][0-9]+}}, v{{[0-9]+}}
 ; NOMADMACF32: v_mul_legacy_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, -s{{[0-9]+}}
