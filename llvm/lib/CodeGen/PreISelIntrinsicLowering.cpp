@@ -36,9 +36,8 @@ static bool lowerLoadRelative(Function &F) {
   Type *Int32PtrTy = Int32Ty->getPointerTo();
   Type *Int8Ty = Type::getInt8Ty(F.getContext());
 
-  for (auto I = F.use_begin(), E = F.use_end(); I != E;) {
-    auto CI = dyn_cast<CallInst>(I->getUser());
-    ++I;
+  for (Use &U : llvm::make_early_inc_range(F.uses())) {
+    auto CI = dyn_cast<CallInst>(U.getUser());
     if (!CI || CI->getCalledOperand() != &F)
       continue;
 
