@@ -299,6 +299,9 @@ cc_library(
             "include/llvm/*.h",
             "include/llvm/IR/*.h",
         ],
+        exclude = [
+            "include/llvm/LinkAllPasses.h",
+        ],
     ) + [
         "include/llvm/IR/Value.def",
         "include/llvm-c/Comdat.h",
@@ -689,6 +692,9 @@ cc_library(
         [
             "include/llvm/*.h",
             "include/llvm/IR/*.h",
+        ],
+        exclude = [
+            "include/llvm/LinkAllPasses.h",
         ],
     ) + [
         "include/llvm-c/Comdat.h",
@@ -1382,7 +1388,9 @@ cc_library(
             "lib/CodeGen/SelectionDAG/*.h",
         ],
     ),
-    hdrs = glob(
+    hdrs = [
+        "include/llvm/LinkAllPasses.h",
+    ] + glob(
         [
             "include/llvm/CodeGen/**/*.h",
         ],
