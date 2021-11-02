@@ -45,7 +45,7 @@ mlirOperationImplementsInterfaceStatic(MlirStringRef operationName,
 MLIR_CAPI_EXPORTED MlirTypeID mlirInferTypeOpInterfaceTypeID();
 
 /// These callbacks are used to return multiple types from functions while
-/// transferring ownerhsip to the caller. The first argument is the number of
+/// transferring ownership to the caller. The first argument is the number of
 /// consecutive elements pointed to by the second argument. The third argument
 /// is an opaque pointer forwarded to the callback by the caller.
 typedef void (*MlirTypesCallback)(intptr_t, MlirType *, void *);
