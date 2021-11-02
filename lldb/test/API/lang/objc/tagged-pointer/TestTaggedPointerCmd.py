@@ -1,0 +1,20 @@
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+
+class TestTaggedPointerCommand(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+
+    def test(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.m"))
+
+        self.expect("lang objc tagged-pointer info bogus", error=True,
+                    patterns=["could not convert 'bogus' to a valid address"])
+
+        self.expect("lang objc tagged-pointer info 0x1", error=True,
+                    patterns=["could not get class descriptor for 0x1"])
+
