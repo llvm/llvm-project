@@ -49,11 +49,13 @@ void test_unused() {
   ++unused_var;
 }
 
-// CHECK: ![[ESCAPE_VAR_LT]] = distinct !DILifetime(object: ![[ESCAPE_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(%struct.__block_byref_escape_var*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i8*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i32)))
-// CHECK: ![[ESCAPE_VAR]] = !DILocalVariable(name: "escape_var"
-// CHECK: ![[NOESCAPE_VAR_LT]] = distinct !DILifetime(object: ![[NOESCAPE_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32*), DIOpDeref(i32)))
-// CHECK: ![[NOESCAPE_VAR]] = !DILocalVariable(name: "noescape_var"
-// CHECK: ![[BLOCK_VAR_LT]] = distinct !DILifetime(object: ![[BLOCK_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(%struct.__block_byref_block_var*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i8*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i32)))
-// CHECK: ![[BLOCK_VAR]] = !DILocalVariable(name: "block_var"
-// CHECK: ![[UNUSED_VAR_LT]] = distinct !DILifetime(object: ![[UNUSED_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32*), DIOpDeref(i32)))
-// CHECK: ![[UNUSED_VAR]] = !DILocalVariable(name: "unused_var"
+// CHECK-LABEL: !llvm.dbg.cu =
+
+// CHECK-DAG: ![[ESCAPE_VAR_LT]] = distinct !DILifetime(object: ![[ESCAPE_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(%struct.__block_byref_escape_var*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i8*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i32)))
+// CHECK-DAG: ![[ESCAPE_VAR]] = !DILocalVariable(name: "escape_var"
+// CHECK-DAG: ![[NOESCAPE_VAR_LT]] = distinct !DILifetime(object: ![[NOESCAPE_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32*), DIOpDeref(i32)))
+// CHECK-DAG: ![[NOESCAPE_VAR]] = !DILocalVariable(name: "noescape_var"
+// CHECK-DAG: ![[BLOCK_VAR_LT]] = distinct !DILifetime(object: ![[BLOCK_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(%struct.__block_byref_block_var*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i8*), DIOpDeref(i8*), DIOpConstant(i64 {{[0-9]+}}), DIOpByteOffset(i32)))
+// CHECK-DAG: ![[BLOCK_VAR]] = !DILocalVariable(name: "block_var"
+// CHECK-DAG: ![[UNUSED_VAR_LT]] = distinct !DILifetime(object: ![[UNUSED_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32*), DIOpDeref(i32)))
+// CHECK-DAG: ![[UNUSED_VAR]] = !DILocalVariable(name: "unused_var"

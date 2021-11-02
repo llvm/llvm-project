@@ -4740,7 +4740,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
         // Use VarDecl's Tag, Scope and Line number.
         auto FieldAlign = getDeclAlignIfRequired(Field, CGM.getContext());
         auto *D = DBuilder.createAutoVariable(
-            Scope, FieldName, Unit, Line, FieldTy, CGM.getLangOpts().Optimize,
+            Scope, FieldName, Unit, Line, FieldTy, /*AlwaysPreserve=*/true,
             Flags | llvm::DINode::FlagArtificial, FieldAlign);
 
         // Insert an llvm.dbg.def into the current block.
@@ -4762,7 +4762,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   llvm::DILocalVariable *D = nullptr;
   if (ArgNo) {
     D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
-                                         CGM.getLangOpts().Optimize, Flags);
+                                         /*AlwaysPreserve=*/true, Flags);
   } else {
     // For normal local variable, we will try to find out whether 'VD' is the
     // copy parameter of coroutine.
@@ -4804,7 +4804,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
     // Or we will create a new DIVariable for this Decl if D dose not exists.
     if (!D)
       D = DBuilder.createAutoVariable(Scope, Name, Unit, Line, Ty,
-                                      CGM.getLangOpts().Optimize, Flags, Align);
+                                      /*AlwaysPreserve=*/true, Flags, Align);
   }
   // Insert an llvm.dbg.def into the current block.
   DBuilder.insertDef(DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()),
@@ -4812,6 +4812,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
                      llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
                                            Scope, CurInlinedAt),
                      Builder.GetInsertBlock());
+
+  llvm::Function *Parent = Builder.GetInsertBlock()->getParent();
+  assert(Parent->getSubprogram() && "expected DISubprogram");
 
   return D;
 }
