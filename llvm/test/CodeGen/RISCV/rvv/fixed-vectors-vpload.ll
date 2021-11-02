@@ -28,6 +28,20 @@ define <4 x i8> @vpload_v4i8(<4 x i8>* %ptr, <4 x i1> %m, i32 zeroext %evl) {
   ret <4 x i8> %load
 }
 
+define <4 x i8> @vpload_v4i8_allones_mask(<4 x i8>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v4i8_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <4 x i1> undef, i1 true, i32 0
+  %b = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> zeroinitializer
+  %load = call <4 x i8> @llvm.vp.load.v4i8(<4 x i8>* %ptr, <4 x i1> %b, i32 %evl)
+  ret <4 x i8> %load
+}
+
 declare <8 x i8> @llvm.vp.load.v8i8(<8 x i8>*, <8 x i1>, i32)
 
 define <8 x i8> @vpload_v8i8(<8 x i8>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
@@ -76,6 +90,20 @@ define <8 x i16> @vpload_v8i16(<8 x i16>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
   ret <8 x i16> %load
 }
 
+define <8 x i16> @vpload_v8i16_allones_mask(<8 x i16>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v8i16_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <8 x i1> undef, i1 true, i32 0
+  %b = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> zeroinitializer
+  %load = call <8 x i16> @llvm.vp.load.v8i16(<8 x i16>* %ptr, <8 x i1> %b, i32 %evl)
+  ret <8 x i16> %load
+}
+
 declare <2 x i32> @llvm.vp.load.v2i32(<2 x i32>*, <2 x i1>, i32)
 
 define <2 x i32> @vpload_v2i32(<2 x i32>* %ptr, <2 x i1> %m, i32 zeroext %evl) {
@@ -112,6 +140,20 @@ define <8 x i32> @vpload_v8i32(<8 x i32>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
   ret <8 x i32> %load
 }
 
+define <8 x i32> @vpload_v8i32_allones_mask(<8 x i32>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v8i32_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <8 x i1> undef, i1 true, i32 0
+  %b = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> zeroinitializer
+  %load = call <8 x i32> @llvm.vp.load.v8i32(<8 x i32>* %ptr, <8 x i1> %b, i32 %evl)
+  ret <8 x i32> %load
+}
+
 declare <2 x i64> @llvm.vp.load.v2i64(<2 x i64>*, <2 x i1>, i32)
 
 define <2 x i64> @vpload_v2i64(<2 x i64>* %ptr, <2 x i1> %m, i32 zeroext %evl) {
@@ -136,6 +178,20 @@ define <4 x i64> @vpload_v4i64(<4 x i64>* %ptr, <4 x i1> %m, i32 zeroext %evl) {
   ret <4 x i64> %load
 }
 
+define <4 x i64> @vpload_v4i64_allones_mask(<4 x i64>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v4i64_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <4 x i1> undef, i1 true, i32 0
+  %b = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> zeroinitializer
+  %load = call <4 x i64> @llvm.vp.load.v4i64(<4 x i64>* %ptr, <4 x i1> %b, i32 %evl)
+  ret <4 x i64> %load
+}
+
 declare <8 x i64> @llvm.vp.load.v8i64(<8 x i64>*, <8 x i1>, i32)
 
 define <8 x i64> @vpload_v8i64(<8 x i64>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
@@ -157,6 +213,20 @@ define <2 x half> @vpload_v2f16(<2 x half>* %ptr, <2 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <2 x half> @llvm.vp.load.v2f16(<2 x half>* %ptr, <2 x i1> %m, i32 %evl)
+  ret <2 x half> %load
+}
+
+define <2 x half> @vpload_v2f16_allones_mask(<2 x half>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v2f16_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <2 x i1> undef, i1 true, i32 0
+  %b = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> zeroinitializer
+  %load = call <2 x half> @llvm.vp.load.v2f16(<2 x half>* %ptr, <2 x i1> %b, i32 %evl)
   ret <2 x half> %load
 }
 
@@ -220,6 +290,20 @@ define <8 x float> @vpload_v8f32(<8 x float>* %ptr, <8 x i1> %m, i32 zeroext %ev
   ret <8 x float> %load
 }
 
+define <8 x float> @vpload_v8f32_allones_mask(<8 x float>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v8f32_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <8 x i1> undef, i1 true, i32 0
+  %b = shufflevector <8 x i1> %a, <8 x i1> poison, <8 x i32> zeroinitializer
+  %load = call <8 x float> @llvm.vp.load.v8f32(<8 x float>* %ptr, <8 x i1> %b, i32 %evl)
+  ret <8 x float> %load
+}
+
 declare <2 x double> @llvm.vp.load.v2f64(<2 x double>*, <2 x i1>, i32)
 
 define <2 x double> @vpload_v2f64(<2 x double>* %ptr, <2 x i1> %m, i32 zeroext %evl) {
@@ -241,6 +325,20 @@ define <4 x double> @vpload_v4f64(<4 x double>* %ptr, <4 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <4 x double> @llvm.vp.load.v4f64(<4 x double>* %ptr, <4 x i1> %m, i32 %evl)
+  ret <4 x double> %load
+}
+
+define <4 x double> @vpload_v4f64_allones_mask(<4 x double>* %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vpload_v4f64_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %a = insertelement <4 x i1> undef, i1 true, i32 0
+  %b = shufflevector <4 x i1> %a, <4 x i1> poison, <4 x i32> zeroinitializer
+  %load = call <4 x double> @llvm.vp.load.v4f64(<4 x double>* %ptr, <4 x i1> %b, i32 %evl)
   ret <4 x double> %load
 }
 
