@@ -79,6 +79,10 @@ inline static MlirStringRef mlirStringRefCreate(const char *str,
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirStringRefCreateFromCString(const char *str);
 
+/// Returns true if two string references are equal, false otherwise.
+MLIR_CAPI_EXPORTED bool mlirStringRefEqual(MlirStringRef string,
+                                           MlirStringRef other);
+
 /// A callback for returning string references.
 ///
 /// This function is called back by the functions that need to return a

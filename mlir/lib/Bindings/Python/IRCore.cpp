@@ -1530,6 +1530,57 @@ PyValue PyValue::createFromCapsule(pybind11::object capsule) {
   return PyValue(ownerRef, value);
 }
 
+//------------------------------------------------------------------------------
+// PySymbolTable.
+//------------------------------------------------------------------------------
+
+PySymbolTable::PySymbolTable(PyOperationBase &operation)
+    : operation(operation.getOperation().getRef()) {
+  symbolTable = mlirSymbolTableCreate(operation.getOperation().get());
+  if (mlirSymbolTableIsNull(symbolTable)) {
+    throw py::cast_error("Operation is not a Symbol Table.");
+  }
+}
+
+py::object PySymbolTable::dunderGetItem(const std::string &name) {
+  operation->checkValid();
+  MlirOperation symbol = mlirSymbolTableLookup(
+      symbolTable, mlirStringRefCreate(name.data(), name.length()));
+  if (mlirOperationIsNull(symbol))
+    throw py::key_error("Symbol '" + name + "' not in the symbol table.");
+
+  return PyOperation::forOperation(operation->getContext(), symbol,
+                                   operation.getObject())
+      ->createOpView();
+}
+
+void PySymbolTable::erase(PyOperationBase &symbol) {
+  operation->checkValid();
+  symbol.getOperation().checkValid();
+  mlirSymbolTableErase(symbolTable, symbol.getOperation().get());
+  // The operation is also erased, so we must invalidate it. There may be Python
+  // references to this operation so we don't want to delete it from the list of
+  // live operations here.
+  symbol.getOperation().valid = false;
+}
+
+void PySymbolTable::dunderDel(const std::string &name) {
+  py::object operation = dunderGetItem(name);
+  erase(py::cast<PyOperationBase &>(operation));
+}
+
+PyAttribute PySymbolTable::insert(PyOperationBase &symbol) {
+  operation->checkValid();
+  symbol.getOperation().checkValid();
+  MlirAttribute symbolAttr = mlirOperationGetAttributeByName(
+      symbol.getOperation().get(), mlirSymbolTableGetSymbolAttributeName());
+  if (mlirAttributeIsNull(symbolAttr))
+    throw py::value_error("Expected operation to have a symbol name.");
+  return PyAttribute(
+      symbol.getOperation().getContext(),
+      mlirSymbolTableInsert(symbolTable, symbol.getOperation().get()));
+}
+
 namespace {
 /// CRTP base class for Python MLIR values that subclass Value and should be
 /// castable from it. The value hierarchy is one level deep and is not supposed
@@ -2669,6 +2720,20 @@ void mlir::python::populateIRCore(py::module &m) {
       });
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of SymbolTable.
+  //----------------------------------------------------------------------------
+  py::class_<PySymbolTable>(m, "SymbolTable", py::module_local())
+      .def(py::init<PyOperationBase &>())
+      .def("__getitem__", &PySymbolTable::dunderGetItem)
+      .def("insert", &PySymbolTable::insert)
+      .def("erase", &PySymbolTable::erase)
+      .def("__delitem__", &PySymbolTable::dunderDel)
+      .def("__contains__", [](PySymbolTable &table, const std::string &name) {
+        return !mlirOperationIsNull(mlirSymbolTableLookup(
+            table, mlirStringRefCreate(name.data(), name.length())));
+      });
 
   // Container bindings.
   PyBlockArgumentList::bind(m);
