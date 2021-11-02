@@ -49,8 +49,9 @@ public:
   /// Insert a new symbol into the table, and rename it as necessary to avoid
   /// collisions. Also insert at the specified location in the body of the
   /// associated operation if it is not already there. It is asserted that the
-  /// symbol is not inside another operation.
-  void insert(Operation *symbol, Block::iterator insertPt = {});
+  /// symbol is not inside another operation. Return the name of the symbol
+  /// after insertion as attribute.
+  StringAttr insert(Operation *symbol, Block::iterator insertPt = {});
 
   /// Return the name of the attribute used for symbol names.
   static StringRef getSymbolAttrName() { return "sym_name"; }
