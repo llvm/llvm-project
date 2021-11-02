@@ -66,6 +66,7 @@ template<typename GraphType>
 class GraphWriter {
   raw_ostream &O;
   const GraphType &G;
+  bool RenderUsingHTML = false;
 
   using DOTTraits = DOTGraphTraits<GraphType>;
   using GTraits = GraphTraits<GraphType>;
@@ -86,6 +87,9 @@ class GraphWriter {
     child_iterator EE = GTraits::child_end(Node);
     bool hasEdgeSourceLabels = false;
 
+    if (RenderUsingHTML)
+      O << "</tr><tr>";
+
     for (unsigned i = 0; EI != EE && i != 64; ++EI, ++i) {
       std::string label = DTraits.getEdgeSourceLabel(Node, EI);
 
@@ -94,14 +98,22 @@ class GraphWriter {
 
       hasEdgeSourceLabels = true;
 
-      if (i)
-        O << "|";
+      if (RenderUsingHTML)
+        O << "<td colspan=\"1\" port=\"s" << i << "\">" << label << "</td>";
+      else {
+        if (i)
+          O << "|";
 
-      O << "<s" << i << ">" << DOT::EscapeString(label);
+        O << "<s" << i << ">" << DOT::EscapeString(label);
+      }
     }
 
-    if (EI != EE && hasEdgeSourceLabels)
-      O << "|<s64>truncated...";
+    if (EI != EE && hasEdgeSourceLabels) {
+      if (RenderUsingHTML)
+        O << "<td colspan=\"1\" port=\"s64\">truncated...</td>";
+      else
+        O << "|<s64>truncated...";
+    }
 
     return hasEdgeSourceLabels;
   }
@@ -109,6 +121,7 @@ class GraphWriter {
 public:
   GraphWriter(raw_ostream &o, const GraphType &g, bool SN) : O(o), G(g) {
     DTraits = DOTTraits(SN);
+    RenderUsingHTML = DTraits.renderNodesUsingHTML();
   }
 
   void writeGraph(const std::string &Title = "") {
@@ -163,12 +176,39 @@ public:
   void writeNode(NodeRef Node) {
     std::string NodeAttributes = DTraits.getNodeAttributes(Node, G);
 
-    O << "\tNode" << static_cast<const void*>(Node) << " [shape=record,";
+    O << "\tNode" << static_cast<const void *>(Node) << " [shape=";
+    if (RenderUsingHTML)
+      O << "none,";
+    else
+      O << "record,";
+
     if (!NodeAttributes.empty()) O << NodeAttributes << ",";
-    O << "label=\"{";
+    O << "label=";
+
+    if (RenderUsingHTML) {
+      // Count the numbewr of edges out of the node to determine how
+      // many columns to span (max 64)
+      unsigned ColSpan = 0;
+      child_iterator EI = GTraits::child_begin(Node);
+      child_iterator EE = GTraits::child_end(Node);
+      for (; EI != EE && ColSpan != 64; ++EI, ++ColSpan)
+        ;
+      if (ColSpan == 0)
+        ColSpan = 1;
+      // Include truncated messages when counting.
+      if (EI != EE)
+        ++ColSpan;
+      O << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\""
+        << " cellpadding=\"0\"><tr><td align=\"text\" colspan=\"" << ColSpan
+        << "\">";
+    } else
+      O << "\"{";
 
     if (!DTraits.renderGraphFromBottomUp()) {
-      O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
+      if (RenderUsingHTML)
+        O << DTraits.getNodeLabel(Node, G) << "</td>";
+      else
+        O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
 
       // If we should include the address of the node in the label, do so now.
       std::string Id = DTraits.getNodeIdentifierLabel(Node, G);
@@ -185,15 +225,25 @@ public:
     bool hasEdgeSourceLabels = getEdgeSourceLabels(EdgeSourceLabels, Node);
 
     if (hasEdgeSourceLabels) {
-      if (!DTraits.renderGraphFromBottomUp()) O << "|";
+      if (!DTraits.renderGraphFromBottomUp())
+        if (!RenderUsingHTML)
+          O << "|";
 
-      O << "{" << EdgeSourceLabels.str() << "}";
+      if (RenderUsingHTML)
+        O << EdgeSourceLabels.str();
+      else
+        O << "{" << EdgeSourceLabels.str() << "}";
 
-      if (DTraits.renderGraphFromBottomUp()) O << "|";
+      if (DTraits.renderGraphFromBottomUp())
+        if (!RenderUsingHTML)
+          O << "|";
     }
 
     if (DTraits.renderGraphFromBottomUp()) {
-      O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
+      if (RenderUsingHTML)
+        O << DTraits.getNodeLabel(Node, G);
+      else
+        O << DOT::EscapeString(DTraits.getNodeLabel(Node, G));
 
       // If we should include the address of the node in the label, do so now.
       std::string Id = DTraits.getNodeIdentifierLabel(Node, G);
@@ -215,12 +265,17 @@ public:
           << DOT::EscapeString(DTraits.getEdgeDestLabel(Node, i));
       }
 
-      if (i != e)
-        O << "|<d64>truncated...";
-      O << "}";
+      if (RenderUsingHTML)
+        O << "<td colspan=\"1\">... truncated</td>";
+      else if (i != e)
+        O << "|<d64>truncated...}";
     }
 
-    O << "}\"];\n";   // Finish printing the "node" line
+    if (RenderUsingHTML)
+      O << "</tr></table>>";
+    else
+      O << "}\"";
+    O << "];\n"; // Finish printing the "node" line
 
     // Output all of the edges now
     child_iterator EI = GTraits::child_begin(Node);
