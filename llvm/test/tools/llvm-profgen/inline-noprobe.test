@@ -6,6 +6,9 @@
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK
 ; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+; RUN: echo -e "0\n0" > %t
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1 --fill-zero-for-all-funcs
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-ALL-ZERO
 
 CHECK: main:188:0
 CHECK:  0: 0
@@ -19,6 +22,33 @@ CHECK:   3.1: bar:42
 CHECK:    1: 42
 CHECK:   3.2: bar:21
 CHECK:    1: 21
+
+CHECK-ALL-ZERO: bar:0:0
+CHECK-ALL-ZERO:  1: 0
+CHECK-ALL-ZERO:  5: 0
+CHECK-ALL-ZERO: foo:0:0
+CHECK-ALL-ZERO:  0: 0
+CHECK-ALL-ZERO:  2.1: 0
+CHECK-ALL-ZERO:  3: 0
+CHECK-ALL-ZERO:  3.2: 0
+CHECK-ALL-ZERO:  4: 0
+CHECK-ALL-ZERO:  3.1: bar:0
+CHECK-ALL-ZERO:   1: 0
+CHECK-ALL-ZERO:  3.2: bar:0
+CHECK-ALL-ZERO:   1: 0
+CHECK-ALL-ZERO:   7: 0
+CHECK-ALL-ZERO: main:0:0
+CHECK-ALL-ZERO:  0: 0
+CHECK-ALL-ZERO:  2: 0
+CHECK-ALL-ZERO:  1: foo:0
+CHECK-ALL-ZERO:   2.1: 0
+CHECK-ALL-ZERO:   3: 0
+CHECK-ALL-ZERO:   3.2: 0
+CHECK-ALL-ZERO:   4: 0
+CHECK-ALL-ZERO:   3.1: bar:0
+CHECK-ALL-ZERO:    1: 0
+CHECK-ALL-ZERO:   3.2: bar:0
+CHECK-ALL-ZERO:    1: 0
 
 CHECK-RAW-PROFILE:      3
 CHECK-RAW-PROFILE-NEXT: 650-691:21
