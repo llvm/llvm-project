@@ -23,6 +23,11 @@ module LLVM_Backend {
     umbrella "CodeGen"
     module * { export * }
 
+    // Exclude these; they're intended to be included into only a single
+    // translation unit (or none) and aren't part of this module.
+    exclude header "CodeGen/LinkAllAsmWriterComponents.h"
+    exclude header "CodeGen/LinkAllCodegenComponents.h"
+
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"
     textual header "CodeGen/MachinePassRegistry.def"

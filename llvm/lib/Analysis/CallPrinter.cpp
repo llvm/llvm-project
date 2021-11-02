@@ -298,6 +298,10 @@ char CallGraphDOTPrinter::ID = 0;
 INITIALIZE_PASS(CallGraphDOTPrinter, "dot-callgraph",
                 "Print call graph to 'dot' file", false, false)
 
+// Create methods available outside of this file, to use them
+// "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by
+// the link time optimization.
+
 ModulePass *llvm::createCallGraphViewerPass() { return new CallGraphViewer(); }
 
 ModulePass *llvm::createCallGraphDOTPrinterPass() {

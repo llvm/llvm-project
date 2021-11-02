@@ -1308,6 +1308,11 @@ option.  Registering instruction schedulers is similar except use the
 ``RegisterScheduler::FunctionPassCtor`` is significantly different from
 ``RegisterRegAlloc::FunctionPassCtor``.
 
+To force the load/linking of your register allocator into the
+:program:`llc`/:program:`lli` tools, add your creator function's global
+declaration to ``Passes.h`` and add a "pseudo" call line to
+``llvm/Codegen/LinkAllCodegenComponents.h``.
+
 Creating new registries
 -----------------------
 

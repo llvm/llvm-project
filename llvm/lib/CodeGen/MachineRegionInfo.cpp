@@ -136,6 +136,10 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
                     "Detect single entry single exit regions", true, true)
 
+// Create methods available outside of this file, to use them
+// "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by
+// the link time optimization.
+
 namespace llvm {
 
 FunctionPass *createMachineRegionInfoPass() {
