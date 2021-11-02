@@ -10,8 +10,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+USE_LIBSTDCPP = "USE_LIBSTDCPP"
+USE_LIBCPP = "USE_LIBCPP"
 
-class LibcxxMultiMapDataFormatterTestCase(TestBase):
+class GenericMultiMapDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -19,11 +21,27 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         TestBase.setUp(self)
         self.namespace = 'std'
 
-    @skipIf(bugnumber="rdar://74106716", debug_info="gmodules")
-    @add_test_categories(["libc++"])
-    def test_with_run_command(self):
+    def findVariable(self, name):
+        var = self.frame().FindVariable(name)
+        self.assertTrue(var.IsValid())
+        return var
+
+    def getVariableType(self, name):
+        var = self.findVariable(name)
+        return var.GetType().GetDisplayTypeName()
+
+    def check(self, var_name, size):
+        var = self.findVariable(var_name)
+        self.assertEqual(var.GetNumChildren(), size)
+        children = []
+        for i in range(size):
+            child = var.GetChildAtIndex(i)
+            children.append(ValueCheck(value=child.GetValue()))
+        self.expect_var_path(var_name, type=self.getVariableType(var_name), children=children)
+
+    def do_test_with_run_command(self, stdlib_type):
         """Test that that file and class static variables display correctly."""
-        self.build()
+        self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -67,6 +85,8 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                 '[1] = (first = 1, second = 1)',
             ])
 
+        self.check("ii", 2)
+
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ii',
@@ -78,6 +98,8 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                              'first = 3',
                              'second = 1'])
 
+        self.check("ii", 4)
+
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect("frame variable ii",
@@ -88,6 +110,8 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                              '[7] = ',
                              'first = 7',
                              'second = 1'])
+
+        self.check("ii", 8)
 
         self.expect("p ii",
                     substrs=[multimap, 'size=8',
@@ -236,11 +260,15 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                     substrs=[multimap, 'size=0',
                              '{}'])
 
+        self.check("is", 0)
+
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.expect('frame variable ss',
                     substrs=[multimap, 'size=0',
                              '{}'])
+
+        self.check("ss", 0)
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
@@ -253,6 +281,8 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
                 '[1] = (first = "ciao", second = "hello")',
                 '[2] = (first = "gatto", second = "cat")',
             ])
+
+        self.check("ss", 3)
 
         self.expect(
             "p ss",
@@ -286,3 +316,14 @@ class LibcxxMultiMapDataFormatterTestCase(TestBase):
         self.expect('frame variable ss',
                     substrs=[multimap, 'size=0',
                              '{}'])
+
+        self.check("ss", 0)
+
+    @add_test_categories(["libstdcxx"])
+    def test_with_run_command_libstdcpp(self):
+        self.do_test_with_run_command(USE_LIBSTDCPP)
+
+    @add_test_categories(["libc++"])
+    def test_with_run_command_libcpp(self):
+        self.do_test_with_run_command(USE_LIBCPP)
+

@@ -315,10 +315,10 @@ class StdVectorSynthProvider:
         return True
 
     """
-    Set and Map have the same underlying data structure,
-    therefore we can use exactly the same implementation for the formatter.
+     This formatter can be applied to all
+     map-like structures (map, multimap, set, multiset)
     """
-class StdSetOrMapSynthProvider:
+class StdMapLikeSynthProvider:
 
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
