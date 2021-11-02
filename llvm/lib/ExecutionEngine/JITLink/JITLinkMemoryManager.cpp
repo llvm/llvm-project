@@ -13,6 +13,50 @@
 
 #define DEBUG_TYPE "jitlink"
 
+using namespace llvm;
+
+namespace {
+
+// FIXME: Remove this copy of CWrapperFunctionResult as soon as JITLink can
+// depend on shared utils from Orc.
+
+// Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
+union CWrapperFunctionResultDataUnion {
+  char *ValuePtr;
+  char Value[sizeof(ValuePtr)];
+};
+
+// Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
+typedef struct {
+  CWrapperFunctionResultDataUnion Data;
+  size_t Size;
+} CWrapperFunctionResult;
+
+Error toError(CWrapperFunctionResult R) {
+  bool HasError = false;
+  std::string ErrMsg;
+  if (R.Size) {
+    bool Large = R.Size > sizeof(CWrapperFunctionResultDataUnion);
+    char *Content = Large ? R.Data.ValuePtr : R.Data.Value;
+    if (Content[0]) {
+      HasError = true;
+      ErrMsg.resize(R.Size - 1);
+      memcpy(&ErrMsg[0], Content + 1, R.Size - 1);
+    }
+    if (Large)
+      free(R.Data.ValuePtr);
+  } else if (R.Data.ValuePtr) {
+    HasError = true;
+    ErrMsg = R.Data.ValuePtr;
+    free(R.Data.ValuePtr);
+  }
+
+  if (HasError)
+    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
+  return Error::success();
+}
+} // namespace
+
 namespace llvm {
 namespace jitlink {
 
@@ -20,17 +64,11 @@ JITLinkMemoryManager::~JITLinkMemoryManager() = default;
 JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
 
 static Error runAllocAction(JITLinkMemoryManager::AllocActionCall &C) {
-  using DeallocFnTy = char *(*)(const void *, size_t);
-  auto *Fn = jitTargetAddressToPointer<DeallocFnTy>(C.FnAddr);
+  using WrapperFnTy = CWrapperFunctionResult (*)(const void *, size_t);
+  auto *Fn = jitTargetAddressToPointer<WrapperFnTy>(C.FnAddr);
 
-  if (char *ErrMsg = Fn(jitTargetAddressToPointer<const void *>(C.CtxAddr),
-                        static_cast<size_t>(C.CtxSize))) {
-    auto E = make_error<StringError>(ErrMsg, inconvertibleErrorCode());
-    free(ErrMsg);
-    return E;
-  }
-
-  return Error::success();
+  return toError(Fn(jitTargetAddressToPointer<const void *>(C.CtxAddr),
+                    static_cast<size_t>(C.CtxSize)));
 }
 
 // Align a JITTargetAddress to conform with block alignment requirements.
