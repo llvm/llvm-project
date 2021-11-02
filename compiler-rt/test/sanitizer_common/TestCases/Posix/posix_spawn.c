@@ -13,8 +13,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  posix_spawnattr_t attr = {};
-  posix_spawn_file_actions_t file_actions = {};
+  posix_spawnattr_t attr = {0};
+  posix_spawn_file_actions_t file_actions = {0};
 
   char *const args[] = {
       argv[0], "2", "3", "4", "2", "3", "4", "2", "3", "4",
