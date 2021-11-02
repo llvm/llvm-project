@@ -1941,3 +1941,291 @@ define i32 @not_and_and_or_not_or_or_use6(i32 %a, i32 %b, i32 %c) {
   call void @use(i32 %and2)
   ret i32 %or3
 }
+
+; (~a & b & c) | ~(a | b) -> (c | ~b) & ~a
+
+define i32 @not_and_and_or_no_or(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_commute1_and(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_commute1_and(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[C:%.*]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[NOT2]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %c, %b
+  %and2 = and i32 %and1, %not2
+  %or2 = or i32 %and2, %not1
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_commute2_and(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_commute2_and(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[C:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[B]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %c
+  %and2 = and i32 %and1, %b
+  %or2 = or i32 %and2, %not1
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_commute1(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_commute1(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %a, %b
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_commute2(i32 %a, i32 %b0, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_commute2(
+; CHECK-NEXT:    [[B:%.*]] = sdiv i32 42, [[B0:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[NOT2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %b = sdiv i32 42, %b0 ; thwart complexity-based canonicalization
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %b, %not2
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_commute3(i32 %a, i32 %b, i32 %c0) {
+; CHECK-LABEL: @not_and_and_or_no_or_commute3(
+; CHECK-NEXT:    [[C:%.*]] = sdiv i32 42, [[C0:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[C]], [[AND1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %c = sdiv i32 42, %c0 ; thwart complexity-based canonicalization
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %c, %and1
+  %or2 = or i32 %and2, %not1
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use1(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use1(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[NOT2]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %not2)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use2(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use2(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[NOT2]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[NOT2]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %b, %c
+  %and2 = and i32 %and1, %not2
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %not2)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use3(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use3(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[C:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[B]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[NOT2]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %c
+  %and2 = and i32 %and1, %b
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %not2)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use4(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use4(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[C:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[B]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[NOT2]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %c
+  %and2 = and i32 %and1, %b
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %not2)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use5(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use5(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[OR1]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %or1)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use6(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use6(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[NOT1]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %not1)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use7(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use7(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[AND1]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %and1)
+  ret i32 %or2
+}
+
+define i32 @not_and_and_or_no_or_use8(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @not_and_and_or_no_or_use8(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
+; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
+; CHECK-NEXT:    call void @use(i32 [[AND2]])
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+  %or1 = or i32 %b, %a
+  %not1 = xor i32 %or1, -1
+  %not2 = xor i32 %a, -1
+  %and1 = and i32 %not2, %b
+  %and2 = and i32 %and1, %c
+  %or2 = or i32 %and2, %not1
+  call void @use(i32 %and2)
+  ret i32 %or2
+}
