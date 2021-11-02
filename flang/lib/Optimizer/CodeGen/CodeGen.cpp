@@ -166,6 +166,30 @@ struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
     return success();
   }
 };
+
+struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::ZeroOp zero, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto ty = convertType(zero.getType());
+    if (ty.isa<mlir::LLVM::LLVMPointerType>()) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(zero, ty);
+    } else if (ty.isa<mlir::IntegerType>()) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          zero, ty, mlir::IntegerAttr::get(zero.getType(), 0));
+    } else if (mlir::LLVM::isCompatibleFloatingPointType(ty)) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          zero, ty, mlir::FloatAttr::get(zero.getType(), 0.0));
+    } else {
+      // TODO: create ConstantAggregateZero for FIR aggregate/array types.
+      return zero.emitOpError(
+          "conversion of fir.zero with aggregate type not implemented yet");
+    }
+    return success();
+  }
+};
 } // namespace
 
 namespace {
@@ -182,10 +206,9 @@ public:
   void runOnOperation() override final {
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
-    auto loc = mlir::UnknownLoc::get(context);
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<AddrOfOpConversion, HasValueOpConversion, GlobalOpConversion,
-                   UndefOpConversion>(typeConverter);
+                   UndefOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
@@ -198,7 +221,6 @@ public:
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
                                                std::move(pattern)))) {
-      mlir::emitError(loc, "error in converting to LLVM-IR dialect\n");
       signalPassFailure();
     }
   }

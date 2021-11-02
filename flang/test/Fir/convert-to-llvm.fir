@@ -81,3 +81,55 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
 // CHECK:   %[[CST:.*]] = llvm.mlir.constant(dense<1> : vector<32x32xi32>) : !llvm.array<32 x array<32 x i32>>
 // CHECK:   llvm.return %[[CST]] : !llvm.array<32 x array<32 x i32>>
 // CHECK: }
+
+// -----
+
+// Test fir.zero_bits operation with LLVM ptr type
+
+func @zero_test_ptr() {
+  %z = fir.zero_bits !llvm.ptr<f32>
+  return
+}
+
+// CHECK: %{{.*}} = llvm.mlir.null : !llvm.ptr<f32>
+// CHECK-NOT: fir.zero_bits
+
+// -----
+
+// Test fir.zero_bits operation with integer type.
+
+func @zero_test_integer() {
+  %z0 = fir.zero_bits i8
+  %z1 = fir.zero_bits i16
+  %z2 = fir.zero_bits i32
+  %z3 = fir.zero_bits i64
+  return
+}
+
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i8) : i8
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i16) : i16
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NOT: fir.zero_bits
+
+// -----
+
+// Test fir.zero_bits operation with floating points types.
+
+func @zero_test_float() {
+  %z0 = fir.zero_bits f16
+  %z1 = fir.zero_bits bf16
+  %z2 = fir.zero_bits f32
+  %z3 = fir.zero_bits f64
+  %z4 = fir.zero_bits f80
+  %z5 = fir.zero_bits f128
+  return
+}
+
+// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f16) : f16
+// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : bf16) : bf16
+// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f32) : f32
+// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f64) : f64
+// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f80) : f80
+// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f128) : f128
+// CHECK-NOT: fir.zero_bits
