@@ -2728,28 +2728,24 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     // (A & C1)|(B & C2)
     ConstantInt *C1, *C2;
     if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
-      Value *V1 = nullptr, *V2 = nullptr;
+      Value *N;
       if ((C1->getValue() & C2->getValue()).isZero()) {
-        // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
-        // iff (C1&C2) == 0 and (N&~C1) == 0
-        if (match(A, m_Or(m_Value(V1), m_Value(V2))) &&
-            ((V1 == B &&
-              MaskedValueIsZero(V2, ~C1->getValue(), 0, &I)) || // (V|N)
-             (V2 == B &&
-              MaskedValueIsZero(V1, ~C1->getValue(), 0, &I))))  // (N|V)
-          return BinaryOperator::CreateAnd(A,
-                                Builder.getInt(C1->getValue()|C2->getValue()));
-        // Or commutes, try both ways.
-        if (match(B, m_Or(m_Value(V1), m_Value(V2))) &&
-            ((V1 == A &&
-              MaskedValueIsZero(V2, ~C2->getValue(), 0, &I)) || // (V|N)
-             (V2 == A &&
-              MaskedValueIsZero(V1, ~C2->getValue(), 0, &I))))  // (N|V)
-          return BinaryOperator::CreateAnd(B,
-                                 Builder.getInt(C1->getValue()|C2->getValue()));
+        // ((B | N) & C1) | (B & C2) --> (B | N) & (C1 | C2)
+        // iff (C1 & C2) == 0 and (N & ~C1) == 0
+        if (match(A, m_c_Or(m_Specific(B), m_Value(N))) &&
+            MaskedValueIsZero(N, ~C1->getValue(), 0, &I))
+          return BinaryOperator::CreateAnd(
+              A, Builder.getInt(C1->getValue() | C2->getValue()));
+        // (A & C1) | ((A | N) & C2) --> (A | N) & (C1 | C2)
+        // iff (C1 & C2) == 0 and (N & ~C1) == 0
+        if (match(B, m_c_Or(m_Specific(A), m_Value(N))) &&
+            MaskedValueIsZero(N, ~C2->getValue(), 0, &I))
+          return BinaryOperator::CreateAnd(
+              B, Builder.getInt(C1->getValue() | C2->getValue()));
 
         // ((V|C3)&C1) | ((V|C4)&C2) --> (V|C3|C4)&(C1|C2)
         // iff (C1&C2) == 0 and (C3&~C1) == 0 and (C4&~C2) == 0.
+        Value *V1 = nullptr, *V2 = nullptr;
         ConstantInt *C3 = nullptr, *C4 = nullptr;
         if (match(A, m_Or(m_Value(V1), m_ConstantInt(C3))) &&
             (C3->getValue() & ~C1->getValue()).isZero() &&
