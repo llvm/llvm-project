@@ -103,10 +103,10 @@ protected:
 
 public:
   // True if this symbol was referenced by a regular (non-bitcode) object.
-  bool isUsedInRegularObj : 1;
+  uint8_t isUsedInRegularObj : 1;
 
   // True if an undefined or dylib symbol is used from a live section.
-  bool used : 1;
+  uint8_t used : 1;
 };
 
 class Defined : public Symbol {
