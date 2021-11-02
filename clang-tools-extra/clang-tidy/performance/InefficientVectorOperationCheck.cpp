@@ -84,7 +84,7 @@ void InefficientVectorOperationCheck::storeOptions(
   Options.store(Opts, "EnableProto", EnableProto);
 }
 
-void InefficientVectorOperationCheck::AddMatcher(
+void InefficientVectorOperationCheck::addMatcher(
     const DeclarationMatcher &TargetRecordDecl, StringRef VarDeclName,
     StringRef VarDeclStmtName, const DeclarationMatcher &AppendMethodDecl,
     StringRef AppendCallName, MatchFinder *Finder) {
@@ -156,7 +156,7 @@ void InefficientVectorOperationCheck::registerMatchers(MatchFinder *Finder) {
       VectorLikeClasses.begin(), VectorLikeClasses.end())));
   const auto AppendMethodDecl =
       cxxMethodDecl(hasAnyName("push_back", "emplace_back"));
-  AddMatcher(VectorDecl, VectorVarDeclName, VectorVarDeclStmtName,
+  addMatcher(VectorDecl, VectorVarDeclName, VectorVarDeclStmtName,
              AppendMethodDecl, PushBackOrEmplaceBackCallName, Finder);
 
   if (EnableProto) {
@@ -168,7 +168,7 @@ void InefficientVectorOperationCheck::registerMatchers(MatchFinder *Finder) {
     // with "add_". So we exclude const methods.
     const auto AddFieldMethodDecl =
         cxxMethodDecl(matchesName("::add_"), unless(isConst()));
-    AddMatcher(ProtoDecl, ProtoVarDeclName, ProtoVarDeclStmtName,
+    addMatcher(ProtoDecl, ProtoVarDeclName, ProtoVarDeclStmtName,
                AddFieldMethodDecl, ProtoAddFieldCallName, Finder);
   }
 }

@@ -171,7 +171,7 @@ CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
   SmartSmallSetVector<CallGraphNode::CallRecord, SmallCallStackSize>
       CallStackSet;
 
-  // Arbitrairly take the first element of SCC as entry point.
+  // Arbitrarily take the first element of SCC as entry point.
   CallGraphNode::CallRecord EntryNode(SCC.front(), /*CallExpr=*/nullptr);
   // Continue recursing into subsequent callees that are part of this SCC,
   // and are thus known to be part of the call graph loop, until loop forms.

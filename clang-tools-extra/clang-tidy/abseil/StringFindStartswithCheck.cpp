@@ -97,7 +97,7 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
        ", " + NeedleExprCode + ")")
           .str());
 
-  // Create a preprocessor #include FixIt hint (CreateIncludeInsertion checks
+  // Create a preprocessor #include FixIt hint (createIncludeInsertion checks
   // whether this already exists).
   Diagnostic << IncludeInserter.createIncludeInsertion(
       Source.getFileID(ComparisonExpr->getBeginLoc()),

@@ -35,7 +35,7 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
     Guard = Guard.substr(PosToolsClang + std::strlen("tools/"));
 
   // Unlike LLVM svn, LLVM git monorepo is named llvm-project, so we replace
-  // "/llvm-project/" with the cannonical "/llvm/".
+  // "/llvm-project/" with the canonical "/llvm/".
   const static StringRef LLVMProject = "/llvm-project/";
   size_t PosLLVMProject = Guard.rfind(std::string(LLVMProject));
   if (PosLLVMProject != StringRef::npos)

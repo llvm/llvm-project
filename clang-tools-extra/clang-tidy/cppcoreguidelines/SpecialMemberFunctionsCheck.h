@@ -77,7 +77,7 @@ private:
 } // namespace clang
 
 namespace llvm {
-/// Specialisation of DenseMapInfo to allow ClassDefId objects in DenseMaps
+/// Specialization of DenseMapInfo to allow ClassDefId objects in DenseMaps
 /// FIXME: Move this to the corresponding cpp file as is done for
 /// clang-tidy/readability/IdentifierNamingCheck.cpp.
 template <>

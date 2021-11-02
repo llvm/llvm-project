@@ -104,8 +104,8 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
                                  bool Strict) {
   DifferingParamsContainer DifferingParams;
 
-  auto SourceParamIt = ParameterSourceDeclaration->param_begin();
-  auto OtherParamIt = OtherDeclaration->param_begin();
+  const auto *SourceParamIt = ParameterSourceDeclaration->param_begin();
+  const auto *OtherParamIt = OtherDeclaration->param_begin();
 
   while (SourceParamIt != ParameterSourceDeclaration->param_end() &&
          OtherParamIt != OtherDeclaration->param_end()) {

@@ -32,7 +32,7 @@ public:
       return;
     if (Info->getName() != Check.getMacroName())
       return;
-    // The first argument to the DISALLOW_COPY_AND_ASSIGN macro is exptected to
+    // The first argument to the DISALLOW_COPY_AND_ASSIGN macro is expected to
     // be the class name.
     const Token *ClassNameTok = Args->getUnexpArgument(0);
     if (Args->ArgNeedsPreexpansion(ClassNameTok, PP))

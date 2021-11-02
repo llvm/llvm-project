@@ -131,7 +131,7 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
                        this);
   }
 
-  // Detect suspicious cast to an inconsistant type (i.e. not integer type).
+  // Detect suspicious cast to an inconsistent type (i.e. not integer type).
   Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(unless(hasType(isInteger())),

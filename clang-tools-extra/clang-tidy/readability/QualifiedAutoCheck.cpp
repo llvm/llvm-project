@@ -226,7 +226,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     if (!isPointerConst(Var->getType()))
       return; // Pointer isn't const, no need to add const qualifier.
     if (!isAutoPointerConst(Var->getType()))
-      return; // Const isnt wrapped in the auto type, so must be declared
+      return; // Const isn't wrapped in the auto type, so must be declared
               // explicitly.
 
     if (Var->getType().isLocalConstQualified()) {
@@ -267,7 +267,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     if (!isPointerConst(Var->getType()))
       return; // Pointer isn't const, no need to add const qualifier.
     if (!isAutoPointerConst(Var->getType()))
-      // Const isnt wrapped in the auto type, so must be declared explicitly.
+      // Const isn't wrapped in the auto type, so must be declared explicitly.
       return;
 
     if (llvm::Optional<SourceRange> TypeSpec =
