@@ -5,7 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   AsyncRuntime.cpp
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
-  SparseUtils.cpp
+  SparseTensorUtils.cpp
   ExecutionEngine.cpp
   RocmRuntimeWrappers.cpp
   RunnerUtils.cpp
@@ -79,7 +79,7 @@ add_mlir_library(MLIRJitRunner
 add_mlir_library(mlir_c_runner_utils
   SHARED
   CRunnerUtils.cpp
-  SparseUtils.cpp
+  SparseTensorUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
   )
