@@ -1393,6 +1393,13 @@ int affineMapFromExprs(MlirContext ctx) {
   if (!mlirAffineExprEqual(mlirAffineMapGetResult(map, 1), affineSymbolExpr))
     return 3;
 
+  MlirAffineExpr affineDim2Expr = mlirAffineDimExprGet(ctx, 1);
+  MlirAffineExpr composed = mlirAffineExprCompose(affineDim2Expr, map);
+  // CHECK: s1
+  mlirAffineExprDump(composed);
+  if (!mlirAffineExprEqual(composed, affineSymbolExpr))
+    return 4;
+
   return 0;
 }
 

@@ -56,6 +56,11 @@ bool mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr,
   return unwrap(affineExpr).isFunctionOfDim(position);
 }
 
+MlirAffineExpr mlirAffineExprCompose(MlirAffineExpr affineExpr,
+                                     MlirAffineMap affineMap) {
+  return wrap(unwrap(affineExpr).compose(unwrap(affineMap)));
+}
+
 //===----------------------------------------------------------------------===//
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//
