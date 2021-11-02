@@ -170,11 +170,11 @@ public:
   uint64_t getOrCompColdCountThreshold() const;
   /// Returns HotCountThreshold if set.
   uint64_t getHotCountThreshold() const {
-    return HotCountThreshold ? HotCountThreshold.getValue() : 0;
+    return HotCountThreshold.getValueOr(0);
   }
   /// Returns ColdCountThreshold if set.
   uint64_t getColdCountThreshold() const {
-    return ColdCountThreshold ? ColdCountThreshold.getValue() : 0;
+    return ColdCountThreshold.getValueOr(0);
   }
 
  private:
