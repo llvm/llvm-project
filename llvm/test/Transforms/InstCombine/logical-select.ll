@@ -682,3 +682,88 @@ define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i
   ret <4 x i32> %sel
 }
 
+define <2 x i64> @bitcast_vec_cond(<16 x i1> %cond, <2 x i64> %c, <2 x i64> %d) {
+; CHECK-LABEL: @bitcast_vec_cond(
+; CHECK-NEXT:    [[S:%.*]] = sext <16 x i1> [[COND:%.*]] to <16 x i8>
+; CHECK-NEXT:    [[T9:%.*]] = bitcast <16 x i8> [[S]] to <2 x i64>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[T11:%.*]] = and <2 x i64> [[NOTT9]], [[C:%.*]]
+; CHECK-NEXT:    [[T12:%.*]] = and <2 x i64> [[T9]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[T11]], [[T12]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %s = sext <16 x i1> %cond to <16 x i8>
+  %t9 = bitcast <16 x i8> %s to <2 x i64>
+  %nott9 = xor <2 x i64> %t9, <i64 -1, i64 -1>
+  %t11 = and <2 x i64> %nott9, %c
+  %t12 = and <2 x i64> %t9, %d
+  %r = or <2 x i64> %t11, %t12
+  ret <2 x i64> %r
+}
+
+define <8 x i3> @bitcast_vec_cond_commute1(<3 x i1> %cond, <8 x i3> %pc, <8 x i3> %d) {
+; CHECK-LABEL: @bitcast_vec_cond_commute1(
+; CHECK-NEXT:    [[C:%.*]] = mul <8 x i3> [[PC:%.*]], [[PC]]
+; CHECK-NEXT:    [[S:%.*]] = sext <3 x i1> [[COND:%.*]] to <3 x i8>
+; CHECK-NEXT:    [[T9:%.*]] = bitcast <3 x i8> [[S]] to <8 x i3>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <8 x i3> [[T9]], <i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1>
+; CHECK-NEXT:    [[T11:%.*]] = and <8 x i3> [[C]], [[NOTT9]]
+; CHECK-NEXT:    [[T12:%.*]] = and <8 x i3> [[T9]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <8 x i3> [[T11]], [[T12]]
+; CHECK-NEXT:    ret <8 x i3> [[R]]
+;
+  %c = mul <8 x i3> %pc, %pc ; thwart complexity-based canonicalization
+  %s = sext <3 x i1> %cond to <3 x i8>
+  %t9 = bitcast <3 x i8> %s to <8 x i3>
+  %nott9 = xor <8 x i3> %t9, <i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1>
+  %t11 = and <8 x i3> %c, %nott9
+  %t12 = and <8 x i3> %t9, %d
+  %r = or <8 x i3> %t11, %t12
+  ret <8 x i3> %r
+}
+
+define <2 x i16> @bitcast_vec_cond_commute2(<4 x i1> %cond, <2 x i16> %pc, <2 x i16> %pd) {
+; CHECK-LABEL: @bitcast_vec_cond_commute2(
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i16> [[PC:%.*]], [[PC]]
+; CHECK-NEXT:    [[D:%.*]] = mul <2 x i16> [[PD:%.*]], [[PD]]
+; CHECK-NEXT:    [[S:%.*]] = sext <4 x i1> [[COND:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[T9:%.*]] = bitcast <4 x i8> [[S]] to <2 x i16>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i16> [[T9]], <i16 -1, i16 -1>
+; CHECK-NEXT:    [[T11:%.*]] = and <2 x i16> [[C]], [[NOTT9]]
+; CHECK-NEXT:    [[T12:%.*]] = and <2 x i16> [[D]], [[T9]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[T11]], [[T12]]
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %c = mul <2 x i16> %pc, %pc ; thwart complexity-based canonicalization
+  %d = mul <2 x i16> %pd, %pd ; thwart complexity-based canonicalization
+  %s = sext <4 x i1> %cond to <4 x i8>
+  %t9 = bitcast <4 x i8> %s to <2 x i16>
+  %nott9 = xor <2 x i16> %t9, <i16 -1, i16 -1>
+  %t11 = and <2 x i16> %c, %nott9
+  %t12 = and <2 x i16> %d, %t9
+  %r = or <2 x i16> %t11, %t12
+  ret <2 x i16> %r
+}
+
+define <2 x i16> @bitcast_vec_cond_commute3(<4 x i8> %cond, <2 x i16> %pc, <2 x i16> %pd) {
+; CHECK-LABEL: @bitcast_vec_cond_commute3(
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i16> [[PC:%.*]], [[PC]]
+; CHECK-NEXT:    [[D:%.*]] = mul <2 x i16> [[PD:%.*]], [[PD]]
+; CHECK-NEXT:    [[S:%.*]] = ashr <4 x i8> [[COND:%.*]], <i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[T9:%.*]] = bitcast <4 x i8> [[S]] to <2 x i16>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i16> [[T9]], <i16 -1, i16 -1>
+; CHECK-NEXT:    [[T11:%.*]] = and <2 x i16> [[C]], [[NOTT9]]
+; CHECK-NEXT:    [[T12:%.*]] = and <2 x i16> [[D]], [[T9]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[T11]], [[T12]]
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %c = mul <2 x i16> %pc, %pc ; thwart complexity-based canonicalization
+  %d = mul <2 x i16> %pd, %pd ; thwart complexity-based canonicalization
+  %s = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
+  %t9 = bitcast <4 x i8> %s to <2 x i16>
+  %nott9 = xor <2 x i16> %t9, <i16 -1, i16 -1>
+  %t11 = and <2 x i16> %c, %nott9
+  %t12 = and <2 x i16> %d, %t9
+  %r = or <2 x i16> %t11, %t12
+  ret <2 x i16> %r
+}

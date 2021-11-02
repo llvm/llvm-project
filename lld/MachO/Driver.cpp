@@ -1364,15 +1364,17 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           config->platform() == PlatformKind::macOS);
 
   if (args.hasArg(OPT_v)) {
-    message(getLLDVersion());
+    message(getLLDVersion(), lld::errs());
     message(StringRef("Library search paths:") +
-            (config->librarySearchPaths.empty()
-                 ? ""
-                 : "\n\t" + join(config->librarySearchPaths, "\n\t")));
+                (config->librarySearchPaths.empty()
+                     ? ""
+                     : "\n\t" + join(config->librarySearchPaths, "\n\t")),
+            lld::errs());
     message(StringRef("Framework search paths:") +
-            (config->frameworkSearchPaths.empty()
-                 ? ""
-                 : "\n\t" + join(config->frameworkSearchPaths, "\n\t")));
+                (config->frameworkSearchPaths.empty()
+                     ? ""
+                     : "\n\t" + join(config->frameworkSearchPaths, "\n\t")),
+            lld::errs());
   }
 
   config->progName = argsArr[0];
