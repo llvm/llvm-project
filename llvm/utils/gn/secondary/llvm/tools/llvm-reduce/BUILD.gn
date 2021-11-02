@@ -10,6 +10,7 @@ executable("llvm-reduce") {
   include_dirs = [ "." ]
   sources = [
     "DeltaManager.cpp",
+    "ReducerWorkItem.cpp",
     "TestRunner.cpp",
     "deltas/Delta.cpp",
     "deltas/ReduceAliases.cpp",
@@ -22,6 +23,7 @@ executable("llvm-reduce") {
     "deltas/ReduceGlobalVarInitializers.cpp",
     "deltas/ReduceGlobalVars.cpp",
     "deltas/ReduceInstructions.cpp",
+    "deltas/ReduceInstructionsMIR.cpp",
     "deltas/ReduceMetadata.cpp",
     "deltas/ReduceModuleData.cpp",
     "deltas/ReduceOperandBundles.cpp",
