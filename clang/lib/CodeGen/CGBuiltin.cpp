@@ -3145,6 +3145,44 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_reduce_max: {
+    auto GetIntrinsicID = [](QualType QT, llvm::Type *IrTy) {
+      if (IrTy->isIntOrIntVectorTy()) {
+        if (auto *VecTy = QT->getAs<VectorType>())
+          QT = VecTy->getElementType();
+        if (QT->isSignedIntegerType())
+          return llvm::Intrinsic::vector_reduce_smax;
+        else
+          return llvm::Intrinsic::vector_reduce_umax;
+      }
+      return llvm::Intrinsic::vector_reduce_fmax;
+    };
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(
+        GetIntrinsicID(E->getArg(0)->getType(), Op0->getType()), Op0, nullptr,
+        "rdx.min");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_reduce_min: {
+    auto GetIntrinsicID = [](QualType QT, llvm::Type *IrTy) {
+      if (IrTy->isIntOrIntVectorTy()) {
+        if (auto *VecTy = QT->getAs<VectorType>())
+          QT = VecTy->getElementType();
+        if (QT->isSignedIntegerType())
+          return llvm::Intrinsic::vector_reduce_smin;
+        else
+          return llvm::Intrinsic::vector_reduce_umin;
+      }
+      return llvm::Intrinsic::vector_reduce_fmin;
+    };
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Result = Builder.CreateUnaryIntrinsic(
+        GetIntrinsicID(E->getArg(0)->getType(), Op0->getType()), Op0, nullptr,
+        "rdx.min");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_matrix_transpose: {
     const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
     Value *MatValue = EmitScalarExpr(E->getArg(0));
