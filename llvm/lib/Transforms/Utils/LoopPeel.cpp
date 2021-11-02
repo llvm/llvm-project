@@ -103,15 +103,15 @@ bool llvm::canPeel(Loop *L) {
   SmallVector<BasicBlock *, 4> Exits;
   L->getUniqueNonLatchExitBlocks(Exits);
   // The latch must either be the only exiting block or all non-latch exit
-  // blocks have either a deopt or unreachable terminator. Both deopt and
-  // unreachable terminators are a strong indication they are not taken. Note
-  // that this is a profitability check, not a legality check. Also note that
-  // LoopPeeling currently can only update the branch weights of latch blocks
-  // and branch weights to blocks with deopt or unreachable do not need
+  // blocks have either a deopt or unreachable terminator or compose a chain of
+  // blocks where the last one is either deopt or unreachable terminated. Both
+  // deopt and unreachable terminators are a strong indication they are not
+  // taken. Note that this is a profitability check, not a legality check. Also
+  // note that LoopPeeling currently can only update the branch weights of latch
+  // blocks and branch weights to blocks with deopt or unreachable do not need
   // updating.
   return all_of(Exits, [](const BasicBlock *BB) {
-    return BB->getTerminatingDeoptimizeCall() ||
-           isa<UnreachableInst>(BB->getTerminator());
+    return IsBlockFollowedByDeoptOrUnreachable(BB);
   });
 }
 
