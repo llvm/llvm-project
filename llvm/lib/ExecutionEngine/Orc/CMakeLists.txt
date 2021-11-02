@@ -51,6 +51,7 @@ add_llvm_component_library(LLVMOrcJIT
   OrcShared
   OrcTargetProcess
   MC
+  MCDisassembler
   Passes
   RuntimeDyld
   Support

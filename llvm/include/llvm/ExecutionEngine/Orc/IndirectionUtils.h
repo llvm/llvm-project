@@ -45,6 +45,13 @@ class PointerType;
 class Triple;
 class Twine;
 class Value;
+class MCDisassembler;
+class MCInstrAnalysis;
+
+namespace jitlink {
+class LinkGraph;
+class Symbol;
+} // namespace jitlink
 
 namespace orc {
 
@@ -556,6 +563,33 @@ GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
 /// Clone module flags metadata into the destination module.
 void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
                               ValueToValueMapTy &VMap);
+
+/// Introduce relocations to \p Sym in its own definition if there are any
+/// pointers formed via PC-relative address that do not already have a
+/// relocation.
+///
+/// This is useful when introducing indirection via a stub function at link time
+/// without compiler support. If a function pointer is formed without a
+/// relocation, e.g. in the definition of \c foo
+///
+/// \code
+/// _foo:
+///   leaq -7(%rip), rax # form pointer to _foo without relocation
+/// _bar:
+///   leaq (%rip), %rax  # uses X86_64_RELOC_SIGNED to '_foo'
+/// \endcode
+///
+/// the pointer to \c _foo computed by \c _foo and \c _bar may differ if we
+/// introduce a stub for _foo. If the pointer is used as a key, this may be
+/// observable to the program. This pass will attempt to introduce the missing
+/// "self-relocation" on the leaq instruction.
+///
+/// This is based on disassembly and should be considered "best effort". It may
+/// silently fail to add relocations.
+Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
+                                                   jitlink::LinkGraph &G,
+                                                   MCDisassembler &Disassembler,
+                                                   MCInstrAnalysis &MIA);
 
 } // end namespace orc
 
