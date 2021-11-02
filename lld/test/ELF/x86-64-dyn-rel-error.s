@@ -14,4 +14,4 @@ _start:
 // RUN: ld.lld --noinhibit-exec %t.o %t2.so -o /dev/null 2>&1 | FileCheck --check-prefix=WARN %s
 // RUN: not ld.lld --export-dynamic --unresolved-symbols=ignore-all %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=WARN %s
 
-// WARN: symbol 'zed' has no type
+// WARN: relocation R_X86_64_32 cannot be used against symbol 'zed'; recompile with -fPIC

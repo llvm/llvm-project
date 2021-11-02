@@ -1094,16 +1094,10 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
     }
   }
 
-  if (config->isPic) {
-    errorOrWarn("relocation " + toString(type) + " cannot be used against " +
-                (sym.getName().empty() ? "local symbol"
-                                       : "symbol '" + toString(sym) + "'") +
-                "; recompile with -fPIC" + getLocation(sec, sym, offset));
-    return;
-  }
-
-  errorOrWarn("symbol '" + toString(sym) + "' has no type" +
-              getLocation(sec, sym, offset));
+  errorOrWarn("relocation " + toString(type) + " cannot be used against " +
+              (sym.getName().empty() ? "local symbol"
+                                     : "symbol '" + toString(sym) + "'") +
+              "; recompile with -fPIC" + getLocation(sec, sym, offset));
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
