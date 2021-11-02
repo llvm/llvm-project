@@ -52,6 +52,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -70,6 +71,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
+  LiveVariables *LV = nullptr;
   MachineDominatorTree *MDT = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   SetVector<MachineInstr*> LoweredEndCf;
@@ -237,6 +239,8 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     BuildMI(MBB, I, DL, TII->get(AndOpc), Tmp)
     .addReg(CopyReg)
     .add(Cond);
+  if (LV)
+    LV->replaceKillInstruction(Cond.getReg(), MI, *And);
 
   setImpSCCDefDead(*And, true);
 
@@ -254,6 +258,8 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineInstr *SetExec =
     BuildMI(MBB, I, DL, TII->get(MovTermOpc), Exec)
     .addReg(Tmp, RegState::Kill);
+  if (LV)
+    LV->getVarInfo(Tmp).Kills.push_back(SetExec);
 
   // Skip ahead to the unconditional branch in case there are other terminators
   // present.
@@ -307,6 +313,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineInstr *OrSaveExec =
     BuildMI(MBB, Start, DL, TII->get(OrSaveExecOpc), SaveReg)
     .add(MI.getOperand(1)); // Saved EXEC
+  if (LV)
+    LV->replaceKillInstruction(MI.getOperand(1).getReg(), MI, *OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -380,15 +388,22 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
     And = BuildMI(MBB, &MI, DL, TII->get(AndOpc), AndReg)
              .addReg(Exec)
              .add(MI.getOperand(1));
+    if (LV)
+      LV->replaceKillInstruction(MI.getOperand(1).getReg(), MI, *And);
     Or = BuildMI(MBB, &MI, DL, TII->get(OrOpc), Dst)
              .addReg(AndReg)
              .add(MI.getOperand(2));
     if (LIS)
       LIS->createAndComputeVirtRegInterval(AndReg);
-  } else
+  } else {
     Or = BuildMI(MBB, &MI, DL, TII->get(OrOpc), Dst)
              .add(MI.getOperand(1))
              .add(MI.getOperand(2));
+    if (LV)
+      LV->replaceKillInstruction(MI.getOperand(1).getReg(), MI, *Or);
+  }
+  if (LV)
+    LV->replaceKillInstruction(MI.getOperand(2).getReg(), MI, *Or);
 
   if (LIS) {
     if (And)
@@ -490,6 +505,8 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
     BuildMI(MBB, InsPt, DL, TII->get(Opcode), Exec)
     .addReg(Exec)
     .add(MI.getOperand(0));
+  if (LV)
+    LV->replaceKillInstruction(MI.getOperand(0).getReg(), MI, *NewMI);
 
   LoweredEndCf.insert(NewMI);
 
@@ -581,7 +598,12 @@ void SILowerControlFlow::optimizeEndCf() {
       LLVM_DEBUG(dbgs() << "Skip redundant "; MI->dump());
       if (LIS)
         LIS->RemoveMachineInstrFromMaps(*MI);
+      Register Reg;
+      if (LV)
+        Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::src1)->getReg();
       MI->eraseFromParent();
+      if (LV)
+        LV->recomputeForSingleDefVirtReg(Reg);
       removeMBBifRedundant(MBB);
     }
   }
@@ -697,6 +719,8 @@ void SILowerControlFlow::lowerInitExec(MachineBasicBlock *MBB,
   auto BfeMI = BuildMI(*MBB, FirstMI, DL, TII->get(AMDGPU::S_BFE_U32), CountReg)
                    .addReg(InputReg)
                    .addImm((MI.getOperand(1).getImm() & Mask) | 0x70000);
+  if (LV)
+    LV->recomputeForSingleDefVirtReg(InputReg);
   auto BfmMI =
       BuildMI(*MBB, FirstMI, DL,
               TII->get(IsWave32 ? AMDGPU::S_BFM_B32 : AMDGPU::S_BFM_B64), Exec)
@@ -705,6 +729,8 @@ void SILowerControlFlow::lowerInitExec(MachineBasicBlock *MBB,
   auto CmpMI = BuildMI(*MBB, FirstMI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
                    .addReg(CountReg, RegState::Kill)
                    .addImm(WavefrontSize);
+  if (LV)
+    LV->getVarInfo(CountReg).Kills.push_back(CmpMI);
   auto CmovMI =
       BuildMI(*MBB, FirstMI, DL,
               TII->get(IsWave32 ? AMDGPU::S_CMOV_B32 : AMDGPU::S_CMOV_B64),
@@ -777,17 +803,14 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
-  // FIXME: This pass causes verification failures.
-  // See: https://bugs.llvm.org/show_bug.cgi?id=52204
-  MF.getProperties().set(
-      MachineFunctionProperties::Property::FailsVerification);
-
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();
+  // This doesn't actually need LiveVariables, but we can preserve them.
+  LV = getAnalysisIfAvailable<LiveVariables>();
   MDT = getAnalysisIfAvailable<MachineDominatorTree>();
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
