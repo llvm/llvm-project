@@ -2297,6 +2297,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinElementwiseMath(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_reduce_max:
+  case Builtin::BI__builtin_reduce_min:
+    if (SemaBuiltinReduceMath(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_matrix_transpose:
     return SemaBuiltinMatrixTranspose(TheCall, TheCallResult);
 
@@ -16811,6 +16816,26 @@ bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
   TheCall->setArg(0, A.get());
   TheCall->setArg(1, B.get());
   TheCall->setType(Res);
+  return false;
+}
+
+bool Sema::SemaBuiltinReduceMath(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 1))
+    return true;
+
+  ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
+  if (A.isInvalid())
+    return true;
+
+  TheCall->setArg(0, A.get());
+  const VectorType *TyA = A.get()->getType()->getAs<VectorType>();
+  if (!TyA) {
+    SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
+    return Diag(ArgLoc, diag::err_builtin_invalid_arg_type)
+           << 1 << /* vector ty*/ 4 << A.get()->getType();
+  }
+
+  TheCall->setType(TyA->getElementType());
   return false;
 }
 

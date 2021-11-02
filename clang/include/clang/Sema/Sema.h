@@ -12680,6 +12680,7 @@ private:
 
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseMathOneArg(CallExpr *TheCall);
+  bool SemaBuiltinReduceMath(CallExpr *TheCall);
 
   // Matrix builtin handling.
   ExprResult SemaBuiltinMatrixTranspose(CallExpr *TheCall,
