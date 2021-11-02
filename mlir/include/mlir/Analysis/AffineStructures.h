@@ -432,7 +432,8 @@ public:
 
   /// Merge local ids of `this` and `other`. This is done by appending local ids
   /// of `other` to `this` and inserting local ids of `this` to `other` at start
-  /// of its local ids.
+  /// of its local ids. Number of dimension and symbol ids should match in
+  /// `this` and `other`.
   void mergeLocalIds(FlatAffineConstraints &other);
 
   /// Removes all equalities and inequalities.
