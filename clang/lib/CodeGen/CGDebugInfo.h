@@ -514,6 +514,10 @@ public:
   /// Emit a constant global variable's debug info.
   void EmitGlobalVariable(const ValueDecl *VD, const APValue &Init);
 
+  /// Emit a constant global variable's debug info (-gheterogeneous-dwarf).
+  void EmitGlobalVariableForHeterogeneousDwarf(const ValueDecl *VD,
+                                               const APValue &Init);
+
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 

@@ -5445,7 +5445,11 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
   // we should conceptually produce both a memory location description *and* an
   // implicit location description because of optimizations along the lines of
   // really-early constant folding. Maybe this is an example of why we need to
-  // support multiple computed lifetime segments for global variables?
+  // support multiple computed lifetime segments for global variables? For now
+  // just do what existing LLVM does and prefer the implicit location.
+  auto &GV = DeclCache[D->getCanonicalDecl()];
+  if (GV)
+    return;
 
   // Create global variable debug descriptor.
   llvm::DIFile *Unit = nullptr;
@@ -5459,7 +5463,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
 
   // Attempt to store one global variable for the declaration - even if we
   // emit a lot of fields.
-  llvm::DIGlobalVariable *GV = nullptr;
+  llvm::DIGlobalVariable *DGV = nullptr;
 
   // If this is an anonymous union then we'll want to emit a global
   // variable for each member of the anonymous union so that it's possible
@@ -5469,7 +5473,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     // FIXME(KZHURAVL): No tests for this path.
-    GV = CollectAnonRecordDeclsForHeterogeneousDwarf(
+    DGV = CollectAnonRecordDeclsForHeterogeneousDwarf(
         RD, Unit, LineNo, LinkageName, Var, DContext);
   } else {
     // Create DIExpr.
@@ -5478,7 +5482,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     ExprBuilder.append<llvm::DIOp::Deref>(Var->getValueType());
 
     // Create DIGlobalVariable.
-    GV = DBuilder.createGlobalVariable(
+    DGV = DBuilder.createGlobalVariable(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
         Var->hasLocalLinkage(), true,
         getOrCreateStaticDataMemberDeclarationOrNull(D), TemplateParameters,
@@ -5490,18 +5494,18 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     LifetimeArgs.push_back(Fragment);
 
     // Create DILifetime and add to llvm.dbg.retainedNodes named metadata.
-    DBuilder.createComputedLifetime(GV, ExprBuilder.intoExpr(), LifetimeArgs);
+    DBuilder.createComputedLifetime(DGV, ExprBuilder.intoExpr(), LifetimeArgs);
 
     // Attach metadata to GlobalVariable.
     Var->addDebugInfo(Fragment);
   }
-  DeclCache[D->getCanonicalDecl()].reset(GV);
+
+  GV.reset(DGV);
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
-    // FIXME: As mentioned above, static const global variables need more
-    // thought. For now we just emit nothing if their address is not taken.
+    EmitGlobalVariableForHeterogeneousDwarf(VD, Init);
     return;
   }
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
@@ -5586,6 +5590,96 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
       true, true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       TemplateParameters, Align));
+}
+
+void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
+    const ValueDecl *VD, const APValue &Init) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  if (VD->hasAttr<NoDebugAttr>())
+    return;
+  llvm::TimeTraceScope TimeScope("DebugConstGlobalVariable", [&]() {
+    return GetName(VD, true);
+  });
+
+  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+  // Create the descriptor for the variable.
+  llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
+  StringRef Name = VD->getName();
+  llvm::DIType *Ty = getOrCreateType(VD->getType(), Unit);
+
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    assert(isa<EnumType>(ED->getTypeForDecl()) && "Enum without EnumType?");
+
+    if (CGM.getCodeGenOpts().EmitCodeView) {
+      // If CodeView, emit enums as global variables, unless they are defined
+      // inside a class. We do this because MSVC doesn't emit S_CONSTANTs for
+      // enums in classes, and because it is difficult to attach this scope
+      // information to the global variable.
+      if (isa<RecordDecl>(ED->getDeclContext()))
+        return;
+    } else {
+      // If not CodeView, emit DW_TAG_enumeration_type if necessary. For
+      // example: for "enum { ZERO };", a DW_TAG_enumeration_type is created the
+      // first time `ZERO` is referenced in a function.
+      llvm::DIType *EDTy =
+          getOrCreateType(QualType(ED->getTypeForDecl(), 0), Unit);
+      assert (EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
+      (void)EDTy;
+      return;
+    }
+  }
+
+  // Do not emit separate definitions for function local consts.
+  if (isa<FunctionDecl>(VD->getDeclContext()))
+    return;
+
+  VD = cast<ValueDecl>(VD->getCanonicalDecl());
+  auto *VarD = dyn_cast<VarDecl>(VD);
+  if (VarD && VarD->isStaticDataMember()) {
+    auto *RD = cast<RecordDecl>(VarD->getDeclContext());
+    getDeclContextDescriptor(VarD);
+    // Ensure that the type is retained even though it's otherwise unreferenced.
+    //
+    // FIXME: This is probably unnecessary, since Ty should reference RD
+    // through its scope.
+    RetainedTypes.push_back(
+        CGM.getContext().getRecordType(RD).getAsOpaquePtr());
+
+    return;
+  }
+  llvm::DIScope *DContext = getDeclContextDescriptor(VD);
+
+  auto &GV = DeclCache[VD];
+  if (GV)
+    return;
+
+  llvm::MDTuple *TemplateParameters = nullptr;
+
+  if (isa<VarTemplateSpecializationDecl>(VD))
+    if (VarD) {
+      llvm::DINodeArray parameterNodes = CollectVarTemplateParams(VarD, &*Unit);
+      TemplateParameters = parameterNodes.get();
+    }
+
+  llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
+  // FIXME: There isn't general support for getting a Constant from an APValue,
+  // but we should be able to support all possibilities here.
+  if (Init.isInt())
+    ExprBuilder.append<llvm::DIOp::Constant>(
+        llvm::ConstantInt::get(CGM.getLLVMContext(), Init.getInt()));
+  else if (Init.isFloat())
+    ExprBuilder.append<llvm::DIOp::Constant>(
+        llvm::ConstantFP::get(CGM.getLLVMContext(), Init.getFloat()));
+
+  llvm::DIGlobalVariable *DGV = DBuilder.createGlobalVariable(
+      DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
+      true, true, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
+      TemplateParameters, Align);
+
+  DBuilder.createComputedLifetime(DGV, ExprBuilder.intoExpr(), {});
+
+  GV.reset(DGV);
 }
 
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
