@@ -44,10 +44,11 @@ using namespace llvm;
 cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
     "verify-cfg-preserved", cl::Hidden,
 #ifdef NDEBUG
-    cl::init(false));
+    cl::init(false)
 #else
-    cl::init(true));
+    cl::init(true)
 #endif
+    );
 
 // An option that prints out the IR after passes, similar to
 // -print-after-all except that it only prints the IR after passes that
