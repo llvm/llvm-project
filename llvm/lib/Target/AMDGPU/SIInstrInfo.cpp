@@ -3597,11 +3597,13 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
         // Additional verification is needed for sdst/src2.
         return true;
       }
-      case AMDGPU::V_MAC_F32_e64:
       case AMDGPU::V_MAC_F16_e64:
-      case AMDGPU::V_FMAC_F32_e64:
+      case AMDGPU::V_MAC_F32_e64:
+      case AMDGPU::V_MAC_LEGACY_F32_e64:
       case AMDGPU::V_FMAC_F16_e64:
+      case AMDGPU::V_FMAC_F32_e64:
       case AMDGPU::V_FMAC_F64_e64:
+      case AMDGPU::V_FMAC_LEGACY_F32_e64:
         if (!Src2->isReg() || !RI.isVGPR(MRI, Src2->getReg()) ||
             hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
           return false;
