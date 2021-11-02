@@ -1213,11 +1213,11 @@ bool BufferizationAliasInfo::isSourceEquivalentToAMatchingInplaceExtractSliceOp(
   for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
        ++mit) {
     auto extractSliceOp =
-        dyn_cast_or_null<ExtractSliceOp>(mit->v.getDefiningOp());
+        dyn_cast_or_null<ExtractSliceOp>(mit->getDefiningOp());
     if (extractSliceOp &&
         areEquivalentExtractSliceOps(extractSliceOp, insertSliceOp) &&
         getInPlace(extractSliceOp.result()) == InPlaceSpec::True) {
-      LDBG("\tfound: " << *mit->v.getDefiningOp() << '\n');
+      LDBG("\tfound: " << *mit->getDefiningOp() << '\n');
       return true;
     }
   }
@@ -1231,7 +1231,7 @@ void BufferizationAliasInfo::applyOnEquivalenceClass(
   auto leaderIt = equivalentInfo.findLeader(v);
   for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
        ++mit) {
-    fun(mit->v);
+    fun(*mit);
   }
 }
 
