@@ -315,6 +315,9 @@ def testRankedTensorType():
     # Encoding should be None.
     assert RankedTensorType.get(shape, f32).encoding is None
 
+    tensor = RankedTensorType.get(shape, f32)
+    assert tensor.shape == shape
+
 
 # CHECK-LABEL: TEST: testUnrankedTensorType
 @run
@@ -395,6 +398,8 @@ def testMemRefType():
       print(e)
     else:
       print("Exception not produced")
+
+    assert memref.shape == shape
 
 
 # CHECK-LABEL: TEST: testUnrankedMemRefType
