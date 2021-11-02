@@ -16,8 +16,14 @@ int main(int argc, char **argv) {
   posix_spawnattr_t attr = {};
   posix_spawn_file_actions_t file_actions = {};
 
-  char *const args[] = {argv[0], "2", NULL};
-  char *const env[] = {"A=B", NULL};
+  char *const args[] = {
+      argv[0], "2", "3", "4", "2", "3", "4", "2", "3", "4",
+      "2",     "3", "4", "2", "3", "4", "2", "3", "4", NULL,
+  };
+  char *const env[] = {
+      "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B",
+      "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", "A=B", NULL,
+  };
 
   pid_t pid;
   int s = posix_spawn(&pid, argv[0], &file_actions, &attr, args, env);
