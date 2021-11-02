@@ -2171,6 +2171,10 @@ void mlir::python::populateIRCore(py::module &m) {
            })
       .def("__eq__",
            [](PyOperationBase &self, py::object other) { return false; })
+      .def("__hash__",
+           [](PyOperationBase &self) {
+             return static_cast<size_t>(llvm::hash_value(&self.getOperation()));
+           })
       .def_property_readonly("attributes",
                              [](PyOperationBase &self) {
                                return PyOpAttributeMap(
@@ -2558,7 +2562,10 @@ void mlir::python::populateIRCore(py::module &m) {
       .def("__eq__",
            [](PyAttribute &self, PyAttribute &other) { return self == other; })
       .def("__eq__", [](PyAttribute &self, py::object &other) { return false; })
-      .def("__hash__", [](PyAttribute &self) { return (size_t)self.get().ptr; })
+      .def("__hash__",
+           [](PyAttribute &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
           kDumpDocstring)
@@ -2652,7 +2659,10 @@ void mlir::python::populateIRCore(py::module &m) {
           "Context that owns the Type")
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def("__eq__", [](PyType &self, py::object &other) { return false; })
-      .def("__hash__", [](PyType &self) { return (size_t)self.get().ptr; })
+      .def("__hash__",
+           [](PyType &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
       .def(
@@ -2703,6 +2713,10 @@ void mlir::python::populateIRCore(py::module &m) {
              return self.get().ptr == other.get().ptr;
            })
       .def("__eq__", [](PyValue &self, py::object other) { return false; })
+      .def("__hash__",
+           [](PyValue &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "__str__",
           [](PyValue &self) {
