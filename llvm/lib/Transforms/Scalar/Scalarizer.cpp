@@ -66,6 +66,15 @@ static cl::opt<bool>
 
 namespace {
 
+BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
+  BasicBlock *BB = Itr->getParent();
+  if (isa<PHINode>(Itr))
+    Itr = BB->getFirstInsertionPt();
+  if (Itr != BB->end())
+    Itr = skipDebugIntrinsics(Itr);
+  return Itr;
+}
+
 // Used to store the scattered form of a vector.
 using ValueVector = SmallVector<Value *, 8>;
 
@@ -371,10 +380,11 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V) {
       return Scatterer(Point->getParent(), Point->getIterator(),
                        UndefValue::get(V->getType()));
     // Put the scattered form of an instruction directly after the
-    // instruction.
+    // instruction, skipping over PHI nodes and debug intrinsics.
     BasicBlock *BB = VOp->getParent();
-    return Scatterer(BB, std::next(BasicBlock::iterator(VOp)),
-                     V, &Scattered[V]);
+    return Scatterer(
+        BB, skipPastPhiNodesAndDbg(std::next(BasicBlock::iterator(VOp))), V,
+        &Scattered[V]);
   }
   // In the fallback case, just put the scattered before Point and
   // keep the result local to Point.
