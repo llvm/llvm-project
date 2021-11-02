@@ -1228,6 +1228,12 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
       Flags.append("ordered,");
     break;
+  case SecFuncMetadata:
+    if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased))
+      Flags.append("probe,");
+    if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute))
+      Flags.append("attr,");
+    break;
   default:
     break;
   }
