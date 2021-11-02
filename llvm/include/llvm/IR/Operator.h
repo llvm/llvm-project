@@ -247,9 +247,6 @@ public:
   void operator|=(const FastMathFlags &OtherFlags) {
     Flags |= OtherFlags.Flags;
   }
-  bool operator!=(const FastMathFlags &OtherFlags) const {
-    return Flags != OtherFlags.Flags;
-  }
 };
 
 /// Utility class for floating point operations which can have
