@@ -448,11 +448,18 @@ struct LinalgTransformationFilter {
     return addFilter(
         [](Operation *op) { return success(isa<OpTypes...>(op)); });
   }
+  LinalgTransformationFilter &setMatchByDefault() {
+    matchByDefault = true;
+    return *this;
+  }
 
 private:
   SmallVector<FilterFunction> filters;
   SmallVector<Identifier> matchDisjunction;
   Optional<Identifier> replacement;
+  /// When set to true, if the attribute is not set, it will be treated as
+  /// a match. Default is false.
+  bool matchByDefault;
 };
 
 using TileSizeComputationFunction =

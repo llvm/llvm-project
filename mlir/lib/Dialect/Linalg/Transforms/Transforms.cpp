@@ -51,14 +51,14 @@ const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
     ArrayRef<Identifier> matchDisjunction, Optional<Identifier> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
-      replacement(replacement) {}
+      replacement(replacement), matchByDefault(false) {}
 
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
     FilterFunction f, ArrayRef<Identifier> matchDisjunction,
     Optional<Identifier> replacement)
     : filters(),
       matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
-      replacement(replacement) {
+      replacement(replacement), matchByDefault(false) {
   if (f)
     filters.push_back(f);
 }
@@ -74,7 +74,7 @@ LogicalResult mlir::linalg::LinalgTransformationFilter::checkAndNotify(
 
   if (!attr) {
     // 1. Has no filter case and matchDisjunction is empty.
-    if (matchDisjunction.empty())
+    if (matchDisjunction.empty() || matchByDefault)
       return success();
 
     // 2. Has no filter but was expecting a filter.
