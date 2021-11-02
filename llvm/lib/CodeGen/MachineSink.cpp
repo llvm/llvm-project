@@ -1718,10 +1718,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
   UsedRegUnits.clear();
   SeenDbgInstrs.clear();
 
-  for (auto I = CurBB.rbegin(), E = CurBB.rend(); I != E;) {
-    MachineInstr *MI = &*I;
-    ++I;
-
+  for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(CurBB))) {
     // Track the operand index for use in Copy.
     SmallVector<unsigned, 2> UsedOpsInCopy;
     // Track the register number defed in Copy.
@@ -1729,14 +1726,14 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     // We must sink this DBG_VALUE if its operand is sunk. To avoid searching
     // for DBG_VALUEs later, record them when they're encountered.
-    if (MI->isDebugValue()) {
+    if (MI.isDebugValue()) {
       SmallDenseMap<MCRegister, SmallVector<unsigned, 2>, 4> MIUnits;
       bool IsValid = true;
-      for (MachineOperand &MO : MI->debug_operands()) {
+      for (MachineOperand &MO : MI.debug_operands()) {
         if (MO.isReg() && Register::isPhysicalRegister(MO.getReg())) {
           // Bail if we can already tell the sink would be rejected, rather
           // than needlessly accumulating lots of DBG_VALUEs.
-          if (hasRegisterDependency(MI, UsedOpsInCopy, DefedRegsInCopy,
+          if (hasRegisterDependency(&MI, UsedOpsInCopy, DefedRegsInCopy,
                                     ModifiedRegUnits, UsedRegUnits)) {
             IsValid = false;
             break;
@@ -1750,28 +1747,28 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       }
       if (IsValid) {
         for (auto RegOps : MIUnits)
-          SeenDbgInstrs[RegOps.first].push_back({MI, RegOps.second});
+          SeenDbgInstrs[RegOps.first].push_back({&MI, RegOps.second});
       }
       continue;
     }
 
-    if (MI->isDebugOrPseudoInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
 
     // Do not move any instruction across function call.
-    if (MI->isCall())
+    if (MI.isCall())
       return false;
 
-    if (!MI->isCopy() || !MI->getOperand(0).isRenamable()) {
-      LiveRegUnits::accumulateUsedDefed(*MI, ModifiedRegUnits, UsedRegUnits,
+    if (!MI.isCopy() || !MI.getOperand(0).isRenamable()) {
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                         TRI);
       continue;
     }
 
     // Don't sink the COPY if it would violate a register dependency.
-    if (hasRegisterDependency(MI, UsedOpsInCopy, DefedRegsInCopy,
+    if (hasRegisterDependency(&MI, UsedOpsInCopy, DefedRegsInCopy,
                               ModifiedRegUnits, UsedRegUnits)) {
-      LiveRegUnits::accumulateUsedDefed(*MI, ModifiedRegUnits, UsedRegUnits,
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                         TRI);
       continue;
     }
@@ -1782,7 +1779,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // Don't sink if we cannot find a single sinkable successor in which Reg
     // is live-in.
     if (!SuccBB) {
-      LiveRegUnits::accumulateUsedDefed(*MI, ModifiedRegUnits, UsedRegUnits,
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                         TRI);
       continue;
     }
@@ -1793,7 +1790,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // recorded which reg units that DBG_VALUEs read, if this instruction
     // writes any of those units then the corresponding DBG_VALUEs must sink.
     MapVector<MachineInstr *, MIRegs::second_type> DbgValsToSinkMap;
-    for (auto &MO : MI->operands()) {
+    for (auto &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
 
@@ -1811,10 +1808,10 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.
-    clearKillFlags(MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
+    clearKillFlags(&MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
     MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
-    performSink(*MI, *SuccBB, InsertPos, DbgValsToSink);
-    updateLiveIn(MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
+    performSink(MI, *SuccBB, InsertPos, DbgValsToSink);
+    updateLiveIn(&MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 
     Changed = true;
     ++NumPostRACopySink;
