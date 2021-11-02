@@ -1,4 +1,4 @@
-//===-- Stdlib utils --------------------------------------------*- C++ -*-===//
+//===-- String to integer conversion utils ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_STDLIB_STDLIB_UTILS_H
-#define LIBC_SRC_STDLIB_STDLIB_UTILS_H
+#ifndef LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
+#define LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
 
 #include "src/__support/CPP/Limits.h"
 #include "src/__support/ctype_utils.h"
@@ -148,4 +148,4 @@ static inline T strtointeger(const char *__restrict src,
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_STDLIB_STDLIB_UTILS_H
+#endif // LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
