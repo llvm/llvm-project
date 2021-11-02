@@ -103,6 +103,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-err33-c
+  <clang-tidy/checks/cert-err33-c>` to
+  :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone-unused-return-value>` was added.
+
 - New alias :doc:`cert-exp42-c
   <clang-tidy/checks/cert-exp42-c>` to
   :doc:`bugprone-suspicious-memory-comparison
