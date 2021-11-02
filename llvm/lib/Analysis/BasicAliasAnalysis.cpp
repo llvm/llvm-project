@@ -1229,6 +1229,10 @@ AliasResult BasicAAResult::aliasGEP(
     return AliasResult::NoAlias;
   }
 
+  // We need to know both acess sizes for all the following heuristics.
+  if (!V1Size.hasValue() || !V2Size.hasValue())
+    return AliasResult::MayAlias;
+
   APInt GCD;
   ConstantRange OffsetRange = ConstantRange(DecompGEP1.Offset);
   for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
@@ -1270,58 +1274,53 @@ AliasResult BasicAAResult::aliasGEP(
   APInt ModOffset = DecompGEP1.Offset.srem(GCD);
   if (ModOffset.isNegative())
     ModOffset += GCD; // We want mod, not rem.
-  if (V1Size.hasValue() && V2Size.hasValue() &&
-      ModOffset.uge(V2Size.getValue()) &&
+  if (ModOffset.uge(V2Size.getValue()) &&
       (GCD - ModOffset).uge(V1Size.getValue()))
     return AliasResult::NoAlias;
 
-  if (V1Size.hasValue() && V2Size.hasValue()) {
-    // Compute ranges of potentially accessed bytes for both accesses. If the
-    // interseciton is empty, there can be no overlap.
-    unsigned BW = OffsetRange.getBitWidth();
-    ConstantRange Range1 = OffsetRange.add(
-        ConstantRange(APInt(BW, 0), APInt(BW, V1Size.getValue())));
-    ConstantRange Range2 =
-        ConstantRange(APInt(BW, 0), APInt(BW, V2Size.getValue()));
-    if (Range1.intersectWith(Range2).isEmptySet())
-      return AliasResult::NoAlias;
+  // Compute ranges of potentially accessed bytes for both accesses. If the
+  // interseciton is empty, there can be no overlap.
+  unsigned BW = OffsetRange.getBitWidth();
+  ConstantRange Range1 = OffsetRange.add(
+      ConstantRange(APInt(BW, 0), APInt(BW, V1Size.getValue())));
+  ConstantRange Range2 =
+      ConstantRange(APInt(BW, 0), APInt(BW, V2Size.getValue()));
+  if (Range1.intersectWith(Range2).isEmptySet())
+    return AliasResult::NoAlias;
+
+  // Try to determine the range of values for VarIndex such that
+  // VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex.
+  Optional<APInt> MinAbsVarIndex;
+  if (DecompGEP1.VarIndices.size() == 1) {
+    // VarIndex = Scale*V.
+    const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
+    if (Var.Val.TruncBits == 0 &&
+        isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
+      // If V != 0 then abs(VarIndex) >= abs(Scale).
+      MinAbsVarIndex = Var.Scale.abs();
+    }
+  } else if (DecompGEP1.VarIndices.size() == 2) {
+    // VarIndex = Scale*V0 + (-Scale)*V1.
+    // If V0 != V1 then abs(VarIndex) >= abs(Scale).
+    // Check that VisitedPhiBBs is empty, to avoid reasoning about
+    // inequality of values across loop iterations.
+    const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
+    const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
+    if (Var0.Scale == -Var1.Scale && Var0.Val.TruncBits == 0 &&
+        Var0.Val.hasSameCastsAs(Var1.Val) && VisitedPhiBBs.empty() &&
+        isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
+                        DT))
+      MinAbsVarIndex = Var0.Scale.abs();
   }
 
-  if (V1Size.hasValue() && V2Size.hasValue()) {
-    // Try to determine the range of values for VarIndex such that
-    // VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex.
-    Optional<APInt> MinAbsVarIndex;
-    if (DecompGEP1.VarIndices.size() == 1) {
-      // VarIndex = Scale*V.
-      const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-      if (Var.Val.TruncBits == 0 &&
-          isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-        // If V != 0 then abs(VarIndex) >= abs(Scale).
-        MinAbsVarIndex = Var.Scale.abs();
-      }
-    } else if (DecompGEP1.VarIndices.size() == 2) {
-      // VarIndex = Scale*V0 + (-Scale)*V1.
-      // If V0 != V1 then abs(VarIndex) >= abs(Scale).
-      // Check that VisitedPhiBBs is empty, to avoid reasoning about
-      // inequality of values across loop iterations.
-      const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
-      const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
-      if (Var0.Scale == -Var1.Scale && Var0.Val.TruncBits == 0 &&
-          Var0.Val.hasSameCastsAs(Var1.Val) && VisitedPhiBBs.empty() &&
-          isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
-                          DT))
-        MinAbsVarIndex = Var0.Scale.abs();
-    }
-
-    if (MinAbsVarIndex) {
-      // The constant offset will have added at least +/-MinAbsVarIndex to it.
-      APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
-      APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
-      // We know that Offset <= OffsetLo || Offset >= OffsetHi
-      if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&
-          OffsetHi.isNonNegative() && OffsetHi.uge(V2Size.getValue()))
-        return AliasResult::NoAlias;
-    }
+  if (MinAbsVarIndex) {
+    // The constant offset will have added at least +/-MinAbsVarIndex to it.
+    APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
+    APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
+    // We know that Offset <= OffsetLo || Offset >= OffsetHi
+    if (OffsetLo.isNegative() && (-OffsetLo).uge(V1Size.getValue()) &&
+        OffsetHi.isNonNegative() && OffsetHi.uge(V2Size.getValue()))
+      return AliasResult::NoAlias;
   }
 
   if (constantOffsetHeuristic(DecompGEP1, V1Size, V2Size, &AC, DT))
