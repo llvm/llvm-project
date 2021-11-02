@@ -129,7 +129,6 @@ std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   KeyStr->Context = Binary->getExpandedContext(Stack, KeyStr->WasLeafInlined);
   if (KeyStr->Context.empty())
     return nullptr;
-  KeyStr->genHashCode();
   return KeyStr;
 }
 
@@ -143,8 +142,6 @@ std::shared_ptr<ProbeBasedCtxKey> ProbeStack::getContextKey() {
       ProbeBasedKey->Probes);
   CSProfileGenerator::trimContext<const MCDecodedPseudoProbe *>(
       ProbeBasedKey->Probes);
-
-  ProbeBasedKey->genHashCode();
   return ProbeBasedKey;
 }
 
@@ -802,7 +799,6 @@ void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
       SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
       TraceIt.advance();
     }
-    Key->genHashCode();
     auto Ret =
         SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
     readSampleCounters(TraceIt, Ret.first->second);
@@ -851,7 +847,6 @@ void PerfScriptReader::generateUnsymbolizedProfile() {
          "Sample counter map should be empty before raw profile generation");
   std::shared_ptr<StringBasedCtxKey> Key =
       std::make_shared<StringBasedCtxKey>();
-  Key->genHashCode();
   SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
