@@ -122,8 +122,7 @@ void ModuleListProperties::UpdateSymlinkMappings() {
     FileSpec resolved;
     Status status = FileSystem::Instance().Readlink(symlink, resolved);
     if (status.Success())
-      m_symlink_paths.Append(ConstString(symlink.GetPath()),
-                             ConstString(resolved.GetPath()), notify);
+      m_symlink_paths.Append(symlink.GetPath(), resolved.GetPath(), notify);
   }
 }
 

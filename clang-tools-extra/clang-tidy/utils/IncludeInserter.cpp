@@ -19,7 +19,7 @@ class IncludeInserterCallback : public PPCallbacks {
 public:
   explicit IncludeInserterCallback(IncludeInserter *Inserter)
       : Inserter(Inserter) {}
-  // Implements PPCallbacks::InclusionDerective(). Records the names and source
+  // Implements PPCallbacks::InclusionDirective(). Records the names and source
   // locations of the inclusions in the main source file being processed.
   void InclusionDirective(SourceLocation HashLocation,
                           const Token &IncludeToken, StringRef FileNameRef,
@@ -76,7 +76,7 @@ IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
   if (!InsertedHeaders[FileID].insert(Header).second)
     return llvm::None;
 
-  return getOrCreate(FileID).CreateIncludeInsertion(Header, IsAngled);
+  return getOrCreate(FileID).createIncludeInsertion(Header, IsAngled);
 }
 
 llvm::Optional<FixItHint>
@@ -92,7 +92,7 @@ void IncludeInserter::addInclude(StringRef FileName, bool IsAngled,
   assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
                       "registerPreprocessor()?");
   FileID FileID = SourceMgr->getFileID(HashLocation);
-  getOrCreate(FileID).AddInclude(FileName, IsAngled, HashLocation, EndLocation);
+  getOrCreate(FileID).addInclude(FileName, IsAngled, HashLocation, EndLocation);
 }
 
 } // namespace utils
