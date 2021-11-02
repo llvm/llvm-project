@@ -1068,8 +1068,8 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[F16]>>:$opA,
-                  Arg<MMAMatrixOf<[F16]>>:$opB,
+  let arguments = (ins Arg<MMAMatrixOf<[F16, F32]>>:$opA,
+                  Arg<MMAMatrixOf<[F16, F32]>>:$opB,
                   Arg<MMAMatrixOf<[F16, F32]>>:$opC);
 
   let results = (outs GPU_MMAMatrix:$res);
