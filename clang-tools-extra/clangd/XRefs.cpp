@@ -80,6 +80,9 @@ const NamedDecl *getDefinition(const NamedDecl *D) {
     return VD->getDefinition();
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     return FD->getDefinition();
+  if (const auto *CTD = dyn_cast<ClassTemplateDecl>(D))
+    if (const auto *RD = CTD->getTemplatedDecl())
+      return RD->getDefinition();
   // Objective-C classes can have three types of declarations:
   //
   // - forward declaration: @class MyClass;
