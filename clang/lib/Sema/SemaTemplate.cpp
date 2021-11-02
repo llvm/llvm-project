@@ -10917,9 +10917,9 @@ Sema::getTemplateArgumentBindingsText(const TemplateParameterList *Params,
     }
 
     Out << " = ";
-    Args[I].print(
-        getPrintingPolicy(), Out,
-        TemplateParameterList::shouldIncludeTypeForArgument(Params, I));
+    Args[I].print(getPrintingPolicy(), Out,
+                  TemplateParameterList::shouldIncludeTypeForArgument(
+                      getPrintingPolicy(), Params, I));
   }
 
   Out << ']';

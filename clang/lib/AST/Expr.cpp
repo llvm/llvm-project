@@ -763,9 +763,9 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
         StringRef Param = Params->getParam(i)->getName();
         if (Param.empty()) continue;
         TOut << Param << " = ";
-        Args.get(i).print(
-            Policy, TOut,
-            TemplateParameterList::shouldIncludeTypeForArgument(Params, i));
+        Args.get(i).print(Policy, TOut,
+                          TemplateParameterList::shouldIncludeTypeForArgument(
+                              Policy, Params, i));
         TOut << ", ";
       }
     }
