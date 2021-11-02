@@ -206,6 +206,57 @@ define i8 @or_and_or_commute3(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+define i8 @or_and2_or2(i8 %x) {
+; CHECK-LABEL: @or_and2_or2(
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use(i8 [[O1]])
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[X]], 2
+; CHECK-NEXT:    call void @use(i8 [[O2]])
+; CHECK-NEXT:    [[X1:%.*]] = and i8 [[O1]], -71
+; CHECK-NEXT:    call void @use(i8 [[X1]])
+; CHECK-NEXT:    [[X2:%.*]] = and i8 [[O2]], 66
+; CHECK-NEXT:    call void @use(i8 [[X2]])
+; CHECK-NEXT:    [[BITFIELD:%.*]] = and i8 [[X]], -8
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[BITFIELD]], 3
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %o1 = or i8 %x, 1
+  call void @use(i8 %o1)
+  %o2 = or i8 %x, 2
+  call void @use(i8 %o2)
+  %x1 = and i8 %o1, 185
+  call void @use(i8 %x1)
+  %x2 = and i8 %o2, 66
+  call void @use(i8 %x2)
+  %r = or i8 %x1, %x2
+  ret i8 %r
+}
+
+define <2 x i8> @or_and2_or2_splat(<2 x i8> %x) {
+; CHECK-LABEL: @or_and2_or2_splat(
+; CHECK-NEXT:    [[O1:%.*]] = or <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[O1]])
+; CHECK-NEXT:    [[O2:%.*]] = or <2 x i8> [[X]], <i8 2, i8 2>
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[O2]])
+; CHECK-NEXT:    [[X1:%.*]] = and <2 x i8> [[O1]], <i8 -71, i8 -71>
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], <i8 66, i8 66>
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X1]], [[X2]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %o1 = or <2 x i8> %x, <i8 1, i8 1>
+  call void @use_vec(<2 x i8> %o1)
+  %o2 = or <2 x i8> %x, <i8 2, i8 2>
+  call void @use_vec(<2 x i8> %o2)
+  %x1 = and <2 x i8> %o1, <i8 185, i8 185>
+  call void @use_vec(<2 x i8> %x1)
+  %x2 = and <2 x i8> %o2, <i8 66, i8 66>
+  call void @use_vec(<2 x i8> %x2)
+  %r = or <2 x i8> %x1, %x2
+  ret <2 x i8> %r
+}
+
 ; Check variants of:
 ; and ({x}or X, Y), C --> {x}or X, (and Y, C)
 ; ...in the following 5 tests.
