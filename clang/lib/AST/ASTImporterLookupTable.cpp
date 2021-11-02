@@ -145,7 +145,7 @@ ASTImporterLookupTable::lookup(DeclContext *DC, DeclarationName Name) const {
 }
 
 bool ASTImporterLookupTable::contains(DeclContext *DC, NamedDecl *ND) const {
-  return 0 < lookup(DC, ND->getDeclName()).count(ND);
+  return lookup(DC, ND->getDeclName()).contains(ND);
 }
 
 void ASTImporterLookupTable::dump(DeclContext *DC) const {
