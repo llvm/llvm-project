@@ -5,7 +5,7 @@
 
 ## Here we check that symbol 'foo' location is reported properly.
 
-# CHECK: error: relocation R_X86_64_PC32 cannot be used against symbol foo
+# CHECK: error: relocation R_X86_64_PC32 cannot be used against symbol 'foo'
 # CHECK: >>> defined in {{.*}}.script:1
 # CHECK: >>> referenced by {{.*}}.o:(.text+0x1)
 
