@@ -239,7 +239,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 DBGSourcePath = resolved_source_path.GetPath();
                               }
                               module_sp->GetSourceMappingList().Append(
-                                  key, ConstString(DBGSourcePath), true);
+                                  key.GetStringRef(), DBGSourcePath, true);
                               // With version 2 of DBGSourcePathRemapping, we
                               // can chop off the last two filename parts
                               // from the source remapping and get a more
@@ -254,8 +254,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 source_path.RemoveLastPathComponent();
                                 source_path.RemoveLastPathComponent();
                                 module_sp->GetSourceMappingList().Append(
-                                    ConstString(build_path.GetPath().c_str()),
-                                    ConstString(source_path.GetPath().c_str()),
+                                    build_path.GetPath(), source_path.GetPath(),
                                     true);
                               }
                             }
@@ -276,8 +275,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                         DBGSourcePath = resolved_source_path.GetPath();
                       }
                       module_sp->GetSourceMappingList().Append(
-                          ConstString(DBGBuildSourcePath),
-                          ConstString(DBGSourcePath), true);
+                          DBGBuildSourcePath, DBGSourcePath, true);
                     }
                   }
                 }
