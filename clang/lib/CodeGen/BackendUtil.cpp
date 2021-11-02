@@ -1178,16 +1178,16 @@ static void addSanitizers(const Triple &TargetTriple,
       if (LangOpts.Sanitize.has(Mask)) {
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
         bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
-        bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+        bool UseGlobalGC = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
         bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
         llvm::AsanDtorKind DestructorKind =
             CodeGenOpts.getSanitizeAddressDtor();
         llvm::AsanDetectStackUseAfterReturnMode UseAfterReturn =
             CodeGenOpts.getSanitizeAddressUseAfterReturn();
         MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-        MPM.addPass(ModuleAddressSanitizerPass(
-            CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator,
-            DestructorKind));
+        MPM.addPass(ModuleAddressSanitizerPass(CompileKernel, Recover,
+                                               UseGlobalGC, UseOdrIndicator,
+                                               DestructorKind));
         MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
             {CompileKernel, Recover, UseAfterScope, UseAfterReturn})));
       }
