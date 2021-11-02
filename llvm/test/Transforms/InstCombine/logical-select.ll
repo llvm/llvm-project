@@ -19,8 +19,8 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[E_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[E_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %e = icmp slt i32 %a, %b
@@ -472,9 +472,9 @@ define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
 
 define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_of_casted_bools(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i4 [[A:%.*]] to <4 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i4 [[B:%.*]] to <4 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[TMP2]], <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i4 [[B:%.*]] to <4 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i4 [[A:%.*]] to <4 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[TMP1]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
 ; CHECK-NEXT:    ret i4 [[TMP4]]
 ;
@@ -582,8 +582,8 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
 
 define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 ; CHECK-LABEL: @allSignBits(
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp slt i32 [[COND:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTNOT]], i32 [[TVAL:%.*]], i32 [[FVAL:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt i32 [[COND:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTNOT]], i32 [[FVAL:%.*]], i32 [[TVAL:%.*]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %bitmask = ashr i32 %cond, 31
