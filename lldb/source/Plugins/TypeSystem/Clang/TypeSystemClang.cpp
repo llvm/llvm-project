@@ -570,10 +570,6 @@ TypeSystemClang::TypeSystemClang(llvm::StringRef name,
 // Destructor
 TypeSystemClang::~TypeSystemClang() { Finalize(); }
 
-ConstString TypeSystemClang::GetPluginNameStatic() {
-  return ConstString("clang");
-}
-
 lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
                                                    Target *target) {

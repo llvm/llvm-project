@@ -426,7 +426,7 @@ public:
   GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx);
 
   // TypeSystem
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              TypeSystemCreateInstance create_callback,
                              LanguageSet supported_languages_for_types,
                              LanguageSet supported_languages_for_expressions);
@@ -441,7 +441,7 @@ public:
   static LanguageSet GetAllTypeSystemSupportedLanguagesForExpressions();
 
   // REPL
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              REPLCreateInstance create_callback,
                              LanguageSet supported_languages);
 
