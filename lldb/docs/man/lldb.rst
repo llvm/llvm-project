@@ -111,7 +111,7 @@ COMMANDS
 
 .. option:: --source-quietly
 
- Tells the debugger to execute this one-line lldb command before any file has been loaded.
+ Tells the debugger not to echo commands while sourcing files or one-line commands provided on the command line.
 
 .. option:: --source <file>
 

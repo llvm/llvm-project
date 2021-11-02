@@ -110,7 +110,7 @@ def: Flag<["-"], "b">,
   Group<grp_command>;
 
 def source_quietly: F<"source-quietly">,
-  HelpText<"Tells the debugger to execute this one-line lldb command before any file has been loaded.">,
+  HelpText<"Tells the debugger not to echo commands while sourcing files or one-line commands provided on the command line.">,
   Group<grp_command>;
 def: Flag<["-"], "Q">,
   Alias<source_quietly>,
