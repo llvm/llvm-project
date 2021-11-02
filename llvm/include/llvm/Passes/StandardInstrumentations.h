@@ -440,7 +440,7 @@ public:
 protected:
   // Add a transition to \p Succ on \p Label
   void addSuccessorLabel(StringRef Succ, StringRef Label) {
-    std::pair<std::string, std::string> SS{Succ, Label};
+    std::pair<std::string, std::string> SS{Succ.str(), Label.str()};
     Successors.insert(SS);
   }
 
