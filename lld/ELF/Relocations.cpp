@@ -1279,9 +1279,9 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     } else if (expr != R_TLSIE_HINT) {
       if (!sym.isInGot())
         addTpOffsetGotEntry(sym);
-      // R_GOT may not be a link-time constant.
-      if (expr == R_GOT)
-        processRelocAux<ELFT>(c, expr, type, offset, sym, addend);
+      // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
+      if (expr == R_GOT && config->isPic && !target->usesOnlyLowPageBits(type))
+        addRelativeReloc(&c, offset, sym, addend, expr, type);
       else
         c.relocations.push_back({expr, type, offset, addend, &sym});
     }
