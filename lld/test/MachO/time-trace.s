@@ -1,3 +1,7 @@
+## When running main twice, we'll also output the time trace JSON twice, which
+## breaks JSON parsing.
+# XFAIL: main-run-twice
+
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 

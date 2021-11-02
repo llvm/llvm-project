@@ -32,14 +32,8 @@ class WebAssemblyAsmTypeCheck final {
   SmallVector<wasm::ValType, 4> ReturnTypes;
   wasm::WasmSignature LastSig;
   bool TypeErrorThisFunction = false;
+  bool Unreachable = false;
   bool is64;
-
-  void Clear() {
-    Stack.clear();
-    LocalTypes.clear();
-    ReturnTypes.clear();
-    TypeErrorThisFunction = false;
-  }
 
   void dumpTypeStack(Twine Msg);
   bool typeError(SMLoc ErrorLoc, const Twine &Msg);
@@ -57,8 +51,16 @@ public:
   void funcDecl(const wasm::WasmSignature &Sig);
   void localDecl(const SmallVector<wasm::ValType, 4> &Locals);
   void setLastSig(const wasm::WasmSignature &Sig) { LastSig = Sig; }
-  void endOfFunction(SMLoc ErrorLoc);
+  bool endOfFunction(SMLoc ErrorLoc);
   bool typeCheck(SMLoc ErrorLoc, const MCInst &Inst);
+
+  void Clear() {
+    Stack.clear();
+    LocalTypes.clear();
+    ReturnTypes.clear();
+    TypeErrorThisFunction = false;
+    Unreachable = false;
+  }
 };
 
 } // end namespace llvm

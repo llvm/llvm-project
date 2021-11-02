@@ -1,9 +1,12 @@
 // RUN: %clang %s -o %t && %run %t 2>&1 | FileCheck %s
+//
+// Older versions of Android do not have certain posix_spawn* functions.
+// UNSUPPORTED: android
 
 #include <assert.h>
 #include <spawn.h>
 #include <stdio.h>
-#include <wait.h>
+#include <sys/wait.h>
 
 int main(int argc, char **argv) {
   if (argc > 1) {

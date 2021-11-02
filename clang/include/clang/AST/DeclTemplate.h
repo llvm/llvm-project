@@ -203,7 +203,8 @@ public:
   void print(raw_ostream &Out, const ASTContext &Context,
              const PrintingPolicy &Policy, bool OmitTemplateKW = false) const;
 
-  static bool shouldIncludeTypeForArgument(const TemplateParameterList *TPL,
+  static bool shouldIncludeTypeForArgument(const PrintingPolicy &Policy,
+                                           const TemplateParameterList *TPL,
                                            unsigned Idx);
 };
 

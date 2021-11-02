@@ -1,9 +1,10 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types,atomics,+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+tail-call,+reference-types,atomics,+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors, but don't check any output:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+reference-types,+atomics,+simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+tail-call,+reference-types,+atomics,+simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
 
 .functype   something1 () -> ()
 .functype   something2 (i64) -> (i32, f64)
+.functype   something3 () -> (i32)
 .globaltype __stack_pointer, i32
 
 empty_func:
@@ -86,6 +87,17 @@ test0:
     else
     end_if
     drop
+    block       void
+    i32.const   2
+    return
+    end_block
+    block       void
+    return_call something3
+    end_block
+    block       void
+    i32.const   3
+    return_call_indirect () -> (i32)
+    end_block
     local.get   4
     local.get   5
     f32x4.add
@@ -215,6 +227,17 @@ empty_fref_table:
 # CHECK-NEXT:      else
 # CHECK-NEXT:      end_if
 # CHECK-NEXT:      drop
+# CHECK-NEXT:      block
+# CHECK-NEXT:      i32.const   2
+# CHECK-NEXT:      return
+# CHECK-NEXT:      end_block
+# CHECK-NEXT:      block
+# CHECK-NEXT:      return_call something3
+# CHECK-NEXT:      end_block
+# CHECK-NEXT:      block
+# CHECK-NEXT:      i32.const   3
+# CHECK-NEXT:      return_call_indirect __indirect_function_table, () -> (i32)
+# CHECK-NEXT:      end_block
 # CHECK-NEXT:      local.get   4
 # CHECK-NEXT:      local.get   5
 # CHECK-NEXT:      f32x4.add

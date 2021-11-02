@@ -734,6 +734,27 @@ bool Minimizer::lexPragma(const char *&First, const char *const End) {
     append("#pragma once\n");
     return false;
   }
+  if (FoundId.Name == "push_macro") {
+    // #pragma push_macro
+    makeToken(pp_pragma_push_macro);
+    append("#pragma push_macro");
+    printDirectiveBody(First, End);
+    return false;
+  }
+  if (FoundId.Name == "pop_macro") {
+    // #pragma pop_macro
+    makeToken(pp_pragma_pop_macro);
+    append("#pragma pop_macro");
+    printDirectiveBody(First, End);
+    return false;
+  }
+  if (FoundId.Name == "include_alias") {
+    // #pragma include_alias
+    makeToken(pp_pragma_include_alias);
+    append("#pragma include_alias");
+    printDirectiveBody(First, End);
+    return false;
+  }
 
   if (FoundId.Name != "clang") {
     skipLine(First, End);
@@ -835,6 +856,10 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
   // Figure out the token.
   IdInfo Id = lexIdentifier(First, End);
   First = Id.Last;
+
+  if (Id.Name == "pragma")
+    return lexPragma(First, End);
+
   auto Kind = llvm::StringSwitch<TokenKind>(Id.Name)
                   .Case("include", pp_include)
                   .Case("__include_macros", pp___include_macros)
@@ -850,7 +875,6 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
                   .Case("elifndef", pp_elifndef)
                   .Case("else", pp_else)
                   .Case("endif", pp_endif)
-                  .Case("pragma", pp_pragma_import)
                   .Default(pp_none);
   if (Kind == pp_none) {
     skipDirective(Id.Name, First, End);
@@ -862,9 +886,6 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
 
   if (Kind == pp_define)
     return lexDefine(First, End);
-
-  if (Kind == pp_pragma_import)
-    return lexPragma(First, End);
 
   // Everything else.
   return lexDefault(Kind, Id.Name, First, End);

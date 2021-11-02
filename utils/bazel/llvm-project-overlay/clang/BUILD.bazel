@@ -691,14 +691,25 @@ cc_library(
         "lib/AST/*.h",
         "lib/AST/Interp/*.cpp",
         "lib/AST/Interp/*.h",
-    ]),
+    ]) + [
+        "lib/AST/AttrDocTable.inc",
+        "lib/AST/Interp/Opcodes.inc",
+    ],
     hdrs = glob([
         "include/clang/AST/*.h",
     ]),
-    includes = [
-        "include",
-        "lib/AST",
-        "lib/AST/Interp",
+    copts = [
+        # FIXME: This is necessary to allow "file relative" include paths from
+        # non-generated `srcs` to find generated `srcs` above. Bazel should
+        # either make this work automatically by creating a unified tree of
+        # `srcs` or at least provide a `local_includes` that has the path
+        # translation logic of `includes` but is only used locally (similar to
+        # `local_defines` vs. `defines`). Until one of those lands, this is the
+        # least bad approach. Using `includes` is *specifically* problematic for
+        # this library because it contains files that collide easily with system
+        # headers such as `CXXABI.h`.
+        "-I$(GENDIR)/external/llvm-project/clang/lib/AST",
+        "-I$(GENDIR)/external/llvm-project/clang/lib/AST/Interp",
     ],
     textual_hdrs = [
         "include/clang/AST/AttrImpl.inc",
@@ -715,8 +726,6 @@ cc_library(
         "include/clang/AST/DeclNodes.inc",
         "include/clang/AST/StmtDataCollectors.inc",
         "include/clang/AST/StmtNodes.inc",
-        "lib/AST/AttrDocTable.inc",
-        "lib/AST/Interp/Opcodes.inc",
     ] + glob([
         "include/clang/AST/*.def",
     ]),

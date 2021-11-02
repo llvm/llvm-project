@@ -69,6 +69,27 @@ func @nvvm_mma(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
+func @nvvm_wmma_load_tf32(%arg0: !llvm.ptr<i32>, %arg1 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
+  // CHECK: nvvm.wmma.load {{.*}} {eltype = "tf32", frag = "a", k = 8 : i32, layout = "row", m = 16 : i32, n = 16 : i32}
+  %0 = nvvm.wmma.load %arg0, %arg1
+    {eltype = "tf32", frag = "a", k = 8 : i32, layout = "row", m = 16 : i32, n = 16 : i32}
+    : (!llvm.ptr<i32>) -> !llvm.struct<(i32, i32, i32, i32)>
+  llvm.return %0 : !llvm.struct<(i32, i32, i32, i32)>
+}
+
+func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : i32,
+                    %6 : i32, %7 : i32, %8 : f32, %9 : f32, %10 : f32,
+                    %11 : f32, %12 : f32, %13 : f32, %14 : f32, %15 : f32)
+                   -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
+  // CHECK: nvvm.wmma.mma {{.*}} {eltypeA = "tf32", eltypeB = "f32", k = 8 : i32, layoutA = "row", layoutB = "row", m = 16 : i32, n = 16 : i32}
+  %r = nvvm.wmma.mma %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15
+    {eltypeA = "tf32", eltypeB = "f32", k = 8 : i32, layoutA = "row", layoutB = "row", m = 16 : i32, n = 16 : i32}
+    : (i32, i32, i32, i32, i32, i32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
+    -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %r : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+}
+
+
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}
