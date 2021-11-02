@@ -12,7 +12,7 @@ using namespace llvm;
 
 TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
-                       std::unique_ptr<ReducerWorkItem> Program)
+                       std::unique_ptr<Module> Program)
     : TestName(TestName), TestArgs(TestArgs), Program(std::move(Program)) {
   assert(this->Program && "Initialized with null program?");
 }
