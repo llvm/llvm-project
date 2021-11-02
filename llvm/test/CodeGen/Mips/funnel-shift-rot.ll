@@ -76,59 +76,43 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
 define i64 @rotl_i64(i64 %x, i64 %z) {
 ; CHECK-BE-LABEL: rotl_i64:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    negu $1, $7
-; CHECK-BE-NEXT:    andi $3, $1, 63
-; CHECK-BE-NEXT:    srlv $6, $4, $3
-; CHECK-BE-NEXT:    andi $1, $1, 32
-; CHECK-BE-NEXT:    andi $2, $7, 63
-; CHECK-BE-NEXT:    move $8, $6
-; CHECK-BE-NEXT:    movn $8, $zero, $1
-; CHECK-BE-NEXT:    sllv $9, $4, $2
-; CHECK-BE-NEXT:    srl $10, $5, 1
-; CHECK-BE-NEXT:    not $11, $2
-; CHECK-BE-NEXT:    srlv $10, $10, $11
-; CHECK-BE-NEXT:    or $9, $9, $10
-; CHECK-BE-NEXT:    sllv $10, $5, $2
-; CHECK-BE-NEXT:    andi $7, $7, 32
-; CHECK-BE-NEXT:    movn $9, $10, $7
-; CHECK-BE-NEXT:    or $2, $9, $8
-; CHECK-BE-NEXT:    srlv $5, $5, $3
-; CHECK-BE-NEXT:    not $3, $3
-; CHECK-BE-NEXT:    sll $4, $4, 1
-; CHECK-BE-NEXT:    sllv $3, $4, $3
-; CHECK-BE-NEXT:    or $3, $3, $5
-; CHECK-BE-NEXT:    movn $3, $6, $1
-; CHECK-BE-NEXT:    movn $10, $zero, $7
+; CHECK-BE-NEXT:    srl $1, $7, 5
+; CHECK-BE-NEXT:    andi $1, $1, 1
+; CHECK-BE-NEXT:    move $3, $4
+; CHECK-BE-NEXT:    movn $3, $5, $1
+; CHECK-BE-NEXT:    andi $6, $7, 31
+; CHECK-BE-NEXT:    sllv $2, $3, $6
+; CHECK-BE-NEXT:    movn $5, $4, $1
+; CHECK-BE-NEXT:    srl $1, $5, 1
+; CHECK-BE-NEXT:    not $4, $7
+; CHECK-BE-NEXT:    andi $4, $4, 31
+; CHECK-BE-NEXT:    srlv $1, $1, $4
+; CHECK-BE-NEXT:    or $2, $2, $1
+; CHECK-BE-NEXT:    sllv $1, $5, $6
+; CHECK-BE-NEXT:    srl $3, $3, 1
+; CHECK-BE-NEXT:    srlv $3, $3, $4
 ; CHECK-BE-NEXT:    jr $ra
-; CHECK-BE-NEXT:    or $3, $10, $3
+; CHECK-BE-NEXT:    or $3, $1, $3
 ;
 ; CHECK-LE-LABEL: rotl_i64:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    negu $1, $6
-; CHECK-LE-NEXT:    andi $2, $1, 63
-; CHECK-LE-NEXT:    srlv $7, $5, $2
-; CHECK-LE-NEXT:    andi $1, $1, 32
-; CHECK-LE-NEXT:    andi $3, $6, 63
-; CHECK-LE-NEXT:    move $8, $7
-; CHECK-LE-NEXT:    movn $8, $zero, $1
-; CHECK-LE-NEXT:    sllv $9, $5, $3
-; CHECK-LE-NEXT:    srl $10, $4, 1
-; CHECK-LE-NEXT:    not $11, $3
-; CHECK-LE-NEXT:    srlv $10, $10, $11
-; CHECK-LE-NEXT:    or $9, $9, $10
-; CHECK-LE-NEXT:    sllv $10, $4, $3
-; CHECK-LE-NEXT:    andi $6, $6, 32
-; CHECK-LE-NEXT:    movn $9, $10, $6
-; CHECK-LE-NEXT:    or $3, $9, $8
-; CHECK-LE-NEXT:    srlv $4, $4, $2
-; CHECK-LE-NEXT:    not $2, $2
-; CHECK-LE-NEXT:    sll $5, $5, 1
-; CHECK-LE-NEXT:    sllv $2, $5, $2
-; CHECK-LE-NEXT:    or $2, $2, $4
-; CHECK-LE-NEXT:    movn $2, $7, $1
-; CHECK-LE-NEXT:    movn $10, $zero, $6
+; CHECK-LE-NEXT:    srl $1, $6, 5
+; CHECK-LE-NEXT:    andi $1, $1, 1
+; CHECK-LE-NEXT:    move $3, $4
+; CHECK-LE-NEXT:    movn $3, $5, $1
+; CHECK-LE-NEXT:    andi $7, $6, 31
+; CHECK-LE-NEXT:    sllv $2, $3, $7
+; CHECK-LE-NEXT:    movn $5, $4, $1
+; CHECK-LE-NEXT:    srl $1, $5, 1
+; CHECK-LE-NEXT:    not $4, $6
+; CHECK-LE-NEXT:    andi $4, $4, 31
+; CHECK-LE-NEXT:    srlv $1, $1, $4
+; CHECK-LE-NEXT:    or $2, $2, $1
+; CHECK-LE-NEXT:    sllv $1, $5, $7
+; CHECK-LE-NEXT:    srl $3, $3, 1
+; CHECK-LE-NEXT:    srlv $3, $3, $4
 ; CHECK-LE-NEXT:    jr $ra
-; CHECK-LE-NEXT:    or $2, $10, $2
+; CHECK-LE-NEXT:    or $3, $1, $3
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f
 }
@@ -254,59 +238,41 @@ define i32 @rotr_i32(i32 %x, i32 %z) {
 define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK-BE-LABEL: rotr_i64:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    negu $1, $7
-; CHECK-BE-NEXT:    andi $2, $1, 63
-; CHECK-BE-NEXT:    sllv $6, $5, $2
-; CHECK-BE-NEXT:    andi $1, $1, 32
-; CHECK-BE-NEXT:    andi $3, $7, 63
-; CHECK-BE-NEXT:    move $8, $6
-; CHECK-BE-NEXT:    movn $8, $zero, $1
-; CHECK-BE-NEXT:    srlv $9, $5, $3
-; CHECK-BE-NEXT:    sll $10, $4, 1
-; CHECK-BE-NEXT:    not $11, $3
-; CHECK-BE-NEXT:    sllv $10, $10, $11
-; CHECK-BE-NEXT:    or $9, $10, $9
-; CHECK-BE-NEXT:    srlv $10, $4, $3
-; CHECK-BE-NEXT:    andi $7, $7, 32
-; CHECK-BE-NEXT:    movn $9, $10, $7
-; CHECK-BE-NEXT:    or $3, $9, $8
-; CHECK-BE-NEXT:    sllv $4, $4, $2
-; CHECK-BE-NEXT:    not $2, $2
-; CHECK-BE-NEXT:    srl $5, $5, 1
-; CHECK-BE-NEXT:    srlv $2, $5, $2
-; CHECK-BE-NEXT:    or $2, $4, $2
-; CHECK-BE-NEXT:    movn $2, $6, $1
-; CHECK-BE-NEXT:    movn $10, $zero, $7
+; CHECK-BE-NEXT:    andi $1, $7, 32
+; CHECK-BE-NEXT:    move $3, $5
+; CHECK-BE-NEXT:    movz $3, $4, $1
+; CHECK-BE-NEXT:    andi $6, $7, 31
+; CHECK-BE-NEXT:    srlv $2, $3, $6
+; CHECK-BE-NEXT:    movz $4, $5, $1
+; CHECK-BE-NEXT:    sll $1, $4, 1
+; CHECK-BE-NEXT:    not $5, $7
+; CHECK-BE-NEXT:    andi $5, $5, 31
+; CHECK-BE-NEXT:    sllv $1, $1, $5
+; CHECK-BE-NEXT:    or $2, $1, $2
+; CHECK-BE-NEXT:    srlv $1, $4, $6
+; CHECK-BE-NEXT:    sll $3, $3, 1
+; CHECK-BE-NEXT:    sllv $3, $3, $5
 ; CHECK-BE-NEXT:    jr $ra
-; CHECK-BE-NEXT:    or $2, $10, $2
+; CHECK-BE-NEXT:    or $3, $3, $1
 ;
 ; CHECK-LE-LABEL: rotr_i64:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    negu $1, $6
-; CHECK-LE-NEXT:    andi $3, $1, 63
-; CHECK-LE-NEXT:    sllv $7, $4, $3
-; CHECK-LE-NEXT:    andi $1, $1, 32
-; CHECK-LE-NEXT:    andi $2, $6, 63
-; CHECK-LE-NEXT:    move $8, $7
-; CHECK-LE-NEXT:    movn $8, $zero, $1
-; CHECK-LE-NEXT:    srlv $9, $4, $2
-; CHECK-LE-NEXT:    sll $10, $5, 1
-; CHECK-LE-NEXT:    not $11, $2
-; CHECK-LE-NEXT:    sllv $10, $10, $11
-; CHECK-LE-NEXT:    or $9, $10, $9
-; CHECK-LE-NEXT:    srlv $10, $5, $2
-; CHECK-LE-NEXT:    andi $6, $6, 32
-; CHECK-LE-NEXT:    movn $9, $10, $6
-; CHECK-LE-NEXT:    or $2, $9, $8
-; CHECK-LE-NEXT:    sllv $5, $5, $3
-; CHECK-LE-NEXT:    not $3, $3
-; CHECK-LE-NEXT:    srl $4, $4, 1
-; CHECK-LE-NEXT:    srlv $3, $4, $3
-; CHECK-LE-NEXT:    or $3, $5, $3
-; CHECK-LE-NEXT:    movn $3, $7, $1
-; CHECK-LE-NEXT:    movn $10, $zero, $6
+; CHECK-LE-NEXT:    andi $1, $6, 32
+; CHECK-LE-NEXT:    move $3, $5
+; CHECK-LE-NEXT:    movz $3, $4, $1
+; CHECK-LE-NEXT:    andi $7, $6, 31
+; CHECK-LE-NEXT:    srlv $2, $3, $7
+; CHECK-LE-NEXT:    movz $4, $5, $1
+; CHECK-LE-NEXT:    sll $1, $4, 1
+; CHECK-LE-NEXT:    not $5, $6
+; CHECK-LE-NEXT:    andi $5, $5, 31
+; CHECK-LE-NEXT:    sllv $1, $1, $5
+; CHECK-LE-NEXT:    or $2, $1, $2
+; CHECK-LE-NEXT:    srlv $1, $4, $7
+; CHECK-LE-NEXT:    sll $3, $3, 1
+; CHECK-LE-NEXT:    sllv $3, $3, $5
 ; CHECK-LE-NEXT:    jr $ra
-; CHECK-LE-NEXT:    or $3, $10, $3
+; CHECK-LE-NEXT:    or $3, $3, $1
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f
 }

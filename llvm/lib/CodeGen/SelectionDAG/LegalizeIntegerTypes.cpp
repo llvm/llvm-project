@@ -4377,18 +4377,45 @@ void DAGTypeLegalizer::ExpandIntRes_VECREDUCE(SDNode *N,
 
 void DAGTypeLegalizer::ExpandIntRes_Rotate(SDNode *N,
                                            SDValue &Lo, SDValue &Hi) {
-  // Lower the rotate to shifts and ORs which can be expanded.
-  SDValue Res;
-  TLI.expandROT(N, true /*AllowVectorOps*/, Res, DAG);
+  // Delegate to funnel-shift expansion.
+  SDLoc DL(N);
+  unsigned Opcode = N->getOpcode() == ISD::ROTL ? ISD::FSHL : ISD::FSHR;
+  SDValue Res = DAG.getNode(Opcode, DL, N->getValueType(0), N->getOperand(0),
+                            N->getOperand(0), N->getOperand(1));
   SplitInteger(Res, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N,
-                                                SDValue &Lo, SDValue &Hi) {
-  // Lower the funnel shift to shifts and ORs which can be expanded.
-  SDValue Res;
-  TLI.expandFunnelShift(N, Res, DAG);
-  SplitInteger(Res, Lo, Hi);
+void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
+                                                SDValue &Hi) {
+  // Values numbered from least significant to most significant.
+  SDValue In1, In2, In3, In4;
+  GetExpandedInteger(N->getOperand(0), In3, In4);
+  GetExpandedInteger(N->getOperand(1), In1, In2);
+  EVT HalfVT = In1.getValueType();
+
+  SDLoc DL(N);
+  unsigned Opc = N->getOpcode();
+  SDValue ShAmt = N->getOperand(2);
+  EVT ShAmtVT = ShAmt.getValueType();
+  EVT ShAmtCCVT = getSetCCResultType(ShAmtVT);
+
+  // If the shift amount is at least half the bitwidth, swap the inputs.
+  unsigned HalfVTBits = HalfVT.getScalarSizeInBits();
+  SDValue AndNode = DAG.getNode(ISD::AND, DL, ShAmtVT, ShAmt,
+                                DAG.getConstant(HalfVTBits, DL, ShAmtVT));
+  SDValue Cond =
+      DAG.getSetCC(DL, ShAmtCCVT, AndNode, DAG.getConstant(0, DL, ShAmtVT),
+                   Opc == ISD::FSHL ? ISD::SETNE : ISD::SETEQ);
+
+  // Expand to a pair of funnel shifts.
+  EVT NewShAmtVT = TLI.getShiftAmountTy(HalfVT, DAG.getDataLayout());
+  SDValue NewShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, NewShAmtVT);
+
+  SDValue Select1 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In1, In2);
+  SDValue Select2 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In2, In3);
+  SDValue Select3 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In3, In4);
+  Lo = DAG.getNode(Opc, DL, HalfVT, Select2, Select1, NewShAmt);
+  Hi = DAG.getNode(Opc, DL, HalfVT, Select3, Select2, NewShAmt);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
