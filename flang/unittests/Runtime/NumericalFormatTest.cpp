@@ -710,7 +710,6 @@ TEST(IOApiTests, FormatDoubleInputValues) {
 
     // Ensure raw uint64 value matches expected conversion from double
     ASSERT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
-                           << "', want 0x" << std::hex << want << ", got 0x"
-                           << u.raw;
+                           << "', want " << want << ", got " << u.raw;
   }
 }

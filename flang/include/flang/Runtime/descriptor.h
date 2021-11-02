@@ -247,12 +247,51 @@ public:
   // subscripts of the array, these wrap the subscripts around to
   // their first (or last) values and return false.
   bool IncrementSubscripts(
-      SubscriptValue[], const int *permutation = nullptr) const;
+      SubscriptValue subscript[], const int *permutation = nullptr) const {
+    for (int j{0}; j < raw_.rank; ++j) {
+      int k{permutation ? permutation[j] : j};
+      const Dimension &dim{GetDimension(k)};
+      if (subscript[k]++ < dim.UpperBound()) {
+        return true;
+      }
+      subscript[k] = dim.LowerBound();
+    }
+    return false;
+  }
+
   bool DecrementSubscripts(
       SubscriptValue[], const int *permutation = nullptr) const;
+
   // False when out of range.
-  bool SubscriptsForZeroBasedElementNumber(SubscriptValue *,
-      std::size_t elementNumber, const int *permutation = nullptr) const;
+  bool SubscriptsForZeroBasedElementNumber(SubscriptValue subscript[],
+      std::size_t elementNumber, const int *permutation = nullptr) const {
+    if (raw_.rank == 0) {
+      return elementNumber == 0;
+    }
+    std::size_t dimCoefficient[maxRank];
+    int k0{permutation ? permutation[0] : 0};
+    dimCoefficient[0] = 1;
+    auto coefficient{static_cast<std::size_t>(GetDimension(k0).Extent())};
+    for (int j{1}; j < raw_.rank; ++j) {
+      int k{permutation ? permutation[j] : j};
+      const Dimension &dim{GetDimension(k)};
+      dimCoefficient[j] = coefficient;
+      coefficient *= dim.Extent();
+    }
+    if (elementNumber >= coefficient) {
+      return false; // out of range
+    }
+    for (int j{raw_.rank - 1}; j > 0; --j) {
+      int k{permutation ? permutation[j] : j};
+      const Dimension &dim{GetDimension(k)};
+      std::size_t quotient{elementNumber / dimCoefficient[j]};
+      subscript[k] = quotient + dim.LowerBound();
+      elementNumber -= quotient * dimCoefficient[j];
+    }
+    subscript[k0] = elementNumber + GetDimension(k0).LowerBound();
+    return true;
+  }
+
   std::size_t ZeroBasedElementNumber(
       const SubscriptValue *, const int *permutation = nullptr) const;
 

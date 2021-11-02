@@ -87,7 +87,8 @@ public:
   // spaces.
   // The argument is a reference to a pointer that is left
   // pointing to the first character that wasn't parsed.
-  ConversionToBinaryResult<PREC> ConvertToBinary(const char *&);
+  ConversionToBinaryResult<PREC> ConvertToBinary(
+      const char *&, const char *end = nullptr);
 
   // Formats a decimal floating-point number to a user buffer.
   // May emit "NaN" or "Inf", or an possibly-signed integer.
@@ -337,7 +338,12 @@ private:
   // Returns true when the the result has effectively been rounded down.
   bool Mean(const BigRadixFloatingPointNumber &);
 
-  bool ParseNumber(const char *&, bool &inexact);
+  // Parses a floating-point number; leaves the pointer reference
+  // argument pointing at the next character after what was recognized.
+  // The "end" argument can be left null if the caller is sure that the
+  // string is properly terminated with an addressable character that
+  // can't be in a valid floating-point character.
+  bool ParseNumber(const char *&, bool &inexact, const char *end);
 
   using Raw = typename Real::RawType;
   constexpr Raw SignBit() const { return Raw{isNegative_} << (Real::bits - 1); }

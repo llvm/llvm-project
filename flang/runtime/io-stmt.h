@@ -82,7 +82,7 @@ public:
   bool Emit(const char16_t *, std::size_t chars);
   bool Emit(const char32_t *, std::size_t chars);
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
-  std::optional<char32_t> GetCurrentChar(); // vacant after end of record
+  std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
@@ -113,6 +113,18 @@ public:
         u_);
   }
 
+  // Vacant after the end of the current record
+  std::optional<char32_t> GetCurrentChar() {
+    const char *p{nullptr};
+    std::size_t bytes{GetNextInputBytes(p)};
+    if (bytes == 0) {
+      return std::nullopt;
+    } else {
+      // TODO: UTF-8 decoding; may have to get more bytes in a loop
+      return *p;
+    }
+  }
+
   bool EmitRepeated(char, std::size_t);
   bool EmitField(const char *, std::size_t length, std::size_t width);
 
@@ -120,12 +132,97 @@ public:
   // Skip over leading blanks, then return the first non-blank character (if
   // any).
   std::optional<char32_t> PrepareInput(
-      const DataEdit &edit, std::optional<int> &remaining);
+      const DataEdit &edit, std::optional<int> &remaining) {
+    remaining.reset();
+    if (edit.descriptor == DataEdit::ListDirected) {
+      GetNextNonBlank();
+    } else {
+      if (edit.width.value_or(0) > 0) {
+        remaining = *edit.width;
+      }
+      SkipSpaces(remaining);
+    }
+    return NextInField(remaining);
+  }
 
-  std::optional<char32_t> SkipSpaces(std::optional<int> &remaining);
-  std::optional<char32_t> NextInField(std::optional<int> &remaining);
+  std::optional<char32_t> SkipSpaces(std::optional<int> &remaining) {
+    while (!remaining || *remaining > 0) {
+      if (auto ch{GetCurrentChar()}) {
+        if (*ch != ' ' && *ch != '\t') {
+          return ch;
+        }
+        HandleRelativePosition(1);
+        if (remaining) {
+          GotChar();
+          --*remaining;
+        }
+      } else {
+        break;
+      }
+    }
+    return std::nullopt;
+  }
+
+  std::optional<char32_t> NextInField(std::optional<int> &remaining) {
+    if (!remaining) { // list-directed or NAMELIST: check for separators
+      if (auto next{GetCurrentChar()}) {
+        switch (*next) {
+        case ' ':
+        case '\t':
+        case ',':
+        case ';':
+        case '/':
+        case '(':
+        case ')':
+        case '\'':
+        case '"':
+        case '*':
+        case '\n': // for stream access
+          break;
+        default:
+          HandleRelativePosition(1);
+          return next;
+        }
+      }
+    } else if (*remaining > 0) {
+      if (auto next{GetCurrentChar()}) {
+        --*remaining;
+        HandleRelativePosition(1);
+        GotChar();
+        return next;
+      }
+      const ConnectionState &connection{GetConnectionState()};
+      if (!connection.IsAtEOF() && connection.recordLength &&
+          connection.positionInRecord >= *connection.recordLength) {
+        IoErrorHandler &handler{GetIoErrorHandler()};
+        if (mutableModes().nonAdvancing) {
+          handler.SignalEor();
+        } else if (connection.isFixedRecordLength && !connection.modes.pad) {
+          handler.SignalError(IostatRecordReadOverrun);
+        }
+        if (connection.modes.pad) { // PAD='YES'
+          --*remaining;
+          return std::optional<char32_t>{' '};
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
   // Skips spaces, advances records, and ignores NAMELIST comments
-  std::optional<char32_t> GetNextNonBlank();
+  std::optional<char32_t> GetNextNonBlank() {
+    auto ch{GetCurrentChar()};
+    bool inNamelist{GetConnectionState().modes.inNamelist};
+    while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
+      if (ch && (*ch == ' ' || *ch == '\t')) {
+        HandleRelativePosition(1);
+      } else if (!AdvanceRecord()) {
+        return std::nullopt;
+      }
+      ch = GetCurrentChar();
+    }
+    return ch;
+  }
 
   template <Direction D> void CheckFormattedStmtType(const char *name) {
     if (!get_if<FormattedIoStatementState<D>>()) {
@@ -182,7 +279,7 @@ struct IoStatementBase : public IoErrorHandler {
   bool Emit(const char16_t *, std::size_t chars);
   bool Emit(const char32_t *, std::size_t chars);
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
-  std::optional<char32_t> GetCurrentChar();
+  std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int);
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
@@ -264,8 +361,7 @@ public:
   using IoStatementBase::Emit;
   bool Emit(
       const CharType *data, std::size_t chars /* not necessarily bytes */);
-
-  std::optional<char32_t> GetCurrentChar();
+  std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
   ConnectionState &GetConnectionState() { return unit_; }
@@ -349,7 +445,7 @@ public:
   bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t chars /* not bytes */);
   bool Emit(const char32_t *, std::size_t chars /* not bytes */);
-  std::optional<char32_t> GetCurrentChar();
+  std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
@@ -414,7 +510,7 @@ public:
   bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t chars /* not bytes */);
   bool Emit(const char32_t *, std::size_t chars /* not bytes */);
-  std::optional<char32_t> GetCurrentChar();
+  std::size_t GetNextInputBytes(const char *&);
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
 
