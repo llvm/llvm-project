@@ -16,15 +16,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  int s;
-
-  posix_spawnattr_t attr;
-  s = posix_spawnattr_init(&attr);
-  assert(!s);
-
-  posix_spawn_file_actions_t file_actions;
-  s = posix_spawn_file_actions_init(&file_actions);
-  assert(!s);
+  posix_spawnattr_t attr = {0};
+  posix_spawn_file_actions_t file_actions = {0};
 
   char *const args[] = {
       argv[0], "2", "3", "4", "2", "3", "4", "2", "3", "4",
@@ -36,7 +29,7 @@ int main(int argc, char **argv) {
   };
 
   pid_t pid;
-  s = posix_spawn(&pid, argv[0], &file_actions, &attr, args, env);
+  int s = posix_spawn(&pid, argv[0], &file_actions, &attr, args, env);
   assert(!s);
 
   waitpid(pid, &s, WUNTRACED | WCONTINUED);
