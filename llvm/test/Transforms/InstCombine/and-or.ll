@@ -242,7 +242,8 @@ define <2 x i8> @or_and2_or2_splat(<2 x i8> %x) {
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X1]])
 ; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], <i8 66, i8 66>
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X1]], [[X2]]
+; CHECK-NEXT:    [[BITFIELD:%.*]] = and <2 x i8> [[X]], <i8 -8, i8 -8>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[BITFIELD]], <i8 3, i8 3>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %o1 = or <2 x i8> %x, <i8 1, i8 1>

@@ -2704,58 +2704,50 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
 
-    // (A & MaskC0) | (B & MaskC1)
-    const APInt *MaskC0, *MaskC1;
-    if (match(C, m_APInt(MaskC0)) && match(D, m_APInt(MaskC1))) {
+    // (A & C0) | (B & C1)
+    const APInt *C0, *C1;
+    if (match(C, m_APInt(C0)) && match(D, m_APInt(C1))) {
       Value *X;
-      if (*MaskC0 == ~*MaskC1) {
+      if (*C0 == ~*C1) {
         // ((X | B) & MaskC) | (B & ~MaskC) -> (X & MaskC) | B
         if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, *MaskC0), B);
+          return BinaryOperator::CreateOr(Builder.CreateAnd(X, *C0), B);
         // (A & MaskC) | ((X | A) & ~MaskC) -> (X & ~MaskC) | A
         if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, *MaskC1), A);
+          return BinaryOperator::CreateOr(Builder.CreateAnd(X, *C1), A);
 
         // ((X ^ B) & MaskC) | (B & ~MaskC) -> (X & MaskC) ^ B
         if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, *MaskC0), B);
+          return BinaryOperator::CreateXor(Builder.CreateAnd(X, *C0), B);
         // (A & MaskC) | ((X ^ A) & ~MaskC) -> (X & ~MaskC) ^ A
         if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, *MaskC1), A);
+          return BinaryOperator::CreateXor(Builder.CreateAnd(X, *C1), A);
       }
 
-      if ((*MaskC0 & *MaskC1).isZero()) {
-        // ((X | B) & C1) | (B & C2) --> (X | B) & (C1 | C2)
-        // iff (C1 & C2) == 0 and (X & ~C1) == 0
+      if ((*C0 & *C1).isZero()) {
+        // ((X | B) & C0) | (B & C1) --> (X | B) & (C0 | C1)
+        // iff (C0 & C1) == 0 and (X & ~C0) == 0
         if (match(A, m_c_Or(m_Value(X), m_Specific(B))) &&
-            MaskedValueIsZero(X, ~*MaskC0, 0, &I))
-          return BinaryOperator::CreateAnd(
-              A, ConstantInt::get(I.getType(), *MaskC0 | *MaskC1));
-
-        // (A & C1) | ((X | A) & C2) --> (X | A) & (C1 | C2)
-        // iff (C1 & C2) == 0 and (X & ~C1) == 0
+            MaskedValueIsZero(X, ~*C0, 0, &I)) {
+          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          return BinaryOperator::CreateAnd(A, C01);
+        }
+        // (A & C0) | ((X | A) & C1) --> (X | A) & (C0 | C1)
+        // iff (C0 & C1) == 0 and (X & ~C1) == 0
         if (match(B, m_c_Or(m_Value(X), m_Specific(A))) &&
-            MaskedValueIsZero(X, ~*MaskC1, 0, &I))
-          return BinaryOperator::CreateAnd(
-              B, ConstantInt::get(I.getType(), *MaskC0 | *MaskC1));
-      }
-    }
-
-    // (A & C1)|(B & C2)
-    ConstantInt *C1, *C2;
-    if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
-      if ((C1->getValue() & C2->getValue()).isZero()) {
-        // ((V|C3)&C1) | ((V|C4)&C2) --> (V|C3|C4)&(C1|C2)
-        // iff (C1&C2) == 0 and (C3&~C1) == 0 and (C4&~C2) == 0.
-        Value *V1 = nullptr, *V2 = nullptr;
-        ConstantInt *C3 = nullptr, *C4 = nullptr;
-        if (match(A, m_Or(m_Value(V1), m_ConstantInt(C3))) &&
-            (C3->getValue() & ~C1->getValue()).isZero() &&
-            match(B, m_Or(m_Specific(V1), m_ConstantInt(C4))) &&
-            (C4->getValue() & ~C2->getValue()).isZero()) {
-          V2 = Builder.CreateOr(V1, ConstantExpr::getOr(C3, C4), "bitfield");
-          return BinaryOperator::CreateAnd(V2,
-                                 Builder.getInt(C1->getValue()|C2->getValue()));
+            MaskedValueIsZero(X, ~*C1, 0, &I)) {
+          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          return BinaryOperator::CreateAnd(B, C01);
+        }
+        // ((X | C2) & C0) | ((X | C3) & C1) --> (X | C2 | C3) & (C0 | C1)
+        // iff (C0 & C1) == 0 and (C2 & ~C0) == 0 and (C3 & ~C1) == 0.
+        const APInt *C2, *C3;
+        if (match(A, m_Or(m_Value(X), m_APInt(C2))) &&
+            match(B, m_Or(m_Specific(X), m_APInt(C3))) &&
+            (*C2 & ~*C0).isZero() && (*C3 & ~*C1).isZero()) {
+          Value *Or = Builder.CreateOr(X, *C2 | *C3, "bitfield");
+          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          return BinaryOperator::CreateAnd(Or, C01);
         }
       }
     }
