@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
 
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
-    defined(_M_X64)
+#include "src/__support/architectures.h"
+
+#if defined(LLVM_LIBC_ARCH_X86)
 
 #include <stddef.h> // size_t
 #include <stdint.h> // uint8_t, uint16_t, uint32_t, uint64_t
@@ -172,7 +173,6 @@ struct Accelerator {
 } // namespace x86
 } // namespace __llvm_libc
 
-#endif // defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||
-       // defined(_M_X64)
+#endif // defined(LLVM_LIBC_ARCH_X86)
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
