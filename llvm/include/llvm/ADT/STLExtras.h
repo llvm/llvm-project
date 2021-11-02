@@ -1907,8 +1907,7 @@ class enumerator_iter
     : public iterator_facade_base<
           enumerator_iter<R>, std::forward_iterator_tag, result_pair<R>,
           typename std::iterator_traits<IterOfRange<R>>::difference_type,
-          typename std::iterator_traits<IterOfRange<R>>::pointer,
-          typename std::iterator_traits<IterOfRange<R>>::reference> {
+          typename std::iterator_traits<IterOfRange<R>>::pointer> {
   using result_type = result_pair<R>;
 
 public:
