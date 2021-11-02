@@ -213,35 +213,35 @@ void ThreadPlanStack::DiscardAllPlans() {
   return;
 }
 
-void ThreadPlanStack::DiscardConsultingMasterPlans() {
+void ThreadPlanStack::DiscardConsultingControllingPlans() {
   std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   while (true) {
-    int master_plan_idx;
+    int controlling_plan_idx;
     bool discard = true;
 
-    // Find the first master plan, see if it wants discarding, and if yes
+    // Find the first controlling plan, see if it wants discarding, and if yes
     // discard up to it.
-    for (master_plan_idx = m_plans.size() - 1; master_plan_idx >= 0;
-         master_plan_idx--) {
-      if (m_plans[master_plan_idx]->IsMasterPlan()) {
-        discard = m_plans[master_plan_idx]->OkayToDiscard();
+    for (controlling_plan_idx = m_plans.size() - 1; controlling_plan_idx >= 0;
+         controlling_plan_idx--) {
+      if (m_plans[controlling_plan_idx]->IsControllingPlan()) {
+        discard = m_plans[controlling_plan_idx]->OkayToDiscard();
         break;
       }
     }
 
-    // If the master plan doesn't want to get discarded, then we're done.
+    // If the controlling plan doesn't want to get discarded, then we're done.
     if (!discard)
       return;
 
     // First pop all the dependent plans:
-    for (int i = m_plans.size() - 1; i > master_plan_idx; i--) {
+    for (int i = m_plans.size() - 1; i > controlling_plan_idx; i--) {
       DiscardPlan();
     }
 
-    // Now discard the master plan itself.
+    // Now discard the controlling plan itself.
     // The bottom-most plan never gets discarded.  "OkayToDiscard" for it
     // means discard it's dependent plans, but not it...
-    if (master_plan_idx > 0) {
+    if (controlling_plan_idx > 0) {
       DiscardPlan();
     }
   }

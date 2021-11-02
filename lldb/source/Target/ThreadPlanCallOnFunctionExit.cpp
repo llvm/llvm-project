@@ -18,7 +18,7 @@ ThreadPlanCallOnFunctionExit::ThreadPlanCallOnFunctionExit(
                  ),
       m_callback(callback) {
   // We are not a user-generated plan.
-  SetIsMasterPlan(false);
+  SetIsControllingPlan(false);
 }
 
 void ThreadPlanCallOnFunctionExit::DidPush() {

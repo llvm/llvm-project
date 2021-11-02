@@ -39,7 +39,7 @@ ThreadPlanCallUserExpression::ThreadPlanCallUserExpression(
       m_user_expression_sp(user_expression_sp) {
   // User expressions are generally "User generated" so we should set them up
   // to stop when done.
-  SetIsMasterPlan(true);
+  SetIsControllingPlan(true);
   SetOkayToDiscard(false);
 }
 
