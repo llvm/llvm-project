@@ -9,19 +9,13 @@
 #ifndef LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 #define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 
+#include "src/__support/architectures.h"
+
 // Cache line sizes for ARM: These values are not strictly correct since
 // cache line sizes depend on implementations, not architectures.  There
 // are even implementations with cache line sizes configurable at boot
 // time.
-#if defined(__aarch64__)
-#define LLVM_LIBC_CACHELINE_SIZE 64
-#elif defined(__ARM_ARCH_5T__)
-#define LLVM_LIBC_CACHELINE_SIZE 32
-#elif defined(__ARM_ARCH_7A__)
-#define LLVM_LIBC_CACHELINE_SIZE 64
-#elif defined(__PPC64__)
-#define LLVM_LIBC_CACHELINE_SIZE 128
-#elif defined(__i386__) || defined(__x86_64__)
+#if defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86)
 #define LLVM_LIBC_CACHELINE_SIZE 64
 #else
 #error "Unsupported platform for memory functions."

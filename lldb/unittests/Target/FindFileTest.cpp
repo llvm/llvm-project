@@ -84,7 +84,7 @@ TEST_F(FindFileTest, FindFileTests) {
       {R"(C:\foo)", llvm::sys::path::Style::windows, DirName.c_str()},
       {R"(C:\foo\test)", llvm::sys::path::Style::windows, FileName.c_str()}};
 
-  ArrayRef<FileSpec> fails{
+  std::vector<FileSpec> fails{
       // path not mapped
       FileSpec("/foo", llvm::sys::path::Style::posix),
       FileSpec("/new", llvm::sys::path::Style::posix),
