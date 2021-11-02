@@ -5199,8 +5199,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
     return;
 
   Register DstReg = MRI.createVirtualRegister(DstRC);
-  MachineInstr *Copy =
-      BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).add(Op);
+  auto Copy = BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).add(Op);
 
   Op.setReg(DstReg);
   Op.setSubReg(0);
@@ -5222,7 +5221,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
   }
   if (!RI.isSGPRClass(DstRC) && !Copy->readsRegister(AMDGPU::EXEC, &RI) &&
       !ImpDef)
-    Copy->addOperand(MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+    Copy.addReg(AMDGPU::EXEC, RegState::Implicit);
 }
 
 // Emit the actual waterfall loop, executing the wrapped instruction for each
