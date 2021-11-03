@@ -5,7 +5,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   Core
   IRReader
-  MIRParser
   Support
   Target
   TransformUtils
@@ -13,7 +12,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-reduce
   DeltaManager.cpp
-  ReducerWorkItem.cpp
   TestRunner.cpp
   deltas/Delta.cpp
   deltas/ReduceAliases.cpp
@@ -32,7 +30,6 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceSpecialGlobals.cpp
   deltas/ReduceOperands.cpp
   deltas/ReduceOperandsToArgs.cpp
-  deltas/ReduceInstructionsMIR.cpp
   llvm-reduce.cpp
 
   DEPENDS
