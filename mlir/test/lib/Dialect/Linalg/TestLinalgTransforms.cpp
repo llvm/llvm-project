@@ -152,6 +152,11 @@ struct TestLinalgTransforms
       llvm::cl::desc("Specify the type of loops to generate: for, parallel or "
                      "tiled_loop"),
       llvm::cl::init("for")};
+  Option<bool> testDecomposeConvolutionPattern{
+      *this, "test-decompose-convolution-patterns",
+      llvm::cl::desc("Test a set of patterns to rewrite high-D convolution ops "
+                     "into low-D ones"),
+      llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -576,6 +581,12 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
+static void applyDecomposeConvolutionPatterns(FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateDecomposeConvolutionPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 static void applyPadTensorToGenericPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<PadTensorOpTransformationPattern>(funcOp.getContext());
@@ -819,6 +830,8 @@ void TestLinalgTransforms::runOnFunction() {
     return applyPadPattern(getFunction(), packPaddings, hoistPaddings);
   if (testInterchangePattern.hasValue())
     return applyInterchangePattern(getFunction(), testInterchangePattern);
+  if (testDecomposeConvolutionPattern)
+    return applyDecomposeConvolutionPatterns(getFunction());
 }
 
 namespace mlir {
