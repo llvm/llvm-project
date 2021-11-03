@@ -601,9 +601,9 @@ Status ProcessWindows::DoDeallocateMemory(lldb::addr_t ptr) {
   return ProcessDebugger::DeallocateMemory(ptr);
 }
 
-Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                                           MemoryRegionInfo &info) {
-  return ProcessDebugger::GetMemoryRegionInfo(vm_addr, info);
+Status ProcessWindows::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
+                                             MemoryRegionInfo &info) {
+  return ProcessDebugger::DoGetMemoryRegionInfo(vm_addr, info);
 }
 
 lldb::addr_t ProcessWindows::GetImageInfoAddress() {

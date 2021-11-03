@@ -377,8 +377,8 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
   return result;
 }
 
-Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                                            MemoryRegionInfo &info) {
+Status ProcessDebugger::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
+                                              MemoryRegionInfo &info) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
   Status error;
   llvm::sys::ScopedLock lock(m_mutex);
@@ -386,7 +386,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
 
   if (!m_session_data) {
     error.SetErrorString(
-        "GetMemoryRegionInfo called with no debugging session.");
+        "DoGetMemoryRegionInfo called with no debugging session.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
   }
@@ -394,7 +394,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
   if (handle == nullptr || handle == LLDB_INVALID_PROCESS) {
     error.SetErrorString(
-        "GetMemoryRegionInfo called with an invalid target process.");
+        "DoGetMemoryRegionInfo called with an invalid target process.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
   }
