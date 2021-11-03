@@ -12,6 +12,9 @@
 // FIXME: Bug 42703
 // XFAIL: solaris
 
+// https://reviews.llvm.org/D111703 made compiler incompatible with released NDK.
+// UNSUPPORTED: android && arm-target-arch
+
 #include <assert.h>
 #include <exception>
 #include <sanitizer/asan_interface.h>
