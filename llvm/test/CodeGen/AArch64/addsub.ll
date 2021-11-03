@@ -152,8 +152,9 @@ define void @sub_med() {
 define i64 @add_two_parts_imm_i64(i64 %a) {
 ; CHECK-LABEL: add_two_parts_imm_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    add x0, x8, #1365
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ret
   %b = add i64 %a, 11183445
   ret i64 %b
@@ -162,8 +163,9 @@ define i64 @add_two_parts_imm_i64(i64 %a) {
 define i32 @add_two_parts_imm_i32(i32 %a) {
 ; CHECK-LABEL: add_two_parts_imm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    add w0, w8, #1365
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    ret
   %b = add i32 %a, 11183445
   ret i32 %b
@@ -172,8 +174,9 @@ define i32 @add_two_parts_imm_i32(i32 %a) {
 define i64 @add_two_parts_imm_i64_neg(i64 %a) {
 ; CHECK-LABEL: add_two_parts_imm_i64_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    sub x0, x8, #1365
+; CHECK-NEXT:    mov x8, #-42325
+; CHECK-NEXT:    movk x8, #65365, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ret
   %b = add i64 %a, -11183445
   ret i64 %b
@@ -182,8 +185,9 @@ define i64 @add_two_parts_imm_i64_neg(i64 %a) {
 define i32 @add_two_parts_imm_i32_neg(i32 %a) {
 ; CHECK-LABEL: add_two_parts_imm_i32_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    sub w0, w8, #1365
+; CHECK-NEXT:    mov w8, #23211
+; CHECK-NEXT:    movk w8, #65365, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    ret
   %b = add i32 %a, -11183445
   ret i32 %b
@@ -192,8 +196,9 @@ define i32 @add_two_parts_imm_i32_neg(i32 %a) {
 define i64 @sub_two_parts_imm_i64(i64 %a) {
 ; CHECK-LABEL: sub_two_parts_imm_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    sub x0, x8, #1365
+; CHECK-NEXT:    mov x8, #-42325
+; CHECK-NEXT:    movk x8, #65365, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ret
   %b = sub i64 %a, 11183445
   ret i64 %b
@@ -202,8 +207,9 @@ define i64 @sub_two_parts_imm_i64(i64 %a) {
 define i32 @sub_two_parts_imm_i32(i32 %a) {
 ; CHECK-LABEL: sub_two_parts_imm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    sub w0, w8, #1365
+; CHECK-NEXT:    mov w8, #23211
+; CHECK-NEXT:    movk w8, #65365, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    ret
   %b = sub i32 %a, 11183445
   ret i32 %b
@@ -212,8 +218,9 @@ define i32 @sub_two_parts_imm_i32(i32 %a) {
 define i64 @sub_two_parts_imm_i64_neg(i64 %a) {
 ; CHECK-LABEL: sub_two_parts_imm_i64_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    add x0, x8, #1365
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ret
   %b = sub i64 %a, -11183445
   ret i64 %b
@@ -222,55 +229,12 @@ define i64 @sub_two_parts_imm_i64_neg(i64 %a) {
 define i32 @sub_two_parts_imm_i32_neg(i32 %a) {
 ; CHECK-LABEL: sub_two_parts_imm_i32_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #2730, lsl #12 // =11182080
-; CHECK-NEXT:    add w0, w8, #1365
+; CHECK-NEXT:    mov w8, #42325
+; CHECK-NEXT:    movk w8, #170, lsl #16
+; CHECK-NEXT:    add w0, w0, w8
 ; CHECK-NEXT:    ret
   %b = sub i32 %a, -11183445
   ret i32 %b
-}
-
-define i32 @add_27962026(i32 %a) {
-; CHECK-LABEL: add_27962026:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43690
-; CHECK-NEXT:    movk w8, #426, lsl #16
-; CHECK-NEXT:    add w0, w0, w8
-; CHECK-NEXT:    ret
-  %b = add i32 %a, 27962026
-  ret i32 %b
-}
-
-define i32 @add_65534(i32 %a) {
-; CHECK-LABEL: add_65534:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65534
-; CHECK-NEXT:    add w0, w0, w8
-; CHECK-NEXT:    ret
-  %b = add i32 %a, 65534
-  ret i32 %b
-}
-
-declare i32 @foox(i32)
-
-define void @add_in_loop(i32 %0) {
-; CHECK-LABEL: add_in_loop:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w19, #43690
-; CHECK-NEXT:    movk w19, #170, lsl #16
-; CHECK-NEXT:  .LBB15_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add w0, w0, w19
-; CHECK-NEXT:    bl foox
-; CHECK-NEXT:    b .LBB15_1
-  br label %2
-2:
-  %3 = phi i32 [ %0, %1 ], [ %5, %2 ]
-  %4 = add nsw i32 %3, 11184810
-  %5 = tail call i32 @foox(i32 %4) #2
-  br label %2
 }
 
 define void @testing() {
@@ -280,7 +244,7 @@ define void @testing() {
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var_i32]
 ; CHECK-NEXT:    ldr w9, [x8]
 ; CHECK-NEXT:    cmp w9, #4095
-; CHECK-NEXT:    b.ne .LBB16_6
+; CHECK-NEXT:    b.ne .LBB13_6
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    adrp x10, :got:var2_i32
 ; CHECK-NEXT:    add w11, w9, #1
@@ -288,26 +252,26 @@ define void @testing() {
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    cmp w10, #3567, lsl #12 // =14610432
-; CHECK-NEXT:    b.lo .LBB16_6
+; CHECK-NEXT:    b.lo .LBB13_6
 ; CHECK-NEXT:  // %bb.2: // %test3
 ; CHECK-NEXT:    add w11, w9, #2
 ; CHECK-NEXT:    cmp w9, #123
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.lt .LBB16_6
+; CHECK-NEXT:    b.lt .LBB13_6
 ; CHECK-NEXT:  // %bb.3: // %test4
 ; CHECK-NEXT:    add w11, w9, #3
 ; CHECK-NEXT:    cmp w10, #321
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.gt .LBB16_6
+; CHECK-NEXT:    b.gt .LBB13_6
 ; CHECK-NEXT:  // %bb.4: // %test5
 ; CHECK-NEXT:    add w11, w9, #4
 ; CHECK-NEXT:    cmn w10, #443
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.ge .LBB16_6
+; CHECK-NEXT:    b.ge .LBB13_6
 ; CHECK-NEXT:  // %bb.5: // %test6
 ; CHECK-NEXT:    add w9, w9, #5
 ; CHECK-NEXT:    str w9, [x8]
-; CHECK-NEXT:  .LBB16_6: // %common.ret
+; CHECK-NEXT:  .LBB13_6: // %common.ret
 ; CHECK-NEXT:    ret
   %val = load i32, i32* @var_i32
   %val2 = load i32, i32* @var2_i32
