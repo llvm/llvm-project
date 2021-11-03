@@ -145,7 +145,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // We first handle the cases of literal zero (both float and integer).
-  if (IsLiteralZero(Result, *Arg)) {
+  if (isLiteralZero(Result, *Arg)) {
     diag(Call->getBeginLoc(),
          "use ZeroDuration() for zero-length time intervals")
         << FixItHint::CreateReplacement(Call->getSourceRange(),
