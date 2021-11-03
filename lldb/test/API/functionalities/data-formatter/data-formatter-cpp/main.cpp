@@ -22,10 +22,10 @@ typedef Type3 Type4; // should show as char
 typedef int ChildType; // should show as int
 typedef int AnotherChildType; // should show as int
 
-struct Point {
+struct TestPoint {
     int x;
     int y;
-    Point(int X = 3, int Y = 2) : x(X), y(Y) {}
+    TestPoint(int X = 3, int Y = 2) : x(X), y(Y) {}
 };
 
 typedef float ShowMyGuts;
@@ -85,7 +85,7 @@ int main (int argc, const char * argv[])
     
     Speed* SPPtrILookHex = new Speed(16);
     
-    Point iAmSomewhere(4,6);
+    TestPoint iAmSomewhere(4,6);
     
 	i_am_cool *cool_pointer = (i_am_cool*)malloc(sizeof(i_am_cool)*3);
 	cool_pointer[0] = i_am_cool(3,-3.141592,'E');

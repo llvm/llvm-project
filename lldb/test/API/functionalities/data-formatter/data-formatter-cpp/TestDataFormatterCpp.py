@@ -120,32 +120,32 @@ class CppDataFormatterTestCase(TestBase):
                 ' = ptr = ',
                 ' "1234567890123456789012345678901234567890123456789012345678901234ABC"'])
 
-        self.runCmd("type summary add -c Point")
+        self.runCmd("type summary add -c TestPoint")
 
         self.expect("frame variable iAmSomewhere",
                     substrs=['x = 4',
                              'y = 6'])
 
         self.expect("type summary list",
-                    substrs=['Point',
+                    substrs=['TestPoint',
                              'one-line'])
 
-        self.runCmd("type summary add --summary-string \"y=${var.y%x}\" Point")
+        self.runCmd("type summary add --summary-string \"y=${var.y%x}\" TestPoint")
 
         self.expect("frame variable iAmSomewhere",
                     substrs=['y=0x'])
 
         self.runCmd(
-            "type summary add --summary-string \"y=${var.y},x=${var.x}\" Point")
+            "type summary add --summary-string \"y=${var.y},x=${var.x}\" TestPoint")
 
         self.expect("frame variable iAmSomewhere",
                     substrs=['y=6',
                              'x=4'])
 
-        self.runCmd("type summary add --summary-string \"hello\" Point -e")
+        self.runCmd("type summary add --summary-string \"hello\" TestPoint -e")
 
         self.expect("type summary list",
-                    substrs=['Point',
+                    substrs=['TestPoint',
                              'show children'])
 
         self.expect("frame variable iAmSomewhere",
