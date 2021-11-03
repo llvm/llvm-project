@@ -3382,6 +3382,18 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_tabortdci:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  // According to GCC 'Basic PowerPC Built-in Functions Available on ISA 2.05',
+  // __builtin_(un)pack_longdouble are available only if long double uses IBM
+  // extended double representation.
+  case PPC::BI__builtin_unpack_longdouble:
+    if (SemaBuiltinConstantArgRange(TheCall, 1, 0, 1))
+      return true;
+    LLVM_FALLTHROUGH;
+  case PPC::BI__builtin_pack_longdouble:
+    if (&TI.getLongDoubleFormat() != &llvm::APFloat::PPCDoubleDouble())
+      return Diag(TheCall->getBeginLoc(), diag::err_ppc_builtin_requires_abi)
+             << "ibmlongdouble";
+    return false;
   case PPC::BI__builtin_altivec_dst:
   case PPC::BI__builtin_altivec_dstt:
   case PPC::BI__builtin_altivec_dstst:
