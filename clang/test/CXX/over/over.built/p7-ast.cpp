@@ -6,7 +6,25 @@ template <typename T>
 auto Test(T* pt) {
   // CHECK: UnaryOperator {{.*}} '<dependent type>' prefix '*'
   // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
-  return *pt;
+  (void)*pt;
+
+  // CHECK: UnaryOperator {{.*}} '<dependent type>' prefix '++'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  (void)(++pt);
+
+  // CHECK: UnaryOperator {{.*}} '<dependent type>' prefix '+'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  (void)(+pt);
+
+  // CHECK: BinaryOperator {{.*}} '<dependent type>' '+'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
+  (void)(pt + 3);
+
+  // CHECK: BinaryOperator {{.*}} '<dependent type>' '-'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  (void)(pt -pt);
 }
 
 
