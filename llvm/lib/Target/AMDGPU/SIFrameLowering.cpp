@@ -1157,11 +1157,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     bool SeenDbgInstr = false;
 
     for (MachineBasicBlock &MBB : MF) {
-      MachineBasicBlock::iterator Next;
-      for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
-        MachineInstr &MI = *I;
-        Next = std::next(I);
-
+      for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
         if (MI.isDebugInstr())
           SeenDbgInstr = true;
 

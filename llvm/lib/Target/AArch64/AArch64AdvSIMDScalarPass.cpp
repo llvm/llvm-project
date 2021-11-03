@@ -377,8 +377,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
 // processMachineBasicBlock - Main optimzation loop.
 bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
   bool Changed = false;
-  for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;) {
-    MachineInstr &MI = *I++;
+  for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     if (isProfitableToTransform(MI)) {
       transformInstruction(MI);
       Changed = true;

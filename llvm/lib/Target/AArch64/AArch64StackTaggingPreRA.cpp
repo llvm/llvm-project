@@ -176,20 +176,19 @@ bool AArch64StackTaggingPreRA::mayUseUncheckedLoadStore() {
 }
 
 void AArch64StackTaggingPreRA::uncheckUsesOf(unsigned TaggedReg, int FI) {
-  for (auto UI = MRI->use_instr_begin(TaggedReg), E = MRI->use_instr_end();
-       UI != E;) {
-    MachineInstr *UseI = &*(UI++);
-    if (isUncheckedLoadOrStoreOpcode(UseI->getOpcode())) {
+  for (MachineInstr &UseI :
+       llvm::make_early_inc_range(MRI->use_instructions(TaggedReg))) {
+    if (isUncheckedLoadOrStoreOpcode(UseI.getOpcode())) {
       // FI operand is always the one before the immediate offset.
-      unsigned OpIdx = TII->getLoadStoreImmIdx(UseI->getOpcode()) - 1;
-      if (UseI->getOperand(OpIdx).isReg() &&
-          UseI->getOperand(OpIdx).getReg() == TaggedReg) {
-        UseI->getOperand(OpIdx).ChangeToFrameIndex(FI);
-        UseI->getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
+      unsigned OpIdx = TII->getLoadStoreImmIdx(UseI.getOpcode()) - 1;
+      if (UseI.getOperand(OpIdx).isReg() &&
+          UseI.getOperand(OpIdx).getReg() == TaggedReg) {
+        UseI.getOperand(OpIdx).ChangeToFrameIndex(FI);
+        UseI.getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
       }
-    } else if (UseI->isCopy() &&
-               Register::isVirtualRegister(UseI->getOperand(0).getReg())) {
-      uncheckUsesOf(UseI->getOperand(0).getReg(), FI);
+    } else if (UseI.isCopy() &&
+               Register::isVirtualRegister(UseI.getOperand(0).getReg())) {
+      uncheckUsesOf(UseI.getOperand(0).getReg(), FI);
     }
   }
 }

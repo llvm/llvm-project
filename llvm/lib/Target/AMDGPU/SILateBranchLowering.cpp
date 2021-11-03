@@ -140,11 +140,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
   bool MadeChange = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::iterator I, Next;
-    for (I = MBB.begin(); I != MBB.end(); I = Next) {
-      Next = std::next(I);
-      MachineInstr &MI = *I;
-
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       case AMDGPU::S_BRANCH:
         // Optimize out branches to the next block.

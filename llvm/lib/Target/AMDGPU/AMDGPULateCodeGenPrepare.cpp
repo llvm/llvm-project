@@ -95,10 +95,8 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
 
   bool Changed = false;
   for (auto &BB : F)
-    for (auto BI = BB.begin(), BE = BB.end(); BI != BE; /*EMPTY*/) {
-      Instruction *I = &*BI++;
-      Changed |= visit(*I);
-    }
+    for (Instruction &I : llvm::make_early_inc_range(BB))
+      Changed |= visit(I);
 
   return Changed;
 }
