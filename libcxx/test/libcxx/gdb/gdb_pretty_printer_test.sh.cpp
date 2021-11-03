@@ -43,7 +43,7 @@
 //
 //    Or
 //
-//    Call ComparePrettyPrintToChars with that variable, and a "const char*"
+//    Call ComparePrettyPrintToRegex with that variable, and a "const char*"
 //    *python* regular expression to match against the printer's output.
 //    The set of special characters in a Python regular expression overlaps
 //    with a lot of things the pretty printers print--brackets, for
@@ -244,22 +244,22 @@ void unique_ptr_test() {
 
 void bitset_test() {
   std::bitset<258> i_am_empty(0);
-  ComparePrettyPrintToChars(i_am_empty, "std::bitset<258ul>");
+  ComparePrettyPrintToRegex(i_am_empty, "std::bitset<258(ul)?>");
 
   std::bitset<0> very_empty;
-  ComparePrettyPrintToChars(very_empty, "std::bitset<0ul>");
+  ComparePrettyPrintToRegex(very_empty, "std::bitset<0(ul)?>");
 
   std::bitset<15> b_000001111111100(1020);
-  ComparePrettyPrintToChars(b_000001111111100,
-      "std::bitset<15ul> = {[2] = 1, [3] = 1, [4] = 1, [5] = 1, [6] = 1, "
-      "[7] = 1, [8] = 1, [9] = 1}");
+  ComparePrettyPrintToRegex(b_000001111111100,
+      R"(std::bitset<15(ul)?> = {\[2\] = 1, \[3\] = 1, \[4\] = 1, \[5\] = 1, \[6\] = 1, )"
+      R"(\[7\] = 1, \[8\] = 1, \[9\] = 1})");
 
   std::bitset<258> b_0_129_132(0);
   b_0_129_132[0] = true;
   b_0_129_132[129] = true;
   b_0_129_132[132] = true;
-  ComparePrettyPrintToChars(b_0_129_132,
-      "std::bitset<258ul> = {[0] = 1, [129] = 1, [132] = 1}");
+  ComparePrettyPrintToRegex(b_0_129_132,
+      R"(std::bitset<258(ul)?> = {\[0\] = 1, \[129\] = 1, \[132\] = 1})");
 }
 
 void list_test() {
