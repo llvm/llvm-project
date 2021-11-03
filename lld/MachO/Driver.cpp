@@ -80,16 +80,30 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
+static DenseMap<CachedHashStringRef, StringRef> resolvedLibraries;
 static Optional<StringRef> findLibrary(StringRef name) {
-  if (config->searchDylibsFirst) {
-    if (Optional<StringRef> path = findPathCombination(
-            "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
-      return path;
+  CachedHashStringRef key(name);
+  auto entry = resolvedLibraries.find(key);
+  if (entry != resolvedLibraries.end())
+    return entry->second;
+
+  auto doFind = [&] {
+    if (config->searchDylibsFirst) {
+      if (Optional<StringRef> path = findPathCombination(
+              "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
+        return path;
+      return findPathCombination("lib" + name, config->librarySearchPaths,
+                                 {".a"});
+    }
     return findPathCombination("lib" + name, config->librarySearchPaths,
-                               {".a"});
-  }
-  return findPathCombination("lib" + name, config->librarySearchPaths,
-                             {".tbd", ".dylib", ".a"});
+                               {".tbd", ".dylib", ".a"});
+  };
+
+  Optional<StringRef> path = doFind();
+  if (path)
+    resolvedLibraries[key] = *path;
+
+  return path;
 }
 
 static Optional<StringRef> findFramework(StringRef name) {
@@ -1076,6 +1090,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   errorHandler().cleanupCallback = []() {
     freeArena();
 
+    resolvedLibraries.clear();
     concatOutputSections.clear();
     inputFiles.clear();
     inputSections.clear();
