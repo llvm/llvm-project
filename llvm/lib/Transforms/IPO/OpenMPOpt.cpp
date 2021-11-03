@@ -597,6 +597,10 @@ struct KernelInfoState : AbstractState {
   /// See AbstractState::indicateOptimisticFixpoint(...)
   ChangeStatus indicateOptimisticFixpoint() override {
     IsAtFixpoint = true;
+    ReachingKernelEntries.indicateOptimisticFixpoint();
+    SPMDCompatibilityTracker.indicateOptimisticFixpoint();
+    ReachedKnownParallelRegions.indicateOptimisticFixpoint();
+    ReachedUnknownParallelRegions.indicateOptimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
 
@@ -3058,19 +3062,16 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!KernelInitCB || !KernelDeinitCB)
       return ChangeStatus::UNCHANGED;
 
-    // Known SPMD-mode kernels need no manifest changes.
-    if (SPMDCompatibilityTracker.isKnown())
-      return ChangeStatus::UNCHANGED;
-
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
-    if (!mayContainParallelRegion() || !changeToSPMDMode(A))
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    if (!changeToSPMDMode(A, Changed))
       return buildCustomStateMachine(A);
 
-    return ChangeStatus::CHANGED;
+    return Changed;
   }
 
-  bool changeToSPMDMode(Attributor &A) {
+  bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
 
     if (!SPMDCompatibilityTracker.isAssumed()) {
@@ -3101,6 +3102,24 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
       return false;
     }
+
+    // Check if the kernel is already in SPMD mode, if so, return success.
+    Function *Kernel = getAnchorScope();
+    GlobalVariable *ExecMode = Kernel->getParent()->getGlobalVariable(
+        (Kernel->getName() + "_exec_mode").str());
+    assert(ExecMode && "Kernel without exec mode?");
+    assert(ExecMode->getInitializer() && "ExecMode doesn't have initializer!");
+
+    // Set the global exec mode flag to indicate SPMD-Generic mode.
+    assert(isa<ConstantInt>(ExecMode->getInitializer()) &&
+           "ExecMode is not an integer!");
+    const int8_t ExecModeVal =
+        cast<ConstantInt>(ExecMode->getInitializer())->getSExtValue();
+    if (ExecModeVal != OMP_TGT_EXEC_MODE_GENERIC)
+      return true;
+
+    // We will now unconditionally modify the IR, indicate a change.
+    Changed = ChangeStatus::CHANGED;
 
     auto CreateGuardedRegion = [&](Instruction *RegionStartI,
                                    Instruction *RegionEndI) {
@@ -3312,17 +3331,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // Adjust the global exec mode flag that tells the runtime what mode this
     // kernel is executed in.
-    Function *Kernel = getAnchorScope();
-    GlobalVariable *ExecMode = Kernel->getParent()->getGlobalVariable(
-        (Kernel->getName() + "_exec_mode").str());
-    assert(ExecMode && "Kernel without exec mode?");
-    assert(ExecMode->getInitializer() && "ExecMode doesn't have initializer!");
-
-    // Set the global exec mode flag to indicate SPMD-Generic mode.
-    assert(isa<ConstantInt>(ExecMode->getInitializer()) &&
-           "ExecMode is not an integer!");
-    const int8_t ExecModeVal =
-        cast<ConstantInt>(ExecMode->getInitializer())->getSExtValue();
     assert(ExecModeVal == OMP_TGT_EXEC_MODE_GENERIC &&
            "Initially non-SPMD kernel has SPMD exec mode!");
     ExecMode->setInitializer(
@@ -3699,6 +3707,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     }
 
     // Callback to check a call instruction.
+    bool AllParallelRegionStatesWereFixed = true;
     bool AllSPMDStatesWereFixed = true;
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
@@ -3706,6 +3715,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
           *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
       getState() ^= CBAA.getState();
       AllSPMDStatesWereFixed &= CBAA.SPMDCompatibilityTracker.isAtFixpoint();
+      AllParallelRegionStatesWereFixed &=
+          CBAA.ReachedKnownParallelRegions.isAtFixpoint();
+      AllParallelRegionStatesWereFixed &=
+          CBAA.ReachedUnknownParallelRegions.isAtFixpoint();
       return true;
     };
 
@@ -3716,6 +3729,23 @@ struct AAKernelInfoFunction : AAKernelInfo {
                         << "Failed to visit all call-like instructions!\n";);
       return indicatePessimisticFixpoint();
     }
+
+    // If we haven't used any assumed information for the reached parallel
+    // region states we can fix it.
+    if (!UsedAssumedInformationInCheckCallInst &&
+        AllParallelRegionStatesWereFixed) {
+      ReachedKnownParallelRegions.indicateOptimisticFixpoint();
+      ReachedUnknownParallelRegions.indicateOptimisticFixpoint();
+    }
+
+    // If we are sure there are no parallel regions in the kernel we do not
+    // want SPMD mode.
+    if (IsKernelEntry && ReachedUnknownParallelRegions.isAtFixpoint() &&
+        ReachedKnownParallelRegions.isAtFixpoint() &&
+        ReachedUnknownParallelRegions.isValidState() &&
+        ReachedKnownParallelRegions.isValidState() &&
+        !mayContainParallelRegion())
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
 
     // If we haven't used any assumed information for the SPMD state we can fix
     // it.
