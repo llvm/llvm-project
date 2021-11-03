@@ -78,6 +78,12 @@ API Changes
   exceeds the maximum supported size, as required by the C++ standard.
   Previously the type ``std::length_error`` was used.
 
+ABI Changes
+-----------
+
+- The C++17 variable templates ``is_error_code_enum_v`` and
+  ``is_error_condition_enum_v`` are now of type ``bool`` instead of ``size_t``.
+
 Build System Changes
 --------------------
 

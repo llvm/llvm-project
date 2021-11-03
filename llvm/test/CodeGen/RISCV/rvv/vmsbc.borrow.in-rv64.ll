@@ -81,7 +81,7 @@ define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv8i1_nxv8i8_nxv8i8(<vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vvm v10, v8, v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i8.nxv8i8(
@@ -219,7 +219,7 @@ define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv4i1_nxv4i16_nxv4i16(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vvm v10, v8, v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i16.nxv4i16(
@@ -334,7 +334,7 @@ define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv2i1_nxv2i32_nxv2i32(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vvm v10, v8, v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i32.nxv2i32(
@@ -426,7 +426,7 @@ define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vvm_nxv1i1_nxv1i64_nxv1i64(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vvm v10, v8, v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i64.nxv1i64(
@@ -587,7 +587,7 @@ define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i8_i8(<vscale
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vxm v9, v8, a0, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv.v.v v0, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i1> @llvm.riscv.vmsbc.borrow.in.nxv8i8.i8(
@@ -725,7 +725,7 @@ define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i16_i16(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vxm v9, v8, a0, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv.v.v v0, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsbc.borrow.in.nxv4i16.i16(
@@ -840,7 +840,7 @@ define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i32_i32(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vxm v9, v8, a0, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv.v.v v0, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i1> @llvm.riscv.vmsbc.borrow.in.nxv2i32.i32(
@@ -932,7 +932,7 @@ define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i64_i64(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
 ; CHECK-NEXT:    vmsbc.vxm v9, v8, a0, v0
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv.v.v v0, v9
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmsbc.borrow.in.nxv1i64.i64(

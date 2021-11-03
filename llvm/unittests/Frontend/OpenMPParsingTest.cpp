@@ -55,8 +55,9 @@ TEST(OpenMPParsingTest, isAllowedClauseForDirective) {
 }
 
 TEST(OpenMPParsingTest, getOrderKind) {
-  EXPECT_EQ(getOrderKind("foobar"), OMP_ORDER_concurrent);
-  EXPECT_EQ(getOrderKind("default"), OMP_ORDER_concurrent);
+  EXPECT_EQ(getOrderKind("foobar"), OMP_ORDER_unknown);
+  EXPECT_EQ(getOrderKind("unknown"), OMP_ORDER_unknown);
+  EXPECT_EQ(getOrderKind("concurrent"), OMP_ORDER_concurrent);
 }
 
 TEST(OpenMPParsingTest, getProcBindKind) {

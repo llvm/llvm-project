@@ -121,6 +121,7 @@ struct Configuration {
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupLiterals = true;
+  bool omitDebugInfo = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
@@ -195,6 +196,13 @@ struct SymbolPriorityEntry {
   size_t anyObjectFile = 0;
   // The priority given to a matching symbol from a particular object file.
   llvm::DenseMap<llvm::StringRef, size_t> objectFiles;
+};
+
+// Whether to force-load an archive.
+enum class ForceLoad {
+  Default, // Apply -all_load or -ObjC behaviors if those flags are enabled
+  Yes,     // Always load the archive, regardless of other flags
+  No,      // Never load the archive, regardless of other flags
 };
 
 extern Configuration *config;

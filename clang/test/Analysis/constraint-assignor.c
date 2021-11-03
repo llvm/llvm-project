@@ -3,9 +3,8 @@
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -verify
 
-// expected-no-diagnostics
-
 void clang_analyzer_warnIfReached();
+void clang_analyzer_eval(int);
 
 void rem_constant_rhs_ne_zero(int x, int y) {
   if (x % 3 == 0) // x % 3 != 0 -> x != 0
@@ -66,4 +65,20 @@ void internal_unsigned_signed_mismatch(unsigned a) {
   // we assign new constraints below.
   if (d % 2 != 0)
     return;
+}
+
+void remainder_with_adjustment(int x) {
+  if ((x + 1) % 3 == 0) // (x + 1) % 3 != 0 -> x + 1 != 0 -> x != -1
+    return;
+  clang_analyzer_eval(x + 1 != 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(x != -1);    // expected-warning{{TRUE}}
+  (void)x; // keep the constraints alive.
+}
+
+void remainder_with_adjustment_of_composit_lhs(int x, int y) {
+  if ((x + y + 1) % 3 == 0) // (x + 1) % 3 != 0 -> x + 1 != 0 -> x != -1
+    return;
+  clang_analyzer_eval(x + y + 1 != 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(x + y != -1);    // expected-warning{{TRUE}}
+  (void)(x * y); // keep the constraints alive.
 }

@@ -56,11 +56,6 @@ void MemoryHistoryASan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString MemoryHistoryASan::GetPluginNameStatic() {
-  static ConstString g_name("asan");
-  return g_name;
-}
-
 MemoryHistoryASan::MemoryHistoryASan(const ProcessSP &process_sp) {
   if (process_sp)
     m_process_wp = process_sp;

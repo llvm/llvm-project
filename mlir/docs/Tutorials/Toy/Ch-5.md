@@ -70,9 +70,14 @@ void ToyToAffineLoweringPass::runOnFunction() {
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want
   // a partial lowering, we explicitly mark the Toy operations that don't want
-  // to lower, `toy.print`, as *legal*.
+  // to lower, `toy.print`, as *legal*. `toy.print` will still need its operands
+  // to be updated though (as we convert from TensorType to MemRefType), so we
+  // only treat it as `legal` if its operands are legal.
   target.addIllegalDialect<ToyDialect>();
-  target.addLegalOp<PrintOp>();
+  target.addDynamicallyLegalOp<toy::PrintOp>([](toy::PrintOp op) {
+    return llvm::none_of(op->getOperandTypes(),
+                         [](Type type) { return type.isa<TensorType>(); });
+  });
   ...
 }
 ```

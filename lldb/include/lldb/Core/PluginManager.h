@@ -134,7 +134,7 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              LanguageCreateInstance create_callback);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
@@ -143,7 +143,7 @@ public:
 
   // LanguageRuntime
   static bool RegisterPlugin(
-      ConstString name, const char *description,
+      llvm::StringRef name, llvm::StringRef description,
       LanguageRuntimeCreateInstance create_callback,
       LanguageRuntimeGetCommandObject command_callback = nullptr,
       LanguageRuntimeGetExceptionPrecondition precondition_callback = nullptr);
@@ -160,7 +160,7 @@ public:
   GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx);
 
   // SystemRuntime
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              SystemRuntimeCreateInstance create_callback);
 
   static bool UnregisterPlugin(SystemRuntimeCreateInstance create_callback);
@@ -230,7 +230,7 @@ public:
                                        CompletionRequest &request);
   // Process
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  ProcessCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
@@ -239,17 +239,17 @@ public:
   static ProcessCreateInstance GetProcessCreateCallbackAtIndex(uint32_t idx);
 
   static ProcessCreateInstance
-  GetProcessCreateCallbackForPluginName(ConstString name);
+  GetProcessCreateCallbackForPluginName(llvm::StringRef name);
 
-  static const char *GetProcessPluginNameAtIndex(uint32_t idx);
+  static llvm::StringRef GetProcessPluginNameAtIndex(uint32_t idx);
 
-  static const char *GetProcessPluginDescriptionAtIndex(uint32_t idx);
+  static llvm::StringRef GetProcessPluginDescriptionAtIndex(uint32_t idx);
 
   static void AutoCompleteProcessName(llvm::StringRef partial_name,
                                       CompletionRequest &request);
 
   // ScriptInterpreter
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              lldb::ScriptLanguage script_lang,
                              ScriptInterpreterCreateInstance create_callback);
 
@@ -297,7 +297,7 @@ public:
   /// \return
   ///    Returns true upon success; otherwise, false.
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  StructuredDataPluginCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr,
                  StructuredDataFilterLaunchInfo filter_callback = nullptr);
@@ -314,7 +314,7 @@ public:
 
   // SymbolFile
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  SymbolFileCreateInstance create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr);
 
@@ -324,7 +324,7 @@ public:
   GetSymbolFileCreateCallbackAtIndex(uint32_t idx);
 
   // SymbolVendor
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              SymbolVendorCreateInstance create_callback);
 
   static bool UnregisterPlugin(SymbolVendorCreateInstance create_callback);
@@ -334,7 +334,7 @@ public:
 
   // Trace
   static bool RegisterPlugin(
-      ConstString name, const char *description,
+      llvm::StringRef name, llvm::StringRef description,
       TraceCreateInstanceForSessionFile create_callback_for_session_file,
       TraceCreateInstanceForLiveProcess create_callback_for_live_process,
       llvm::StringRef schema);
@@ -343,10 +343,10 @@ public:
   UnregisterPlugin(TraceCreateInstanceForSessionFile create_callback);
 
   static TraceCreateInstanceForSessionFile
-  GetTraceCreateCallback(ConstString plugin_name);
+  GetTraceCreateCallback(llvm::StringRef plugin_name);
 
   static TraceCreateInstanceForLiveProcess
-  GetTraceCreateCallbackForLiveProcess(ConstString plugin_name);
+  GetTraceCreateCallbackForLiveProcess(llvm::StringRef plugin_name);
 
   /// Get the JSON schema for a trace session file corresponding to the given
   /// plugin.
@@ -357,7 +357,7 @@ public:
   /// \return
   ///     An empty \a StringRef if no plugin was found with that plugin name,
   ///     otherwise the actual schema is returned.
-  static llvm::StringRef GetTraceSchema(ConstString plugin_name);
+  static llvm::StringRef GetTraceSchema(llvm::StringRef plugin_name);
 
   /// Get the JSON schema for a trace session file corresponding to the plugin
   /// given by its index.
@@ -376,16 +376,16 @@ public:
   ///     This callback is used to create a CommandObject that will be listed
   ///     under "thread trace export". Can be \b null.
   static bool RegisterPlugin(
-      ConstString name, const char *description,
+      llvm::StringRef name, llvm::StringRef description,
       TraceExporterCreateInstance create_callback,
       ThreadTraceExportCommandCreator create_thread_trace_export_command);
 
   static TraceExporterCreateInstance
-  GetTraceExporterCreateCallback(ConstString plugin_name);
+  GetTraceExporterCreateCallback(llvm::StringRef plugin_name);
 
   static bool UnregisterPlugin(TraceExporterCreateInstance create_callback);
 
-  static const char *GetTraceExporterPluginNameAtIndex(uint32_t index);
+  static llvm::StringRef GetTraceExporterPluginNameAtIndex(uint32_t index);
 
   /// Return the callback used to create the CommandObject that will be listed
   /// under "thread trace export". Can be \b null.
@@ -393,7 +393,7 @@ public:
   GetThreadTraceExportCommandCreatorAtIndex(uint32_t index);
 
   // UnwindAssembly
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              UnwindAssemblyCreateInstance create_callback);
 
   static bool UnregisterPlugin(UnwindAssemblyCreateInstance create_callback);
@@ -402,7 +402,7 @@ public:
   GetUnwindAssemblyCreateCallbackAtIndex(uint32_t idx);
 
   // MemoryHistory
-  static bool RegisterPlugin(ConstString name, const char *description,
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              MemoryHistoryCreateInstance create_callback);
 
   static bool UnregisterPlugin(MemoryHistoryCreateInstance create_callback);
@@ -412,7 +412,7 @@ public:
 
   // InstrumentationRuntime
   static bool
-  RegisterPlugin(ConstString name, const char *description,
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                  InstrumentationRuntimeCreateInstance create_callback,
                  InstrumentationRuntimeGetType get_type_callback);
 

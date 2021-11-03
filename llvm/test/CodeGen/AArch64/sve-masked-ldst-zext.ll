@@ -95,6 +95,19 @@ define <vscale x 8 x i64> @masked_zload_nxv8i16(<vscale x 8 x i16>* %a, <vscale 
   ret <vscale x 8 x i64> %ext
 }
 
+; Masked load requires promotion
+define <vscale x 2 x double> @masked_zload_2i16_2f64(<vscale x 2 x i16>* noalias %in, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_zload_2i16_2f64:
+; CHECK:       ld1h { z0.d }, p0/z, [x0]
+; CHECK-NEXT:  ptrue p0.d
+; CHECK-NEXT:  ucvtf z0.d, p0/m, z0.s
+; CHECK-NEXT:  ret
+  %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>* %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %zext = zext <vscale x 2 x i16> %wide.load to <vscale x 2 x i32>
+  %res = uitofp <vscale x 2 x i32> %zext to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>*, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(<vscale x 2 x i16>*, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 declare <vscale x 2 x i32> @llvm.masked.load.nxv2i32(<vscale x 2 x i32>*, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)

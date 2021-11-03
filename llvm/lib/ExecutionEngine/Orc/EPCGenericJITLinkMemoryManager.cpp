@@ -60,11 +60,12 @@ public:
     //        turn this into a std::swap.
     FR.Actions.reserve(G.allocActions().size());
     for (auto &ActPair : G.allocActions())
-      FR.Actions.push_back(
-          {{ExecutorAddr(ActPair.Finalize.FnAddr),
-            ExecutorAddr(ActPair.Finalize.CtxAddr), ActPair.Finalize.CtxSize},
-           {ExecutorAddr(ActPair.Dealloc.FnAddr),
-            ExecutorAddr(ActPair.Dealloc.CtxAddr), ActPair.Dealloc.CtxSize}});
+      FR.Actions.push_back({{ExecutorAddr(ActPair.Finalize.FnAddr),
+                             {ExecutorAddr(ActPair.Finalize.CtxAddr),
+                              ExecutorAddrDiff(ActPair.Finalize.CtxSize)}},
+                            {ExecutorAddr(ActPair.Dealloc.FnAddr),
+                             {ExecutorAddr(ActPair.Dealloc.CtxAddr),
+                              ExecutorAddrDiff(ActPair.Dealloc.CtxSize)}}});
     G.allocActions().clear();
 
     Parent.EPC.callSPSWrapperAsync<

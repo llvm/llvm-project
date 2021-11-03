@@ -268,6 +268,7 @@ bool MachOPlatform::isInitializerSection(StringRef SegName,
 
 bool MachOPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
+  case Triple::aarch64:
   case Triple::x86_64:
     return true;
   default:

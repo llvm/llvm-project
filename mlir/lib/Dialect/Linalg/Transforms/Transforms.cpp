@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -152,14 +153,14 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
 /// result of the created PadTensorOp or return failure if the operand cannot be
 /// padded to a static shape.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
-    PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
+    OpBuilder &b, linalg::LinalgOp opToPad, OpOperand *opOperand,
     const PaddingValueComputationFunction &paddingFunc,
     const PaddingNoFoldComputationFunction &nofoldFunc, Value &result) {
   // Can't pad scalars.
   if (opToPad.getShape(opOperand).empty())
     return success();
   // Can't pad if no padding value is known.
-  FailureOr<Value> paddingValue = paddingFunc(rewriter, *opOperand);
+  FailureOr<Value> paddingValue = paddingFunc(b, *opOperand);
   if (failed(paddingValue))
     return success();
   auto sliceOp = opOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
@@ -175,9 +176,10 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
                          : linalg::getSmallestBoundingIndex(size.get<Value>());
     // SmallestBoundingIndex must exist for all sizes.
     // For now return an error if we can't find it.
-    if (!indexAttr)
-      return rewriter.notifyMatchFailure(
-          opToPad, "No constant bounding box can be found for padding");
+    if (!indexAttr) {
+      LLVM_DEBUG(DBGS() << "No constant bounding box can be found for padding");
+      return failure();
+    }
     staticSizes.push_back(indexAttr.getInt());
   }
   auto staticTensorType = RankedTensorType::get(
@@ -185,12 +187,12 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   bool nofold = nofoldFunc ? nofoldFunc(*opOperand) : false;
   result = linalg::PadTensorOp::createPadHighOp(
       staticTensorType, opOperand->get(), paddingValue.getValue(),
-      /*nofold=*/nofold, opToPad->getLoc(), rewriter);
+      /*nofold=*/nofold, opToPad->getLoc(), b);
   return success();
 }
 
-LogicalResult
-linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
+FailureOr<SmallVector<Value>>
+linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
                           const PaddingValueComputationFunction &paddingFunc,
                           const PaddingNoFoldComputationFunction &nofoldFunc,
                           LinalgOp &paddedOp) {
@@ -200,9 +202,9 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
   assert(opToPad.hasTensorSemantics() &&
          "expected operation to have tensor semantics");
 
-  OpBuilder::InsertionGuard g(rewriter);
+  OpBuilder::InsertionGuard g(b);
   // Set IP after op because we also take the dims of the original output.
-  rewriter.setInsertionPointAfter(opToPad);
+  b.setInsertionPointAfter(opToPad);
   // Make a copy of the shaped operands and update it.
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad.getNumInputsAndOutputs());
@@ -211,15 +213,14 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
     // If padding was requested but the shape cannot be bounded statically then
     // the pattern fails to apply.
     if (failed(padOperandToSmallestStaticBoundingBox(
-            rewriter, opToPad, opOperand, paddingFunc, nofoldFunc,
-            paddedOperand)))
+            b, opToPad, opOperand, paddingFunc, nofoldFunc, paddedOperand)))
       return failure();
     newOperands.push_back(paddedOperand ? paddedOperand : opOperand->get());
   }
 
   SmallVector<SmallVector<Value>> reifiedResultShapes;
   if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
-                 .reifyResultShapes(rewriter, reifiedResultShapes)))
+                 .reifyResultShapes(b, reifiedResultShapes)))
     return failure();
   assert(reifiedResultShapes.size() == opToPad->getNumResults() &&
          "expected same number of results");
@@ -227,7 +228,7 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
       ValueRange(newOperands).take_back(opToPad.getNumOutputs()).getTypes();
-  paddedOp = opToPad.clone(rewriter, loc, resultTensorTypes, newOperands);
+  paddedOp = opToPad.clone(b, loc, resultTensorTypes, newOperands);
 
   // Recover the slice out of the new static results. This keeps the original
   // linalg op around because it uses the dims of the original results.
@@ -237,16 +238,15 @@ linalg::rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
     Value paddedResult = en.value();
     int64_t resultNumber = en.index();
     int64_t rank = paddedResult.getType().cast<RankedTensorType>().getRank();
-    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
     SmallVector<OpFoldResult> sizes;
     for (Value v : reifiedResultShapes[resultNumber])
       sizes.push_back(v);
-    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    paddedSubviewResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
+    SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
+    paddedSubviewResults.push_back(b.create<tensor::ExtractSliceOp>(
         loc, paddedResult, offsets, sizes, strides));
   }
-  rewriter.replaceOp(opToPad, paddedSubviewResults);
-  return success();
+  return paddedSubviewResults;
 }
 
 /// Linalg base tiling pattern.
@@ -345,9 +345,11 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // Try to pad on the fly by rewriting res->op as a padded op. If successful,
   // `res.op` is rewritten in static form with padded operands.
   LinalgOp paddedOp;
-  if (succeeded(rewriteAsPaddedOp(
-          rewriter, res->op, options.paddingValueComputationFunction,
-          options.paddingNoFoldComputationFunction, paddedOp))) {
+  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
+      rewriter, res->op, options.paddingValueComputationFunction,
+      options.paddingNoFoldComputationFunction, paddedOp);
+  if (succeeded(newResults)) {
+    rewriter.replaceOp(res->op, newResults.getValue());
     filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
     res->op = paddedOp;
     result = *res;
@@ -466,6 +468,64 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
   rewriter.updateRootInPlace(op, [&]() {
     originalOpMarker.replaceLinalgTransformationFilter(rewriter, op);
   });
+  return success();
+}
+
+/// Linalg padding pattern.
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    MLIRContext *context, LinalgPaddingOptions options,
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
+      options(options) {}
+
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(filter),
+      options(options) {}
+
+LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
+  if (!linalgOp.hasTensorSemantics())
+    return failure();
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+
+  // Pad the operation.
+  LinalgOp paddedOp;
+  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
+      rewriter, linalgOp, options.paddingValueComputationFunction,
+      options.paddingNoFoldComputationFunction, paddedOp);
+  if (failed(newResults))
+    return failure();
+
+  // Compute the desired hoisting depths.
+  SmallVector<int64_t> depths;
+  if (options.paddingHoistComputationFunction) {
+    for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands())
+      depths.push_back(options.paddingHoistComputationFunction(*opOperand));
+  }
+
+  // Hoist the padding.
+  for (auto en : enumerate(depths)) {
+    OpOperand &opOperand = paddedOp->getOpOperand(en.index());
+    auto padTensorOp = opOperand.get().getDefiningOp<PadTensorOp>();
+    if (!padTensorOp || en.value() == 0)
+      continue;
+    PadTensorOp hoistedOp;
+    FailureOr<Value> newResult =
+        hoistPaddingOnTensors(padTensorOp, en.value(), hoistedOp);
+    if (failed(newResult))
+      continue;
+    rewriter.replaceOp(padTensorOp, newResult.getValue());
+  }
+
+  // Replace the original operation to pad.
+  rewriter.replaceOp(op, newResults.getValue());
+  filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
   return success();
 }
 

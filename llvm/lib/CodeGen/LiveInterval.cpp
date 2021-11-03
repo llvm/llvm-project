@@ -592,21 +592,10 @@ void LiveRange::removeSegment(SlotIndex Start, SlotIndex End,
   VNInfo *ValNo = I->valno;
   if (I->start == Start) {
     if (I->end == End) {
-      if (RemoveDeadValNo) {
-        // Check if val# is dead.
-        bool isDead = true;
-        for (const_iterator II = begin(), EE = end(); II != EE; ++II)
-          if (II != I && II->valno == ValNo) {
-            isDead = false;
-            break;
-          }
-        if (isDead) {
-          // Now that ValNo is dead, remove it.
-          markValNoForDeletion(ValNo);
-        }
-      }
-
       segments.erase(I);  // Removed the whole Segment.
+
+      if (RemoveDeadValNo)
+        removeValNoIfDead(ValNo);
     } else
       I->start = End;
     return;
@@ -625,6 +614,19 @@ void LiveRange::removeSegment(SlotIndex Start, SlotIndex End,
 
   // Insert the new one.
   segments.insert(std::next(I), Segment(End, OldEnd, ValNo));
+}
+
+LiveRange::iterator LiveRange::removeSegment(iterator I, bool RemoveDeadValNo) {
+  VNInfo *ValNo = I->valno;
+  I = segments.erase(I);
+  if (RemoveDeadValNo)
+    removeValNoIfDead(ValNo);
+  return I;
+}
+
+void LiveRange::removeValNoIfDead(VNInfo *ValNo) {
+  if (none_of(*this, [=](const Segment &S) { return S.valno == ValNo; }))
+    markValNoForDeletion(ValNo);
 }
 
 /// removeValNo - Remove all the segments defined by the specified value#.

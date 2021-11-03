@@ -240,6 +240,8 @@ SourceLocation TypeLoc::getEndLoc() const {
     case IncompleteArray:
     case VariableArray:
     case FunctionNoProto:
+      // The innermost type with suffix syntax always determines the end of the
+      // type.
       Last = Cur;
       break;
     case FunctionProto:
@@ -248,12 +250,19 @@ SourceLocation TypeLoc::getEndLoc() const {
       else
         Last = Cur;
       break;
+    case ObjCObjectPointer:
+      // `id` and `id<...>` have no star location.
+      if (Cur.castAs<ObjCObjectPointerTypeLoc>().getStarLoc().isInvalid())
+        break;
+      LLVM_FALLTHROUGH;
     case Pointer:
     case BlockPointer:
     case MemberPointer:
     case LValueReference:
     case RValueReference:
     case PackExpansion:
+      // Types with prefix syntax only determine the end of the type if there
+      // is no suffix type.
       if (!Last)
         Last = Cur;
       break;

@@ -2,7 +2,7 @@
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
 # RUN: not %lld -dylib -framework CoreFoundation --icf=all %t/test.o 2>&1 | FileCheck %s
-# CHECK: error: {{.*}}test.o: __cfstring contains symbol _uh_oh at misaligned offset
+# CHECK: error: {{.*}}test.o:(__cfstring): symbol _uh_oh at misaligned offset
 
 .cstring
 L_.str:

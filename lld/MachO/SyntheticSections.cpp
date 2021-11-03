@@ -259,7 +259,7 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
 }
 
 GotSection::GotSection()
-    : NonLazyPointerSectionBase(segment_names::dataConst, section_names::got) {
+    : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
   flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
@@ -621,14 +621,14 @@ void StubHelperSection::setup() {
       ConcatOutputSection::getOrCreateForInput(in.imageLoaderCache);
   inputSections.push_back(in.imageLoaderCache);
   // Since this isn't in the symbol table or in any input file, the noDeadStrip
-  // argument doesn't matter. It's kept alive by ImageLoaderCacheSection()
-  // setting `live` to true on the backing InputSection.
+  // argument doesn't matter.
   dyldPrivate =
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
                     /*isExternal=*/false, /*isPrivateExtern=*/false,
                     /*isThumb=*/false, /*isReferencedDynamically=*/false,
                     /*noDeadStrip=*/false);
+  dyldPrivate->used = true;
 }
 
 LazyPointerSection::LazyPointerSection()
@@ -876,6 +876,9 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
 }
 
 void SymtabSection::emitStabs() {
+  if (config->omitDebugInfo)
+    return;
+
   for (const std::string &s : config->astPaths) {
     StabsEntry astStab(N_AST);
     astStab.strx = stringTableSection.addString(s);
@@ -921,7 +924,7 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = defined->isec->canonical()->parent->index;
+    symStab.sect = defined->isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 
@@ -1046,7 +1049,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         nList->n_value = defined->value;
       } else {
         nList->n_type = scope | N_SECT;
-        nList->n_sect = defined->isec->canonical()->parent->index;
+        nList->n_sect = defined->isec->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
@@ -1169,6 +1172,9 @@ CodeSignatureSection::CodeSignatureSection()
   size_t slashIndex = fileName.rfind("/");
   if (slashIndex != std::string::npos)
     fileName = fileName.drop_front(slashIndex + 1);
+
+  // NOTE: Any changes to these calculations should be repeated
+  // in llvm-objcopy's MachOLayoutBuilder::layoutTail.
   allHeadersSize = alignTo<16>(fixedHeadersSize + fileName.size() + 1);
   fileNamePad = allHeadersSize - fixedHeadersSize - fileName.size();
 }
@@ -1182,6 +1188,8 @@ uint64_t CodeSignatureSection::getRawSize() const {
 }
 
 void CodeSignatureSection::writeHashes(uint8_t *buf) const {
+  // NOTE: Changes to this functionality should be repeated in llvm-objcopy's
+  // MachOWriter::writeSignatureData.
   uint8_t *code = buf;
   uint8_t *codeEnd = buf + fileOff;
   uint8_t *hashes = codeEnd + allHeadersSize;
@@ -1212,6 +1220,8 @@ void CodeSignatureSection::writeHashes(uint8_t *buf) const {
 }
 
 void CodeSignatureSection::writeTo(uint8_t *buf) const {
+  // NOTE: Changes to this functionality should be repeated in llvm-objcopy's
+  // MachOWriter::writeSignatureData.
   uint32_t signatureSize = static_cast<uint32_t>(getSize());
   auto *superBlob = reinterpret_cast<CS_SuperBlob *>(buf);
   write32be(&superBlob->magic, CSMAGIC_EMBEDDED_SIGNATURE);

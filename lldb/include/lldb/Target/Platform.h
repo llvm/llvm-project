@@ -214,7 +214,7 @@ public:
 
   llvm::Optional<std::string> GetOSBuildString();
 
-  bool GetOSKernelDescription(std::string &s);
+  llvm::Optional<std::string> GetOSKernelDescription();
 
   // Returns the name of the platform
   ConstString GetName();
@@ -244,9 +244,8 @@ public:
     return llvm::None;
   }
 
-  virtual bool GetRemoteOSKernelDescription(std::string &s) {
-    s.clear();
-    return false;
+  virtual llvm::Optional<std::string> GetRemoteOSKernelDescription() {
+    return llvm::None;
   }
 
   // Remote Platform subclasses need to override this function

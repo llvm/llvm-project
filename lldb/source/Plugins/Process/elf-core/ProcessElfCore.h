@@ -40,9 +40,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "elf-core"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   // Constructors and Destructors
   ProcessElfCore(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
@@ -60,9 +60,7 @@ public:
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // Process Control
   lldb_private::Status DoDestroy() override;

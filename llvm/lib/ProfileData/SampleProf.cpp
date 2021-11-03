@@ -331,7 +331,7 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
 
 void SampleContextTrimmer::trimAndMergeColdContextProfiles(
     uint64_t ColdCountThreshold, bool TrimColdContext, bool MergeColdContext,
-    uint32_t ColdContextFrameLength) {
+    uint32_t ColdContextFrameLength, bool TrimBaseProfileOnly) {
   if (!TrimColdContext && !MergeColdContext)
     return;
 
@@ -339,14 +339,21 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
   if (ColdCountThreshold == 0)
     return;
 
+  // Trimming base profiles only is mainly to honor the preinliner decsion. When
+  // MergeColdContext is true preinliner decsion is not honored anyway so turn
+  // off TrimBaseProfileOnly.
+  if (MergeColdContext)
+    TrimBaseProfileOnly = false;
+
   // Filter the cold profiles from ProfileMap and move them into a tmp
   // container
   std::vector<std::pair<SampleContext, const FunctionSamples *>> ColdProfiles;
   for (const auto &I : ProfileMap) {
+    const SampleContext &Context = I.first;
     const FunctionSamples &FunctionProfile = I.second;
-    if (FunctionProfile.getTotalSamples() >= ColdCountThreshold)
-      continue;
-    ColdProfiles.emplace_back(I.first, &I.second);
+    if (FunctionProfile.getTotalSamples() < ColdCountThreshold &&
+        (!TrimBaseProfileOnly || Context.isBaseContext()))
+      ColdProfiles.emplace_back(Context, &I.second);
   }
 
   // Remove the cold profile from ProfileMap and merge them into

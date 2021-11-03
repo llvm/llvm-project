@@ -134,6 +134,10 @@ public:
                    LiveIntervals *LIS = nullptr,
                    bool OnlyToVGPR = false) const;
 
+  bool spillEmergencySGPR(MachineBasicBlock::iterator MI,
+                          MachineBasicBlock &RestoreMBB, Register SGPR,
+                          RegScavenger *RS) const;
+
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;

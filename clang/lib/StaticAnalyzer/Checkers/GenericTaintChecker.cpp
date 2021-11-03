@@ -514,7 +514,7 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
     if (OneOf("snprintf"))
       return {{1}, {0, ReturnValueIndex}, VariadicType::Src, 3};
     if (OneOf("sprintf"))
-      return {{}, {0, ReturnValueIndex}, VariadicType::Src, 2};
+      return {{1}, {0, ReturnValueIndex}, VariadicType::Src, 2};
     if (OneOf("strcpy", "stpcpy", "strcat"))
       return {{1}, {0, ReturnValueIndex}};
     if (OneOf("bcopy"))

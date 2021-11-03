@@ -561,7 +561,7 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    mv a0, zero
-; RV32-NEXT:    vmv8r.v v16, v8
+; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call vector_arg_indirect_stack@plt
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -613,7 +613,7 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV64-NEXT:    addi a0, a0, 24
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    mv a0, zero
-; RV64-NEXT:    vmv8r.v v16, v8
+; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call vector_arg_indirect_stack@plt
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5

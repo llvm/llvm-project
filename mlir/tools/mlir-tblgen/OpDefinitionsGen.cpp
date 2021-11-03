@@ -2443,7 +2443,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     ERROR_IF_PRUNED(m, "getOperands", op);
     m->body() << "  return odsOperands;";
   }
-  std::string attr = op.getGetterName("operand_segment_sizes");
+  std::string attr = "operand_segment_sizes";
   std::string sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode, attr);
   generateNamedOperandGetters(op, adaptor,
                               /*isAdaptor=*/true, sizeAttrInit,
@@ -2455,9 +2455,9 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
   FmtContext fctx;
   fctx.withBuilder("::mlir::Builder(odsAttrs.getContext())");
 
-  auto emitAttr = [&](StringRef name, Attribute attr) {
-    auto *method = adaptor.addMethodAndPrune(attr.getStorageType(), name);
-    ERROR_IF_PRUNED(method, "Adaptor::" + name, op);
+  auto emitAttr = [&](StringRef name, StringRef emitName, Attribute attr) {
+    auto *method = adaptor.addMethodAndPrune(attr.getStorageType(), emitName);
+    ERROR_IF_PRUNED(method, "Adaptor::" + emitName, op);
     auto &body = method->body();
     body << "  assert(odsAttrs && \"no attributes when constructing adapter\");"
          << "\n  " << attr.getStorageType() << " attr = "
@@ -2489,8 +2489,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
     const auto &name = namedAttr.name;
     const auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr()) {
-      for (auto emitName : op.getGetterNames(name))
-        emitAttr(emitName, attr);
+      for (const auto &emitName : op.getGetterNames(name))
+        emitAttr(name, emitName, attr);
     }
   }
 
@@ -2506,16 +2506,18 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
       continue;
 
     // Generate the accessors for a variadic region.
-    if (region.isVariadic()) {
-      auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", region.name);
-      ERROR_IF_PRUNED(m, "Adaptor::" + region.name, op);
-      m->body() << formatv("  return odsRegions.drop_front({0});", i);
-      continue;
-    }
+    for (StringRef name : op.getGetterNames(region.name)) {
+      if (region.isVariadic()) {
+        auto *m = adaptor.addMethodAndPrune("::mlir::RegionRange", name);
+        ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
+        m->body() << formatv("  return odsRegions.drop_front({0});", i);
+        continue;
+      }
 
-    auto *m = adaptor.addMethodAndPrune("::mlir::Region &", region.name);
-    ERROR_IF_PRUNED(m, "Adaptor::" + region.name, op);
-    m->body() << formatv("  return *odsRegions[{0}];", i);
+      auto *m = adaptor.addMethodAndPrune("::mlir::Region &", name);
+      ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
+      m->body() << formatv("  return *odsRegions[{0}];", i);
+    }
   }
 
   // Add verification function.

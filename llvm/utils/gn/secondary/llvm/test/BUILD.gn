@@ -301,6 +301,7 @@ group("test") {
     "//llvm/utils/TableGen:llvm-tblgen",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
+    "//llvm/utils/llvm-locstats",
     "//llvm/utils/not",
 
     # llvm-config wants libgtest_main.a to exist at runtime when run as in

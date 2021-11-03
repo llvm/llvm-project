@@ -10426,7 +10426,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, false);
     }
 
-    if (numBitsSigned(MulLHS, DAG) < 32 && numBitsSigned(MulRHS, DAG) < 32) {
+    if (numBitsSigned(MulLHS, DAG) <= 32 && numBitsSigned(MulRHS, DAG) <= 32) {
       MulLHS = DAG.getSExtOrTrunc(MulLHS, SL, MVT::i32);
       MulRHS = DAG.getSExtOrTrunc(MulRHS, SL, MVT::i32);
       AddRHS = DAG.getSExtOrTrunc(AddRHS, SL, MVT::i64);
@@ -10748,7 +10748,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
         return LHS.getOperand(0);
     }
 
-    uint64_t CRHSVal = CRHS->getZExtValue();
+    const APInt &CRHSVal = CRHS->getAPIntValue();
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         LHS.getOpcode() == ISD::SELECT &&
         isa<ConstantSDNode>(LHS.getOperand(1)) &&
@@ -10760,8 +10760,8 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       // setcc (select cc, CT, CF), CF, ne => cc
       // setcc (select cc, CT, CF), CT, ne => xor cc, -1
       // setcc (select cc, CT, CF), CT, eq => cc
-      uint64_t CT = LHS.getConstantOperandVal(1);
-      uint64_t CF = LHS.getConstantOperandVal(2);
+      const APInt &CT = LHS.getConstantOperandAPInt(1);
+      const APInt &CF = LHS.getConstantOperandAPInt(2);
 
       if ((CF == CRHSVal && CC == ISD::SETEQ) ||
           (CT == CRHSVal && CC == ISD::SETNE))
@@ -10825,7 +10825,7 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
     // cvt_f32_ubyte1 (srl x, 16) -> cvt_f32_ubyte3 x
     // cvt_f32_ubyte0 (srl x,  8) -> cvt_f32_ubyte1 x
     if (auto *C = dyn_cast<ConstantSDNode>(Shift.getOperand(1))) {
-      Shift = DAG.getZExtOrTrunc(Shift.getOperand(0),
+      SDValue Shifted = DAG.getZExtOrTrunc(Shift.getOperand(0),
                                  SDLoc(Shift.getOperand(0)), MVT::i32);
 
       unsigned ShiftOffset = 8 * Offset;
@@ -10836,7 +10836,7 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
 
       if (ShiftOffset < 32 && (ShiftOffset % 8) == 0) {
         return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + ShiftOffset / 8, SL,
-                           MVT::f32, Shift);
+                           MVT::f32, Shifted);
       }
     }
   }

@@ -3,6 +3,7 @@
 
 // amdgcn does not have printf definition
 // XFAIL: amdgcn-amd-amdhsa
+// XFAIL: amdgcn-amd-amdhsa-newRTL
 
 #include <omp.h>
 #include <stdio.h>

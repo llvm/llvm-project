@@ -46,7 +46,7 @@ add_libc_fuzzer(
     libc.src.math.truncf
     libc.src.math.truncl
     libc.src.__support.FPUtil.fputil
-    libc.utils.CPP.standalone_cpp
+    libc.src.__support.CPP.standalone_cpp
 )
 
 add_libc_fuzzer(

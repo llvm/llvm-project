@@ -188,11 +188,11 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
 
   std::string HeaderDirName = "/tmp/Sources/Foo/Headers/";
   std::string HeaderName = "Foo.h";
-#ifdef _WIN32
-  // Force header path to be absolute on windows.
-  // As headermap content should represent absolute locations.
-  HeaderDirName = "C:" + HeaderDirName;
-#endif /*_WIN32*/
+  if (is_style_windows(llvm::sys::path::Style::native)) {
+    // Force header path to be absolute on windows.
+    // As headermap content should represent absolute locations.
+    HeaderDirName = "C:" + HeaderDirName;
+  }
 
   test::HMapFileMockMaker<FileTy> Maker(File);
   auto a = Maker.addString("Foo/Foo.h");

@@ -473,3 +473,61 @@ define i1 @logical_and_icmp_clamp_pred_diff(<4 x i32> %x) {
   %s7 = select i1 %s6, i1 %d3, i1 false
   ret i1 %s7
 }
+
+define i1 @logical_and_icmp_extra_op(<4 x i32> %x, <4 x i32> %y, i1 %c) {
+; CHECK-LABEL: @logical_and_icmp_extra_op(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C:%.*]], i1 [[C]], i1 false
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP3]], i1 [[S3]], i1 false
+; CHECK-NEXT:    ret i1 [[OP_EXTRA]]
+;
+  %x0 = extractelement <4 x i32> %x, i32 0
+  %x1 = extractelement <4 x i32> %x, i32 1
+  %x2 = extractelement <4 x i32> %x, i32 2
+  %x3 = extractelement <4 x i32> %x, i32 3
+  %y0 = extractelement <4 x i32> %y, i32 0
+  %y1 = extractelement <4 x i32> %y, i32 1
+  %y2 = extractelement <4 x i32> %y, i32 2
+  %y3 = extractelement <4 x i32> %y, i32 3
+  %d0 = icmp slt i32 %x0, %y0
+  %d1 = icmp slt i32 %x1, %y1
+  %d2 = icmp slt i32 %x2, %y2
+  %d3 = icmp slt i32 %x3, %y3
+  %s3 = select i1 %c, i1 %c, i1 false
+  %s4 = select i1 %s3, i1 %d0, i1 false
+  %s5 = select i1 %s4, i1 %d1, i1 false
+  %s6 = select i1 %s5, i1 %d2, i1 false
+  %s7 = select i1 %s6, i1 %d3, i1 false
+  ret i1 %s7
+}
+
+define i1 @logical_or_icmp_extra_op(<4 x i32> %x, <4 x i32> %y, i1 %c) {
+; CHECK-LABEL: @logical_or_icmp_extra_op(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP3]], i1 true, i1 [[S3]]
+; CHECK-NEXT:    ret i1 [[OP_EXTRA]]
+;
+  %x0 = extractelement <4 x i32> %x, i32 0
+  %x1 = extractelement <4 x i32> %x, i32 1
+  %x2 = extractelement <4 x i32> %x, i32 2
+  %x3 = extractelement <4 x i32> %x, i32 3
+  %y0 = extractelement <4 x i32> %y, i32 0
+  %y1 = extractelement <4 x i32> %y, i32 1
+  %y2 = extractelement <4 x i32> %y, i32 2
+  %y3 = extractelement <4 x i32> %y, i32 3
+  %d0 = icmp slt i32 %x0, %y0
+  %d1 = icmp slt i32 %x1, %y1
+  %d2 = icmp slt i32 %x2, %y2
+  %d3 = icmp slt i32 %x3, %y3
+  %s3 = select i1 %c, i1 true, i1 %c
+  %s4 = select i1 %s3, i1 true, i1 %d0
+  %s5 = select i1 %s4, i1 true, i1 %d1
+  %s6 = select i1 %s5, i1 true, i1 %d2
+  %s7 = select i1 %s6, i1 true, i1 %d3
+  ret i1 %s7
+}

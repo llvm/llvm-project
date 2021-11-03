@@ -759,7 +759,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
     SampleContextTrimmer(ProfileMap)
         .trimAndMergeColdContextProfiles(
             SampleProfColdThreshold, SampleTrimColdContext,
-            SampleMergeColdContext, SampleColdContextFrameDepth);
+            SampleMergeColdContext, SampleColdContextFrameDepth, false);
   }
 
   auto WriterOrErr =

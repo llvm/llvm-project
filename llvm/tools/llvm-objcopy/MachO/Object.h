@@ -315,7 +315,6 @@ struct Object {
   LinkData DataInCode;
   LinkData LinkerOptimizationHint;
   LinkData FunctionStarts;
-  LinkData CodeSignature;
 
   Optional<uint32_t> SwiftVersion;
 
@@ -333,6 +332,9 @@ struct Object {
   Optional<size_t> LinkerOptimizationHintCommandIndex;
   /// The index LC_FUNCTION_STARTS load comamnd if present.
   Optional<size_t> FunctionStartsCommandIndex;
+  /// The index of the LC_SEGMENT or LC_SEGMENT_64 load command
+  /// corresponding to the __TEXT segment.
+  Optional<size_t> TextSegmentCommandIndex;
 
   BumpPtrAllocator Alloc;
   StringSaver NewSectionsContents;

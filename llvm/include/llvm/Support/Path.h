@@ -27,6 +27,27 @@ namespace path {
 
 enum class Style { windows, posix, native };
 
+/// Check if \p S uses POSIX path rules.
+constexpr bool is_style_posix(Style S) {
+  if (S == Style::posix)
+    return true;
+  if (S != Style::native)
+    return false;
+#if defined(_WIN32)
+  return false;
+#else
+  return true;
+#endif
+}
+
+/// Check if \p S uses Windows path rules.
+constexpr bool is_style_windows(Style S) { return !is_style_posix(S); }
+
+/// Check if \p S uses the same path rules as Style::native.
+constexpr bool is_style_native(Style S) {
+  return is_style_posix(S) == is_style_posix(Style::native);
+}
+
 /// @name Lexical Component Iterator
 /// @{
 

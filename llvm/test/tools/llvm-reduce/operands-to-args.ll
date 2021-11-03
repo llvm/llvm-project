@@ -54,3 +54,19 @@ entry:
   ret void
 }
 
+
+; Make sure to skip functions with non-direct call users
+declare void @e(i8*)
+
+; INTERESTING-LABEL: define void @g() {
+define void @g() {
+  call void @e(i8* bitcast (void (i8**)* @f to i8*))
+  ret void
+}
+
+; INTERESTING-LABEL: define void @f(i8** %a) {
+define void @f(i8** %a) {
+  %1 = load i8*, i8** %a
+  %2 = bitcast i8* %1 to i32*
+  ret void
+}

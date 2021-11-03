@@ -42,6 +42,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -373,9 +374,9 @@ static Value getPHISourceValue(Block *current, Block *pred,
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(terminator)) {
     // For switches, we take the operands from either the default case, or from
     // the case branch that was taken.
-    if (switchOp.defaultDestination() == current)
-      return switchOp.defaultOperands()[index];
-    for (auto i : llvm::enumerate(switchOp.caseDestinations()))
+    if (switchOp.getDefaultDestination() == current)
+      return switchOp.getDefaultOperands()[index];
+    for (auto i : llvm::enumerate(switchOp.getCaseDestinations()))
       if (i.value() == current)
         return switchOp.getCaseOperands(i.index())[index];
   }
@@ -556,7 +557,7 @@ static void addRuntimePreemptionSpecifier(bool dsoLocalRequested,
 }
 
 /// Create named global variables that correspond to llvm.mlir.global
-/// definitions.
+/// definitions. Convert llvm.global_ctors and global_dtors ops.
 LogicalResult ModuleTranslation::convertGlobals() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = convertType(op.getType());
@@ -622,6 +623,26 @@ LogicalResult ModuleTranslation::convertGlobals() {
       auto *global = cast<llvm::GlobalVariable>(lookupGlobal(op));
       if (!shouldDropGlobalInitializer(global->getLinkage(), cst))
         global->setInitializer(cst);
+    }
+  }
+
+  // Convert llvm.mlir.global_ctors and dtors.
+  for (Operation &op : getModuleBody(mlirModule)) {
+    auto ctorOp = dyn_cast<GlobalCtorsOp>(op);
+    auto dtorOp = dyn_cast<GlobalDtorsOp>(op);
+    if (!ctorOp && !dtorOp)
+      continue;
+    auto range = ctorOp ? llvm::zip(ctorOp.ctors(), ctorOp.priorities())
+                        : llvm::zip(dtorOp.dtors(), dtorOp.priorities());
+    auto appendGlobalFn =
+        ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
+    for (auto symbolAndPriority : range) {
+      llvm::Function *f = lookupFunction(
+          std::get<0>(symbolAndPriority).cast<FlatSymbolRefAttr>().getValue());
+      appendGlobalFn(
+          *llvmModule.get(), f,
+          std::get<1>(symbolAndPriority).cast<IntegerAttr>().getInt(),
+          /*Data=*/nullptr);
     }
   }
 
@@ -769,10 +790,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   }
 
   // Check the personality and set it.
-  if (func.personality().hasValue()) {
+  if (func.getPersonality().hasValue()) {
     llvm::Type *ty = llvm::Type::getInt8PtrTy(llvmFunc->getContext());
-    if (llvm::Constant *pfunc =
-            getLLVMConstant(ty, func.personalityAttr(), func.getLoc(), *this))
+    if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
+                                                func.getLoc(), *this))
       llvmFunc->setPersonalityFn(pfunc);
   }
 
@@ -816,13 +837,13 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
         function.getName(),
         cast<llvm::FunctionType>(convertType(function.getType())));
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
-    llvmFunc->setLinkage(convertLinkageToLLVM(function.linkage()));
+    llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
     mapFunction(function.getName(), llvmFunc);
-    addRuntimePreemptionSpecifier(function.dso_local(), llvmFunc);
+    addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Forward the pass-through attributes to LLVM.
-    if (failed(forwardPassthroughAttributes(function.getLoc(),
-                                            function.passthrough(), llvmFunc)))
+    if (failed(forwardPassthroughAttributes(
+            function.getLoc(), function.getPassthrough(), llvmFunc)))
       return failure();
   }
 
@@ -1028,7 +1049,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Convert other top-level operations if possible.
   llvm::IRBuilder<> llvmBuilder(llvmContext);
   for (Operation &o : getModuleBody(module).getOperations()) {
-    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::MetadataOp>(&o) &&
+    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::GlobalCtorsOp,
+             LLVM::GlobalDtorsOp, LLVM::MetadataOp>(&o) &&
         !o.hasTrait<OpTrait::IsTerminator>() &&
         failed(translator.convertOperation(o, llvmBuilder))) {
       return nullptr;

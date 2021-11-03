@@ -19,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
@@ -100,12 +101,14 @@ struct Diag : DiagBase {
     Unknown,
     Clang,
     ClangTidy,
+    Clangd,
     ClangdConfig,
   } Source = Unknown;
   /// Elaborate on the problem, usually pointing to a related piece of code.
   std::vector<Note> Notes;
   /// *Alternative* fixes for this diagnostic, one should be chosen.
   std::vector<Fix> Fixes;
+  llvm::SmallVector<DiagnosticTag, 1> Tags;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D);
 

@@ -12,6 +12,8 @@ cmake_minimum_required(VERSION 3.13.4)
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
   ${CMAKE_MODULE_PATH}
   )
 
@@ -90,7 +92,13 @@ set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
     "Additional linker flags for test programs.")
 set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
     "Additional compiler flags for test programs.")
-set(LIBUNWIND_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
+
+if (LIBUNWIND_ENABLE_SHARED)
+  set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-shared.cfg.in")
+else()
+  set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-static.cfg.in")
+endif()
+set(LIBUNWIND_TEST_CONFIG "${LIBUNWIND_DEFAULT_TEST_CONFIG}" CACHE STRING
   "The path to the Lit testing configuration to use when running the tests.
    If a relative path is provided, it is assumed to be relative to '<monorepo>/libunwind/test/configs'.")
 if (NOT IS_ABSOLUTE "${LIBUNWIND_TEST_CONFIG}")

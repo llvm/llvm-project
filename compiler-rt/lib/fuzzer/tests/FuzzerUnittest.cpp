@@ -671,12 +671,12 @@ TEST(Corpus, Replace) {
                      /*TimeOfUnit*/ std::chrono::microseconds(5678),
                      /*FeatureSet*/ {}, DFT,
                      /*BaseII*/ nullptr);
-  (void) SecondII;
   Unit ReplacedU = Unit{0x03};
 
   C->Replace(FirstII, ReplacedU,
              /*TimeOfUnit*/ std::chrono::microseconds(321));
 
+  // FirstII should be replaced.
   EXPECT_EQ(FirstII->U, Unit{0x03});
   EXPECT_EQ(FirstII->Reduced, true);
   EXPECT_EQ(FirstII->TimeOfUnit, std::chrono::microseconds(321));
@@ -684,6 +684,11 @@ TEST(Corpus, Replace) {
   ComputeSHA1(ReplacedU.data(), ReplacedU.size(), ExpectedSha1.data());
   std::vector<uint8_t> IISha1(FirstII->Sha1, FirstII->Sha1 + kSHA1NumBytes);
   EXPECT_EQ(IISha1, ExpectedSha1);
+
+  // SecondII should not be replaced.
+  EXPECT_EQ(SecondII->U, Unit{0x02});
+  EXPECT_EQ(SecondII->Reduced, false);
+  EXPECT_EQ(SecondII->TimeOfUnit, std::chrono::microseconds(5678));
 }
 
 template <typename T>

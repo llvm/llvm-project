@@ -25,7 +25,7 @@ class SPIRVToLLVMConversion : public OpConversionPattern<SPIRVOp> {
 public:
   SPIRVToLLVMConversion(MLIRContext *context, LLVMTypeConverter &typeConverter,
                         PatternBenefit benefit = 1)
-      : OpConversionPattern<SPIRVOp>(context, benefit),
+      : OpConversionPattern<SPIRVOp>(typeConverter, context, benefit),
         typeConverter(typeConverter) {}
 
 protected:

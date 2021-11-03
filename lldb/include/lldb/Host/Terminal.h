@@ -10,7 +10,6 @@
 #define LLDB_HOST_TERMINAL_H
 #if defined(__cplusplus)
 
-#include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
 

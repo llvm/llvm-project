@@ -38,19 +38,31 @@ inline bool in_symbolizer() {
 
 }  // namespace __tsan
 
-#define SCOPED_INTERCEPTOR_RAW(func, ...)      \
-  ThreadState *thr = cur_thread_init();        \
-  const uptr caller_pc = GET_CALLER_PC();      \
-  ScopedInterceptor si(thr, #func, caller_pc); \
-  const uptr pc = GET_CURRENT_PC();            \
-  (void)pc;
+#define SCOPED_INTERCEPTOR_RAW(func, ...)            \
+  ThreadState *thr = cur_thread_init();              \
+  ScopedInterceptor si(thr, #func, GET_CALLER_PC()); \
+  UNUSED const uptr pc = GET_CURRENT_PC();
+
+#ifdef __powerpc64__
+// Debugging of crashes on powerpc after commit:
+// c80604f7a3 ("tsan: remove real func check from interceptors")
+// Somehow replacing if with DCHECK leads to strange failures in:
+// SanitizerCommon-tsan-powerpc64le-Linux :: Linux/ptrace.cpp
+// https://lab.llvm.org/buildbot/#/builders/105
+// https://lab.llvm.org/buildbot/#/builders/121
+// https://lab.llvm.org/buildbot/#/builders/57
+#  define CHECK_REAL_FUNC(func)                                          \
+    if (REAL(func) == 0) {                                               \
+      Report("FATAL: ThreadSanitizer: failed to intercept %s\n", #func); \
+      Die();                                                             \
+    }
+#else
+#  define CHECK_REAL_FUNC(func) DCHECK(REAL(func))
+#endif
 
 #define SCOPED_TSAN_INTERCEPTOR(func, ...)                                \
   SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__);                              \
-  if (REAL(func) == 0) {                                                  \
-    Report("FATAL: ThreadSanitizer: failed to intercept %s\n", #func);    \
-    Die();                                                                \
-  }                                                                       \
+  CHECK_REAL_FUNC(func);                                                  \
   if (!thr->is_inited || thr->ignore_interceptors || thr->in_ignored_lib) \
     return REAL(func)(__VA_ARGS__);
 

@@ -118,9 +118,8 @@ public:
   /// must return a Value of the converted type on success, an `llvm::None` if
   /// it failed but other materialization can be attempted, and `nullptr` on
   /// unrecoverable failure. It will only be called for (sub)types of `T`.
-  /// Materialization functions must be provided when a type conversion
-  /// results in more than one type, or if a type conversion may persist after
-  /// the conversion has finished.
+  /// Materialization functions must be provided when a type conversion may
+  /// persist after the conversion has finished.
   ///
   /// This method registers a materialization that will be called when
   /// converting an illegal block argument type, to a legal type.
@@ -354,7 +353,7 @@ protected:
   /// Construct a conversion pattern with the given converter, and forward the
   /// remaining arguments to RewritePattern.
   template <typename... Args>
-  ConversionPattern(TypeConverter &typeConverter, Args &&... args)
+  ConversionPattern(TypeConverter &typeConverter, Args &&...args)
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
@@ -383,6 +382,9 @@ public:
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
+  LogicalResult match(Operation *op) const final {
+    return match(cast<SourceOp>(op));
+  }
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
     rewrite(cast<SourceOp>(op), OpAdaptor(operands, op->getAttrDictionary()),
@@ -396,42 +398,22 @@ public:
                            rewriter);
   }
 
-  /// Rewrite and Match methods that operate on the SourceOp type and accept the
-  /// raw operand values.
-  /// NOTICE: These methods are deprecated and will be removed. All new code
-  /// should use the adaptor methods below instead.
-  virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
+  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// overridden by the derived pattern class.
+  virtual LogicalResult match(SourceOp op) const {
+    llvm_unreachable("must override match or matchAndRewrite");
+  }
+  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override matchAndRewrite or a rewrite method");
   }
   virtual LogicalResult
-  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
     if (failed(match(op)))
       return failure();
-    rewrite(op, OpAdaptor(operands, op->getAttrDictionary()), rewriter);
+    rewrite(op, adaptor, rewriter);
     return success();
-  }
-
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
-  /// overridden by the derived pattern class.
-  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    ValueRange operands = adaptor.getOperands();
-    rewrite(op,
-            ArrayRef<Value>(operands.getBase().get<const Value *>(),
-                            operands.size()),
-            rewriter);
-  }
-  virtual LogicalResult
-  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const {
-    ValueRange operands = adaptor.getOperands();
-    return matchAndRewrite(
-        op,
-        ArrayRef<Value>(operands.getBase().get<const Value *>(),
-                        operands.size()),
-        rewriter);
   }
 
 private:
@@ -551,9 +533,16 @@ public:
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
 
-  /// Return the converted value that replaces 'key'. Return 'key' if there is
-  /// no such a converted value.
+  /// Return the converted value of 'key' with a type defined by the type
+  /// converter of the currently executing pattern. Return nullptr in the case
+  /// of failure, the remapped value otherwise.
   Value getRemappedValue(Value key);
+
+  /// Return the converted values that replace 'keys' with types defined by the
+  /// type converter of the currently executing pattern. Returns failure if the
+  /// remap failed, success otherwise.
+  LogicalResult getRemappedValues(ValueRange keys,
+                                  SmallVectorImpl<Value> &results);
 
   //===--------------------------------------------------------------------===//
   // PatternRewriter Hooks

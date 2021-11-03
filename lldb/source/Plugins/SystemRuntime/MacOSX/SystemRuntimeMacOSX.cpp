@@ -976,19 +976,11 @@ SystemRuntimeMacOSX::ItemInfo SystemRuntimeMacOSX::ExtractItemInfoFromBuffer(
 }
 
 void SystemRuntimeMacOSX::Initialize() {
-  PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance);
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(),
+      "System runtime plugin for Mac OS X native libraries.", CreateInstance);
 }
 
 void SystemRuntimeMacOSX::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-lldb_private::ConstString SystemRuntimeMacOSX::GetPluginNameStatic() {
-  static ConstString g_name("systemruntime-macosx");
-  return g_name;
-}
-
-const char *SystemRuntimeMacOSX::GetPluginDescriptionStatic() {
-  return "System runtime plugin for Mac OS X native libraries.";
 }

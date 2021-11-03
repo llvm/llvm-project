@@ -16,6 +16,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/JSON.h"
 
 namespace lldb_private {
 
@@ -80,6 +81,18 @@ public:
 
   void RemoveSignal(int signo);
 
+  /// Track how many times signals are hit as stop reasons.
+  void IncrementSignalHitCount(int signo);
+
+  /// Get the hit count statistics for signals.
+  ///
+  /// Gettings statistics on the hit counts of signals can help explain why some
+  /// debug sessions are slow since each stop takes a few hundred ms and some
+  /// software use signals a lot and can cause slow debugging performance if
+  /// they are used too often. Even if a signal is not stopped at, it will auto
+  /// continue the process and a delay will happen.
+  llvm::json::Value GetHitCountStatistics() const;
+
   // Returns a current version of the data stored in this class. Version gets
   // incremented each time Set... method is called.
   uint64_t GetVersion() const;
@@ -99,6 +112,7 @@ protected:
     ConstString m_name;
     ConstString m_alias;
     std::string m_description;
+    uint32_t m_hit_count = 0;
     bool m_suppress : 1, m_stop : 1, m_notify : 1;
 
     Signal(const char *name, bool default_suppress, bool default_stop,

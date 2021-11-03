@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/Array.h"
 #include "src/string/memory_utils/utils.h"
-#include "utils/CPP/Array.h"
 #include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {

@@ -206,6 +206,12 @@ cc_library(
     includes = ["include"],
     linkopts = select({
         "@bazel_tools//src/conditions:windows": [],
+        "@bazel_tools//src/conditions:freebsd": [
+            "-pthread",
+            "-lexecinfo",
+            "-ldl",
+            "-lm",
+        ],
         "//conditions:default": [
             "-pthread",
             "-ldl",
@@ -3096,7 +3102,9 @@ cc_binary(
     name = "llvm-mca",
     srcs = glob([
         "tools/llvm-mca/*.cpp",
+        "tools/llvm-mca/*.h",
         "tools/llvm-mca/Views/*.cpp",
+        "tools/llvm-mca/Views/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,

@@ -35,9 +35,15 @@ private:
   SDValue getFFBX_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL, unsigned Opc) const;
 
 public:
+  /// \returns The minimum number of bits needed to store the value of \Op as an
+  /// unsigned integer. Truncating to this size and then zero-extending to the
+  /// original size will not change the value.
   static unsigned numBitsUnsigned(SDValue Op, SelectionDAG &DAG);
+
+  /// \returns The minimum number of bits needed to store the value of \Op as a
+  /// signed integer. Truncating to this size and then sign-extending to the
+  /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
-  static bool hasDefinedInitializer(const GlobalValue *GV);
 
 protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;

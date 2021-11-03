@@ -138,9 +138,9 @@ define <vscale x 4 x i1> @intrinsic_vmfge_mask_vv_nxv4f16_nxv4f16(<vscale x 4 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    vmfle.vv v8, v9, v8
 ; CHECK-NEXT:    vmv1r.v v11, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vmfle.vv v11, v10, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v11
+; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    ret
 entry:
   %mask = call <vscale x 4 x i1> @llvm.riscv.vmfge.nxv4f16(
@@ -346,9 +346,9 @@ define <vscale x 2 x i1> @intrinsic_vmfge_mask_vv_nxv2f32_nxv2f32(<vscale x 2 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vmfle.vv v8, v9, v8
 ; CHECK-NEXT:    vmv1r.v v11, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vmfle.vv v11, v10, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v11
+; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    ret
 entry:
   %mask = call <vscale x 2 x i1> @llvm.riscv.vmfge.nxv2f32(
@@ -502,9 +502,9 @@ define <vscale x 1 x i1> @intrinsic_vmfge_mask_vv_nxv1f64_nxv1f64(<vscale x 1 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vmfle.vv v8, v9, v8
 ; CHECK-NEXT:    vmv1r.v v11, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vmfle.vv v11, v10, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v11
+; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    ret
 entry:
   %mask = call <vscale x 1 x i1> @llvm.riscv.vmfge.nxv1f64(
@@ -759,7 +759,7 @@ define <vscale x 4 x i1> @intrinsic_vmfge_mask_vf_nxv4f16_f16(<vscale x 4 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmfge.vf v10, v8, ft0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmfge.mask.nxv4f16.f16(
@@ -955,7 +955,7 @@ define <vscale x 2 x i1> @intrinsic_vmfge_mask_vf_nxv2f32_f32(<vscale x 2 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmfge.vf v10, v8, ft0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i1> @llvm.riscv.vmfge.mask.nxv2f32.f32(
@@ -1102,7 +1102,7 @@ define <vscale x 1 x i1> @intrinsic_vmfge_mask_vf_nxv1f64_f64(<vscale x 1 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmfge.vf v10, v8, ft0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmfge.mask.nxv1f64.f64(
