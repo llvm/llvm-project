@@ -1046,7 +1046,8 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     // Insert the spill to the stack frame.
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, CS.getFrameIdx(), RC, TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg), CS.getFrameIdx(),
+                            RC, TRI);
   }
 
   return true;
