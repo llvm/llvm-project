@@ -601,6 +601,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f64, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::ppcf128, Custom);
 
   // To handle counter-based loop conditions.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
@@ -10428,6 +10430,16 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     return DAG.getMergeValues(RetOps, dl);
   }
+
+  case Intrinsic::ppc_unpack_longdouble: {
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
+           "Argument of long double unpack must be 0 or 1!");
+    return DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::f64, Op.getOperand(1),
+                       DAG.getConstant(!!(Idx->getSExtValue()), dl,
+                                       Idx->getValueType(0)));
+  }
+
   case Intrinsic::ppc_compare_exp_lt:
   case Intrinsic::ppc_compare_exp_gt:
   case Intrinsic::ppc_compare_exp_eq:
@@ -11107,6 +11119,15 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, NewInt));
     Results.push_back(NewInt.getValue(1));
+    break;
+  }
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrinsicID =
+        cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+
+    if (IntrinsicID == Intrinsic::ppc_pack_longdouble)
+      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::ppcf128,
+                                    N->getOperand(2), N->getOperand(1)));
     break;
   }
   case ISD::VAARG: {
