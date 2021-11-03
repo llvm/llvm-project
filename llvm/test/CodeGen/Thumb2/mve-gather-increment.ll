@@ -1457,45 +1457,62 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define void @shlor(i32* nocapture %x, i32* noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: shlor:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    blt .LBB16_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    adr r3, .LCPI16_0
-; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    vmov.i32 q1, #0x4
+; CHECK-NEXT:    adr.w lr, .LCPI16_0
+; CHECK-NEXT:    adr r4, .LCPI16_1
+; CHECK-NEXT:    adr r5, .LCPI16_2
+; CHECK-NEXT:    adr r6, .LCPI16_3
+; CHECK-NEXT:    vldrw.u32 q0, [r6]
+; CHECK-NEXT:    vldrw.u32 q1, [r5]
+; CHECK-NEXT:    vldrw.u32 q2, [r4]
+; CHECK-NEXT:    vldrw.u32 q3, [lr]
+; CHECK-NEXT:    vadd.i32 q0, q0, r1
+; CHECK-NEXT:    vadd.i32 q1, q1, r1
+; CHECK-NEXT:    vadd.i32 q2, q2, r1
+; CHECK-NEXT:    vadd.i32 q3, q3, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB16_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vshl.i32 q2, q0, #3
-; CHECK-NEXT:    vmov q4, q2
-; CHECK-NEXT:    vldrw.u32 q3, [r1, q2, uxtw #2]
-; CHECK-NEXT:    vorr.i32 q4, #0x2
-; CHECK-NEXT:    vldrw.u32 q5, [r1, q4, uxtw #2]
-; CHECK-NEXT:    vmov q4, q2
-; CHECK-NEXT:    vadd.i32 q3, q5, q3
-; CHECK-NEXT:    vorr.i32 q4, #0x4
-; CHECK-NEXT:    vldrw.u32 q5, [r1, q4, uxtw #2]
-; CHECK-NEXT:    vorr.i32 q2, #0x6
-; CHECK-NEXT:    vadd.i32 q3, q3, q5
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q4, [r1, q2, uxtw #2]
-; CHECK-NEXT:    vadd.i32 q2, q3, q4
-; CHECK-NEXT:    vstrw.32 q2, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q4, [q3, #128]!
+; CHECK-NEXT:    vldrw.u32 q5, [q2, #128]!
+; CHECK-NEXT:    vadd.i32 q4, q5, q4
+; CHECK-NEXT:    vldrw.u32 q5, [q1, #128]!
+; CHECK-NEXT:    vldrw.u32 q6, [q0, #128]!
+; CHECK-NEXT:    vadd.i32 q4, q4, q5
+; CHECK-NEXT:    vadd.i32 q4, q4, q6
+; CHECK-NEXT:    vstrw.32 q4, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB16_2
 ; CHECK-NEXT:  .LBB16_3: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.4:
 ; CHECK-NEXT:  .LCPI16_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:    .long 4294967168 @ 0xffffff80
+; CHECK-NEXT:    .long 4294967200 @ 0xffffffa0
+; CHECK-NEXT:    .long 4294967232 @ 0xffffffc0
+; CHECK-NEXT:    .long 4294967264 @ 0xffffffe0
+; CHECK-NEXT:  .LCPI16_1:
+; CHECK-NEXT:    .long 4294967176 @ 0xffffff88
+; CHECK-NEXT:    .long 4294967208 @ 0xffffffa8
+; CHECK-NEXT:    .long 4294967240 @ 0xffffffc8
+; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
+; CHECK-NEXT:  .LCPI16_2:
+; CHECK-NEXT:    .long 4294967184 @ 0xffffff90
+; CHECK-NEXT:    .long 4294967216 @ 0xffffffb0
+; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
+; CHECK-NEXT:    .long 4294967280 @ 0xfffffff0
+; CHECK-NEXT:  .LCPI16_3:
+; CHECK-NEXT:    .long 4294967192 @ 0xffffff98
+; CHECK-NEXT:    .long 4294967224 @ 0xffffffb8
+; CHECK-NEXT:    .long 4294967256 @ 0xffffffd8
+; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
 entry:
   %cmp23 = icmp sgt i32 %n, 0
   br i1 %cmp23, label %vector.ph, label %for.cond.cleanup
