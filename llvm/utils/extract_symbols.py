@@ -126,6 +126,11 @@ def readobj_is_32bit_windows(lib):
             return (match.group(1) == 'COFF-i386')
     return False
 
+# On AIX, there isn't an easy way to detect 32-bit windows objects with the system toolchain,
+# so just assume false.
+def aix_is_32bit_windows(lib):
+    return False
+
 # MSVC mangles names to ?<identifier_mangling>@<type_mangling>. By examining the
 # identifier/type mangling we can decide which symbols could possibly be
 # required and which we can discard.
@@ -357,7 +362,7 @@ if __name__ == '__main__':
               'objdump' : (None, objdump_is_32bit_windows),
               'llvm-readobj' : (readobj_get_symbols, readobj_is_32bit_windows) }
     get_symbols = None
-    is_32bit_windows = None
+    is_32bit_windows = aix_is_32bit_windows if sys.platform.startswith('aix') else None
     # If we have a tools argument then use that for the list of tools to check
     if args.tools:
         tool_exes = args.tools
