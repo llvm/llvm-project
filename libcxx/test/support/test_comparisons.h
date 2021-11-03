@@ -176,13 +176,13 @@ void AssertComparisons2ConvertibleToBool()
 struct LessAndEqComp {
   int value;
 
-  LessAndEqComp(int v) : value(v) {}
+  TEST_CONSTEXPR_CXX14 LessAndEqComp(int v) : value(v) {}
 
-  friend bool operator<(const LessAndEqComp& lhs, const LessAndEqComp& rhs) {
+  friend TEST_CONSTEXPR_CXX14 bool operator<(const LessAndEqComp& lhs, const LessAndEqComp& rhs) {
     return lhs.value < rhs.value;
   }
 
-  friend bool operator==(const LessAndEqComp& lhs, const LessAndEqComp& rhs) {
+  friend TEST_CONSTEXPR_CXX14 bool operator==(const LessAndEqComp& lhs, const LessAndEqComp& rhs) {
     return lhs.value == rhs.value;
   }
 };
