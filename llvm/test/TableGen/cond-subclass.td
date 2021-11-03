@@ -1,6 +1,6 @@
 // Check that !cond with operands of different subtypes can
 // initialize a supertype variable.
-// RUN: llvm-tblgen %s | FileCheck %s
+// RUN: llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s
 // XFAIL: vg_leak
 
 class E<int dummy> {}

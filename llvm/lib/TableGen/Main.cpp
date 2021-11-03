@@ -55,6 +55,10 @@ WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 static cl::opt<bool>
 TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
 
+static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
+    "no-warn-on-unused-template-args",
+    cl::desc("Disable unused template argument warnings."));
+
 static int reportError(const char *ProgName, Twine Msg) {
   errs() << ProgName << ": " << Msg;
   errs().flush();
@@ -107,7 +111,7 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
 
-  TGParser Parser(SrcMgr, MacroNames, Records);
+  TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
   if (Parser.ParseFile())
     return 1;

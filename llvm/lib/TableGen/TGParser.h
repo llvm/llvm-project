@@ -160,10 +160,13 @@ class TGParser {
                       // exist.
   };
 
+  bool NoWarnOnUnusedTemplateArgs = false;
+
 public:
-  TGParser(SourceMgr &SM, ArrayRef<std::string> Macros,
-           RecordKeeper &records)
-    : Lex(SM, Macros), CurMultiClass(nullptr), Records(records) {}
+  TGParser(SourceMgr &SM, ArrayRef<std::string> Macros, RecordKeeper &records,
+           const bool NoWarnOnUnusedTemplateArgs = false)
+      : Lex(SM, Macros), CurMultiClass(nullptr), Records(records),
+        NoWarnOnUnusedTemplateArgs(NoWarnOnUnusedTemplateArgs) {}
 
   /// ParseFile - Main entrypoint for parsing a tblgen file.  These parser
   /// routines return true on error, or false on success.
