@@ -144,6 +144,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasTSXLDTRK = false;
   bool HasUINTR = false;
   bool HasCRC32 = false;
+  bool HasX87 = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;

@@ -203,6 +203,8 @@ protected:
   bool HasFloat16;
   bool HasBFloat16;
   bool HasIbm128;
+  bool HasLongDouble;
+  bool HasFPReturn;
   bool HasStrictFP;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
@@ -600,6 +602,13 @@ public:
 
   /// Determine whether the __ibm128 type is supported on this target.
   virtual bool hasIbm128Type() const { return HasIbm128; }
+
+  /// Determine whether the long double type is supported on this target.
+  virtual bool hasLongDoubleType() const { return HasLongDouble; }
+
+  /// Determine whether return of a floating point value is supported
+  /// on this target.
+  virtual bool hasFPReturn() const { return HasFPReturn; }
 
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }

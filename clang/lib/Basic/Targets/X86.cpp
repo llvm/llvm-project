@@ -338,6 +338,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasUINTR = true;
     } else if (Feature == "+crc32") {
       HasCRC32 = true;
+    } else if (Feature == "+x87") {
+      HasX87 = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -379,6 +381,14 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
   SimdDefaultAlign =
       hasFeature("avx512f") ? 512 : hasFeature("avx") ? 256 : 128;
+
+  if (!HasX87) {
+    if (LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
+      HasLongDouble = false;
+    if (getTriple().getArch() == llvm::Triple::x86)
+      HasFPReturn = false;
+  }
+
   return true;
 }
 
@@ -1038,6 +1048,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("x86", true)
       .Case("x86_32", getTriple().getArch() == llvm::Triple::x86)
       .Case("x86_64", getTriple().getArch() == llvm::Triple::x86_64)
+      .Case("x87", HasX87)
       .Case("xop", XOPLevel >= XOP)
       .Case("xsave", HasXSAVE)
       .Case("xsavec", HasXSAVEC)
