@@ -128,10 +128,7 @@ public:
   explicit ModuleAddressSanitizerPass(
       bool CompileKernel = false, bool Recover = false, bool UseGlobalGC = true,
       bool UseOdrIndicator = false,
-      AsanDtorKind DestructorKind = AsanDtorKind::Global,
-      bool UseAfterScope = false,
-      AsanDetectStackUseAfterReturnMode UseAfterReturn =
-          AsanDetectStackUseAfterReturnMode::Runtime);
+      AsanDtorKind DestructorKind = AsanDtorKind::Global);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
@@ -143,8 +140,6 @@ private:
   bool UseGlobalGC;
   bool UseOdrIndicator;
   AsanDtorKind DestructorKind;
-  bool UseAfterScope;
-  AsanDetectStackUseAfterReturnMode UseAfterReturn;
 };
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
