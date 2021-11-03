@@ -1194,39 +1194,41 @@ func @kernel_3d(%arga: tensor<?x?xf32>,
 }
 
 // CHECK-LABEL:   func @sum_reduction(
-// CHECK-SAME:                        %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                        %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
-// CHECK-DAG:           %[[VAL_2:.*]] = arith.constant 2 : index
-// CHECK-DAG:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
+// CHECK-SAME:       %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
+// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}>>
+// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}>>
+// CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
 // CHECK:           %[[VAL_10:.*]] = memref.alloc() : memref<f32>
 // CHECK:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<f32> to memref<f32>
-// CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
-// CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_11]] to %[[VAL_12]] step %[[VAL_4]] {
-// CHECK:             %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xindex>
-// CHECK:             %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_4]] : index
-// CHECK:             %[[VAL_16:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_15]]] : memref<?xindex>
-// CHECK:             scf.for %[[VAL_17:.*]] = %[[VAL_14]] to %[[VAL_16]] step %[[VAL_4]] {
-// CHECK:               %[[VAL_18:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_17]]] : memref<?xindex>
-// CHECK:               %[[VAL_19:.*]] = arith.addi %[[VAL_17]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_20:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_19]]] : memref<?xindex>
-// CHECK:               %[[VAL_21:.*]] = memref.load %[[VAL_10]][] : memref<f32>
-// CHECK:               %[[VAL_22:.*]] = scf.for %[[VAL_23:.*]] = %[[VAL_18]] to %[[VAL_20]] step %[[VAL_4]] iter_args(%[[VAL_24:.*]] = %[[VAL_21]]) -> (f32) {
-// CHECK:                 %[[VAL_25:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_23]]] : memref<?xf32>
-// CHECK:                 %[[VAL_26:.*]] = arith.addf %[[VAL_24]], %[[VAL_25]] : f32
-// CHECK:                 scf.yield %[[VAL_26]] : f32
+// CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_10]][] : memref<f32>
+// CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_2]]] : memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_3]] iter_args(%[[VAL_16:.*]] = %[[VAL_11]]) -> (f32) {
+// CHECK:             %[[VAL_17:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_15]]] : memref<?xindex>
+// CHECK:             %[[VAL_18:.*]] = arith.addi %[[VAL_15]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_19:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_18]]] : memref<?xindex>
+// CHECK:             %[[VAL_20:.*]] = scf.for %[[VAL_21:.*]] = %[[VAL_17]] to %[[VAL_19]] step %[[VAL_3]] iter_args(%[[VAL_22:.*]] = %[[VAL_16]]) -> (f32) {
+// CHECK:               %[[VAL_23:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_21]]] : memref<?xindex>
+// CHECK:               %[[VAL_24:.*]] = arith.addi %[[VAL_21]], %[[VAL_3]] : index
+// CHECK:               %[[VAL_25:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_24]]] : memref<?xindex>
+// CHECK:               %[[VAL_26:.*]] = scf.for %[[VAL_27:.*]] = %[[VAL_23]] to %[[VAL_25]] step %[[VAL_3]] iter_args(%[[VAL_28:.*]] = %[[VAL_22]]) -> (f32) {
+// CHECK:                 %[[VAL_29:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_27]]] : memref<?xf32>
+// CHECK:                 %[[VAL_30:.*]] = arith.addf %[[VAL_28]], %[[VAL_29]] : f32
+// CHECK:                 scf.yield %[[VAL_30]] : f32
 // CHECK:               }
-// CHECK:               memref.store %[[VAL_27:.*]], %[[VAL_10]][] : memref<f32>
+// CHECK:               scf.yield %[[VAL_26]] : f32
 // CHECK:             }
+// CHECK:             scf.yield %[[VAL_20]] : f32
 // CHECK:           }
-// CHECK:           %[[VAL_28:.*]] = memref.tensor_load %[[VAL_10]] : memref<f32>
-// CHECK:           return %[[VAL_28]] : tensor<f32>
+// CHECK:           memref.store %[[VAL_14]], %[[VAL_10]][] : memref<f32>
+// CHECK:           %[[VAL_34:.*]] = memref.tensor_load %[[VAL_10]] : memref<f32>
+// CHECK:           return %[[VAL_34]] : tensor<f32>
 // CHECK:         }
 func @sum_reduction(%arga: tensor<10x20x30xf32, #Tsss>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_sum_reduction
@@ -1250,35 +1252,37 @@ func @sum_reduction(%arga: tensor<10x20x30xf32, #Tsss>, %argx: tensor<f32>) -> t
 }
 
 // CHECK-LABEL:   func @sum_reduction_inv(
-// CHECK-SAME:                            %[[VAL_0:.*]]: tensor<?x?x?xf32>,
-// CHECK-SAME:                            %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                            %[[VAL_2:.*]]: tensor<f32>) -> tensor<f32> {
-// CHECK-DAG:           %[[VAL_3:.*]] = arith.constant 2 : index
-// CHECK-DAG:           %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_5]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32>
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?x?xf32>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32>
+// CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xf32>
 // CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_0]] : memref<?x?x?xf32>
-// CHECK:           %[[VAL_9:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
+// CHECK:           %[[VAL_9:.*]] = tensor.dim %[[VAL_1]], %[[VAL_5]] : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<f32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<f32>
 // CHECK:           memref.copy %[[VAL_11]], %[[VAL_12]] : memref<f32> to memref<f32>
-// CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_9]] step %[[VAL_5]] {
-// CHECK:             %[[VAL_14:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_13]]] : memref<?xf32>
-// CHECK:             scf.for %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_5]] {
-// CHECK:               %[[VAL_16:.*]] = memref.load %[[VAL_12]][] : memref<f32>
-// CHECK:               %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_4]] to %[[VAL_7]] step %[[VAL_5]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (f32) {
-// CHECK:                 %[[VAL_20:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_13]], %[[VAL_15]], %[[VAL_18]]] : memref<?x?x?xf32>
-// CHECK:                 %[[VAL_21:.*]] = arith.mulf %[[VAL_20]], %[[VAL_14]] : f32
-// CHECK:                 %[[VAL_22:.*]] = arith.addf %[[VAL_19]], %[[VAL_21]] : f32
-// CHECK:                 scf.yield %[[VAL_22]] : f32
+// CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_12]][] : memref<f32>
+// CHECK:           %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_9]] step %[[VAL_3]] iter_args(%[[VAL_16:.*]] = %[[VAL_13]]) -> (f32) {
+// CHECK:             %[[VAL_17:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_15]]] : memref<?xf32>
+// CHECK:             %[[VAL_18:.*]] = scf.for %[[VAL_19:.*]] = %[[VAL_5]] to %[[VAL_6]] step %[[VAL_3]] iter_args(%[[VAL_20:.*]] = %[[VAL_16]]) -> (f32) {
+// CHECK:               %[[VAL_21:.*]] = scf.for %[[VAL_22:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_3]] iter_args(%[[VAL_23:.*]] = %[[VAL_20]]) -> (f32) {
+// CHECK:                 %[[VAL_24:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_15]], %[[VAL_19]], %[[VAL_22]]] : memref<?x?x?xf32>
+// CHECK:                 %[[VAL_25:.*]] = arith.mulf %[[VAL_24]], %[[VAL_17]] : f32
+// CHECK:                 %[[VAL_26:.*]] = arith.addf %[[VAL_23]], %[[VAL_25]] : f32
+// CHECK:                 scf.yield %[[VAL_26]] : f32
 // CHECK:               }
-// CHECK:               memref.store %[[VAL_23:.*]], %[[VAL_12]][] : memref<f32>
+// CHECK:               scf.yield %[[VAL_21]] : f32
 // CHECK:             }
+// CHECK:             scf.yield %[[VAL_18]] : f32
 // CHECK:           }
-// CHECK:           %[[VAL_24:.*]] = memref.tensor_load %[[VAL_12]] : memref<f32>
-// CHECK:           return %[[VAL_24]] : tensor<f32>
+// CHECK:           memref.store %[[VAL_14]], %[[VAL_12]][] : memref<f32>
+// CHECK:           %[[VAL_30:.*]] = memref.tensor_load %[[VAL_12]] : memref<f32>
+// CHECK:           return %[[VAL_30]] : tensor<f32>
 // CHECK:         }
 func @sum_reduction_inv(%arga: tensor<?x?x?xf32>,
                         %argb: tensor<?xf32, #Td>,

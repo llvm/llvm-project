@@ -870,12 +870,12 @@ func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 }
 
 // CHECK-LABEL:   func @matvec(
-// CHECK-SAME:                 %[[VAL_0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32xf32>,
-// CHECK-SAME:                 %[[VAL_2:.*]]: tensor<16xf32>) -> tensor<16xf32> {
-// CHECK-DAG:           %[[VAL_3:.*]] = arith.constant 16 : index
-// CHECK-DAG:           %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_5:.*]] = arith.constant 1 : index
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32xf32>,
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<16xf32>) -> tensor<16xf32> {
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 16 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<16x32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
@@ -884,10 +884,10 @@ func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 // CHECK:           %[[VAL_11:.*]] = memref.alloc() : memref<16xf32>
 // CHECK:           memref.copy %[[VAL_10]], %[[VAL_11]] : memref<16xf32> to memref<16xf32>
 // CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
-// CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_12]]] : memref<?xindex>
-// CHECK:             %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_5]] : index
-// CHECK:             %[[VAL_15:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_14]]] : memref<?xindex>
-// CHECK:             %[[VAL_16:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_12]]] : memref<16xf32>
+// CHECK-DAG:         %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_12]]] : memref<?xindex>
+// CHECK-DAG:         %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_5]] : index
+// CHECK-DAG:         %[[VAL_15:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_14]]] : memref<?xindex>
+// CHECK-DAG:         %[[VAL_16:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_12]]] : memref<16xf32>
 // CHECK:             %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_13]] to %[[VAL_15]] step %[[VAL_5]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (f32) {
 // CHECK:               %[[VAL_20:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_18]]] : memref<?xindex>
 // CHECK:               %[[VAL_21:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_18]]] : memref<?xf32>
@@ -896,7 +896,7 @@ func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 // CHECK:               %[[VAL_24:.*]] = arith.addf %[[VAL_23]], %[[VAL_19]] : f32
 // CHECK:               scf.yield %[[VAL_24]] : f32
 // CHECK:             }
-// CHECK:             memref.store %[[VAL_25:.*]], %[[VAL_11]]{{\[}}%[[VAL_12]]] : memref<16xf32>
+// CHECK:             memref.store %[[VAL_17]], %[[VAL_11]]{{\[}}%[[VAL_12]]] : memref<16xf32>
 // CHECK:           }
 // CHECK:           %[[VAL_26:.*]] = memref.tensor_load %[[VAL_11]] : memref<16xf32>
 // CHECK:           return %[[VAL_26]] : tensor<16xf32>
@@ -923,30 +923,31 @@ func @matvec(%argA: tensor<16x32xf32, #Tds>, %argb: tensor<32xf32>, %argx: tenso
 }
 
 // CHECK-LABEL:   func @sum_reduction(
-// CHECK-SAME:                        %[[VAL_0:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                        %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
-// CHECK-DAG:           %[[VAL_2:.*]] = arith.constant 10 : index
-// CHECK-DAG:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_7:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
 // CHECK:           %[[VAL_8:.*]] = memref.alloc() : memref<f32>
 // CHECK:           memref.copy %[[VAL_7]], %[[VAL_8]] : memref<f32> to memref<f32>
-// CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_3]] to %[[VAL_2]] step %[[VAL_4]] {
-// CHECK:             %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_9]]] : memref<?xindex>
-// CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_9]], %[[VAL_4]] : index
-// CHECK:             %[[VAL_12:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_11]]] : memref<?xindex>
-// CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_8]][] : memref<f32>
-// CHECK:             %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_10]] to %[[VAL_12]] step %[[VAL_4]] iter_args(%[[VAL_16:.*]] = %[[VAL_13]]) -> (f32) {
-// CHECK:               %[[VAL_17:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_15]]] : memref<?xf32>
-// CHECK:               %[[VAL_18:.*]] = arith.addf %[[VAL_16]], %[[VAL_17]] : f32
-// CHECK:               scf.yield %[[VAL_18]] : f32
+// CHECK:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<f32>
+// CHECK:           %[[VAL_10:.*]] = scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_2]] step %[[VAL_3]] iter_args(%[[VAL_12:.*]] = %[[VAL_9]]) -> (f32) {
+// CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_11]]] : memref<?xindex>
+// CHECK:             %[[VAL_14:.*]] = arith.addi %[[VAL_11]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_15:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_14]]] : memref<?xindex>
+// CHECK:             %[[VAL_16:.*]] = scf.for %[[VAL_17:.*]] = %[[VAL_13]] to %[[VAL_15]] step %[[VAL_3]] iter_args(%[[VAL_18:.*]] = %[[VAL_12]]) -> (f32) {
+// CHECK:               %[[VAL_19:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_17]]] : memref<?xf32>
+// CHECK:               %[[VAL_20:.*]] = arith.addf %[[VAL_18]], %[[VAL_19]] : f32
+// CHECK:               scf.yield %[[VAL_20]] : f32
 // CHECK:             }
-// CHECK:             memref.store %[[VAL_19:.*]], %[[VAL_8]][] : memref<f32>
+// CHECK:             scf.yield %[[VAL_16]] : f32
 // CHECK:           }
-// CHECK:           %[[VAL_20:.*]] = memref.tensor_load %[[VAL_8]] : memref<f32>
-// CHECK:           return %[[VAL_20]] : tensor<f32>
+// CHECK:           memref.store %[[VAL_10]], %[[VAL_8]][] : memref<f32>
+// CHECK:           %[[VAL_23:.*]] = memref.tensor_load %[[VAL_8]] : memref<f32>
+// CHECK:           return %[[VAL_23]] : tensor<f32>
 // CHECK:         }
 func @sum_reduction(%arga: tensor<10x20xf32, #Tds>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_sum_reduction
@@ -1020,10 +1021,10 @@ func @scale(%arga: tensor<?x?xf64, #Tds>, %argx: tensor<?x?xf64>) -> tensor<?x?x
 }
 
 // CHECK-LABEL:   func @sampled_dense_dense(
-// CHECK-SAME:                              %[[VAL_0:.*0]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                              %[[VAL_1:.*1]]: tensor<?x?xf32>,
-// CHECK-SAME:                              %[[VAL_2:.*2]]: tensor<?x?xf32>,
-// CHECK-SAME:                              %[[VAL_3:.*3]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
+// CHECK-SAME:      %[[VAL_0:.*0]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_1:.*1]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[VAL_2:.*2]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[VAL_3:.*3]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
@@ -1047,9 +1048,9 @@ func @scale(%arga: tensor<?x?xf64, #Tds>, %argx: tensor<?x?xf64>) -> tensor<?x?x
 // CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_20]], %[[VAL_5]] : index
 // CHECK:             %[[VAL_24:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_23]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_25:.*]] = %[[VAL_22]] to %[[VAL_24]] step %[[VAL_5]] {
-// CHECK:               %[[VAL_26:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_25]]] : memref<?xindex>
-// CHECK:               %[[VAL_27:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_25]]] : memref<?xf32>
-// CHECK:               %[[VAL_28:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_21]], %[[VAL_26]]] : memref<?x?xf32>
+// CHECK-DAG:           %[[VAL_26:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_25]]] : memref<?xindex>
+// CHECK-DAG:           %[[VAL_27:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_25]]] : memref<?xf32>
+// CHECK-DAG:           %[[VAL_28:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_21]], %[[VAL_26]]] : memref<?x?xf32>
 // CHECK:               %[[VAL_29:.*]] = scf.for %[[VAL_30:.*]] = %[[VAL_4]] to %[[VAL_12]] step %[[VAL_5]] iter_args(%[[VAL_31:.*]] = %[[VAL_28]]) -> (f32) {
 // CHECK:                 %[[VAL_32:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_21]], %[[VAL_30]]] : memref<?x?xf32>
 // CHECK:                 %[[VAL_33:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_30]], %[[VAL_26]]] : memref<?x?xf32>
@@ -1058,7 +1059,7 @@ func @scale(%arga: tensor<?x?xf64, #Tds>, %argx: tensor<?x?xf64>) -> tensor<?x?x
 // CHECK:                 %[[VAL_36:.*]] = arith.addf %[[VAL_31]], %[[VAL_35]] : f32
 // CHECK:                 scf.yield %[[VAL_36]] : f32
 // CHECK:               }
-// CHECK:               memref.store %[[VAL_37:.*]], %[[VAL_17]]{{\[}}%[[VAL_21]], %[[VAL_26]]] : memref<?x?xf32>
+// CHECK:               memref.store %[[VAL_29]], %[[VAL_17]]{{\[}}%[[VAL_21]], %[[VAL_26]]] : memref<?x?xf32>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_38:.*]] = memref.tensor_load %[[VAL_17]] : memref<?x?xf32>
@@ -1094,25 +1095,25 @@ func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
 }
 
 // CHECK-LABEL:   func @sum_kernel_with_inv(
-// CHECK-SAME:                              %[[VAL_0:.*0]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                              %[[VAL_1:.*1]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                              %[[VAL_2:.*2]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
-// CHECK-SAME:                              %[[VAL_3:.*3]]: tensor<?xf32>,
-// CHECK-SAME:                              %[[VAL_4:.*4]]: tensor<f32>,
-// CHECK-SAME:                              %[[VAL_5:.*5]]: tensor<?xf32>) -> tensor<?xf32> {
-// CHECK-DAG:           %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_7:.*]] = arith.constant true
-// CHECK-DAG:           %[[VAL_8:.*]] = arith.constant 1 : index
+// CHECK-SAME:      %[[VAL_0:.*0]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_1:.*1]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_2:.*2]]: tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:      %[[VAL_3:.*3]]: tensor<?xf32>,
+// CHECK-SAME:      %[[VAL_4:.*4]]: tensor<f32>,
+// CHECK-SAME:      %[[VAL_5:.*5]]: tensor<?xf32>) -> tensor<?xf32> {
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_8:.*]] = arith.constant true
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_6]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_6]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_7]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_7]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_15:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_7]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_15:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_7]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_16:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.pointers %[[VAL_2]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
-// CHECK:           %[[VAL_18:.*]] = sparse_tensor.indices %[[VAL_2]], %[[VAL_8]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.pointers %[[VAL_2]], %[[VAL_7]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.indices %[[VAL_2]], %[[VAL_7]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
 // CHECK:           %[[VAL_19:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_20:.*]] = memref.buffer_cast %[[VAL_3]] : memref<?xf32>
 // CHECK:           %[[VAL_21:.*]] = memref.buffer_cast %[[VAL_4]] : memref<f32>
@@ -1122,7 +1123,7 @@ func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
 // CHECK:           memref.copy %[[VAL_23]], %[[VAL_24]] : memref<?xf32> to memref<?xf32>
 // CHECK:           %[[VAL_25:.*]] = memref.load %[[VAL_21]][] : memref<f32>
 // CHECK:           %[[VAL_26:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_6]]] : memref<?xindex>
-// CHECK:           %[[VAL_27:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_8]]] : memref<?xindex>
+// CHECK:           %[[VAL_27:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_7]]] : memref<?xindex>
 // CHECK:           %[[VAL_28:.*]]:2 = scf.while (%[[VAL_29:.*]] = %[[VAL_26]], %[[VAL_30:.*]] = %[[VAL_6]]) : (index, index) -> (index, index) {
 // CHECK:             %[[VAL_31:.*]] = arith.cmpi ult, %[[VAL_29]], %[[VAL_27]] : index
 // CHECK:             scf.condition(%[[VAL_31]]) %[[VAL_29]], %[[VAL_30]] : index, index
@@ -1131,158 +1132,158 @@ func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
 // CHECK:             %[[VAL_34:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_32]]] : memref<?xindex>
 // CHECK:             %[[VAL_35:.*]] = arith.cmpi eq, %[[VAL_34]], %[[VAL_33]] : index
 // CHECK:             scf.if %[[VAL_35]] {
-// CHECK:               %[[VAL_36:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:               %[[VAL_37:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_32]]] : memref<?xindex>
-// CHECK:               %[[VAL_38:.*]] = arith.addi %[[VAL_32]], %[[VAL_8]] : index
-// CHECK:               %[[VAL_39:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_38]]] : memref<?xindex>
-// CHECK:               %[[VAL_40:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_33]]] : memref<?xindex>
-// CHECK:               %[[VAL_41:.*]] = arith.addi %[[VAL_33]], %[[VAL_8]] : index
-// CHECK:               %[[VAL_42:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_41]]] : memref<?xindex>
-// CHECK:               %[[VAL_43:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_33]]] : memref<?xindex>
-// CHECK:               %[[VAL_44:.*]] = arith.addi %[[VAL_33]], %[[VAL_8]] : index
-// CHECK:               %[[VAL_45:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_44]]] : memref<?xindex>
-// CHECK:               %[[VAL_46:.*]]:3 = scf.while (%[[VAL_47:.*]] = %[[VAL_37]], %[[VAL_48:.*]] = %[[VAL_40]], %[[VAL_49:.*]] = %[[VAL_43]]) : (index, index, index) -> (index, index, index) {
-// CHECK:                 %[[VAL_50:.*]] = arith.cmpi ult, %[[VAL_47]], %[[VAL_39]] : index
-// CHECK:                 %[[VAL_51:.*]] = arith.cmpi ult, %[[VAL_48]], %[[VAL_42]] : index
-// CHECK:                 %[[VAL_52:.*]] = arith.andi %[[VAL_50]], %[[VAL_51]] : i1
-// CHECK:                 %[[VAL_53:.*]] = arith.cmpi ult, %[[VAL_49]], %[[VAL_45]] : index
+// CHECK:               %[[VAL_36:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:               %[[VAL_37:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:               %[[VAL_38:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_32]]] : memref<?xindex>
+// CHECK:               %[[VAL_39:.*]] = arith.addi %[[VAL_32]], %[[VAL_7]] : index
+// CHECK:               %[[VAL_40:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_39]]] : memref<?xindex>
+// CHECK:               %[[VAL_41:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_33]]] : memref<?xindex>
+// CHECK:               %[[VAL_42:.*]] = arith.addi %[[VAL_33]], %[[VAL_7]] : index
+// CHECK:               %[[VAL_43:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_42]]] : memref<?xindex>
+// CHECK:               %[[VAL_44:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_33]]] : memref<?xindex>
+// CHECK:               %[[VAL_45:.*]] = arith.addi %[[VAL_33]], %[[VAL_7]] : index
+// CHECK:               %[[VAL_46:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_45]]] : memref<?xindex>
+// CHECK:               %[[VAL_47:.*]]:4 = scf.while (%[[VAL_48:.*]] = %[[VAL_38]], %[[VAL_49:.*]] = %[[VAL_41]], %[[VAL_50:.*]] = %[[VAL_44]], %[[VAL_51:.*]] = %[[VAL_36]]) : (index, index, index, f32) -> (index, index, index, f32) {
+// CHECK:                 %[[VAL_52:.*]] = arith.cmpi ult, %[[VAL_48]], %[[VAL_40]] : index
+// CHECK:                 %[[VAL_53:.*]] = arith.cmpi ult, %[[VAL_49]], %[[VAL_43]] : index
 // CHECK:                 %[[VAL_54:.*]] = arith.andi %[[VAL_52]], %[[VAL_53]] : i1
-// CHECK:                 scf.condition(%[[VAL_54]]) %[[VAL_47]], %[[VAL_48]], %[[VAL_49]] : index, index, index
+// CHECK:                 %[[VAL_55:.*]] = arith.cmpi ult, %[[VAL_50]], %[[VAL_46]] : index
+// CHECK:                 %[[VAL_56:.*]] = arith.andi %[[VAL_54]], %[[VAL_55]] : i1
+// CHECK:                 scf.condition(%[[VAL_56]]) %[[VAL_48]], %[[VAL_49]], %[[VAL_50]], %[[VAL_51]] : index, index, index, f32
 // CHECK:               } do {
-// CHECK:               ^bb0(%[[VAL_55:.*]]: index, %[[VAL_56:.*]]: index, %[[VAL_57:.*]]: index):
-// CHECK:                 %[[VAL_58:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_55]]] : memref<?xindex>
-// CHECK:                 %[[VAL_59:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_56]]] : memref<?xindex>
-// CHECK:                 %[[VAL_60:.*]] = arith.cmpi ult, %[[VAL_59]], %[[VAL_58]] : index
-// CHECK:                 %[[VAL_61:.*]] = select %[[VAL_60]], %[[VAL_59]], %[[VAL_58]] : index
-// CHECK:                 %[[VAL_62:.*]] = memref.load %[[VAL_18]]{{\[}}%[[VAL_57]]] : memref<?xindex>
+// CHECK:               ^bb0(%[[VAL_57:.*]]: index, %[[VAL_58:.*]]: index, %[[VAL_59:.*]]: index, %[[VAL_60:.*]]: f32):
+// CHECK:                 %[[VAL_61:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_57]]] : memref<?xindex>
+// CHECK:                 %[[VAL_62:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_58]]] : memref<?xindex>
 // CHECK:                 %[[VAL_63:.*]] = arith.cmpi ult, %[[VAL_62]], %[[VAL_61]] : index
 // CHECK:                 %[[VAL_64:.*]] = select %[[VAL_63]], %[[VAL_62]], %[[VAL_61]] : index
-// CHECK:                 %[[VAL_65:.*]] = arith.cmpi eq, %[[VAL_58]], %[[VAL_64]] : index
-// CHECK:                 %[[VAL_66:.*]] = arith.cmpi eq, %[[VAL_59]], %[[VAL_64]] : index
-// CHECK:                 %[[VAL_67:.*]] = arith.andi %[[VAL_65]], %[[VAL_66]] : i1
-// CHECK:                 %[[VAL_68:.*]] = arith.cmpi eq, %[[VAL_62]], %[[VAL_64]] : index
-// CHECK:                 %[[VAL_69:.*]] = arith.andi %[[VAL_67]], %[[VAL_68]] : i1
-// CHECK:                 scf.if %[[VAL_69]] {
-// CHECK:                   %[[VAL_70:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:                   %[[VAL_71:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_55]]] : memref<?xf32>
-// CHECK:                   %[[VAL_72:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_56]]] : memref<?xf32>
-// CHECK:                   %[[VAL_73:.*]] = arith.mulf %[[VAL_71]], %[[VAL_72]] : f32
-// CHECK:                   %[[VAL_74:.*]] = arith.mulf %[[VAL_73]], %[[VAL_36]] : f32
-// CHECK:                   %[[VAL_75:.*]] = arith.mulf %[[VAL_74]], %[[VAL_25]] : f32
-// CHECK:                   %[[VAL_76:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_57]]] : memref<?xf32>
-// CHECK:                   %[[VAL_77:.*]] = arith.addf %[[VAL_75]], %[[VAL_76]] : f32
-// CHECK:                   %[[VAL_78:.*]] = arith.addf %[[VAL_70]], %[[VAL_77]] : f32
-// CHECK:                   memref.store %[[VAL_78]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:                 %[[VAL_65:.*]] = memref.load %[[VAL_18]]{{\[}}%[[VAL_59]]] : memref<?xindex>
+// CHECK:                 %[[VAL_66:.*]] = arith.cmpi ult, %[[VAL_65]], %[[VAL_64]] : index
+// CHECK:                 %[[VAL_67:.*]] = select %[[VAL_66]], %[[VAL_65]], %[[VAL_64]] : index
+// CHECK:                 %[[VAL_68:.*]] = arith.cmpi eq, %[[VAL_61]], %[[VAL_67]] : index
+// CHECK:                 %[[VAL_69:.*]] = arith.cmpi eq, %[[VAL_62]], %[[VAL_67]] : index
+// CHECK:                 %[[VAL_70:.*]] = arith.andi %[[VAL_68]], %[[VAL_69]] : i1
+// CHECK:                 %[[VAL_71:.*]] = arith.cmpi eq, %[[VAL_65]], %[[VAL_67]] : index
+// CHECK:                 %[[VAL_72:.*]] = arith.andi %[[VAL_70]], %[[VAL_71]] : i1
+// CHECK:                 %[[VAL_73:.*]] = scf.if %[[VAL_72]] -> (f32) {
+// CHECK:                   %[[VAL_74:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_57]]] : memref<?xf32>
+// CHECK:                   %[[VAL_75:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_58]]] : memref<?xf32>
+// CHECK:                   %[[VAL_76:.*]] = arith.mulf %[[VAL_74]], %[[VAL_75]] : f32
+// CHECK:                   %[[VAL_77:.*]] = arith.mulf %[[VAL_76]], %[[VAL_37]] : f32
+// CHECK:                   %[[VAL_78:.*]] = arith.mulf %[[VAL_77]], %[[VAL_25]] : f32
+// CHECK:                   %[[VAL_79:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_59]]] : memref<?xf32>
+// CHECK:                   %[[VAL_80:.*]] = arith.addf %[[VAL_78]], %[[VAL_79]] : f32
+// CHECK:                   %[[VAL_81:.*]] = arith.addf %[[VAL_60]], %[[VAL_80]] : f32
+// CHECK:                   scf.yield %[[VAL_81]] : f32
 // CHECK:                 } else {
-// CHECK:                   %[[VAL_79:.*]] = arith.cmpi eq, %[[VAL_58]], %[[VAL_64]] : index
-// CHECK:                   %[[VAL_80:.*]] = arith.cmpi eq, %[[VAL_59]], %[[VAL_64]] : index
-// CHECK:                   %[[VAL_81:.*]] = arith.andi %[[VAL_79]], %[[VAL_80]] : i1
-// CHECK:                   scf.if %[[VAL_81]] {
-// CHECK:                     %[[VAL_82:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:                     %[[VAL_83:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_55]]] : memref<?xf32>
-// CHECK:                     %[[VAL_84:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_56]]] : memref<?xf32>
-// CHECK:                     %[[VAL_85:.*]] = arith.mulf %[[VAL_83]], %[[VAL_84]] : f32
-// CHECK:                     %[[VAL_86:.*]] = arith.mulf %[[VAL_85]], %[[VAL_36]] : f32
-// CHECK:                     %[[VAL_87:.*]] = arith.mulf %[[VAL_86]], %[[VAL_25]] : f32
-// CHECK:                     %[[VAL_88:.*]] = arith.addf %[[VAL_82]], %[[VAL_87]] : f32
-// CHECK:                     memref.store %[[VAL_88]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:                   %[[VAL_82:.*]] = arith.cmpi eq, %[[VAL_61]], %[[VAL_67]] : index
+// CHECK:                   %[[VAL_83:.*]] = arith.cmpi eq, %[[VAL_62]], %[[VAL_67]] : index
+// CHECK:                   %[[VAL_84:.*]] = arith.andi %[[VAL_82]], %[[VAL_83]] : i1
+// CHECK:                   %[[VAL_85:.*]] = scf.if %[[VAL_84]] -> (f32) {
+// CHECK:                     %[[VAL_86:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_57]]] : memref<?xf32>
+// CHECK:                     %[[VAL_87:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_58]]] : memref<?xf32>
+// CHECK:                     %[[VAL_88:.*]] = arith.mulf %[[VAL_86]], %[[VAL_87]] : f32
+// CHECK:                     %[[VAL_89:.*]] = arith.mulf %[[VAL_88]], %[[VAL_37]] : f32
+// CHECK:                     %[[VAL_90:.*]] = arith.mulf %[[VAL_89]], %[[VAL_25]] : f32
+// CHECK:                     %[[VAL_91:.*]] = arith.addf %[[VAL_60]], %[[VAL_90]] : f32
+// CHECK:                     scf.yield %[[VAL_91]] : f32
 // CHECK:                   } else {
-// CHECK:                     %[[VAL_89:.*]] = arith.cmpi eq, %[[VAL_62]], %[[VAL_64]] : index
-// CHECK:                     scf.if %[[VAL_89]] {
-// CHECK:                       %[[VAL_90:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:                       %[[VAL_91:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_57]]] : memref<?xf32>
-// CHECK:                       %[[VAL_92:.*]] = arith.addf %[[VAL_90]], %[[VAL_91]] : f32
-// CHECK:                       memref.store %[[VAL_92]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:                     %[[VAL_92:.*]] = arith.cmpi eq, %[[VAL_65]], %[[VAL_67]] : index
+// CHECK:                     %[[VAL_93:.*]] = scf.if %[[VAL_92]] -> (f32) {
+// CHECK:                       %[[VAL_94:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_59]]] : memref<?xf32>
+// CHECK:                       %[[VAL_95:.*]] = arith.addf %[[VAL_60]], %[[VAL_94]] : f32
+// CHECK:                       scf.yield %[[VAL_95]] : f32
 // CHECK:                     } else {
+// CHECK:                       scf.yield %[[VAL_60]] : f32
 // CHECK:                     }
+// CHECK:                     scf.yield %[[VAL_96:.*]] : f32
 // CHECK:                   }
+// CHECK:                   scf.yield %[[VAL_97:.*]] : f32
 // CHECK:                 }
-// CHECK:                 %[[VAL_93:.*]] = arith.cmpi eq, %[[VAL_58]], %[[VAL_64]] : index
-// CHECK:                 %[[VAL_94:.*]] = arith.addi %[[VAL_55]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_95:.*]] = select %[[VAL_93]], %[[VAL_94]], %[[VAL_55]] : index
-// CHECK:                 %[[VAL_96:.*]] = arith.cmpi eq, %[[VAL_59]], %[[VAL_64]] : index
-// CHECK:                 %[[VAL_97:.*]] = arith.addi %[[VAL_56]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_98:.*]] = select %[[VAL_96]], %[[VAL_97]], %[[VAL_56]] : index
-// CHECK:                 %[[VAL_99:.*]] = arith.cmpi eq, %[[VAL_62]], %[[VAL_64]] : index
-// CHECK:                 %[[VAL_100:.*]] = arith.addi %[[VAL_57]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_101:.*]] = select %[[VAL_99]], %[[VAL_100]], %[[VAL_57]] : index
-// CHECK:                 scf.yield %[[VAL_95]], %[[VAL_98]], %[[VAL_101]] : index, index, index
+// CHECK:                 %[[VAL_98:.*]] = arith.cmpi eq, %[[VAL_61]], %[[VAL_67]] : index
+// CHECK:                 %[[VAL_99:.*]] = arith.addi %[[VAL_57]], %[[VAL_7]] : index
+// CHECK:                 %[[VAL_100:.*]] = select %[[VAL_98]], %[[VAL_99]], %[[VAL_57]] : index
+// CHECK:                 %[[VAL_101:.*]] = arith.cmpi eq, %[[VAL_62]], %[[VAL_67]] : index
+// CHECK:                 %[[VAL_102:.*]] = arith.addi %[[VAL_58]], %[[VAL_7]] : index
+// CHECK:                 %[[VAL_103:.*]] = select %[[VAL_101]], %[[VAL_102]], %[[VAL_58]] : index
+// CHECK:                 %[[VAL_104:.*]] = arith.cmpi eq, %[[VAL_65]], %[[VAL_67]] : index
+// CHECK:                 %[[VAL_105:.*]] = arith.addi %[[VAL_59]], %[[VAL_7]] : index
+// CHECK:                 %[[VAL_106:.*]] = select %[[VAL_104]], %[[VAL_105]], %[[VAL_59]] : index
+// CHECK:                 scf.yield %[[VAL_100]], %[[VAL_103]], %[[VAL_106]], %[[VAL_107:.*]] : index, index, index, f32
 // CHECK:               }
-// CHECK:               %[[VAL_102:.*]]:2 = scf.while (%[[VAL_103:.*]] = %[[VAL_104:.*]]#0, %[[VAL_105:.*]] = %[[VAL_104]]#1) : (index, index) -> (index, index) {
-// CHECK:                 %[[VAL_106:.*]] = arith.cmpi ult, %[[VAL_103]], %[[VAL_39]] : index
-// CHECK:                 %[[VAL_107:.*]] = arith.cmpi ult, %[[VAL_105]], %[[VAL_42]] : index
-// CHECK:                 %[[VAL_108:.*]] = arith.andi %[[VAL_106]], %[[VAL_107]] : i1
-// CHECK:                 scf.condition(%[[VAL_108]]) %[[VAL_103]], %[[VAL_105]] : index, index
+// CHECK:               %[[VAL_108:.*]]:3 = scf.while (%[[VAL_109:.*]] = %[[VAL_110:.*]]#0, %[[VAL_111:.*]] = %[[VAL_110]]#1, %[[VAL_112:.*]] = %[[VAL_110]]#3) : (index, index, f32) -> (index, index, f32) {
+// CHECK:                 %[[VAL_113:.*]] = arith.cmpi ult, %[[VAL_109]], %[[VAL_40]] : index
+// CHECK:                 %[[VAL_114:.*]] = arith.cmpi ult, %[[VAL_111]], %[[VAL_43]] : index
+// CHECK:                 %[[VAL_115:.*]] = arith.andi %[[VAL_113]], %[[VAL_114]] : i1
+// CHECK:                 scf.condition(%[[VAL_115]]) %[[VAL_109]], %[[VAL_111]], %[[VAL_112]] : index, index, f32
 // CHECK:               } do {
-// CHECK:               ^bb0(%[[VAL_109:.*]]: index, %[[VAL_110:.*]]: index):
-// CHECK:                 %[[VAL_111:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_109]]] : memref<?xindex>
-// CHECK:                 %[[VAL_112:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_110]]] : memref<?xindex>
-// CHECK:                 %[[VAL_113:.*]] = arith.cmpi ult, %[[VAL_112]], %[[VAL_111]] : index
-// CHECK:                 %[[VAL_114:.*]] = select %[[VAL_113]], %[[VAL_112]], %[[VAL_111]] : index
-// CHECK:                 %[[VAL_115:.*]] = arith.cmpi eq, %[[VAL_111]], %[[VAL_114]] : index
-// CHECK:                 %[[VAL_116:.*]] = arith.cmpi eq, %[[VAL_112]], %[[VAL_114]] : index
-// CHECK:                 %[[VAL_117:.*]] = arith.andi %[[VAL_115]], %[[VAL_116]] : i1
-// CHECK:                 scf.if %[[VAL_117]] {
-// CHECK:                   %[[VAL_118:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:                   %[[VAL_119:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_109]]] : memref<?xf32>
-// CHECK:                   %[[VAL_120:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_110]]] : memref<?xf32>
-// CHECK:                   %[[VAL_121:.*]] = arith.mulf %[[VAL_119]], %[[VAL_120]] : f32
-// CHECK:                   %[[VAL_122:.*]] = arith.mulf %[[VAL_121]], %[[VAL_36]] : f32
-// CHECK:                   %[[VAL_123:.*]] = arith.mulf %[[VAL_122]], %[[VAL_25]] : f32
-// CHECK:                   %[[VAL_124:.*]] = arith.addf %[[VAL_118]], %[[VAL_123]] : f32
-// CHECK:                   memref.store %[[VAL_124]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:               ^bb0(%[[VAL_116:.*]]: index, %[[VAL_117:.*]]: index, %[[VAL_118:.*]]: f32):
+// CHECK:                 %[[VAL_119:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_116]]] : memref<?xindex>
+// CHECK:                 %[[VAL_120:.*]] = memref.load %[[VAL_15]]{{\[}}%[[VAL_117]]] : memref<?xindex>
+// CHECK:                 %[[VAL_121:.*]] = arith.cmpi ult, %[[VAL_120]], %[[VAL_119]] : index
+// CHECK:                 %[[VAL_122:.*]] = select %[[VAL_121]], %[[VAL_120]], %[[VAL_119]] : index
+// CHECK:                 %[[VAL_123:.*]] = arith.cmpi eq, %[[VAL_119]], %[[VAL_122]] : index
+// CHECK:                 %[[VAL_124:.*]] = arith.cmpi eq, %[[VAL_120]], %[[VAL_122]] : index
+// CHECK:                 %[[VAL_125:.*]] = arith.andi %[[VAL_123]], %[[VAL_124]] : i1
+// CHECK:                 %[[VAL_126:.*]] = scf.if %[[VAL_125]] -> (f32) {
+// CHECK:                   %[[VAL_127:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_116]]] : memref<?xf32>
+// CHECK:                   %[[VAL_128:.*]] = memref.load %[[VAL_16]]{{\[}}%[[VAL_117]]] : memref<?xf32>
+// CHECK:                   %[[VAL_129:.*]] = arith.mulf %[[VAL_127]], %[[VAL_128]] : f32
+// CHECK:                   %[[VAL_130:.*]] = arith.mulf %[[VAL_129]], %[[VAL_37]] : f32
+// CHECK:                   %[[VAL_131:.*]] = arith.mulf %[[VAL_130]], %[[VAL_25]] : f32
+// CHECK:                   %[[VAL_132:.*]] = arith.addf %[[VAL_118]], %[[VAL_131]] : f32
+// CHECK:                   scf.yield %[[VAL_132]] : f32
 // CHECK:                 } else {
+// CHECK:                   scf.yield %[[VAL_118]] : f32
 // CHECK:                 }
-// CHECK:                 %[[VAL_125:.*]] = arith.cmpi eq, %[[VAL_111]], %[[VAL_114]] : index
-// CHECK:                 %[[VAL_126:.*]] = arith.addi %[[VAL_109]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_127:.*]] = select %[[VAL_125]], %[[VAL_126]], %[[VAL_109]] : index
-// CHECK:                 %[[VAL_128:.*]] = arith.cmpi eq, %[[VAL_112]], %[[VAL_114]] : index
-// CHECK:                 %[[VAL_129:.*]] = arith.addi %[[VAL_110]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_130:.*]] = select %[[VAL_128]], %[[VAL_129]], %[[VAL_110]] : index
-// CHECK:                 scf.yield %[[VAL_127]], %[[VAL_130]] : index, index
+// CHECK:                 %[[VAL_133:.*]] = arith.cmpi eq, %[[VAL_119]], %[[VAL_122]] : index
+// CHECK:                 %[[VAL_134:.*]] = arith.addi %[[VAL_116]], %[[VAL_7]] : index
+// CHECK:                 %[[VAL_135:.*]] = select %[[VAL_133]], %[[VAL_134]], %[[VAL_116]] : index
+// CHECK:                 %[[VAL_136:.*]] = arith.cmpi eq, %[[VAL_120]], %[[VAL_122]] : index
+// CHECK:                 %[[VAL_137:.*]] = arith.addi %[[VAL_117]], %[[VAL_7]] : index
+// CHECK:                 %[[VAL_138:.*]] = select %[[VAL_136]], %[[VAL_137]], %[[VAL_117]] : index
+// CHECK:                 scf.yield %[[VAL_135]], %[[VAL_138]], %[[VAL_139:.*]] : index, index, f32
 // CHECK:               }
-// CHECK:               %[[VAL_131:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:               %[[VAL_132:.*]] = scf.for %[[VAL_133:.*]] = %[[VAL_134:.*]]#2 to %[[VAL_45]] step %[[VAL_8]] iter_args(%[[VAL_135:.*]] = %[[VAL_131]]) -> (f32) {
-// CHECK:                 %[[VAL_136:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_133]]] : memref<?xf32>
-// CHECK:                 %[[VAL_137:.*]] = arith.addf %[[VAL_135]], %[[VAL_136]] : f32
-// CHECK:                 scf.yield %[[VAL_137]] : f32
+// CHECK:               %[[VAL_140:.*]] = scf.for %[[VAL_141:.*]] = %[[VAL_142:.*]]#2 to %[[VAL_46]] step %[[VAL_7]] iter_args(%[[VAL_143:.*]] = %[[VAL_144:.*]]#2) -> (f32) {
+// CHECK:                 %[[VAL_145:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_141]]] : memref<?xf32>
+// CHECK:                 %[[VAL_146:.*]] = arith.addf %[[VAL_143]], %[[VAL_145]] : f32
+// CHECK:                 scf.yield %[[VAL_146]] : f32
 // CHECK:               }
-// CHECK:               memref.store %[[VAL_138:.*]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:               memref.store %[[VAL_147:.*]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
 // CHECK:             } else {
-// CHECK:               scf.if %[[VAL_7]] {
-// CHECK:                 %[[VAL_139:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_33]]] : memref<?xindex>
-// CHECK:                 %[[VAL_140:.*]] = arith.addi %[[VAL_33]], %[[VAL_8]] : index
-// CHECK:                 %[[VAL_141:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_140]]] : memref<?xindex>
-// CHECK:                 %[[VAL_142:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
-// CHECK:                 %[[VAL_143:.*]] = scf.for %[[VAL_144:.*]] = %[[VAL_139]] to %[[VAL_141]] step %[[VAL_8]] iter_args(%[[VAL_145:.*]] = %[[VAL_142]]) -> (f32) {
-// CHECK:                   %[[VAL_146:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_144]]] : memref<?xf32>
-// CHECK:                   %[[VAL_147:.*]] = arith.addf %[[VAL_145]], %[[VAL_146]] : f32
-// CHECK:                   scf.yield %[[VAL_147]] : f32
+// CHECK:               scf.if %[[VAL_8]] {
+// CHECK:                 %[[VAL_148:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:                 %[[VAL_149:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_33]]] : memref<?xindex>
+// CHECK:                 %[[VAL_150:.*]] = arith.addi %[[VAL_33]], %[[VAL_7]] : index
+// CHECK:                 %[[VAL_151:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_150]]] : memref<?xindex>
+// CHECK:                 %[[VAL_152:.*]] = scf.for %[[VAL_153:.*]] = %[[VAL_149]] to %[[VAL_151]] step %[[VAL_7]] iter_args(%[[VAL_154:.*]] = %[[VAL_148]]) -> (f32) {
+// CHECK:                   %[[VAL_155:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_153]]] : memref<?xf32>
+// CHECK:                   %[[VAL_156:.*]] = arith.addf %[[VAL_154]], %[[VAL_155]] : f32
+// CHECK:                   scf.yield %[[VAL_156]] : f32
 // CHECK:                 }
-// CHECK:                 memref.store %[[VAL_148:.*]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
+// CHECK:                 memref.store %[[VAL_157:.*]], %[[VAL_24]]{{\[}}%[[VAL_33]]] : memref<?xf32>
 // CHECK:               } else {
 // CHECK:               }
 // CHECK:             }
-// CHECK:             %[[VAL_149:.*]] = arith.cmpi eq, %[[VAL_34]], %[[VAL_33]] : index
-// CHECK:             %[[VAL_150:.*]] = arith.addi %[[VAL_32]], %[[VAL_8]] : index
-// CHECK:             %[[VAL_151:.*]] = select %[[VAL_149]], %[[VAL_150]], %[[VAL_32]] : index
-// CHECK:             %[[VAL_152:.*]] = arith.addi %[[VAL_33]], %[[VAL_8]] : index
-// CHECK:             scf.yield %[[VAL_151]], %[[VAL_152]] : index, index
+// CHECK:             %[[VAL_158:.*]] = arith.cmpi eq, %[[VAL_34]], %[[VAL_33]] : index
+// CHECK:             %[[VAL_159:.*]] = arith.addi %[[VAL_32]], %[[VAL_7]] : index
+// CHECK:             %[[VAL_160:.*]] = select %[[VAL_158]], %[[VAL_159]], %[[VAL_32]] : index
+// CHECK:             %[[VAL_161:.*]] = arith.addi %[[VAL_33]], %[[VAL_7]] : index
+// CHECK:             scf.yield %[[VAL_160]], %[[VAL_161]] : index, index
 // CHECK:           }
-// CHECK:           scf.for %[[VAL_153:.*]] = %[[VAL_154:.*]]#1 to %[[VAL_22]] step %[[VAL_8]] {
-// CHECK:             %[[VAL_155:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_153]]] : memref<?xindex>
-// CHECK:             %[[VAL_156:.*]] = arith.addi %[[VAL_153]], %[[VAL_8]] : index
-// CHECK:             %[[VAL_157:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_156]]] : memref<?xindex>
-// CHECK:             %[[VAL_158:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_153]]] : memref<?xf32>
-// CHECK:             %[[VAL_159:.*]] = scf.for %[[VAL_160:.*]] = %[[VAL_155]] to %[[VAL_157]] step %[[VAL_8]] iter_args(%[[VAL_161:.*]] = %[[VAL_158]]) -> (f32) {
-// CHECK:               %[[VAL_162:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_160]]] : memref<?xf32>
-// CHECK:               %[[VAL_163:.*]] = arith.addf %[[VAL_161]], %[[VAL_162]] : f32
-// CHECK:               scf.yield %[[VAL_163]] : f32
+// CHECK:           scf.for %[[VAL_162:.*]] = %[[VAL_163:.*]]#1 to %[[VAL_22]] step %[[VAL_7]] {
+// CHECK:             %[[VAL_164:.*]] = memref.load %[[VAL_24]]{{\[}}%[[VAL_162]]] : memref<?xf32>
+// CHECK:             %[[VAL_165:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_162]]] : memref<?xindex>
+// CHECK:             %[[VAL_166:.*]] = arith.addi %[[VAL_162]], %[[VAL_7]] : index
+// CHECK:             %[[VAL_167:.*]] = memref.load %[[VAL_17]]{{\[}}%[[VAL_166]]] : memref<?xindex>
+// CHECK:             %[[VAL_168:.*]] = scf.for %[[VAL_169:.*]] = %[[VAL_165]] to %[[VAL_167]] step %[[VAL_7]] iter_args(%[[VAL_170:.*]] = %[[VAL_164]]) -> (f32) {
+// CHECK:               %[[VAL_171:.*]] = memref.load %[[VAL_19]]{{\[}}%[[VAL_169]]] : memref<?xf32>
+// CHECK:               %[[VAL_172:.*]] = arith.addf %[[VAL_170]], %[[VAL_171]] : f32
+// CHECK:               scf.yield %[[VAL_172]] : f32
 // CHECK:             }
-// CHECK:             memref.store %[[VAL_164:.*]], %[[VAL_24]]{{\[}}%[[VAL_153]]] : memref<?xf32>
+// CHECK:             memref.store %[[VAL_173:.*]], %[[VAL_24]]{{\[}}%[[VAL_162]]] : memref<?xf32>
 // CHECK:           }
-// CHECK:           %[[VAL_165:.*]] = memref.tensor_load %[[VAL_24]] : memref<?xf32>
-// CHECK:           return %[[VAL_165]] : tensor<?xf32>
+// CHECK:           %[[VAL_174:.*]] = memref.tensor_load %[[VAL_24]] : memref<?xf32>
+// CHECK:           return %[[VAL_174]] : tensor<?xf32>
 // CHECK:         }
 func @sum_kernel_with_inv(%arga: tensor<?x?xf32, #Tss>,
                           %argb: tensor<?x?xf32, #Tds>,
