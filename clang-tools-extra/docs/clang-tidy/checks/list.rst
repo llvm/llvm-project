@@ -333,6 +333,7 @@ Clang-Tidy Checks
    `cert-dcl03-c <cert-dcl03-c.html>`_, `misc-static-assert <misc-static-assert.html>`_, "Yes"
    `cert-dcl16-c <cert-dcl16-c.html>`_, `readability-uppercase-literal-suffix <readability-uppercase-literal-suffix.html>`_, "Yes"
    `cert-dcl37-c <cert-dcl37-c.html>`_, `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
+   `cert-err33-c <cert-err33-c.html>`_, `bugprone-unused-return-value <bugprone-unused-return-value.html>`_,
    `cert-dcl51-cpp <cert-dcl51-cpp.html>`_, `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
    `cert-dcl54-cpp <cert-dcl54-cpp.html>`_, `misc-new-delete-overloads <misc-new-delete-overloads.html>`_,
    `cert-dcl59-cpp <cert-dcl59-cpp.html>`_, `google-build-namespaces <google-build-namespaces.html>`_,
