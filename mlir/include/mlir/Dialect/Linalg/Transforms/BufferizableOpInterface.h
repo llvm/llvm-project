@@ -18,7 +18,7 @@ namespace mlir {
 class BlockAndValueMapping;
 
 namespace linalg {
-class AllocationCallbacks;
+struct AllocationCallbacks;
 class BufferizationAliasInfo;
 
 /// Specify fine-grain relationship between buffers to enable more analysis.
