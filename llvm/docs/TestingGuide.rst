@@ -333,9 +333,10 @@ using ``split-file`` to extract them. For example,
   ;--- b.ll
   ...
 
-The parts are separated by the regex ``^(.|//)--- <part>``. By default the
-extracted content has leading empty lines to preserve line numbers. Specify
-``--no-leading-lines`` to drop leading lines.
+The parts are separated by the regex ``^(.|//)--- <part>``.
+
+If you want to test relative line numbers like ``[[#@LINE+1]]``, specify
+``--leading-lines`` to add leading empty lines to preserve line numbers.
 
 If the extra files are large, the idiomatic place to put them is in a subdirectory ``Inputs``.
 You can then refer to the extra files as ``%S/Inputs/foo.bar``.
