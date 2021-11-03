@@ -522,7 +522,7 @@ struct Allocator {
         size > max_user_defined_malloc_size) {
       if (AllocatorMayReturnNull()) {
         Report("WARNING: AddressSanitizer failed to allocate 0x%zx bytes\n",
-               (void*)size);
+               size);
         return nullptr;
       }
       uptr malloc_limit =

@@ -188,7 +188,8 @@ void ScanRangeForPointers(uptr begin, uptr end,
                           const char *region_type, ChunkTag tag) {
   CHECK(tag == kReachable || tag == kIndirectlyLeaked);
   const uptr alignment = flags()->pointer_alignment();
-  LOG_POINTERS("Scanning %s range %p-%p.\n", region_type, begin, end);
+  LOG_POINTERS("Scanning %s range %p-%p.\n", region_type, (void *)begin,
+               (void *)end);
   uptr pp = begin;
   if (pp % alignment)
     pp = pp + alignment - pp % alignment;
@@ -207,13 +208,15 @@ void ScanRangeForPointers(uptr begin, uptr end,
       LOG_POINTERS(
           "%p is poisoned: ignoring %p pointing into chunk %p-%p of size "
           "%zu.\n",
-          pp, p, chunk, chunk + m.requested_size(), m.requested_size());
+          (void *)pp, p, (void *)chunk, (void *)(chunk + m.requested_size()),
+          m.requested_size());
       continue;
     }
 
     m.set_tag(tag);
-    LOG_POINTERS("%p: found %p pointing into chunk %p-%p of size %zu.\n", pp, p,
-                 chunk, chunk + m.requested_size(), m.requested_size());
+    LOG_POINTERS("%p: found %p pointing into chunk %p-%p of size %zu.\n",
+                 (void *)pp, p, (void *)chunk,
+                 (void *)(chunk + m.requested_size()), m.requested_size());
     if (frontier)
       frontier->push_back(chunk);
   }
@@ -281,7 +284,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   InternalMmapVector<uptr> registers;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
-    LOG_THREADS("Processing thread %d.\n", os_id);
+    LOG_THREADS("Processing thread %llu.\n", os_id);
     uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
     DTLS *dtls;
     bool thread_found = GetThreadRangesLocked(os_id, &stack_begin, &stack_end,
@@ -290,14 +293,14 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     if (!thread_found) {
       // If a thread can't be found in the thread registry, it's probably in the
       // process of destruction. Log this event and move on.
-      LOG_THREADS("Thread %d not found in registry.\n", os_id);
+      LOG_THREADS("Thread %llu not found in registry.\n", os_id);
       continue;
     }
     uptr sp;
     PtraceRegistersStatus have_registers =
         suspended_threads.GetRegistersAndSP(i, &registers, &sp);
     if (have_registers != REGISTERS_AVAILABLE) {
-      Report("Unable to get registers from thread %d.\n", os_id);
+      Report("Unable to get registers from thread %llu.\n", os_id);
       // If unable to get SP, consider the entire stack to be reachable unless
       // GetRegistersAndSP failed with ESRCH.
       if (have_registers == REGISTERS_UNAVAILABLE_FATAL) continue;
@@ -313,7 +316,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     }
 
     if (flags()->use_stacks) {
-      LOG_THREADS("Stack at %p-%p (SP = %p).\n", stack_begin, stack_end, sp);
+      LOG_THREADS("Stack at %p-%p (SP = %p).\n", (void *)stack_begin,
+                  (void *)stack_end, (void *)sp);
       if (sp < stack_begin || sp >= stack_end) {
         // SP is outside the recorded stack range (e.g. the thread is running a
         // signal handler on alternate stack, or swapcontext was used).
@@ -327,7 +331,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
           stack_begin += page_size;
         }
         LOG_THREADS("Skipped %d guard page(s) to obtain stack %p-%p.\n",
-                    skipped, stack_begin, stack_end);
+                    skipped, (void *)stack_begin, (void *)stack_end);
       } else {
         // Shrink the stack range to ignore out-of-scope values.
         stack_begin = sp;
@@ -339,7 +343,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
     if (flags()->use_tls) {
       if (tls_begin) {
-        LOG_THREADS("TLS at %p-%p.\n", tls_begin, tls_end);
+        LOG_THREADS("TLS at %p-%p.\n", (void *)tls_begin, (void *)tls_end);
         // If the tls and cache ranges don't overlap, scan full tls range,
         // otherwise, only scan the non-overlapping portions
         if (cache_begin == cache_end || tls_end < cache_begin ||
@@ -373,7 +377,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
           uptr dtls_beg = dtv.beg;
           uptr dtls_end = dtls_beg + dtv.size;
           if (dtls_beg < dtls_end) {
-            LOG_THREADS("DTLS %zu at %p-%p.\n", id, dtls_beg, dtls_end);
+            LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
+                        (void *)dtls_end);
             ScanRangeForPointers(dtls_beg, dtls_end, frontier, "DTLS",
                                  kReachable);
           }
@@ -381,7 +386,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       } else {
         // We are handling a thread with DTLS under destruction. Log about
         // this and continue.
-        LOG_THREADS("Thread %d has DTLS under destruction.\n", os_id);
+        LOG_THREADS("Thread %llu has DTLS under destruction.\n", os_id);
       }
 #endif
     }
@@ -399,8 +404,9 @@ void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
   uptr intersection_end = Min(region_end, root_region.begin + root_region.size);
   if (intersection_begin >= intersection_end) return;
   LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
-               root_region.begin, root_region.begin + root_region.size,
-               region_begin, region_end,
+               (void *)root_region.begin,
+               (void *)(root_region.begin + root_region.size),
+               (void *)region_begin, (void *)region_end,
                is_readable ? "readable" : "unreadable");
   if (is_readable)
     ScanRangeForPointers(intersection_begin, intersection_end, frontier, "ROOT",
@@ -460,8 +466,8 @@ static void IgnoredSuppressedCb(uptr chunk, void *arg) {
   if (idx >= suppressed.size() || m.stack_trace_id() != suppressed[idx])
     return;
 
-  LOG_POINTERS("Suppressed: chunk %p-%p of size %zu.\n", chunk,
-               chunk + m.requested_size(), m.requested_size());
+  LOG_POINTERS("Suppressed: chunk %p-%p of size %zu.\n", (void *)chunk,
+               (void *)(chunk + m.requested_size()), m.requested_size());
   m.set_tag(kIgnored);
 }
 
@@ -472,8 +478,8 @@ static void CollectIgnoredCb(uptr chunk, void *arg) {
   chunk = GetUserBegin(chunk);
   LsanMetadata m(chunk);
   if (m.allocated() && m.tag() == kIgnored) {
-    LOG_POINTERS("Ignored: chunk %p-%p of size %zu.\n",
-                 chunk, chunk + m.requested_size(), m.requested_size());
+    LOG_POINTERS("Ignored: chunk %p-%p of size %zu.\n", (void *)chunk,
+                 (void *)(chunk + m.requested_size()), m.requested_size());
     reinterpret_cast<Frontier *>(arg)->push_back(chunk);
   }
 }
@@ -617,8 +623,9 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   if (tctx->status == ThreadStatusRunning) {
     uptr i = InternalLowerBound(suspended_threads, tctx->os_id);
     if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
-      Report("Running thread %d was not suspended. False leaks are possible.\n",
-             tctx->os_id);
+      Report(
+          "Running thread %llu was not suspended. False leaks are possible.\n",
+          tctx->os_id);
   }
 }
 
@@ -871,7 +878,7 @@ void LeakReport::PrintLeakedObjectsForLeak(uptr index) {
   u32 leak_id = leaks_[index].id;
   for (uptr j = 0; j < leaked_objects_.size(); j++) {
     if (leaked_objects_[j].leak_id == leak_id)
-      Printf("%p (%zu bytes)\n", leaked_objects_[j].addr,
+      Printf("%p (%zu bytes)\n", (void *)leaked_objects_[j].addr,
              leaked_objects_[j].size);
   }
 }
@@ -962,7 +969,7 @@ void __lsan_register_root_region(const void *begin, uptr size) {
   CHECK(root_regions);
   RootRegion region = {reinterpret_cast<uptr>(begin), size};
   root_regions->push_back(region);
-  VReport(1, "Registered root region at %p of size %llu\n", begin, size);
+  VReport(1, "Registered root region at %p of size %zu\n", begin, size);
 #endif // CAN_SANITIZE_LEAKS
 }
 
@@ -979,13 +986,13 @@ void __lsan_unregister_root_region(const void *begin, uptr size) {
       uptr last_index = root_regions->size() - 1;
       (*root_regions)[i] = (*root_regions)[last_index];
       root_regions->pop_back();
-      VReport(1, "Unregistered root region at %p of size %llu\n", begin, size);
+      VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
       break;
     }
   }
   if (!removed) {
     Report(
-        "__lsan_unregister_root_region(): region at %p of size %llu has not "
+        "__lsan_unregister_root_region(): region at %p of size %zu has not "
         "been registered.\n",
         begin, size);
     Die();
