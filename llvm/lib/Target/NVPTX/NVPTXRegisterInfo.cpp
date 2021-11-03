@@ -107,6 +107,14 @@ NVPTXRegisterInfo::getCalleeSavedRegs(const MachineFunction *) const {
 
 BitVector NVPTXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
+  for (unsigned Reg = NVPTX::ENVREG0; Reg <= NVPTX::ENVREG31; ++Reg) {
+    markSuperRegs(Reserved, Reg);
+  }
+  markSuperRegs(Reserved, NVPTX::VRFrame32);
+  markSuperRegs(Reserved, NVPTX::VRFrameLocal32);
+  markSuperRegs(Reserved, NVPTX::VRFrame64);
+  markSuperRegs(Reserved, NVPTX::VRFrameLocal64);
+  markSuperRegs(Reserved, NVPTX::VRDepot);
   return Reserved;
 }
 
