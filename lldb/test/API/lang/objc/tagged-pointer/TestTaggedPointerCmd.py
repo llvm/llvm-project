@@ -15,6 +15,8 @@ class TestTaggedPointerCommand(TestBase):
         self.expect("lang objc tagged-pointer info bogus", error=True,
                     patterns=["could not convert 'bogus' to a valid address"])
 
-        self.expect("lang objc tagged-pointer info 0x1", error=True,
-                    patterns=["could not get class descriptor for 0x1"])
+        self.expect("lang objc tagged-pointer info 0x0", error=True,
+                    patterns=["could not convert '0x0' to a valid address"])
 
+        self.expect("lang objc tagged-pointer info 0xffffffff", error=True,
+                    patterns=["could not get class descriptor for 0xffffffff"])
