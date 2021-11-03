@@ -2712,17 +2712,20 @@ INTERCEPTOR(int, getnameinfo, void *sockaddr, unsigned salen, char *host,
 #endif
 
 #if SANITIZER_INTERCEPT_GETSOCKNAME
-INTERCEPTOR(int, getsockname, int sock_fd, void *addr, int *addrlen) {
+INTERCEPTOR(int, getsockname, int sock_fd, void *addr, unsigned *addrlen) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getsockname, sock_fd, addr, addrlen);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, addrlen, sizeof(*addrlen));
-  int addrlen_in = *addrlen;
+  unsigned addr_sz;
+  if (addrlen) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, addrlen, sizeof(*addrlen));
+    addr_sz = *addrlen;
+  }
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getsockname)(sock_fd, addr, addrlen);
-  if (res == 0) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, addr, Min(addrlen_in, *addrlen));
+  if (!res && addr && addrlen) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, addr, Min(addr_sz, *addrlen));
   }
   return res;
 }
@@ -3227,13 +3230,17 @@ INTERCEPTOR(int, getpeername, int sockfd, void *addr, unsigned *addrlen) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getpeername, sockfd, addr, addrlen);
   unsigned addr_sz;
-  if (addrlen) addr_sz = *addrlen;
+  if (addrlen) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, addrlen, sizeof(*addrlen));
+    addr_sz = *addrlen;
+  }
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getpeername)(sockfd, addr, addrlen);
-  if (!res && addr && addrlen)
+  if (!res && addr && addrlen) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, addr, Min(addr_sz, *addrlen));
+  }
   return res;
 }
 #define INIT_GETPEERNAME COMMON_INTERCEPT_FUNCTION(getpeername);
