@@ -340,19 +340,16 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PB.registerPipelineParsingCallback(
       [](StringRef Name, ModulePassManager &MPM,
          ArrayRef<PassBuilder::PipelineElement>) {
-        AddressSanitizerOptions Opts;
         if (Name == "asan-pipeline") {
           MPM.addPass(
               RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-          MPM.addPass(
-              createModuleToFunctionPassAdaptor(AddressSanitizerPass(Opts)));
           MPM.addPass(ModuleAddressSanitizerPass());
           return true;
         } else if (Name == "asan-function-pipeline") {
+          // FIXME: now this is the same as asan-pipeline and can me removed.
           MPM.addPass(
               RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-          MPM.addPass(
-              createModuleToFunctionPassAdaptor(AddressSanitizerPass(Opts)));
+          MPM.addPass(ModuleAddressSanitizerPass());
           return true;
         }
         return false;

@@ -1295,17 +1295,28 @@ void ModuleAddressSanitizerPass::printPipeline(
 
 ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(
     bool CompileKernel, bool Recover, bool UseGlobalGC, bool UseOdrIndicator,
-    AsanDtorKind DestructorKind)
+    AsanDtorKind DestructorKind, bool UseAfterScope,
+    AsanDetectStackUseAfterReturnMode UseAfterReturn)
     : CompileKernel(CompileKernel), Recover(Recover), UseGlobalGC(UseGlobalGC),
-      UseOdrIndicator(UseOdrIndicator), DestructorKind(DestructorKind) {}
+      UseOdrIndicator(UseOdrIndicator), DestructorKind(DestructorKind),
+      UseAfterScope(UseAfterScope), UseAfterReturn(UseAfterReturn) {}
 
 PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
-                                                  AnalysisManager<Module> &AM) {
-  GlobalsMetadata &GlobalsMD = AM.getResult<ASanGlobalsMetadataAnalysis>(M);
-  ModuleAddressSanitizer Sanitizer(M, &GlobalsMD, CompileKernel, Recover,
-                                   UseGlobalGC, UseOdrIndicator,
-                                   DestructorKind);
-  if (Sanitizer.instrumentModule(M))
+                                                  ModuleAnalysisManager &MAM) {
+  GlobalsMetadata &GlobalsMD = MAM.getResult<ASanGlobalsMetadataAnalysis>(M);
+  ModuleAddressSanitizer ModuleSanitizer(M, &GlobalsMD, CompileKernel, Recover,
+                                         UseGlobalGC, UseOdrIndicator,
+                                         DestructorKind);
+  bool Modified = false;
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    AddressSanitizer FunctionSanitizer(M, &GlobalsMD, CompileKernel, Recover,
+                                       UseAfterScope, UseAfterReturn);
+    const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
+  }
+  Modified |= ModuleSanitizer.instrumentModule(M);
+  if (Modified)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
@@ -2841,6 +2852,8 @@ bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
 
 bool AddressSanitizer::instrumentFunction(Function &F,
                                           const TargetLibraryInfo *TLI) {
+  if (F.empty())
+    return false;
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
   if (F.getName().startswith("__asan_")) return false;

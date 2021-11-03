@@ -1185,11 +1185,9 @@ static void addSanitizers(const Triple &TargetTriple,
         llvm::AsanDetectStackUseAfterReturnMode UseAfterReturn =
             CodeGenOpts.getSanitizeAddressUseAfterReturn();
         MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-        MPM.addPass(ModuleAddressSanitizerPass(CompileKernel, Recover,
-                                               UseGlobalGC, UseOdrIndicator,
-                                               DestructorKind));
-        MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-            {CompileKernel, Recover, UseAfterScope, UseAfterReturn})));
+        MPM.addPass(ModuleAddressSanitizerPass(
+            CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator,
+            DestructorKind, UseAfterScope, UseAfterReturn));
       }
     };
     ASanPass(SanitizerKind::Address, false);
