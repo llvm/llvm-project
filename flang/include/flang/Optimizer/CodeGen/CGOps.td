@@ -42,6 +42,7 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
          The default is a vector of the value 1.
        - slice: A vector of triples that describe an array slice.
        - subcomponent: A vector of indices for subobject slicing.
+       - substring: A substring operator (offset, length) for CHARACTER.
        - LEN type parameters: A vector of runtime LEN type parameters that
          describe an correspond to the elemental derived type.
 
@@ -54,14 +55,15 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     Variadic<AnyIntegerType>:$shift,
     Variadic<AnyIntegerType>:$slice,
     Variadic<AnyCoordinateType>:$subcomponent,
+    Variadic<AnyIntegerType>:$substr,
     Variadic<AnyIntegerType>:$lenParams
   );
   let results = (outs fir_BoxType);
 
   let assemblyFormat = [{
     $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
-      (`path` $subcomponent^)? (`typeparams` $lenParams^)? attr-dict
-      `:` functional-type(operands, results)
+      (`path` $subcomponent^)? (`substr` $substr^)? (`typeparams` $lenParams^)?
+      attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -76,9 +78,10 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     unsigned shiftOffset() { return shapeOffset() + shape().size(); }
     unsigned sliceOffset() { return shiftOffset() + shift().size(); }
     unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
-    unsigned lenParamOffset() {
-      return subcomponentOffset() + subcomponent().size();
+    unsigned substrOffset() {
+       return subcomponentOffset() + subcomponent().size();
     }
+    unsigned lenParamOffset() { return substrOffset() + substr().size(); }
   }];
 }
 
@@ -97,6 +100,7 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
          The default is a vector of the value 1.
        - slice: A vector of triples that describe an array slice.
        - subcomponent: A vector of indices for subobject slicing.
+       - substring: A substring operator (offset, length) for CHARACTER.
 
     The box argument is mandatory, the other arguments are optional.
     There must not both be a shape and slice/subcomponent arguments
@@ -107,14 +111,15 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
     Variadic<AnyIntegerType>:$shape,
     Variadic<AnyIntegerType>:$shift,
     Variadic<AnyIntegerType>:$slice,
-    Variadic<AnyCoordinateType>:$subcomponent
+    Variadic<AnyCoordinateType>:$subcomponent,
+    Variadic<AnyIntegerType>:$substr
   );
   let results = (outs fir_BoxType);
 
   let assemblyFormat = [{
     $box (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
-      (`path` $subcomponent^) ? attr-dict
-      `:` functional-type(operands, results)
+      (`path` $subcomponent^)? (`substr` $substr^)? attr-dict `:`
+      functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
