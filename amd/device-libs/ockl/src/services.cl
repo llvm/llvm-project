@@ -401,7 +401,7 @@ __ockl_sanitizer_report(ulong addr, ulong pc, ulong wgidx, ulong wgidy,
 
 /*===---  DEVMEM  ----------------------------------------------------------*/
 
-ulong
+WEAK_ATTR ulong
 __ockl_devmem_request(ulong addr, ulong size)
 {
     long2 result = __ockl_hostcall_preview(SERVICE_DEVMEM, addr, size, 0, 0, 0, 0, 0, 0);
