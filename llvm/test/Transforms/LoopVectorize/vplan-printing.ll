@@ -242,4 +242,40 @@ for.end:
   ret void
 }
 
+define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
+; CHECK-LABEL: Checking a loop in "print_fmuladd_strict"
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: for.body:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%sum.07> = phi ir<0.000000e+00>, ir<%muladd>
+; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:   WIDEN ir<%0> = load ir<%arrayidx>
+; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, ir<%iv>
+; CHECK-NEXT:   WIDEN ir<%1> = load ir<%arrayidx2>
+; CHECK-NEXT:   EMIT vp<%6> = fmul nnan ninf nsz ir<%0> ir<%1>
+; CHECK-NEXT:   REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<%6>)
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
+  %1 = load float, float* %arrayidx2, align 4
+  %muladd = tail call nnan ninf nsz float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret float %muladd
+}
+
 declare float @llvm.sqrt.f32(float) nounwind readnone
+declare float @llvm.fmuladd.f32(float, float, float)

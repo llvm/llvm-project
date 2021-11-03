@@ -794,6 +794,7 @@ public:
 private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
+  FastMathFlags FMF;
 
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
@@ -875,6 +876,9 @@ public:
       return true;
     }
   }
+
+  /// Set the fast-math flags.
+  void setFastMathFlags(FastMathFlags FMFNew);
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
