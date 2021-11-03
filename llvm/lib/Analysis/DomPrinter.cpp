@@ -261,10 +261,6 @@ INITIALIZE_PASS(PostDomOnlyPrinter, "dot-postdom-only",
                 "(with no function bodies)",
                 false, false)
 
-// Create methods available outside of this file, to use them
-// "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by
-// the link time optimization.
-
 FunctionPass *llvm::createDomPrinterPass() {
   return new DomPrinter();
 }
