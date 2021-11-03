@@ -1,5 +1,6 @@
 ; RUN: opt -loop-vectorize -enable-interleaved-mem-accesses -prefer-predicate-over-epilogue=predicate-dont-vectorize -S -mcpu=skx --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=DISABLED_MASKED_STRIDED
 ; RUN: opt -loop-vectorize -enable-interleaved-mem-accesses -enable-masked-interleaved-mem-accesses -prefer-predicate-over-epilogue=predicate-dont-vectorize -S -mcpu=skx --debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=ENABLED_MASKED_STRIDED
+; REQUIRES: asserts
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
