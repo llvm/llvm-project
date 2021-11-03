@@ -104,6 +104,9 @@ public:
 void runDeltaPass(
     TestRunner &Test, int Targets,
     function_ref<void(Oracle &, Module &)> ExtractChunksFromModule);
+void runDeltaPass(
+    TestRunner &Test, int Targets,
+    function_ref<void(Oracle &, MachineFunction &)> ExtractChunksFromModule);
 } // namespace llvm
 
 #endif
