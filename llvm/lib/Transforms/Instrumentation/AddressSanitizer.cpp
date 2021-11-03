@@ -1288,23 +1288,23 @@ void ModuleAddressSanitizerPass::printPipeline(
   static_cast<PassInfoMixin<ModuleAddressSanitizerPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
-  if (CompileKernel)
+  if (Options.CompileKernel)
     OS << "kernel";
   OS << ">";
 }
 
 ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(
-    bool CompileKernel, bool Recover, bool UseGlobalGC, bool UseOdrIndicator,
-    AsanDtorKind DestructorKind)
-    : CompileKernel(CompileKernel), Recover(Recover), UseGlobalGC(UseGlobalGC),
+    const AddressSanitizerOptions &Options, bool UseGlobalGC,
+    bool UseOdrIndicator, AsanDtorKind DestructorKind)
+    : Options(Options), UseGlobalGC(UseGlobalGC),
       UseOdrIndicator(UseOdrIndicator), DestructorKind(DestructorKind) {}
 
 PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
                                                   AnalysisManager<Module> &AM) {
   GlobalsMetadata &GlobalsMD = AM.getResult<ASanGlobalsMetadataAnalysis>(M);
-  ModuleAddressSanitizer Sanitizer(M, &GlobalsMD, CompileKernel, Recover,
-                                   UseGlobalGC, UseOdrIndicator,
-                                   DestructorKind);
+  ModuleAddressSanitizer Sanitizer(M, &GlobalsMD, Options.CompileKernel,
+                                   Options.Recover, UseGlobalGC,
+                                   UseOdrIndicator, DestructorKind);
   if (Sanitizer.instrumentModule(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
