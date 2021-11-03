@@ -15,6 +15,7 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
 
@@ -352,13 +353,90 @@ struct WmmaConstantOpToNVVMLowering
   }
 };
 
+static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
+                           Value rhs, bool isMin) {
+  auto floatType = getElementTypeOrSelf(lhs.getType()).cast<FloatType>();
+  Type i1Type = builder.getI1Type();
+  if (auto vecType = lhs.getType().dyn_cast<VectorType>())
+    i1Type = VectorType::get(vecType.getShape(), i1Type);
+  Value cmp = builder.create<LLVM::FCmpOp>(
+      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
+      lhs, rhs);
+  Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
+  Value isNan = builder.create<LLVM::FCmpOp>(
+      loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
+  Value nan = builder.create<LLVM::ConstantOp>(
+      loc, lhs.getType(),
+      builder.getFloatAttr(floatType,
+                           APFloat::getQNaN(floatType.getFloatSemantics())));
+  return builder.create<LLVM::SelectOp>(loc, isNan, sel, nan);
+}
+
+static Value createScalarOp(OpBuilder &builder, Location loc,
+                            gpu::MMAElementwiseOp op,
+                            ArrayRef<Value> operands) {
+  switch (op) {
+  case gpu::MMAElementwiseOp::ADDF:
+    return builder.create<LLVM::FAddOp>(loc, operands[0].getType(), operands);
+  case gpu::MMAElementwiseOp::MULF:
+    return builder.create<LLVM::FMulOp>(loc, operands[0].getType(), operands);
+  case gpu::MMAElementwiseOp::MAXF:
+    return createMinMaxF(builder, loc, operands[0], operands[1],
+                         /*isMin=*/false);
+  case gpu::MMAElementwiseOp::MINF:
+    return createMinMaxF(builder, loc, operands[0], operands[1],
+                         /*isMin=*/true);
+  }
+  llvm_unreachable("unknown op");
+}
+
+/// Convert GPU MMA elementwise ops to extract + op + insert.
+struct WmmaElementwiseOpToNVVMLowering
+    : public ConvertOpToLLVMPattern<gpu::SubgroupMmaElementwiseOp> {
+  using ConvertOpToLLVMPattern<
+      gpu::SubgroupMmaElementwiseOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaElementwiseOp subgroupMmaElementwiseOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (failed(areAllLLVMTypes(subgroupMmaElementwiseOp.getOperation(),
+                               adaptor.getOperands(), rewriter)))
+      return failure();
+    Location loc = subgroupMmaElementwiseOp.getLoc();
+    size_t numOperands = adaptor.getOperands().size();
+    LLVM::LLVMStructType destType = convertMMAToLLVMType(
+        subgroupMmaElementwiseOp.getType().cast<gpu::MMAMatrixType>());
+    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, destType);
+    for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
+      SmallVector<Value> extractedOperands;
+      for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
+        Type elementType = adaptor.getOperands()[opIdx]
+                               .getType()
+                               .cast<LLVM::LLVMStructType>()
+                               .getBody()[i];
+        extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
+            loc, elementType, adaptor.getOperands()[opIdx],
+            rewriter.getI32ArrayAttr(i)));
+      }
+      Value element =
+          createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.operation(),
+                         extractedOperands);
+      matrixStruct = rewriter.create<LLVM::InsertValueOp>(
+          loc, matrixStruct, element, rewriter.getI32ArrayAttr(i));
+    }
+    rewriter.replaceOp(subgroupMmaElementwiseOp, matrixStruct);
+    return success();
+  }
+};
+
 } // anonymous namespace
 
 namespace mlir {
 void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns) {
   patterns.insert<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
-                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering>(
-      converter);
+                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
+                  WmmaElementwiseOpToNVVMLowering>(converter);
 }
 } // namespace mlir

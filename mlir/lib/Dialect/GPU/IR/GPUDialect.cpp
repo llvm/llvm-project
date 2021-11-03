@@ -1185,6 +1185,7 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
+#include "mlir/Dialect/GPU/GPUOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"

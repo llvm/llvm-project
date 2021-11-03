@@ -166,6 +166,8 @@ void addAsyncDependency(Operation *op, Value token);
 } // end namespace gpu
 } // end namespace mlir
 
+#include "mlir/Dialect/GPU/GPUOpsEnums.h.inc"
+
 #include "mlir/Dialect/GPU/GPUOpsDialect.h.inc"
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.h.inc"
