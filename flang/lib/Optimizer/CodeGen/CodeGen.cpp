@@ -167,6 +167,18 @@ struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   }
 };
 
+// convert to LLVM IR dialect `unreachable`
+struct UnreachableOpConversion : public FIROpConversion<fir::UnreachableOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::UnreachableOp unreach, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::UnreachableOp>(unreach);
+    return success();
+  }
+};
+
 struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -190,6 +202,7 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
     return success();
   }
 };
+
 } // namespace
 
 namespace {
@@ -207,8 +220,10 @@ public:
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
-    pattern.insert<AddrOfOpConversion, HasValueOpConversion, GlobalOpConversion,
-                   UndefOpConversion, ZeroOpConversion>(typeConverter);
+    pattern
+        .insert<AddrOfOpConversion, HasValueOpConversion, GlobalOpConversion,
+                UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+            typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);

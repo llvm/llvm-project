@@ -133,3 +133,15 @@ func @zero_test_float() {
 // CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f80) : f80
 // CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f128) : f128
 // CHECK-NOT: fir.zero_bits
+
+// -----
+
+// Verify that fir.unreachable is transformed to llvm.unreachable
+
+// CHECK:  llvm.func @test_unreachable() {
+// CHECK-NEXT:    llvm.unreachable
+// CHECK-NEXT:  }
+
+func @test_unreachable() {
+  fir.unreachable
+}
