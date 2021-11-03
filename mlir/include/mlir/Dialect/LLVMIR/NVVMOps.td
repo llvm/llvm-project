@@ -195,12 +195,12 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
 }
 
 /// Generate enum value of the wmma.mma intrinsic.
-class WMMA_NAME<string ALayout, string BLayout, WMMA_REGS A, WMMA_REGS B,
-  WMMA_REGS C, WMMA_REGS D> {
+class WMMA_NAME<string Op, string ALayout, string BLayout, WMMA_REGS A,
+  WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
   string id =   "llvm::Intrinsic::nvvm_wmma"
                 # "_" # A.geom
-                # "_mma"
+                # "_" # Op
                 # "_" # ALayout
                 # "_" # BLayout
                 # signature;
@@ -342,7 +342,7 @@ class MMA_MMA_INTR<string opName> {
   "    && \"" # op[0].ptx_elt_type # "\" == eltypeA && \""
    # op[3].ptx_elt_type # "\" == eltypeB)"
   "  return " #
-       WMMA_NAME<layoutA, layoutB, op[0], op[1], op[2], op[3]>.id # ";")));
+       WMMA_NAME<opName, layoutA, layoutB, op[0], op[1], op[2], op[3]>.id # ";")));
   list<string> f = !foldl([""],
                      !foldl([[""]], cond0, acc, el, !listconcat(acc, el)),
                           acc1, el1, !listconcat(acc1, el1));
