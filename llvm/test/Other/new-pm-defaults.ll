@@ -216,6 +216,7 @@
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
+; CHECK-O-NEXT: Running pass: LoopDeletionPass
 ; CHECK-O-NEXT: Running pass: LoopDistributePass
 ; CHECK-O-NEXT: Running pass: InjectTLIMappings
 ; CHECK-O-NEXT: Running pass: LoopVectorizePass
