@@ -1098,7 +1098,6 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
     SCEV *S = new (SCEVAllocator)
         SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -1219,7 +1218,6 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
     SCEV *S =
         new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator), Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -1274,7 +1272,6 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
   SCEV *S = new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator),
                                                  Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, Op);
   return S;
 }
@@ -1604,7 +1601,6 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     SCEV *S = new (SCEVAllocator) SCEVZeroExtendExpr(ID.Intern(SCEVAllocator),
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -1874,7 +1870,6 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   SCEV *S = new (SCEVAllocator) SCEVZeroExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, Op);
   return S;
 }
@@ -1914,7 +1909,6 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -2112,7 +2106,6 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, { Op });
   return S;
 }
@@ -2898,7 +2891,6 @@ ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
     S = new (SCEVAllocator)
         SCEVAddExpr(ID.Intern(SCEVAllocator), O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
@@ -2922,7 +2914,7 @@ ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
     S = new (SCEVAllocator)
         SCEVAddRecExpr(ID.Intern(SCEVAllocator), O, Ops.size(), L);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
+    LoopUsers[L].push_back(S);
     registerUser(S, Ops);
   }
   setNoWrapFlags(S, Flags);
@@ -2945,7 +2937,6 @@ ScalarEvolution::getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
     S = new (SCEVAllocator) SCEVMulExpr(ID.Intern(SCEVAllocator),
                                         O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
@@ -3455,7 +3446,6 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
   SCEV *S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator),
                                              LHS, RHS);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, {LHS, RHS});
   return S;
 }
@@ -3850,7 +3840,6 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
       SCEVMinMaxExpr(ID.Intern(SCEVAllocator), Kind, O, Ops.size());
 
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, Ops);
   return S;
 }
@@ -6589,6 +6578,26 @@ ScalarEvolution::getNonTrivialDefiningScopeBound(const SCEV *S) {
   return nullptr;
 }
 
+/// Fills \p Ops with unique operands of \p S, if it has operands. If not,
+/// \p Ops remains unmodified.
+static void collectUniqueOps(const SCEV *S,
+                             SmallVectorImpl<const SCEV *> &Ops) {
+  SmallPtrSet<const SCEV *, 4> Unique;
+  auto InsertUnique = [&](const SCEV *S) {
+    if (Unique.insert(S).second)
+      Ops.push_back(S);
+  };
+  if (auto *S2 = dyn_cast<SCEVCastExpr>(S))
+    for (auto *Op : S2->operands())
+      InsertUnique(Op);
+  else if (auto *S2 = dyn_cast<SCEVNAryExpr>(S))
+    for (auto *Op : S2->operands())
+      InsertUnique(Op);
+  else if (auto *S2 = dyn_cast<SCEVUDivExpr>(S))
+    for (auto *Op : S2->operands())
+      InsertUnique(Op);
+}
+
 const Instruction *
 ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
   // Do a bounded search of the def relation of the requested SCEVs.
@@ -6612,15 +6621,12 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
     if (auto *DefI = getNonTrivialDefiningScopeBound(S)) {
       if (!Bound || DT.dominates(Bound, DefI))
         Bound = DefI;
-    } else if (auto *S2 = dyn_cast<SCEVCastExpr>(S))
-      for (auto *Op : S2->operands())
+    } else {
+      SmallVector<const SCEV *, 4> Ops;
+      collectUniqueOps(S, Ops);
+      for (auto *Op : Ops)
         pushOp(Op);
-    else if (auto *S2 = dyn_cast<SCEVNAryExpr>(S))
-      for (auto *Op : S2->operands())
-        pushOp(Op);
-    else if (auto *S2 = dyn_cast<SCEVUDivExpr>(S))
-      for (auto *Op : S2->operands())
-        pushOp(Op);
+    }
   }
   return Bound ? Bound : &*F.getEntryBlock().begin();
 }
@@ -12808,13 +12814,6 @@ ScalarEvolution::getUsedLoops(const SCEV *S,
   SCEVTraversal<FindUsedLoops>(F).visitAll(S);
 }
 
-void ScalarEvolution::addToLoopUseLists(const SCEV *S) {
-  SmallPtrSet<const Loop *, 8> LoopsUsed;
-  getUsedLoops(S, LoopsUsed);
-  for (auto *L : LoopsUsed)
-    LoopUsers[L].push_back(S);
-}
-
 void ScalarEvolution::verify() const {
   ScalarEvolution &SE = *const_cast<ScalarEvolution *>(this);
   ScalarEvolution SE2(F, TLI, AC, DT, LI);
@@ -12908,15 +12907,8 @@ void ScalarEvolution::verify() const {
 
   // Verify intergity of SCEV users.
   for (const auto &S : UniqueSCEVs) {
-    SmallPtrSet<const SCEV *, 4> Ops;
-    if (const auto *NS = dyn_cast<SCEVNAryExpr>(&S))
-      Ops.insert(NS->op_begin(), NS->op_end());
-    else if (const auto *CS = dyn_cast<SCEVCastExpr>(&S))
-      Ops.insert(CS->getOperand());
-    else if (const auto *DS = dyn_cast<SCEVUDivExpr>(&S)) {
-      Ops.insert(DS->getLHS());
-      Ops.insert(DS->getRHS());
-    }
+    SmallVector<const SCEV *, 4> Ops;
+    collectUniqueOps(&S, Ops);
     for (const auto *Op : Ops) {
       // We do not store dependencies of constants.
       if (isa<SCEVConstant>(Op))

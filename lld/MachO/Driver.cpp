@@ -174,7 +174,7 @@ static std::vector<StringRef> getSystemLibraryRoots(InputArgList &args) {
   for (const Arg *arg : args.filtered(OPT_syslibroot))
     roots.push_back(arg->getValue());
   // NOTE: the final `-syslibroot` being `/` will ignore all roots
-  if (roots.size() && roots.back() == "/")
+  if (!roots.empty() && roots.back() == "/")
     roots.clear();
   // NOTE: roots can never be empty - add an empty root to simplify the library
   // and framework search path computation.
@@ -206,7 +206,9 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
        args.filtered(OPT_thinlto_cache_policy, OPT_prune_interval_lto,
                      OPT_prune_after_lto, OPT_max_relative_cache_size_lto)) {
     switch (arg->getOption().getID()) {
-    case OPT_thinlto_cache_policy: add(arg->getValue()); break;
+    case OPT_thinlto_cache_policy:
+      add(arg->getValue());
+      break;
     case OPT_prune_interval_lto:
       if (!strcmp("-1", arg->getValue()))
         add("prune_interval=87600h"); // 10 years
@@ -659,10 +661,12 @@ static PlatformKind parsePlatformVersion(const ArgList &args) {
 // Has the side-effect of setting Config::target.
 static TargetInfo *createTargetInfo(InputArgList &args) {
   StringRef archName = args.getLastArgValue(OPT_arch);
-  if (archName.empty())
-    fatal("must specify -arch");
-  PlatformKind platform = parsePlatformVersion(args);
+  if (archName.empty()) {
+    error("must specify -arch");
+    return nullptr;
+  }
 
+  PlatformKind platform = parsePlatformVersion(args);
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 
@@ -680,7 +684,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_ARM:
     return createARMTargetInfo(cpuSubtype);
   default:
-    fatal("missing or unsupported -arch " + archName);
+    error("missing or unsupported -arch " + archName);
+    return nullptr;
   }
 }
 
@@ -1068,7 +1073,25 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
-  errorHandler().cleanupCallback = []() { freeArena(); };
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+
+    concatOutputSections.clear();
+    inputFiles.clear();
+    inputSections.clear();
+    loadedArchives.clear();
+    syntheticSections.clear();
+    thunkMap.clear();
+
+    firstTLVDataSection = nullptr;
+    tar = nullptr;
+    memset(&in, 0, sizeof(in));
+
+    resetLoadedDylibs();
+    resetOutputSegments();
+    resetWriter();
+    InputFile::resetIdCount();
+  };
 
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
@@ -1100,6 +1123,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   target = createTargetInfo(args);
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
+  if (errorCount())
+    return false;
 
   config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
   if (!config->osoPrefix.empty()) {
@@ -1339,15 +1364,17 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           config->platform() == PlatformKind::macOS);
 
   if (args.hasArg(OPT_v)) {
-    message(getLLDVersion());
+    message(getLLDVersion(), lld::errs());
     message(StringRef("Library search paths:") +
-            (config->librarySearchPaths.empty()
-                 ? ""
-                 : "\n\t" + join(config->librarySearchPaths, "\n\t")));
+                (config->librarySearchPaths.empty()
+                     ? ""
+                     : "\n\t" + join(config->librarySearchPaths, "\n\t")),
+            lld::errs());
     message(StringRef("Framework search paths:") +
-            (config->frameworkSearchPaths.empty()
-                 ? ""
-                 : "\n\t" + join(config->frameworkSearchPaths, "\n\t")));
+                (config->frameworkSearchPaths.empty()
+                     ? ""
+                     : "\n\t" + join(config->frameworkSearchPaths, "\n\t")),
+            lld::errs());
   }
 
   config->progName = argsArr[0];
@@ -1391,6 +1418,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       for (const Arg *arg : args.filtered(OPT_sub_library))
         reexportHandler(arg, extensions);
     }
+
+    cl::ResetAllOptionOccurrences();
 
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
@@ -1476,5 +1505,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  errorHandler().reset();
+  return ret;
 }

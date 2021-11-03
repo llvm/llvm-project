@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/architectures.h"
 #include "src/fenv/fedisableexcept.h"
 #include "src/fenv/feenableexcept.h"
 #include "src/fenv/fegetexcept.h"
@@ -15,7 +16,7 @@
 #include <fenv.h>
 
 TEST(LlvmLibcFEnvTest, EnableTest) {
-#ifdef __aarch64__
+#if defined(LLVM_LIBC_ARCH_AARCH64)
   // Few aarch64 HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -27,7 +28,7 @@ TEST(LlvmLibcFEnvTest, EnableTest) {
   __llvm_libc::feenableexcept(FE_DIVBYZERO);
   if (__llvm_libc::fegetexcept() == 0)
     return;
-#endif
+#endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};

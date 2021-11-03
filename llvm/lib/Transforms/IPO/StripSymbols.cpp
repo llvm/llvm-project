@@ -214,13 +214,13 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
   findUsedValues(M.getGlobalVariable("llvm.compiler.used"), llvmUsedValues);
 
   for (GlobalVariable &GV : M.globals()) {
-    if (GV.hasLocalLinkage() && llvmUsedValues.count(&GV) == 0)
+    if (GV.hasLocalLinkage() && !llvmUsedValues.contains(&GV))
       if (!PreserveDbgInfo || !GV.getName().startswith("llvm.dbg"))
         GV.setName(""); // Internal symbols can't participate in linkage
   }
 
   for (Function &I : M) {
-    if (I.hasLocalLinkage() && llvmUsedValues.count(&I) == 0)
+    if (I.hasLocalLinkage() && !llvmUsedValues.contains(&I))
       if (!PreserveDbgInfo || !I.getName().startswith("llvm.dbg"))
         I.setName(""); // Internal symbols can't participate in linkage
     if (auto *Symtab = I.getValueSymbolTable())

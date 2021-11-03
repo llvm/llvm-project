@@ -32,6 +32,7 @@ class DefaultingPyMlirContext;
 class PyModule;
 class PyOperation;
 class PyType;
+class PySymbolTable;
 class PyValue;
 
 /// Template for a reference to a concrete type which captures a python
@@ -399,6 +400,10 @@ public:
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope);
 
+  /// Moves the operation before or after the other operation.
+  void moveAfter(PyOperationBase &other);
+  void moveBefore(PyOperationBase &other);
+
   /// Each must provide access to the raw Operation.
   virtual PyOperation &getOperation() = 0;
 };
@@ -428,6 +433,14 @@ public:
   createDetached(PyMlirContextRef contextRef, MlirOperation operation,
                  pybind11::object parentKeepAlive = pybind11::object());
 
+  /// Detaches the operation from its parent block and updates its state
+  /// accordingly.
+  void detachFromParent() {
+    mlirOperationRemoveFromParent(getOperation());
+    setDetached();
+    parentKeepAlive = pybind11::object();
+  }
+
   /// Gets the backing operation.
   operator MlirOperation() const { return get(); }
   MlirOperation get() const {
@@ -441,9 +454,13 @@ public:
   }
 
   bool isAttached() { return attached; }
-  void setAttached() {
+  void setAttached(pybind11::object parent = pybind11::object()) {
     assert(!attached && "operation already attached");
     attached = true;
+  }
+  void setDetached() {
+    assert(attached && "operation already detached");
+    attached = false;
   }
   void checkValid() const;
 
@@ -495,6 +512,9 @@ private:
   pybind11::object parentKeepAlive;
   bool attached = true;
   bool valid = true;
+
+  friend class PyOperationBase;
+  friend class PySymbolTable;
 };
 
 /// A PyOpView is equivalent to the C++ "Op" wrappers: these are the basis for
@@ -856,6 +876,38 @@ public:
 
 private:
   MlirIntegerSet integerSet;
+};
+
+/// Bindings for MLIR symbol tables.
+class PySymbolTable {
+public:
+  /// Constructs a symbol table for the given operation.
+  explicit PySymbolTable(PyOperationBase &operation);
+
+  /// Destroys the symbol table.
+  ~PySymbolTable() { mlirSymbolTableDestroy(symbolTable); }
+
+  /// Returns the symbol (opview) with the given name, throws if there is no
+  /// such symbol in the table.
+  pybind11::object dunderGetItem(const std::string &name);
+
+  /// Removes the given operation from the symbol table and erases it.
+  void erase(PyOperationBase &symbol);
+
+  /// Removes the operation with the given name from the symbol table and erases
+  /// it, throws if there is no such symbol in the table.
+  void dunderDel(const std::string &name);
+
+  /// Inserts the given operation into the symbol table. The operation must have
+  /// the symbol trait.
+  PyAttribute insert(PyOperationBase &symbol);
+
+  /// Casts the bindings class into the C API structure.
+  operator MlirSymbolTable() { return symbolTable; }
+
+private:
+  PyOperationRef operation;
+  MlirSymbolTable symbolTable;
 };
 
 void populateIRAffine(pybind11::module &m);

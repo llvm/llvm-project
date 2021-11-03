@@ -616,6 +616,8 @@ void request_attach(const llvm::json::Object &request) {
   // Run any initialize LLDB commands the user specified in the launch.json
   g_vsc.RunInitCommands();
 
+  SetSourceMapFromArguments(*arguments);
+
   lldb::SBError status;
   g_vsc.SetTarget(g_vsc.CreateTargetFromArguments(*arguments, status));
   if (status.Fail()) {
@@ -656,8 +658,6 @@ void request_attach(const llvm::json::Object &request) {
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
   }
-
-  SetSourceMapFromArguments(*arguments);
 
   if (error.Success() && core_file.empty()) {
     auto attached_pid = g_vsc.target.GetProcess().GetProcessID();

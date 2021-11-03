@@ -570,10 +570,6 @@ TypeSystemClang::TypeSystemClang(llvm::StringRef name,
 // Destructor
 TypeSystemClang::~TypeSystemClang() { Finalize(); }
 
-ConstString TypeSystemClang::GetPluginNameStatic() {
-  return ConstString("clang");
-}
-
 lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
                                                    Target *target) {
@@ -2940,7 +2936,12 @@ bool TypeSystemClang::IsCharType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsCompleteType(lldb::opaque_compiler_type_t type) {
-  const bool allow_completion = false;
+  // If the type hasn't been lazily completed yet, complete it now so that we
+  // can give the caller an accurate answer whether the type actually has a
+  // definition. Without completing the type now we would just tell the user
+  // the current (internal) completeness state of the type and most users don't
+  // care (or even know) about this behavior.
+  const bool allow_completion = true;
   return GetCompleteQualType(&getASTContext(), GetQualType(type),
                              allow_completion);
 }

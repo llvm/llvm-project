@@ -558,13 +558,11 @@ define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd float [[TMP4]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[WIDE_LOAD1]])
-; CHECK-NEXT:    [[TMP7]] = fadd float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float [[TMP4]], <4 x float> [[WIDE_LOAD1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -572,7 +570,7 @@ define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi float [ undef, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi float [ undef, [[FOR_BODY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[RESULT_0_LCSSA]]
 ;
 entry:
@@ -613,9 +611,9 @@ define float @reduction_fmul(float* nocapture %A, float* nocapture %B) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[TMP4]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[WIDE_LOAD1]])
-; CHECK-NEXT:    [[TMP7]] = fmul float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7]] = fmul fast float [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]

@@ -62,6 +62,7 @@ public:
     CortexA78C,
     CortexR82,
     CortexX1,
+    CortexX2,
     ExynosM3,
     Falkor,
     Kryo,

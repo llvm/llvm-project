@@ -17813,7 +17813,8 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
     Val = DefaultLvalueConversion(Val).get();
 
   if (Val) {
-    if (Enum->isDependentType() || Val->isTypeDependent())
+    if (Enum->isDependentType() || Val->isTypeDependent() ||
+        Val->containsErrors())
       EltTy = Context.DependentTy;
     else {
       // FIXME: We don't allow folding in C++11 mode for an enum with a fixed

@@ -31,11 +31,6 @@ ORC_RT_INTERFACE void *__orc_rt_macho_jit_dlsym(void *dso_handle,
 namespace __orc_rt {
 namespace macho {
 
-struct MachOPerObjectSectionsToRegister {
-  ExecutorAddrRange EHFrameSection;
-  ExecutorAddrRange ThreadDataSection;
-};
-
 struct MachOJITDylibInitializers {
   using SectionList = std::vector<ExecutorAddrRange>;
 
@@ -66,32 +61,6 @@ enum dlopen_mode : int {
 };
 
 } // end namespace macho
-
-using SPSMachOPerObjectSectionsToRegister =
-    SPSTuple<SPSExecutorAddrRange, SPSExecutorAddrRange>;
-
-template <>
-class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
-                             macho::MachOPerObjectSectionsToRegister> {
-
-public:
-  static size_t size(const macho::MachOPerObjectSectionsToRegister &MOPOSR) {
-    return SPSMachOPerObjectSectionsToRegister::AsArgList::size(
-        MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const macho::MachOPerObjectSectionsToRegister &MOPOSR) {
-    return SPSMachOPerObjectSectionsToRegister::AsArgList::serialize(
-        OB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          macho::MachOPerObjectSectionsToRegister &MOPOSR) {
-    return SPSMachOPerObjectSectionsToRegister::AsArgList::deserialize(
-        IB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
-  }
-};
 
 using SPSNamedExecutorAddrRangeSequenceMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRangeSequence>>;

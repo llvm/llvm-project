@@ -1095,6 +1095,10 @@ static void createBSWAPShuffleMask(EVT VT, SmallVectorImpl<int> &ShuffleMask) {
 SDValue VectorLegalizer::ExpandBSWAP(SDNode *Node) {
   EVT VT = Node->getValueType(0);
 
+  // Scalable vectors can't use shuffle expansion.
+  if (VT.isScalableVector())
+    return TLI.expandBSWAP(Node, DAG);
+
   // Generate a byte wise shuffle mask for the BSWAP.
   SmallVector<int, 16> ShuffleMask;
   createBSWAPShuffleMask(VT, ShuffleMask);
@@ -1123,6 +1127,12 @@ SDValue VectorLegalizer::ExpandBSWAP(SDNode *Node) {
 void VectorLegalizer::ExpandBITREVERSE(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   EVT VT = Node->getValueType(0);
+
+  // We can't unroll or use shuffles for scalable vectors.
+  if (VT.isScalableVector()) {
+    Results.push_back(TLI.expandBITREVERSE(Node, DAG));
+    return;
+  }
 
   // If we have the scalar operation, it's probably cheaper to unroll it.
   if (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, VT.getScalarType())) {

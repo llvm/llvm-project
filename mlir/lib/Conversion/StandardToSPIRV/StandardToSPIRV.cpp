@@ -65,6 +65,24 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts std.br to spv.Branch.
+struct BranchOpPattern final : public OpConversionPattern<BranchOp> {
+  using OpConversionPattern<BranchOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(BranchOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts std.cond_br to spv.BranchConditional.
+struct CondBranchOpPattern final : public OpConversionPattern<CondBranchOp> {
+  using OpConversionPattern<CondBranchOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CondBranchOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts tensor.extract into loading using access chains from SPIR-V local
 /// variables.
 class TensorExtractPattern final
@@ -177,6 +195,31 @@ SplatPattern::matchAndRewrite(SplatOp op, OpAdaptor adaptor,
 }
 
 //===----------------------------------------------------------------------===//
+// BranchOpPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BranchOpPattern::matchAndRewrite(BranchOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<spirv::BranchOp>(op, op.getDest(),
+                                               adaptor.getDestOperands());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CondBranchOpPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult CondBranchOpPattern::matchAndRewrite(
+    CondBranchOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
+      op, op.getCondition(), op.getTrueDest(), adaptor.getTrueDestOperands(),
+      op.getFalseDest(), adaptor.getFalseDestOperands());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern population
 //===----------------------------------------------------------------------===//
 
@@ -194,7 +237,8 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       spirv::UnaryAndBinaryOpPattern<MinSIOp, spirv::GLSLSMinOp>,
       spirv::UnaryAndBinaryOpPattern<MinUIOp, spirv::GLSLUMinOp>,
 
-      ReturnOpPattern, SelectOpPattern, SplatPattern>(typeConverter, context);
+      ReturnOpPattern, SelectOpPattern, SplatPattern, BranchOpPattern,
+      CondBranchOpPattern>(typeConverter, context);
 }
 
 void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,

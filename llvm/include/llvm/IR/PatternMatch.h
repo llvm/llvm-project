@@ -593,32 +593,7 @@ inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
 struct icmp_pred_with_threshold {
   ICmpInst::Predicate Pred;
   const APInt *Thr;
-  bool isValue(const APInt &C) {
-    switch (Pred) {
-    case ICmpInst::Predicate::ICMP_EQ:
-      return C.eq(*Thr);
-    case ICmpInst::Predicate::ICMP_NE:
-      return C.ne(*Thr);
-    case ICmpInst::Predicate::ICMP_UGT:
-      return C.ugt(*Thr);
-    case ICmpInst::Predicate::ICMP_UGE:
-      return C.uge(*Thr);
-    case ICmpInst::Predicate::ICMP_ULT:
-      return C.ult(*Thr);
-    case ICmpInst::Predicate::ICMP_ULE:
-      return C.ule(*Thr);
-    case ICmpInst::Predicate::ICMP_SGT:
-      return C.sgt(*Thr);
-    case ICmpInst::Predicate::ICMP_SGE:
-      return C.sge(*Thr);
-    case ICmpInst::Predicate::ICMP_SLT:
-      return C.slt(*Thr);
-    case ICmpInst::Predicate::ICMP_SLE:
-      return C.sle(*Thr);
-    default:
-      llvm_unreachable("Unhandled ICmp predicate");
-    }
-  }
+  bool isValue(const APInt &C) { return ICmpInst::compare(C, *Thr, Pred); }
 };
 /// Match an integer or vector with every element comparing 'pred' (eg/ne/...)
 /// to Threshold. For vectors, this includes constants with undefined elements.

@@ -1291,13 +1291,13 @@ static TypeSystemInstances &GetTypeSystemInstances() {
 }
 
 bool PluginManager::RegisterPlugin(
-    ConstString name, const char *description,
+    llvm::StringRef name, llvm::StringRef description,
     TypeSystemCreateInstance create_callback,
     LanguageSet supported_languages_for_types,
     LanguageSet supported_languages_for_expressions) {
   return GetTypeSystemInstances().RegisterPlugin(
-      name, description, create_callback, supported_languages_for_types,
-      supported_languages_for_expressions);
+      ConstString(name), description.str().c_str(), create_callback,
+      supported_languages_for_types, supported_languages_for_expressions);
 }
 
 bool PluginManager::UnregisterPlugin(TypeSystemCreateInstance create_callback) {
@@ -1344,11 +1344,12 @@ static REPLInstances &GetREPLInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(ConstString name, const char *description,
+bool PluginManager::RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                                    REPLCreateInstance create_callback,
                                    LanguageSet supported_languages) {
-  return GetREPLInstances().RegisterPlugin(name, description, create_callback,
-                                           supported_languages);
+  return GetREPLInstances().RegisterPlugin(
+      ConstString(name), description.str().c_str(), create_callback,
+      supported_languages);
 }
 
 bool PluginManager::UnregisterPlugin(REPLCreateInstance create_callback) {

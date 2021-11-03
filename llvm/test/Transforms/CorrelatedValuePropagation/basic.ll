@@ -382,7 +382,7 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
 ; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
-; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:    switch i32 [[S1]], label [[ENTRY_UNREACHABLEDEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[EXIT1:%.*]]
 ; CHECK-NEXT:    i32 2, label [[EXIT2:%.*]]
 ; CHECK-NEXT:    i32 3, label [[EXIT1]]
@@ -391,6 +391,8 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i32 2
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -453,10 +455,9 @@ define i8 @switch_defaultdest_multipleuse(i8 %t0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[O:%.*]] = or i8 [[T0:%.*]], 1
 ; CHECK-NEXT:    [[R:%.*]] = srem i8 1, [[O]]
-; CHECK-NEXT:    switch i8 [[R]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i8 0, label [[EXIT]]
-; CHECK-NEXT:    i8 1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -532,7 +533,7 @@ define i1 @smin(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[B:%.*]], 20
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[B_GUARD:%.*]], label [[OUT]]
 ; CHECK:       b_guard:
-; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sle i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ule i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
@@ -564,7 +565,7 @@ define i1 @smax(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[B:%.*]], 20
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[B_GUARD:%.*]], label [[OUT]]
 ; CHECK:       b_guard:
-; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sge i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       out:
@@ -737,7 +738,7 @@ define i1 @clamp_low3(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
-; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sgt i32 [[A]], 5
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ugt i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[ADD]], i32 5
 ; CHECK-NEXT:    ret i1 false
@@ -764,7 +765,7 @@ define i1 @clamp_low4(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
-; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sle i32 [[A]], 5
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ule i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[ADD]]
 ; CHECK-NEXT:    ret i1 false
@@ -933,10 +934,10 @@ define void @abs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
 ; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[ABS]], 19
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
 ; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp uge i32 [[ABS]], 1
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -978,10 +979,10 @@ define void @abs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
 ; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[ABS]], 19
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[ABS]], 19
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
 ; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp sge i32 [[ABS]], 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp uge i32 [[ABS]], 1
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

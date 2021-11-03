@@ -110,7 +110,7 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   copy->symbols.clear();
 
   // Remove duplicate compact unwind info for symbols at the same address.
-  if (symbols.size() == 0)
+  if (symbols.empty())
     return;
   it = symbols.begin();
   uint64_t v = (*it)->value;

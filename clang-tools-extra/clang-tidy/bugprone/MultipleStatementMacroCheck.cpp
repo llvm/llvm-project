@@ -39,7 +39,7 @@ const Stmt *nextStmt(const MatchFinder::MatchResult &Result, const Stmt *S) {
 
 using ExpansionRanges = std::vector<SourceRange>;
 
-/// \bried Get all the macro expansion ranges related to `Loc`.
+/// \brief Get all the macro expansion ranges related to `Loc`.
 ///
 /// The result is ordered from most inner to most outer.
 ExpansionRanges getExpansionRanges(SourceLocation Loc,

@@ -160,8 +160,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     return AdrImmBits(Value & 0x1fffffULL);
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
     assert(!IsResolved);
-    if (TheTriple.isOSBinFormatCOFF())
+    if (TheTriple.isOSBinFormatCOFF()) {
+      if (!isInt<21>(SignedValue))
+        Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
       return AdrImmBits(Value & 0x1fffffULL);
+    }
     return AdrImmBits((Value & 0x1fffff000ULL) >> 12);
   case AArch64::fixup_aarch64_ldr_pcrel_imm19:
   case AArch64::fixup_aarch64_pcrel_branch19:

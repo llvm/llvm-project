@@ -176,7 +176,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("sizeof-pointer-to-aggregate"),
                      this);
 
-  // Detect expression like: sizeof(epxr) <= k for a suspicious constant 'k'.
+  // Detect expression like: sizeof(expr) <= k for a suspicious constant 'k'.
   if (WarnOnSizeOfCompareToConstant) {
     Finder->addMatcher(
         binaryOperator(matchers::isRelationalOperator(),

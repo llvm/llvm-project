@@ -221,9 +221,6 @@ ISD::CondCode llvm::getFCmpCodeWithoutNaN(ISD::CondCode CC) {
   }
 }
 
-/// getICmpCondCode - Return the ISD condition code corresponding to
-/// the given LLVM IR integer condition code.
-///
 ISD::CondCode llvm::getICmpCondCode(ICmpInst::Predicate Pred) {
   switch (Pred) {
   case ICmpInst::ICMP_EQ:  return ISD::SETEQ;
@@ -238,6 +235,33 @@ ISD::CondCode llvm::getICmpCondCode(ICmpInst::Predicate Pred) {
   case ICmpInst::ICMP_UGT: return ISD::SETUGT;
   default:
     llvm_unreachable("Invalid ICmp predicate opcode!");
+  }
+}
+
+ICmpInst::Predicate llvm::getICmpCondCode(ISD::CondCode Pred) {
+  switch (Pred) {
+  case ISD::SETEQ:
+    return ICmpInst::ICMP_EQ;
+  case ISD::SETNE:
+    return ICmpInst::ICMP_NE;
+  case ISD::SETLE:
+    return ICmpInst::ICMP_SLE;
+  case ISD::SETULE:
+    return ICmpInst::ICMP_ULE;
+  case ISD::SETGE:
+    return ICmpInst::ICMP_SGE;
+  case ISD::SETUGE:
+    return ICmpInst::ICMP_UGE;
+  case ISD::SETLT:
+    return ICmpInst::ICMP_SLT;
+  case ISD::SETULT:
+    return ICmpInst::ICMP_ULT;
+  case ISD::SETGT:
+    return ICmpInst::ICMP_SGT;
+  case ISD::SETUGT:
+    return ICmpInst::ICMP_UGT;
+  default:
+    llvm_unreachable("Invalid ISD integer condition code!");
   }
 }
 

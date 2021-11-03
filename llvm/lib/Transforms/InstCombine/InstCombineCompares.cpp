@@ -541,7 +541,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         if (!CI->isNoopCast(DL))
           return false;
 
-        if (Explored.count(CI->getOperand(0)) == 0)
+        if (!Explored.contains(CI->getOperand(0)))
           WorkList.push_back(CI->getOperand(0));
       }
 
@@ -553,7 +553,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
             GEP->getType() != Start->getType())
           return false;
 
-        if (Explored.count(GEP->getOperand(0)) == 0)
+        if (!Explored.contains(GEP->getOperand(0)))
           WorkList.push_back(GEP->getOperand(0));
       }
 
@@ -575,7 +575,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
     // Explore the PHI nodes further.
     for (auto *PN : PHIs)
       for (Value *Op : PN->incoming_values())
-        if (Explored.count(Op) == 0)
+        if (!Explored.contains(Op))
           WorkList.push_back(Op);
   }
 
@@ -589,7 +589,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
       auto *Inst = dyn_cast<Instruction>(Val);
 
       if (Inst == Base || Inst == PHI || !Inst || !PHI ||
-          Explored.count(PHI) == 0)
+          !Explored.contains(PHI))
         continue;
 
       if (PHI->getParent() == Inst->getParent())

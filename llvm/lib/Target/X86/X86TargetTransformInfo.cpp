@@ -2706,8 +2706,8 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   static const CostTblEntry AVX512CostTbl[] = {
     { ISD::ABS,        MVT::v8i64,   1 },
     { ISD::ABS,        MVT::v16i32,  1 },
-    { ISD::ABS,        MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::ABS,        MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::ABS,        MVT::v32i16,  2 },
+    { ISD::ABS,        MVT::v64i8,   2 },
     { ISD::ABS,        MVT::v4i64,   1 },
     { ISD::ABS,        MVT::v2i64,   1 },
     { ISD::BITREVERSE, MVT::v8i64,  36 },
@@ -2731,26 +2731,26 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v64i8,  18 },
     { ISD::SMAX,       MVT::v8i64,   1 },
     { ISD::SMAX,       MVT::v16i32,  1 },
-    { ISD::SMAX,       MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::SMAX,       MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::SMAX,       MVT::v32i16,  2 },
+    { ISD::SMAX,       MVT::v64i8,   2 },
     { ISD::SMAX,       MVT::v4i64,   1 },
     { ISD::SMAX,       MVT::v2i64,   1 },
     { ISD::SMIN,       MVT::v8i64,   1 },
     { ISD::SMIN,       MVT::v16i32,  1 },
-    { ISD::SMIN,       MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::SMIN,       MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::SMIN,       MVT::v32i16,  2 },
+    { ISD::SMIN,       MVT::v64i8,   2 },
     { ISD::SMIN,       MVT::v4i64,   1 },
     { ISD::SMIN,       MVT::v2i64,   1 },
     { ISD::UMAX,       MVT::v8i64,   1 },
     { ISD::UMAX,       MVT::v16i32,  1 },
-    { ISD::UMAX,       MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::UMAX,       MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::UMAX,       MVT::v32i16,  2 },
+    { ISD::UMAX,       MVT::v64i8,   2 },
     { ISD::UMAX,       MVT::v4i64,   1 },
     { ISD::UMAX,       MVT::v2i64,   1 },
     { ISD::UMIN,       MVT::v8i64,   1 },
     { ISD::UMIN,       MVT::v16i32,  1 },
-    { ISD::UMIN,       MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::UMIN,       MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::UMIN,       MVT::v32i16,  2 },
+    { ISD::UMIN,       MVT::v64i8,   2 },
     { ISD::UMIN,       MVT::v4i64,   1 },
     { ISD::UMIN,       MVT::v2i64,   1 },
     { ISD::USUBSAT,    MVT::v16i32,  2 }, // pmaxud + psubd
@@ -2761,14 +2761,14 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::UADDSAT,    MVT::v2i64,   3 }, // not + pminuq + paddq
     { ISD::UADDSAT,    MVT::v4i64,   3 }, // not + pminuq + paddq
     { ISD::UADDSAT,    MVT::v8i64,   3 }, // not + pminuq + paddq
-    { ISD::SADDSAT,    MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::SADDSAT,    MVT::v64i8,   2 }, // FIXME: include split
-    { ISD::SSUBSAT,    MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::SSUBSAT,    MVT::v64i8,   2 }, // FIXME: include split
-    { ISD::UADDSAT,    MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::UADDSAT,    MVT::v64i8,   2 }, // FIXME: include split
-    { ISD::USUBSAT,    MVT::v32i16,  2 }, // FIXME: include split
-    { ISD::USUBSAT,    MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::SADDSAT,    MVT::v32i16,  2 },
+    { ISD::SADDSAT,    MVT::v64i8,   2 },
+    { ISD::SSUBSAT,    MVT::v32i16,  2 },
+    { ISD::SSUBSAT,    MVT::v64i8,   2 },
+    { ISD::UADDSAT,    MVT::v32i16,  2 },
+    { ISD::UADDSAT,    MVT::v64i8,   2 },
+    { ISD::USUBSAT,    MVT::v32i16,  2 },
+    { ISD::USUBSAT,    MVT::v64i8,   2 },
     { ISD::FMAXNUM,    MVT::f32,     2 },
     { ISD::FMAXNUM,    MVT::v4f32,   2 },
     { ISD::FMAXNUM,    MVT::v8f32,   2 },

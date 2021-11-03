@@ -352,10 +352,10 @@
 #define HAVE_STD_IS_TRIVIALLY_COPYABLE 1
 
 /* Define to a function implementing stricmp */
-/* stricmp defined in Bazel */
+/* stricmp defined conditionally below. */
 
 /* Define to a function implementing strdup */
-/* strdup defined in Bazel */
+/* strdup defined conditionally below. */
 
 /* Whether GlobalISel rule coverage is being collected */
 #define LLVM_GISEL_COV_ENABLED 0
@@ -367,5 +367,18 @@
 #define LLVM_SUPPORT_XCODE_SIGNPOSTS 0
 
 /* HAVE_PROC_PID_RUSAGE defined in Bazel */
+
+/* Directly provide definitions here behind platform preprocessor definitions.
+ * The preprocessor conditions are sufficient to handle all of the configuration
+ * on platforms targeted by Bazel, and defining these here more faithfully
+ * matches how the users of this header expect things to work with CMake.
+ * FIXME: We should consider moving other platform defines to use this technique
+ * as well.
+ */
+
+#ifdef _WIN32
+#define stricmp _stricmp
+#define strdup _strdup
+#endif
 
 #endif

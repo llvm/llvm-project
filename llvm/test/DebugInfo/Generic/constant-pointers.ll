@@ -10,10 +10,10 @@
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_TAG_template_value_parameter
-; CHECK:     DW_AT_name {{.*}} "V"
+; CHECK:     DW_AT_name {{.*}}"V"
 ; CHECK:     DW_AT_const_value [DW_FORM_udata] (0)
 ; CHECK:   DW_TAG_template_value_parameter
-; CHECK:     DW_AT_name {{.*}} "F"
+; CHECK:     DW_AT_name {{.*}}"F"
 ; CHECK:     DW_AT_const_value [DW_FORM_udata] (0)
 
 ; Function Attrs: nounwind uwtable

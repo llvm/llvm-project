@@ -104,8 +104,8 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
                                  bool Strict) {
   DifferingParamsContainer DifferingParams;
 
-  auto SourceParamIt = ParameterSourceDeclaration->param_begin();
-  auto OtherParamIt = OtherDeclaration->param_begin();
+  const auto *SourceParamIt = ParameterSourceDeclaration->param_begin();
+  const auto *OtherParamIt = OtherDeclaration->param_begin();
 
   while (SourceParamIt != ParameterSourceDeclaration->param_end() &&
          OtherParamIt != OtherDeclaration->param_end()) {
@@ -303,7 +303,7 @@ void InconsistentDeclarationParameterNameCheck::check(
   const auto *OriginalDeclaration =
       Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
 
-  if (VisitedDeclarations.count(OriginalDeclaration) > 0)
+  if (VisitedDeclarations.contains(OriginalDeclaration))
     return; // Avoid multiple warnings.
 
   const FunctionDecl *ParameterSourceDeclaration =

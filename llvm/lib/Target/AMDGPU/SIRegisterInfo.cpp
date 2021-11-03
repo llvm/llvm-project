@@ -2631,8 +2631,10 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
   if (const RegisterBank *RB = RCOrRB.dyn_cast<const RegisterBank*>())
     return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
 
-  const TargetRegisterClass *RC = RCOrRB.get<const TargetRegisterClass*>();
-  return getAllocatableClass(RC);
+  if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
+    return getAllocatableClass(RC);
+
+  return nullptr;
 }
 
 MCRegister SIRegisterInfo::getVCC() const {

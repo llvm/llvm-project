@@ -411,7 +411,6 @@ void CallEvent::dump(raw_ostream &Out) const {
   ASTContext &Ctx = getState()->getStateManager().getContext();
   if (const Expr *E = getOriginExpr()) {
     E->printPretty(Out, nullptr, Ctx.getPrintingPolicy());
-    Out << "\n";
     return;
   }
 

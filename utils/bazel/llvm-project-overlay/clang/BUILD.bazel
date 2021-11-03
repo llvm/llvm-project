@@ -691,14 +691,25 @@ cc_library(
         "lib/AST/*.h",
         "lib/AST/Interp/*.cpp",
         "lib/AST/Interp/*.h",
-    ]),
+    ]) + [
+        "lib/AST/AttrDocTable.inc",
+        "lib/AST/Interp/Opcodes.inc",
+    ],
     hdrs = glob([
         "include/clang/AST/*.h",
     ]),
-    includes = [
-        "include",
-        "lib/AST",
-        "lib/AST/Interp",
+    copts = [
+        # FIXME: This is necessary to allow "file relative" include paths from
+        # non-generated `srcs` to find generated `srcs` above. Bazel should
+        # either make this work automatically by creating a unified tree of
+        # `srcs` or at least provide a `local_includes` that has the path
+        # translation logic of `includes` but is only used locally (similar to
+        # `local_defines` vs. `defines`). Until one of those lands, this is the
+        # least bad approach. Using `includes` is *specifically* problematic for
+        # this library because it contains files that collide easily with system
+        # headers such as `CXXABI.h`.
+        "-I$(GENDIR)/external/llvm-project/clang/lib/AST",
+        "-I$(GENDIR)/external/llvm-project/clang/lib/AST/Interp",
     ],
     textual_hdrs = [
         "include/clang/AST/AttrImpl.inc",
@@ -715,8 +726,6 @@ cc_library(
         "include/clang/AST/DeclNodes.inc",
         "include/clang/AST/StmtDataCollectors.inc",
         "include/clang/AST/StmtNodes.inc",
-        "lib/AST/AttrDocTable.inc",
-        "lib/AST/Interp/Opcodes.inc",
     ] + glob([
         "include/clang/AST/*.def",
     ]),
@@ -1313,6 +1322,10 @@ cc_library(
         # directly #including "Tools.h".
         "lib/Driver",
     ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": ["version.lib"],
+        "//conditions:default": [],
+    }),
     textual_hdrs = glob([
         "include/clang/Driver/*.def",
     ]),
@@ -1732,12 +1745,13 @@ cc_library(
 )
 
 cc_library(
-    name = "libclang_library",
+    name = "libclang_static",
     srcs = glob([
         "tools/libclang/*.cpp",
         "tools/libclang/*.h",
     ]),
     hdrs = glob(["include/clang-c/*.h"]),
+    defines = ["CINDEX_NO_EXPORTS"],
     deps = [
         ":arc_migrate",
         ":ast",
@@ -1758,18 +1772,36 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "c-bindings",
-    hdrs = glob(["include/clang-c/*.h"]),
-    deps = [
-        ":libclang_library",
-    ],
-    alwayslink = 1,
-)
-
 cc_plugin_library(
     name = "libclang",
-    deps = [":c-bindings"],
+    srcs = glob([
+        "tools/libclang/*.cpp",
+        "tools/libclang/*.h",
+    ]),
+    hdrs = glob(["include/clang-c/*.h"]),
+    copts = select({
+        "@bazel_tools//src/conditions:windows": ["-D_CINDEX_LIB_"],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "include",
+    deps = [
+        ":arc_migrate",
+        ":ast",
+        ":basic",
+        ":codegen",
+        ":config",
+        ":driver",
+        ":frontend",
+        ":index",
+        ":lex",
+        ":rewrite",
+        ":sema",
+        ":tooling",
+        "//llvm:BitstreamReader",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
 )
 
 filegroup(
@@ -1802,14 +1834,12 @@ cc_binary(
     deps = [
         ":ast",
         ":basic",
-        ":c-bindings",
         ":codegen",
         ":config",
         ":frontend",
         ":index",
         ":lex",
-        ":parse",
-        ":sema",
+        ":libclang",
         ":serialization",
         "//llvm:Core",
         "//llvm:MC",
@@ -1837,11 +1867,14 @@ cc_binary(
     name = "c-arcmt-test",
     testonly = 1,
     srcs = ["tools/c-arcmt-test/c-arcmt-test.c"],
-    copts = ["-std=gnu99"],
+    copts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": ["-std=gnu99"],
+    }),
     stamp = 0,
     deps = [
-        ":c-bindings",
         ":codegen",
+        ":libclang",
         "//llvm:MC",
         "//llvm:Support",
     ],

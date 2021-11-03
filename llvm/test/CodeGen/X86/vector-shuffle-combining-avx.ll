@@ -447,7 +447,7 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X86-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm5
 ; X86-AVX1-NEXT:    vshufpd {{.*#+}} ymm4 = ymm5[1],ymm4[0],ymm5[2],ymm4[3]
-; X86-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[0,1],ymm2[0,1]
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm5
 ; X86-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[2,3,0,1]
 ; X86-AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0],ymm3[1],ymm5[2],ymm3[3]
 ; X86-AVX1-NEXT:    vmovapd %ymm3, (%edx)
@@ -520,7 +520,7 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm5
 ; X64-AVX1-NEXT:    vshufpd {{.*#+}} ymm4 = ymm5[1],ymm4[0],ymm5[2],ymm4[3]
-; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[0,1],ymm2[0,1]
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm5
 ; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[2,3,0,1]
 ; X64-AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0],ymm3[1],ymm5[2],ymm3[3]
 ; X64-AVX1-NEXT:    vmovapd %ymm3, (%rdi)

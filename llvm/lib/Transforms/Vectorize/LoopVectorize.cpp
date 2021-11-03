@@ -1123,7 +1123,7 @@ static Value *getRuntimeVFAsFloat(IRBuilder<> &B, Type *FTy, ElementCount VF) {
   assert(FTy->isFloatingPointTy() && "Expected floating point type!");
   Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
   Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
-  return B.CreateSIToFP(RuntimeVF, FTy);
+  return B.CreateUIToFP(RuntimeVF, FTy);
 }
 
 void reportVectorizationFailure(const StringRef DebugMsg,
@@ -9776,6 +9776,9 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   Value *PrevInChain = State.get(getChainOp(), 0);
   RecurKind Kind = RdxDesc->getRecurrenceKind();
   bool IsOrdered = State.ILV->useOrderedReductions(*RdxDesc);
+  // Propagate the fast-math flags carried by the underlying instruction.
+  IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
+  State.Builder.setFastMathFlags(RdxDesc->getFastMathFlags());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {

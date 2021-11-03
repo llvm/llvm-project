@@ -4055,6 +4055,35 @@ bool CmpInst::isSigned(Predicate predicate) {
   }
 }
 
+bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,
+                       ICmpInst::Predicate Pred) {
+  assert(ICmpInst::isIntPredicate(Pred) && "Only for integer predicates!");
+  switch (Pred) {
+  case ICmpInst::Predicate::ICMP_EQ:
+    return LHS.eq(RHS);
+  case ICmpInst::Predicate::ICMP_NE:
+    return LHS.ne(RHS);
+  case ICmpInst::Predicate::ICMP_UGT:
+    return LHS.ugt(RHS);
+  case ICmpInst::Predicate::ICMP_UGE:
+    return LHS.uge(RHS);
+  case ICmpInst::Predicate::ICMP_ULT:
+    return LHS.ult(RHS);
+  case ICmpInst::Predicate::ICMP_ULE:
+    return LHS.ule(RHS);
+  case ICmpInst::Predicate::ICMP_SGT:
+    return LHS.sgt(RHS);
+  case ICmpInst::Predicate::ICMP_SGE:
+    return LHS.sge(RHS);
+  case ICmpInst::Predicate::ICMP_SLT:
+    return LHS.slt(RHS);
+  case ICmpInst::Predicate::ICMP_SLE:
+    return LHS.sle(RHS);
+  default:
+    llvm_unreachable("Unexpected non-integer predicate.");
+  };
+}
+
 CmpInst::Predicate CmpInst::getFlippedSignednessPredicate(Predicate pred) {
   assert(CmpInst::isRelational(pred) &&
          "Call only with non-equality predicates!");

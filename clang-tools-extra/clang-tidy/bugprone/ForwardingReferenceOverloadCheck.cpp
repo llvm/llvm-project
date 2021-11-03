@@ -112,7 +112,8 @@ void ForwardingReferenceOverloadCheck::check(
 
   // Every parameter after the first must have a default value.
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  for (auto Iter = Ctor->param_begin() + 1; Iter != Ctor->param_end(); ++Iter) {
+  for (auto *Iter = Ctor->param_begin() + 1; Iter != Ctor->param_end();
+       ++Iter) {
     if (!(*Iter)->hasDefaultArg())
       return;
   }

@@ -2058,7 +2058,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     unsigned NumPHIdValues = 0;
     for (auto *I : *LRI)
       for (auto *V : PHIOperands[I]) {
-        if (InstructionsToSink.count(V) == 0)
+        if (!InstructionsToSink.contains(V))
           ++NumPHIdValues;
         // FIXME: this check is overly optimistic. We may end up not sinking
         // said instruction, due to the very same profitability check.
@@ -4780,26 +4780,6 @@ static bool CasesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
       return false;
   }
   return true;
-}
-
-static void createUnreachableSwitchDefault(SwitchInst *Switch,
-                                           DomTreeUpdater *DTU) {
-  LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
-  auto *BB = Switch->getParent();
-  auto *OrigDefaultBlock = Switch->getDefaultDest();
-  OrigDefaultBlock->removePredecessor(BB);
-  BasicBlock *NewDefaultBlock = BasicBlock::Create(
-      BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
-      OrigDefaultBlock);
-  new UnreachableInst(Switch->getContext(), NewDefaultBlock);
-  Switch->setDefaultDest(&*NewDefaultBlock);
-  if (DTU) {
-    SmallVector<DominatorTree::UpdateType, 2> Updates;
-    Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
-    if (!is_contained(successors(BB), OrigDefaultBlock))
-      Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
-    DTU->applyUpdates(Updates);
-  }
 }
 
 /// Turn a switch with two reachable destinations into an integer range

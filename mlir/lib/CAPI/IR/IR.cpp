@@ -338,6 +338,8 @@ MlirOperation mlirOperationClone(MlirOperation op) {
 
 void mlirOperationDestroy(MlirOperation op) { unwrap(op)->erase(); }
 
+void mlirOperationRemoveFromParent(MlirOperation op) { unwrap(op)->remove(); }
+
 bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
@@ -449,6 +451,14 @@ void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
 
 bool mlirOperationVerify(MlirOperation op) {
   return succeeded(verify(unwrap(op)));
+}
+
+void mlirOperationMoveAfter(MlirOperation op, MlirOperation other) {
+  return unwrap(op)->moveAfter(unwrap(other));
+}
+
+void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
+  return unwrap(op)->moveBefore(unwrap(other));
 }
 
 //===----------------------------------------------------------------------===//
@@ -752,4 +762,37 @@ bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2) {
 
 size_t mlirTypeIDHashValue(MlirTypeID typeID) {
   return hash_value(unwrap(typeID));
+}
+
+//===----------------------------------------------------------------------===//
+// Symbol and SymbolTable API.
+//===----------------------------------------------------------------------===//
+
+MlirStringRef mlirSymbolTableGetSymbolAttributeName() {
+  return wrap(SymbolTable::getSymbolAttrName());
+}
+
+MlirSymbolTable mlirSymbolTableCreate(MlirOperation operation) {
+  if (!unwrap(operation)->hasTrait<OpTrait::SymbolTable>())
+    return wrap(static_cast<SymbolTable *>(nullptr));
+  return wrap(new SymbolTable(unwrap(operation)));
+}
+
+void mlirSymbolTableDestroy(MlirSymbolTable symbolTable) {
+  delete unwrap(symbolTable);
+}
+
+MlirOperation mlirSymbolTableLookup(MlirSymbolTable symbolTable,
+                                    MlirStringRef name) {
+  return wrap(unwrap(symbolTable)->lookup(StringRef(name.data, name.length)));
+}
+
+MlirAttribute mlirSymbolTableInsert(MlirSymbolTable symbolTable,
+                                    MlirOperation operation) {
+  return wrap(unwrap(symbolTable)->insert(unwrap(operation)));
+}
+
+void mlirSymbolTableErase(MlirSymbolTable symbolTable,
+                          MlirOperation operation) {
+  unwrap(symbolTable)->erase(unwrap(operation));
 }

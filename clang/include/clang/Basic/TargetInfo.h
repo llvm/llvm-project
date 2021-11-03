@@ -1013,8 +1013,7 @@ public:
     }
     bool isValidAsmImmediate(const llvm::APInt &Value) const {
       if (!ImmSet.empty())
-        return Value.isSignedIntN(32) &&
-               ImmSet.count(Value.getZExtValue()) != 0;
+        return Value.isSignedIntN(32) && ImmSet.contains(Value.getZExtValue());
       return !ImmRange.isConstrained ||
              (Value.sge(ImmRange.Min) && Value.sle(ImmRange.Max));
     }

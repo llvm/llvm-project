@@ -34,14 +34,6 @@ namespace linalg {
 /// uses BufferizationAliasInfo.
 class BufferizationAliasInfo {
 public:
-  /// Specify fine-grain relationship between buffers to enable more analysis.
-  enum class BufferRelation {
-    None,
-    // TODO: ResultContainsOperand,
-    // TODO: OperandContainsResult,
-    Equivalent
-  };
-
   explicit BufferizationAliasInfo(Operation *rootOp);
 
   /// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
@@ -122,23 +114,17 @@ public:
   void dumpEquivalences() const;
 
 private:
-  /// llvm::EquivalenceClasses wants comparable elements because it uses
-  /// std::set as the underlying impl.
-  /// ValueWrapper wraps Value and uses pointer comparison on the defining op.
-  /// This is a poor man's comparison but it's not like UnionFind needs ordering
-  /// anyway ..
-  struct ValueWrapper {
-    ValueWrapper(Value val) : v(val) {}
-    operator Value() const { return v; }
-    bool operator<(const ValueWrapper &wrap) const {
-      return v.getImpl() < wrap.v.getImpl();
+  /// llvm::EquivalenceClasses wants comparable elements. This comparator uses
+  /// uses pointer comparison on the defining op. This is a poor man's
+  /// comparison but it's not like UnionFind needs ordering anyway.
+  struct ValueComparator {
+    bool operator()(const Value &lhs, const Value &rhs) const {
+      return lhs.getImpl() < rhs.getImpl();
     }
-    bool operator==(const ValueWrapper &wrap) const { return v == wrap.v; }
-    Value v;
   };
 
   using EquivalenceClassRangeType = llvm::iterator_range<
-      llvm::EquivalenceClasses<ValueWrapper>::member_iterator>;
+      llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
 
@@ -164,10 +150,10 @@ private:
   /// Auxiliary structure to store all the values a given value aliases with.
   /// These are the conservative cases that can further decompose into
   /// "equivalent" buffer relationships.
-  llvm::EquivalenceClasses<ValueWrapper> aliasInfo;
+  llvm::EquivalenceClasses<Value, ValueComparator> aliasInfo;
 
   /// Auxiliary structure to store all the equivalent buffer classes.
-  llvm::EquivalenceClasses<ValueWrapper> equivalentInfo;
+  llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
 };
 
 /// Analyze the `ops` to determine which OpResults are inplaceable.
@@ -207,6 +193,8 @@ bufferizeOp(Operation *op, BlockAndValueMapping &bvm,
             AllocationCallbacks allocationFns,
             DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr);
 
+/// Register external models implemented for the `BufferizableOpInterface`.
+void registerBufferiableOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 

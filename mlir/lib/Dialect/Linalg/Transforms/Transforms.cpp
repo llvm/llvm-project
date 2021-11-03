@@ -840,3 +840,98 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
   rewriter.replaceOp(sliceOp, tiledPadOp->getResults());
   return success();
 }
+
+namespace {
+// The following are patterns for downscaling convolution ops with size-1
+// window dimensions.
+//
+// Note that we'd eventually want to write such transformations in a generic
+// way, e.g., converting to linalg.generic, removing the size-1 dimensions,
+// and then turning back to named ops. But for now it's fine to have a few
+// patterns matching special ops to get started.
+
+/// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
+/// convolution ops.
+struct DownscaleSizeOneWindowed2DConvolution final
+    : public OpRewritePattern<Conv2DNhwcHwcfOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
+                                PatternRewriter &rewriter) const override {
+    auto linalgOp = cast<linalg::LinalgOp>(*convOp);
+    if (linalgOp.hasBufferSemantics())
+      return failure(); // To be implemented
+
+    Value input = convOp.inputs().front();
+    Value filter = convOp.inputs().back();
+    Value output = convOp.outputs().front();
+
+    auto inputType = input.getType().dyn_cast<RankedTensorType>();
+    auto filterType = filter.getType().dyn_cast<RankedTensorType>();
+    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+
+    auto inputShape = inputType.getShape();
+    auto filterShape = filterType.getShape();
+    auto outputShape = outputType.getShape();
+
+    // Only handle the case where at least one of the window dimensions is
+    // of size 1. Other cases can rely on tiling to reduce to such cases.
+    int64_t fhSize = filterShape[0], fwSize = filterShape[1];
+    int64_t ohSize = outputShape[1], owSize = outputShape[2];
+    if (!(fhSize == 1 && ohSize == 1) && !(fwSize == 1 && owSize == 1))
+      return failure();
+    bool removeH = ohSize == 1;
+
+    // Get new shapes and types for all operands by removing the size-1
+    // dimension.
+
+    SmallVector<int64_t, 3> newInputShape{
+        inputShape[0], inputShape[removeH ? 2 : 1], inputShape[3]};
+    auto newInputType = RankedTensorType::get(
+        newInputShape, inputType.getElementType(), inputType.getEncoding());
+
+    SmallVector<int64_t, 3> newFilterShape{filterShape[removeH ? 1 : 0],
+                                           filterShape[2], filterShape[3]};
+    auto newFilterType = RankedTensorType::get(
+        newFilterShape, filterType.getElementType(), filterType.getEncoding());
+
+    SmallVector<int64_t, 3> newOutputShape{
+        outputShape[0], outputShape[removeH ? 2 : 1], outputShape[3]};
+    auto newOutputType = RankedTensorType::get(
+        newOutputShape, outputType.getElementType(), outputType.getEncoding());
+
+    SmallVector<ReassociationIndices, 3> ioReshapeIndices = {{0}, {1, 2}, {3}};
+    SmallVector<ReassociationIndices, 3> fReshapeIndices = {{0, 1}, {2}, {3}};
+
+    // Reshape all operands for 1-D convolution.
+    Location loc = convOp.getLoc();
+    Value newInput = rewriter.create<linalg::TensorCollapseShapeOp>(
+        loc, newInputType, input, ioReshapeIndices);
+    Value newFilter = rewriter.create<linalg::TensorCollapseShapeOp>(
+        loc, newFilterType, filter, fReshapeIndices);
+    Value newOutput = rewriter.create<linalg::TensorCollapseShapeOp>(
+        loc, newOutputType, output, ioReshapeIndices);
+
+    // We need to shrink the strides and dilations too.
+    auto stride = convOp.strides().getFlatValue<int64_t>(removeH ? 1 : 0);
+    auto stridesAttr = rewriter.getI64VectorAttr(stride);
+    auto dilation = convOp.dilations().getFlatValue<int64_t>(removeH ? 1 : 0);
+    auto dilationsAttr = rewriter.getI64VectorAttr(dilation);
+
+    auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(
+        loc, newOutputType, ValueRange{newInput, newFilter},
+        ValueRange{newOutput}, stridesAttr, dilationsAttr);
+
+    rewriter.replaceOpWithNewOp<linalg::TensorExpandShapeOp>(
+        convOp, outputType, conv1DOp.getResult(0), ioReshapeIndices);
+    return success();
+  };
+};
+
+} // namespace
+
+void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
+                                                  PatternBenefit benefit) {
+  patterns.add<DownscaleSizeOneWindowed2DConvolution>(patterns.getContext(),
+                                                      benefit);
+}
