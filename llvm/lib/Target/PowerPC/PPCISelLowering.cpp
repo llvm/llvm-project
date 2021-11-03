@@ -1712,6 +1712,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::EXTRACT_VSX_REG: return "PPCISD::EXTRACT_VSX_REG";
   case PPCISD::XXMFACC:         return "PPCISD::XXMFACC";
   case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
+  case PPCISD::ZEXT_LD_SPLAT:   return "PPCISD::ZEXT_LD_SPLAT";
+  case PPCISD::SEXT_LD_SPLAT:   return "PPCISD::SEXT_LD_SPLAT";
   case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
   case PPCISD::STRICT_FADDRTZ:
     return "PPCISD::STRICT_FADDRTZ";
@@ -9060,6 +9062,34 @@ bool llvm::checkConvertToNonDenormSingle(APFloat &ArgAPFloat) {
   return (!LosesInfo && !APFloatToConvert.isDenormal());
 }
 
+static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
+                             unsigned &Opcode) {
+  const SDNode *InputNode = Op.getOperand(0).getNode();
+  if (!InputNode || !ISD::isUNINDEXEDLoad(InputNode))
+    return false;
+
+  if (!Subtarget.hasVSX())
+    return false;
+
+  EVT Ty = Op->getValueType(0);
+  if (Ty == MVT::v2f64 || Ty == MVT::v4f32 || Ty == MVT::v4i32 ||
+      Ty == MVT::v8i16 || Ty == MVT::v16i8)
+    return true;
+
+  if (Ty == MVT::v2i64) {
+    // check the extend type if the input is i32 while the output vector type is
+    // v2i64.
+    if (cast<LoadSDNode>(Op.getOperand(0))->getMemoryVT() == MVT::i32) {
+      if (ISD::isZEXTLoad(InputNode))
+        Opcode = PPCISD::ZEXT_LD_SPLAT;
+      if (ISD::isSEXTLoad(InputNode))
+        Opcode = PPCISD::SEXT_LD_SPLAT;
+    }
+    return true;
+  }
+  return false;
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.  If we CAN select this case, and if it
 // selects to a single instruction, return Op.  Otherwise, if we can codegen
@@ -9123,17 +9153,17 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   if (!BVNIsConstantSplat || SplatBitSize > 32) {
+    unsigned NewOpcode = PPCISD::LD_SPLAT;
 
-    bool IsPermutedLoad = false;
-    const SDValue *InputLoad =
-        getNormalLoadInput(Op.getOperand(0), IsPermutedLoad);
     // Handle load-and-splat patterns as we have instructions that will do this
     // in one go.
-    if (InputLoad && DAG.isSplatValue(Op, true)) {
+    if (DAG.isSplatValue(Op, true) &&
+        isValidSplatLoad(Subtarget, Op, NewOpcode)) {
+      const SDValue *InputLoad = &Op.getOperand(0);
       LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
 
-      // We have handling for 4 and 8 byte elements.
-      unsigned ElementSize = LD->getMemoryVT().getScalarSizeInBits();
+      unsigned ElementSize = LD->getMemoryVT().getScalarSizeInBits() *
+                             ((NewOpcode == PPCISD::LD_SPLAT) ? 1 : 2);
 
       // Checking for a single use of this load, we have to check for vector
       // width (128 bits) / ElementSize uses (since each operand of the
@@ -9142,18 +9172,54 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       for (SDValue BVInOp : Op->ops())
         if (BVInOp.isUndef())
           NumUsesOfInputLD--;
+
+      // Execlude somes case where LD_SPLAT is worse than scalar_to_vector:
+      // Below cases should also happen for "lfiwzx/lfiwax + LE target + index
+      // 1" and "lxvrhx + BE target + index 7" and "lxvrbx + BE target + index
+      // 15", but funciton IsValidSplatLoad() now will only return true when
+      // the data at index 0 is not nullptr. So we will not get into trouble for
+      // these cases.
+      //
+      // case 1 - lfiwzx/lfiwax
+      // 1.1: load result is i32 and is sign/zero extend to i64;
+      // 1.2: build a v2i64 vector type with above loaded value;
+      // 1.3: the vector has only one value at index 0, others are all undef;
+      // 1.4: on BE target, so that lfiwzx/lfiwax does not need any permute.
+      if (NumUsesOfInputLD == 1 &&
+          (Op->getValueType(0) == MVT::v2i64 && NewOpcode != PPCISD::LD_SPLAT &&
+           !Subtarget.isLittleEndian() && Subtarget.hasVSX() &&
+           Subtarget.hasLFIWAX()))
+        return SDValue();
+
+      // case 2 - lxvrhx
+      // 2.1: load result is i16;
+      // 2.2: build a v8i16 vector with above loaded value;
+      // 2.3: the vector has only one value at index 0, others are all undef;
+      // 2.4: on LE target, so that lxvrhx does not need any permute.
+      if (NumUsesOfInputLD == 1 && Subtarget.isLittleEndian() &&
+          Subtarget.isISA3_1() && Op->getValueType(0) == MVT::v16i8)
+        return SDValue();
+
+      // case 3 - lxvrbx
+      // 3.1: load result is i8;
+      // 3.2: build a v16i8 vector with above loaded value;
+      // 3.3: the vector has only one value at index 0, others are all undef;
+      // 3.4: on LE target, so that lxvrbx does not need any permute.
+      if (NumUsesOfInputLD == 1 && Subtarget.isLittleEndian() &&
+          Subtarget.isISA3_1() && Op->getValueType(0) == MVT::v8i16)
+        return SDValue();
+
       assert(NumUsesOfInputLD > 0 && "No uses of input LD of a build_vector?");
       if (InputLoad->getNode()->hasNUsesOfValue(NumUsesOfInputLD, 0) &&
-          ((Subtarget.hasVSX() && ElementSize == 64) ||
-           (Subtarget.hasP9Vector() && ElementSize == 32))) {
+          Subtarget.hasVSX()) {
         SDValue Ops[] = {
           LD->getChain(),    // Chain
           LD->getBasePtr(),  // Ptr
           DAG.getValueType(Op.getValueType()) // VT
         };
         SDValue LdSplt = DAG.getMemIntrinsicNode(
-            PPCISD::LD_SPLAT, dl, DAG.getVTList(Op.getValueType(), MVT::Other),
-            Ops, LD->getMemoryVT(), LD->getMemOperand());
+            NewOpcode, dl, DAG.getVTList(Op.getValueType(), MVT::Other), Ops,
+            LD->getMemoryVT(), LD->getMemOperand());
         // Replace all uses of the output chain of the original load with the
         // output chain of the new load.
         DAG.ReplaceAllUsesOfValueWith(InputLoad->getValue(1),
