@@ -1658,8 +1658,8 @@ const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
                         term->getNumOperands() != 0 ||
                         term->getNumResults() != 0;
     }
-    p.printRegion({0}, /*printEntryBlockArgs=*/true,
-                  /*printBlockTerminators=*/printTerminator);
+    _odsPrinter.printRegion({0}, /*printEntryBlockArgs=*/true,
+      /*printBlockTerminators=*/printTerminator);
   }
 )";
 
@@ -1677,7 +1677,8 @@ const char *enumAttrBeginPrinterCode = R"(
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                OpMethodBody &body, bool withKeyword) {
-  body << "  p.printOptionalAttrDict" << (withKeyword ? "WithKeyword" : "")
+  body << "  _odsPrinter.printOptionalAttrDict"
+       << (withKeyword ? "WithKeyword" : "")
        << "((*this)->getAttrs(), /*elidedAttrs=*/{";
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands &&
@@ -1701,7 +1702,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 /// the previous element was a punctuation literal.
 static void genLiteralPrinter(StringRef value, OpMethodBody &body,
                               bool &shouldEmitSpace, bool &lastWasPunctuation) {
-  body << "  p";
+  body << "  _odsPrinter";
 
   // Don't insert a space for certain punctuation.
   auto shouldPrintSpaceBeforeLiteral = [&] {
@@ -1726,7 +1727,7 @@ static void genLiteralPrinter(StringRef value, OpMethodBody &body,
 static void genSpacePrinter(bool value, OpMethodBody &body,
                             bool &shouldEmitSpace, bool &lastWasPunctuation) {
   if (value) {
-    body << "  p << ' ';\n";
+    body << "  _odsPrinter << ' ';\n";
     lastWasPunctuation = false;
   } else {
     lastWasPunctuation = true;
@@ -1776,7 +1777,7 @@ static void genCustomDirectiveParameterPrinter(Element *element,
 /// Generate the printer for a custom directive.
 static void genCustomDirectivePrinter(CustomDirective *customDir,
                                       const Operator &op, OpMethodBody &body) {
-  body << "  print" << customDir->getName() << "(p, *this";
+  body << "  print" << customDir->getName() << "(_odsPrinter, *this";
   for (Element &param : customDir->getArguments()) {
     body << ", ";
     genCustomDirectiveParameterPrinter(&param, op, body);
@@ -1791,13 +1792,13 @@ static void genRegionPrinter(const Twine &regionName, OpMethodBody &body,
     body << llvm::formatv(regionSingleBlockImplicitTerminatorPrinterCode,
                           regionName);
   else
-    body << "  p.printRegion(" << regionName << ");\n";
+    body << "  _odsPrinter.printRegion(" << regionName << ");\n";
 }
 static void genVariadicRegionPrinter(const Twine &regionListName,
                                      OpMethodBody &body,
                                      bool hasImplicitTermTrait) {
   body << "    llvm::interleaveComma(" << regionListName
-       << ", p, [&](::mlir::Region &region) {\n      ";
+       << ", _odsPrinter, [&](::mlir::Region &region) {\n      ";
   genRegionPrinter("region", body, hasImplicitTermTrait);
   body << "    });\n";
 }
@@ -1856,10 +1857,10 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
         body << '"' << cases[it].getStr() << '"';
       });
       body << ")))\n"
-              "      p << '\"' << caseValueStr << '\"';\n"
+              "      _odsPrinter << '\"' << caseValueStr << '\"';\n"
               "    else\n  ";
     }
-    body << "    p << caseValueStr;\n"
+    body << "    _odsPrinter << caseValueStr;\n"
             "  }\n";
     return;
   }
@@ -1889,17 +1890,17 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                             llvm::isDigit(symbol.front()) ? ("_" + symbol)
                                                           : symbol);
     }
-    body << "      p << caseValueStr;\n"
+    body << "      _odsPrinter << caseValueStr;\n"
             "      break;\n"
             "    default:\n"
-            "      p << '\"' << caseValueStr << '\"';\n"
+            "      _odsPrinter << '\"' << caseValueStr << '\"';\n"
             "      break;\n"
             "    }\n"
             "  }\n";
     return;
   }
 
-  body << "    p << caseValueStr;\n"
+  body << "    _odsPrinter << caseValueStr;\n"
           "  }\n";
 }
 
@@ -1942,7 +1943,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 
   // Emit a whitespace element.
   if (isa<NewlineElement>(element)) {
-    body << "  p.printNewline();\n";
+    body << "  _odsPrinter.printNewline();\n";
     return;
   }
   if (SpaceElement *space = dyn_cast<SpaceElement>(element))
@@ -1999,7 +2000,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   // Optionally insert a space before the next element. The AttrDict printer
   // already adds a space as necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
-    body << "  p << ' ';\n";
+    body << "  _odsPrinter << ' ';\n";
   lastWasPunctuation = false;
   shouldEmitSpace = true;
 
@@ -2012,31 +2013,33 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 
     // If we are formatting as a symbol name, handle it as a symbol name.
     if (shouldFormatSymbolNameAttr(var)) {
-      body << "  p.printSymbolName(" << op.getGetterName(var->name)
+      body << "  _odsPrinter.printSymbolName(" << op.getGetterName(var->name)
            << "Attr().getValue());\n";
       return;
     }
 
     // Elide the attribute type if it is buildable.
     if (attr->getTypeBuilder())
-      body << "  p.printAttributeWithoutType(" << op.getGetterName(var->name)
-           << "Attr());\n";
+      body << "  _odsPrinter.printAttributeWithoutType("
+           << op.getGetterName(var->name) << "Attr());\n";
     else
-      body << "  p.printAttribute(" << op.getGetterName(var->name)
+      body << "  _odsPrinter.printAttribute(" << op.getGetterName(var->name)
            << "Attr());\n";
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     if (operand->getVar()->isVariadicOfVariadic()) {
       body << "  ::llvm::interleaveComma("
            << op.getGetterName(operand->getVar()->name)
-           << "(), p, [&](const auto &operands) { p << \"(\" << operands << "
+           << "(), _odsPrinter, [&](const auto &operands) { _odsPrinter << "
+              "\"(\" << operands << "
               "\")\"; });\n";
 
     } else if (operand->getVar()->isOptional()) {
       body << "  if (::mlir::Value value = "
            << op.getGetterName(operand->getVar()->name) << "())\n"
-           << "    p << value;\n";
+           << "    _odsPrinter << value;\n";
     } else {
-      body << "  p << " << op.getGetterName(operand->getVar()->name) << "();\n";
+      body << "  _odsPrinter << " << op.getGetterName(operand->getVar()->name)
+           << "();\n";
     }
   } else if (auto *region = dyn_cast<RegionVariable>(element)) {
     const NamedRegion *var = region->getVar();
@@ -2050,32 +2053,34 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
     const NamedSuccessor *var = successor->getVar();
     std::string name = op.getGetterName(var->name);
     if (var->isVariadic())
-      body << "  ::llvm::interleaveComma(" << name << "(), p);\n";
+      body << "  ::llvm::interleaveComma(" << name << "(), _odsPrinter);\n";
     else
-      body << "  p << " << name << "();\n";
+      body << "  _odsPrinter << " << name << "();\n";
   } else if (auto *dir = dyn_cast<CustomDirective>(element)) {
     genCustomDirectivePrinter(dir, op, body);
   } else if (isa<OperandsDirective>(element)) {
-    body << "  p << getOperation()->getOperands();\n";
+    body << "  _odsPrinter << getOperation()->getOperands();\n";
   } else if (isa<RegionsDirective>(element)) {
     genVariadicRegionPrinter("getOperation()->getRegions()", body,
                              hasImplicitTermTrait);
   } else if (isa<SuccessorsDirective>(element)) {
-    body << "  ::llvm::interleaveComma(getOperation()->getSuccessors(), p);\n";
+    body << "  ::llvm::interleaveComma(getOperation()->getSuccessors(), "
+            "_odsPrinter);\n";
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     if (auto *operand = dyn_cast<OperandVariable>(dir->getOperand())) {
       if (operand->getVar()->isVariadicOfVariadic()) {
-        body << llvm::formatv("  ::llvm::interleaveComma({0}().getTypes(), p, "
-                              "[&](::mlir::TypeRange types) {{ p << \"(\" << "
-                              "types << \")\"; });\n",
-                              op.getGetterName(operand->getVar()->name));
+        body << llvm::formatv(
+            "  ::llvm::interleaveComma({0}().getTypes(), _odsPrinter, "
+            "[&](::mlir::TypeRange types) {{ _odsPrinter << \"(\" << "
+            "types << \")\"; });\n",
+            op.getGetterName(operand->getVar()->name));
         return;
       }
     }
-    body << "  p << ";
+    body << "  _odsPrinter << ";
     genTypeOperandPrinter(dir->getOperand(), op, body) << ";\n";
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
-    body << "  p.printFunctionalType(";
+    body << "  _odsPrinter.printFunctionalType(";
     genTypeOperandPrinter(dir->getInputs(), op, body) << ", ";
     genTypeOperandPrinter(dir->getResults(), op, body) << ");\n";
   } else {
@@ -2084,8 +2089,8 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
-  auto *method =
-      opClass.addMethodAndPrune("void", "print", "::mlir::OpAsmPrinter &p");
+  auto *method = opClass.addMethodAndPrune("void", "print",
+                                           "::mlir::OpAsmPrinter &_odsPrinter");
   auto &body = method->body();
 
   // Flags for if we should emit a space, and if the last element was
