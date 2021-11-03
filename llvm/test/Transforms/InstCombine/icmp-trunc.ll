@@ -172,14 +172,14 @@ define i1 @ugt_253(i32 %x) {
   ret i1 %r
 }
 
-define <2 x i1> @ugt_239_splat(<2 x i16> %x) {
-; CHECK-LABEL: @ugt_239_splat(
+define <2 x i1> @ugt_2043_splat(<2 x i16> %x) {
+; CHECK-LABEL: @ugt_2043_splat(
 ; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i11>
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i11> [[T]], <i11 239, i11 239>
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i11> [[T]], <i11 -5, i11 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t = trunc <2 x i16> %x to <2 x i11>
-  %r = icmp ugt <2 x i11> %t, <i11 239, i11 239>
+  %r = icmp ugt <2 x i11> %t, <i11 2043, i11 2043> ; 0b111_1111_101
   ret <2 x i1> %r
 }
 
