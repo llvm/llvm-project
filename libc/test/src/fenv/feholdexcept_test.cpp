@@ -9,13 +9,14 @@
 #include "src/fenv/feholdexcept.h"
 
 #include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/architectures.h"
 #include "utils/UnitTest/FPExceptMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
 
 TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
-#ifdef __aarch64__
+#if defined(LLVM_LIBC_ARCH_AARCH64)
   // Few aarch64 HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -27,7 +28,7 @@ TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
   __llvm_libc::fputil::enableExcept(FE_DIVBYZERO);
   if (__llvm_libc::fputil::getExcept() == 0)
     return;
-#endif
+#endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
