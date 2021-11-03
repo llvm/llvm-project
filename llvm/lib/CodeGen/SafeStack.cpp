@@ -702,9 +702,8 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
 
   if (!DynamicAllocas.empty()) {
     // Now go through the instructions again, replacing stacksave/stackrestore.
-    for (inst_iterator It = inst_begin(&F), Ie = inst_end(&F); It != Ie;) {
-      Instruction *I = &*(It++);
-      auto II = dyn_cast<IntrinsicInst>(I);
+    for (Instruction &I : llvm::make_early_inc_range(instructions(&F))) {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
       if (!II)
         continue;
 

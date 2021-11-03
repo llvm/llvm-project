@@ -193,8 +193,8 @@ bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
 
   bool MadeChange = false;
   for (BasicBlock &BB : F)
-    for (BasicBlock::iterator II = BB.begin(), E = BB.end(); II != E;) {
-      IntrinsicInst *CI = dyn_cast<IntrinsicInst>(II++);
+    for (Instruction &I : llvm::make_early_inc_range(BB)) {
+      IntrinsicInst *CI = dyn_cast<IntrinsicInst>(&I);
       if (!CI)
         continue;
 
