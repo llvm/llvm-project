@@ -1461,27 +1461,6 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       // have not changed exit counts, or the values produced by the compare.
       continue;
     }
-
-    // If we have a loop which would be undefined if infinite, and it has at
-    // most one possible dynamic exit, then we can conclude that exit must
-    // be taken.  If that exit must be taken, and we know the LHS can only
-    // take values in the positive domain, then we can conclude RHS must
-    // also be in that same range, and replace a signed compare with an
-    // unsigned one.
-    // If the exit might not be taken in a well defined program.
-    if (ExitingBlocks.size() == 1 && SE->loopHasNoAbnormalExits(L) &&
-        SE->loopIsFiniteByAssumption(L)) {
-      // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
-      // replace the signed condition with the unsigned version.
-      ICmp->setPredicate(ICmp->getUnsignedPredicate());
-      Changed = true;
-
-      // Given we've changed exit counts, notify SCEV.  
-      // Some nested loops may share same folded exit basic block,
-      // thus we need to notify top most loop.
-      SE->forgetTopmostLoop(L);
-      continue;
-    }
   }
 
   // Now that we've canonicalized the condition to match the extend,
@@ -1540,22 +1519,6 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       // Note, we are leaving SCEV in an unfortunately imprecise case here
       // as rotation tends to reveal information about trip counts not
       // previously visible.
-      continue;
-    }
-
-    // If we have a loop which would be undefined if infinite, and it has at
-    // most one possible dynamic exit, then we can conclude that exit must
-    // be taken.  If that exit must be taken, and we know the LHS can only
-    // take values in the positive domain, then we can conclude RHS must
-    // also be in that same range.
-    if (ExitingBlocks.size() == 1 && SE->loopHasNoAbnormalExits(L) &&
-        SE->loopIsFiniteByAssumption(L)) {
-      doRotateTransform();
-      Changed = true;
-      // Given we've changed exit counts, notify SCEV.
-      // Some nested loops may share same folded exit basic block,
-      // thus we need to notify top most loop.
-      SE->forgetTopmostLoop(L);
       continue;
     }
   }
