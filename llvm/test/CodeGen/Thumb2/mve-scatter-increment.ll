@@ -236,24 +236,22 @@ define void @shl(i32* nocapture readonly %x, i32* noalias nocapture %y, i32 %n) 
 ; CHECK-NEXT:  .LBB4_1: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI4_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    vmov.i32 q1, #0x4
+; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vshl.i32 q3, q0, #2
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vstrw.32 q2, [r1, q3, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vstrw.32 q1, [q0, #64]!
 ; CHECK-NEXT:    letp lr, .LBB4_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.4:
 ; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:    .long 4294967232 @ 0xffffffc0
+; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
+; CHECK-NEXT:    .long 4294967264 @ 0xffffffe0
+; CHECK-NEXT:    .long 4294967280 @ 0xfffffff0
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %vector.ph, label %for.cond.cleanup

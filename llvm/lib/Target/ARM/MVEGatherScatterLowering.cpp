@@ -149,10 +149,10 @@ private:
   bool optimiseOffsets(Value *Offsets, BasicBlock *BB, LoopInfo *LI);
   // Pushes the given add out of the loop
   void pushOutAdd(PHINode *&Phi, Value *OffsSecondOperand, unsigned StartIndex);
-  // Pushes the given mul out of the loop
-  void pushOutMul(PHINode *&Phi, Value *IncrementPerRound,
-                  Value *OffsSecondOperand, unsigned LoopIncrement,
-                  IRBuilder<> &Builder);
+  // Pushes the given mul or shl out of the loop
+  void pushOutMulShl(unsigned Opc, PHINode *&Phi, Value *IncrementPerRound,
+                     Value *OffsSecondOperand, unsigned LoopIncrement,
+                     IRBuilder<> &Builder);
 };
 
 } // end anonymous namespace
@@ -342,7 +342,8 @@ Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
 
   const Instruction *I = cast<Instruction>(V);
   if (I->getOpcode() == Instruction::Add ||
-              I->getOpcode() == Instruction::Mul) {
+      I->getOpcode() == Instruction::Mul ||
+      I->getOpcode() == Instruction::Shl) {
     Optional<int64_t> Op0 = getIfConst(I->getOperand(0));
     Optional<int64_t> Op1 = getIfConst(I->getOperand(1));
     if (!Op0 || !Op1)
@@ -351,6 +352,8 @@ Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
       return Optional<int64_t>{Op0.getValue() + Op1.getValue()};
     if (I->getOpcode() == Instruction::Mul)
       return Optional<int64_t>{Op0.getValue() * Op1.getValue()};
+    if (I->getOpcode() == Instruction::Shl)
+      return Optional<int64_t>{Op0.getValue() << Op1.getValue()};
   }
   return Optional<int64_t>{};
 }
@@ -888,11 +891,11 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
   Phi->removeIncomingValue(StartIndex);
 }
 
-void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
-                                          Value *IncrementPerRound,
-                                          Value *OffsSecondOperand,
-                                          unsigned LoopIncrement,
-                                          IRBuilder<> &Builder) {
+void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
+                                             Value *IncrementPerRound,
+                                             Value *OffsSecondOperand,
+                                             unsigned LoopIncrement,
+                                             IRBuilder<> &Builder) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising mul instruction\n");
 
   // Create a new scalar add outside of the loop and transform it to a splat
@@ -901,12 +904,13 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
         Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back());
 
   // Create a new index
-  Value *StartIndex = BinaryOperator::Create(
-      Instruction::Mul, Phi->getIncomingValue(LoopIncrement == 1 ? 0 : 1),
-      OffsSecondOperand, "PushedOutMul", InsertionPoint);
+  Value *StartIndex =
+      BinaryOperator::Create((Instruction::BinaryOps)Opcode,
+                             Phi->getIncomingValue(LoopIncrement == 1 ? 0 : 1),
+                             OffsSecondOperand, "PushedOutMul", InsertionPoint);
 
   Instruction *Product =
-      BinaryOperator::Create(Instruction::Mul, IncrementPerRound,
+      BinaryOperator::Create((Instruction::BinaryOps)Opcode, IncrementPerRound,
                              OffsSecondOperand, "Product", InsertionPoint);
   // Increment NewIndex by Product instead of the multiplication
   Instruction *NewIncrement = BinaryOperator::Create(
@@ -936,7 +940,8 @@ static bool hasAllGatScatUsers(Instruction *I) {
       return Gatscat;
     } else {
       unsigned OpCode = cast<Instruction>(U)->getOpcode();
-      if ((OpCode == Instruction::Add || OpCode == Instruction::Mul) &&
+      if ((OpCode == Instruction::Add || OpCode == Instruction::Mul ||
+           OpCode == Instruction::Shl) &&
           hasAllGatScatUsers(cast<Instruction>(U))) {
         continue;
       }
@@ -956,7 +961,8 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     return false;
   Instruction *Offs = cast<Instruction>(Offsets);
   if (Offs->getOpcode() != Instruction::Add &&
-      Offs->getOpcode() != Instruction::Mul)
+      Offs->getOpcode() != Instruction::Mul &&
+      Offs->getOpcode() != Instruction::Shl)
     return false;
   Loop *L = LI->getLoopFor(BB);
   if (L == nullptr)
@@ -1063,8 +1069,9 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     pushOutAdd(NewPhi, OffsSecondOperand, IncrementingBlock == 1 ? 0 : 1);
     break;
   case Instruction::Mul:
-    pushOutMul(NewPhi, IncrementPerRound, OffsSecondOperand, IncrementingBlock,
-               Builder);
+  case Instruction::Shl:
+    pushOutMulShl(Offs->getOpcode(), NewPhi, IncrementPerRound,
+                  OffsSecondOperand, IncrementingBlock, Builder);
     break;
   default:
     return false;
