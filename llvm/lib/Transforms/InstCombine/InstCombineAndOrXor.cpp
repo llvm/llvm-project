@@ -2292,18 +2292,18 @@ static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
 /// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
 /// B, it can be used as the condition operand of a select instruction.
 Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
-  // Step 1: We may have peeked through bitcasts in the caller.
+  // We may have peeked through bitcasts in the caller.
   // Exit immediately if we don't have (vector) integer types.
   Type *Ty = A->getType();
   if (!Ty->isIntOrIntVectorTy() || !B->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  // Step 2: We need 0 or all-1's bitmasks.
+  // We need 0 or all-1's bitmasks.
   if (ComputeNumSignBits(A) != Ty->getScalarSizeInBits())
     return nullptr;
 
-  // Step 3: If B is the 'not' value of A, we have our answer.
-  if (match(A, m_Not(m_Specific(B)))) {
+  // If B is the 'not' value of A, we have our answer.
+  if (match(B, m_Not(m_Specific(A)))) {
     // If these are scalars or vectors of i1, A can be used directly.
     if (Ty->isIntOrIntVectorTy(1))
       return A;
