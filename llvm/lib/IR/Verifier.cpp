@@ -829,11 +829,9 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
 
 void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
   // Pierce through ConstantExprs and GlobalAliases and check that the resolver
-  // is a Function definition
+  // has a Function 
   const Function *Resolver = GI.getResolverFunction();
   Assert(Resolver, "IFunc must have a Function resolver", &GI);
-  Assert(!Resolver->isDeclarationForLinker(),
-         "IFunc resolver must be a definition", &GI);
 
   // Check that the immediate resolver operand (prior to any bitcasts) has the
   // correct type
