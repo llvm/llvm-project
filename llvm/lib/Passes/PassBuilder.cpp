@@ -580,10 +580,6 @@ Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "minimal", "LowerMatrixIntrinsics");
 }
 
-Expected<bool> parseModuleAddressSanitizerPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "kernel", "ModuleAddressSanitizer");
-}
-
 Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
   AddressSanitizerOptions Result;
   while (!Params.empty()) {

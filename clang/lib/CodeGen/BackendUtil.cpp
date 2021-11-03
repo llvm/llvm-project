@@ -1188,8 +1188,6 @@ static void addSanitizers(const Triple &TargetTriple,
         MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
         MPM.addPass(ModuleAddressSanitizerPass(
             Opts, UseGlobalGC, UseOdrIndicator, DestructorKind));
-        MPM.addPass(
-            createModuleToFunctionPassAdaptor(AddressSanitizerPass(Opts)));
       }
     };
     ASanPass(SanitizerKind::Address, false);

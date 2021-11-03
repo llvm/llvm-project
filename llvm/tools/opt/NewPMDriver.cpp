@@ -344,8 +344,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
         if (Name == "asan-pipeline") {
           MPM.addPass(
               RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-          MPM.addPass(
-              createModuleToFunctionPassAdaptor(AddressSanitizerPass(Opts)));
           MPM.addPass(ModuleAddressSanitizerPass(Opts));
           return true;
         } else if (Name == "asan-function-pipeline") {
