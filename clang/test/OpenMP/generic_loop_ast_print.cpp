@@ -23,7 +23,7 @@
 
 //PRINT: template <typename T, int C> void templ_foo(T t) {
 //PRINT:   T j, z;
-//PRINT:   #pragma omp loop collapse(C) reduction(+: z) lastprivate(j)
+//PRINT:   #pragma omp loop collapse(C) reduction(+: z) lastprivate(j) bind(thread)
 //PRINT:   for (T i = 0; i < t; ++i)
 //PRINT:       for (j = 0; j < t; ++j)
 //PRINT:           z += i + j;
@@ -38,12 +38,13 @@
 //DUMP: DeclRefExpr{{.*}}'z' 'T'
 //DUMP: OMPLastprivateClause
 //DUMP: DeclRefExpr{{.*}}'j' 'T'
+//DUMP: OMPBindClause
 //DUMP: ForStmt
 //DUMP: ForStmt
 
 //PRINT: template<> void templ_foo<int, 2>(int t) {
 //PRINT:     int j, z;
-//PRINT:     #pragma omp loop collapse(2) reduction(+: z) lastprivate(j)
+//PRINT:     #pragma omp loop collapse(2) reduction(+: z) lastprivate(j) bind(thread)
 //PRINT:         for (int i = 0; i < t; ++i)
 //PRINT:             for (j = 0; j < t; ++j)
 //PRINT:                 z += i + j;
@@ -60,12 +61,13 @@
 //DUMP: DeclRefExpr{{.*}}'z' 'int':'int'
 //DUMP: OMPLastprivateClause
 //DUMP: DeclRefExpr{{.*}}'j' 'int':'int'
+//DUMP: OMPBindClause
 //DUMP: ForStmt
 template <typename T, int C>
 void templ_foo(T t) {
 
   T j,z;
-  #pragma omp loop collapse(C) reduction(+:z) lastprivate(j)
+  #pragma omp loop collapse(C) reduction(+:z) lastprivate(j) bind(thread)
   for (T i = 0; i<t; ++i)
     for (j = 0; j<t; ++j)
       z += i+j;
@@ -109,7 +111,7 @@ void test() {
   }
 
   int j, z, z1;
-  //PRINT: #pragma omp loop collapse(2) private(z) lastprivate(j) order(concurrent) reduction(+: z1)
+  //PRINT: #pragma omp loop collapse(2) private(z) lastprivate(j) order(concurrent) reduction(+: z1) bind(parallel)
   //DUMP: OMPGenericLoopDirective
   //DUMP: OMPCollapseClause
   //DUMP: IntegerLiteral{{.*}}2
@@ -120,10 +122,11 @@ void test() {
   //DUMP: OMPOrderClause
   //DUMP: OMPReductionClause
   //DUMP-NEXT: DeclRefExpr{{.*}}'z1'
+  //DUMP: OMPBindClause
   //DUMP: ForStmt
   //DUMP: ForStmt
   #pragma omp loop collapse(2) private(z) lastprivate(j) order(concurrent) \
-                   reduction(+:z1)
+                   reduction(+:z1) bind(parallel)
   for (auto i = 0; i < N; ++i) {
     for (j = 0; j < N; ++j) {
       z = i+j;
@@ -131,6 +134,40 @@ void test() {
       z1 += z;
     }
   }
+
+  //PRINT: #pragma omp target teams
+  //PRINT: #pragma omp loop bind(teams)
+  //DUMP: OMPTargetTeamsDirective
+  //DUMP: OMPGenericLoopDirective
+  //DUMP: OMPBindClause
+  //DUMP: ForStmt
+  #pragma omp target teams
+  #pragma omp loop bind(teams)
+  for (auto i = 0; i < N; ++i) { }
+
+  //PRINT: #pragma omp target
+  //PRINT: #pragma omp teams
+  //PRINT: #pragma omp loop bind(teams)
+  //DUMP: OMPTargetDirective
+  //DUMP: OMPTeamsDirective
+  //DUMP: OMPGenericLoopDirective
+  //DUMP: OMPBindClause
+  //DUMP: ForStmt
+  #pragma omp target
+  #pragma omp teams
+  #pragma omp loop bind(teams)
+  for (auto i = 0; i < N; ++i) { }
+}
+
+//PRINT: void nobindingfunc() {
+//DUMP: FunctionDecl {{.*}}nobindingfunc 'void ()'
+void nobindingfunc()
+{
+  //PRINT: #pragma omp loop
+  //DUMP: OMPGenericLoopDirective
+  //DUMP: ForStmt
+  #pragma omp loop
+  for (int i=0; i<10; ++i) { }
 }
 
 void bar()

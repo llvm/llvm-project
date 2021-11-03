@@ -130,6 +130,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_ADJUST_ARGS_KIND(Name) .Case(#Name, OMPC_ADJUST_ARGS_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ADJUST_ARGS_unknown);
+  case OMPC_bind:
+    return llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_BIND_KIND(Name) .Case(#Name, OMPC_BIND_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_BIND_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -385,6 +390,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'adjust_args' clause kind");
+  case OMPC_bind:
+    switch (Type) {
+    case OMPC_BIND_unknown:
+      return "unknown";
+#define OPENMP_BIND_KIND(Name)                                                 \
+  case OMPC_BIND_##Name:                                                       \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'bind' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:

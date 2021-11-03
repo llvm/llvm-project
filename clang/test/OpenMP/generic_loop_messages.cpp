@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -Wuninitialized %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -verify -fopenmp \
+// RUN:  -fopenmp-version=51 -Wuninitialized %s
 
 void foo()
 {
@@ -6,7 +7,7 @@ void foo()
   int z;
 
   // expected-error@+2 {{statement after '#pragma omp loop' must be a for loop}}
-  #pragma omp loop
+  #pragma omp loop bind(thread)
   i = 0;
 
   // OpenMP 5.1 [2.22 Nesting of regions]
@@ -15,7 +16,7 @@ void foo()
   // task, taskloop, critical, ordered, atomic, or masked region.
 
   // expected-error@+3 {{region cannot be closely nested inside 'loop' region}}
-  #pragma omp loop
+  #pragma omp loop bind(thread)
   for (i=0; i<1000; ++i) {
     #pragma omp barrier
   }
@@ -24,7 +25,7 @@ void foo()
   // atomic, task, or taskloop region.
 
   // expected-error@+3 {{region cannot be closely nested inside 'loop' region}}
-  #pragma omp loop
+  #pragma omp loop bind(thread)
   for (i=0; i<1000; ++i) {
     #pragma omp masked filter(2)
     { }
@@ -35,37 +36,56 @@ void foo()
   // inside a critical, ordered, loop, atomic, task, or taskloop region.
 
   // expected-error@+3 {{region cannot be closely nested inside 'loop' region; perhaps you forget to enclose 'omp ordered' directive into a for or a parallel for region with 'ordered' clause?}}
-  #pragma omp loop
+  #pragma omp loop bind(thread)
   for (i=0; i<1000; ++i) {
     #pragma omp ordered
     { }
   }
 
   // expected-error@+3 {{region cannot be closely nested inside 'loop' region; perhaps you forget to enclose 'omp ordered' directive into a for or a parallel for region with 'ordered' clause?}}
-  #pragma omp loop
+  #pragma omp loop bind(thread)
   for (i=0; i<1000; ++i) {
     #pragma omp ordered threads
     { }
   }
 
   // expected-error@+3 {{region cannot be closely nested inside 'loop' region; perhaps you forget to enclose 'omp ordered' directive into a for or a parallel for region with 'ordered' clause?}}
-  #pragma omp loop
+  #pragma omp loop bind(thread)
   for (i=0; i<1000; ++i) {
     #pragma omp ordered depend(source)
   }
 
-  // bind clause (not yet implemented)
+  // bind clause
+
+  // expected-error@+1 {{directive '#pragma omp loop' cannot contain more than one 'bind' clause}}
+  #pragma omp loop bind(thread) bind(thread)
+  for (i=0; i<1000; ++i) {
+  }
+
+  // expected-error@+2 {{expected 'teams', 'parallel' or 'thread' in OpenMP clause 'bind'}}
+  #pragma omp parallel
+  #pragma omp loop bind(other)
+  for (i=0; i<1000; ++i) {
+  }
+
+  #pragma omp target
+  {
+    // expected-error@+1 {{region cannot be closely nested inside 'target' region; perhaps you forget to enclose 'omp loop' directive into a teams region?}}
+    #pragma omp loop bind(teams)
+    for (i=0; i<10; ++i) {
+    }
+  }
 
   // collapse clause
 
   // expected-error@+4 {{expected 2 for loops after '#pragma omp loop', but found only 1}}
   // expected-note@+1 {{as specified in 'collapse' clause}}
-  #pragma omp loop collapse(2)
+  #pragma omp loop collapse(2) bind(thread)
   for (i=0; i<1000; ++i)
     z = i+11;
 
   // expected-error@+1 {{directive '#pragma omp loop' cannot contain more than one 'collapse' clause}}
-  #pragma omp loop collapse(2) collapse(2)
+  #pragma omp loop collapse(2) collapse(2) bind(thread)
   for (i=0; i<1000; ++i)
     for (j=0; j<1000; ++j)
       z = i+j+11;
@@ -73,14 +93,14 @@ void foo()
   // order clause
 
   // expected-error@+1 {{expected 'concurrent' in OpenMP clause 'order'}}
-  #pragma omp loop order(foo)
+  #pragma omp loop order(foo) bind(thread)
   for (i=0; i<1000; ++i)
     z = i+11;
 
   // private clause
 
   // expected-error@+1 {{use of undeclared identifier 'undef_var'}}
-  #pragma omp loop private(undef_var)
+  #pragma omp loop private(undef_var) bind(thread)
   for (i=0; i<1000; ++i)
     z = i+11;
 
@@ -90,13 +110,13 @@ void foo()
   // iteration variable of a loop that is associated with the construct.
 
   // expected-error@+1 {{only loop iteration variables are allowed in 'lastprivate' clause in 'omp loop' directives}}
-  #pragma omp loop lastprivate(z)
+  #pragma omp loop lastprivate(z) bind(thread)
   for (i=0; i<1000; ++i) {
     z = i+11;
   }
 
   // expected-error@+1 {{only loop iteration variables are allowed in 'lastprivate' clause in 'omp loop' directives}}
-  #pragma omp loop lastprivate(k) collapse(2)
+  #pragma omp loop lastprivate(k) collapse(2) bind(thread)
   for (i=0; i<1000; ++i)
     for (j=0; j<1000; ++j)
       for (k=0; k<1000; ++k)
@@ -105,7 +125,7 @@ void foo()
   // reduction
 
   // expected-error@+1 {{use of undeclared identifier 'undef_var'}}
-  #pragma omp loop reduction(+:undef_var)
+  #pragma omp loop reduction(+:undef_var) bind(thread)
   for (i=0; i<1000; ++i)
     z = i+11;
 }
@@ -116,12 +136,12 @@ void templ_test(T t) {
 
   // expected-error@+4 {{expected 2 for loops after '#pragma omp loop', but found only 1}}
   // expected-note@+1 {{as specified in 'collapse' clause}}
-  #pragma omp loop collapse(C)
+  #pragma omp loop collapse(C) bind(thread)
   for (i=0; i<1000; ++i)
     z = i+11;
 
   // expected-error@+1 {{only loop iteration variables are allowed in 'lastprivate' clause in 'omp loop' directives}}
-  #pragma omp loop lastprivate(z)
+  #pragma omp loop lastprivate(z) bind(thread)
   for (i=0; i<1000; ++i) {
     z = i+11;
   }

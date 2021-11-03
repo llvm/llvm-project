@@ -11424,6 +11424,12 @@ public:
                                        SourceLocation ColonLoc,
                                        SourceLocation EndLoc, Expr *Modifier,
                                        ArrayRef<Expr *> Locators);
+  /// Called on a well-formed 'bind' clause.
+  OMPClause *ActOnOpenMPBindClause(OpenMPBindClauseKind Kind,
+                                   SourceLocation KindLoc,
+                                   SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {

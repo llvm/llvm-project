@@ -6732,6 +6732,12 @@ void OMPClauseWriter::VisitOMPAffinityClause(OMPAffinityClause *C) {
     Record.AddStmt(E);
 }
 
+void OMPClauseWriter::VisitOMPBindClause(OMPBindClause *C) {
+  Record.writeEnum(C->getBindKind());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getBindKindLoc());
+}
+
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());
   for (const auto &Set : TI->Sets) {

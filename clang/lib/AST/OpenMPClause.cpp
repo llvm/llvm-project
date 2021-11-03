@@ -161,6 +161,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_uses_allocators:
   case OMPC_affinity:
   case OMPC_when:
+  case OMPC_bind:
     break;
   default:
     break;
@@ -259,6 +260,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_uses_allocators:
   case OMPC_affinity:
   case OMPC_when:
+  case OMPC_bind:
     break;
   default:
     break;
@@ -1586,6 +1588,16 @@ OMPInitClause *OMPInitClause::CreateEmpty(const ASTContext &C, unsigned N) {
   return new (Mem) OMPInitClause(N);
 }
 
+OMPBindClause *
+OMPBindClause::Create(const ASTContext &C, OpenMPBindClauseKind K,
+                      SourceLocation KLoc, SourceLocation StartLoc,
+                      SourceLocation LParenLoc, SourceLocation EndLoc) {
+  return new (C) OMPBindClause(K, KLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPBindClause *OMPBindClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPBindClause();
+}
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -2295,6 +2307,12 @@ void OMPClausePrinter::VisitOMPFilterClause(OMPFilterClause *Node) {
   OS << "filter(";
   Node->getThreadID()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPBindClause(OMPBindClause *Node) {
+  OS << "bind("
+     << getOpenMPSimpleClauseTypeName(OMPC_bind, unsigned(Node->getBindKind()))
+     << ")";
 }
 
 void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,

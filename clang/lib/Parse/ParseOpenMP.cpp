@@ -3056,7 +3056,7 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
 ///    clause:
 ///       if-clause | final-clause | num_threads-clause | safelen-clause |
 ///       default-clause | private-clause | firstprivate-clause | shared-clause
-///       | linear-clause | aligned-clause | collapse-clause |
+///       | linear-clause | aligned-clause | collapse-clause | bind-clause |
 ///       lastprivate-clause | reduction-clause | proc_bind-clause |
 ///       schedule-clause | copyin-clause | copyprivate-clause | untied-clause |
 ///       mergeable-clause | flush-clause | read-clause | write-clause |
@@ -3146,6 +3146,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_proc_bind:
   case OMPC_atomic_default_mem_order:
   case OMPC_order:
+  case OMPC_bind:
     // OpenMP [2.14.3.1, Restrictions]
     //  Only a single default clause may be specified on a parallel, task or
     //  teams directive.
@@ -3154,6 +3155,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     // OpenMP [5.0, Requires directive, Restrictions]
     //  At most one atomic_default_mem_order clause can appear
     //  on the directive
+    // OpenMP 5.1, 2.11.7 loop Construct, Restrictions.
+    // At most one bind clause can appear on a loop directive.
     if (!FirstClause && CKind != OMPC_order) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
@@ -3499,6 +3502,9 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
 ///
 ///    proc_bind-clause:
 ///         'proc_bind' '(' 'master' | 'close' | 'spread' ')'
+///
+///    bind-clause:
+///         'bind' '(' 'teams' | 'parallel' | 'thread' ')'
 ///
 ///    update-clause:
 ///         'update' '(' 'in' | 'out' | 'inout' | 'mutexinoutset' ')'
