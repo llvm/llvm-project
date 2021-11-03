@@ -5389,7 +5389,7 @@ cc_library(
     name = "mlir_c_runner_utils",
     srcs = [
         "lib/ExecutionEngine/CRunnerUtils.cpp",
-        "lib/ExecutionEngine/SparseUtils.cpp",
+        "lib/ExecutionEngine/SparseTensorUtils.cpp",
     ],
     hdrs = ["include/mlir/ExecutionEngine/CRunnerUtils.h"],
     includes = ["include"],
