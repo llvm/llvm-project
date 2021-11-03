@@ -2247,8 +2247,18 @@ class MoveParamInst<NVPTXRegClass regclass, string asmstr> :
             !strconcat("mov", asmstr, " \t$dst, $src;"),
             [(set regclass:$dst, (MoveParam regclass:$src))]>;
 
+class MoveParamSymbolInst<NVPTXRegClass regclass, Operand srcty,
+                          string asmstr> :
+  NVPTXInst<(outs regclass:$dst), (ins srcty:$src),
+            !strconcat("mov", asmstr, " \t$dst, $src;"),
+            [(set regclass:$dst, (MoveParam texternalsym:$src))]>;
+
 def MoveParamI64 : MoveParamInst<Int64Regs, ".b64">;
 def MoveParamI32 : MoveParamInst<Int32Regs, ".b32">;
+
+def MoveParamSymbolI64 : MoveParamSymbolInst<Int64Regs, i64imm, ".b64">;
+def MoveParamSymbolI32 : MoveParamSymbolInst<Int32Regs, i32imm, ".b32">;
+
 def MoveParamI16 :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$src),
             "cvt.u16.u32 \t$dst, $src;",
