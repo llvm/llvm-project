@@ -106,7 +106,7 @@ struct AddressSanitizerOptions {
 /// surrounding requested memory to be checked for invalid accesses.
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
-  explicit AddressSanitizerPass(AddressSanitizerOptions Options)
+  AddressSanitizerPass(const AddressSanitizerOptions &Options)
       : Options(Options){};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
@@ -125,8 +125,8 @@ private:
 class ModuleAddressSanitizerPass
     : public PassInfoMixin<ModuleAddressSanitizerPass> {
 public:
-  explicit ModuleAddressSanitizerPass(
-      bool CompileKernel = false, bool Recover = false, bool UseGlobalGC = true,
+  ModuleAddressSanitizerPass(
+      const AddressSanitizerOptions &Options, bool UseGlobalGC = true,
       bool UseOdrIndicator = false,
       AsanDtorKind DestructorKind = AsanDtorKind::Global);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -135,8 +135,7 @@ public:
   static bool isRequired() { return true; }
 
 private:
-  bool CompileKernel;
-  bool Recover;
+  AddressSanitizerOptions Options;
   bool UseGlobalGC;
   bool UseOdrIndicator;
   AsanDtorKind DestructorKind;
