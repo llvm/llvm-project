@@ -314,7 +314,12 @@ struct UnwindState {
 struct ContextKey {
   uint64_t HashCode = 0;
   virtual ~ContextKey() = default;
-  uint64_t getHashCode() const { return HashCode; }
+  uint64_t getHashCode() {
+    if (HashCode == 0)
+      genHashCode();
+    return HashCode;
+  }
+  virtual void genHashCode() = 0;
   virtual bool isEqual(const ContextKey *K) const {
     return HashCode == K->HashCode;
   };
@@ -341,7 +346,9 @@ struct StringBasedCtxKey : public ContextKey {
     return Context == Other->Context;
   }
 
-  void genHashCode() { HashCode = hash_value(SampleContextFrames(Context)); }
+  void genHashCode() override {
+    HashCode = hash_value(SampleContextFrames(Context));
+  }
 };
 
 // Probe based context key as the intermediate key of context
@@ -364,7 +371,7 @@ struct ProbeBasedCtxKey : public ContextKey {
                       O->Probes.end());
   }
 
-  void genHashCode() {
+  void genHashCode() override {
     for (const auto *P : Probes) {
       HashCode = hash_combine(HashCode, P);
     }
