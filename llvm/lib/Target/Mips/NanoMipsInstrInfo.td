@@ -278,6 +278,10 @@ class CountLeading1NM<string opstr, RegisterOperand RO>:
   InstNM<(outs RO:$rd), (ins RO:$rs), !strconcat(opstr, "\t$rd, $rs"),
          [(set RO:$rd, (ctlz (not RO:$rs)))]>, InstSize32;
 
+class BitRevNM<string opstr, RegisterOperand RO>:
+  InstNM<(outs RO:$rd), (ins RO:$rs), !strconcat(opstr, "\t$rd, $rs"),
+         [(set RO:$rd, (bitreverse RO:$rs))]>, InstSize32;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -335,6 +339,8 @@ def SEH_NM : SignExtInRegNM<"seh", i16, GPR32NMOpnd>;
 
 def CLZ_NM : CountLeading0NM<"clz", GPR32NMOpnd>;
 def CLO_NM : CountLeading1NM<"clo", GPR32NMOpnd>;
+
+def BITREVW_NM : BitRevNM<"bitrevw", GPR32NMOpnd>;
 
 // P.TRAP pool of instructions.
 def TEQ_NM : Trap<"teq">;
