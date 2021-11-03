@@ -832,7 +832,7 @@ static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
     return true;
   if (Name == "cgscc")
     return true;
-  if (Name == "function")
+  if (Name == "function" || Name == "function<eager-inv>")
     return true;
 
   // Explicitly handle custom-parsed pass names.
@@ -858,7 +858,7 @@ static bool isCGSCCPassName(StringRef Name, CallbacksT &Callbacks) {
   // Explicitly handle pass manager names.
   if (Name == "cgscc")
     return true;
-  if (Name == "function")
+  if (Name == "function" || Name == "function<eager-inv>")
     return true;
 
   // Explicitly handle custom-parsed pass names.
@@ -884,7 +884,7 @@ static bool isCGSCCPassName(StringRef Name, CallbacksT &Callbacks) {
 template <typename CallbacksT>
 static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
   // Explicitly handle pass manager names.
-  if (Name == "function")
+  if (Name == "function" || Name == "function<eager-inv>")
     return true;
   if (Name == "loop" || Name == "loop-mssa")
     return true;
@@ -1013,11 +1013,12 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
       MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
       return Error::success();
     }
-    if (Name == "function") {
+    if (Name == "function" || Name == "function<eager-inv>") {
       FunctionPassManager FPM;
       if (auto Err = parseFunctionPassPipeline(FPM, InnerPipeline))
         return Err;
-      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
+                                                    Name != "function"));
       return Error::success();
     }
     if (auto Count = parseRepeatPassName(Name)) {
@@ -1180,12 +1181,13 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
       CGPM.addPass(std::move(NestedCGPM));
       return Error::success();
     }
-    if (Name == "function") {
+    if (Name == "function" || Name == "function<eager-inv>") {
       FunctionPassManager FPM;
       if (auto Err = parseFunctionPassPipeline(FPM, InnerPipeline))
         return Err;
       // Add the nested pass manager with the appropriate adaptor.
-      CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      CGPM.addPass(
+          createCGSCCToFunctionPassAdaptor(std::move(FPM), Name != "function"));
       return Error::success();
     }
     if (auto Count = parseRepeatPassName(Name)) {

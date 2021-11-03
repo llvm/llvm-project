@@ -477,11 +477,12 @@ class CGSCCToFunctionPassAdaptor
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass)
-      : Pass(std::move(Pass)) {}
+  explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+                                      bool EagerlyInvalidate)
+      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
+      : Pass(std::move(Arg.Pass)), EagerlyInvalidate(Arg.EagerlyInvalidate) {}
 
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
@@ -499,7 +500,10 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    OS << "function(";
+    OS << "function";
+    if (EagerlyInvalidate)
+      OS << "<eager-inv>";
+    OS << "(";
     Pass->printPipeline(OS, MapClassName2PassName);
     OS << ")";
   }
@@ -508,13 +512,15 @@ public:
 
 private:
   std::unique_ptr<PassConceptT> Pass;
+  bool EagerlyInvalidate;
 };
 
 /// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor
-createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass) {
+createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
+                                 bool EagerlyInvalidate = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
@@ -522,7 +528,8 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass) {
   // causing terrible compile times.
   return CGSCCToFunctionPassAdaptor(
       std::unique_ptr<CGSCCToFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<FunctionPassT>(Pass))));
+          new PassModelT(std::forward<FunctionPassT>(Pass))),
+      EagerlyInvalidate);
 }
 
 /// A helper that repeats an SCC pass each time an indirect call is refined to
