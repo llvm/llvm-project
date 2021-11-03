@@ -2431,14 +2431,20 @@ static int PosixSpawnImpl(void *ctx, RealSpawnPtr *real_posix_spawn, pid_t *pid,
                           char *const envp[]) {
   COMMON_INTERCEPTOR_READ_RANGE(ctx, file_or_path,
                                 internal_strlen(file_or_path) + 1);
-  char *const *s = argv;
-  for (; *s; ++s)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, *s, internal_strlen(*s) + 1);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, argv, (s - argv + 1) * sizeof(*s));
-  s = envp;
-  for (; *s; ++s)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, *s, internal_strlen(*s) + 1);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, envp, (s - envp + 1) * sizeof(*s));
+  if (argv) {
+    for (char *const *s = argv; ; ++s) {
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, s, sizeof(*s));
+      if (!*s) break;
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, *s, internal_strlen(*s) + 1);
+    }
+  }
+  if (envp) {
+    for (char *const *s = envp; ; ++s) {
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, s, sizeof(*s));
+      if (!*s) break;
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, *s, internal_strlen(*s) + 1);
+    }
+  }
   int res =
       real_posix_spawn(pid, file_or_path, file_actions, attrp, argv, envp);
   if (res == 0)
