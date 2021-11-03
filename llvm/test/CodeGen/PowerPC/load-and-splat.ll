@@ -59,11 +59,9 @@ define dso_local void @test2(<4 x float>* nocapture %c, float* nocapture readonl
 ;
 ; P7-LABEL: test2:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lwz r4, 12(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    stw r4, -16(r1)
-; P7-NEXT:    lxvw4x vs0, 0, r5
-; P7-NEXT:    xxspltw vs0, vs0, 0
+; P7-NEXT:    addi r4, r4, 12
+; P7-NEXT:    lfiwzx f0, 0, r4
+; P7-NEXT:    xxspltw vs0, vs0, 1
 ; P7-NEXT:    stxvw4x vs0, 0, r3
 ; P7-NEXT:    blr
 entry:
@@ -94,11 +92,9 @@ define dso_local void @test3(<4 x i32>* nocapture %c, i32* nocapture readonly %a
 ;
 ; P7-LABEL: test3:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lwz r4, 12(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    stw r4, -16(r1)
-; P7-NEXT:    lxvw4x vs0, 0, r5
-; P7-NEXT:    xxspltw vs0, vs0, 0
+; P7-NEXT:    addi r4, r4, 12
+; P7-NEXT:    lfiwzx f0, 0, r4
+; P7-NEXT:    xxspltw vs0, vs0, 1
 ; P7-NEXT:    stxvw4x vs0, 0, r3
 ; P7-NEXT:    blr
 entry:
@@ -109,6 +105,7 @@ entry:
   store <4 x i32> %splat.splat.i, <4 x i32>* %c, align 16
   ret void
 }
+
 
 ; v2i64
 define dso_local void @test4(<2 x i64>* nocapture %c, i64* nocapture readonly %a) local_unnamed_addr {
@@ -146,24 +143,21 @@ define void @test5(<2 x i64>* %a, i32* %in) {
 ; P9-LABEL: test5:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lfiwax f0, 0, r4
-; P9-NEXT:    xxspltd vs0, vs0, 0
+; P9-NEXT:    xxspltd vs0, f0, 0
 ; P9-NEXT:    stxv vs0, 0(r3)
 ; P9-NEXT:    blr
 ;
 ; P8-LABEL: test5:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lfiwax f0, 0, r4
-; P8-NEXT:    xxspltd vs0, vs0, 0
+; P8-NEXT:    xxspltd vs0, f0, 0
 ; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test5:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lwa r4, 0(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    std r4, -8(r1)
-; P7-NEXT:    std r4, -16(r1)
-; P7-NEXT:    lxvd2x vs0, 0, r5
+; P7-NEXT:    lfiwax f0, 0, r4
+; P7-NEXT:    xxspltd vs0, f0, 0
 ; P7-NEXT:    stxvd2x vs0, 0, r3
 ; P7-NEXT:    blr
 entry:
@@ -180,24 +174,21 @@ define void @test6(<2 x i64>* %a, i32* %in) {
 ; P9-LABEL: test6:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lfiwzx f0, 0, r4
-; P9-NEXT:    xxspltd vs0, vs0, 0
+; P9-NEXT:    xxspltd vs0, f0, 0
 ; P9-NEXT:    stxv vs0, 0(r3)
 ; P9-NEXT:    blr
 ;
 ; P8-LABEL: test6:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lfiwzx f0, 0, r4
-; P8-NEXT:    xxspltd vs0, vs0, 0
+; P8-NEXT:    xxspltd vs0, f0, 0
 ; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test6:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lwz r4, 0(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    std r4, -8(r1)
-; P7-NEXT:    std r4, -16(r1)
-; P7-NEXT:    lxvd2x vs0, 0, r5
+; P7-NEXT:    lfiwzx f0, 0, r4
+; P7-NEXT:    xxspltd vs0, f0, 0
 ; P7-NEXT:    stxvd2x vs0, 0, r3
 ; P7-NEXT:    blr
 entry:
@@ -220,7 +211,7 @@ define void @test7(<8 x i16>* %a, i16* %in) {
 ;
 ; P8-LABEL: test7:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lhz r4, 0(r4)
+; P8-NEXT:    lhzx r4, 0, r4
 ; P8-NEXT:    mtvsrd v2, r4
 ; P8-NEXT:    vsplth v2, v2, 3
 ; P8-NEXT:    stvx v2, 0, r3
@@ -228,10 +219,11 @@ define void @test7(<8 x i16>* %a, i16* %in) {
 ;
 ; P7-LABEL: test7:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lhz r4, 0(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    sth r4, -16(r1)
-; P7-NEXT:    lxvw4x v2, 0, r5
+; P7-NEXT:    li r5, 1
+; P7-NEXT:    lvx v2, 0, r4
+; P7-NEXT:    lvsl v4, 0, r4
+; P7-NEXT:    lvx v3, r5, r4
+; P7-NEXT:    vperm v2, v2, v3, v4
 ; P7-NEXT:    vsplth v2, v2, 0
 ; P7-NEXT:    stxvw4x v2, 0, r3
 ; P7-NEXT:    blr
@@ -254,7 +246,7 @@ define void @test8(<16 x i8>* %a, i8* %in) {
 ;
 ; P8-LABEL: test8:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lbz r4, 0(r4)
+; P8-NEXT:    lbzx r4, 0, r4
 ; P8-NEXT:    mtvsrd v2, r4
 ; P8-NEXT:    vspltb v2, v2, 7
 ; P8-NEXT:    stvx v2, 0, r3
@@ -262,10 +254,9 @@ define void @test8(<16 x i8>* %a, i8* %in) {
 ;
 ; P7-LABEL: test8:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lbz r4, 0(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    stb r4, -16(r1)
-; P7-NEXT:    lxvw4x v2, 0, r5
+; P7-NEXT:    lvsl v2, 0, r4
+; P7-NEXT:    lvx v3, 0, r4
+; P7-NEXT:    vperm v2, v3, v3, v2
 ; P7-NEXT:    vspltb v2, v2, 0
 ; P7-NEXT:    stxvw4x v2, 0, r3
 ; P7-NEXT:    blr
