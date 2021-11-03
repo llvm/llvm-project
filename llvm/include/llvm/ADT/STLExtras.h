@@ -1251,20 +1251,39 @@ public:
   }
 };
 
+namespace detail {
+/// Return a reference to the first or second member of a reference. Otherwise,
+/// return a copy of the member of a temporary.
+///
+/// When passing a range whose iterators return values instead of references,
+/// the reference must be dropped from `decltype((elt.first))`, which will
+/// always be a reference, to avoid returning a reference to a temporary.
+template <typename EltTy, typename FirstTy> class first_or_second_type {
+public:
+  using type =
+      typename std::conditional_t<std::is_reference<EltTy>::value, FirstTy,
+                                  std::remove_reference_t<FirstTy>>;
+};
+} // end namespace detail
+
 /// Given a container of pairs, return a range over the first elements.
 template <typename ContainerTy> auto make_first_range(ContainerTy &&c) {
-  return llvm::map_range(
-      std::forward<ContainerTy>(c),
-      [](decltype((*std::begin(c))) elt) -> decltype((elt.first)) {
-        return elt.first;
-      });
+  using EltTy = decltype((*std::begin(c)));
+  return llvm::map_range(std::forward<ContainerTy>(c),
+                         [](EltTy elt) -> typename detail::first_or_second_type<
+                                           EltTy, decltype((elt.first))>::type {
+                           return elt.first;
+                         });
 }
 
 /// Given a container of pairs, return a range over the second elements.
 template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
+  using EltTy = decltype((*std::begin(c)));
   return llvm::map_range(
       std::forward<ContainerTy>(c),
-      [](decltype((*std::begin(c))) elt) -> decltype((elt.second)) {
+      [](EltTy elt) ->
+      typename detail::first_or_second_type<EltTy,
+                                            decltype((elt.second))>::type {
         return elt.second;
       });
 }
