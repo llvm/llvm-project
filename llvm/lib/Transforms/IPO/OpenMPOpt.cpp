@@ -22,6 +22,7 @@
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -42,6 +43,8 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
+
+#include <algorithm>
 
 using namespace llvm;
 using namespace omp;
@@ -633,13 +636,15 @@ struct KernelInfoState : AbstractState {
   KernelInfoState operator^=(const KernelInfoState &KIS) {
     // Do not merge two different _init and _deinit call sites.
     if (KIS.KernelInitCB) {
-      if(KernelInitCB && KernelInitCB != KIS.KernelInitCB)
-        llvm_unreachable("Kernel that calls another kernel violates OpenMP-Opt assumptions.");
+      if (KernelInitCB && KernelInitCB != KIS.KernelInitCB)
+        llvm_unreachable("Kernel that calls another kernel violates OpenMP-Opt "
+                         "assumptions.");
       KernelInitCB = KIS.KernelInitCB;
     }
     if (KIS.KernelDeinitCB) {
-      if(KernelDeinitCB && KernelDeinitCB != KIS.KernelDeinitCB)
-        llvm_unreachable("Kernel that calls another kernel violates OpenMP-Opt assumptions.");
+      if (KernelDeinitCB && KernelDeinitCB != KIS.KernelDeinitCB)
+        llvm_unreachable("Kernel that calls another kernel violates OpenMP-Opt "
+                         "assumptions.");
       KernelDeinitCB = KIS.KernelDeinitCB;
     }
     SPMDCompatibilityTracker ^= KIS.SPMDCompatibilityTracker;
@@ -2941,7 +2946,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // state. As long as we are not in an invalid state, we will create a
       // custom state machine so the value should be a `i1 false`. If we are
       // in an invalid state, we won't change the value that is in the IR.
-      if (!isValidState())
+      if (!ReachedKnownParallelRegions.isValidState())
         return nullptr;
       // If we have disabled state machine rewrites, don't make a custom one.
       if (DisableOpenMPOptStateMachineRewrite)
@@ -3029,6 +3034,18 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // This is a generic region but SPMDization is disabled so stop tracking.
     else if (DisableOpenMPOptSPMDization)
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+  }
+
+  /// Sanitize the string \p S such that it is a suitable global symbol name.
+  static std::string sanitizeForGlobalName(std::string S) {
+    std::replace_if(
+        S.begin(), S.end(),
+        [](const char C) {
+          return !((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
+                   (C >= '0' && C <= '9') || C == '_');
+        },
+        '.');
+    return S;
   }
 
   /// Modify the IR based on the KernelInfoState as the fixpoint iteration is
@@ -3161,8 +3178,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
         auto *SharedMem = new GlobalVariable(
             M, I.getType(), /* IsConstant */ false,
             GlobalValue::InternalLinkage, UndefValue::get(I.getType()),
-            I.getName() + ".guarded.output.alloc", nullptr,
-            GlobalValue::NotThreadLocal,
+            sanitizeForGlobalName(
+                (I.getName() + ".guarded.output.alloc").str()),
+            nullptr, GlobalValue::NotThreadLocal,
             static_cast<unsigned>(AddressSpace::Shared));
 
         // Emit a store instruction to update the value.
@@ -3173,11 +3191,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
                                        RegionBarrierBB->getTerminator());
 
         // Emit a load instruction and replace uses of the output value.
-        for (Instruction *UsrI : OutsideUsers) {
-          assert(UsrI->getParent() == RegionExitBB &&
-                 "Expected escaping users in exit region");
+        for (Instruction *UsrI : OutsideUsers)
           UsrI->replaceUsesOfWith(&I, LoadI);
-        }
       }
 
       auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
@@ -3651,7 +3666,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         // Check for AAHeapToStack moved objects which must not be guarded.
         auto &HS = A.getAAFor<AAHeapToStack>(
             *this, IRPosition::function(*I.getFunction()),
-            DepClassTy::REQUIRED);
+            DepClassTy::OPTIONAL);
         if (llvm::all_of(Objects, [&HS](const Value *Obj) {
               auto *CB = dyn_cast<CallBase>(Obj);
               if (!CB)
@@ -3695,7 +3710,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
     bool UsedAssumedInformationInCheckCallInst = false;
     if (!A.checkForAllCallLikeInstructions(
             CheckCallInst, *this, UsedAssumedInformationInCheckCallInst)) {
-      LLVM_DEBUG(dbgs() << TAG << "Failed to visit all call-like instructions!\n";);
+      LLVM_DEBUG(dbgs() << TAG
+                        << "Failed to visit all call-like instructions!\n";);
       return indicatePessimisticFixpoint();
     }
 
