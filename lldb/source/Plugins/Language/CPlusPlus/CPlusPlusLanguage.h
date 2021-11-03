@@ -102,7 +102,7 @@ public:
 
   static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
 
@@ -134,9 +134,7 @@ public:
       const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
   // PluginInterface protocol
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 
 } // namespace lldb_private

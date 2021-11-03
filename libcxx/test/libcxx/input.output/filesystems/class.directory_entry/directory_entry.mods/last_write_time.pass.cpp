@@ -15,6 +15,9 @@
 // other platforms.
 // UNSUPPORTED: windows
 
+// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
+// UNSUPPORTED: linux && 32bits-on-64bits
+
 // <filesystem>
 
 // class directory_entry

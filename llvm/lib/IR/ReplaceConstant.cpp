@@ -15,15 +15,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/ValueMap.h"
 
 namespace llvm {
-// Replace a constant expression by instructions with equivalent operations at
-// a specified location.
-Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  auto *CEInstr = CE->getAsInstruction();
-  CEInstr->insertBefore(Instr);
-  return CEInstr;
-}
 
 void convertConstantExprsToInstructions(Instruction *I, ConstantExpr *CE,
                                         SmallPtrSetImpl<Instruction *> *Insts) {
@@ -40,7 +34,8 @@ void convertConstantExprsToInstructions(
     Instruction *I,
     std::map<Use *, std::vector<std::vector<ConstantExpr *>>> &CEPaths,
     SmallPtrSetImpl<Instruction *> *Insts) {
-  SmallPtrSet<ConstantExpr *, 8> Visited;
+  ValueMap<ConstantExpr *, Instruction *> Visited;
+
   for (Use &U : I->operands()) {
     // The operand U is either not a constant expression operand or the
     // constant expression paths do not belong to U, ignore U.
@@ -55,24 +50,47 @@ void convertConstantExprsToInstructions(
       BI = &(*(BB->getFirstInsertionPt()));
     }
 
-    // Go through the paths associated with operand U, and convert all the
-    // constant expressions along all paths to corresponding instructions.
+    // Go through all the paths associated with operand U, and convert all the
+    // constant expressions along all the paths to corresponding instructions.
     auto *II = I;
     auto &Paths = CEPaths[&U];
     for (auto &Path : Paths) {
       for (auto *CE : Path) {
-        if (!Visited.insert(CE).second)
-          continue;
-        auto *NI = CE->getAsInstruction();
-        NI->insertBefore(BI);
+        // Instruction which is equivalent to CE.
+        Instruction *NI = nullptr;
+
+        if (!Visited.count(CE)) {
+          // CE is encountered first time, convert it into a corresponding
+          // instruction NI, and appropriately insert NI before the parent
+          // instruction.
+          NI = CE->getAsInstruction(BI);
+
+          // Mark CE as visited by mapping CE to NI.
+          Visited[CE] = NI;
+
+          // If required collect NI.
+          if (Insts)
+            Insts->insert(NI);
+        } else {
+          // We had already encountered CE, the correponding instruction already
+          // exist, use it to replace CE.
+          NI = Visited[CE];
+        }
+
+        assert(NI && "Expected an instruction corresponding to constant "
+                     "expression.");
+
+        // Replace all uses of constant expression CE by the corresponding
+        // instruction NI within the current parent instruction.
         II->replaceUsesOfWith(CE, NI);
-        CE->removeDeadConstantUsers();
         BI = II = NI;
-        if (Insts)
-          Insts->insert(NI);
       }
     }
   }
+
+  // Remove all converted constant expressions which are dead by now.
+  for (auto Item : Visited)
+    Item.first->removeDeadConstantUsers();
 }
 
 void collectConstantExprPaths(

@@ -43,7 +43,10 @@ def LinalgComprehensiveModuleBufferize :
            "Allows the return of memrefs (for testing purposes only)">,
     Option<"useAlloca", "use-alloca", "bool",
            /*default=*/"false",
-           "Use stack allocations for memrefs (for testing purposes only)">
+           "Use stack allocations for memrefs (for testing purposes only)">,
+    Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
+           /*default=*/"0",
+           "Analyze ops in random order with a given seed (fuzzer)">
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }
@@ -236,6 +239,19 @@ def LinalgStrategyTilePass
     : FunctionPass<"linalg-strategy-tile-pass"> {
   let summary = "Configurable pass to apply pattern-based linalg tiling.";
   let constructor = "mlir::createLinalgStrategyTilePass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
+      "Which linalg op within the func is the anchor to latch on.">,
+  ];
+}
+
+def LinalgStrategyPadPass
+    : FunctionPass<"linalg-strategy-pad-pass"> {
+  let summary = "Configurable pass to apply padding and hoisting.";
+  let constructor = "mlir::createLinalgStrategyPadPass()";
   let dependentDialects = ["linalg::LinalgDialect"];
   let options = [
     Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",

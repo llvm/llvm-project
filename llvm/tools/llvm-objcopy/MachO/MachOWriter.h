@@ -53,10 +53,11 @@ class MachOWriter {
   void writeTail();
 
 public:
-  MachOWriter(Object &O, bool Is64Bit, bool IsLittleEndian, uint64_t PageSize,
-              raw_ostream &Out)
+  MachOWriter(Object &O, bool Is64Bit, bool IsLittleEndian,
+              StringRef OutputFileName, uint64_t PageSize, raw_ostream &Out)
       : O(O), Is64Bit(Is64Bit), IsLittleEndian(IsLittleEndian),
-        PageSize(PageSize), Out(Out), LayoutBuilder(O, Is64Bit, PageSize) {}
+        PageSize(PageSize), Out(Out),
+        LayoutBuilder(O, Is64Bit, OutputFileName, PageSize) {}
 
   size_t totalSize() const;
   Error finalize();

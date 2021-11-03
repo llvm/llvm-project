@@ -2262,15 +2262,17 @@ MachineBasicBlock *SIInstrInfo::getBranchDestBlock(
   return MI.getOperand(0).getMBB();
 }
 
-unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
-                                           MachineBasicBlock &DestBB,
-                                           const DebugLoc &DL,
-                                           int64_t BrOffset,
-                                           RegScavenger *RS) const {
+void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                       MachineBasicBlock &DestBB,
+                                       MachineBasicBlock &RestoreBB,
+                                       const DebugLoc &DL, int64_t BrOffset,
+                                       RegScavenger *RS) const {
   assert(RS && "RegScavenger required for long branching");
   assert(MBB.empty() &&
          "new block should be inserted for expanding unconditional branch");
   assert(MBB.pred_size() == 1);
+  assert(RestoreBB.empty() &&
+         "restore block should be inserted for restoring clobbered registers");
 
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -2306,14 +2308,6 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // Insert the indirect branch after the other terminator.
   BuildMI(&MBB, DL, get(AMDGPU::S_SETPC_B64))
     .addReg(PCReg);
-
-  auto ComputeBlockSize = [](const TargetInstrInfo *TII,
-                             const MachineBasicBlock &MBB) {
-    unsigned Size = 0;
-    for (const MachineInstr &MI : MBB)
-      Size += TII->getInstSizeInBytes(MI);
-    return Size;
-  };
 
   // FIXME: If spilling is necessary, this will fail because this scavenger has
   // no emergency stack slots. It is non-trivial to spill in this situation,
@@ -2353,22 +2347,34 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   RS->enterBasicBlockEnd(MBB);
   Register Scav = RS->scavengeRegisterBackwards(
-    AMDGPU::SReg_64RegClass,
-    MachineBasicBlock::iterator(GetPC), false, 0);
-  MRI.replaceRegWith(PCReg, Scav);
-  MRI.clearVirtRegs();
-  RS->setRegUsed(Scav);
+      AMDGPU::SReg_64RegClass, MachineBasicBlock::iterator(GetPC),
+      /* RestoreAfter */ false, 0, /* AllowSpill */ false);
+  if (Scav) {
+    RS->setRegUsed(Scav);
+    MRI.replaceRegWith(PCReg, Scav);
+    MRI.clearVirtRegs();
+  } else {
+    // As SGPR needs VGPR to be spilled, we reuse the slot of temporary VGPR for
+    // SGPR spill.
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    TRI->spillEmergencySGPR(GetPC, RestoreBB, AMDGPU::SGPR0_SGPR1, RS);
+    MRI.replaceRegWith(PCReg, AMDGPU::SGPR0_SGPR1);
+    MRI.clearVirtRegs();
+  }
 
+  MCSymbol *DestLabel = Scav ? DestBB.getSymbol() : RestoreBB.getSymbol();
   // Now, the distance could be defined.
   auto *Offset = MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(DestBB.getSymbol(), MCCtx),
+      MCSymbolRefExpr::create(DestLabel, MCCtx),
       MCSymbolRefExpr::create(PostGetPCLabel, MCCtx), MCCtx);
   // Add offset assignments.
   auto *Mask = MCConstantExpr::create(0xFFFFFFFFULL, MCCtx);
   OffsetLo->setVariableValue(MCBinaryExpr::createAnd(Offset, Mask, MCCtx));
   auto *ShAmt = MCConstantExpr::create(32, MCCtx);
   OffsetHi->setVariableValue(MCBinaryExpr::createAShr(Offset, ShAmt, MCCtx));
-  return ComputeBlockSize(this, MBB);
+
+  return;
 }
 
 unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
@@ -2497,19 +2503,15 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
 
 unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                    int *BytesRemoved) const {
-  MachineBasicBlock::iterator I = MBB.getFirstTerminator();
-
   unsigned Count = 0;
   unsigned RemovedSize = 0;
-  while (I != MBB.end()) {
-    MachineBasicBlock::iterator Next = std::next(I);
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB.terminators())) {
     // Skip over artificial terminators when removing instructions.
-    if (I->isBranch() || I->isReturn()) {
-      RemovedSize += getInstSizeInBytes(*I);
-      I->eraseFromParent();
+    if (MI.isBranch() || MI.isReturn()) {
+      RemovedSize += getInstSizeInBytes(MI);
+      MI.eraseFromParent();
       ++Count;
     }
-    I = Next;
   }
 
   if (BytesRemoved)
@@ -3634,11 +3636,13 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
         // Additional verification is needed for sdst/src2.
         return true;
       }
-      case AMDGPU::V_MAC_F32_e64:
       case AMDGPU::V_MAC_F16_e64:
-      case AMDGPU::V_FMAC_F32_e64:
+      case AMDGPU::V_MAC_F32_e64:
+      case AMDGPU::V_MAC_LEGACY_F32_e64:
       case AMDGPU::V_FMAC_F16_e64:
+      case AMDGPU::V_FMAC_F32_e64:
       case AMDGPU::V_FMAC_F64_e64:
+      case AMDGPU::V_FMAC_LEGACY_F32_e64:
         if (!Src2->isReg() || !RI.isVGPR(MRI, Src2->getReg()) ||
             hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers))
           return false;
@@ -5234,8 +5238,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
     return;
 
   Register DstReg = MRI.createVirtualRegister(DstRC);
-  MachineInstr *Copy =
-      BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).add(Op);
+  auto Copy = BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).add(Op);
 
   Op.setReg(DstReg);
   Op.setSubReg(0);
@@ -5257,7 +5260,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
   }
   if (!RI.isSGPRClass(DstRC) && !Copy->readsRegister(AMDGPU::EXEC, &RI) &&
       !ImpDef)
-    Copy->addOperand(MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+    Copy.addReg(AMDGPU::EXEC, RegState::Implicit);
 }
 
 // Emit the actual waterfall loop, executing the wrapped instruction for each

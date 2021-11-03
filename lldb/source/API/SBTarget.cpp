@@ -214,8 +214,8 @@ SBStructuredData SBTarget::GetStatistics() {
   if (!target_sp)
     return LLDB_RECORD_RESULT(data);
   std::string json_str =
-      llvm::formatv("{0:2}", 
-          DebuggerStats::ReportStatistics(target_sp->GetDebugger(), 
+      llvm::formatv("{0:2}",
+          DebuggerStats::ReportStatistics(target_sp->GetDebugger(),
                                           target_sp.get())).str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
   return LLDB_RECORD_RESULT(data);
@@ -1586,13 +1586,13 @@ void SBTarget::AppendImageSearchPath(const char *from, const char *to,
   if (!target_sp)
     return error.SetErrorString("invalid target");
 
-  const ConstString csFrom(from), csTo(to);
-  if (!csFrom)
+  llvm::StringRef srFrom = from, srTo = to;
+  if (srFrom.empty())
     return error.SetErrorString("<from> path can't be empty");
-  if (!csTo)
+  if (srTo.empty())
     return error.SetErrorString("<to> path can't be empty");
 
-  target_sp->GetImageSearchPathList().Append(csFrom, csTo, true);
+  target_sp->GetImageSearchPathList().Append(srFrom, srTo, true);
 }
 
 lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,

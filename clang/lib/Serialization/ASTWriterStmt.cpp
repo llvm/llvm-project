@@ -1482,8 +1482,8 @@ void ASTStmtWriter::VisitObjCAtTryStmt(ObjCAtTryStmt *S) {
   Record.push_back(S->getNumCatchStmts());
   Record.push_back(S->getFinallyStmt() != nullptr);
   Record.AddStmt(S->getTryBody());
-  for (unsigned I = 0, N = S->getNumCatchStmts(); I != N; ++I)
-    Record.AddStmt(S->getCatchStmt(I));
+  for (ObjCAtCatchStmt *C : S->catch_stmts())
+    Record.AddStmt(C);
   if (S->getFinallyStmt())
     Record.AddStmt(S->getFinallyStmt());
   Record.AddSourceLocation(S->getAtTryLoc());
@@ -2587,6 +2587,11 @@ void ASTStmtWriter::VisitOMPMaskedDirective(OMPMaskedDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_MASKED_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPGenericLoopDirective(OMPGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_GENERIC_LOOP_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

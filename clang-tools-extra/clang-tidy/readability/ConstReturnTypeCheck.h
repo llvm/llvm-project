@@ -23,8 +23,8 @@ namespace readability {
 class ConstReturnTypeCheck : public ClangTidyCheck {
  public:
   using ClangTidyCheck::ClangTidyCheck;
-  void registerMatchers(ast_matchers::MatchFinder* finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult& result) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
 } // namespace readability

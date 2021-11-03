@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-hard %s -o - | FileCheck %s -check-prefix=CHECK-HARD
 ; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
+; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-hard %s -o - | FileCheck %s -check-prefix=CHECK-HARD
+; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
 
 
 ; __thread int counter;

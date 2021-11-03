@@ -45,3 +45,6 @@ Options
    - ``std::basic_string::empty()`` and ``std::vector::empty()``. Not using the
      return value often indicates that the programmer confused the function with
      ``clear()``.
+
+`cert-err33-c <cert-err33-c.html>`_ is an alias of this check that checks a
+fixed and large set of standard library functions.

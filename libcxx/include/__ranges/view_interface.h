@@ -43,11 +43,13 @@ template<class _Derived>
 class view_interface : public view_base {
   _LIBCPP_HIDE_FROM_ABI
   constexpr _Derived& __derived() noexcept {
+    static_assert(sizeof(_Derived) && derived_from<_Derived, view_interface> && view<_Derived>);
     return static_cast<_Derived&>(*this);
   }
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr _Derived const& __derived() const noexcept {
+    static_assert(sizeof(_Derived) && derived_from<_Derived, view_interface> && view<_Derived>);
     return static_cast<_Derived const&>(*this);
   }
 

@@ -109,7 +109,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   static const MVT::SimpleValueType F64VecVTs[] = {
       MVT::nxv1f64, MVT::nxv2f64, MVT::nxv4f64, MVT::nxv8f64};
 
-  if (Subtarget.hasStdExtV()) {
+  if (Subtarget.hasVInstructions()) {
     auto addRegClassForRVV = [this](MVT VT) {
       unsigned Size = VT.getSizeInBits().getKnownMinValue();
       assert(Size <= 512 && isPowerOf2_32(Size));
@@ -128,18 +128,22 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     for (MVT VT : BoolVecVTs)
       addRegClassForRVV(VT);
-    for (MVT VT : IntVecVTs)
+    for (MVT VT : IntVecVTs) {
+      if (VT.getVectorElementType() == MVT::i64 &&
+          !Subtarget.hasVInstructionsI64())
+        continue;
       addRegClassForRVV(VT);
+    }
 
-    if (Subtarget.hasStdExtZfh())
+    if (Subtarget.hasVInstructionsF16())
       for (MVT VT : F16VecVTs)
         addRegClassForRVV(VT);
 
-    if (Subtarget.hasStdExtF())
+    if (Subtarget.hasVInstructionsF32())
       for (MVT VT : F32VecVTs)
         addRegClassForRVV(VT);
 
-    if (Subtarget.hasStdExtD())
+    if (Subtarget.hasVInstructionsF64())
       for (MVT VT : F64VecVTs)
         addRegClassForRVV(VT);
 
@@ -418,7 +422,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  if (Subtarget.hasStdExtV()) {
+  if (Subtarget.hasVInstructions()) {
     setBooleanVectorContents(ZeroOrOneBooleanContent);
 
     setOperationAction(ISD::VSCALE, XLenVT, Custom);
@@ -522,6 +526,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     for (MVT VT : IntVecVTs) {
+      if (VT.getVectorElementType() == MVT::i64 &&
+          !Subtarget.hasVInstructionsI64())
+        continue;
+
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::SPLAT_VECTOR_PARTS, VT, Custom);
 
@@ -536,6 +544,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTTZ, VT, Expand);
       setOperationAction(ISD::CTLZ, VT, Expand);
       setOperationAction(ISD::CTPOP, VT, Expand);
+
+      setOperationAction(ISD::BSWAP, VT, Expand);
 
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction(ISD::ANY_EXTEND, VT, Custom);
@@ -684,18 +694,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           }
         };
 
-    if (Subtarget.hasStdExtZfh())
+    if (Subtarget.hasVInstructionsF16())
       for (MVT VT : F16VecVTs)
         SetCommonVFPActions(VT);
 
     for (MVT VT : F32VecVTs) {
-      if (Subtarget.hasStdExtF())
+      if (Subtarget.hasVInstructionsF32())
         SetCommonVFPActions(VT);
       SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
     }
 
     for (MVT VT : F64VecVTs) {
-      if (Subtarget.hasStdExtD())
+      if (Subtarget.hasVInstructionsF64())
         SetCommonVFPActions(VT);
       SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
       SetCommonVFPExtLoadTruncStoreActions(VT, F32VecVTs);
@@ -925,7 +935,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::XOR);
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::ZERO_EXTEND);
-  if (Subtarget.hasStdExtV()) {
+  if (Subtarget.hasVInstructions()) {
     setTargetDAGCombine(ISD::FCOPYSIGN);
     setTargetDAGCombine(ISD::MGATHER);
     setTargetDAGCombine(ISD::MSCATTER);
@@ -943,7 +953,7 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
                                             EVT VT) const {
   if (!VT.isVector())
     return getPointerTy(DL);
-  if (Subtarget.hasStdExtV() &&
+  if (Subtarget.hasVInstructions() &&
       (VT.isScalableVector() || Subtarget.useRVVForFixedLengthVectors()))
     return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
@@ -1089,7 +1099,7 @@ bool RISCVTargetLowering::shouldSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
 
-  if (!I->getType()->isVectorTy() || !Subtarget.hasStdExtV())
+  if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
     return false;
 
   auto IsSinker = [&](Instruction *I, int Operand) {
@@ -1104,6 +1114,8 @@ bool RISCVTargetLowering::shouldSinkOperands(
     case Instruction::FSub:
     case Instruction::FMul:
     case Instruction::FDiv:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
       return true;
     case Instruction::Shl:
     case Instruction::LShr:
@@ -1347,15 +1359,18 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(Type *ScalarTy) const {
     return true;
 
   if (ScalarTy->isIntegerTy(8) || ScalarTy->isIntegerTy(16) ||
-      ScalarTy->isIntegerTy(32) || ScalarTy->isIntegerTy(64))
+      ScalarTy->isIntegerTy(32))
     return true;
 
+  if (ScalarTy->isIntegerTy(64))
+    return Subtarget.hasVInstructionsI64();
+
   if (ScalarTy->isHalfTy())
-    return Subtarget.hasStdExtZfh();
+    return Subtarget.hasVInstructionsF16();
   if (ScalarTy->isFloatTy())
-    return Subtarget.hasStdExtF();
+    return Subtarget.hasVInstructionsF32();
   if (ScalarTy->isDoubleTy())
-    return Subtarget.hasStdExtD();
+    return Subtarget.hasVInstructionsF64();
 
   return false;
 }
@@ -1391,18 +1406,21 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
+    break;
   case MVT::i64:
+    if (!Subtarget.hasVInstructionsI64())
+      return false;
     break;
   case MVT::f16:
-    if (!Subtarget.hasStdExtZfh())
+    if (!Subtarget.hasVInstructionsF16())
       return false;
     break;
   case MVT::f32:
-    if (!Subtarget.hasStdExtF())
+    if (!Subtarget.hasVInstructionsF32())
       return false;
     break;
   case MVT::f64:
-    if (!Subtarget.hasStdExtD())
+    if (!Subtarget.hasVInstructionsF64())
       return false;
     break;
   }
@@ -3764,7 +3782,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN) &&
          "Unexpected opcode");
 
-  if (!Subtarget.hasStdExtV())
+  if (!Subtarget.hasVInstructions())
     return SDValue();
 
   bool HasChain = Op.getOpcode() == ISD::INTRINSIC_W_CHAIN;
@@ -4853,24 +4871,38 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     PassThru = MLoad->getPassThru();
   }
 
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+
   MVT XLenVT = Subtarget.getXLenVT();
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(VT);
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
-
-    Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
+    if (!IsUnmasked) {
+      MVT MaskVT =
+          MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+    }
   }
 
   if (!VL)
     VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
+  unsigned IntID =
+      IsUnmasked ? Intrinsic::riscv_vle : Intrinsic::riscv_vle_mask;
+  SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
+  if (!IsUnmasked)
+    Ops.push_back(PassThru);
+  Ops.push_back(BasePtr);
+  if (!IsUnmasked)
+    Ops.push_back(Mask);
+  Ops.push_back(VL);
+  if (!IsUnmasked)
+    Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
+
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
-  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
-  SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
-  SDValue Ops[] = {Chain, IntID, PassThru, BasePtr, Mask, VL, Policy};
+
   SDValue Result =
       DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT, MMO);
   Chain = Result.getValue(1);
@@ -8062,7 +8094,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   }
 
   assert((!UseGPRForF16_F32 || !UseGPRForF64 || LocVT == XLenVT ||
-          (TLI.getSubtarget().hasStdExtV() && ValVT.isVector())) &&
+          (TLI.getSubtarget().hasVInstructions() && ValVT.isVector())) &&
          "Expected an XLenVT or vector types at this stage");
 
   if (Reg) {
@@ -8098,7 +8130,7 @@ void RISCVTargetLowering::analyzeInputArgs(
   FunctionType *FType = MF.getFunction().getFunctionType();
 
   Optional<unsigned> FirstMaskArgument;
-  if (Subtarget.hasStdExtV())
+  if (Subtarget.hasVInstructions())
     FirstMaskArgument = preAssignMask(Ins);
 
   for (unsigned i = 0; i != NumArgs; ++i) {
@@ -8129,7 +8161,7 @@ void RISCVTargetLowering::analyzeOutputArgs(
   unsigned NumArgs = Outs.size();
 
   Optional<unsigned> FirstMaskArgument;
-  if (Subtarget.hasStdExtV())
+  if (Subtarget.hasVInstructions())
     FirstMaskArgument = preAssignMask(Outs);
 
   for (unsigned i = 0; i != NumArgs; i++) {
@@ -8974,7 +9006,7 @@ bool RISCVTargetLowering::CanLowerReturn(
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
   Optional<unsigned> FirstMaskArgument;
-  if (Subtarget.hasStdExtV())
+  if (Subtarget.hasVInstructions())
     FirstMaskArgument = preAssignMask(Outs);
 
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
@@ -9407,7 +9439,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
 
-  if (Subtarget.hasStdExtV()) {
+  if (Subtarget.hasVInstructions()) {
     Register VReg = StringSwitch<Register>(Constraint.lower())
                         .Case("{v0}", RISCV::V0)
                         .Case("{v1}", RISCV::V1)

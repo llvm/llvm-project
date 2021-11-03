@@ -338,11 +338,10 @@ llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
   return llvm::None;
 }
 
-bool RemoteAwarePlatform::GetRemoteOSKernelDescription(std::string &s) {
+llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSKernelDescription() {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSKernelDescription(s);
-  s.clear();
-  return false;
+    return m_remote_platform_sp->GetRemoteOSKernelDescription();
+  return llvm::None;
 }
 
 ArchSpec RemoteAwarePlatform::GetRemoteSystemArchitecture() {

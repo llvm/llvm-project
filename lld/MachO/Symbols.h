@@ -9,8 +9,8 @@
 #ifndef LLD_MACHO_SYMBOLS_H
 #define LLD_MACHO_SYMBOLS_H
 
+#include "Config.h"
 #include "InputFiles.h"
-#include "InputSection.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
@@ -20,7 +20,6 @@
 namespace lld {
 namespace macho {
 
-class InputSection;
 class MachHeaderSection;
 
 struct StringRefZ {
@@ -51,7 +50,7 @@ public:
     return {nameData, nameSize};
   }
 
-  bool isLive() const;
+  bool isLive() const { return used; }
 
   virtual uint64_t getVA() const { return 0; }
 
@@ -114,28 +113,22 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb, bool isReferencedDynamically, bool noDeadStrip)
-      : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
-        overridesWeakDef(false), privateExtern(isPrivateExtern),
-        includeInSymtab(true), thumb(isThumb),
-        referencedDynamically(isReferencedDynamically),
-        noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
-    if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
-      concatIsec->numRefs++;
-  }
+          bool isThumb, bool isReferencedDynamically, bool noDeadStrip);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
     return isWeakDef() && isExternal() && !privateExtern;
   }
-  bool isTlv() const override {
-    return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
-  }
+  bool isTlv() const override;
 
   bool isExternal() const { return external; }
   bool isAbsolute() const { return isec == nullptr; }
 
   uint64_t getVA() const override;
+
+  // Ensure this symbol's pointers to InputSections point to their canonical
+  // copies.
+  void canonicalize();
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
@@ -145,6 +138,7 @@ public:
   uint64_t value;
   // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
+  ConcatInputSection *compactUnwind = nullptr;
 
   bool overridesWeakDef : 1;
   // Whether this symbol should appear in the output binary's export trie.

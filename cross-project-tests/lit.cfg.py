@@ -153,18 +153,23 @@ else:
 
 # Typical command would take the form:
 # ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
-dexter_regression_test_command = ' '.join(
+# Exclude build flags for %dexter_regression_base.
+dexter_regression_test_base = ' '.join(
   # "python", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
   ['"{}"'.format(sys.executable),
   '"{}"'.format(dexter_path),
   'test',
   '--fail-lt 1.0 -w',
+  dexter_regression_test_debugger])
+tools.append(ToolSubst('%dexter_regression_base', dexter_regression_test_base))
+
+# Include build flags for %dexter_regression_test.
+dexter_regression_test_build = ' '.join([
+  dexter_regression_test_base,
   dexter_regression_test_builder,
-  dexter_regression_test_debugger,
   dexter_regression_test_cflags,
   dexter_regression_test_ldflags])
-
-tools.append(ToolSubst('%dexter_regression_test', dexter_regression_test_command))
+tools.append(ToolSubst('%dexter_regression_test', dexter_regression_test_build))
 
 tool_dirs = [config.llvm_tools_dir]
 

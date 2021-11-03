@@ -43,7 +43,7 @@ static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
   for (size_t I = 0, Size = LHS.size(); I < Size; I++) {
     // NOTE: We strip goto labels and annotations in addition to stripping
     // the `case X:` or `default:` labels, but it is very unlikely that this
-    // would casue false positives in real-world code.
+    // would cause false positives in real-world code.
     if (!areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
                                 RHS[I]->stripLabelLikeStatements(), Context)) {
       return false;
@@ -187,10 +187,10 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         Branches.back().push_back(S);
     }
 
-    auto End = Branches.end();
-    auto BeginCurrent = Branches.begin();
+    auto *End = Branches.end();
+    auto *BeginCurrent = Branches.begin();
     while (BeginCurrent < End) {
-      auto EndCurrent = BeginCurrent + 1;
+      auto *EndCurrent = BeginCurrent + 1;
       while (EndCurrent < End &&
              areSwitchBranchesIdentical(*BeginCurrent, *EndCurrent, Context)) {
         ++EndCurrent;

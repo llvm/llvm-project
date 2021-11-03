@@ -1073,7 +1073,6 @@ private:
   const SIInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
-  unsigned BBSelectRegister;
   PHILinearize PHIInfo;
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> FallthroughMap;
   RegionMRT *RMRT;
@@ -1124,8 +1123,6 @@ private:
   bool regionIsSimpleIf(RegionMRT *Region);
 
   void transformSimpleIfRegion(RegionMRT *Region);
-
-  void eliminateDeadBranchOperands(MachineBasicBlock::instr_iterator &II);
 
   void insertUnconditionalBranch(MachineBasicBlock *MBB,
                                  MachineBasicBlock *Dest,

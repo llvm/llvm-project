@@ -8,21 +8,25 @@
 // UNSUPPORTED: android
 
 #include <cassert>
-#include <cstdio>
 #include <cstdlib>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-FILE *f;
+int f;
 volatile void *buf;
 volatile char sink;
 
-extern "C" void __sanitizer_on_print(const char *str) {
-  fprintf(f, "%s", str);
-  fflush(f);
+__attribute__((disable_sanitizer_instrumentation)) extern "C" void
+__sanitizer_on_print(const char *str) {
+  write(f, str, strlen(str));
 }
 
 int main(int argc, char *argv[]) {
   assert(argc >= 2);
-  f = fopen(argv[1], "w");
+  f = open(argv[1], O_CREAT | O_TRUNC | O_WRONLY, 0666);
 
   // Use-after-free to trigger ASan/TSan reports.
   void *ptr = malloc(1);

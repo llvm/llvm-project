@@ -116,13 +116,6 @@ cl::opt<bool> X86PadForBranchAlign(
     "x86-pad-for-branch-align", cl::init(true), cl::Hidden,
     cl::desc("Pad previous instructions to implement branch alignment"));
 
-class X86ELFObjectWriter : public MCELFObjectTargetWriter {
-public:
-  X86ELFObjectWriter(bool is64Bit, uint8_t OSABI, uint16_t EMachine,
-                     bool HasRelocationAddend, bool foobar)
-    : MCELFObjectTargetWriter(is64Bit, OSABI, EMachine, HasRelocationAddend) {}
-};
-
 class X86AsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
   std::unique_ptr<const MCInstrInfo> MCII;

@@ -54,6 +54,7 @@ struct TestLinalgCodegenStrategy
 
   void runStrategy(LinalgTilingOptions tilingOptions,
                    LinalgTilingOptions registerTilingOptions,
+                   LinalgPaddingOptions paddingOptions,
                    vector::VectorContractLowering vectorContractLowering,
                    vector::VectorTransferSplit vectorTransferSplit);
 
@@ -86,6 +87,16 @@ struct TestLinalgCodegenStrategy
       *this, "register-promote-full-tile-pad",
       llvm::cl::desc("Pad the small aligned memory buffer to the tile sizes."),
       llvm::cl::init(false)};
+  Option<bool> pad{*this, "pad", llvm::cl::desc("Pad the operands."),
+                   llvm::cl::init(false)};
+  ListOption<int64_t> packPaddings{
+      *this, "pack-paddings",
+      llvm::cl::desc("Operand packing flags when test-pad-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> hoistPaddings{
+      *this, "hoist-paddings",
+      llvm::cl::desc("Operand hoisting depths when test-pad-pattern"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   Option<bool> generalize{*this, "generalize",
                           llvm::cl::desc("Generalize named operations."),
                           llvm::cl::init(false)};
@@ -132,9 +143,18 @@ struct TestLinalgCodegenStrategy
       llvm::cl::init("")};
 };
 
+// For now, just assume it is the zero of type.
+// In the future, it should be the zero of type + op.
+static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
+  auto t = getElementTypeOrSelf(op.get());
+  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
+                                     b.getZeroAttr(t));
+}
+
 void TestLinalgCodegenStrategy::runStrategy(
     LinalgTilingOptions tilingOptions,
     LinalgTilingOptions registerTilingOptions,
+    LinalgPaddingOptions paddingOptions,
     vector::VectorContractLowering vectorContractLowering,
     vector::VectorTransferSplit vectorTransferSplit) {
   assert(!anchorOpName.empty());
@@ -150,6 +170,7 @@ void TestLinalgCodegenStrategy::runStrategy(
                  LinalgPromotionOptions()
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(registerPromoteFullTile))
+      .padIf(pad, anchorOpName, paddingOptions)
       .generalizeIf(generalize, anchorOpName)
       .interchangeIf(!iteratorInterchange.empty(), iteratorInterchange)
       .vectorizeIf(vectorize, generalize ? genericOpName : anchorOpName)
@@ -191,6 +212,21 @@ void TestLinalgCodegenStrategy::runOnFunction() {
     registerTilingOptions =
         registerTilingOptions.setTileSizes(registerTileSizes);
 
+  LinalgPaddingOptions paddingOptions;
+  auto packFunc = [&](OpOperand &opOperand) {
+    return opOperand.getOperandNumber() < packPaddings.size()
+               ? packPaddings[opOperand.getOperandNumber()]
+               : false;
+  };
+  auto hoistingFunc = [&](OpOperand &opOperand) {
+    return opOperand.getOperandNumber() < hoistPaddings.size()
+               ? hoistPaddings[opOperand.getOperandNumber()]
+               : 0;
+  };
+  paddingOptions.setPaddingValueComputationFunction(getNeutralOfLinalgOp);
+  paddingOptions.setPaddingNoFoldComputationFunction(packFunc);
+  paddingOptions.setPaddingHoistComputationFunction(hoistingFunc);
+
   vector::VectorContractLowering vectorContractLowering =
       llvm::StringSwitch<vector::VectorContractLowering>(
           vectorizeContractionTo.getValue())
@@ -206,8 +242,8 @@ void TestLinalgCodegenStrategy::runOnFunction() {
           .Case("vector-transfers", vector::VectorTransferSplit::VectorTransfer)
           .Default(vector::VectorTransferSplit::None);
 
-  runStrategy(tilingOptions, registerTilingOptions, vectorContractLowering,
-              vectorTransferSplit);
+  runStrategy(tilingOptions, registerTilingOptions, paddingOptions,
+              vectorContractLowering, vectorTransferSplit);
 }
 
 namespace mlir {

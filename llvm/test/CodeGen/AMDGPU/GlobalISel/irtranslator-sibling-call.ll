@@ -259,7 +259,7 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[INT]], [[C2]](s64)
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
-  ; GCN-NEXT:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32
+  ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY9]](p4)
@@ -290,7 +290,7 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GCN-NEXT:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @i32_fastcc_i32_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
+  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @i32_fastcc_i32_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN-NEXT:   S_ENDPGM 0
@@ -338,7 +338,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, i3
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
-  ; GCN-NEXT:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_byval_i32
+  ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_byval_i32
   ; GCN-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN-NEXT:   [[COPY13:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GCN-NEXT:   [[COPY14:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -363,7 +363,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, i3
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY17]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY18]](s32)
   ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](s32)
-  ; GCN-NEXT:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @i32_fastcc_i32_byval_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
+  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @i32_fastcc_i32_byval_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
   ; GCN-NEXT:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GCN-NEXT:   $vgpr0 = COPY [[COPY22]](s32)
@@ -769,7 +769,7 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
-  ; GCN-NEXT:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
+  ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GCN-NEXT:   [[COPY13:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -829,7 +829,7 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY16]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY17]](s32)
   ; GCN-NEXT:   $vgpr31 = COPY [[COPY18]](s32)
-  ; GCN-NEXT:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @i32_fastcc_i32_i32_a32i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
+  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @i32_fastcc_i32_i32_a32i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 12, implicit-def $scc
   ; GCN-NEXT:   $vgpr0 = COPY [[COPY21]](s32)
@@ -859,7 +859,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GCN-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
-  ; GCN-NEXT:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32
+  ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32
   ; GCN-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN-NEXT:   [[COPY13:%[0-9]+]]:_(p4) = COPY [[COPY6]]
   ; GCN-NEXT:   [[COPY14:%[0-9]+]]:_(p4) = COPY [[COPY5]]
@@ -880,7 +880,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
   ; GCN-NEXT:   $sgpr13 = COPY [[COPY17]](s32)
   ; GCN-NEXT:   $sgpr14 = COPY [[COPY18]](s32)
   ; GCN-NEXT:   $vgpr31 = COPY [[COPY19]](s32)
-  ; GCN-NEXT:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @i32_fastcc_i32_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
+  ; GCN-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @i32_fastcc_i32_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV1:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @sibling_call_i32_fastcc_i32_i32

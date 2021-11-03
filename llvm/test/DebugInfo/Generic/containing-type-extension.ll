@@ -5,7 +5,7 @@
 ; CHECK: [[SP:.*]]: DW_TAG_structure_type
 ; CHECK-NOT: TAG
 ; CHECK: DW_AT_containing_type [DW_FORM_ref4]
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "vtable")
+; CHECK: DW_AT_name {{.*}}"vtable"
 
 ; The code doesn't actually matter.
 define i32 @main() #0 !dbg !4 {

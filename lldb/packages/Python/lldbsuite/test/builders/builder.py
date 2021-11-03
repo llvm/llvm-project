@@ -82,15 +82,6 @@ class Builder:
 
         return cmdline
 
-    def runBuildCommands(self, commands):
-        try:
-            lldbtest.system(commands)
-        except subprocess.CalledProcessError as called_process_error:
-            # Convert to a build-specific error.
-            # We don't do that in lldbtest.system() since that
-            # is more general purpose.
-            raise build_exception.BuildError(called_process_error)
-
     def getArchSpec(self, architecture):
         """
         Helper function to return the key-value string to specify the architecture
@@ -140,11 +131,11 @@ class Builder:
             return ["MAKE_DSYM=NO", "MAKE_GMODULES=YES"]
         return None
 
-    def build(self, debug_info, architecture=None, compiler=None,
+    def getBuildCommand(self, debug_info, architecture=None, compiler=None,
             dictionary=None, testdir=None, testname=None):
         debug_info_args = self._getDebugInfoArgs(debug_info)
         if debug_info_args is None:
-            return False
+            return None
 
         command_parts = [
             self.getMake(testdir, testname), debug_info_args, ["all"],
@@ -154,8 +145,7 @@ class Builder:
             self.getCmdLine(dictionary)]
         command = list(itertools.chain(*command_parts))
 
-        self.runBuildCommands([command])
-        return True
+        return command
 
     def cleanup(self, dictionary=None):
         """Perform a platform-specific cleanup after the test."""

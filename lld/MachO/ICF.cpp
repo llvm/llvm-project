@@ -105,6 +105,9 @@ static bool equalsConstant(const ConcatInputSection *ia,
       return false;
 
     InputSection *isecA, *isecB;
+
+    uint64_t valueA = 0;
+    uint64_t valueB = 0;
     if (ra.referent.is<Symbol *>()) {
       const auto *sa = ra.referent.get<Symbol *>();
       const auto *sb = rb.referent.get<Symbol *>();
@@ -121,7 +124,9 @@ static bool equalsConstant(const ConcatInputSection *ia,
         return da->value == db->value;
       }
       isecA = da->isec;
+      valueA = da->value;
       isecB = db->isec;
+      valueB = db->value;
     } else {
       isecA = ra.referent.get<InputSection *>();
       isecB = rb.referent.get<InputSection *>();
@@ -136,7 +141,8 @@ static bool equalsConstant(const ConcatInputSection *ia,
       return true;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+    return isecA->getOffset(valueA + ra.addend) ==
+           isecB->getOffset(valueB + rb.addend);
   };
   return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
                     f);
@@ -246,7 +252,7 @@ void ICF::run() {
             } else {
               hash += defined->value;
             }
-          } else
+          } else if (!isa<Undefined>(sym))
             llvm_unreachable("foldIdenticalSections symbol kind");
         }
       }
@@ -309,22 +315,6 @@ void ICF::segregate(
   }
 }
 
-template <class Ptr>
-DenseSet<const InputSection *> findFunctionsWithUnwindInfo() {
-  DenseSet<const InputSection *> result;
-  for (ConcatInputSection *isec : in.unwindInfo->getInputs()) {
-    for (size_t i = 0; i < isec->relocs.size(); ++i) {
-      Reloc &r = isec->relocs[i];
-      assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
-      if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
-          offsetof(CompactUnwindEntry<Ptr>, functionAddress))
-        continue;
-      result.insert(r.referent.get<InputSection *>());
-    }
-  }
-  return result;
-}
-
 void macho::foldIdenticalSections() {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
@@ -333,11 +323,6 @@ void macho::foldIdenticalSections() {
   // relocs to find every referenced InputSection, but that precludes easy
   // parallelization. Therefore, we hash every InputSection here where we have
   // them all accessible as simple vectors.
-
-  // ICF can't fold functions with unwind info
-  DenseSet<const InputSection *> functionsWithUnwindInfo =
-      target->wordSize == 8 ? findFunctionsWithUnwindInfo<uint64_t>()
-                            : findFunctionsWithUnwindInfo<uint32_t>();
 
   // If an InputSection is ineligible for ICF, we give it a unique ID to force
   // it into an unfoldable singleton equivalence class.  Begin the unique-ID
@@ -351,9 +336,15 @@ void macho::foldIdenticalSections() {
   for (ConcatInputSection *isec : inputSections) {
     // FIXME: consider non-code __text sections as hashable?
     bool isHashable = (isCodeSection(isec) || isCfStringSection(isec)) &&
-                      !isec->shouldOmitFromOutput() &&
-                      !functionsWithUnwindInfo.contains(isec) &&
-                      isec->isHashableForICF();
+                      !isec->shouldOmitFromOutput() && isec->isHashableForICF();
+    // ICF can't fold functions with unwind info
+    if (isHashable)
+      for (Defined *d : isec->symbols)
+        if (d->compactUnwind) {
+          isHashable = false;
+          break;
+        }
+
     if (isHashable)
       hashable.push_back(isec);
     else

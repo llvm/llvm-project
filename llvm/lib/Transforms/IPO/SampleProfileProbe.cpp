@@ -415,9 +415,7 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   BlockFrequencyInfo &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
   auto BBProfileCount = [&BFI](BasicBlock *BB) {
-    return BFI.getBlockProfileCount(BB)
-               ? BFI.getBlockProfileCount(BB).getValue()
-               : 0;
+    return BFI.getBlockProfileCount(BB).getValueOr(0);
   };
 
   // Collect the sum of execution weight for each probe.

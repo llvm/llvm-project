@@ -289,4 +289,4 @@ The [DLTI](Dialects/DLTI.md) dialect provides the attributes implementing
 `DataLayoutSpecInterface` and `DataLayoutEntryInterface`, as well as a dialect
 attribute that can be used to attach the specification to a given operation. The
 verifier of this attribute triggers those of the specification and checks the
-compatiblity of nested specifications.
+compatibility of nested specifications.

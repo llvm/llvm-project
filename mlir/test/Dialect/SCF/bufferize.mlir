@@ -4,11 +4,11 @@
 // CHECK-SAME:             %[[PRED:.*]]: i1,
 // CHECK-SAME:             %[[TRUE_TENSOR:.*]]: tensor<?xf32>,
 // CHECK-SAME:             %[[FALSE_TENSOR:.*]]: tensor<?xf32>) -> tensor<?xf32> {
+// CHECK:           %[[TRUE_MEMREF:.*]] = memref.buffer_cast %[[TRUE_TENSOR]] : memref<?xf32>
+// CHECK:           %[[FALSE_MEMREF:.*]] = memref.buffer_cast %[[FALSE_TENSOR]] : memref<?xf32>
 // CHECK:           %[[RESULT_MEMREF:.*]] = scf.if %[[PRED]] -> (memref<?xf32>) {
-// CHECK:             %[[TRUE_MEMREF:.*]] = memref.buffer_cast %[[TRUE_TENSOR]] : memref<?xf32>
 // CHECK:             scf.yield %[[TRUE_MEMREF]] : memref<?xf32>
 // CHECK:           } else {
-// CHECK:             %[[FALSE_MEMREF:.*]] = memref.buffer_cast %[[FALSE_TENSOR]] : memref<?xf32>
 // CHECK:             scf.yield %[[FALSE_MEMREF]] : memref<?xf32>
 // CHECK:           }
 // CHECK:           %[[RESULT_TENSOR:.*]] = memref.tensor_load %[[RESULT_MEMREF:.*]] : memref<?xf32>
@@ -29,9 +29,7 @@ func @if(%pred: i1, %true_val: tensor<?xf32>, %false_val: tensor<?xf32>) -> tens
 // CHECK-SAME:              %[[STEP:.*]]: index) -> tensor<f32> {
 // CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
 // CHECK:           %[[RESULT_MEMREF:.*]] = scf.for %[[VAL_6:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ITER:.*]] = %[[MEMREF]]) -> (memref<f32>) {
-// CHECK:             %[[TENSOR_ITER:.*]] = memref.tensor_load %[[ITER]] : memref<f32>
-// CHECK:             %[[MEMREF_YIELDED:.*]] = memref.buffer_cast %[[TENSOR_ITER]] : memref<f32>
-// CHECK:             scf.yield %[[MEMREF_YIELDED]] : memref<f32>
+// CHECK:             scf.yield %[[ITER]] : memref<f32>
 // CHECK:           }
 // CHECK:           %[[VAL_8:.*]] = memref.tensor_load %[[VAL_9:.*]] : memref<f32>
 // CHECK:           return %[[VAL_8]] : tensor<f32>

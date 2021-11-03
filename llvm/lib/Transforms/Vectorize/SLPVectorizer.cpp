@@ -766,6 +766,12 @@ public:
   /// Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
 
+  /// Checks if the specified gather tree entry \p TE can be represented as a
+  /// shuffled vector entry + (possibly) permutation with other gathers. It
+  /// implements the checks only for possibly ordered scalars (Loads,
+  /// ExtractElement, ExtractValue), which can be part of the graph.
+  Optional<OrdersType> findReusedOrderedScalars(const TreeEntry &TE);
+
   /// Reorders the current graph to the most profitable order starting from the
   /// root node to the leaf nodes. The best order is chosen only from the nodes
   /// of the same size (vectorization factor). Smaller nodes are considered
@@ -781,7 +787,7 @@ public:
   /// operands. Plus, even the leaf nodes have different orders, it allows to
   /// sink reordering in the graph closer to the root node and merge it later
   /// during analysis.
-  void reorderBottomToTop();
+  void reorderBottomToTop(bool IgnoreReorder = false);
 
   /// \return The vector element size in bits to use when vectorizing the
   /// expression tree ending at \p V. If V is a store, the size is the width of
@@ -824,7 +830,7 @@ public:
 
   /// \returns True if the VectorizableTree is both tiny and not fully
   /// vectorizable. We do not vectorize such trees.
-  bool isTreeTinyAndNotFullyVectorizable() const;
+  bool isTreeTinyAndNotFullyVectorizable(bool ForReduction = false) const;
 
   /// Assume that a legal-sized 'or'-reduction of shifted/zexted loaded values
   /// can be load combined in the backend. Load combining may not be allowed in
@@ -1620,7 +1626,7 @@ private:
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
-  bool isFullyVectorizableTinyTree() const;
+  bool isFullyVectorizableTinyTree(bool ForReduction) const;
 
   /// Reorder commutative or alt operands to get better probability of
   /// generating vectorized code.
@@ -2670,6 +2676,72 @@ static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask) {
   fixupOrderingIndices(Order);
 }
 
+Optional<BoUpSLP::OrdersType>
+BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
+  assert(TE.State == TreeEntry::NeedToGather && "Expected gather node only.");
+  unsigned NumScalars = TE.Scalars.size();
+  OrdersType CurrentOrder(NumScalars, NumScalars);
+  SmallVector<int> Positions;
+  SmallBitVector UsedPositions(NumScalars);
+  const TreeEntry *STE = nullptr;
+  // Try to find all gathered scalars that are gets vectorized in other
+  // vectorize node. Here we can have only one single tree vector node to
+  // correctly identify order of the gathered scalars.
+  for (unsigned I = 0; I < NumScalars; ++I) {
+    Value *V = TE.Scalars[I];
+    if (!isa<LoadInst, ExtractElementInst, ExtractValueInst>(V))
+      continue;
+    if (const auto *LocalSTE = getTreeEntry(V)) {
+      if (!STE)
+        STE = LocalSTE;
+      else if (STE != LocalSTE)
+        // Take the order only from the single vector node.
+        return None;
+      unsigned Lane =
+          std::distance(STE->Scalars.begin(), find(STE->Scalars, V));
+      if (Lane >= NumScalars)
+        return None;
+      if (CurrentOrder[Lane] != NumScalars) {
+        if (Lane != I)
+          continue;
+        UsedPositions.reset(CurrentOrder[Lane]);
+      }
+      // The partial identity (where only some elements of the gather node are
+      // in the identity order) is good.
+      CurrentOrder[Lane] = I;
+      UsedPositions.set(I);
+    }
+  }
+  // Need to keep the order if we have a vector entry and at least 2 scalars or
+  // the vectorized entry has just 2 scalars.
+  if (STE && (UsedPositions.count() > 1 || STE->Scalars.size() == 2)) {
+    auto &&IsIdentityOrder = [NumScalars](ArrayRef<unsigned> CurrentOrder) {
+      for (unsigned I = 0; I < NumScalars; ++I)
+        if (CurrentOrder[I] != I && CurrentOrder[I] != NumScalars)
+          return false;
+      return true;
+    };
+    if (IsIdentityOrder(CurrentOrder)) {
+      CurrentOrder.clear();
+      return CurrentOrder;
+    }
+    auto *It = CurrentOrder.begin();
+    for (unsigned I = 0; I < NumScalars;) {
+      if (UsedPositions.test(I)) {
+        ++I;
+        continue;
+      }
+      if (*It == NumScalars) {
+        *It = I;
+        ++I;
+      }
+      ++It;
+    }
+    return CurrentOrder;
+  }
+  return None;
+}
+
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
   DenseMap<unsigned, SmallPtrSet<TreeEntry *, 4>> VFToOrderedEntries;
@@ -2689,19 +2761,29 @@ void BoUpSLP::reorderTopToBottom() {
             InsertElementInst>(TE->getMainOp()) &&
         !TE->isAltShuffle()) {
       VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
-    } else if (TE->State == TreeEntry::NeedToGather &&
-               TE->getOpcode() == Instruction::ExtractElement &&
-               !TE->isAltShuffle() &&
-               isa<FixedVectorType>(cast<ExtractElementInst>(TE->getMainOp())
-                                        ->getVectorOperandType()) &&
-               allSameType(TE->Scalars) && allSameBlock(TE->Scalars)) {
-      // Check that gather of extractelements can be represented as
-      // just a shuffle of a single vector.
-      OrdersType CurrentOrder;
-      bool Reuse = canReuseExtract(TE->Scalars, TE->getMainOp(), CurrentOrder);
-      if (Reuse || !CurrentOrder.empty()) {
+      return;
+    }
+    if (TE->State == TreeEntry::NeedToGather) {
+      if (TE->getOpcode() == Instruction::ExtractElement &&
+          !TE->isAltShuffle() &&
+          isa<FixedVectorType>(cast<ExtractElementInst>(TE->getMainOp())
+                                   ->getVectorOperandType()) &&
+          allSameType(TE->Scalars) && allSameBlock(TE->Scalars)) {
+        // Check that gather of extractelements can be represented as
+        // just a shuffle of a single vector.
+        OrdersType CurrentOrder;
+        bool Reuse =
+            canReuseExtract(TE->Scalars, TE->getMainOp(), CurrentOrder);
+        if (Reuse || !CurrentOrder.empty()) {
+          VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
+          GathersToOrders.try_emplace(TE.get(), CurrentOrder);
+          return;
+        }
+      }
+      if (Optional<OrdersType> CurrentOrder =
+              findReusedOrderedScalars(*TE.get())) {
         VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
-        GathersToOrders.try_emplace(TE.get(), CurrentOrder);
+        GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
       }
     }
   });
@@ -2718,7 +2800,9 @@ void BoUpSLP::reorderTopToBottom() {
     const SmallPtrSetImpl<TreeEntry *> &OrderedEntries = It->getSecond();
     // All operands are reordered and used only in this node - propagate the
     // most used order to the user node.
-    DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo> OrdersUses;
+    MapVector<OrdersType, unsigned,
+              DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo>>
+        OrdersUses;
     SmallPtrSet<const TreeEntry *, 4> VisitedOps;
     for (const TreeEntry *OpTE : OrderedEntries) {
       // No need to reorder this nodes, still need to extend and to use shuffle,
@@ -2742,18 +2826,18 @@ void BoUpSLP::reorderTopToBottom() {
           return Idx == UndefMaskElem ? E : static_cast<unsigned>(Idx);
         });
         fixupOrderingIndices(CurrentOrder);
-        ++OrdersUses.try_emplace(CurrentOrder).first->getSecond();
+        ++OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second;
       } else {
-        ++OrdersUses.try_emplace(Order).first->getSecond();
+        ++OrdersUses.insert(std::make_pair(Order, 0)).first->second;
       }
     }
     // Set order of the user node.
     if (OrdersUses.empty())
       continue;
     // Choose the most used order.
-    ArrayRef<unsigned> BestOrder = OrdersUses.begin()->first;
-    unsigned Cnt = OrdersUses.begin()->second;
-    for (const auto &Pair : llvm::drop_begin(OrdersUses)) {
+    ArrayRef<unsigned> BestOrder = OrdersUses.front().first;
+    unsigned Cnt = OrdersUses.front().second;
+    for (const auto &Pair : drop_begin(OrdersUses)) {
       if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty())) {
         BestOrder = Pair.first;
         Cnt = Pair.second;
@@ -2820,7 +2904,7 @@ void BoUpSLP::reorderTopToBottom() {
   }
 }
 
-void BoUpSLP::reorderBottomToTop() {
+void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   SetVector<TreeEntry *> OrderedEntries;
   DenseMap<const TreeEntry *, OrdersType> GathersToOrders;
   // Find all reorderable leaf nodes with the given VF.
@@ -2830,6 +2914,8 @@ void BoUpSLP::reorderBottomToTop() {
   for_each(VectorizableTree, [this, &OrderedEntries, &GathersToOrders,
                               &NonVectorized](
                                  const std::unique_ptr<TreeEntry> &TE) {
+    if (TE->State != TreeEntry::Vectorize)
+      NonVectorized.push_back(TE.get());
     // No need to reorder if need to shuffle reuses, still need to shuffle the
     // node.
     if (!TE->ReuseShuffleIndices.empty())
@@ -2838,28 +2924,37 @@ void BoUpSLP::reorderBottomToTop() {
         isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE->getMainOp()) &&
         !TE->isAltShuffle()) {
       OrderedEntries.insert(TE.get());
-    } else if (TE->State == TreeEntry::NeedToGather &&
-               TE->getOpcode() == Instruction::ExtractElement &&
-               !TE->isAltShuffle() &&
-               isa<FixedVectorType>(cast<ExtractElementInst>(TE->getMainOp())
-                                        ->getVectorOperandType()) &&
-               allSameType(TE->Scalars) && allSameBlock(TE->Scalars)) {
-      // Check that gather of extractelements can be represented as
-      // just a shuffle of a single vector with a single user only.
-      OrdersType CurrentOrder;
-      bool Reuse = canReuseExtract(TE->Scalars, TE->getMainOp(), CurrentOrder);
-      if ((Reuse || !CurrentOrder.empty()) &&
-          !any_of(
-              VectorizableTree, [&TE](const std::unique_ptr<TreeEntry> &Entry) {
-                return Entry->State == TreeEntry::NeedToGather &&
-                       Entry.get() != TE.get() && Entry->isSame(TE->Scalars);
-              })) {
+      return;
+    }
+    if (TE->State == TreeEntry::NeedToGather) {
+      if (TE->getOpcode() == Instruction::ExtractElement &&
+          !TE->isAltShuffle() &&
+          isa<FixedVectorType>(cast<ExtractElementInst>(TE->getMainOp())
+                                   ->getVectorOperandType()) &&
+          allSameType(TE->Scalars) && allSameBlock(TE->Scalars)) {
+        // Check that gather of extractelements can be represented as
+        // just a shuffle of a single vector with a single user only.
+        OrdersType CurrentOrder;
+        bool Reuse =
+            canReuseExtract(TE->Scalars, TE->getMainOp(), CurrentOrder);
+        if ((Reuse || !CurrentOrder.empty()) &&
+            !any_of(VectorizableTree,
+                    [&TE](const std::unique_ptr<TreeEntry> &Entry) {
+                      return Entry->State == TreeEntry::NeedToGather &&
+                             Entry.get() != TE.get() &&
+                             Entry->isSame(TE->Scalars);
+                    })) {
+          OrderedEntries.insert(TE.get());
+          GathersToOrders.try_emplace(TE.get(), CurrentOrder);
+          return;
+        }
+      }
+      if (Optional<OrdersType> CurrentOrder =
+              findReusedOrderedScalars(*TE.get())) {
         OrderedEntries.insert(TE.get());
-        GathersToOrders.try_emplace(TE.get(), CurrentOrder);
+        GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
       }
     }
-    if (TE->State != TreeEntry::Vectorize)
-      NonVectorized.push_back(TE.get());
   });
 
   // Checks if the operands of the users are reordarable and have only single
@@ -2911,7 +3006,7 @@ void BoUpSLP::reorderBottomToTop() {
     for (TreeEntry *TE : OrderedEntries) {
       if (!(TE->State == TreeEntry::Vectorize ||
             (TE->State == TreeEntry::NeedToGather &&
-             TE->getOpcode() == Instruction::ExtractElement)) ||
+             GathersToOrders.count(TE))) ||
           TE->UserTreeIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
           !all_of(drop_begin(TE->UserTreeIndices),
                   [TE](const EdgeInfo &EI) {
@@ -2946,11 +3041,14 @@ void BoUpSLP::reorderBottomToTop() {
       }
       // All operands are reordered and used only in this node - propagate the
       // most used order to the user node.
-      DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo> OrdersUses;
+      MapVector<OrdersType, unsigned,
+                DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo>>
+          OrdersUses;
       SmallPtrSet<const TreeEntry *, 4> VisitedOps;
       for (const auto &Op : Data.second) {
         TreeEntry *OpTE = Op.second;
-        if (!OpTE->ReuseShuffleIndices.empty())
+        if (!OpTE->ReuseShuffleIndices.empty() ||
+            (IgnoreReorder && OpTE == VectorizableTree.front().get()))
           continue;
         const auto &Order = [OpTE, &GathersToOrders]() -> const OrdersType & {
           if (OpTE->State == TreeEntry::NeedToGather)
@@ -2968,13 +3066,14 @@ void BoUpSLP::reorderBottomToTop() {
             return Idx == UndefMaskElem ? E : static_cast<unsigned>(Idx);
           });
           fixupOrderingIndices(CurrentOrder);
-          ++OrdersUses.try_emplace(CurrentOrder).first->getSecond();
+          ++OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second;
         } else {
-          ++OrdersUses.try_emplace(Order).first->getSecond();
+          ++OrdersUses.insert(std::make_pair(Order, 0)).first->second;
         }
         if (VisitedOps.insert(OpTE).second)
-          OrdersUses.try_emplace({}, 0).first->getSecond() +=
+          OrdersUses.insert(std::make_pair(OrdersType(), 0)).first->second +=
               OpTE->UserTreeIndices.size();
+        assert(OrdersUses[{}] > 0 && "Counter cannot be less than 0.");
         --OrdersUses[{}];
       }
       // If no orders - skip current nodes and jump to the next one, if any.
@@ -2986,9 +3085,9 @@ void BoUpSLP::reorderBottomToTop() {
         continue;
       }
       // Choose the best order.
-      ArrayRef<unsigned> BestOrder = OrdersUses.begin()->first;
-      unsigned Cnt = OrdersUses.begin()->second;
-      for (const auto &Pair : llvm::drop_begin(OrdersUses)) {
+      ArrayRef<unsigned> BestOrder = OrdersUses.front().first;
+      unsigned Cnt = OrdersUses.front().second;
+      for (const auto &Pair : drop_begin(OrdersUses)) {
         if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty())) {
           BestOrder = Pair.first;
           Cnt = Pair.second;
@@ -3031,10 +3130,13 @@ void BoUpSLP::reorderBottomToTop() {
       }
       // For gathers just need to reorder its scalars.
       for (TreeEntry *Gather : GatherOps) {
-        if (!Gather->ReuseShuffleIndices.empty())
-          continue;
         assert(Gather->ReorderIndices.empty() &&
                "Unexpected reordering of gathers.");
+        if (!Gather->ReuseShuffleIndices.empty()) {
+          // Just reorder reuses indices.
+          reorderReuses(Gather->ReuseShuffleIndices, Mask);
+          continue;
+        }
         reorderScalars(Gather->Scalars, Mask);
         OrderedEntries.remove(Gather);
       }
@@ -3061,6 +3163,10 @@ void BoUpSLP::reorderBottomToTop() {
       }
     }
   }
+  // If the reordering is unnecessary, just remove the reorder.
+  if (IgnoreReorder && !VectorizableTree.front()->ReorderIndices.empty() &&
+      VectorizableTree.front()->ReuseShuffleIndices.empty())
+    VectorizableTree.front()->ReorderIndices.clear();
 }
 
 void BoUpSLP::buildExternalUses(
@@ -4894,13 +5000,29 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   }
 }
 
-bool BoUpSLP::isFullyVectorizableTinyTree() const {
+bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   LLVM_DEBUG(dbgs() << "SLP: Check whether the tree with height "
                     << VectorizableTree.size() << " is fully vectorizable .\n");
 
+  auto &&AreVectorizableGathers = [this](const TreeEntry *TE, unsigned Limit) {
+    SmallVector<int> Mask;
+    return TE->State == TreeEntry::NeedToGather &&
+           !any_of(TE->Scalars,
+                   [this](Value *V) { return EphValues.contains(V); }) &&
+           (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
+            TE->Scalars.size() < Limit ||
+            (TE->getOpcode() == Instruction::ExtractElement &&
+             isFixedVectorShuffle(TE->Scalars, Mask)));
+  };
+
   // We only handle trees of heights 1 and 2.
   if (VectorizableTree.size() == 1 &&
-      VectorizableTree[0]->State == TreeEntry::Vectorize)
+      (VectorizableTree[0]->State == TreeEntry::Vectorize ||
+       (ForReduction &&
+        AreVectorizableGathers(VectorizableTree[0].get(),
+                               VectorizableTree[0]->Scalars.size()) &&
+        (VectorizableTree[0]->Scalars.size() > 2 ||
+         VectorizableTree[0]->ReuseShuffleIndices.size() > 2))))
     return true;
 
   if (VectorizableTree.size() != 2)
@@ -4912,19 +5034,14 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
   // or they are extractelements, which form shuffle.
   SmallVector<int> Mask;
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
-      (allConstant(VectorizableTree[1]->Scalars) ||
-       isSplat(VectorizableTree[1]->Scalars) ||
-       (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
-        VectorizableTree[1]->Scalars.size() <
-            VectorizableTree[0]->Scalars.size()) ||
-       (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
-        VectorizableTree[1]->getOpcode() == Instruction::ExtractElement &&
-        isFixedVectorShuffle(VectorizableTree[1]->Scalars, Mask))))
+      AreVectorizableGathers(VectorizableTree[1].get(),
+                             VectorizableTree[0]->Scalars.size()))
     return true;
 
   // Gathering cost would be too much for tiny trees.
   if (VectorizableTree[0]->State == TreeEntry::NeedToGather ||
-      VectorizableTree[1]->State == TreeEntry::NeedToGather)
+      (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
+       VectorizableTree[0]->State != TreeEntry::ScatterVectorize))
     return false;
 
   return true;
@@ -4993,7 +5110,7 @@ bool BoUpSLP::isLoadCombineCandidate() const {
   return true;
 }
 
-bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() const {
+bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -5007,7 +5124,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() const {
 
   // If we have a tiny tree (a tree whose size is less than MinTreeSize), we
   // can vectorize it if we can prove it fully vectorizable.
-  if (isFullyVectorizableTinyTree())
+  if (isFullyVectorizableTinyTree(ForReduction))
     return false;
 
   assert(VectorizableTree.empty()
@@ -5769,7 +5886,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     VF = E->ReuseShuffleIndices.size();
   ShuffleInstructionBuilder ShuffleBuilder(Builder, VF);
   if (E->State == TreeEntry::NeedToGather) {
-    setInsertPointAfterBundle(E);
+    if (E->getMainOp())
+      setInsertPointAfterBundle(E);
     Value *Vec;
     SmallVector<int> Mask;
     SmallVector<const TreeEntry *> Entries;
@@ -7352,9 +7470,7 @@ struct SLPVectorizer : public FunctionPass {
     initializeSLPVectorizerPass(*PassRegistry::getPassRegistry());
   }
 
-  bool doInitialization(Module &M) override {
-    return false;
-  }
+  bool doInitialization(Module &M) override { return false; }
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
@@ -7995,10 +8111,20 @@ class HorizontalReduction {
                          Value *RHS, const Twine &Name, bool UseSelect) {
     unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     switch (Kind) {
+    case RecurKind::Or:
+      if (UseSelect &&
+          LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
+        return Builder.CreateSelect(LHS, Builder.getTrue(), RHS, Name);
+      return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
+                                 Name);
+    case RecurKind::And:
+      if (UseSelect &&
+          LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
+        return Builder.CreateSelect(LHS, RHS, Builder.getFalse(), Name);
+      return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
+                                 Name);
     case RecurKind::Add:
     case RecurKind::Mul:
-    case RecurKind::Or:
-    case RecurKind::And:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
@@ -8042,8 +8168,12 @@ class HorizontalReduction {
   static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name,
                          const ReductionOpsListType &ReductionOps) {
-    bool UseSelect = ReductionOps.size() == 2;
-    assert((!UseSelect || isa<SelectInst>(ReductionOps[1][0])) &&
+    bool UseSelect = ReductionOps.size() == 2 ||
+                     // Logical or/and.
+                     (ReductionOps.size() == 1 &&
+                      isa<SelectInst>(ReductionOps.front().front()));
+    assert((!UseSelect || ReductionOps.size() != 2 ||
+            isa<SelectInst>(ReductionOps[1][0])) &&
            "Expected cmp + select pairs for reduction");
     Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name, UseSelect);
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)) {
@@ -8181,10 +8311,10 @@ class HorizontalReduction {
   /// Checks if the instruction is in basic block \p BB.
   /// For a cmp+sel min/max reduction check that both ops are in \p BB.
   static bool hasSameParent(Instruction *I, BasicBlock *BB) {
-    if (isCmpSelMinMax(I)) {
+    if (isCmpSelMinMax(I) || (isBoolLogicOp(I) && isa<SelectInst>(I))) {
       auto *Sel = cast<SelectInst>(I);
-      auto *Cmp = cast<Instruction>(Sel->getCondition());
-      return Sel->getParent() == BB && Cmp->getParent() == BB;
+      auto *Cmp = dyn_cast<Instruction>(Sel->getCondition());
+      return Sel->getParent() == BB && Cmp && Cmp->getParent() == BB;
     }
     return I->getParent() == BB;
   }
@@ -8447,12 +8577,12 @@ public:
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       ArrayRef<Value *> VL(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, IgnoreList);
-      if (V.isTreeTinyAndNotFullyVectorizable())
+      if (V.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true))
         break;
       if (V.isLoadCombineReductionCandidate(RdxKind))
         break;
       V.reorderTopToBottom();
-      V.reorderBottomToTop();
+      V.reorderBottomToTop(/*IgnoreReorder=*/true);
       V.buildExternalUses(ExternallyUsedValues);
 
       // For a poison-safe boolean logic reduction, do not replace select
@@ -8630,6 +8760,7 @@ private:
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
 
+    ++NumVectorInstructions;
     return createSimpleTargetReduction(Builder, TTI, VectorizedValue, RdxKind,
                                        ReductionOps.back());
   }
@@ -8889,15 +9020,15 @@ static bool tryToVectorizeHorReductionOrInstOperands(
           continue;
         }
       }
+      // Set P to nullptr to avoid re-analysis of phi node in
+      // matchAssociativeReduction function unless this is the root node.
+      P = nullptr;
+      // Do not try to vectorize CmpInst operands, this is done separately.
+      // Final attempt for binop args vectorization should happen after the loop
+      // to try to find reductions.
+      if (!isa<CmpInst>(Inst))
+        PostponedInsts.push_back(Inst);
     }
-    // Set P to nullptr to avoid re-analysis of phi node in
-    // matchAssociativeReduction function unless this is the root node.
-    P = nullptr;
-    // Do not try to vectorize CmpInst operands, this is done separately.
-    // Final attempt for binop args vectorization should happen after the loop
-    // to try to find reductions.
-    if (!isa<CmpInst>(Inst))
-      PostponedInsts.push_back(Inst);
 
     // Try to vectorize operands.
     // Continue analysis for the instruction from the same basic block only to

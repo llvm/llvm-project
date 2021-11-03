@@ -52,7 +52,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(callee(functionDecl(LegacyCreatorFunctions)));
   // C-style functions like `::malloc()` sometimes create owners as void*
   // which is expected to be cast to the correct type in C++. This case
-  // must be catched explicitly.
+  // must be caught explicitly.
   const auto LegacyOwnerCast =
       castExpr(hasSourceExpression(CreatesLegacyOwner));
   // Functions that do manual resource management but cannot be updated to use

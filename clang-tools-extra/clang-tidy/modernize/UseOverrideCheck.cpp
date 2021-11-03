@@ -172,7 +172,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       // same line as the declaration if the beginning brace for the start of
       // the body falls on the next line.
       ReplacementText = " " + OverrideSpelling;
-      auto LastTokenIter = std::prev(Tokens.end());
+      auto *LastTokenIter = std::prev(Tokens.end());
       // When try statement is used instead of compound statement as
       // method body - insert override keyword before it.
       if (LastTokenIter->is(tok::kw_try))

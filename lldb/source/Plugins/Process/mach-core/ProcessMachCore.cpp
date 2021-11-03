@@ -48,12 +48,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ProcessMachCore)
 
-ConstString ProcessMachCore::GetPluginNameStatic() {
-  static ConstString g_name("mach-o-core");
-  return g_name;
-}
-
-const char *ProcessMachCore::GetPluginDescriptionStatic() {
+llvm::StringRef ProcessMachCore::GetPluginDescriptionStatic() {
   return "Mach-O core file debugging plug-in.";
 }
 

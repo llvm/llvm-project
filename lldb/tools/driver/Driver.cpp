@@ -609,6 +609,7 @@ int Driver::MainLoop() {
     options.SetSpawnThread(false);
     options.SetStopOnError(true);
     options.SetStopOnCrash(m_option_data.m_batch);
+    options.SetEchoCommands(!m_option_data.m_source_quietly);
 
     SBCommandInterpreterRunResult results =
         m_debugger.RunCommandInterpreter(options);

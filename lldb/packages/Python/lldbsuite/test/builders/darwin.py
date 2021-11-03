@@ -54,13 +54,20 @@ def get_triple():
     return vendor, os, version, env
 
 
+def get_triple_str(arch, vendor, os, version, env):
+    if None in [arch, vendor, os, version, env]:
+        return None
+
+    component = [arch, vendor, os + version]
+    if env:
+        components.append(env)
+    return '-'.join(component)
+
+
 class BuilderDarwin(Builder):
     def getTriple(self, arch):
         vendor, os, version, env = get_triple()
-        components = [arch, vendor, os, version, env]
-        if None in components:
-            return None
-        return '-'.join(components)
+        return get_triple_str(arch, vendor, os, version, env)
 
     def getExtraMakeArgs(self):
         """
@@ -93,11 +100,9 @@ class BuilderDarwin(Builder):
         """Returns the ARCH_CFLAGS for the make system."""
         # Get the triple components.
         vendor, os, version, env = get_triple()
-        if vendor is None or os is None or version is None or env is None:
+        triple = get_triple_str(arch, vendor, os, version, env)
+        if not triple:
             return []
-
-        # Construct the triple from its components.
-        triple = '-'.join([arch, vendor, os, version, env])
 
         # Construct min version argument
         version_min = ""

@@ -28,13 +28,13 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() {
+    return "UndefinedBehaviorSanitizer";
+  }
 
   static lldb::InstrumentationRuntimeType GetTypeStatic();
 
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }
 

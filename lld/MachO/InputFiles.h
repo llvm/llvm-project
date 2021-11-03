@@ -69,6 +69,7 @@ public:
   virtual ~InputFile() = default;
   Kind kind() const { return fileKind; }
   StringRef getName() const { return name; }
+  static void resetIdCount() { idCount = 0; }
 
   MemoryBufferRef mb;
 
@@ -119,6 +120,7 @@ private:
                         SubsectionMap &);
   void parseDebugInfo();
   void parseDataInCode();
+  void registerCompactUnwind();
 };
 
 // command-line -sectcreate file

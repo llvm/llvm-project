@@ -557,7 +557,6 @@ def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE">;
 
 def S : Flag<["-"], "S">,
     HelpText<"Strip debug information (STABS or DWARF) from the output">,
-    Flags<[HelpHidden]>,
     Group<grp_symtab>;
 def x : Flag<["-"], "x">,
     HelpText<"Exclude non-global symbols from the output symbol table">,
@@ -947,6 +946,9 @@ def mllvm : Separate<["-"], "mllvm">,
 def mcpu : Separate<["-"], "mcpu">,
     HelpText<"Processor family target for LTO code generation">,
     Group<grp_rare>;
+def no_dtrace_dof : Flag<["-"], "no_dtrace_dof">,
+    HelpText<"Disable dtrace-dof processing (default).">,
+    Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 
@@ -1269,10 +1271,6 @@ def kexts_use_stubs : Flag<["-"], "kexts_use_stubs">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def no_compact_unwind : Flag<["-"], "no_compact_unwind">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def no_dtrace_dof : Flag<["-"], "no_dtrace_dof">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;

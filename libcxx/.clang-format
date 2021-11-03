@@ -2,7 +2,8 @@ BasedOnStyle: LLVM
 
 ---
 Language: Cpp
-Standard: Cpp03
+Standard: c++20
+SpacesInAngles: Leave
 
 AlwaysBreakTemplateDeclarations: true
 PointerAlignment: Left

@@ -8,51 +8,31 @@ define void @test(float* %A, i32 %x) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i1 false, [[IDENT_CHECK]]
-; CHECK-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 undef)
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 false, i1 [[TMP3]], i1 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP0]], [[TMP6]]
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 undef)
-; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 1, [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 1, [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i32 [[TMP8]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 false, i1 [[TMP10]], i1 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP7]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP16]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], [[X]]
-; CHECK-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, float* [[TMP20]], i32 0
-; CHECK-NEXT:    [[TMP22:%.*]] = bitcast float* [[TMP21]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[TMP24]], [[X]]
-; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP26]]
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, float* [[TMP27]], i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = bitcast float* [[TMP28]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[WIDE_LOAD]], <4 x float>* [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[X]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP7]] to <4 x float>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[X]]
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, float* [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast float* [[TMP14]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[WIDE_LOAD]], <4 x float>* [[TMP15]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -73,7 +53,7 @@ define void @test(float* %A, i32 %x) {
 ; CHECK-NEXT:    [[ARRAYIDX1209:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[IDX_2]]
 ; CHECK-NEXT:    store float [[LV]], float* [[ARRAYIDX1209]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], undef
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

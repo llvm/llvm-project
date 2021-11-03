@@ -1557,41 +1557,15 @@ TEST(ConstantRange, MakeSatisfyingICmpRegion) {
       ConstantRange(APInt(8, 4), APInt(8, -128)));
 }
 
-static bool icmp(CmpInst::Predicate Pred, const APInt &LHS, const APInt &RHS) {
-  switch (Pred) {
-  case CmpInst::Predicate::ICMP_EQ:
-    return LHS.eq(RHS);
-  case CmpInst::Predicate::ICMP_NE:
-    return LHS.ne(RHS);
-  case CmpInst::Predicate::ICMP_UGT:
-    return LHS.ugt(RHS);
-  case CmpInst::Predicate::ICMP_UGE:
-    return LHS.uge(RHS);
-  case CmpInst::Predicate::ICMP_ULT:
-    return LHS.ult(RHS);
-  case CmpInst::Predicate::ICMP_ULE:
-    return LHS.ule(RHS);
-  case CmpInst::Predicate::ICMP_SGT:
-    return LHS.sgt(RHS);
-  case CmpInst::Predicate::ICMP_SGE:
-    return LHS.sge(RHS);
-  case CmpInst::Predicate::ICMP_SLT:
-    return LHS.slt(RHS);
-  case CmpInst::Predicate::ICMP_SLE:
-    return LHS.sle(RHS);
-  default:
-    llvm_unreachable("Not an ICmp predicate!");
-  }
-}
-
 void ICmpTestImpl(CmpInst::Predicate Pred) {
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(
       Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
         bool Exhaustive = true;
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
-          ForeachNumInConstantRange(
-              CR2, [&](const APInt &N2) { Exhaustive &= icmp(Pred, N1, N2); });
+          ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+            Exhaustive &= ICmpInst::compare(N1, N2, Pred);
+          });
         });
         EXPECT_EQ(CR1.icmp(Pred, CR2), Exhaustive);
       });
@@ -2531,4 +2505,80 @@ TEST_F(ConstantRangeTest, binaryNot) {
       [](const APInt &N) { return ~N; }, PreferSmallest);
 }
 
-}  // anonymous namespace
+template <typename T>
+void testConstantRangeICmpPredEquivalence(ICmpInst::Predicate SrcPred, T Func) {
+  unsigned Bits = 4;
+  EnumerateTwoConstantRanges(
+      Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
+        ICmpInst::Predicate TgtPred;
+        bool ExpectedEquivalent;
+        std::tie(TgtPred, ExpectedEquivalent) = Func(CR1, CR2);
+        if (TgtPred == CmpInst::Predicate::BAD_ICMP_PREDICATE)
+          return;
+        bool TrulyEquivalent = true;
+        ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
+          if (!TrulyEquivalent)
+            return;
+          ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
+            if (!TrulyEquivalent)
+              return;
+            TrulyEquivalent &= ICmpInst::compare(N1, N2, SrcPred) ==
+                               ICmpInst::compare(N1, N2, TgtPred);
+          });
+        });
+        ASSERT_EQ(TrulyEquivalent, ExpectedEquivalent);
+      });
+}
+
+TEST_F(ConstantRangeTest, areInsensitiveToSignednessOfICmpPredicate) {
+  for (auto Pred : seq_inclusive(ICmpInst::Predicate::FIRST_ICMP_PREDICATE,
+                                 ICmpInst::Predicate::LAST_ICMP_PREDICATE)) {
+    if (ICmpInst::isEquality(Pred))
+      continue;
+    ICmpInst::Predicate FlippedSignednessPred =
+        ICmpInst::getFlippedSignednessPredicate(Pred);
+    testConstantRangeICmpPredEquivalence(Pred, [FlippedSignednessPred](
+                                                   const ConstantRange &CR1,
+                                                   const ConstantRange &CR2) {
+      return std::make_pair(
+          FlippedSignednessPred,
+          ConstantRange::areInsensitiveToSignednessOfICmpPredicate(CR1, CR2));
+    });
+  }
+}
+
+TEST_F(ConstantRangeTest, areInsensitiveToSignednessOfInvertedICmpPredicate) {
+  for (auto Pred : seq_inclusive(ICmpInst::Predicate::FIRST_ICMP_PREDICATE,
+                                 ICmpInst::Predicate::LAST_ICMP_PREDICATE)) {
+    if (ICmpInst::isEquality(Pred))
+      continue;
+    ICmpInst::Predicate InvertedFlippedSignednessPred =
+        ICmpInst::getInversePredicate(
+            ICmpInst::getFlippedSignednessPredicate(Pred));
+    testConstantRangeICmpPredEquivalence(
+        Pred, [InvertedFlippedSignednessPred](const ConstantRange &CR1,
+                                              const ConstantRange &CR2) {
+          return std::make_pair(
+              InvertedFlippedSignednessPred,
+              ConstantRange::areInsensitiveToSignednessOfInvertedICmpPredicate(
+                  CR1, CR2));
+        });
+  }
+}
+
+TEST_F(ConstantRangeTest, getEquivalentPredWithFlippedSignedness) {
+  for (auto Pred : seq_inclusive(ICmpInst::Predicate::FIRST_ICMP_PREDICATE,
+                                 ICmpInst::Predicate::LAST_ICMP_PREDICATE)) {
+    if (ICmpInst::isEquality(Pred))
+      continue;
+    testConstantRangeICmpPredEquivalence(
+        Pred, [Pred](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return std::make_pair(
+              ConstantRange::getEquivalentPredWithFlippedSignedness(Pred, CR1,
+                                                                    CR2),
+              /*ExpectedEquivalent=*/true);
+        });
+  }
+}
+
+} // anonymous namespace

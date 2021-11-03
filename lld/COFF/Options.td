@@ -78,8 +78,9 @@ def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
 def natvis : P<"natvis", "Path to natvis file to embed in the PDB">;
 def pdb : P<"pdb", "PDB file path">;
-def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;
+def pdbpagesize : P<"pdbpagesize", "PDB page size">;
+def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
     MetaVarName<"<name>=<file>">,
     HelpText<"Embed the contents of <file> in the PDB as named stream <name>">;

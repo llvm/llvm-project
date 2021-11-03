@@ -555,6 +555,10 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
 //===----------------------------------------------------------------------===//
 // ResultRange
 
+ResultRange::ResultRange(OpResult result)
+    : ResultRange(static_cast<detail::OpResultImpl *>(Value(result).getImpl()),
+                  1) {}
+
 ResultRange::use_range ResultRange::getUses() const {
   return {use_begin(), use_end()};
 }
@@ -603,6 +607,10 @@ void ResultRange::UseIterator::skipOverResultsWithNoUsers() {
     use = {};
   else
     use = (*it).use_begin();
+}
+
+void ResultRange::replaceAllUsesWith(Operation *op) {
+  replaceAllUsesWith(op->getResults());
 }
 
 //===----------------------------------------------------------------------===//

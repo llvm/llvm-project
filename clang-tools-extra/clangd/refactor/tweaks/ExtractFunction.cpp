@@ -230,7 +230,7 @@ bool alwaysReturns(const ExtractionZone &EZ) {
 }
 
 bool ExtractionZone::isRootStmt(const Stmt *S) const {
-  return RootStmts.find(S) != RootStmts.end();
+  return RootStmts.contains(S);
 }
 
 // Finds the function in which the zone lies.

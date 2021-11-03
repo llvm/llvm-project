@@ -264,28 +264,28 @@ declare void @g.f1()
 ;                  <ResolverTy>* @<Resolver>
 
 ; IFunc -- Linkage
-@ifunc.external = external ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.external = ifunc void (), i8* ()* @ifunc_resolver
-@ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
-@ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
+@ifunc.external = external ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK: @ifunc.external = ifunc void (), void ()* ()* @ifunc_resolver
+@ifunc.private = private ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK: @ifunc.private = private ifunc void (), void ()* ()* @ifunc_resolver
+@ifunc.internal = internal ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK: @ifunc.internal = internal ifunc void (), void ()* ()* @ifunc_resolver
 
 ; IFunc -- Visibility
-@ifunc.default = default ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.default = ifunc void (), i8* ()* @ifunc_resolver
-@ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
-@ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
+@ifunc.default = default ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK: @ifunc.default = ifunc void (), void ()* ()* @ifunc_resolver
+@ifunc.hidden = hidden ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK: @ifunc.hidden = hidden ifunc void (), void ()* ()* @ifunc_resolver
+@ifunc.protected = protected ifunc void (), void ()* ()* @ifunc_resolver
+; CHECK: @ifunc.protected = protected ifunc void (), void ()* ()* @ifunc_resolver
 
 ; IFunc -- partition
-; CHECK: @ifunc.partition = ifunc void (), i8* ()* @ifunc_resolver, partition "part"
-@ifunc.partition = ifunc void (), i8* ()* @ifunc_resolver, partition "part"
+; CHECK: @ifunc.partition = ifunc void (), void ()* ()* @ifunc_resolver, partition "part"
+@ifunc.partition = ifunc void (), void ()* ()* @ifunc_resolver, partition "part"
 
-define i8* @ifunc_resolver() {
+define void ()* @ifunc_resolver() {
 entry:
-  ret i8* null
+  ret void ()* null
 }
 
 ;; Functions

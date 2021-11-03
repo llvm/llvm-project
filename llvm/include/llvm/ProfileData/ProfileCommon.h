@@ -66,9 +66,9 @@ public:
 
   /// Find the summary entry for a desired percentile of counts.
   static const ProfileSummaryEntry &
-  getEntryForPercentile(SummaryEntryVector &DS, uint64_t Percentile);
-  static uint64_t getHotCountThreshold(SummaryEntryVector &DS);
-  static uint64_t getColdCountThreshold(SummaryEntryVector &DS);
+  getEntryForPercentile(const SummaryEntryVector &DS, uint64_t Percentile);
+  static uint64_t getHotCountThreshold(const SummaryEntryVector &DS);
+  static uint64_t getColdCountThreshold(const SummaryEntryVector &DS);
 };
 
 class InstrProfSummaryBuilder final : public ProfileSummaryBuilder {

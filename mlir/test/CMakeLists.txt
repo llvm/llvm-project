@@ -128,7 +128,6 @@ endif()
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRPythonModules
-    MLIRPythonTestModules
   )
 endif()
 

@@ -818,4 +818,16 @@ main:
     # CHECK: f64x2.relaxed_max # encoding: [0xfd,0xee,0x01]
     f64x2.relaxed_max
 
+    # CHECK: i32x4.relaxed_trunc_f32x4_s # encoding: [0xfd,0xa5,0x01]
+    i32x4.relaxed_trunc_f32x4_s
+
+    # CHECK: i32x4.relaxed_trunc_f32x4_u # encoding: [0xfd,0xa6,0x01]
+    i32x4.relaxed_trunc_f32x4_u
+
+    # CHECK: i32x4.relaxed_trunc_f64x2_s_zero # encoding: [0xfd,0xc5,0x01]
+    i32x4.relaxed_trunc_f64x2_s_zero
+
+    # CHECK: i32x4.relaxed_trunc_f64x2_u_zero # encoding: [0xfd,0xc6,0x01]
+    i32x4.relaxed_trunc_f64x2_u_zero
+
     end_function

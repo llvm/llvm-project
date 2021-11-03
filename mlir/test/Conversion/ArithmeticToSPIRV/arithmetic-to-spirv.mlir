@@ -161,9 +161,10 @@ module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
+// expected-error @+1 {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'vector<4xi64>', with target type 'vector<4xi32>'}}
 func @int_vector4_invalid(%arg0: vector<4xi64>) {
   // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
-  // expected-error @+1 {{op requires the same type for all operands and results}}
+  // expected-note @+1 {{see existing live user here}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
@@ -568,6 +569,15 @@ func @index_cast3(%arg0: i32) {
 func @index_cast4(%arg0: index) {
   // CHECK-NOT: spv.SConvert
   %0 = arith.index_cast %arg0 : index to i32
+  return
+}
+
+// CHECK-LABEL: @bit_cast
+func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
+  // CHECK: spv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
+  %0 = arith.bitcast %arg0 : vector<2xf32> to vector<2xi32>
+  // CHECK: spv.Bitcast %{{.+}} : i64 to f64
+  %1 = arith.bitcast %arg1 : i64 to f64
   return
 }
 

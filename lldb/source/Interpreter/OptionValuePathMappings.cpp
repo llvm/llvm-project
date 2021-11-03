@@ -62,10 +62,10 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
-            ConstString a(orginal_path);
-            ConstString b(replace_path);
-            if (!m_path_mappings.Replace(a, b, idx, m_notify_changes))
-              m_path_mappings.Append(a, b, m_notify_changes);
+            if (!m_path_mappings.Replace(orginal_path, replace_path, idx,
+                                         m_notify_changes))
+              m_path_mappings.Append(orginal_path, replace_path,
+                                     m_notify_changes);
             changed = true;
           } else {
             std::string previousError =
@@ -102,9 +102,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
         const char *orginal_path = args.GetArgumentAtIndex(i);
         const char *replace_path = args.GetArgumentAtIndex(i + 1);
         if (VerifyPathExists(replace_path)) {
-          ConstString a(orginal_path);
-          ConstString b(replace_path);
-          m_path_mappings.Append(a, b, m_notify_changes);
+          m_path_mappings.Append(orginal_path, replace_path, m_notify_changes);
           m_value_was_set = true;
           changed = true;
         } else {
@@ -139,9 +137,8 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
-            ConstString a(orginal_path);
-            ConstString b(replace_path);
-            m_path_mappings.Insert(a, b, idx, m_notify_changes);
+            m_path_mappings.Insert(orginal_path, replace_path, idx,
+                                   m_notify_changes);
             changed = true;
             idx++;
           } else {

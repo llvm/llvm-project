@@ -239,6 +239,8 @@ template <class ELFT>
 template <class RelTy>
 bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
                            const InputSection *secB, ArrayRef<RelTy> rb) {
+  if (ra.size() != rb.size())
+    return false;
   for (size_t i = 0; i < ra.size(); ++i) {
     if (ra[i].r_offset != rb[i].r_offset ||
         ra[i].getType(config->isMips64EL) != rb[i].getType(config->isMips64EL))
@@ -312,8 +314,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
 // except relocation targets.
 template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
-  if (a->numRelocations != b->numRelocations || a->flags != b->flags ||
-      a->getSize() != b->getSize() || a->data() != b->data())
+  if (a->flags != b->flags || a->getSize() != b->getSize() ||
+      a->data() != b->data())
     return false;
 
   // If two sections have different output sections, we cannot merge them.
@@ -321,10 +323,10 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
   if (a->getParent() != b->getParent())
     return false;
 
-  if (a->areRelocsRela)
-    return constantEq(a, a->template relas<ELFT>(), b,
-                      b->template relas<ELFT>());
-  return constantEq(a, a->template rels<ELFT>(), b, b->template rels<ELFT>());
+  const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
+  return ra.areRelocsRel() ? constantEq(a, ra.rels, b, rb.rels)
+                           : constantEq(a, ra.relas, b, rb.relas);
 }
 
 // Compare two lists of relocations. Returns true if all pairs of
@@ -369,10 +371,10 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, ArrayRef<RelTy> ra,
 // Compare "moving" part of two InputSections, namely relocation targets.
 template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
-  if (a->areRelocsRela)
-    return variableEq(a, a->template relas<ELFT>(), b,
-                      b->template relas<ELFT>());
-  return variableEq(a, a->template rels<ELFT>(), b, b->template rels<ELFT>());
+  const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
+  return ra.areRelocsRel() ? variableEq(a, ra.rels, b, rb.rels)
+                           : variableEq(a, ra.relas, b, rb.relas);
 }
 
 template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t begin, size_t end) {
@@ -499,10 +501,11 @@ template <class ELFT> void ICF<ELFT>::run() {
   // a large time complexity will have less work to do.
   for (unsigned cnt = 0; cnt != 2; ++cnt) {
     parallelForEach(sections, [&](InputSection *s) {
-      if (s->areRelocsRela)
-        combineRelocHashes<ELFT>(cnt, s, s->template relas<ELFT>());
+      const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
+      if (rels.areRelocsRel())
+        combineRelocHashes<ELFT>(cnt, s, rels.rels);
       else
-        combineRelocHashes<ELFT>(cnt, s, s->template rels<ELFT>());
+        combineRelocHashes<ELFT>(cnt, s, rels.relas);
     });
   }
 

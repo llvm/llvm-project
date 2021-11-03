@@ -1913,10 +1913,11 @@ template <typename ELFT>
 static void readSymbolPartitionSection(InputSectionBase *s) {
   // Read the relocation that refers to the partition's entry point symbol.
   Symbol *sym;
-  if (s->areRelocsRela)
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(s->template relas<ELFT>()[0]);
+  const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(s->template rels<ELFT>()[0]);
+    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
@@ -2333,7 +2334,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // If --thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
-  // in addCombinedLTOObject, so we are done if that's the case.
+  // in compileBitcodeFiles, so we are done if that's the case.
   // Likewise, --plugin-opt=emit-llvm and --plugin-opt=emit-asm are the
   // options to create output files in bitcode or assembly code
   // respectively. No object files are generated.

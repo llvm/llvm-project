@@ -1634,6 +1634,9 @@ def warn_weak_vtable : Warning<
   "%0 has no out-of-line virtual method definitions; its vtable will be "
   "emitted in every translation unit">,
   InGroup<DiagGroup<"weak-vtables">>, DefaultIgnore;
+def warn_weak_template_vtable : Warning<
+  "this warning is no longer in use and will be removed in the next release">,
+  InGroup<DiagGroup<"weak-template-vtables">>, DefaultIgnore;
 
 def ext_using_undefined_std : ExtWarn<
   "using directive refers to implicitly-defined namespace 'std'">;
@@ -6780,7 +6783,7 @@ def warn_taking_address_of_packed_member : Warning<
   "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
   InGroup<DiagGroup<"address-of-packed-member">>;
 def warn_param_mismatched_alignment : Warning<
-  "passing %0-byte aligned argument to %1-byte aligned parameter %2 of %3 may result in an unaligned pointer access">,
+  "passing %0-byte aligned argument to %1-byte aligned parameter %2%select{| of %4}3 may result in an unaligned pointer access">,
   InGroup<DiagGroup<"align-mismatch">>;
 
 def err_objc_object_assignment : Error<
@@ -10791,6 +10794,9 @@ def note_omp_protected_structured_block
     : Note<"jump bypasses OpenMP structured block">;
 def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
+def err_omp_lastprivate_loop_var_non_loop_iteration : Error<
+  "only loop iteration variables are allowed in 'lastprivate' clause in "
+  "'omp loop' directives">;
 def err_omp_interop_variable_expected : Error<
   "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
 def err_omp_interop_variable_wrong_type : Error<
@@ -11294,6 +11300,12 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_builtin_invalid_arg_type: Error <
+  "%ordinal0 argument must be a "
+  "%select{vector, integer or floating point type|matrix|"
+   "pointer to a valid matrix element type|"
+   "signed integer or floating point type|vector type}1 (was %2)">;
+
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_matrix_index_not_integer: Error<
@@ -11306,11 +11318,8 @@ def err_matrix_separate_incomplete_index: Error<
   "matrix row and column subscripts cannot be separated by any expression">;
 def err_matrix_subscript_comma: Error<
   "comma expressions are not allowed as indices in matrix subscript expressions">;
-def err_builtin_matrix_arg: Error<"1st argument must be a matrix">;
 def err_builtin_matrix_scalar_unsigned_arg: Error<
   "%0 argument must be a constant unsigned integer expression">;
-def err_builtin_matrix_pointer_arg: Error<
-  "%ordinal0 argument must be a pointer to a valid matrix element type">;
 def err_builtin_matrix_pointer_arg_mismatch: Error<
   "the pointee of the 2nd argument must match the element type of the 1st argument (%0 != %1)">;
 def err_builtin_matrix_store_to_const: Error<

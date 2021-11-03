@@ -503,7 +503,6 @@ public:
 
     // For all other cases, insert the individual values individually.
     Type eltType;
-    llvm::errs() << llvmType << "\n";
     if (auto arrayType = llvmType.dyn_cast<LLVM::LLVMArrayType>())
       eltType = arrayType.getElementType();
     else

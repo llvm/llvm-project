@@ -521,13 +521,10 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
     OS << NL;
   }
 
-  for (unsigned I = 0, N = Node->getNumCatchStmts(); I != N; ++I) {
-    ObjCAtCatchStmt *catchStmt = Node->getCatchStmt(I);
+  for (ObjCAtCatchStmt *catchStmt : Node->catch_stmts()) {
     Indent() << "@catch(";
-    if (catchStmt->getCatchParamDecl()) {
-      if (Decl *DS = catchStmt->getCatchParamDecl())
-        PrintRawDecl(DS);
-    }
+    if (Decl *DS = catchStmt->getCatchParamDecl())
+      PrintRawDecl(DS);
     OS << ")";
     if (auto *CS = dyn_cast<CompoundStmt>(catchStmt->getCatchBody())) {
       PrintRawCompoundStmt(CS);
@@ -1000,6 +997,11 @@ void StmtPrinter::VisitOMPDispatchDirective(OMPDispatchDirective *Node) {
 
 void StmtPrinter::VisitOMPMaskedDirective(OMPMaskedDirective *Node) {
   Indent() << "#pragma omp masked";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPGenericLoopDirective(OMPGenericLoopDirective *Node) {
+  Indent() << "#pragma omp loop";
   PrintOMPExecutableDirective(Node);
 }
 

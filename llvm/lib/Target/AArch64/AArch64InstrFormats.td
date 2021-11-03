@@ -846,13 +846,13 @@ def logical_imm64_not : Operand<i64> {
   let ParserMatchClass = LogicalImm64NotOperand;
 }
 
-// iXX_imm0_65535 predicates - True if the immediate is in the range [0,65535].
+// immXX_0_65535 predicates - True if the immediate is in the range [0,65535].
 let ParserMatchClass = AsmImmRange<0, 65535>, PrintMethod = "printImmHex" in {
-def i32_imm0_65535 : Operand<i32>, TImmLeaf<i32, [{
+def timm32_0_65535 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 65536;
 }]>;
 
-def i64_imm0_65535 : Operand<i64>, TImmLeaf<i64, [{
+def timm64_0_65535 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 65536;
 }]>;
 }
@@ -956,8 +956,8 @@ def imm0_3 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_3Operand;
 }
 
-// imm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
-def imm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
+// timm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
+def timm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
@@ -1426,7 +1426,7 @@ class TMSystemINoOperand<bits<4> CRm, string asm, list<dag> pattern>
 
 // System instructions for exit from transactions
 class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
-    : I<(outs), (ins i64_imm0_65535:$imm), asm, "\t$imm", "", pattern>,
+    : I<(outs), (ins timm64_0_65535:$imm), asm, "\t$imm", "", pattern>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;
@@ -4511,7 +4511,7 @@ multiclass MemTagStore<bits<2> opc1, string insn> {
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm>
-    : I<(outs), (ins i32_imm0_65535:$imm), asm, "\t$imm", "", []>,
+    : I<(outs), (ins timm32_0_65535:$imm), asm, "\t$imm", "", []>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;

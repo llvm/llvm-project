@@ -7406,7 +7406,7 @@ mlir/lib/ExecutionEngine/JitRunner.cpp
 mlir/lib/ExecutionEngine/OptUtils.cpp
 mlir/lib/ExecutionEngine/RocmRuntimeWrappers.cpp
 mlir/lib/ExecutionEngine/RunnerUtils.cpp
-mlir/lib/ExecutionEngine/SparseUtils.cpp
+mlir/lib/ExecutionEngine/SparseTensorUtils.cpp
 mlir/lib/Interfaces/CallInterfaces.cpp
 mlir/lib/Interfaces/CastInterfaces.cpp
 mlir/lib/Interfaces/ControlFlowInterfaces.cpp

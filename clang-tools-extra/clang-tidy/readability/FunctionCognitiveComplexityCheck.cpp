@@ -86,7 +86,7 @@ struct CognitiveComplexity final {
   };
 
   // The helper struct used to record one increment occurrence, with all the
-  // details nessesary.
+  // details necessary.
   struct Detail {
     const SourceLocation Loc;     // What caused the increment?
     const unsigned short Nesting; // How deeply nested is Loc located?

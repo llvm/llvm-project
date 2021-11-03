@@ -731,6 +731,20 @@ public:
     return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
   }
 
+  // Accumulate all body samples to set total samples.
+  void updateTotalSamples() {
+    setTotalSamples(0);
+    for (const auto &I : BodySamples)
+      addTotalSamples(I.second.getSamples());
+
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.updateTotalSamples();
+        addTotalSamples(CS.second.getTotalSamples());
+      }
+    }
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
@@ -1128,11 +1142,18 @@ private:
 class SampleContextTrimmer {
 public:
   SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
-  // Trim and merge cold context profile when requested.
+  // Trim and merge cold context profile when requested. TrimBaseProfileOnly
+  // should only be effective when TrimColdContext is true. On top of
+  // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
+  // cold profiles or only cold base profiles. Trimming base profiles only is
+  // mainly to honor the preinliner decsion. Note that when MergeColdContext is
+  // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
+  // be ignored.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
                                        bool TrimColdContext,
                                        bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength);
+                                       uint32_t ColdContextFrameLength,
+                                       bool TrimBaseProfileOnly);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 

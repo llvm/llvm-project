@@ -1190,6 +1190,11 @@ void StmtProfiler::VisitOMPMaskedDirective(const OMPMaskedDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPGenericLoopDirective(
+    const OMPGenericLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);
 }

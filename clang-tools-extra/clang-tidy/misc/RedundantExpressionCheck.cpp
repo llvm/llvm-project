@@ -771,7 +771,7 @@ bool isTokAtEndOfExpr(SourceRange ExprSR, Token T, const SourceManager &SM) {
   return SM.getExpansionLoc(ExprSR.getEnd()) == T.getLocation();
 }
 
-/// Returns true if both LhsEpxr and RhsExpr are
+/// Returns true if both LhsExpr and RhsExpr are
 /// macro expressions and they are expanded
 /// from different macros.
 static bool areExprsFromDifferentMacros(const Expr *LhsExpr,
@@ -863,7 +863,7 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
           .bind("nested-duplicates"),
       this);
 
-  // Conditional (trenary) operator with equivalent operands, like (Y ? X : X).
+  // Conditional (ternary) operator with equivalent operands, like (Y ? X : X).
   Finder->addMatcher(
       traverse(TK_AsIs,
                conditionalOperator(expressionsAreEquivalent(),

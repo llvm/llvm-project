@@ -12,24 +12,24 @@
 
 ; CHECK: debug_info contents
 ; CHECK: DW_TAG_enumeration_type
-; CHECK-NEXT: DW_AT_name{{.*}} = "e1"
+; CHECK-NEXT: DW_AT_name {{.*}}"e1"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
-; CHECK-NEXT: DW_AT_name{{.*}} = "J"
+; CHECK-NEXT: DW_AT_name {{.*}}"J"
 ; CHECK-NEXT: DW_AT_const_value [DW_FORM_sdata]     (4294967295)
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
-; CHECK-NEXT: DW_AT_name{{.*}} = "K"
+; CHECK-NEXT: DW_AT_name {{.*}}"K"
 ; CHECK-NEXT: DW_AT_const_value [DW_FORM_sdata]     (-1152921504606846976)
 
 ; Check that we retain enums that aren't referenced by any variables, etc
 ; CHECK: DW_TAG_enumeration_type
-; CHECK-NEXT: DW_AT_name{{.*}} = "e2"
+; CHECK-NEXT: DW_AT_name {{.*}}"e2"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_enumerator
-; CHECK-NEXT: DW_AT_name{{.*}} = "X"
+; CHECK-NEXT: DW_AT_name {{.*}}"X"
 
 source_filename = "test/DebugInfo/Generic/enum.ll"
 

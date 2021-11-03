@@ -1,4 +1,6 @@
-# RUN: yaml2obj %s | llvm-dwarfdump --statistics - 2>&1 | FileCheck %s
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfdump --statistics %t.o 2>&1 | FileCheck %s
+# RUN: rm %t.o
 
 ## Check that we are covering the situation when a stat field overflows.
 ##

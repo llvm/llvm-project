@@ -20,8 +20,6 @@ class GlobalsDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipIf(debug_info="gmodules",
-            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

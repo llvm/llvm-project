@@ -125,7 +125,7 @@ static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
   cl::desc("prefer update form when ds form is also a update form"));
 
 static cl::opt<bool> EnableChainCommoning(
-    "ppc-formprep-chain-commoning", cl::init(true), cl::Hidden,
+    "ppc-formprep-chain-commoning", cl::init(false), cl::Hidden,
     cl::desc("Enable chain commoning in PPC loop prepare pass."));
 
 // Sum of following 3 per loop thresholds for all loops can not be larger
@@ -494,7 +494,7 @@ bool PPCLoopInstrFormPrep::prepareBasesForCommoningChains(Bucket &CBucket) {
   // All elements are increased by FirstOffset.
   // The number of chains should be sqrt(EleNum).
   if (!SawChainSeparater)
-    ChainNum = (unsigned)sqrt(EleNum);
+    ChainNum = (unsigned)sqrt((double)EleNum);
 
   CBucket.ChainSize = (unsigned)(EleNum / ChainNum);
 
@@ -553,8 +553,6 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
   BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  Type *I64Ty = Type::getInt64Ty(Header->getContext());
-
   SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
                      "loopprepare-chaincommon");
 
@@ -605,7 +603,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
           return false;
 
       Value *OffsetValue = SCEVE.expandCodeFor(
-          OffsetSCEV, I64Ty, LoopPredecessor->getTerminator());
+          OffsetSCEV, OffsetSCEV->getType(), LoopPredecessor->getTerminator());
 
       Instruction *NewPtr = rewriteForBucketElement(Base, Bucket.Elements[Idx],
                                                     OffsetValue, DeletedPtrs);

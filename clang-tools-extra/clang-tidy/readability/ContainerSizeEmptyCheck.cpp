@@ -90,7 +90,7 @@ AST_MATCHER(CXXConstructExpr, isDefaultConstruction) {
 namespace tidy {
 namespace readability {
 
-using utils::IsBinaryOrTernary;
+using utils::isBinaryOrTernary;
 
 ContainerSizeEmptyCheck::ContainerSizeEmptyCheck(StringRef Name,
                                                  ClangTidyContext *Context)
@@ -191,7 +191,7 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   std::string ReplacementText = std::string(
       Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()),
                            *Result.SourceManager, getLangOpts()));
-  if (IsBinaryOrTernary(E) || isa<UnaryOperator>(E)) {
+  if (isBinaryOrTernary(E) || isa<UnaryOperator>(E)) {
     ReplacementText = "(" + ReplacementText + ")";
   }
   if (E->getType()->isPointerType())

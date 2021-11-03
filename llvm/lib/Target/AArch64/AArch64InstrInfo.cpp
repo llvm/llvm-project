@@ -2263,32 +2263,35 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNPSi:
   case AArch64::LDG:
   case AArch64::STGPi:
+
   case AArch64::LD1B_IMM:
-  case AArch64::LD1H_IMM:
-  case AArch64::LD1W_IMM:
-  case AArch64::LD1D_IMM:
-  case AArch64::ST1B_IMM:
-  case AArch64::ST1H_IMM:
-  case AArch64::ST1W_IMM:
-  case AArch64::ST1D_IMM:
   case AArch64::LD1B_H_IMM:
+  case AArch64::LD1B_S_IMM:
+  case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_H_IMM:
+  case AArch64::LD1SB_S_IMM:
+  case AArch64::LD1SB_D_IMM:
+  case AArch64::LD1H_IMM:
   case AArch64::LD1H_S_IMM:
+  case AArch64::LD1H_D_IMM:
   case AArch64::LD1SH_S_IMM:
+  case AArch64::LD1SH_D_IMM:
+  case AArch64::LD1W_IMM:
   case AArch64::LD1W_D_IMM:
   case AArch64::LD1SW_D_IMM:
+  case AArch64::LD1D_IMM:
+
+  case AArch64::ST1B_IMM:
   case AArch64::ST1B_H_IMM:
-  case AArch64::ST1H_S_IMM:
-  case AArch64::ST1W_D_IMM:
-  case AArch64::LD1B_S_IMM:
-  case AArch64::LD1SB_S_IMM:
-  case AArch64::LD1H_D_IMM:
-  case AArch64::LD1SH_D_IMM:
   case AArch64::ST1B_S_IMM:
-  case AArch64::ST1H_D_IMM:
-  case AArch64::LD1B_D_IMM:
-  case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1H_S_IMM:
+  case AArch64::ST1H_D_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST1W_D_IMM:
+  case AArch64::ST1D_IMM:
+
   case AArch64::LD1RB_IMM:
   case AArch64::LD1RB_H_IMM:
   case AArch64::LD1RB_S_IMM:
@@ -2305,6 +2308,32 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LD1RW_D_IMM:
   case AArch64::LD1RSW_IMM:
   case AArch64::LD1RD_IMM:
+
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDNT1D_ZRI:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STNT1D_ZRI:
+
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1B_D_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1SB_S_IMM:
+  case AArch64::LDNF1SB_D_IMM:
+  case AArch64::LDNF1H_IMM:
+  case AArch64::LDNF1H_S_IMM:
+  case AArch64::LDNF1H_D_IMM:
+  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1SH_D_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SW_D_IMM:
+  case AArch64::LDNF1D_IMM:
     return 3;
   case AArch64::ADDG:
   case AArch64::STGOffset:
@@ -2855,10 +2884,22 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1H_IMM:
   case AArch64::LD1W_IMM:
   case AArch64::LD1D_IMM:
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDNT1D_ZRI:
   case AArch64::ST1B_IMM:
   case AArch64::ST1H_IMM:
   case AArch64::ST1W_IMM:
   case AArch64::ST1D_IMM:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STNT1D_ZRI:
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1H_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNF1D_IMM:
     // A full vectors worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(16);
@@ -2875,6 +2916,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST1B_H_IMM:
   case AArch64::ST1H_S_IMM:
   case AArch64::ST1W_D_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1H_S_IMM:
+  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SW_D_IMM:
     // A half vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(8);
@@ -2888,6 +2935,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1SH_D_IMM:
   case AArch64::ST1B_S_IMM:
   case AArch64::ST1H_D_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1SB_S_IMM:
+  case AArch64::LDNF1H_D_IMM:
+  case AArch64::LDNF1SH_D_IMM:
     // A quarter vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(4);
@@ -2898,6 +2949,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::LDNF1B_D_IMM:
+  case AArch64::LDNF1SB_D_IMM:
     // A eighth vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(2);

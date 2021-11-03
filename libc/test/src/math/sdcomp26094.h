@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SDCOMP26094_H
 #define LLVM_LIBC_TEST_SRC_MATH_SDCOMP26094_H
 
-#include "utils/CPP/Array.h"
+#include "src/__support/CPP/Array.h"
 
 #include <stdint.h>
 

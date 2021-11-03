@@ -500,6 +500,37 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.17.7 atomic construct
+//===----------------------------------------------------------------------===//
+
+// In the OpenMP Specification, atomic construct has an `atomic-clause` which
+// can take the values `read`, `write`, `update` and `capture`. These four
+// kinds of atomic constructs are fundamentally independent and are handled
+// separately while lowering. Having four separate operations (one for each
+// value of the clause) here decomposes handling of this construct into a
+// two-step process.
+
+def AtomicReadOp : OpenMP_Op<"atomic.read"> {
+  let arguments = (ins OpenMP_PointerLikeType:$address,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let results = (outs AnyType);
+  let parser = [{ return parseAtomicReadOp(parser, result); }];
+  let printer = [{ return printAtomicReadOp(p, *this); }];
+  let verifier = [{ return verifyAtomicReadOp(*this); }];
+}
+
+def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
+  let arguments = (ins OpenMP_PointerLikeType:$address,
+                       AnyType:$value,
+                       DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let parser = [{ return parseAtomicWriteOp(parser, result); }];
+  let printer = [{ return printAtomicWriteOp(p, *this); }];
+  let verifier = [{ return verifyAtomicWriteOp(*this); }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 

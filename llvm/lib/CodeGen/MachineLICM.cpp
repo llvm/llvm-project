@@ -781,15 +781,11 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN) {
 
     // Process the block
     SpeculationState = SpeculateUnknown;
-    for (MachineBasicBlock::iterator
-         MII = MBB->begin(), E = MBB->end(); MII != E; ) {
-      MachineBasicBlock::iterator NextMII = MII; ++NextMII;
-      MachineInstr *MI = &*MII;
-      if (!Hoist(MI, Preheader))
-        UpdateRegPressure(MI);
+    for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
+      if (!Hoist(&MI, Preheader))
+        UpdateRegPressure(&MI);
       // If we have hoisted an instruction that may store, it can only be a
       // constant store.
-      MII = NextMII;
     }
 
     // If it's a leaf node, it's done. Traverse upwards to pop ancestors.

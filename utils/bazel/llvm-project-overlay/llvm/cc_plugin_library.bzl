@@ -4,51 +4,72 @@
 
 """A macro to produce a loadable plugin library for the target OS.
 
-This macro produces a `cc_binary` rule with the name `name + "_impl"`. It
-forces the rule to statically link in its dependencies but to be linked as a
-shared "plugin" library. It then creates binary aliases to `.so`, `.dylib`
-,and `.dll` suffixed names for use on various platforms and selects between
-these into a filegroup with the exact name passed to the macro.
+This macro produces a set of platform-specific `cc_binary` rules, by appending
+the platform suffix (`.dll`, `.dylib`, or `.so`) to the provided `name`. It then
+connects these to a `cc_import` rule with `name` exactly and `hdrs` that can be
+used by other Bazel rules to depend on the plugin library.
+
+The `srcs` attribute for the `cc_binary` rules is `srcs + hdrs`. Other explicit
+arguments are passed to all of the rules where they apply, and can be used to
+configure generic aspects of all generated rules such as `testonly`. Lastly,
+`kwargs` is expanded into all the `cc_binary` rules.
 """
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
-load(":binary_alias.bzl", "binary_alias")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library")
 
-def cc_plugin_library(name, **kwargs):
+def cc_plugin_library(name, srcs, hdrs, include_prefix = None, strip_include_prefix = None, alwayslink = False, features = [], tags = [], testonly = False, **kwargs):
     # Neither the name of the plugin binary nor tags on whether it is built are
-    # configurable. Instead, we build a `cc_binary` that implements the plugin
-    # library using a `_impl` suffix. Bazel will use appropriate flags to cause
-    # this file to be a plugin library regardless of its name. We then create
-    # binary aliases in the different possible platform names, and select
-    # between these different names into a filegroup. The macro's name becomes
-    # the filegroup name and it contains exactly one target that is the target
-    # platform suffixed plugin library.
+    # configurable. Instead, we build a `cc_binary` with each name and
+    # selectively depend on them based on platform.
     #
     # All-in-all, this is a pretty poor workaround. I think this is part of the
     # Bazel issue: https://github.com/bazelbuild/bazel/issues/7538
-    cc_binary(
-        name = name + "_impl",
-        linkshared = True,
-        linkstatic = True,
-        **kwargs
-    )
-    binary_alias(
-        name = name + ".so",
-        binary = ":" + name + "_impl",
-    )
-    binary_alias(
-        name = name + ".dll",
-        binary = ":" + name + "_impl",
-    )
-    binary_alias(
-        name = name + ".dylib",
-        binary = ":" + name + "_impl",
-    )
+    so_name = name + ".so"
+    dll_name = name + ".dll"
+    dylib_name = name + ".dylib"
+    interface_output_name = name + "_interface_output"
+    import_name = name + "_import"
+    for impl_name in [dll_name, dylib_name, so_name]:
+        cc_binary(
+            name = impl_name,
+            srcs = srcs + hdrs,
+            linkshared = True,
+            linkstatic = True,
+            features = features,
+            tags = ["manual"] + tags,
+            testonly = testonly,
+            **kwargs
+        )
     native.filegroup(
-        name = name,
+        name = interface_output_name,
         srcs = select({
-            "@bazel_tools//src/conditions:windows": [":" + name + ".dll"],
-            "@bazel_tools//src/conditions:darwin": [":" + name + ".dylib"],
-            "//conditions:default": [":" + name + ".so"],
+            "@bazel_tools//src/conditions:windows": [":" + dll_name],
+            "@bazel_tools//src/conditions:darwin": [":" + dylib_name],
+            "//conditions:default": [":" + so_name],
         }),
+        output_group = "interface_library",
+    )
+    cc_import(
+        name = import_name,
+        interface_library = ":" + interface_output_name,
+        shared_library = select({
+            "@bazel_tools//src/conditions:windows": ":" + dll_name,
+            "@bazel_tools//src/conditions:darwin": ":" + dylib_name,
+            "//conditions:default": ":" + so_name,
+        }),
+        alwayslink = alwayslink,
+        features = features,
+        tags = tags,
+        testonly = testonly,
+    )
+    cc_library(
+        name = name,
+        hdrs = hdrs,
+        include_prefix = include_prefix,
+        strip_include_prefix = strip_include_prefix,
+        deps = [":" + import_name],
+        alwayslink = alwayslink,
+        features = features,
+        tags = tags,
+        testonly = testonly,
     )

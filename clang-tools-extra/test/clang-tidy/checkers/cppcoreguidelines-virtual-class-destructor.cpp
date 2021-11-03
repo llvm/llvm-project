@@ -231,9 +231,8 @@ struct DerivedFromTemplateVirtualBaseStruct : T {
 DerivedFromTemplateVirtualBaseStruct<PublicVirtualBaseStruct> InstantiationWithPublicVirtualBaseStruct;
 
 // Derived from template, base has *not* virtual dtor
-// CHECK-MESSAGES: :[[@LINE+8]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+7]]:8: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+6]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+6]]:8: note: make it public and virtual
 // CHECK-FIXES: struct DerivedFromTemplateNonVirtualBaseStruct : T {
 // CHECK-FIXES-NEXT: virtual ~DerivedFromTemplateNonVirtualBaseStruct() = default;
 // CHECK-FIXES-NEXT: virtual void foo();
@@ -256,9 +255,8 @@ using DerivedFromTemplateVirtualBaseStruct2Typedef = DerivedFromTemplateVirtualB
 DerivedFromTemplateVirtualBaseStruct2Typedef InstantiationWithPublicVirtualBaseStruct2;
 
 // Derived from template, base has *not* virtual dtor, to be used in a typedef
-// CHECK-MESSAGES: :[[@LINE+8]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+7]]:8: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+6]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:8: warning: destructor of 'DerivedFromTemplateNonVirtualBaseStruct2<PublicNonVirtualBaseStruct>' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+6]]:8: note: make it public and virtual
 // CHECK-FIXES: struct DerivedFromTemplateNonVirtualBaseStruct2 : T {
 // CHECK-FIXES-NEXT: virtual ~DerivedFromTemplateNonVirtualBaseStruct2() = default;
 // CHECK-FIXES-NEXT: virtual void foo();

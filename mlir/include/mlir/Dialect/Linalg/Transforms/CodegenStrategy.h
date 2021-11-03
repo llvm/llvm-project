@@ -46,6 +46,22 @@ private:
   linalg::LinalgTilingOptions options;
 };
 
+/// Represent one application of LinalgStrategyPadPass.
+struct Pad : public Transformation {
+  Pad(StringRef name, linalg::LinalgPaddingOptions options,
+      LinalgTransformationFilter::FilterFunction f = nullptr)
+      : Transformation(f), opName(name), options(options) {}
+
+  void addToPassPipeline(OpPassManager &pm,
+                         LinalgTransformationFilter m) const override {
+    pm.addPass(createLinalgStrategyPadPass(opName, options, m));
+  }
+
+private:
+  std::string opName;
+  linalg::LinalgPaddingOptions options;
+};
+
 /// Represent one application of createLinalgStrategyPromotePass.
 struct Promote : public Transformation {
   Promote(StringRef name, linalg::LinalgPromotionOptions options,
@@ -146,6 +162,21 @@ struct CodegenStrategy {
   tileIf(bool b, StringRef opName, linalg::LinalgTilingOptions options,
          LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? tile(opName, options) : *this;
+  }
+  /// Append a pattern to pad and hoist the operands of Op `opName` with padding
+  /// `options`.
+  CodegenStrategy &pad(StringRef opName, linalg::LinalgPaddingOptions options,
+                       LinalgTransformationFilter::FilterFunction f = nullptr) {
+    transformationSequence.emplace_back(
+        std::make_unique<Pad>(opName, options, f));
+    return *this;
+  }
+  /// Conditionally append a pattern to pad and hoist the operands of Op
+  /// `opName` with padding `options`.
+  CodegenStrategy &
+  padIf(bool b, StringRef opName, linalg::LinalgPaddingOptions options,
+        LinalgTransformationFilter::FilterFunction f = nullptr) {
+    return b ? pad(opName, options, f) : *this;
   }
   /// Append a pattern to add a level of promotion for `LinalgOpType` with
   /// promotion `options`.

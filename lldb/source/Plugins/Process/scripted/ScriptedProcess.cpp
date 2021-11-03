@@ -30,12 +30,7 @@ LLDB_PLUGIN_DEFINE(ScriptedProcess)
 using namespace lldb;
 using namespace lldb_private;
 
-ConstString ScriptedProcess::GetPluginNameStatic() {
-  static ConstString g_name("ScriptedProcess");
-  return g_name;
-}
-
-const char *ScriptedProcess::GetPluginDescriptionStatic() {
+llvm::StringRef ScriptedProcess::GetPluginDescriptionStatic() {
   return "Scripted Process plug-in.";
 }
 

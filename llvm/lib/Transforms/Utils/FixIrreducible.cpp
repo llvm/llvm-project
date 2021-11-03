@@ -124,7 +124,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   // children to a new vector.
   auto FirstChild = std::partition(
       CandidateLoops.begin(), CandidateLoops.end(), [&](Loop *L) {
-        return L == NewLoop || Blocks.count(L->getHeader()) == 0;
+        return L == NewLoop || !Blocks.contains(L->getHeader());
       });
   SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
   CandidateLoops.erase(FirstChild, CandidateLoops.end());

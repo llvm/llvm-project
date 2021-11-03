@@ -38,12 +38,7 @@ void SymbolFileSymtab::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SymbolFileSymtab::GetPluginNameStatic() {
-  static ConstString g_name("symtab");
-  return g_name;
-}
-
-const char *SymbolFileSymtab::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolFileSymtab::GetPluginDescriptionStatic() {
   return "Reads debug symbols from an object file's symbol table.";
 }
 

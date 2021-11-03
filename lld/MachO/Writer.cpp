@@ -343,6 +343,7 @@ public:
   }
 
   static uint32_t getInstanceCount() { return instanceCount; }
+  static void resetInstanceCount() { instanceCount = 0; }
 
 private:
   LoadCommandType type;
@@ -671,10 +672,15 @@ void Writer::scanRelocations() {
 
 void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
-  for (const Symbol *sym : symtab->getSymbols()) {
-    if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->overridesWeakDef && defined->isLive())
+  for (Symbol *sym : symtab->getSymbols()) {
+    if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (!defined->isLive())
+        continue;
+      defined->canonicalize();
+      if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
+      if (!defined->isAbsolute() && isCodeSection(defined->isec))
+        in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       // This branch intentionally doesn't check isLive().
       if (dysym->isDynamicLookup())
@@ -682,6 +688,20 @@ void Writer::scanSymbols() {
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->getRefState());
     }
+  }
+
+  for (const InputFile *file : inputFiles) {
+    if (auto *objFile = dyn_cast<ObjFile>(file))
+      for (Symbol *sym : objFile->symbols) {
+        if (auto *defined = dyn_cast_or_null<Defined>(sym)) {
+          if (!defined->isLive())
+            continue;
+          defined->canonicalize();
+          if (!defined->isExternal() && !defined->isAbsolute() &&
+              isCodeSection(defined->isec))
+            in.unwindInfo->addSymbol(defined);
+        }
+      }
   }
 }
 
@@ -954,7 +974,12 @@ template <class LP> void Writer::createOutputSections() {
 
   for (SyntheticSection *ssec : syntheticSections) {
     auto it = concatOutputSections.find({ssec->segname, ssec->name});
-    if (ssec->isNeeded()) {
+    // We add all LinkEdit sections here because we don't know if they are
+    // needed until their finalizeContents() methods get called later. While
+    // this means that we add some redundant sections to __LINKEDIT, there is
+    // is no redundancy in the output, as we do not emit section headers for
+    // any LinkEdit sections.
+    if (ssec->isNeeded() || ssec->segname == segment_names::linkEdit) {
       if (it == concatOutputSections.end()) {
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
       } else {
@@ -1101,6 +1126,9 @@ template <class LP> void Writer::run() {
   treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
+  // Canonicalization of all pointers to InputSections should be handled by
+  // these two methods.
+  scanSymbols();
   scanRelocations();
 
   // Do not proceed if there was an undefined symbol.
@@ -1109,7 +1137,6 @@ template <class LP> void Writer::run() {
 
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
-  scanSymbols();
   createOutputSections<LP>();
 
   // After this point, we create no new segments; HOWEVER, we might
@@ -1126,6 +1153,8 @@ template <class LP> void Writer::run() {
 }
 
 template <class LP> void macho::writeResult() { Writer().run<LP>(); }
+
+void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();

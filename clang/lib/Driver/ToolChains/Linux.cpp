@@ -261,6 +261,13 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   const std::string OSLibDir = std::string(getOSLibDir(Triple, Args));
   const std::string MultiarchTriple = getMultiarchTriple(D, Triple, SysRoot);
 
+  // mips32: Debian multilib, we use /libo32, while in other case, /lib is
+  // used. We need add both libo32 and /lib.
+  if (Arch == llvm::Triple::mips || Arch == llvm::Triple::mipsel) {
+    Generic_GCC::AddMultilibPaths(D, SysRoot, "libo32", MultiarchTriple, Paths);
+    addPathIfExists(D, SysRoot + "/libo32", Paths);
+    addPathIfExists(D, SysRoot + "/usr/libo32", Paths);
+  }
   Generic_GCC::AddMultilibPaths(D, SysRoot, OSLibDir, MultiarchTriple, Paths);
 
   addPathIfExists(D, SysRoot + "/lib/" + MultiarchTriple, Paths);

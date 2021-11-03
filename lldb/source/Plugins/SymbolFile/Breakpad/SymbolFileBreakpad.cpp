@@ -176,11 +176,6 @@ void SymbolFileBreakpad::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString SymbolFileBreakpad::GetPluginNameStatic() {
-  static ConstString g_name("breakpad");
-  return g_name;
-}
-
 uint32_t SymbolFileBreakpad::CalculateAbilities() {
   if (!m_objfile_sp || !llvm::isa<ObjectFileBreakpad>(*m_objfile_sp))
     return 0;
@@ -783,3 +778,9 @@ void SymbolFileBreakpad::ParseUnwindData() {
   }
   m_unwind_data->win.Sort();
 }
+
+uint64_t SymbolFileBreakpad::GetDebugInfoSize() {
+  // Breakpad files are all debug info.
+  return m_objfile_sp->GetByteSize();
+}
+

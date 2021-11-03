@@ -4,7 +4,7 @@
 
 ## Test we don't create R_AARCH64_RELATIVE.
 
-# CHECK: error: relocation R_PPC64_ADDR32 cannot be used against symbol hidden; recompile with -fPIC
+# CHECK: error: relocation R_PPC64_ADDR32 cannot be used against symbol 'hidden'; recompile with -fPIC
 
 .globl hidden
 .hidden hidden

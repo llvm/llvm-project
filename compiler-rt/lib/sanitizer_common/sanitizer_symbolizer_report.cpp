@@ -88,10 +88,16 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #endif
 }
 
-void ReportMmapWriteExec(int prot) {
+void ReportMmapWriteExec(int prot, int flags) {
 #if SANITIZER_POSIX && (!SANITIZER_GO && !SANITIZER_ANDROID)
-  if ((prot & (PROT_WRITE | PROT_EXEC)) != (PROT_WRITE | PROT_EXEC))
+  int pflags = (PROT_WRITE | PROT_EXEC);
+  if ((prot & pflags) != pflags)
     return;
+
+#  if SANITIZER_MAC && defined(MAP_JIT)
+  if ((flags & MAP_JIT) == MAP_JIT)
+    return;
+#  endif
 
   ScopedErrorReportLock l;
   SanitizerCommonDecorator d;

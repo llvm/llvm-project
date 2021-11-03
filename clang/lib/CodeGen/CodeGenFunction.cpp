@@ -1299,18 +1299,40 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // When generating code for a builtin with an inline declaration, use a
   // mangled name to hold the actual body, while keeping an external definition
   // in case the function pointer is referenced somewhere.
-  if (FD->isInlineBuiltinDeclaration() && Fn) {
-    std::string FDInlineName = (Fn->getName() + ".inline").str();
-    llvm::Module *M = Fn->getParent();
-    llvm::Function *Clone = M->getFunction(FDInlineName);
-    if (!Clone) {
-      Clone = llvm::Function::Create(Fn->getFunctionType(),
-                                     llvm::GlobalValue::InternalLinkage,
-                                     Fn->getAddressSpace(), FDInlineName, M);
-      Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (Fn) {
+    if (FD->isInlineBuiltinDeclaration()) {
+      std::string FDInlineName = (Fn->getName() + ".inline").str();
+      llvm::Module *M = Fn->getParent();
+      llvm::Function *Clone = M->getFunction(FDInlineName);
+      if (!Clone) {
+        Clone = llvm::Function::Create(Fn->getFunctionType(),
+                                       llvm::GlobalValue::InternalLinkage,
+                                       Fn->getAddressSpace(), FDInlineName, M);
+        Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+      }
+      Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
+      Fn = Clone;
     }
-    Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    Fn = Clone;
+
+    // Detect the unusual situation where an inline version is shadowed by a
+    // non-inline version. In that case we should pick the external one
+    // everywhere. That's GCC behavior too. Unfortunately, I cannot find a way
+    // to detect that situation before we reach codegen, so do some late
+    // replacement.
+    else {
+      for (const FunctionDecl *PD = FD->getPreviousDecl(); PD;
+           PD = PD->getPreviousDecl()) {
+        if (LLVM_UNLIKELY(PD->isInlineBuiltinDeclaration())) {
+          std::string FDInlineName = (Fn->getName() + ".inline").str();
+          llvm::Module *M = Fn->getParent();
+          if (llvm::Function *Clone = M->getFunction(FDInlineName)) {
+            Clone->replaceAllUsesWith(Fn);
+            Clone->eraseFromParent();
+          }
+          break;
+        }
+      }
+    }
   }
 
   // Check if we should generate debug info for this function.

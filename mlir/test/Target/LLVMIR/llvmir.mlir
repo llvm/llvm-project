@@ -1384,6 +1384,24 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr<i3
 
 // -----
 
+// CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @foo, i8* null }]
+llvm.mlir.global_ctors { ctors = [@foo], priorities = [0 : i32]}
+
+llvm.func @foo() {
+  llvm.return
+}
+
+// -----
+
+// CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @foo, i8* null }]
+llvm.mlir.global_dtors { dtors = [@foo], priorities = [0 : i32]}
+
+llvm.func @foo() {
+  llvm.return
+}
+
+// -----
+
 // Check that branch weight attributes are exported properly as metadata.
 llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
   // CHECK: !prof ![[NODE:[0-9]+]]

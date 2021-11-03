@@ -213,7 +213,13 @@ endif()
 
 check_library_exists(xar xar_open "" LLVM_HAVE_LIBXAR)
 if(LLVM_HAVE_LIBXAR)
-  set(XAR_LIB xar)
+  message(STATUS "The xar file format has been deprecated: LLVM_HAVE_LIBXAR might be removed in the future.")
+  # The xar file format has been deprecated since macOS 12.0.
+  if (CMAKE_OSX_DEPLOYMENT_TARGET VERSION_GREATER_EQUAL 12)
+    set(LLVM_HAVE_LIBXAR 0)
+  else()
+    set(XAR_LIB xar)
+  endif()
 endif()
 
 # function checks

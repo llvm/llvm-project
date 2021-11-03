@@ -36,6 +36,7 @@ extern template class DomTreeNodeBase<MachineBasicBlock>;
 extern template class DominatorTreeBase<MachineBasicBlock, false>; // DomTree
 extern template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTree
 
+using MachineDomTree = DomTreeBase<MachineBasicBlock>;
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
 //===-------------------------------------
@@ -43,8 +44,6 @@ using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 /// compute a normal dominator tree.
 ///
 class MachineDominatorTree : public MachineFunctionPass {
-  using DomTreeT = DomTreeBase<MachineBasicBlock>;
-
   /// Helper structure used to hold all the basic blocks
   /// involved in the split of a critical edge.
   struct CriticalEdge {
@@ -67,7 +66,7 @@ class MachineDominatorTree : public MachineFunctionPass {
   mutable SmallSet<MachineBasicBlock *, 32> NewBBs;
 
   /// The DominatorTreeBase that is used to compute a normal dominator tree.
-  std::unique_ptr<DomTreeT> DT;
+  std::unique_ptr<MachineDomTree> DT;
 
   /// Apply all the recorded critical edges to the DT.
   /// This updates the underlying DT information in a way that uses
@@ -84,8 +83,9 @@ public:
     calculate(MF);
   }
 
-  DomTreeT &getBase() {
-    if (!DT) DT.reset(new DomTreeT());
+  MachineDomTree &getBase() {
+    if (!DT)
+      DT.reset(new MachineDomTree());
     applySplitCriticalEdges();
     return *DT;
   }

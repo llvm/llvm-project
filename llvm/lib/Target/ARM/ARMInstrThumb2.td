@@ -4671,6 +4671,9 @@ def t2CDP2 : T2Cop<0b1111, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 }
 
 
+// Reading thread pointer from coprocessor register
+def : T2Pat<(ARMthread_pointer), (t2MRC 15, 0, 13, 0, 3)>,
+      Requires<[IsThumb2, IsReadTPHard]>;
 
 //===----------------------------------------------------------------------===//
 // ARMv8.1 Privilege Access Never extension

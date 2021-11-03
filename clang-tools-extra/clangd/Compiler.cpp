@@ -42,6 +42,9 @@ void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   IgnoreDiagnostics::log(DiagLevel, Info);
 }
 
+static bool AllowCrashPragmasForTest = false;
+void allowCrashPragmasForTest() { AllowCrashPragmasForTest = true; }
+
 void disableUnsupportedOptions(CompilerInvocation &CI) {
   // Disable "clang -verify" diagnostics, they are rarely useful in clangd, and
   // our compiler invocation set-up doesn't seem to work with it (leading
@@ -66,7 +69,8 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
   CI.getPreprocessorOpts().PCHWithHdrStop = false;
   CI.getPreprocessorOpts().PCHWithHdrStopCreate = false;
   // Don't crash on `#pragma clang __debug parser_crash`
-  CI.getPreprocessorOpts().DisablePragmaDebugCrash = true;
+  if (!AllowCrashPragmasForTest)
+    CI.getPreprocessorOpts().DisablePragmaDebugCrash = true;
 
   // Always default to raw container format as clangd doesn't registry any other
   // and clang dies when faced with unknown formats.

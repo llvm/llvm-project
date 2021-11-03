@@ -108,7 +108,7 @@ struct ClangTidyOptions {
 
     std::string Value;
     /// Priority stores relative precedence of the value loaded from config
-    /// files to disambigute local vs global value from different levels.
+    /// files to disambiguate local vs global value from different levels.
     unsigned Priority;
   };
   typedef std::pair<std::string, std::string> StringPair;
@@ -129,8 +129,8 @@ struct ClangTidyOptions {
   /// and using a FileOptionsProvider, it will take a configuration file in the
   /// parent directory (if any exists) and apply this config file on top of the
   /// parent one. IF true and using a ConfigOptionsProvider, it will apply this
-  /// config on top of any configuation file it finds in the directory using the
-  /// same logic as FileOptionsProvider. If false or missing, only this
+  /// config on top of any configuration file it finds in the directory using
+  /// the same logic as FileOptionsProvider. If false or missing, only this
   /// configuration file will be used.
   llvm::Optional<bool> InheritParentConfig;
 

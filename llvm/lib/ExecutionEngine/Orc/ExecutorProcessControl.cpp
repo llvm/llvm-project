@@ -125,7 +125,7 @@ void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                                   IncomingWFRHandler SendResult,
                                                   ArrayRef<char> ArgBuffer) {
   using WrapperFnTy =
-      shared::detail::CWrapperFunctionResult (*)(const char *Data, size_t Size);
+      shared::CWrapperFunctionResult (*)(const char *Data, size_t Size);
   auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
   SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
 }
@@ -138,40 +138,39 @@ Error SelfExecutorProcessControl::disconnect() {
 void SelfExecutorProcessControl::writeUInt8sAsync(
     ArrayRef<tpctypes::UInt8Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *jitTargetAddressToPointer<uint8_t *>(W.Address) = W.Value;
+    *W.Addr.toPtr<uint8_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeUInt16sAsync(
     ArrayRef<tpctypes::UInt16Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *jitTargetAddressToPointer<uint16_t *>(W.Address) = W.Value;
+    *W.Addr.toPtr<uint16_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeUInt32sAsync(
     ArrayRef<tpctypes::UInt32Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *jitTargetAddressToPointer<uint32_t *>(W.Address) = W.Value;
+    *W.Addr.toPtr<uint32_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeUInt64sAsync(
     ArrayRef<tpctypes::UInt64Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    *jitTargetAddressToPointer<uint64_t *>(W.Address) = W.Value;
+    *W.Addr.toPtr<uint64_t *>() = W.Value;
   OnWriteComplete(Error::success());
 }
 
 void SelfExecutorProcessControl::writeBuffersAsync(
     ArrayRef<tpctypes::BufferWrite> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
-    memcpy(jitTargetAddressToPointer<char *>(W.Address), W.Buffer.data(),
-           W.Buffer.size());
+    memcpy(W.Addr.toPtr<char *>(), W.Buffer.data(), W.Buffer.size());
   OnWriteComplete(Error::success());
 }
 
-shared::detail::CWrapperFunctionResult
+shared::CWrapperFunctionResult
 SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
     void *Ctx, const void *FnTag, const char *Data, size_t Size) {
 
