@@ -503,6 +503,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setTruncStoreAction(MVT::i64, MVT::i32, Custom);
   }
 
+  if (Subtarget.hasNanoMips()) {
+    setOperationAction(ISD::CTLZ, MVT::i32, Legal);
+  }
+
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
   setTargetDAGCombine(ISD::SDIVREM);
@@ -1472,7 +1476,7 @@ bool MipsTargetLowering::isCheapToSpeculateCttz() const {
 }
 
 bool MipsTargetLowering::isCheapToSpeculateCtlz() const {
-  return Subtarget.hasMips32();
+  return Subtarget.hasMips32() || Subtarget.hasNanoMips();
 }
 
 bool MipsTargetLowering::shouldFoldConstantShiftPairToMask(

@@ -270,6 +270,14 @@ class LoadScaledAddressNM<string opstr, RegisterOperand RO> :
          [(set RO:$rd, (add (shl RO:$rs, immZExt2:$shift), RO:$rt))]>,
   InstSize32;
 
+class CountLeading0NM<string opstr, RegisterOperand RO>:
+  InstNM<(outs RO:$rd), (ins RO:$rs), !strconcat(opstr, "\t$rd, $rs"),
+         [(set RO:$rd, (ctlz RO:$rs))]>, InstSize32;
+
+class CountLeading1NM<string opstr, RegisterOperand RO>:
+  InstNM<(outs RO:$rd), (ins RO:$rs), !strconcat(opstr, "\t$rd, $rs"),
+         [(set RO:$rd, (ctlz (not RO:$rs)))]>, InstSize32;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -324,6 +332,9 @@ def LSA_NM : LoadScaledAddressNM<"lsa", GPR32NMOpnd>;
 
 def SEB_NM : SignExtInRegNM<"seb", i8, GPR32NMOpnd>;
 def SEH_NM : SignExtInRegNM<"seh", i16, GPR32NMOpnd>;
+
+def CLZ_NM : CountLeading0NM<"clz", GPR32NMOpnd>;
+def CLO_NM : CountLeading1NM<"clo", GPR32NMOpnd>;
 
 // P.TRAP pool of instructions.
 def TEQ_NM : Trap<"teq">;
