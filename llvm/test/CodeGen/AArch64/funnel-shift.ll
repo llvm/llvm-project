@@ -46,29 +46,19 @@ define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) {
 define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; CHECK-LABEL: fshl_i128:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    tst x4, #0x40
 ; CHECK-NEXT:    mvn w8, w4
-; CHECK-NEXT:    extr x9, x3, x2, #1
-; CHECK-NEXT:    lsr x10, x3, #1
-; CHECK-NEXT:    and x12, x8, #0x7f
-; CHECK-NEXT:    lsl x11, x10, #1
-; CHECK-NEXT:    tst x12, #0x40
-; CHECK-NEXT:    lsl x11, x11, x4
+; CHECK-NEXT:    csel x9, x2, x3, ne
+; CHECK-NEXT:    csel x10, x3, x0, ne
+; CHECK-NEXT:    lsr x9, x9, #1
+; CHECK-NEXT:    lsl x11, x10, x4
+; CHECK-NEXT:    csel x12, x0, x1, ne
+; CHECK-NEXT:    lsr x10, x10, #1
 ; CHECK-NEXT:    lsr x9, x9, x8
-; CHECK-NEXT:    orr x9, x11, x9
-; CHECK-NEXT:    lsr x11, x0, #1
-; CHECK-NEXT:    lsr x10, x10, x8
-; CHECK-NEXT:    lsl x12, x1, x4
-; CHECK-NEXT:    lsr x8, x11, x8
-; CHECK-NEXT:    and x11, x4, #0x7f
-; CHECK-NEXT:    csel x9, x10, x9, ne
-; CHECK-NEXT:    csel x10, xzr, x10, ne
-; CHECK-NEXT:    orr x8, x12, x8
-; CHECK-NEXT:    lsl x12, x0, x4
-; CHECK-NEXT:    tst x11, #0x40
-; CHECK-NEXT:    csel x8, x12, x8, ne
-; CHECK-NEXT:    csel x11, xzr, x12, ne
-; CHECK-NEXT:    orr x1, x8, x10
+; CHECK-NEXT:    lsl x12, x12, x4
+; CHECK-NEXT:    lsr x8, x10, x8
 ; CHECK-NEXT:    orr x0, x11, x9
+; CHECK-NEXT:    orr x1, x12, x8
 ; CHECK-NEXT:    ret
   %f = call i128 @llvm.fshl.i128(i128 %x, i128 %y, i128 %z)
   ret i128 %f
