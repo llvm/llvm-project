@@ -135,12 +135,8 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  BasicBlock::iterator BBCurr, BBEnd, BBNext;
-  for (BBCurr = SourceBB.begin(), BBEnd = SourceBB.end(); BBCurr != BBEnd;
-       BBCurr = BBNext) {
-    BBNext = std::next(BBCurr);
-    BBCurr->moveBefore(TargetBB, TargetBB.end());
-  }
+  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
+    I.moveBefore(TargetBB, TargetBB.end());
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant

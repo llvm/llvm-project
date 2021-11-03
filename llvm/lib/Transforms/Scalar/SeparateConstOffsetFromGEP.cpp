@@ -1167,8 +1167,8 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
     if (!DT->isReachableFromEntry(&B))
       continue;
 
-    for (BasicBlock::iterator I = B.begin(), IE = B.end(); I != IE;)
-      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I++))
+    for (Instruction &I : llvm::make_early_inc_range(B))
+      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
         Changed |= splitGEP(GEP);
     // No need to split GEP ConstantExprs because all its indices are constant
     // already.
