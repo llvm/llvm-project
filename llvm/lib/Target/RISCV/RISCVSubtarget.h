@@ -138,8 +138,8 @@ public:
   bool hasVInstructionsF16() const { return HasStdExtV && hasStdExtZfh(); }
   bool hasVInstructionsF32() const { return HasStdExtV && hasStdExtF(); }
   bool hasVInstructionsF64() const { return HasStdExtV && hasStdExtD(); }
-  // D and Zfh imply F.
-  bool hasVInstructionsAnyF() const { return HasStdExtV && hasStdExtF(); }
+  // F16 and F64 both require F32.
+  bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   unsigned getMaxInterleaveFactor() const {
     return hasVInstructions() ? MaxInterleaveFactor : 1;
   }
