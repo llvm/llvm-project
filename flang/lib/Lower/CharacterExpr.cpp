@@ -217,9 +217,10 @@ void Fortran::lower::CharacterExprHelper::createLengthOneAssign(
   auto valTy = val.getType();
   // Precondition is rhs is size 1, but it may be wrapped in a fir.array.
   if (auto seqTy = valTy.dyn_cast<fir::SequenceType>()) {
-    auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
     valTy = seqTy.getEleTy();
-    val = builder.create<fir::ExtractValueOp>(loc, valTy, val, zero);
+    val = builder.create<fir::ExtractValueOp>(loc, valTy, val,
+                                              builder.getArrayAttr(zero));
   }
   auto addrTy = fir::ReferenceType::get(valTy);
   addr = builder.createConvert(loc, addrTy, addr);
