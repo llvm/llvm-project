@@ -955,12 +955,13 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
   nmi = End;
   MachineBasicBlock::iterator InsertPos = KillPos;
   if (LIS) {
-    // We have to move the copies first so that the MBB is still well-formed
-    // when calling handleMove().
+    // We have to move the copies (and any interleaved debug instructions)
+    // first so that the MBB is still well-formed when calling handleMove().
     for (MachineBasicBlock::iterator MBBI = AfterMI; MBBI != End;) {
       auto CopyMI = MBBI++;
       MBB->splice(InsertPos, MBB, CopyMI);
-      LIS->handleMove(*CopyMI);
+      if (!CopyMI->isDebugOrPseudoInstr())
+        LIS->handleMove(*CopyMI);
       InsertPos = CopyMI;
     }
     End = std::next(MachineBasicBlock::iterator(MI));
