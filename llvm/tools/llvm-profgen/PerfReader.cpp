@@ -31,6 +31,10 @@ static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
+static cl::opt<bool>
+    ShowDetailedWarning("show-detailed-warning", cl::init(false),
+                        cl::ZeroOrMore,
+                        cl::desc("Show detailed warning message."));
 
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -433,10 +437,16 @@ void HybridPerfReader::unwindSamples() {
   }
 
   // Warn about untracked frames due to missing probes.
-  for (auto Address : AllUntrackedCallsites)
-    WithColor::warning() << "Profile context truncated due to missing probe "
-                         << "for call instruction at "
-                         << format("0x%" PRIx64, Address) << "\n";
+  if (ShowDetailedWarning) {
+    for (auto Address : AllUntrackedCallsites)
+      WithColor::warning() << "Profile context truncated due to missing probe "
+                           << "for call instruction at "
+                           << format("0x%" PRIx64, Address) << "\n";
+  }
+
+  emitWarningSummary(AllUntrackedCallsites.size(), SampleCounters.size(),
+                     "of profiled contexts are truncated due to missing probe "
+                     "for call instruction.");
 }
 
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
@@ -1008,12 +1018,105 @@ void HybridPerfReader::generateUnsymbolizedProfile() {
 }
 
 void PerfScriptReader::warnTruncatedStack() {
-  for (auto Address : InvalidReturnAddresses) {
-    WithColor::warning()
-        << "Truncated stack sample due to invalid return address at "
-        << format("0x%" PRIx64, Address)
-        << ", likely caused by frame pointer omission\n";
+  if (ShowDetailedWarning) {
+    for (auto Address : InvalidReturnAddresses) {
+      WithColor::warning()
+          << "Truncated stack sample due to invalid return address at "
+          << format("0x%" PRIx64, Address)
+          << ", likely caused by frame pointer omission\n";
+    }
   }
+  emitWarningSummary(
+      InvalidReturnAddresses.size(), AggregatedSamples.size(),
+      "of truncated stack samples due to invalid return address, "
+      "likely caused by frame pointer omission.");
+}
+
+void PerfScriptReader::emitWarningSummary(uint64_t Num, uint64_t Total,
+                                          StringRef Msg) {
+  if (!Total || !Num)
+    return;
+  WithColor::warning() << format("%.2f", static_cast<double>(Num) * 100 / Total)
+                       << "%(" << Num << "/" << Total << ") " << Msg << "\n";
+}
+
+void PerfScriptReader::warnInvalidRange() {
+  std::unordered_map<std::pair<uint64_t, uint64_t>, uint64_t,
+                     pair_hash<uint64_t, uint64_t>>
+      Ranges;
+
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    uint64_t Count = Item.second;
+    uint64_t EndOffeset = 0;
+    for (const LBREntry &LBR : Sample->LBRStack) {
+      uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
+      uint64_t StartOffset = Binary->virtualAddrToOffset(LBR.Target);
+      if (EndOffeset != 0)
+        Ranges[{StartOffset, EndOffeset}] += Count;
+      EndOffeset = SourceOffset;
+    }
+  }
+
+  if (Ranges.empty()) {
+    WithColor::warning() << "No samples in perf script!\n";
+    return;
+  }
+
+  auto WarnInvalidRange =
+      [&](uint64_t StartOffset, uint64_t EndOffset, StringRef Msg) {
+        if (!ShowDetailedWarning)
+          return;
+        WithColor::warning()
+            << "["
+            << format("%8" PRIx64, Binary->offsetToVirtualAddr(StartOffset))
+            << ","
+            << format("%8" PRIx64, Binary->offsetToVirtualAddr(EndOffset))
+            << "]: " << Msg << "\n";
+      };
+
+  const char *EndNotBoundaryMsg = "Range is not on instruction boundary, "
+                                  "likely due to profile and binary mismatch.";
+  const char *DanglingRangeMsg = "Range does not belong to any functions, "
+                                 "likely from PLT, .init or .fini section.";
+  const char *RangeCrossFuncMsg =
+      "Fall through range should not cross function boundaries, likely due to "
+      "profile and binary mismatch.";
+
+  uint64_t InstNotBoundary = 0;
+  uint64_t UnmatchedRange = 0;
+  uint64_t RangeCrossFunc = 0;
+
+  for (auto &I : Ranges) {
+    uint64_t StartOffset = I.first.first;
+    uint64_t EndOffset = I.first.second;
+
+    if (!Binary->offsetIsCode(StartOffset) ||
+        !Binary->offsetIsTransfer(EndOffset)) {
+      InstNotBoundary++;
+      WarnInvalidRange(StartOffset, EndOffset, EndNotBoundaryMsg);
+    }
+
+    auto *FRange = Binary->findFuncRangeForOffset(StartOffset);
+    if (!FRange) {
+      UnmatchedRange++;
+      WarnInvalidRange(StartOffset, EndOffset, DanglingRangeMsg);
+      continue;
+    }
+
+    if (EndOffset >= FRange->EndOffset) {
+      RangeCrossFunc++;
+      WarnInvalidRange(StartOffset, EndOffset, RangeCrossFuncMsg);
+    }
+  }
+
+  uint64_t TotalRangeNum = Ranges.size();
+  emitWarningSummary(InstNotBoundary, TotalRangeNum,
+                     "of profiled ranges are not on instruction boundary.");
+  emitWarningSummary(UnmatchedRange, TotalRangeNum,
+                     "of profiled ranges do not belong to any functions.");
+  emitWarningSummary(RangeCrossFunc, TotalRangeNum,
+                     "of profiled ranges do cross function boundaries.");
 }
 
 void PerfScriptReader::parsePerfTraces() {
@@ -1022,6 +1125,7 @@ void PerfScriptReader::parsePerfTraces() {
 
   // Generate unsymbolized profile.
   warnTruncatedStack();
+  warnInvalidRange();
   generateUnsymbolizedProfile();
 
   if (SkipSymbolization)
