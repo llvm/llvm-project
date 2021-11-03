@@ -8552,25 +8552,42 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
   // Both operands must be equivalent extend nodes.
   SDValue LeftOp = ShiftOperand.getOperand(0);
   SDValue RightOp = ShiftOperand.getOperand(1);
+
   bool IsSignExt = LeftOp.getOpcode() == ISD::SIGN_EXTEND;
   bool IsZeroExt = LeftOp.getOpcode() == ISD::ZERO_EXTEND;
 
-  if ((!(IsSignExt || IsZeroExt)) || LeftOp.getOpcode() != RightOp.getOpcode())
+  if (!IsSignExt && !IsZeroExt)
     return SDValue();
+
+  EVT NarrowVT = LeftOp.getOperand(0).getValueType();
+  unsigned NarrowVTSize = NarrowVT.getScalarSizeInBits();
+
+  SDValue MulhRightOp;
+  if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
+    unsigned ActiveBits = IsSignExt
+                              ? Constant->getAPIntValue().getMinSignedBits()
+                              : Constant->getAPIntValue().getActiveBits();
+    if (ActiveBits > NarrowVTSize)
+      return SDValue();
+    MulhRightOp = DAG.getConstant(
+        Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
+        NarrowVT);
+  } else {
+    if (LeftOp.getOpcode() != RightOp.getOpcode())
+      return SDValue();
+    // Check that the two extend nodes are the same type.
+    if (NarrowVT != RightOp.getOperand(0).getValueType())
+      return SDValue();
+    MulhRightOp = RightOp.getOperand(0);
+  }
 
   EVT WideVT = LeftOp.getValueType();
   // Proceed with the transformation if the wide types match.
   assert((WideVT == RightOp.getValueType()) &&
          "Cannot have a multiply node with two different operand types.");
 
-  EVT NarrowVT = LeftOp.getOperand(0).getValueType();
-  // Check that the two extend nodes are the same type.
-  if (NarrowVT != RightOp.getOperand(0).getValueType())
-    return SDValue();
-
   // Proceed with the transformation if the wide type is twice as large
   // as the narrow type.
-  unsigned NarrowVTSize = NarrowVT.getScalarSizeInBits();
   if (WideVT.getScalarSizeInBits() != 2 * NarrowVTSize)
     return SDValue();
 
@@ -8589,8 +8606,8 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isOperationLegalOrCustom(MulhOpcode, NarrowVT))
     return SDValue();
 
-  SDValue Result = DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0),
-                               RightOp.getOperand(0));
+  SDValue Result =
+      DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0), MulhRightOp);
   return (N->getOpcode() == ISD::SRA ? DAG.getSExtOrTrunc(Result, DL, WideVT)
                                      : DAG.getZExtOrTrunc(Result, DL, WideVT));
 }
