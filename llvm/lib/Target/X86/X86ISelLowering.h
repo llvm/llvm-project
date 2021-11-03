@@ -627,10 +627,6 @@ namespace llvm {
     // packed single precision.
     DPBF16PS,
 
-    // Save xmm argument registers to the stack, according to %al. An operator
-    // is needed so that this can be expanded with control flow.
-    VASTART_SAVE_XMM_REGS,
-
     // Windows's _chkstk call to do stack probing.
     WIN_ALLOCA,
 
@@ -847,6 +843,10 @@ namespace llvm {
     AESDECWIDE128KL,
     AESENCWIDE256KL,
     AESDECWIDE256KL,
+
+    // Save xmm argument registers to the stack, according to %al. An operator
+    // is needed so that this can be expanded with control flow.
+    VASTART_SAVE_XMM_REGS,
 
     // WARNING: Do not add anything in the end unless you want the node to
     // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
