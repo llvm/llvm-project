@@ -244,14 +244,14 @@ void unique_ptr_test() {
 
 void bitset_test() {
   std::bitset<258> i_am_empty(0);
-  ComparePrettyPrintToChars(i_am_empty, "std::bitset<258>");
+  ComparePrettyPrintToChars(i_am_empty, "std::bitset<258ul>");
 
   std::bitset<0> very_empty;
-  ComparePrettyPrintToChars(very_empty, "std::bitset<0>");
+  ComparePrettyPrintToChars(very_empty, "std::bitset<0ul>");
 
   std::bitset<15> b_000001111111100(1020);
   ComparePrettyPrintToChars(b_000001111111100,
-      "std::bitset<15> = {[2] = 1, [3] = 1, [4] = 1, [5] = 1, [6] = 1, "
+      "std::bitset<15ul> = {[2] = 1, [3] = 1, [4] = 1, [5] = 1, [6] = 1, "
       "[7] = 1, [8] = 1, [9] = 1}");
 
   std::bitset<258> b_0_129_132(0);
@@ -259,7 +259,7 @@ void bitset_test() {
   b_0_129_132[129] = true;
   b_0_129_132[132] = true;
   ComparePrettyPrintToChars(b_0_129_132,
-      "std::bitset<258> = {[0] = 1, [129] = 1, [132] = 1}");
+      "std::bitset<258ul> = {[0] = 1, [129] = 1, [132] = 1}");
 }
 
 void list_test() {
