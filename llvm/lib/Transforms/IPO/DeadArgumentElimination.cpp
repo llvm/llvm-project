@@ -175,8 +175,8 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   // to pass in a smaller number of arguments into the new function.
   //
   std::vector<Value *> Args;
-  for (Value::user_iterator I = Fn.user_begin(), E = Fn.user_end(); I != E; ) {
-    CallBase *CB = dyn_cast<CallBase>(*I++);
+  for (User *U : llvm::make_early_inc_range(Fn.users())) {
+    CallBase *CB = dyn_cast<CallBase>(U);
     if (!CB)
       continue;
 
