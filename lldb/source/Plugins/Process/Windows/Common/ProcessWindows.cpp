@@ -603,7 +603,7 @@ Status ProcessWindows::DoDeallocateMemory(lldb::addr_t ptr) {
 
 Status ProcessWindows::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
                                              MemoryRegionInfo &info) {
-  return ProcessDebugger::DoGetMemoryRegionInfo(vm_addr, info);
+  return ProcessDebugger::GetMemoryRegionInfo(vm_addr, info);
 }
 
 lldb::addr_t ProcessWindows::GetImageInfoAddress() {

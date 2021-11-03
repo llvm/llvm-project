@@ -924,12 +924,9 @@ static Optional<Instruction *> instCombineST1ScatterIndex(InstCombiner &IC,
     Type *VecPtrTy = PointerType::getUnqual(Ty);
     Ptr = Builder.CreateBitCast(Ptr, VecPtrTy);
 
-    CallInst *MaskedStore =
-        Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
-    MaskedStore->takeName(&II);
-    II.eraseFromParent();
+    (void)Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
 
-    return IC.replaceInstUsesWith(II, MaskedStore);
+    return IC.eraseInstFromFunction(II);
   }
 
   return None;
