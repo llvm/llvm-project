@@ -1414,6 +1414,7 @@ private:
   SMLoc Loc; // Source location of definition of name.
   PointerIntPair<RecTy *, 2, FieldKind> TyAndKind;
   Init *Value;
+  bool IsUsed = false;
 
 public:
   RecordVal(Init *N, RecTy *T, FieldKind K);
@@ -1457,6 +1458,11 @@ public:
 
   /// Set the value and source location of the field.
   bool setValue(Init *V, SMLoc NewLoc);
+
+  /// Whether this value is used. Useful for reporting warnings, for example
+  /// when a template argument is unused.
+  void setUsed(bool Used) { IsUsed = Used; }
+  bool isUsed() const { return IsUsed; }
 
   void dump() const;
 
@@ -1632,6 +1638,7 @@ public:
   }
 
   void checkRecordAssertions();
+  void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
     for (const auto &SCPair : SuperClasses)

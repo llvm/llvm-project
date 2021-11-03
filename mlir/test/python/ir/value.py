@@ -55,3 +55,22 @@ def testValueIsInstance():
   op = func.regions[0].blocks[0].operations[0]
   assert not BlockArgument.isinstance(op.results[0])
   assert OpResult.isinstance(op.results[0])
+
+
+# CHECK-LABEL: TEST: testValueHash
+@run
+def testValueHash():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(
+      r"""
+    func @foo(%arg0: f32) -> f32 {
+      %0 = "some_dialect.some_op"(%arg0) : (f32) -> f32
+      return %0 : f32
+    }""", ctx)
+
+  [func] = module.body.operations
+  block = func.entry_block
+  op, ret = block.operations
+  assert hash(block.arguments[0]) == hash(op.operands[0])
+  assert hash(op.result) == hash(ret.operands[0])

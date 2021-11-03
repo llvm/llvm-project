@@ -780,6 +780,10 @@ BUILTIN(__builtin_cfuged, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cntlzdm, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cnttzdm, "ULLiULLiULLi", "")
 
+// Double-double (un)pack
+BUILTIN(__builtin_unpack_longdouble, "dLdIi", "")
+BUILTIN(__builtin_pack_longdouble, "Lddd", "")
+
 // Generate random number
 BUILTIN(__builtin_darn, "LLi", "")
 BUILTIN(__builtin_darn_raw, "LLi", "")

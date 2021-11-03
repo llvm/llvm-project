@@ -36,3 +36,13 @@ void test_builtin_ppc_flm() {
   // CHECK: call double @llvm.ppc.setflm(double %1)
   res = __builtin_setflm(res);
 }
+
+double test_builtin_unpack_ldbl(long double x) {
+  // CHECK: call double @llvm.ppc.unpack.longdouble(ppc_fp128 %0, i32 1)
+  return __builtin_unpack_longdouble(x, 1);
+}
+
+long double test_builtin_pack_ldbl(double x, double y) {
+  // CHECK: call ppc_fp128 @llvm.ppc.pack.longdouble(double %0, double %1)
+  return __builtin_pack_longdouble(x, y);
+}

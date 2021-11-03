@@ -463,17 +463,15 @@ bool MergeFunctions::runOnModule(Module &M) {
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
   Constant *BitcastNew = ConstantExpr::getBitCast(New, Old->getType());
-  for (auto UI = Old->use_begin(), UE = Old->use_end(); UI != UE;) {
-    Use *U = &*UI;
-    ++UI;
-    CallBase *CB = dyn_cast<CallBase>(U->getUser());
-    if (CB && CB->isCallee(U)) {
+  for (Use &U : llvm::make_early_inc_range(Old->uses())) {
+    CallBase *CB = dyn_cast<CallBase>(U.getUser());
+    if (CB && CB->isCallee(&U)) {
       // Do not copy attributes from the called function to the call-site.
       // Function comparison ensures that the attributes are the same up to
       // type congruences in byval(), in which case we need to keep the byval
       // type of the call-site, not the callee function.
       remove(CB->getFunction());
-      U->set(BitcastNew);
+      U.set(BitcastNew);
     }
   }
 }
