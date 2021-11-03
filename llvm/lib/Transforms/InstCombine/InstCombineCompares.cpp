@@ -4614,18 +4614,22 @@ static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
   // The trunc masks high bits while the compare may effectively mask low bits.
   Value *X;
   const APInt *C;
-  if (match(Op0, m_OneUse(m_Trunc(m_Value(X)))) && match(Op1, m_Power2(C))) {
-    if (Pred == ICmpInst::ICMP_ULT) {
-      // (trunc X) u< Pow2C --> (X & MaskC) == 0
-      unsigned SrcBits = X->getType()->getScalarSizeInBits();
-      unsigned DstBits = Op0->getType()->getScalarSizeInBits();
-      APInt MaskC = APInt::getOneBitSet(SrcBits, DstBits) - C->zext(SrcBits);
+  if (!match(Op0, m_OneUse(m_Trunc(m_Value(X)))) || !match(Op1, m_APInt(C)))
+    return nullptr;
+
+  unsigned SrcBits = X->getType()->getScalarSizeInBits();
+  if (Pred == ICmpInst::ICMP_ULT) {
+    if (C->isPowerOf2()) {
+      // If C is a power-of-2:
+      // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
+      Constant *MaskC = ConstantInt::get(X->getType(), (-*C).zext(SrcBits));
       Value *And = Builder.CreateAnd(X, MaskC);
       Constant *Zero = ConstantInt::getNullValue(X->getType());
       return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
     }
-    // TODO: Handle ugt.
+    // TODO: Handle C is negative-power-of-2.
   }
+  // TODO: Handle ugt.
 
   return nullptr;
 }
