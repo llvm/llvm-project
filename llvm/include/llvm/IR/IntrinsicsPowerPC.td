@@ -50,6 +50,15 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
                        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
                                  [IntrNoMem]>;
 
+  def int_ppc_unpack_longdouble : GCCBuiltin<"__builtin_unpack_longdouble">,
+                                  Intrinsic<[llvm_double_ty],
+                                            [llvm_ppcf128_ty, llvm_i32_ty],
+                                            [IntrNoMem]>;
+  def int_ppc_pack_longdouble : GCCBuiltin<"__builtin_pack_longdouble">,
+                                Intrinsic<[llvm_ppcf128_ty],
+                                          [llvm_double_ty, llvm_double_ty],
+                                          [IntrNoMem]>;
+
   // Generate a random number
   def int_ppc_darn : GCCBuiltin<"__builtin_darn">,
                      Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
