@@ -75,8 +75,8 @@ TEST_F(FindFileTest, FindFileTests) {
   llvm::FileRemover file_remover(FileName);
   PathMappingList map;
 
-  map.Append(ConstString("/old"), ConstString(DirName.str()), false);
-  map.Append(ConstString(R"(C:\foo)"), ConstString(DirName.str()), false);
+  map.Append("/old", DirName.str(), false);
+  map.Append(R"(C:\foo)", DirName.str(), false);
 
   Matches matches[] = {
       {"/old", llvm::sys::path::Style::posix, DirName.c_str()},
