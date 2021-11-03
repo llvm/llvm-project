@@ -196,7 +196,8 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
           zero, ty, mlir::FloatAttr::get(zero.getType(), 0.0));
     } else {
       // TODO: create ConstantAggregateZero for FIR aggregate/array types.
-      return zero.emitOpError(
+      return rewriter.notifyMatchFailure(
+          zero,
           "conversion of fir.zero with aggregate type not implemented yet");
     }
     return success();
