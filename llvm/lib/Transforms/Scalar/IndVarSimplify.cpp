@@ -156,7 +156,8 @@ class IndVarSimplify {
   bool rewriteNonIntegerIVs(Loop *L);
 
   bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
-  /// See if we can convert an exit condition from signed to unsigned.
+  /// Try to improve our exit conditions by converting condition from signed
+  /// to unsigned or rotating computation out of the loop.
   /// (See inline comment about why this is duplicated from simplifyAndExtend)
   bool canonicalizeExitCondition(Loop *L);
   /// Try to eliminate loop exits based on analyzeable exit counts
@@ -1482,6 +1483,83 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       continue;
     }
   }
+
+  // Now that we've canonicalized the condition to match the extend,
+  // see if we can rotate the extend out of the loop.
+  for (auto *ExitingBB : ExitingBlocks) {
+    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
+    assert(BI->isConditional() && "exit branch must be conditional");
+
+    auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!ICmp || !ICmp->hasOneUse() || !ICmp->isUnsigned())
+      continue;
+
+    auto *LHS = ICmp->getOperand(0);
+    auto *RHS = ICmp->getOperand(1);
+    if (L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS))
+      // Nothing to rotate
+      continue;
+
+    if (!LHS->hasOneUse())
+      // Can't rotate without increasing instruction count
+      continue;
+
+    // Match (icmp unsigned-cond zext, RHS)
+    // TODO: Extend to handle corresponding sext/signed-cmp case
+    // TODO: Extend to other invertible functions
+    Value *LHSOp = nullptr;
+    if (!match(LHS, m_ZExt(m_Value(LHSOp))))
+      continue;
+
+    // Given a icmp unsigned-cond zext(Op) where zext(trunc(RHS)) == RHS
+    // replace with an icmp of the form icmp unsigned-cond Op, trunc(RHS)
+    // when zext is loop varying and RHS is loop invariant.  This converts
+    // loop varying work to loop-invariant work.
+    auto doRotateTransform = [&]() {
+      assert(ICmp->isUnsigned() && "must have proven unsigned already");
+      auto *NewRHS =
+        CastInst::Create(Instruction::Trunc, RHS, LHSOp->getType(), "",
+                         L->getLoopPreheader()->getTerminator());
+      ICmp->setOperand(0, LHSOp);
+      ICmp->setOperand(1, NewRHS);
+      if (LHS->use_empty())
+        DeadInsts.push_back(LHS);
+    };
+
+
+    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
+    const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
+    const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
+    auto FullCR = ConstantRange::getFull(InnerBitWidth);
+    FullCR = FullCR.zeroExtend(OuterBitWidth);
+    if (FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS)))) {
+      doRotateTransform();
+      Changed = true;
+      // Note, we are leaving SCEV in an unfortunately imprecise case here
+      // as rotation tends to reveal information about trip counts not
+      // previously visible.
+      continue;
+    }
+
+    // If we have a loop which would be undefined if infinite, and it has at
+    // most one possible dynamic exit, then we can conclude that exit must
+    // be taken.  If that exit must be taken, and we know the LHS can only
+    // take values in the positive domain, then we can conclude RHS must
+    // also be in that same range.
+    if (ExitingBlocks.size() == 1 && SE->loopHasNoAbnormalExits(L) &&
+        SE->loopIsFiniteByAssumption(L)) {
+      doRotateTransform();
+      Changed = true;
+      // Given we've changed exit counts, notify SCEV.
+      // Some nested loops may share same folded exit basic block,
+      // thus we need to notify top most loop.
+      SE->forgetTopmostLoop(L);
+      continue;
+    }
+  }
+
   return Changed;
 }
 
@@ -1866,8 +1944,8 @@ bool IndVarSimplify::run(Loop *L) {
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
 
-  // Try to convert exit conditions to unsigned
-  // Note: Handles invalidation internally if needed.
+  // Try to convert exit conditions to unsigned and rotate computation
+  // out of the loop.  Note: Handles invalidation internally if needed.
   Changed |= canonicalizeExitCondition(L);
 
   // Try to eliminate loop exits based on analyzeable exit counts
