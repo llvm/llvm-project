@@ -218,7 +218,12 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
 }
 
 llvm::Optional<FileSpec> PathMappingList::FindFile(const FileSpec &orig_spec) const {
-  if (auto remapped = RemapPath(orig_spec.GetPath(), /*only_if_exists=*/true))
+  // We must normalize the orig_spec again using the host's path style,
+  // otherwise there will be mismatch between the host and remote platform
+  // if they use different path styles.
+  if (auto remapped = RemapPath(
+          NormalizePath(ConstString(orig_spec.GetCString())).GetStringRef(),
+          /*only_if_exists=*/true))
     return remapped;
 
   return {};
