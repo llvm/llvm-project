@@ -504,7 +504,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   }
 
   if (Subtarget.hasNanoMips()) {
-    setOperationAction(ISD::CTLZ, MVT::i32, Legal);
+    setOperationAction(ISD::CTLZ,       MVT::i32, Legal);
+    setOperationAction(ISD::CTTZ,       MVT::i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   }
 
@@ -1473,7 +1474,7 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
 }
 
 bool MipsTargetLowering::isCheapToSpeculateCttz() const {
-  return Subtarget.hasMips32();
+  return Subtarget.hasMips32() || Subtarget.hasNanoMips();
 }
 
 bool MipsTargetLowering::isCheapToSpeculateCtlz() const {
@@ -1523,6 +1524,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
+  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ:               return lowerCTTZ(Op, DAG);
   }
   return SDValue();
 }
@@ -3260,6 +3263,16 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   SDValue Trunc = DAG.getNode(MipsISD::TruncIntFP, SDLoc(Op), FPTy,
                               Op.getOperand(0));
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
+}
+
+SDValue MipsTargetLowering::lowerCTTZ(SDValue Op, SelectionDAG &DAG) const {
+  if (!Subtarget.hasNanoMips())
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue BitReverse = DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(0));
+  return DAG.getNode(ISD::CTLZ, DL, VT, BitReverse);
 }
 
 //===----------------------------------------------------------------------===//

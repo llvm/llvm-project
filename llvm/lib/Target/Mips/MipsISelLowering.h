@@ -566,6 +566,7 @@ class TargetRegisterClass;
                                  bool IsSRA) const;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerCTTZ(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
