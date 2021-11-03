@@ -80,19 +80,39 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
+static DenseMap<CachedHashStringRef, StringRef> resolvedLibraries;
 static Optional<StringRef> findLibrary(StringRef name) {
-  if (config->searchDylibsFirst) {
-    if (Optional<StringRef> path = findPathCombination(
-            "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
-      return path;
+  CachedHashStringRef key(name);
+  auto entry = resolvedLibraries.find(key);
+  if (entry != resolvedLibraries.end())
+    return entry->second;
+
+  auto doFind = [&] {
+    if (config->searchDylibsFirst) {
+      if (Optional<StringRef> path = findPathCombination(
+              "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
+        return path;
+      return findPathCombination("lib" + name, config->librarySearchPaths,
+                                 {".a"});
+    }
     return findPathCombination("lib" + name, config->librarySearchPaths,
-                               {".a"});
-  }
-  return findPathCombination("lib" + name, config->librarySearchPaths,
-                             {".tbd", ".dylib", ".a"});
+                               {".tbd", ".dylib", ".a"});
+  };
+
+  Optional<StringRef> path = doFind();
+  if (path)
+    resolvedLibraries[key] = *path;
+
+  return path;
 }
 
+static DenseMap<CachedHashStringRef, StringRef> resolvedFrameworks;
 static Optional<StringRef> findFramework(StringRef name) {
+  CachedHashStringRef key(name);
+  auto entry = resolvedFrameworks.find(key);
+  if (entry != resolvedFrameworks.end())
+    return entry->second;
+
   SmallString<260> symlink;
   StringRef suffix;
   std::tie(name, suffix) = name.split(",");
@@ -108,13 +128,13 @@ static Optional<StringRef> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return saver.save(suffixed.str());
+          return resolvedFrameworks[key] = saver.save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
 
     if (Optional<StringRef> path = resolveDylibPath(symlink.str()))
-      return path;
+      return resolvedFrameworks[key] = *path;
   }
   return {};
 }
@@ -1076,6 +1096,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   errorHandler().cleanupCallback = []() {
     freeArena();
 
+    resolvedFrameworks.clear();
+    resolvedLibraries.clear();
     concatOutputSections.clear();
     inputFiles.clear();
     inputSections.clear();

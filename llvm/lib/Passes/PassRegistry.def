@@ -138,12 +138,10 @@ MODULE_PASS_WITH_PARAMS("hwasan",
                         "kernel;recover")
 MODULE_PASS_WITH_PARAMS("asan-module",
                         "ModuleAddressSanitizerPass",
-                        [](bool CompileKernel) {
-                          return ModuleAddressSanitizerPass(CompileKernel,
-                                                            false, true,
-                                                            false);
+                        [](AddressSanitizerOptions Opts) {
+                          return ModuleAddressSanitizerPass(Opts);
                         },
-                        parseModuleAddressSanitizerPassOptions,
+                        parseASanPassOptions,
                         "kernel")
 #undef MODULE_PASS_WITH_PARAMS
 
