@@ -76,6 +76,7 @@ public:
 
 private:
   LoopInfo *LI = nullptr;
+  const DataLayout *DL;
 
   // Check this is a valid gather with correct alignment
   bool isLegalTypeAndAlignment(unsigned NumElements, unsigned ElemSize,
@@ -335,13 +336,13 @@ int MVEGatherScatterLowering::computeScale(unsigned GEPElemSize,
 
 Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
   const Constant *C = dyn_cast<Constant>(V);
-  if (C != nullptr)
+  if (C && C->getSplatValue())
     return Optional<int64_t>{C->getUniqueInteger().getSExtValue()};
   if (!isa<Instruction>(V))
     return Optional<int64_t>{};
 
   const Instruction *I = cast<Instruction>(V);
-  if (I->getOpcode() == Instruction::Add ||
+  if (I->getOpcode() == Instruction::Add || I->getOpcode() == Instruction::Or ||
       I->getOpcode() == Instruction::Mul ||
       I->getOpcode() == Instruction::Shl) {
     Optional<int64_t> Op0 = getIfConst(I->getOperand(0));
@@ -354,18 +355,28 @@ Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
       return Optional<int64_t>{Op0.getValue() * Op1.getValue()};
     if (I->getOpcode() == Instruction::Shl)
       return Optional<int64_t>{Op0.getValue() << Op1.getValue()};
+    if (I->getOpcode() == Instruction::Or)
+      return Optional<int64_t>{Op0.getValue() | Op1.getValue()};
   }
   return Optional<int64_t>{};
+}
+
+// Return true if I is an Or instruction that is equivalent to an add, due to
+// the operands having no common bits set.
+static bool isAddLikeOr(Instruction *I, const DataLayout &DL) {
+  return I->getOpcode() == Instruction::Or &&
+         haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL);
 }
 
 std::pair<Value *, int64_t>
 MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
   std::pair<Value *, int64_t> ReturnFalse =
       std::pair<Value *, int64_t>(nullptr, 0);
-  // At this point, the instruction we're looking at must be an add or we
-  // bail out
+  // At this point, the instruction we're looking at must be an add or an
+  // add-like-or.
   Instruction *Add = dyn_cast<Instruction>(Inst);
-  if (Add == nullptr || Add->getOpcode() != Instruction::Add)
+  if (Add == nullptr ||
+      (Add->getOpcode() != Instruction::Add && isAddLikeOr(Add, *DL)))
     return ReturnFalse;
 
   Value *Summand;
@@ -740,10 +751,9 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
 
   // The gep was in charge of making sure the offsets are scaled correctly
   // - calculate that factor so it can be applied by hand
-  DataLayout DT = I->getParent()->getParent()->getParent()->getDataLayout();
   int TypeScale =
-      computeScale(DT.getTypeSizeInBits(GEP->getOperand(0)->getType()),
-                   DT.getTypeSizeInBits(GEP->getType()) /
+      computeScale(DL->getTypeSizeInBits(GEP->getOperand(0)->getType()),
+                   DL->getTypeSizeInBits(GEP->getType()) /
                        cast<FixedVectorType>(GEP->getType())->getNumElements());
   if (TypeScale == -1)
     return nullptr;
@@ -927,7 +937,7 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
 
 // Check whether all usages of this instruction are as offsets of
 // gathers/scatters or simple arithmetics only used by gathers/scatters
-static bool hasAllGatScatUsers(Instruction *I) {
+static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
   if (I->hasNUses(0)) {
     return false;
   }
@@ -941,8 +951,9 @@ static bool hasAllGatScatUsers(Instruction *I) {
     } else {
       unsigned OpCode = cast<Instruction>(U)->getOpcode();
       if ((OpCode == Instruction::Add || OpCode == Instruction::Mul ||
-           OpCode == Instruction::Shl) &&
-          hasAllGatScatUsers(cast<Instruction>(U))) {
+           OpCode == Instruction::Shl ||
+           isAddLikeOr(cast<Instruction>(U), DL)) &&
+          hasAllGatScatUsers(cast<Instruction>(U), DL)) {
         continue;
       }
       return false;
@@ -960,7 +971,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   if (!isa<Instruction>(Offsets))
     return false;
   Instruction *Offs = cast<Instruction>(Offsets);
-  if (Offs->getOpcode() != Instruction::Add &&
+  if (Offs->getOpcode() != Instruction::Add && !isAddLikeOr(Offs, *DL) &&
       Offs->getOpcode() != Instruction::Mul &&
       Offs->getOpcode() != Instruction::Shl)
     return false;
@@ -968,7 +979,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   if (L == nullptr)
     return false;
   if (!Offs->hasOneUse()) {
-    if (!hasAllGatScatUsers(Offs))
+    if (!hasAllGatScatUsers(Offs, *DL))
       return false;
   }
 
@@ -1066,6 +1077,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
 
   switch (Offs->getOpcode()) {
   case Instruction::Add:
+  case Instruction::Or:
     pushOutAdd(NewPhi, OffsSecondOperand, IncrementingBlock == 1 ? 0 : 1);
     break;
   case Instruction::Mul:
@@ -1221,6 +1233,7 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   if (!ST->hasMVEIntegerOps())
     return false;
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  DL = &F.getParent()->getDataLayout();
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
 
