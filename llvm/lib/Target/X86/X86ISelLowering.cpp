@@ -51669,16 +51669,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     // a larger broadcast_load. Update other uses to use an extracted subvector.
     if (Op0.getOpcode() == X86ISD::VBROADCAST_LOAD ||
         Op0.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
-      auto *MemIntr = cast<MemIntrinsicSDNode>(Op0);
-      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-      SDValue Ops[] = {MemIntr->getChain(), MemIntr->getBasePtr()};
-      SDValue BcastLd = DAG.getMemIntrinsicNode(Op0.getOpcode(), DL, Tys, Ops,
-                                                MemIntr->getMemoryVT(),
-                                                MemIntr->getMemOperand());
-      DAG.ReplaceAllUsesOfValueWith(
-          Op0, extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits()));
-      DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
-      return BcastLd;
+      auto *Mem = cast<MemSDNode>(Op0);
+      unsigned Opc = Op0.getOpcode() == X86ISD::VBROADCAST_LOAD
+                         ? X86ISD::VBROADCAST_LOAD
+                         : X86ISD::SUBV_BROADCAST_LOAD;
+      if (SDValue BcastLd =
+              getBROADCAST_LOAD(Opc, DL, VT, Mem->getMemoryVT(), Mem, 0, DAG)) {
+        SDValue BcastSrc =
+            extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits());
+        DAG.ReplaceAllUsesOfValueWith(Op0, BcastSrc);
+        return BcastLd;
+      }
     }
 
     // If this is a simple subvector load repeated across multiple lanes, then
