@@ -275,6 +275,45 @@ Put related tests into a single file rather than having a separate file per
 test. Check if there are files already covering your feature and consider
 adding your code there instead of creating a new file.
 
+Generating assertions in regression tests
+-----------------------------------------
+
+Some regression test cases are very large and complex to write/update by hand.
+In that case to reduce the human work we can use the scripts available in
+llvm/utils/ to generate the assertions.
+
+For example to generate assertions in an :program:`llc`-based test, run:
+
+ .. code-block:: bash
+
+     % llvm/utils/update_llc_test_checks.py --llc-binary build/bin/llc test.ll
+
+And if you want to update assertions in an existing test case, pass `-u` option
+which first check the ``NOTE:`` line exists and matches the script name.
+
+These are the most common scripts and their purposes/applications in generating
+assertions:
+
+.. code-block::
+
+  update_analyze_test_checks.py
+  opt --analyze --costmodel
+
+  update_cc_test_checks.py
+  C/C++, or clang/clang++ (IR checks)
+
+  update_llc_test_checks.py
+  llc (assembly checks)
+
+  update_mca_test_checks.py
+  llvm-mca
+
+  update_mir_test_checks.py
+  llc (MIR checks)
+
+  update_test_checks.py
+  opt
+
 Extra files
 -----------
 
