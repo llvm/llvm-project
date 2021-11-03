@@ -3,6 +3,9 @@
 //
 // RUN: %clangxx %s -o %t && %run %t 2>&1
 
+// connect() fails on Android.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <errno.h>
 #include <netinet/in.h>
