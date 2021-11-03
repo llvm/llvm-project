@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -disable-cgp | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -disable-cgp -verify-machineinstrs | FileCheck %s
 ; Disable CGP which also folds branches, so that only BranchFolding is under
 ; the spotlight.
 
