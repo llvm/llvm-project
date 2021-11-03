@@ -65,6 +65,8 @@ unsigned getSwappedVPCOMImm(unsigned Imm);
 /// Get the VCMP immediate if the opcodes are swapped.
 unsigned getSwappedVCMPImm(unsigned Imm);
 
+/// Check if the instruction is X87 instruction.
+bool isX87Instruction(MachineInstr &MI);
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is
