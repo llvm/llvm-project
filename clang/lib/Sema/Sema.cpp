@@ -1861,9 +1861,6 @@ Sema::SemaDiagnosticBuilder Sema::Diag(SourceLocation Loc, unsigned DiagID,
 }
 
 void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
-  if (!LangOpts.SYCLIsDevice && !(LangOpts.OpenMP && LangOpts.OpenMPIsDevice))
-    return;
-
   if (isUnevaluatedContext() || Ty.isNull())
     return;
 
@@ -1886,7 +1883,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   FunctionDecl *FD = isa<FunctionDecl>(C) ? cast<FunctionDecl>(C)
                                           : dyn_cast_or_null<FunctionDecl>(D);
 
-  auto CheckType = [&](QualType Ty) {
+  auto CheckDeviceType = [&](QualType Ty) {
     if (Ty->isDependentType())
       return;
 
@@ -1898,7 +1895,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         else
           PD << "expression";
         targetDiag(Loc, PD, FD)
-            << false /*show bit size*/ << 0 /*bitsize*/
+            << false /*show bit size*/ << 0 /*bitsize*/ << false /*return*/
             << Ty << Context.getTargetInfo().getTriple().str();
       }
       return;
@@ -1931,6 +1928,49 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       if (targetDiag(Loc, PD, FD)
           << true /*show bit size*/
           << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty
+          << false /*return*/ << Context.getTargetInfo().getTriple().str()) {
+        if (D)
+          D->setInvalidDecl();
+      }
+      if (D)
+        targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
+    }
+  };
+
+  auto CheckType = [&](QualType Ty, bool IsRetTy = false) {
+    if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice))
+      CheckDeviceType(Ty);
+
+    QualType UnqualTy = Ty.getCanonicalType().getUnqualifiedType();
+    const TargetInfo &TI = Context.getTargetInfo();
+    if (!TI.hasLongDoubleType() && UnqualTy == Context.LongDoubleTy) {
+      PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type);
+      if (D)
+        PD << D;
+      else
+        PD << "expression";
+
+      if (Diag(Loc, PD, FD)
+          << false /*show bit size*/ << 0 << Ty << false /*return*/
+          << Context.getTargetInfo().getTriple().str()) {
+        if (D)
+          D->setInvalidDecl();
+      }
+      if (D)
+        targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
+    }
+
+    bool IsDouble = UnqualTy == Context.DoubleTy;
+    bool IsFloat = UnqualTy == Context.FloatTy;
+    if (IsRetTy && !TI.hasFPReturn() && (IsDouble || IsFloat)) {
+      PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type);
+      if (D)
+        PD << D;
+      else
+        PD << "expression";
+
+      if (Diag(Loc, PD, FD)
+          << false /*show bit size*/ << 0 << Ty << true /*return*/
           << Context.getTargetInfo().getTriple().str()) {
         if (D)
           D->setInvalidDecl();
@@ -1941,14 +1981,13 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   };
 
   CheckType(Ty);
-
   if (const auto *FPTy = dyn_cast<FunctionProtoType>(Ty)) {
     for (const auto &ParamTy : FPTy->param_types())
       CheckType(ParamTy);
-    CheckType(FPTy->getReturnType());
+    CheckType(FPTy->getReturnType(), /*IsRetTy=*/true);
   }
   if (const auto *FNPTy = dyn_cast<FunctionNoProtoType>(Ty))
-    CheckType(FNPTy->getReturnType());
+    CheckType(FNPTy->getReturnType(), /*IsRetTy=*/true);
 }
 
 /// Looks through the macro-expansion chain for the given
