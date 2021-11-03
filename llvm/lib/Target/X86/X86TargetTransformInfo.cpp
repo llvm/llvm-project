@@ -5053,11 +5053,59 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   // Get the cost of one memory operation.
   auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
                                              LegalVT.getVectorNumElements());
-  InstructionCost MemOpCost = getMemoryOpCost(
-      Opcode, SingleMemOpTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+  InstructionCost MemOpCost;
+  if (UseMaskForCond || UseMaskForGaps)
+    MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
+                                      AddressSpace, CostKind);
+  else
+    MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, MaybeAlign(Alignment),
+                                AddressSpace, CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
   MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
+
+  // FIXME: this is the most conservative estimate for the mask cost.
+  InstructionCost MaskCost;
+  if (UseMaskForCond || UseMaskForGaps) {
+    APInt DemandedLoadStoreElts = APInt::getZero(VecTy->getNumElements());
+    for (unsigned Index : Indices) {
+      assert(Index < Factor && "Invalid index for interleaved memory op");
+      for (unsigned Elm = 0; Elm < VF; Elm++)
+        DemandedLoadStoreElts.setBit(Index + Elm * Factor);
+    }
+
+    Type *I1Type = Type::getInt1Ty(VecTy->getContext());
+    auto *MaskVT = FixedVectorType::get(I1Type, VecTy->getNumElements());
+    auto *MaskSubVT = FixedVectorType::get(I1Type, VF);
+
+    // The Mask shuffling cost is extract all the elements of the Mask
+    // and insert each of them Factor times into the wide vector:
+    //
+    // E.g. an interleaved group with factor 3:
+    //    %mask = icmp ult <8 x i32> %vec1, %vec2
+    //    %interleaved.mask = shufflevector <8 x i1> %mask, <8 x i1> undef,
+    //        <24 x i32> <0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7>
+    // The cost is estimated as extract all mask elements from the <8xi1> mask
+    // vector and insert them factor times into the <24xi1> shuffled mask
+    // vector.
+    MaskCost += getScalarizationOverhead(
+        MaskSubVT, APInt::getAllOnes(MaskSubVT->getNumElements()),
+        /*Insert*/ false, /*Extract*/ true);
+    MaskCost += getScalarizationOverhead(
+        MaskVT,
+        UseMaskForGaps ? DemandedLoadStoreElts
+                       : APInt::getAllOnes(VecTy->getNumElements()),
+        /*Insert*/ true,
+        /*Extract*/ false);
+
+    // The Gaps mask is invariant and created outside the loop, therefore the
+    // cost of creating it is not accounted for here. However if we have both
+    // a MaskForGaps and some other mask that guards the execution of the
+    // memory access, we need to account for the cost of And-ing the two masks
+    // inside the loop.
+    if (UseMaskForGaps)
+      MaskCost += getArithmeticInstrCost(BinaryOperator::And, MaskVT, CostKind);
+  }
 
   if (Opcode == Instruction::Load) {
     // The tables (AVX512InterleavedLoadTbl and AVX512InterleavedStoreTbl)
@@ -5074,7 +5122,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
 
     if (const auto *Entry =
             CostTableLookup(AVX512InterleavedLoadTbl, Factor, VT))
-      return NumOfMemOps * MemOpCost + Entry->Cost;
+      return MaskCost + NumOfMemOps * MemOpCost + Entry->Cost;
     //If an entry does not exist, fallback to the default implementation.
 
     // Kind of shuffle depends on number of loaded values.
@@ -5111,7 +5159,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
       NumOfMoves = NumOfResults * NumOfShufflesPerResult / 2;
 
     InstructionCost Cost = NumOfResults * NumOfShufflesPerResult * ShuffleCost +
-                           NumOfUnfoldedLoads * MemOpCost + NumOfMoves;
+                           MaskCost + NumOfUnfoldedLoads * MemOpCost +
+                           NumOfMoves;
 
     return Cost;
   }
@@ -5133,7 +5182,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
 
   if (const auto *Entry =
           CostTableLookup(AVX512InterleavedStoreTbl, Factor, VT))
-    return NumOfMemOps * MemOpCost + Entry->Cost;
+    return MaskCost + NumOfMemOps * MemOpCost + Entry->Cost;
   //If an entry does not exist, fallback to the default implementation.
 
   // There is no strided stores meanwhile. And store can't be folded in
@@ -5147,6 +5196,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   // We need additional instructions to keep sources.
   unsigned NumOfMoves = NumOfMemOps * NumOfShufflesPerStore / 2;
   InstructionCost Cost =
+      MaskCost +
       NumOfMemOps * (MemOpCost + NumOfShufflesPerStore * ShuffleCost) +
       NumOfMoves;
   return Cost;
@@ -5157,10 +5207,6 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
   auto *VecTy = cast<FixedVectorType>(BaseTy);
-  if (UseMaskForCond || UseMaskForGaps)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, CostKind,
-                                             UseMaskForCond, UseMaskForGaps);
 
   auto isSupportedOnAVX512 = [&](Type *VecTy, bool HasBW) {
     Type *EltTy = cast<VectorType>(VecTy)->getElementType();
@@ -5176,6 +5222,11 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     return getInterleavedMemoryOpCostAVX512(
         Opcode, VecTy, Factor, Indices, Alignment,
         AddressSpace, CostKind, UseMaskForCond, UseMaskForGaps);
+
+  if (UseMaskForCond || UseMaskForGaps)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace, CostKind,
+                                             UseMaskForCond, UseMaskForGaps);
 
   // Get estimation for interleaved load/store operations for SSE-AVX2.
   // As opposed to AVX-512, SSE-AVX2 do not have generic shuffles that allow
