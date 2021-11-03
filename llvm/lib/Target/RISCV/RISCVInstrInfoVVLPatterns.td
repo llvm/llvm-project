@@ -606,7 +606,7 @@ multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
 // Patterns.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 
 // 7.4. Vector Unit-Stride Instructions
 foreach vti = AllVectors in {
@@ -925,10 +925,10 @@ defm : VPatBinaryVL_VV_VX_VI<riscv_uaddsat_vl, "PseudoVSADDU">;
 defm : VPatBinaryVL_VV_VX<riscv_ssubsat_vl, "PseudoVSSUB">;
 defm : VPatBinaryVL_VV_VX<riscv_usubsat_vl, "PseudoVSSUBU">;
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
 // 15.1. Vector Single-Width Integer Reduction Instructions
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 defm : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
@@ -937,17 +937,17 @@ defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
 defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 defm : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", /*is_float*/1>;
 defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", /*is_float*/1>;
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 defm : VPatBinaryFPVL_VV_VF<riscv_fadd_vl, "PseudoVFADD">;
@@ -1209,9 +1209,9 @@ foreach fvti = AllFloatVectors in {
   }
 }
 
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 
 foreach mti = AllMasks in {
   // 16.1 Vector Mask-Register Logical Instructions
@@ -1279,9 +1279,9 @@ foreach mti = AllMasks in {
                  VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
 }
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 // 17.1. Integer Scalar Move Instructions
 // 17.4. Vector Register Gather Instruction
 foreach vti = AllIntegerVectors in {
@@ -1361,9 +1361,9 @@ foreach vti = AllIntegerVectors in {
   }
 }
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtV, HasStdExtF] in {
+let Predicates = [HasVInstructionsAnyF] in {
 
 // 17.2. Floating-Point Scalar Move Instructions
 foreach vti = AllFloatVectors in {
@@ -1443,7 +1443,7 @@ foreach vti = AllFloatVectors in {
   }
 }
 
-} // Predicates = [HasStdExtV, HasStdExtF]
+} // Predicates = [HasVInstructionsAnyF]
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous RISCVISD SDNodes
@@ -1467,7 +1467,7 @@ def riscv_slide1up_vl  : SDNode<"RISCVISD::VSLIDE1UP_VL", SDTRVVSlide1, []>;
 def riscv_slidedown_vl : SDNode<"RISCVISD::VSLIDEDOWN_VL", SDTRVVSlide, []>;
 def riscv_slide1down_vl  : SDNode<"RISCVISD::VSLIDE1DOWN_VL", SDTRVVSlide1, []>;
 
-let Predicates = [HasStdExtV] in {
+let Predicates = [HasVInstructions] in {
 
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (riscv_vid_vl (vti.Mask true_mask),
@@ -1520,4 +1520,4 @@ foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
                 GPR:$vl, vti.Log2SEW)>;
 }
 
-} // Predicates = [HasStdExtV]
+} // Predicates = [HasVInstructions]
