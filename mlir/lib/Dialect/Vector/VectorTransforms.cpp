@@ -686,6 +686,12 @@ public:
     for (auto attr : op.transp())
       transp.push_back(attr.cast<IntegerAttr>().getInt());
 
+    if (vectorTransformOptions.vectorTransposeLowering ==
+            vector::VectorTransposeLowering::Shuffle &&
+        resType.getRank() == 2 && transp[0] == 1 && transp[1] == 0)
+      return rewriter.notifyMatchFailure(
+          op, "Options specifies lowering to shuffle");
+
     // Handle a true 2-D matrix transpose differently when requested.
     if (vectorTransformOptions.vectorTransposeLowering ==
             vector::VectorTransposeLowering::Flat &&
@@ -736,6 +742,61 @@ private:
     return result;
   }
 
+  /// Options to control the vector patterns.
+  vector::VectorTransformsOptions vectorTransformOptions;
+};
+
+/// Rewrite a 2-D vector.transpose as a sequence of:
+///   vector.shape_cast 2D -> 1D
+///   vector.shuffle
+///   vector.shape_cast 1D -> 2D
+class TransposeOp2DToShuffleLowering
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+
+  TransposeOp2DToShuffleLowering(
+      vector::VectorTransformsOptions vectorTransformOptions,
+      MLIRContext *context)
+      : OpRewritePattern<vector::TransposeOp>(context),
+        vectorTransformOptions(vectorTransformOptions) {}
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+
+    VectorType srcType = op.getVectorType();
+    if (srcType.getRank() != 2)
+      return rewriter.notifyMatchFailure(op, "Not a 2D transpose");
+
+    SmallVector<int64_t, 4> transp;
+    for (auto attr : op.transp())
+      transp.push_back(attr.cast<IntegerAttr>().getInt());
+    if (transp[0] != 1 && transp[1] != 0)
+      return rewriter.notifyMatchFailure(op, "Not a 2D transpose permutation");
+
+    if (vectorTransformOptions.vectorTransposeLowering !=
+        VectorTransposeLowering::Shuffle)
+      return rewriter.notifyMatchFailure(op, "Options do not ask for Shuffle");
+
+    int64_t m = srcType.getShape().front(), n = srcType.getShape().back();
+    Value casted = rewriter.create<vector::ShapeCastOp>(
+        loc, VectorType::get({m * n}, srcType.getElementType()), op.vector());
+    SmallVector<int64_t> mask;
+    mask.reserve(m * n);
+    for (int64_t j = 0; j < n; ++j)
+      for (int64_t i = 0; i < m; ++i)
+        mask.push_back(i * n + j);
+
+    Value shuffled =
+        rewriter.create<vector::ShuffleOp>(loc, casted, casted, mask);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getResultType(),
+                                                     shuffled);
+
+    return success();
+  }
+
+private:
   /// Options to control the vector patterns.
   vector::VectorTransformsOptions vectorTransformOptions;
 };
@@ -3656,7 +3717,8 @@ void mlir::vector::populateVectorContractLoweringPatterns(
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns, VectorTransformsOptions options) {
-  patterns.add<TransposeOpLowering>(options, patterns.getContext());
+  patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
+      options, patterns.getContext());
 }
 
 void mlir::vector::populateVectorReductionToContractPatterns(
