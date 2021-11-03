@@ -1431,7 +1431,7 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     assert(BI->isConditional() && "exit branch must be conditional");
 
     auto *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
-    if (!ICmp || !ICmp->hasOneUse())
+    if (!ICmp || !ICmp->hasOneUse() || ICmp->isUnsigned())
       continue;
 
     auto *LHS = ICmp->getOperand(0);
@@ -1444,7 +1444,7 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
 
     // Match (icmp signed-cond zext, RHS)
     Value *LHSOp = nullptr;
-    if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
+    if (!match(LHS, m_ZExt(m_Value(LHSOp))))
       continue;
 
     const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
