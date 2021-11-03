@@ -359,7 +359,7 @@ bool IsNamelistName(IoStatementState &io) {
   if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
     ConnectionState &connection{io.GetConnectionState()};
     if (connection.modes.inNamelist) {
-      SavedPosition savedPosition{connection};
+      SavedPosition savedPosition{io};
       if (auto ch{io.GetNextNonBlank()}) {
         if (IsLegalIdStart(*ch)) {
           do {
@@ -368,7 +368,7 @@ bool IsNamelistName(IoStatementState &io) {
           } while (ch && IsLegalIdChar(*ch));
           ch = io.GetNextNonBlank();
           // TODO: how to deal with NaN(...) ambiguity?
-          return ch && (ch == '=' || ch == '(' || ch == '%');
+          return ch && (*ch == '=' || *ch == '(' || *ch == '%');
         }
       }
     }

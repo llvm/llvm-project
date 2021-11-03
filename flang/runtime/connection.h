@@ -17,6 +17,8 @@
 
 namespace Fortran::runtime::io {
 
+class IoStatementState;
+
 enum class Direction { Output, Input };
 enum class Access { Sequential, Direct, Stream };
 
@@ -57,40 +59,25 @@ struct ConnectionState : public ConnectionAttributes {
   // or an end-of-file READ condition on a sequential access file
   std::optional<std::int64_t> endfileRecordNumber;
 
+  // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
+  MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
+
   // Set when processing repeated items during list-directed & NAMELIST input
   // in order to keep a span of records in frame on a non-positionable file,
   // so that backspacing to the beginning of the repeated item doesn't require
   // repositioning the external storage medium when that's impossible.
-  std::optional<std::int64_t> resumptionRecordNumber;
-
-  // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
-  MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
+  bool pinnedFrame{false};
 };
 
 // Utility class for capturing and restoring a position in an input stream.
 class SavedPosition {
 public:
-  explicit SavedPosition(ConnectionState &c)
-      : connection_{c}, positionInRecord_{c.positionInRecord},
-        furthestPositionInRecord_{c.furthestPositionInRecord},
-        leftTabLimit_{c.leftTabLimit}, previousResumptionRecordNumber_{
-                                           c.resumptionRecordNumber} {
-    c.resumptionRecordNumber = c.currentRecordNumber;
-  }
-  ~SavedPosition() {
-    connection_.currentRecordNumber = *connection_.resumptionRecordNumber;
-    connection_.resumptionRecordNumber = previousResumptionRecordNumber_;
-    connection_.leftTabLimit = leftTabLimit_;
-    connection_.furthestPositionInRecord = furthestPositionInRecord_;
-    connection_.positionInRecord = positionInRecord_;
-  }
+  explicit SavedPosition(IoStatementState &);
+  ~SavedPosition();
 
 private:
-  ConnectionState &connection_;
-  std::int64_t positionInRecord_;
-  std::int64_t furthestPositionInRecord_;
-  std::optional<std::int64_t> leftTabLimit_;
-  std::optional<std::int64_t> previousResumptionRecordNumber_;
+  IoStatementState &io_;
+  ConnectionState saved_;
 };
 
 } // namespace Fortran::runtime::io
