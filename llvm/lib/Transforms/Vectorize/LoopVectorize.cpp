@@ -2294,12 +2294,7 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
     Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
   }
 
-  Value *Zero;
-  if (Start->getType()->isFloatingPointTy())
-    Zero = ConstantFP::get(Start->getType(), 0);
-  else
-    Zero = ConstantInt::get(Start->getType(), 0);
-
+  Value *Zero = getSignedIntOrFpConstant(Start->getType(), 0);
   Value *SplatStart = Builder.CreateVectorSplat(VF, Start);
   Value *SteppedStart =
       getStepVector(SplatStart, Zero, Step, II.getInductionOpcode());
