@@ -75,8 +75,8 @@ protected:
 
   Status HaltProcess(bool &caused_stop);
 
-  Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
-                               MemoryRegionInfo &range_info);
+  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
+                             MemoryRegionInfo &range_info);
 
   Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                     size_t &bytes_read);
