@@ -1871,38 +1871,90 @@ def : GCNPat <
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-def : GCNPat<(i32 (sext_inreg i32:$src, i1)),
+class UniformSextInreg<ValueType VT> : PatFrag<
+  (ops node:$src),
+  (sext_inreg $src, VT),
+  [{ return !N->isDivergent(); }]>;
+
+def : GCNPat<(i32 (UniformSextInreg<i1> i32:$src)),
   (S_BFE_I32 i32:$src, (i32 65536))>; // 0 | 1 << 16
 
 // Handle sext_inreg in i64
 def : GCNPat <
-  (i64 (sext_inreg i64:$src, i1)),
+  (i64 (UniformSextInreg<i1> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x10000)) // 0 | 1 << 16
 >;
 
 def : GCNPat <
-  (i16 (sext_inreg i16:$src, i1)),
+  (i16 (UniformSextInreg<i1> i16:$src)),
   (S_BFE_I32 $src, (i32 0x00010000)) // 0 | 1 << 16
 >;
 
 def : GCNPat <
-  (i16 (sext_inreg i16:$src, i8)),
+  (i16 (UniformSextInreg<i8> i16:$src)),
   (S_BFE_I32 $src, (i32 0x80000)) // 0 | 8 << 16
 >;
 
 def : GCNPat <
-  (i64 (sext_inreg i64:$src, i8)),
+  (i64 (UniformSextInreg<i8> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x80000)) // 0 | 8 << 16
 >;
 
 def : GCNPat <
-  (i64 (sext_inreg i64:$src, i16)),
+  (i64 (UniformSextInreg<i16> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x100000)) // 0 | 16 << 16
 >;
 
 def : GCNPat <
-  (i64 (sext_inreg i64:$src, i32)),
+  (i64 (UniformSextInreg<i32> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x200000)) // 0 | 32 << 16
+>;
+
+
+class DivergentSextInreg<ValueType VT> : PatFrag<
+  (ops node:$src),
+  (sext_inreg $src, VT),
+  [{ return N->isDivergent(); }]>;
+
+def : GCNPat<(i32 (DivergentSextInreg<i1> i32:$src)),
+  (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
+
+def : GCNPat <
+  (i16 (DivergentSextInreg<i1> i16:$src)),
+  (V_BFE_I32_e64 $src, (i32 0), (i32 1)) // 0 | 1 << 16
+>;
+
+def : GCNPat <
+  (i16 (DivergentSextInreg<i8> i16:$src)),
+  (V_BFE_I32_e64 $src, (i32 0), (i32 8)) // 0 | 8 << 16
+>;
+
+def : GCNPat <
+  (i64 (DivergentSextInreg<i1> i64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 1)), sub0,
+    (V_ASHRREV_I32_e32  (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 1))), sub1)
+>;
+
+def : GCNPat <
+  (i64 (DivergentSextInreg<i8> i64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8)/* 0 | 8 << 16 */), sub0,
+    (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8))), sub1)
+>;
+
+def : GCNPat <
+  (i64 (DivergentSextInreg<i16> i64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)/* 0 | 16 << 16 */), sub0,
+    (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16))), sub1)
+>;
+
+def : GCNPat <
+  (i64 (DivergentSextInreg<i32> i64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (i32 (EXTRACT_SUBREG i64:$src, sub0)), sub0,
+    (V_ASHRREV_I32_e32 (i32 31), (i32 (EXTRACT_SUBREG i64:$src, sub0))), sub1)
 >;
 
 def : GCNPat <
