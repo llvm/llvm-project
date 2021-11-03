@@ -153,14 +153,6 @@ static constexpr auto TAG = "[" DEBUG_TYPE "]";
 
 namespace {
 
-enum class AddressSpace : unsigned {
-  Generic = 0,
-  Global = 1,
-  Shared = 3,
-  Constant = 4,
-  Local = 5,
-};
-
 struct AAHeapToShared;
 
 struct AAICVTracker;
