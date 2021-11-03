@@ -67,10 +67,6 @@ def testTypeHash():
 
   # CHECK: hash(t1) == hash(t3): True
   print("hash(t1) == hash(t3):", t1.__hash__() == t3.__hash__())
-  # In general, hashes don't have to be unique. In this case, however, the
-  # hash is just the underlying pointer so it will be.
-  # CHECK: hash(t1) == hash(t2): False
-  print("hash(t1) == hash(t2):", t1.__hash__() == t2.__hash__())
 
   s = set()
   s.add(t1)
