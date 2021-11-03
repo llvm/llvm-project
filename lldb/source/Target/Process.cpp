@@ -1983,57 +1983,6 @@ size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
   return out_str.size();
 }
 
-size_t Process::ReadStringFromMemory(addr_t addr, char *dst, size_t max_bytes,
-                                     Status &error, size_t type_width) {
-  size_t total_bytes_read = 0;
-  if (dst && max_bytes && type_width && max_bytes >= type_width) {
-    // Ensure a null terminator independent of the number of bytes that is
-    // read.
-    memset(dst, 0, max_bytes);
-    size_t bytes_left = max_bytes - type_width;
-
-    const char terminator[4] = {'\0', '\0', '\0', '\0'};
-    assert(sizeof(terminator) >= type_width && "Attempting to validate a "
-                                               "string with more than 4 bytes "
-                                               "per character!");
-
-    addr_t curr_addr = addr;
-    const size_t cache_line_size = m_memory_cache.GetMemoryCacheLineSize();
-    char *curr_dst = dst;
-
-    error.Clear();
-    while (bytes_left > 0 && error.Success()) {
-      addr_t cache_line_bytes_left =
-          cache_line_size - (curr_addr % cache_line_size);
-      addr_t bytes_to_read =
-          std::min<addr_t>(bytes_left, cache_line_bytes_left);
-      size_t bytes_read = ReadMemory(curr_addr, curr_dst, bytes_to_read, error);
-
-      if (bytes_read == 0)
-        break;
-
-      // Search for a null terminator of correct size and alignment in
-      // bytes_read
-      size_t aligned_start = total_bytes_read - total_bytes_read % type_width;
-      for (size_t i = aligned_start;
-           i + type_width <= total_bytes_read + bytes_read; i += type_width)
-        if (::memcmp(&dst[i], terminator, type_width) == 0) {
-          error.Clear();
-          return i;
-        }
-
-      total_bytes_read += bytes_read;
-      curr_dst += bytes_read;
-      curr_addr += bytes_read;
-      bytes_left -= bytes_read;
-    }
-  } else {
-    if (max_bytes)
-      error.SetErrorString("invalid arguments");
-  }
-  return total_bytes_read;
-}
-
 // Deprecated in favor of ReadStringFromMemory which has wchar support and
 // correct code to find null terminators.
 size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
