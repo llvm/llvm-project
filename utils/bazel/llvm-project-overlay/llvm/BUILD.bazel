@@ -3576,6 +3576,7 @@ cc_binary(
     includes = ["tools/llvm-reduce"],
     stamp = 0,
     deps = [
+        ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":BitReader",
         ":Core",
