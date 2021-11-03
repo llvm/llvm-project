@@ -90,7 +90,7 @@ public:
   /// Register the given action handler with the manager.
   void registerActionHandler(std::unique_ptr<HandlerBase> handler) {
     // The manager is always disabled if built without debug.
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     actionHandlers.emplace_back(std::move(handler));
 #endif
   }
@@ -109,7 +109,7 @@ public:
   template <typename ActionType, typename... Args>
   bool shouldExecute(Args &&... args) {
     // The manager is always disabled if built without debug.
-#ifdef NDEBUG
+#if !LLVM_ENABLE_ABI_BREAKING_CHECKS
     return true;
 #else
     // Invoke the `shouldExecute` method on the provided handler.
@@ -127,7 +127,7 @@ public:
 
 private:
 // The manager is always disabled if built without debug.
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   //===--------------------------------------------------------------------===//
   // Query to Handler Dispatch
   //===--------------------------------------------------------------------===//
