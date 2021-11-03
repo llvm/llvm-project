@@ -106,7 +106,13 @@ static Optional<StringRef> findLibrary(StringRef name) {
   return path;
 }
 
+static DenseMap<CachedHashStringRef, StringRef> resolvedFrameworks;
 static Optional<StringRef> findFramework(StringRef name) {
+  CachedHashStringRef key(name);
+  auto entry = resolvedFrameworks.find(key);
+  if (entry != resolvedFrameworks.end())
+    return entry->second;
+
   SmallString<260> symlink;
   StringRef suffix;
   std::tie(name, suffix) = name.split(",");
@@ -122,13 +128,13 @@ static Optional<StringRef> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return saver.save(suffixed.str());
+          return resolvedFrameworks[key] = saver.save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
 
     if (Optional<StringRef> path = resolveDylibPath(symlink.str()))
-      return path;
+      return resolvedFrameworks[key] = *path;
   }
   return {};
 }
@@ -1090,6 +1096,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   errorHandler().cleanupCallback = []() {
     freeArena();
 
+    resolvedFrameworks.clear();
     resolvedLibraries.clear();
     concatOutputSections.clear();
     inputFiles.clear();
