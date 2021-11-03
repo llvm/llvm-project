@@ -2805,13 +2805,13 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
 
-  // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
-  // TODO: One use checks are conservative. We have 7 operations in the source
-  //       expression and 3 in the target. We could allow 3 multiple used values
-  //       in RHS and LHS combined, but there is no common infrastructure to
-  //       conveniently do so no.
+  // (~(A | B) & C) | ... --> ...
+  // TODO: One use checks are conservative. We just need to check that a total
+  //       number of multiple used values does not exceed reduction
+  //       in operations.
   if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
                                   m_Value(C))))) {
+    // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
                        m_Specific(B))))) {
@@ -2819,23 +2819,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A));
     }
 
+    // (~(A | B) & C) | (~(B | C) & A) --> (A ^ C) & ~B
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(B), m_Specific(C)))),
                        m_Specific(A))))) {
       Value *Xor = Builder.CreateXor(A, C);
       return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B));
     }
-  }
 
-  // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
-  // TODO: One use checks are conservative. We just need to check that a total
-  //       number of multiple used values does not exceed 3.
-  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
-                                  m_Value(C))))) {
+    // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
     if (match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(C)))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(B, C), A));
 
+    // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
     if (match(Op1, m_Not(m_c_Or(m_Specific(B), m_Specific(C)))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(A, C), B));
