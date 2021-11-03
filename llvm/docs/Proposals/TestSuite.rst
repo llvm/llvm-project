@@ -219,7 +219,7 @@ http://www.nwchem-sw.org/index.php/Benchmarks
 
 TVM
 ----
-https://github.com/dmlc/tvm/tree/master/apps/benchmark
+https://github.com/dmlc/tvm/tree/main/apps/benchmark
 
 HydroBench
 ----------
@@ -227,7 +227,7 @@ https://github.com/HydroBench/Hydro
 
 ParRes
 ------
-https://github.com/ParRes/Kernels/tree/master/Cxx11
+https://github.com/ParRes/Kernels/tree/default/Cxx11
 
 Applications/Libraries
 ======================

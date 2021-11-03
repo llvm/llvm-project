@@ -53,7 +53,7 @@ several style guides are hard-coded:
   FormatStyle getGoogleStyle();
 
   /// Returns a format style complying with Chromium's style guide:
-  /// https://chromium.googlesource.com/chromium/src/+/master/styleguide/styleguide.md
+  /// https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/styleguide.md
   FormatStyle getChromiumStyle();
 
   /// Returns a format style complying with the GNU coding standards:

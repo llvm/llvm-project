@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines manifest constants for the wasm object file format.
-// See: https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
+// See: https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md
 //
 //===----------------------------------------------------------------------===//
 

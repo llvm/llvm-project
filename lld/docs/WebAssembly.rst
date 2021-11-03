@@ -205,6 +205,6 @@ Missing features
   supported.
 - No support for creating shared libraries.  The spec for shared libraries in
   WebAssembly is still in flux:
-  https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+  https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
 
-.. _linking: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
+.. _linking: https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md

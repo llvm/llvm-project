@@ -71,7 +71,7 @@ protected:
 // Create the custom "dylink" section containing information for the dynamic
 // linker.
 // See
-// https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+// https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
 class DylinkSection : public SyntheticSection {
 public:
   DylinkSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "dylink.0") {}

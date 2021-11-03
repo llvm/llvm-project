@@ -1087,7 +1087,7 @@ uint32_t WasmObjectWriter::writeDataSection(const MCAsmLayout &Layout) {
 void WasmObjectWriter::writeRelocSection(
     uint32_t SectionIndex, StringRef Name,
     std::vector<WasmRelocationEntry> &Relocs) {
-  // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
+  // See: https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md
   // for descriptions of the reloc sections.
 
   if (Relocs.empty())

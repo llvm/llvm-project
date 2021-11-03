@@ -812,7 +812,7 @@ if(LLVM_INCLUDE_TESTS)
 endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
-# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 # In this case, the latest C API library is available for download from
 # https://www.tensorflow.org/install/lang_c.
 # We will expose the conditional compilation variable,
@@ -846,7 +846,7 @@ if (TENSORFLOW_C_LIB_PATH)
 endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
-# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 # Specifically, assuming python3 is installed:
 # python3 -m pip install --upgrade pip && python3 -m pip install --user tf_nightly==2.3.0.dev20200528
 # Then set TENSORFLOW_AOT_PATH to the package install - usually it's ~/.local/lib/python3.7/site-packages/tensorflow
