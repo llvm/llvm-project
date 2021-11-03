@@ -1,5 +1,3 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
 ; MD5 checksums provided by IR should be passed through to asm.
 ; They'll be emitted to an object file only for DWARF 5 or later.
 
