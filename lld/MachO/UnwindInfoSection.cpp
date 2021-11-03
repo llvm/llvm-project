@@ -602,7 +602,7 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
         *ep++ = (it->second << COMPRESSED_ENTRY_FUNC_OFFSET_BITS) |
                 (cuep->functionAddress - functionAddressBase);
       }
-      if (page.localEncodings.size() != 0)
+      if (!page.localEncodings.empty())
         memcpy(ep, page.localEncodings.data(),
                page.localEncodings.size() * sizeof(uint32_t));
     } else {

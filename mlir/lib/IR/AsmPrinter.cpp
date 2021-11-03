@@ -16,6 +16,7 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1608,6 +1609,9 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
   if (state && succeeded(state->getAliasState().getAlias(attr, os)))
     return;
 
+  if (!isa<BuiltinDialect>(attr.getDialect()))
+    return printDialectAttribute(attr);
+
   auto attrType = attr.getType();
   if (auto opaqueAttr = attr.dyn_cast<OpaqueAttr>()) {
     printDialectSymbol(os, "#", opaqueAttr.getDialectNamespace(),
@@ -1728,11 +1732,7 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
 
   } else if (auto locAttr = attr.dyn_cast<LocationAttr>()) {
     printLocation(locAttr);
-
-  } else {
-    return printDialectAttribute(attr);
   }
-
   // Don't print the type if we must elide it, or if it is a None type.
   if (typeElision != AttrTypeElision::Must && !attrType.isa<NoneType>()) {
     os << " : ";

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -57,16 +58,6 @@ static NVVM::MMATypes getElementType(gpu::MMAMatrixType type) {
     return type.getOperand().equals("COp") ? NVVM::MMATypes::f32
                                            : NVVM::MMATypes::tf32;
   llvm_unreachable("Unsupported type");
-}
-
-/// Return the LLVMStructureType corresponding to the MMAMatrixType `type`.
-static LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type) {
-  NVVM::MMAFrag frag = convertOperand(type.getOperand());
-  NVVM::MMATypes eltType = getElementType(type);
-  std::pair<Type, unsigned> typeInfo =
-      inferMMAType(eltType, frag, type.getContext());
-  return LLVM::LLVMStructType::getLiteral(
-      type.getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
 }
 
 /// This class implements the conversion of GPU MMA loadOp to wmma.load op
@@ -433,6 +424,17 @@ struct WmmaElementwiseOpToNVVMLowering
 } // anonymous namespace
 
 namespace mlir {
+
+/// Return the LLVMStructureType corresponding to the MMAMatrixType `type`.
+LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type) {
+  NVVM::MMAFrag frag = convertOperand(type.getOperand());
+  NVVM::MMATypes eltType = getElementType(type);
+  std::pair<Type, unsigned> typeInfo =
+      inferMMAType(eltType, frag, type.getContext());
+  return LLVM::LLVMStructType::getLiteral(
+      type.getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
+}
+
 void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns) {
   patterns.insert<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,

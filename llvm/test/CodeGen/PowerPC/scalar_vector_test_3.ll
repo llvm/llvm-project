@@ -204,25 +204,25 @@ define <2 x i64> @s2v_test6(i32* nocapture readonly %ptr)  {
 ; P9LE-LABEL: s2v_test6:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfiwax f0, 0, r3
-; P9LE-NEXT:    xxspltd v2, vs0, 0
+; P9LE-NEXT:    xxspltd v2, f0, 0
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: s2v_test6:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfiwax f0, 0, r3
-; P9BE-NEXT:    xxspltd v2, vs0, 0
+; P9BE-NEXT:    xxspltd v2, f0, 0
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: s2v_test6:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwax f0, 0, r3
-; P8LE-NEXT:    xxspltd v2, vs0, 0
+; P8LE-NEXT:    xxspltd v2, f0, 0
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test6:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    lfiwax f0, 0, r3
-; P8BE-NEXT:    xxspltd v2, vs0, 0
+; P8BE-NEXT:    xxspltd v2, f0, 0
 ; P8BE-NEXT:    blr
 
 
@@ -240,25 +240,25 @@ define <2 x i64> @s2v_test7(i32* nocapture readonly %ptr)  {
 ; P9LE-LABEL: s2v_test7:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfiwax f0, 0, r3
-; P9LE-NEXT:    xxspltd v2, vs0, 0
+; P9LE-NEXT:    xxspltd v2, f0, 0
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: s2v_test7:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfiwax f0, 0, r3
-; P9BE-NEXT:    xxspltd v2, vs0, 0
+; P9BE-NEXT:    xxspltd v2, f0, 0
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: s2v_test7:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwax f0, 0, r3
-; P8LE-NEXT:    xxspltd v2, vs0, 0
+; P8LE-NEXT:    xxspltd v2, f0, 0
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: s2v_test7:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    lfiwax f0, 0, r3
-; P8BE-NEXT:    xxspltd v2, vs0, 0
+; P8BE-NEXT:    xxspltd v2, f0, 0
 ; P8BE-NEXT:    blr
 
 

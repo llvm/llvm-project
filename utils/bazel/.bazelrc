@@ -72,8 +72,16 @@ build:generic_gcc --copt=-Werror --host_copt=-Werror
 # Generic Windows flags common to both MSVC and Clang.
 ###############################################################################
 
-# Yay for security warnings. Boo for non-standard.
-build:windows --copt=/D_CRT_SECURE_NO_WARNINGS --host_copt=/D_CRT_SECURE_NO_WARNINGS
+# C++14 standard version is required.
+build:windows --cxxopt=/std:c++14 --host_cxxopt=/std:c++14
+
+# Other generic dialect flags.
+build:windows --copt=/Zc:strictStrings --host_copt=/Zc:strictStrings
+build:windows --copt=/Oi --host_copt=/Oi
+build:windows --cxxopt=/Zc:rvalueCast --host_cxxopt=/Zc:rvalueCast
+
+# Use the more flexible bigobj format for C++ files that have lots of symbols.
+build:windows --cxxopt=/bigobj --host_cxxopt=/bigobj
 
 ###############################################################################
 # Windows specific flags for building with MSVC.
@@ -107,9 +115,6 @@ build:clang-cl --config=windows
 # Switch from MSVC to the `clang-cl` compiler.
 build:clang-cl --compiler=clang-cl
 
-# C++14 standard version is required.
-build:clang-cl --cxxopt=/std:c++14 --host_cxxopt=/std:c++14
-
 # Use Clang's internal warning flags instead of the ones that sometimes map
 # through to MSVC's flags.
 build:clang-cl --copt=/clang:-Wall --host_copt=/clang:-Wall
@@ -120,6 +125,10 @@ build:clang-cl --copt=/clang:-Wno-unused --host_copt=/clang:-Wno-unused
 
 # There appears to be an unused constant in GoogleTest on Windows.
 build:clang-cl --copt=/clang:-Wno-unused-const-variable --host_copt=/clang:-Wno-unused-const-variable
+
+# Disable some warnings hit even with `clang-cl` in Clang's own code.
+build:clang-cl --copt=/clang:-Wno-inconsistent-dllimport --host_copt=/clang:-Wno-inconsistent-dllimport
+build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c++11-narrowing
 
 ###############################################################################
 

@@ -8,26 +8,35 @@
 #include <sanitizer/hwasan_interface.h>
 
 int main() {
-  void *alloc = malloc(4096);
+  char *alloc = (char *)malloc(4096);
+
+  // Simulate short granule tags.
+  alloc[15] = 0x00;
+  alloc[31] = 0xbb;
+  alloc[47] = 0xcc;
+  alloc[63] = 0xdd;
+  alloc[79] = 0xee;
+  alloc[95] = 0xff;
 
   // __hwasan_tag_memory expects untagged pointers.
   char *p = (char *)__hwasan_tag_pointer(alloc, 0);
   assert(p);
 
+  // Write tags to shadow.
   __hwasan_tag_memory(p, 1, 32);
-  __hwasan_tag_memory(p + 32, 3, 16);
+  __hwasan_tag_memory(p + 32, 16, 16);
   __hwasan_tag_memory(p + 48, 0, 32);
   __hwasan_tag_memory(p + 80, 4, 16);
 
   char *q = (char *)__hwasan_tag_pointer(p, 7);
   __hwasan_print_shadow(q + 5, 89 - 5);
   // CHECK:      HWASan shadow map for {{.*}}5 .. {{.*}}9 (pointer tag 7)
-  // CHECK-NEXT:   {{.*}}0: 1
-  // CHECK-NEXT:   {{.*}}0: 1
-  // CHECK-NEXT:   {{.*}}0: 3
-  // CHECK-NEXT:   {{.*}}0: 0
-  // CHECK-NEXT:   {{.*}}0: 0
-  // CHECK-NEXT:   {{.*}}0: 4
+  // CHECK-NEXT:   {{.*}}0: 01(00)
+  // CHECK-NEXT:   {{.*}}0: 01(bb)
+  // CHECK-NEXT:   {{.*}}0: 10
+  // CHECK-NEXT:   {{.*}}0: 00
+  // CHECK-NEXT:   {{.*}}0: 00
+  // CHECK-NEXT:   {{.*}}0: 04(ff)
 
   free(alloc);
 }

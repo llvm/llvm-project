@@ -695,45 +695,6 @@ static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return None;
 }
 
-static Optional<Instruction *> instCombineSVEVectorFMLA(InstCombiner &IC,
-                                                        IntrinsicInst &II) {
-  // fold (fadd p a (fmul p b c)) -> (fma p a b c)
-  Value *p, *FMul, *a, *b, *c;
-  auto m_SVEFAdd = [](auto p, auto w, auto x) {
-    return m_CombineOr(m_Intrinsic<Intrinsic::aarch64_sve_fadd>(p, w, x),
-                       m_Intrinsic<Intrinsic::aarch64_sve_fadd>(p, x, w));
-  };
-  auto m_SVEFMul = [](auto p, auto y, auto z) {
-    return m_Intrinsic<Intrinsic::aarch64_sve_fmul>(p, y, z);
-  };
-  if (!match(&II, m_SVEFAdd(m_Value(p), m_Value(a),
-                            m_CombineAnd(m_Value(FMul),
-                                         m_SVEFMul(m_Deferred(p), m_Value(b),
-                                                   m_Value(c))))))
-    return None;
-
-  if (!FMul->hasOneUse())
-    return None;
-
-  llvm::FastMathFlags FAddFlags = II.getFastMathFlags();
-  llvm::FastMathFlags FMulFlags = cast<CallInst>(FMul)->getFastMathFlags();
-  // Don't combine when FMul & Fadd flags differ to prevent the loss of any
-  // additional important flags
-  if (FAddFlags != FMulFlags)
-    return None;
-  bool AllowReassoc = FAddFlags.allowReassoc() && FMulFlags.allowReassoc();
-  bool AllowContract = FAddFlags.allowContract() && FMulFlags.allowContract();
-  if (!AllowReassoc || !AllowContract)
-    return None;
-
-  IRBuilder<> Builder(II.getContext());
-  Builder.SetInsertPoint(&II);
-  auto FMLA = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fmla,
-                                      {II.getType()}, {p, a, b, c}, &II);
-  FMLA->setFastMathFlags(FAddFlags);
-  return IC.replaceInstUsesWith(II, FMLA);
-}
-
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul:
@@ -761,14 +722,6 @@ static Optional<Instruction *> instCombineSVEVectorBinOp(InstCombiner &IC,
   auto BinOp =
       Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2));
   return IC.replaceInstUsesWith(II, BinOp);
-}
-
-static Optional<Instruction *> instCombineSVEVectorFAdd(InstCombiner &IC,
-                                                        IntrinsicInst &II) {
-  auto FMLA = instCombineSVEVectorFMLA(IC, II);
-  if (FMLA)
-    return FMLA;
-  return instCombineSVEVectorBinOp(IC, II);
 }
 
 static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
@@ -948,7 +901,6 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fmul:
     return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fadd:
-    return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorBinOp(IC, II);
   case Intrinsic::aarch64_sve_tbl:

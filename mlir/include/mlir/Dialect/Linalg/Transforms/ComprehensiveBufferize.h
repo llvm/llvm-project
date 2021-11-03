@@ -34,14 +34,6 @@ namespace linalg {
 /// uses BufferizationAliasInfo.
 class BufferizationAliasInfo {
 public:
-  /// Specify fine-grain relationship between buffers to enable more analysis.
-  enum class BufferRelation {
-    None,
-    // TODO: ResultContainsOperand,
-    // TODO: OperandContainsResult,
-    Equivalent
-  };
-
   explicit BufferizationAliasInfo(Operation *rootOp);
 
   /// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
@@ -201,6 +193,8 @@ bufferizeOp(Operation *op, BlockAndValueMapping &bvm,
             AllocationCallbacks allocationFns,
             DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr);
 
+/// Register external models implemented for the `BufferizableOpInterface`.
+void registerBufferiableOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 

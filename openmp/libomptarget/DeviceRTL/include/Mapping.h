@@ -34,8 +34,18 @@ bool isSPMDMode();
 bool isGenericMode();
 
 /// Return true if the executing thread is the main thread in generic mode.
+/// These functions will lookup state and it is required that that is OK for the
+/// thread and location. See also `isInitialThreadInLevel0` for a stateless
+/// alternative for certain situations, e.g. during initialization.
 bool isMainThreadInGenericMode();
 bool isMainThreadInGenericMode(bool IsSPMD);
+
+/// Return true if this thread is the initial thread in parallel level 0.
+///
+/// The thread for which this returns true should be used for single threaded
+/// initialization tasks. We pick a special thread to ensure there are no
+/// races between the initialization and the first read of initialized state.
+bool isInitialThreadInLevel0(bool IsSPMD);
 
 /// Return true if the executing thread has the lowest Id of the active threads
 /// in the warp.

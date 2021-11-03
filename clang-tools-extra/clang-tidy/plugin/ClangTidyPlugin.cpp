@@ -48,7 +48,7 @@ public:
     // Create the AST consumer.
     ClangTidyASTConsumerFactory Factory(*Context);
     std::vector<std::unique_ptr<ASTConsumer>> Vec;
-    Vec.push_back(Factory.CreateASTConsumer(Compiler, File));
+    Vec.push_back(Factory.createASTConsumer(Compiler, File));
 
     return std::make_unique<WrapConsumer>(
         std::move(Context), std::move(DiagEngine), std::move(Vec));

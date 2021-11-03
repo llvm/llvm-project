@@ -414,9 +414,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
             // last two filename parts from the source remapping and get a more
             // general source remapping that still works. Add this as another
             // option in addition to the full source path remap.
-            module_spec.GetSourceMappingList().Append(
-                ConstString(DBGBuildSourcePath.c_str()),
-                ConstString(DBGSourcePath.c_str()), true);
+            module_spec.GetSourceMappingList().Append(DBGBuildSourcePath,
+                                                      DBGSourcePath, true);
             if (do_truncate_remapping_names) {
               FileSpec build_path(DBGBuildSourcePath.c_str());
               FileSpec source_path(DBGSourcePath.c_str());
@@ -425,8 +424,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               source_path.RemoveLastPathComponent();
               source_path.RemoveLastPathComponent();
               module_spec.GetSourceMappingList().Append(
-                  ConstString(build_path.GetPath().c_str()),
-                  ConstString(source_path.GetPath().c_str()), true);
+                  build_path.GetPath(), source_path.GetPath(), true);
             }
           }
         }
@@ -458,9 +456,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         FileSystem::Instance().Resolve(resolved_source_path);
         DBGSourcePath = resolved_source_path.GetPath();
       }
-      module_spec.GetSourceMappingList().Append(
-          ConstString(DBGBuildSourcePath.c_str()),
-          ConstString(DBGSourcePath.c_str()), true);
+      module_spec.GetSourceMappingList().Append(DBGBuildSourcePath,
+                                                DBGSourcePath, true);
     }
   }
   return success;

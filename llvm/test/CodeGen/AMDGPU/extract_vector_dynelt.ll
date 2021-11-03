@@ -234,7 +234,7 @@ entry:
 ; GCN-LABEL: {{^}}double8_extelt:
 ; GCN-NOT: buffer_
 ; GCN-NOT: s_or_b32
-; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[#BASE:]], [[ZERO]]
 ; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
 ; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], v[[#BASE]]
@@ -250,7 +250,7 @@ entry:
 ; GCN-LABEL: {{^}}double7_extelt:
 ; GCN-NOT: buffer_
 ; GCN-NOT: s_or_b32
-; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[#BASE:]], [[ZERO]]
 ; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
 ; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], v[[#BASE]]
@@ -294,7 +294,7 @@ entry:
 ; GCN-LABEL: {{^}}double15_extelt:
 ; GCN-NOT: buffer_
 ; GCN-NOT: s_or_b32
-; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[#BASE:]], [[ZERO]]
 ; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
 ; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], v[[#BASE]]
@@ -310,7 +310,7 @@ entry:
 ; GCN-LABEL: {{^}}double16_extelt:
 ; GCN-NOT: buffer_
 ; GCN-NOT: s_or_b32
-; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[#BASE:]], [[ZERO]]
 ; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
 ; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], v[[#BASE]]

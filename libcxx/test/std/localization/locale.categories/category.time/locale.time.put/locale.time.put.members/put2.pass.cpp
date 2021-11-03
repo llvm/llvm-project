@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <locale>
 
 // class time_put<charT, OutputIterator>
@@ -321,11 +319,15 @@ int main(int, char**)
         std::string ex(str, iter.base());
 //        assert(ex == "-0400");  depends on time zone
     }
+#ifndef _WIN32
+    // The Windows strftime() doesn't support the "%+" format. Depending on CRT
+    // configuration of the invalid parameter handler, this can abort the process.
     {
         iter = f.put(output_iterator<char*>(str), ios, '*', &t, '+');
         std::string ex(str, iter.base());
 //        assert(ex == "Sat May  2 13:03:06 EDT 2009");  depends on time zone
     }
+#endif
     {
         iter = f.put(output_iterator<char*>(str), ios, '*', &t, '%');
         std::string ex(str, iter.base());

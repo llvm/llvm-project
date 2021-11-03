@@ -46,7 +46,15 @@ void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
     ArrayRef<int64_t> tileSizes);
 
-/// Populates patterns for vectorizing convolution ops.
+/// Populates patterns to decompose high-D convolution ops into low-D ones. This
+/// is a step in progressive lowering for convolution ops, afterwards we can
+/// vectorize the low-D convolution ops.
+void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
+
+/// Populates patterns for vectorizing low-D convolution ops. This is a step in
+/// progressive lowering for convolution ops, it assume high-D convolution ops
+/// were decomposed previously.
 void populateConvolutionVectorizationPatterns(RewritePatternSet &patterns,
                                               PatternBenefit benefit = 1);
 
@@ -440,11 +448,18 @@ struct LinalgTransformationFilter {
     return addFilter(
         [](Operation *op) { return success(isa<OpTypes...>(op)); });
   }
+  LinalgTransformationFilter &setMatchByDefault() {
+    matchByDefault = true;
+    return *this;
+  }
 
 private:
   SmallVector<FilterFunction> filters;
   SmallVector<Identifier> matchDisjunction;
   Optional<Identifier> replacement;
+  /// When set to true, if the attribute is not set, it will be treated as
+  /// a match. Default is false.
+  bool matchByDefault;
 };
 
 using TileSizeComputationFunction =

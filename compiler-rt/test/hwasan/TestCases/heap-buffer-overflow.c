@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 // CHECKM: Cause: heap-buffer-overflow
 // CHECKM: is located 0 bytes to the right of 1000000-byte region
 //
-// CHECK31: tags: [[TAG:..]]/0e (ptr/mem)
+// CHECK31: tags: [[TAG:..]]/0e([[TAG]]) (ptr/mem)
 // CHECK31-NOT: Invalid access starting at offset
 // CHECK31: Cause: heap-buffer-overflow
 // CHECK31: is located 1 bytes to the right of 30-byte region

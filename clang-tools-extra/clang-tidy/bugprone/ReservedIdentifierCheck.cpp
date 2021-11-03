@@ -152,7 +152,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
 }
 
 Optional<RenamerClangTidyCheck::FailureInfo>
-ReservedIdentifierCheck::GetDeclFailureInfo(const NamedDecl *Decl,
+ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                             const SourceManager &) const {
   assert(Decl && Decl->getIdentifier() && !Decl->getName().empty() &&
          !Decl->isImplicit() &&
@@ -163,14 +163,14 @@ ReservedIdentifierCheck::GetDeclFailureInfo(const NamedDecl *Decl,
 }
 
 Optional<RenamerClangTidyCheck::FailureInfo>
-ReservedIdentifierCheck::GetMacroFailureInfo(const Token &MacroNameTok,
+ReservedIdentifierCheck::getMacroFailureInfo(const Token &MacroNameTok,
                                              const SourceManager &) const {
   return getFailureInfoImpl(MacroNameTok.getIdentifierInfo()->getName(), true,
                             getLangOpts(), Invert, AllowedIdentifiers);
 }
 
 RenamerClangTidyCheck::DiagInfo
-ReservedIdentifierCheck::GetDiagInfo(const NamingCheckId &ID,
+ReservedIdentifierCheck::getDiagInfo(const NamingCheckId &ID,
                                      const NamingCheckFailure &Failure) const {
   return DiagInfo{Message, [&](DiagnosticBuilder &Diag) {
                     Diag << ID.second

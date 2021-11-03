@@ -78,6 +78,9 @@ EXTERN void __kmpc_barrier_simple_spmd(kmp_Ident *loc_ref, int32_t tid) {
   __kmpc_impl_syncthreads();
   PRINT0(LD_SYNC, "completed kmpc_barrier_simple_spmd\n");
 }
+EXTERN void __kmpc_barrier_simple_generic(kmp_Ident *loc_ref, int32_t tid) {
+  return __kmpc_barrier_simple_spmd(loc_ref, tid);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP MASTER

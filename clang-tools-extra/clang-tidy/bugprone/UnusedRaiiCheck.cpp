@@ -84,9 +84,9 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
     auto SR = SourceRange(Node->getLParenLoc(), Node->getRParenLoc());
     auto DefaultConstruction = Node->getNumArgs() == 0;
     if (!DefaultConstruction) {
-      auto FirstArg = Node->getArg(0);
+      auto *FirstArg = Node->getArg(0);
       DefaultConstruction = isa<CXXDefaultArgExpr>(FirstArg);
-      if (auto ILE = dyn_cast<InitListExpr>(FirstArg)) {
+      if (auto *ILE = dyn_cast<InitListExpr>(FirstArg)) {
         DefaultConstruction = ILE->getNumInits() == 0;
         SR = SourceRange(ILE->getLBraceLoc(), ILE->getRBraceLoc());
       }

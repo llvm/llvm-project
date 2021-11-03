@@ -15,15 +15,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
+#include "ReducerWorkItem.h"
 #include "TestRunner.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <system_error>
 #include <vector>
 
@@ -39,7 +45,8 @@ static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
 static cl::opt<bool>
     PrintDeltaPasses("print-delta-passes",
                      cl::desc("Print list of delta passes, passable to "
-                              "--delta-passes as a comma separated list"));
+                              "--delta-passes as a comma separated list"),
+                     cl::cat(Options));
 
 static cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
                                           cl::desc("<input llvm ll/bc file>"),
@@ -55,9 +62,8 @@ static cl::list<std::string>
                   cl::desc("Arguments passed onto the interesting-ness test"),
                   cl::cat(Options));
 
-static cl::opt<std::string>
-    OutputFilename("output",
-                   cl::desc("Specify the output file. default: reduced.ll"));
+static cl::opt<std::string> OutputFilename(
+    "output", cl::desc("Specify the output file. default: reduced.ll|mir"));
 static cl::alias OutputFileAlias("o", cl::desc("Alias for -output"),
                                  cl::aliasopt(OutputFilename),
                                  cl::cat(Options));
@@ -68,30 +74,27 @@ static cl::opt<bool>
                           "with the reduced version!"),
                  cl::cat(Options));
 
-// Parses IR into a Module and verifies it
-static std::unique_ptr<Module> parseInputFile(StringRef Filename,
-                                              LLVMContext &Ctxt) {
-  SMDiagnostic Err;
-  std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
-  if (!Result) {
-    Err.print("llvm-reduce", errs());
-    return Result;
-  }
+enum class InputLanguages { None, IR, MIR };
 
-  if (verifyModule(*Result, &errs())) {
-    errs() << "Error: " << Filename << " - input module is broken!\n";
-    return std::unique_ptr<Module>();
-  }
+static cl::opt<InputLanguages>
+    InputLanguage("x", cl::ValueOptional,
+                  cl::desc("Input language ('ir' or 'mir')"),
+                  cl::init(InputLanguages::None),
+                  cl::values(clEnumValN(InputLanguages::IR, "ir", ""),
+                             clEnumValN(InputLanguages::MIR, "mir", "")),
+                  cl::cat(Options));
 
-  return Result;
-}
+static cl::opt<std::string> TargetTriple("mtriple",
+                                         cl::desc("Set the target triple"),
+                                         cl::cat(Options));
 
-void writeOutput(Module &M, StringRef Message) {
+static codegen::RegisterCodeGenFlags CGF;
+
+void writeOutput(ReducerWorkItem &M, StringRef Message) {
   if (ReplaceInput) // In-place
     OutputFilename = InputFilename.c_str();
   else if (OutputFilename.empty() || OutputFilename == "-")
-    OutputFilename = "reduced.ll";
-
+    OutputFilename = M.isMIR() ? "reduced.mir" : "reduced.ll";
   std::error_code EC;
   raw_fd_ostream Out(OutputFilename, EC);
   if (EC) {
@@ -102,11 +105,39 @@ void writeOutput(Module &M, StringRef Message) {
   errs() << Message << OutputFilename << "\n";
 }
 
+static std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+
+  if (TargetTriple == "")
+    TargetTriple = sys::getDefaultTargetTriple();
+  auto TT(Triple::normalize(TargetTriple));
+  std::string CPU(codegen::getCPUStr());
+  std::string FS(codegen::getFeaturesStr());
+
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+
+  return std::unique_ptr<LLVMTargetMachine>(
+      static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
+          TT, CPU, FS, TargetOptions(), None, None, CodeGenOpt::Default)));
+}
+
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   cl::HideUnrelatedOptions({&Options, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
+
+  bool ReduceModeMIR = false;
+  if (InputLanguage != InputLanguages::None) {
+    if (InputLanguage == InputLanguages::MIR)
+      ReduceModeMIR = true;
+  } else if (StringRef(InputFilename).endswith(".mir")) {
+    ReduceModeMIR = true;
+  }
 
   if (PrintDeltaPasses) {
     printDeltaPasses(errs());
@@ -114,9 +145,14 @@ int main(int Argc, char **Argv) {
   }
 
   LLVMContext Context;
-  std::unique_ptr<Module> OriginalProgram =
-      parseInputFile(InputFilename, Context);
-
+  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<MachineModuleInfo> MMI;
+  std::unique_ptr<ReducerWorkItem> OriginalProgram;
+  if (ReduceModeMIR) {
+    TM = createTargetMachine();
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+  }
+  OriginalProgram = parseReducerWorkItem(InputFilename, Context, MMI.get());
   if (!OriginalProgram) {
     return 1;
   }

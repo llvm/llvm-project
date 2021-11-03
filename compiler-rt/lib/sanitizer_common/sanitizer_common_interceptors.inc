@@ -2434,11 +2434,11 @@ static int PosixSpawnImpl(void *ctx, RealSpawnPtr *real_posix_spawn, pid_t *pid,
   char *const *s = argv;
   for (; *s; ++s)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, *s, internal_strlen(*s) + 1);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, argv, (s - argv + 1) / sizeof(*s));
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, argv, (s - argv + 1) * sizeof(*s));
   s = envp;
   for (; *s; ++s)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, *s, internal_strlen(*s) + 1);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, (s - envp + 1) / sizeof(*s));
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, envp, (s - envp + 1) * sizeof(*s));
   int res =
       real_posix_spawn(pid, file_or_path, file_actions, attrp, argv, envp);
   if (res == 0)
@@ -9081,10 +9081,10 @@ INTERCEPTOR(char *, MD2Data, const unsigned char *data, unsigned int len,
     return ret; \
   }
 
-SHA2_INTERCEPTORS(224, u32);
-SHA2_INTERCEPTORS(256, u32);
-SHA2_INTERCEPTORS(384, u64);
-SHA2_INTERCEPTORS(512, u64);
+SHA2_INTERCEPTORS(224, u32)
+SHA2_INTERCEPTORS(256, u32)
+SHA2_INTERCEPTORS(384, u64)
+SHA2_INTERCEPTORS(512, u64)
 
 #define INIT_SHA2_INTECEPTORS(LEN) \
   COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Init); \

@@ -2268,12 +2268,8 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
   SmallVector<int, 16> Mask;
   Shuf.getShuffleMask(Mask);
 
-  // The shuffle must not change vector sizes.
-  // TODO: This restriction could be removed if the insert has only one use
-  //       (because the transform would require a new length-changing shuffle).
   int NumElts = Mask.size();
-  if (NumElts != (int)(cast<FixedVectorType>(V0->getType())->getNumElements()))
-    return nullptr;
+  int InpNumElts = cast<FixedVectorType>(V0->getType())->getNumElements();
 
   // This is a specialization of a fold in SimplifyDemandedVectorElts. We may
   // not be able to handle it there if the insertelement has >1 use.
@@ -2290,11 +2286,16 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
   if (match(V1, m_InsertElt(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
     // Offset the index constant by the vector width because we are checking for
     // accesses to the 2nd vector input of the shuffle.
-    IdxC += NumElts;
+    IdxC += InpNumElts;
     // shuf ?, (inselt X, ?, IdxC), Mask --> shuf ?, X, Mask
     if (!is_contained(Mask, (int)IdxC))
       return IC.replaceOperand(Shuf, 1, X);
   }
+  // For the rest of the transform, the shuffle must not change vector sizes.
+  // TODO: This restriction could be removed if the insert has only one use
+  //       (because the transform would require a new length-changing shuffle).
+  if (NumElts != InpNumElts)
+    return nullptr;
 
   // shuffle (insert ?, Scalar, IndexC), V1, Mask --> insert V1, Scalar, IndexC'
   auto isShufflingScalarIntoOp1 = [&](Value *&Scalar, ConstantInt *&IndexC) {

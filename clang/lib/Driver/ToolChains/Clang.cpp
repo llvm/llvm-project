@@ -613,7 +613,8 @@ getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
       A && A->getOption().matches(options::OPT_fno_omit_frame_pointer);
   bool OmitLeafFP = Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
                                  options::OPT_mno_omit_leaf_frame_pointer,
-                                 Triple.isAArch64() || Triple.isPS4CPU());
+                                 Triple.isAArch64() || Triple.isPS4CPU() ||
+                                 Triple.isVE());
   if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
       (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
     if (OmitLeafFP)
@@ -6391,14 +6392,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
-  // -frelaxed-template-template-args is deprecated and on by default.
-  if (Arg *A =
-          Args.getLastArg(options::OPT_frelaxed_template_template_args,
-                          options::OPT_fno_relaxed_template_template_args)) {
-    D.Diag(diag::warn_drv_deprecated_arg) << A->getAsString(Args) << false;
-    if (A->getOption().matches(options::OPT_fno_relaxed_template_template_args))
-      CmdArgs.push_back("-fno-relaxed-template-template-args");
-  }
+  // -frelaxed-template-template-args is off by default, as it is a severe
+  // breaking change until a corresponding change to template partial ordering
+  // is provided.
+  if (Args.hasFlag(options::OPT_frelaxed_template_template_args,
+                   options::OPT_fno_relaxed_template_template_args, false))
+    CmdArgs.push_back("-frelaxed-template-template-args");
 
   // -fsized-deallocation is off by default, as it is an ABI-breaking change for
   // most platforms.

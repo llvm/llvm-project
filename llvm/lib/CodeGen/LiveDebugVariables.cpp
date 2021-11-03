@@ -1294,13 +1294,9 @@ bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
 
 static void removeDebugInstrs(MachineFunction &mf) {
   for (MachineBasicBlock &MBB : mf) {
-    for (auto MBBI = MBB.begin(), MBBE = MBB.end(); MBBI != MBBE; ) {
-      if (!MBBI->isDebugInstr()) {
-        ++MBBI;
-        continue;
-      }
-      MBBI = MBB.erase(MBBI);
-    }
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
+      if (MI.isDebugInstr())
+        MBB.erase(&MI);
   }
 }
 
