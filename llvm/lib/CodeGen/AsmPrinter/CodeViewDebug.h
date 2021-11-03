@@ -186,6 +186,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   };
   FunctionInfo *CurFn = nullptr;
 
+  codeview::SourceLanguage CurrentSourceLanguage =
+      codeview::SourceLanguage::Masm;
+
+  // This map records the constant offset in DIExpression of the
+  // DIGlobalVariableExpression referencing the DIGlobalVariable.
+  DenseMap<const DIGlobalVariable *, uint64_t> CVGlobalVariableOffsets;
+
   // Map used to seperate variables according to the lexical scope they belong
   // in.  This is populated by recordLocalVariable() before
   // collectLexicalBlocks() separates the variables between the FunctionInfo
@@ -400,6 +407,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex lowerType(const DIType *Ty, const DIType *ClassTy);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeArray(const DICompositeType *Ty);
+  codeview::TypeIndex lowerTypeString(const DIStringType *Ty);
   codeview::TypeIndex lowerTypeBasic(const DIBasicType *Ty);
   codeview::TypeIndex lowerTypePointer(
       const DIDerivedType *Ty,
@@ -463,6 +471,11 @@ protected:
 
   /// Gather post-function debug information.
   void endFunctionImpl(const MachineFunction *) override;
+
+  /// Check if the current module is in Fortran.
+  bool moduleIsInFortran() {
+    return CurrentSourceLanguage == codeview::SourceLanguage::Fortran;
+  }
 
 public:
   CodeViewDebug(AsmPrinter *AP);
