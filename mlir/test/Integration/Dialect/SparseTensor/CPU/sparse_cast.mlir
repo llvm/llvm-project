@@ -13,7 +13,7 @@
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
 // RUN: mlir-opt %s \
-// RUN:   --sparsification="vectorization-strategy=2 vl=2 enable-simd-index32" --sparse-tensor-conversion \
+// RUN:   --sparsification="vectorization-strategy=2 vl=2" --sparse-tensor-conversion \
 // RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize --lower-affine \
@@ -23,7 +23,6 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-//
 
 #SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 
