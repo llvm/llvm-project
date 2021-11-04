@@ -3132,11 +3132,9 @@ void HexagonConstEvaluator::replaceAllRegUsesWith(Register FromReg,
                                                   Register ToReg) {
   assert(FromReg.isVirtual());
   assert(ToReg.isVirtual());
-  for (auto I = MRI->use_begin(FromReg), E = MRI->use_end(); I != E;) {
-    MachineOperand &O = *I;
-    ++I;
+  for (MachineOperand &O :
+       llvm::make_early_inc_range(MRI->use_operands(FromReg)))
     O.setReg(ToReg);
-  }
 }
 
 bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,

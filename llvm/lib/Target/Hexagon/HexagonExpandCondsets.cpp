@@ -1070,20 +1070,18 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
 bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
                                              std::set<Register> &UpdRegs) {
   bool Changed = false;
-  MachineBasicBlock::iterator I, E, NextI;
-  for (I = B.begin(), E = B.end(); I != E; I = NextI) {
-    NextI = std::next(I);
-    unsigned Opc = I->getOpcode();
+  for (MachineInstr &MI : llvm::make_early_inc_range(B)) {
+    unsigned Opc = MI.getOpcode();
     if (Opc == Hexagon::A2_tfrt || Opc == Hexagon::A2_tfrf) {
-      bool Done = predicate(*I, (Opc == Hexagon::A2_tfrt), UpdRegs);
+      bool Done = predicate(MI, (Opc == Hexagon::A2_tfrt), UpdRegs);
       if (!Done) {
         // If we didn't predicate I, we may need to remove it in case it is
         // an "identity" copy, e.g.  %1 = A2_tfrt %2, %1.
-        if (RegisterRef(I->getOperand(0)) == RegisterRef(I->getOperand(2))) {
-          for (auto &Op : I->operands())
+        if (RegisterRef(MI.getOperand(0)) == RegisterRef(MI.getOperand(2))) {
+          for (auto &Op : MI.operands())
             if (Op.isReg())
               UpdRegs.insert(Op.getReg());
-          removeInstr(*I);
+          removeInstr(MI);
         }
       }
       Changed |= Done;
