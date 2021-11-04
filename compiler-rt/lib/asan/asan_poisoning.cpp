@@ -66,7 +66,7 @@ void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {
   uptr end = ptr + size;
   if (Verbosity()) {
     Printf("__asan_%spoison_intra_object_redzone [%p,%p) %zd\n",
-           poison ? "" : "un", ptr, end, size);
+           poison ? "" : "un", (void *)ptr, (void *)end, size);
     if (Verbosity() >= 2)
       PRINT_CURRENT_STACK();
   }
