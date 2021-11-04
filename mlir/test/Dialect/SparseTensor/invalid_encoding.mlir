@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+#a = #sparse_tensor.encoding<{dimLevelType = []}>
+func private @scalar(%arg0: tensor<f64, #a>) -> () // expected-error {{expected non-scalar sparse tensor}}
+
 // -----
 
 #a = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
