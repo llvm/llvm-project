@@ -63,6 +63,8 @@ public:
     return lldb::eLanguageTypeUnknown;
   }
 
+  lldb::FunctionSP GetOrCreateFunction(CompileUnit &comp_unit);
+
   size_t ParseFunctions(CompileUnit &comp_unit) override;
 
   bool ParseLineTable(CompileUnit &comp_unit) override;

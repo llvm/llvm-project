@@ -39,7 +39,16 @@ image dump line-table d.c
 image lookup -a 0x4000b2 -v
 # CHECK-LABEL: image lookup -a 0x4000b2 -v
 # CHECK: Summary: line-table.out`func + 2
+# CHECK: Function: id = {0x00000000}, name = "func", range = [0x00000000004000b0-0x00000000004000c0)
+
+image dump symfile
+# CHECK-LABEL: Compile units:
+# CHECK-NEXT:  CompileUnit{0x00000000}, language = "<not loaded>", file = '/tmp/a.c'
+# CHECK-NEXT:   Function{0x00000000}, demangled = func, type_uid = 0x00000000
+# CHECK:  CompileUnit{0x00000001}, language = "<not loaded>", file = '/tmp/c.c'
+# CHECK-NEXT:  CompileUnit{0x00000002}, language = "<not loaded>", file = '/tmp/d.c'
+# CHECK-NEXT:  CompileUnit{0x00000003}, language = "<not loaded>", file = '/tmp/d.c'
 
 breakpoint set -f c.c -l 2
 # CHECK-LABEL: breakpoint set -f c.c -l 2
-# CHECK: Breakpoint 1: where = line-table.out`func + 2, address = 0x00000000004000b2
+# CHECK: Breakpoint 1: where = line-table.out`func + 2 at c.c:2, address = 0x00000000004000b2

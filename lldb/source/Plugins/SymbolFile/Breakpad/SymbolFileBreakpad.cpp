@@ -219,9 +219,45 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
   return cu_sp;
 }
 
+FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
+  user_id_t id = comp_unit.GetID();
+  if (FunctionSP func_sp = comp_unit.FindFunctionByUID(id))
+    return func_sp;
+
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
+  FunctionSP func_sp;
+  addr_t base = GetBaseFileAddress();
+  if (base == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "Unable to fetch the base address of object file. Skipping "
+                  "symtab population.");
+    return func_sp;
+  }
+
+  const SectionList *list = comp_unit.GetModule()->GetSectionList();
+  CompUnitData &data = m_cu_data->GetEntryRef(id).data;
+  LineIterator It(*m_objfile_sp, Record::Func, data.bookmark);
+  assert(Record::classify(*It) == Record::Func);
+
+  if (auto record = FuncRecord::parse(*It)) {
+    Mangled func_name;
+    func_name.SetValue(ConstString(record->Name), false);
+    addr_t address = record->Address + base;
+    SectionSP section_sp = list->FindSectionContainingFileAddress(address);
+    if (section_sp) {
+      AddressRange func_range(
+          section_sp, address - section_sp->GetFileAddress(), record->Size);
+      // Use the CU's id because every CU has only one function inside.
+      func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
+                                           nullptr, func_range);
+      comp_unit.AddFunction(func_sp);
+    }
+  }
+  return func_sp;
+}
+
 size_t SymbolFileBreakpad::ParseFunctions(CompileUnit &comp_unit) {
-  // TODO
-  return 0;
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  return GetOrCreateFunction(comp_unit) ? 1 : 0;
 }
 
 bool SymbolFileBreakpad::ParseLineTable(CompileUnit &comp_unit) {
@@ -251,7 +287,8 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
                                          SymbolContextItem resolve_scope,
                                          SymbolContext &sc) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!(resolve_scope & (eSymbolContextCompUnit | eSymbolContextLineEntry)))
+  if (!(resolve_scope & (eSymbolContextCompUnit | eSymbolContextLineEntry |
+                         eSymbolContextFunction)))
     return 0;
 
   ParseCUData();
@@ -266,6 +303,13 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
     if (sc.comp_unit->GetLineTable()->FindLineEntryByAddress(so_addr,
                                                              sc.line_entry)) {
       result |= eSymbolContextLineEntry;
+    }
+  }
+  if (resolve_scope & eSymbolContextFunction) {
+    FunctionSP func_sp = GetOrCreateFunction(*sc.comp_unit);
+    if (func_sp) {
+      sc.function = func_sp.get();
+      result |= eSymbolContextFunction;
     }
   }
 
@@ -291,7 +335,20 @@ void SymbolFileBreakpad::FindFunctions(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
-  // TODO
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  // TODO: Implement this with supported FunctionNameType.
+
+  for (uint32_t i = 0; i < GetNumCompileUnits(); ++i) {
+    CompUnitSP cu_sp = GetCompileUnitAtIndex(i);
+    FunctionSP func_sp = GetOrCreateFunction(*cu_sp);
+    if (func_sp && name == func_sp->GetNameNoArguments()) {
+      SymbolContext sc;
+      sc.comp_unit = cu_sp.get();
+      sc.function = func_sp.get();
+      sc.module_sp = func_sp->CalculateSymbolContextModule();
+      sc_list.Append(sc);
+    }
+  }
 }
 
 void SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
@@ -345,11 +402,6 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
                      size.getValueOr(0)),
         size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
   };
-
-  for (llvm::StringRef line : lines(Record::Func)) {
-    if (auto record = FuncRecord::parse(line))
-      add_symbol(record->Address, record->Size, record->Name);
-  }
 
   for (llvm::StringRef line : lines(Record::Public)) {
     if (auto record = PublicRecord::parse(line))
