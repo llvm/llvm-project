@@ -989,30 +989,24 @@ class DIDerivedType : public DIType {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIDerivedType,
-                                (unsigned Tag, MDString *Name, Metadata *File,
-                                 unsigned Line, Metadata *Scope,
-                                 Metadata *BaseType, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, uint64_t OffsetInBits,
-                                 Optional<unsigned> DWARFAddressSpace,
-                                 DIFlags Flags, Metadata *ExtraData = nullptr,
-                                 Metadata *Annotations = nullptr),
-                                (Tag, Name, File, Line, Scope, BaseType,
-                                 SizeInBits, AlignInBits, OffsetInBits,
-                                 DWARFAddressSpace, Flags, ExtraData,
-                                 Annotations))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIDerivedType,
-                                (unsigned Tag, StringRef Name, DIFile *File,
-                                 unsigned Line, DIScope *Scope,
-                                 DIType *BaseType, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, uint64_t OffsetInBits,
-                                 Optional<unsigned> DWARFAddressSpace,
-                                 DIFlags Flags, Metadata *ExtraData = nullptr,
-                                 DINodeArray Annotations = nullptr),
-                                (Tag, Name, File, Line, Scope, BaseType,
-                                 SizeInBits, AlignInBits, OffsetInBits,
-                                 DWARFAddressSpace, Flags, ExtraData,
-                                 Annotations))
+  DEFINE_ALL_MDNODE_GET_METHODS(
+      DIDerivedType,
+      (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
+       Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+       uint32_t AlignInBits, uint64_t OffsetInBits,
+       Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+       Metadata *ExtraData = nullptr, Metadata *Annotations = nullptr),
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, DWARFAddressSpace, Flags, ExtraData, Annotations))
+  DEFINE_ALL_MDNODE_GET_METHODS(
+      DIDerivedType,
+      (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
+       DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
+       uint32_t AlignInBits, uint64_t OffsetInBits,
+       Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+       Metadata *ExtraData = nullptr, DINodeArray Annotations = nullptr),
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, DWARFAddressSpace, Flags, ExtraData, Annotations))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
 
@@ -3503,18 +3497,20 @@ class DILocalVariable : public DIVariable {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DILocalVariable,
-      (DILocalScope * Scope, StringRef Name, DIFile *File, unsigned Line,
-       DIType *Type, unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-       DINodeArray Annotations),
-      (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits, Annotations))
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DILocalVariable,
-      (Metadata * Scope, MDString *Name, Metadata *File, unsigned Line,
-       Metadata *Type, unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-       Metadata *Annotations),
-      (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits, Annotations))
+  DEFINE_ALL_MDNODE_GET_METHODS(DILocalVariable,
+                                (DILocalScope * Scope, StringRef Name,
+                                 DIFile *File, unsigned Line, DIType *Type,
+                                 unsigned Arg, DIFlags Flags,
+                                 uint32_t AlignInBits, DINodeArray Annotations),
+                                (Scope, Name, File, Line, Type, Arg, Flags,
+                                 AlignInBits, Annotations))
+  DEFINE_ALL_MDNODE_GET_METHODS(DILocalVariable,
+                                (Metadata * Scope, MDString *Name,
+                                 Metadata *File, unsigned Line, Metadata *Type,
+                                 unsigned Arg, DIFlags Flags,
+                                 uint32_t AlignInBits, Metadata *Annotations),
+                                (Scope, Name, File, Line, Type, Arg, Flags,
+                                 AlignInBits, Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }
 
@@ -3735,20 +3731,16 @@ class DIImportedEntity : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIImportedEntity,
-                                (unsigned Tag, DIScope *Scope, DINode *Entity,
-                                 DIFile *File, unsigned Line,
-                                 StringRef Name = "",
-                                 DINodeArray Elements = nullptr),
-                                (Tag, Scope, Entity, File, Line, Name,
-                                 Elements))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIImportedEntity,
-                                (unsigned Tag, Metadata *Scope,
-                                 Metadata *Entity, Metadata *File,
-                                 unsigned Line, MDString *Name,
-                                 Metadata *Elements = nullptr),
-                                (Tag, Scope, Entity, File, Line, Name,
-                                 Elements))
+  DEFINE_ALL_MDNODE_GET_METHODS(
+      DIImportedEntity,
+      (unsigned Tag, DIScope *Scope, DINode *Entity, DIFile *File,
+       unsigned Line, StringRef Name = "", DINodeArray Elements = nullptr),
+      (Tag, Scope, Entity, File, Line, Name, Elements))
+  DEFINE_ALL_MDNODE_GET_METHODS(
+      DIImportedEntity,
+      (unsigned Tag, Metadata *Scope, Metadata *Entity, Metadata *File,
+       unsigned Line, MDString *Name, Metadata *Elements = nullptr),
+      (Tag, Scope, Entity, File, Line, Name, Elements))
 
   TempDIImportedEntity clone() const { return cloneImpl(); }
 
