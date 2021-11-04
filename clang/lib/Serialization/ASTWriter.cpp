@@ -3045,11 +3045,11 @@ public:
     unsigned DataLen = 4 + 2 + 2; // 2 bytes for each of the method counts
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
-      if (Method->getMethod())
+      if (ShouldWriteMethodListNode(Method))
         DataLen += 4;
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
-      if (Method->getMethod())
+      if (ShouldWriteMethodListNode(Method))
         DataLen += 4;
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
@@ -3080,13 +3080,13 @@ public:
     unsigned NumInstanceMethods = 0;
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
-      if (Method->getMethod())
+      if (ShouldWriteMethodListNode(Method))
         ++NumInstanceMethods;
 
     unsigned NumFactoryMethods = 0;
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
-      if (Method->getMethod())
+      if (ShouldWriteMethodListNode(Method))
         ++NumFactoryMethods;
 
     unsigned InstanceBits = Methods.Instance.getBits();
@@ -3107,14 +3107,19 @@ public:
     LE.write<uint16_t>(FullFactoryBits);
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
-      if (Method->getMethod())
+      if (ShouldWriteMethodListNode(Method))
         LE.write<uint32_t>(Writer.getDeclID(Method->getMethod()));
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
-      if (Method->getMethod())
+      if (ShouldWriteMethodListNode(Method))
         LE.write<uint32_t>(Writer.getDeclID(Method->getMethod()));
 
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
+  }
+
+private:
+  static bool ShouldWriteMethodListNode(const ObjCMethodList *Node) {
+    return (Node->getMethod() && !Node->getMethod()->isFromASTFile());
   }
 };
 
@@ -3158,15 +3163,21 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
       if (Chain && ID < FirstSelectorID) {
         // Selector already exists. Did it change?
         bool changed = false;
-        for (ObjCMethodList *M = &Data.Instance;
-             !changed && M && M->getMethod(); M = M->getNext()) {
-          if (!M->getMethod()->isFromASTFile())
-            changed = true;
-        }
-        for (ObjCMethodList *M = &Data.Factory; !changed && M && M->getMethod();
+        for (ObjCMethodList *M = &Data.Instance; M && M->getMethod();
              M = M->getNext()) {
-          if (!M->getMethod()->isFromASTFile())
+          if (!M->getMethod()->isFromASTFile()) {
             changed = true;
+            Data.Instance = *M;
+            break;
+          }
+        }
+        for (ObjCMethodList *M = &Data.Factory; M && M->getMethod();
+             M = M->getNext()) {
+          if (!M->getMethod()->isFromASTFile()) {
+            changed = true;
+            Data.Factory = *M;
+            break;
+          }
         }
         if (!changed)
           continue;

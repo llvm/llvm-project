@@ -23,11 +23,22 @@ add_header_library(
 )
 
 add_header_library(
-  str_conv_utils
+  str_to_integer
   HDRS
-    str_conv_utils.h
+    str_to_integer.h
+  DEPENDS
+    .ctype_utils
+    libc.include.errno
+    libc.src.errno.__errno_location
+    libc.src.__support.CPP.standalone_cpp
+)
+
+add_header_library(
+  str_to_float
+  HDRS
     str_to_float.h
   DEPENDS
+    .str_to_integer
     .ctype_utils
     .high_precision_decimal
     libc.include.errno

@@ -21,7 +21,7 @@ namespace internal {
 // and contains the 128 bit mantissa approximations of the powers of 10 from
 // -348 to 347. The exponents are implied by a linear expression with slope
 // 217706.0/65536.0 ≈ log(10)/log(2). This is used by the Eisel-Lemire algorithm
-// in str_conv_utils.h.
+// in str_to_float.h.
 
 constexpr int32_t DETAILED_POWERS_OF_TEN_MIN_EXP_10 = -348;
 constexpr int32_t DETAILED_POWERS_OF_TEN_MAX_EXP_10 = 347;
