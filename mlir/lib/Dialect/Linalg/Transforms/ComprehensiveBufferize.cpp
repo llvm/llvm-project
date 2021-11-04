@@ -2045,7 +2045,7 @@ struct LinalgComprehensiveModuleBufferize
         .insert<linalg::LinalgDialect, memref::MemRefDialect,
                 tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
                 arith::ArithmeticDialect, StandardOpsDialect>();
-    registerBufferiableOpInterfaceExternalModels(registry);
+    registerBufferizableOpInterfaceExternalModels(registry);
   }
 
 private:
@@ -3480,7 +3480,7 @@ template <> struct LinalgOpInterfaceHelper<> {
 
 } // namespace
 
-void registerBufferiableOpInterfaceExternalModels(DialectRegistry &registry) {
+void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<arith::ConstantOp, arith_ext::ConstantOpInterface>();
   registry.addOpInterface<linalg::InitTensorOp,
                           linalg_ext::InitTensorOpInterface>();
