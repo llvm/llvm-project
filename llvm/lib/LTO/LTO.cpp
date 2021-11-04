@@ -997,7 +997,7 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
-Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
+Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
@@ -1183,7 +1183,7 @@ namespace {
 class InProcessThinBackend : public ThinBackendProc {
   ThreadPool BackendThreadPool;
   AddStreamFn AddStream;
-  NativeObjectCache Cache;
+  FileCache Cache;
   std::set<GlobalValue::GUID> CfiFunctionDefs;
   std::set<GlobalValue::GUID> CfiFunctionDecls;
 
@@ -1195,7 +1195,7 @@ public:
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, NativeObjectCache Cache)
+      AddStreamFn AddStream, FileCache Cache)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
         BackendThreadPool(ThinLTOParallelism), AddStream(std::move(AddStream)),
         Cache(std::move(Cache)) {
@@ -1208,8 +1208,8 @@ public:
   }
 
   Error runThinLTOBackendThread(
-      AddStreamFn AddStream, NativeObjectCache Cache, unsigned Task,
-      BitcodeModule BM, ModuleSummaryIndex &CombinedIndex,
+      AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
+      ModuleSummaryIndex &CombinedIndex,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
@@ -1239,7 +1239,11 @@ public:
     computeLTOCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList,
                        ExportList, ResolvedODR, DefinedGlobals, CfiFunctionDefs,
                        CfiFunctionDecls);
-    if (AddStreamFn CacheAddStream = Cache(Task, Key))
+    Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key);
+    if (Error Err = CacheAddStreamOrErr.takeError())
+      return Err;
+    AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
+    if (CacheAddStream)
       return RunThinBackend(CacheAddStream);
 
     return Error::success();
@@ -1301,7 +1305,7 @@ public:
 ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism) {
   return [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
              const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-             AddStreamFn AddStream, NativeObjectCache Cache) {
+             AddStreamFn AddStream, FileCache Cache) {
     return std::make_unique<InProcessThinBackend>(
         Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries, AddStream,
         Cache);
@@ -1395,14 +1399,14 @@ ThinBackend lto::createWriteIndexesThinBackend(
     raw_fd_ostream *LinkedObjectsFile, IndexWriteCallback OnWrite) {
   return [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
              const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-             AddStreamFn AddStream, NativeObjectCache Cache) {
+             AddStreamFn AddStream, FileCache Cache) {
     return std::make_unique<WriteIndexesThinBackend>(
         Conf, CombinedIndex, ModuleToDefinedGVSummaries, OldPrefix, NewPrefix,
         ShouldEmitImportsFiles, LinkedObjectsFile, OnWrite);
   };
 }
 
-Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
+Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   timeTraceProfilerBegin("ThinLink", StringRef(""));
   auto TimeTraceScopeExit = llvm::make_scope_exit([]() {

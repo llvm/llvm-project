@@ -411,7 +411,10 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                          EC.message());
   }
 
-  auto Stream = AddStream(Task);
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr = AddStream(Task);
+  if (Error Err = StreamOrErr.takeError())
+    report_fatal_error(std::move(Err));
+  std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
