@@ -194,7 +194,7 @@ bufferizeOp(Operation *op, BlockAndValueMapping &bvm,
             DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr);
 
 /// Register external models implemented for the `BufferizableOpInterface`.
-void registerBufferiableOpInterfaceExternalModels(DialectRegistry &registry);
+void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 

@@ -1572,8 +1572,7 @@ void ICmpTestImpl(CmpInst::Predicate Pred) {
 }
 
 TEST(ConstantRange, ICmp) {
-  for (auto Pred : seq_inclusive(CmpInst::Predicate::FIRST_ICMP_PREDICATE,
-                                 CmpInst::Predicate::LAST_ICMP_PREDICATE))
+  for (auto Pred : ICmpInst::predicates())
     ICmpTestImpl(Pred);
 }
 
@@ -2531,8 +2530,7 @@ void testConstantRangeICmpPredEquivalence(ICmpInst::Predicate SrcPred, T Func) {
 }
 
 TEST_F(ConstantRangeTest, areInsensitiveToSignednessOfICmpPredicate) {
-  for (auto Pred : seq_inclusive(ICmpInst::Predicate::FIRST_ICMP_PREDICATE,
-                                 ICmpInst::Predicate::LAST_ICMP_PREDICATE)) {
+  for (auto Pred : ICmpInst::predicates()) {
     if (ICmpInst::isEquality(Pred))
       continue;
     ICmpInst::Predicate FlippedSignednessPred =
@@ -2548,8 +2546,7 @@ TEST_F(ConstantRangeTest, areInsensitiveToSignednessOfICmpPredicate) {
 }
 
 TEST_F(ConstantRangeTest, areInsensitiveToSignednessOfInvertedICmpPredicate) {
-  for (auto Pred : seq_inclusive(ICmpInst::Predicate::FIRST_ICMP_PREDICATE,
-                                 ICmpInst::Predicate::LAST_ICMP_PREDICATE)) {
+  for (auto Pred : ICmpInst::predicates()) {
     if (ICmpInst::isEquality(Pred))
       continue;
     ICmpInst::Predicate InvertedFlippedSignednessPred =
@@ -2567,8 +2564,7 @@ TEST_F(ConstantRangeTest, areInsensitiveToSignednessOfInvertedICmpPredicate) {
 }
 
 TEST_F(ConstantRangeTest, getEquivalentPredWithFlippedSignedness) {
-  for (auto Pred : seq_inclusive(ICmpInst::Predicate::FIRST_ICMP_PREDICATE,
-                                 ICmpInst::Predicate::LAST_ICMP_PREDICATE)) {
+  for (auto Pred : ICmpInst::predicates()) {
     if (ICmpInst::isEquality(Pred))
       continue;
     testConstantRangeICmpPredEquivalence(
