@@ -5900,6 +5900,9 @@ namespace {
     void VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
       Visit(TL.getUnqualifiedLoc());
     }
+    // Allow to fill pointee's type locations, e.g.,
+    //   int __attr * __attr * __attr *p;
+    void VisitPointerTypeLoc(PointerTypeLoc TL) { Visit(TL.getNextTypeLoc()); }
     void VisitTypedefTypeLoc(TypedefTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeLoc());
     }
@@ -6498,6 +6501,34 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
   if (!BuildAddressSpaceIndex(*this, ASIdx, AddrSpace, AttrLoc))
     return QualType();
   return BuildAddressSpaceAttr(T, ASIdx, AddrSpace, AttrLoc);
+}
+
+static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
+                                      TypeProcessingState &State) {
+  Sema &S = State.getSema();
+
+  // Check the number of attribute arguments.
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Ensure the argument is a string.
+  auto *StrLiteral = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
+  if (!StrLiteral) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
+        << Attr << AANT_ArgumentString;
+    Attr.setInvalid();
+    return;
+  }
+
+  ASTContext &Ctx = S.Context;
+  StringRef BTFTypeTag = StrLiteral->getString();
+  Type = State.getAttributedType(
+      ::new (Ctx) BTFTypeTagAttr(Ctx, Attr, BTFTypeTag), Type, Type);
+  return;
 }
 
 /// HandleAddressSpaceTypeAttribute - Process an address_space attribute on the
@@ -8127,6 +8158,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
 
     case ParsedAttr::IgnoredAttribute:
+      break;
+
+    case ParsedAttr::AT_BTFTypeTag:
+      HandleBTFTypeTagAttribute(type, attr, state);
+      attr.setUsedAsTypeAttr();
       break;
 
     case ParsedAttr::AT_MayAlias:
