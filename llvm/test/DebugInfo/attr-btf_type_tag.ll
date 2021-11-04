@@ -31,10 +31,10 @@
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_name      ("g")
-; CHECK-NEXT:   DW_AT_type      (0x[[T1:[0-9]+]] "int ***")
+; CHECK-NEXT:   DW_AT_type      (0x[[T1:[0-9a-f]+]] "int ***")
 
 ; CHECK:      0x[[T1]]: DW_TAG_pointer_type
-; CHECK-NEXT:   DW_AT_type      (0x[[T2:[0-9]+]] "int **")
+; CHECK-NEXT:   DW_AT_type      (0x[[T2:[0-9a-f]+]] "int **")
 
 ; CHECK:        DW_TAG_LLVM_annotation
 ; CHECK-NEXT:     DW_AT_name    ("btf_type_tag")
@@ -43,7 +43,7 @@
 ; CHECK:        NULL
 
 ; CHECK:      0x[[T2]]: DW_TAG_pointer_type
-; CHECK-NEXT:   DW_AT_type      (0x[[T3:[0-9]+]] "int *")
+; CHECK-NEXT:   DW_AT_type      (0x[[T3:[0-9a-f]+]] "int *")
 
 ; CHECK:        DW_TAG_LLVM_annotation
 ; CHECK-NEXT:     DW_AT_name    ("btf_type_tag")
@@ -52,7 +52,7 @@
 ; CHECK:        NULL
 
 ; CHECK:      0x[[T3]]: DW_TAG_pointer_type
-; CHECK-NEXT:   DW_AT_type      (0x[[#]] "int")
+; CHECK-NEXT:   DW_AT_type      (0x{{[0-9a-f]+}} "int")
 
 !13 = !{i32 7, !"Dwarf Version", i32 4}
 !14 = !{i32 2, !"Debug Info Version", i32 3}
