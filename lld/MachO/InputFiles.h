@@ -14,6 +14,7 @@
 
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -211,6 +212,7 @@ public:
 };
 
 extern llvm::SetVector<InputFile *> inputFiles;
+extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 
