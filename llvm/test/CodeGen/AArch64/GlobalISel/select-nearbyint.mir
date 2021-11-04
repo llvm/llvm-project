@@ -16,7 +16,7 @@ body:             |
     ; CHECK-LABEL: name: test_v4f16.nearbyint
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FRINTIv4f16_:%[0-9]+]]:fpr64 = FRINTIv4f16 [[COPY]]
+    ; CHECK: [[FRINTIv4f16_:%[0-9]+]]:fpr64 = nofpexcept FRINTIv4f16 [[COPY]]
     ; CHECK: $d0 = COPY [[FRINTIv4f16_]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<4 x s16>) = COPY $d0
@@ -39,7 +39,7 @@ body:             |
     ; CHECK-LABEL: name: test_v8f16.nearbyint
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FRINTIv8f16_:%[0-9]+]]:fpr128 = FRINTIv8f16 [[COPY]]
+    ; CHECK: [[FRINTIv8f16_:%[0-9]+]]:fpr128 = nofpexcept FRINTIv8f16 [[COPY]]
     ; CHECK: $q0 = COPY [[FRINTIv8f16_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<8 x s16>) = COPY $q0
@@ -62,7 +62,7 @@ body:             |
     ; CHECK-LABEL: name: test_v2f32.nearbyint
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FRINTIv2f32_:%[0-9]+]]:fpr64 = FRINTIv2f32 [[COPY]]
+    ; CHECK: [[FRINTIv2f32_:%[0-9]+]]:fpr64 = nofpexcept FRINTIv2f32 [[COPY]]
     ; CHECK: $d0 = COPY [[FRINTIv2f32_]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0
@@ -85,7 +85,7 @@ body:             |
     ; CHECK-LABEL: name: test_v2f64.nearbyint
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FRINTIv2f64_:%[0-9]+]]:fpr128 = FRINTIv2f64 [[COPY]]
+    ; CHECK: [[FRINTIv2f64_:%[0-9]+]]:fpr128 = nofpexcept FRINTIv2f64 [[COPY]]
     ; CHECK: $q0 = COPY [[FRINTIv2f64_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<2 x s64>) = COPY $q0
@@ -108,7 +108,7 @@ body:             |
     ; CHECK-LABEL: name: test_f32.nearbyint
     ; CHECK: liveins: $s0
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FRINTISr:%[0-9]+]]:fpr32 = FRINTISr [[COPY]]
+    ; CHECK: [[FRINTISr:%[0-9]+]]:fpr32 = nofpexcept FRINTISr [[COPY]]
     ; CHECK: $s0 = COPY [[FRINTISr]]
     ; CHECK: RET_ReallyLR implicit $s0
     %0:fpr(s32) = COPY $s0
@@ -131,7 +131,7 @@ body:             |
     ; CHECK-LABEL: name: test_f64.nearbyint
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FRINTIDr:%[0-9]+]]:fpr64 = FRINTIDr [[COPY]]
+    ; CHECK: [[FRINTIDr:%[0-9]+]]:fpr64 = nofpexcept FRINTIDr [[COPY]]
     ; CHECK: $d0 = COPY [[FRINTIDr]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(s64) = COPY $d0
@@ -154,7 +154,7 @@ body:             |
     ; CHECK-LABEL: name: test_f16.nearbyint
     ; CHECK: liveins: $h0
     ; CHECK: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
-    ; CHECK: [[FRINTIHr:%[0-9]+]]:fpr16 = FRINTIHr [[COPY]]
+    ; CHECK: [[FRINTIHr:%[0-9]+]]:fpr16 = nofpexcept FRINTIHr [[COPY]]
     ; CHECK: $h0 = COPY [[FRINTIHr]]
     ; CHECK: RET_ReallyLR implicit $h0
     %0:fpr(s16) = COPY $h0

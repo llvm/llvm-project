@@ -13,7 +13,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_float
-    ; CHECK: %{{[0-9]+}}:fpr32 = FRINTMSr %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr32 = nofpexcept FRINTMSr %{{[0-9]+}}
     liveins: $s0
     %0:fpr(s32) = COPY $s0
     %1:fpr(s32) = G_FFLOOR %0
@@ -31,7 +31,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_double
-    ; CHECK: %{{[0-9]+}}:fpr64 = FRINTMDr %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTMDr %{{[0-9]+}}
     liveins: $d0
     %0:fpr(s64) = COPY $d0
     %1:fpr(s64) = G_FFLOOR %0
@@ -49,7 +49,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_v2f32
-    ; CHECK: %{{[0-9]+}}:fpr64 = FRINTMv2f32 %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTMv2f32 %{{[0-9]+}}
     liveins: $d0
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s32>) = G_FFLOOR %0
@@ -67,7 +67,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_v4f32
-    ; CHECK: %{{[0-9]+}}:fpr128 = FRINTMv4f32 %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTMv4f32 %{{[0-9]+}}
     liveins: $q0
     %0:fpr(<4 x s32>) = COPY $q0
     %1:fpr(<4 x s32>) = G_FFLOOR %0
@@ -85,7 +85,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_v2f64
-    ; CHECK: %{{[0-9]+}}:fpr128 = FRINTMv2f64 %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTMv2f64 %{{[0-9]+}}
     liveins: $q0
     %0:fpr(<2 x s64>) = COPY $q0
     %1:fpr(<2 x s64>) = G_FFLOOR %0
@@ -103,7 +103,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_v4f16
-    ; CHECK: %{{[0-9]+}}:fpr64 = FRINTMv4f16 %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTMv4f16 %{{[0-9]+}}
     liveins: $d0
     %0:fpr(<4 x s16>) = COPY $d0
     %1:fpr(<4 x s16>) = G_FFLOOR %0
@@ -121,7 +121,7 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            floor_v8f16
-    ; CHECK: %{{[0-9]+}}:fpr128 = FRINTMv8f16 %{{[0-9]+}}
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTMv8f16 %{{[0-9]+}}
     liveins: $q0
     %0:fpr(<8 x s16>) = COPY $q0
     %1:fpr(<8 x s16>) = G_FFLOOR %0

@@ -848,7 +848,7 @@ body:             |
     ; CHECK-LABEL: name: fadd_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[COPY1]]
     ; CHECK: $s0 = COPY [[FADDSrr]]
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
@@ -873,7 +873,7 @@ body:             |
     ; CHECK-LABEL: name: fadd_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: [[FADDDrr:%[0-9]+]]:fpr64 = FADDDrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[COPY]], [[COPY1]]
     ; CHECK: $d0 = COPY [[FADDDrr]]
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
@@ -898,7 +898,7 @@ body:             |
     ; CHECK-LABEL: name: fsub_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[FSUBSrr:%[0-9]+]]:fpr32 = FSUBSrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FSUBSrr:%[0-9]+]]:fpr32 = nofpexcept FSUBSrr [[COPY]], [[COPY1]]
     ; CHECK: $s0 = COPY [[FSUBSrr]]
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
@@ -923,7 +923,7 @@ body:             |
     ; CHECK-LABEL: name: fsub_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: [[FSUBDrr:%[0-9]+]]:fpr64 = FSUBDrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FSUBDrr:%[0-9]+]]:fpr64 = nofpexcept FSUBDrr [[COPY]], [[COPY1]]
     ; CHECK: $d0 = COPY [[FSUBDrr]]
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
@@ -948,7 +948,7 @@ body:             |
     ; CHECK-LABEL: name: fmul_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[FMULSrr:%[0-9]+]]:fpr32 = FMULSrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FMULSrr:%[0-9]+]]:fpr32 = nofpexcept FMULSrr [[COPY]], [[COPY1]]
     ; CHECK: $s0 = COPY [[FMULSrr]]
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
@@ -973,7 +973,7 @@ body:             |
     ; CHECK-LABEL: name: fmul_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: [[FMULDrr:%[0-9]+]]:fpr64 = FMULDrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FMULDrr:%[0-9]+]]:fpr64 = nofpexcept FMULDrr [[COPY]], [[COPY1]]
     ; CHECK: $d0 = COPY [[FMULDrr]]
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
@@ -998,7 +998,7 @@ body:             |
     ; CHECK-LABEL: name: fdiv_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: [[FDIVSrr:%[0-9]+]]:fpr32 = FDIVSrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FDIVSrr:%[0-9]+]]:fpr32 = nofpexcept FDIVSrr [[COPY]], [[COPY1]]
     ; CHECK: $s0 = COPY [[FDIVSrr]]
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
@@ -1023,7 +1023,7 @@ body:             |
     ; CHECK-LABEL: name: fdiv_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: [[FDIVDrr:%[0-9]+]]:fpr64 = FDIVDrr [[COPY]], [[COPY1]]
+    ; CHECK: [[FDIVDrr:%[0-9]+]]:fpr64 = nofpexcept FDIVDrr [[COPY]], [[COPY1]]
     ; CHECK: $d0 = COPY [[FDIVDrr]]
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1

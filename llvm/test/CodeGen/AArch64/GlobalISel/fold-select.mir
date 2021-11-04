@@ -53,7 +53,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK-NEXT: FCMPSri [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: nofpexcept FCMPSri [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY]], 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSELWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0

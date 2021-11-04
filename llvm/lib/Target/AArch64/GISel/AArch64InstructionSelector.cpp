@@ -3050,10 +3050,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
     LLVM_FALLTHROUGH;
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
   case TargetOpcode::G_OR: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))
@@ -3376,6 +3372,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     I.setDesc(TII.get(NewOpc));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    I.setFlags(MachineInstr::NoFPExcept);
 
     return true;
   }
@@ -4701,6 +4698,7 @@ AArch64InstructionSelector::emitFPCompare(Register LHS, Register RHS,
   // Partially build the compare. Decide if we need to add a use for the
   // third operand based off whether or not we're comparing against 0.0.
   auto CmpMI = MIRBuilder.buildInstr(CmpOpc).addUse(LHS);
+  CmpMI.setMIFlags(MachineInstr::NoFPExcept);
   if (!ShouldUseImm)
     CmpMI.addUse(RHS);
   constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
