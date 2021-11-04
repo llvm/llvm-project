@@ -3108,14 +3108,14 @@ def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
              PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
 
-let Defs = [RM] in {
+let Defs = [RM], hasSideEffects = 1 in {
   let isCodeGenOnly = 1 in
   def MTFSFb  : XFLForm<63, 711, (outs), (ins i32imm:$FM, f8rc:$rT),
                         "mtfsf $FM, $rT", IIC_IntMTFSB0,
                         [(int_ppc_mtfsf timm:$FM, f64:$rT)]>,
                 PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
-let Uses = [RM] in {
+let Uses = [RM], hasSideEffects = 1 in {
   def MFFS   : XForm_42<63, 583, (outs f8rc:$rT), (ins),
                          "mffs $rT", IIC_IntMFFS,
                          [(set f64:$rT, (PPCmffs))]>,
@@ -4503,7 +4503,7 @@ def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
 // All MTFSF variants may change the rounding mode so conservatively set it
 // as an implicit def for all of them.
 let Predicates = [HasFPU] in {
-let Defs = [RM] in {
+let Defs = [RM], hasSideEffects = 1 in {
 let isCodeGenOnly = 1,
     Pattern = [(int_ppc_mtfsfi timm:$BF, timm:$U)], W = 0 in
 def MTFSFIb : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U),
