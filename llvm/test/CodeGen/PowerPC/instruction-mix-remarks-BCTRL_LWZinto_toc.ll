@@ -6,8 +6,7 @@
 ; CHECK:  - String:          "\n"
 ; CHECK:  - String:          "bctrl\n\tld 2, "
 ; CHECK:  - String:          ': '
-; CHECK:  - INST_bctrl
-; CHECK:	ld 2,: '1'
+; CHECK:  - INST_bctrl:      '1'
 ; CHECK:  - String:          "\n"
 
 
