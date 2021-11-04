@@ -51,9 +51,6 @@ bool inRange(const MCExpr *Expr, int64_t MinValue, int64_t MaxValue) {
   return false;
 }
 
-enum RegisterKind { GR, GR64, XR, CR, FCR };
-enum class RegisterGroup { GR, XR, CR, FCR };
-
 // Instances of this class represented a parsed machine instruction
 class M88kOperand : public MCParsedAsmOperand {
   enum OperandKind {
@@ -74,7 +71,6 @@ class M88kOperand : public MCParsedAsmOperand {
   };
 
   struct RegOp {
-    RegisterKind Kind;
     unsigned RegNo;
   };
 
@@ -105,10 +101,6 @@ public:
   SMLoc getEndLoc() const override { return EndLoc; }
 
   bool isReg() const override { return Kind == OpKind_Reg; }
-
-  bool isReg(RegisterKind RegKind) const {
-    return Kind == OpKind_Reg && Reg.Kind == RegKind;
-  }
 
   unsigned getReg() const override {
     assert(isReg() && "Invalid type access!");
@@ -142,10 +134,9 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<M88kOperand> createReg(RegisterKind Kind, unsigned Num,
-                                                SMLoc StartLoc, SMLoc EndLoc) {
+  static std::unique_ptr<M88kOperand> createReg(unsigned Num, SMLoc StartLoc,
+                                                SMLoc EndLoc) {
     auto Op = std::make_unique<M88kOperand>(OpKind_Reg, StartLoc, EndLoc);
-    Op->Reg.Kind = Kind;
     Op->Reg.RegNo = Num;
     return Op;
   }
@@ -164,41 +155,10 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
-  void addGPROperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
-  void addGPR64Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
-  void addXROperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
-  void addCROperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
-  void addFCROperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    Inst.addOperand(MCOperand::createReg(getReg()));
-  }
-
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands");
     addExpr(Inst, getImm());
   }
-
-  bool isGPR() const { return isReg(GR); }
-  bool isGPR64() const { return isReg(GR64); }
-  bool isXR() const { return isReg(XR); }
-  bool isCR() const { return isReg(CR); }
-  bool isFCR() const { return isReg(FCR); }
 
   bool isU5Imm() const { return isImm(0, 31); }
   // TODO
@@ -243,18 +203,13 @@ class M88kAsmParser : public MCTargetAsmParser {
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
   OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
+  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+                                      unsigned Kind) override;
 
-  bool parseRegister(unsigned &RegNo, RegisterGroup &RegGrp, SMLoc &StartLoc,
-                     SMLoc &EndLoc, bool RestoreOnFailure);
-  OperandMatchResultTy parseRegister(OperandVector &Operands,
-                                     RegisterKind RegKind);
+  bool parseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+                     bool RestoreOnFailure);
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
-  OperandMatchResultTy parseGPR(OperandVector &Operands);
-  OperandMatchResultTy parseGPR64(OperandVector &Operands);
-  OperandMatchResultTy parseXR(OperandVector &Operands);
-  OperandMatchResultTy parseCR(OperandVector &Operands);
-  OperandMatchResultTy parseFCR(OperandVector &Operands);
   OperandMatchResultTy parseImmWO(OperandVector &Operands);
   OperandMatchResultTy parsePCRel16(OperandVector &Operands) {
     // return parsePCRel(Operands, -(1LL << 16), (1LL << 16) - 1, false);
@@ -293,6 +248,53 @@ private:
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "M88kGenAsmMatcher.inc"
+
+unsigned M88kAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
+                                                   unsigned Kind) {
+  if (Kind == MCK_GPR64RC && AsmOp.isReg()) {
+    switch (AsmOp.getReg()) {
+    case M88k::R0:
+    case M88k::R2:
+    case M88k::R4:
+    case M88k::R6:
+    case M88k::R8:
+    case M88k::R10:
+    case M88k::R12:
+    case M88k::R14:
+    case M88k::R16:
+    case M88k::R18:
+    case M88k::R20:
+    case M88k::R22:
+    case M88k::R24:
+    case M88k::R26:
+    case M88k::R28:
+    case M88k::R30:
+      return Match_Success;
+    case M88k::R1:
+    case M88k::R3:
+    case M88k::R5:
+    case M88k::R7:
+    case M88k::R9:
+    case M88k::R11:
+    case M88k::R13:
+    case M88k::R15:
+    case M88k::R17:
+    case M88k::R19:
+    case M88k::R21:
+    case M88k::R23:
+    case M88k::R25:
+    case M88k::R27:
+    case M88k::R29:
+    case M88k::R31:
+      // TODO Add option to flag odd registers.
+      return Match_Success;
+    default:
+      return Match_InvalidOperand;
+    }
+  }
+
+  return Match_InvalidOperand;
+}
 
 bool M88kAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
@@ -353,11 +355,10 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   // Check if it is a register.
   if (Lexer.is(AsmToken::Percent)) {
     unsigned RegNo;
-    RegisterGroup RegGrp;
     SMLoc StartLoc, EndLoc;
-    if (parseRegister(RegNo, RegGrp, StartLoc, EndLoc, false))
+    if (parseRegister(RegNo, StartLoc, EndLoc, false))
       return true;
-    Operands.push_back(M88kOperand::createReg(GR, RegNo, StartLoc, EndLoc));
+    Operands.push_back(M88kOperand::createReg(RegNo, StartLoc, EndLoc));
     return false;
   }
 
@@ -371,29 +372,8 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
     return false;
   }
-  llvm::dbgs() << "parseOperand failed (" << Mnemonic << ")\n";
   // Failure
   return true;
-}
-
-OperandMatchResultTy M88kAsmParser::parseGPR(OperandVector &Operands) {
-  return parseRegister(Operands, GR);
-}
-
-OperandMatchResultTy M88kAsmParser::parseGPR64(OperandVector &Operands) {
-  return parseRegister(Operands, GR64);
-}
-
-OperandMatchResultTy M88kAsmParser::parseXR(OperandVector &Operands) {
-  return parseRegister(Operands, XR);
-}
-
-OperandMatchResultTy M88kAsmParser::parseCR(OperandVector &Operands) {
-  return parseRegister(Operands, CR);
-}
-
-OperandMatchResultTy M88kAsmParser::parseFCR(OperandVector &Operands) {
-  return parseRegister(Operands, FCR);
 }
 
 OperandMatchResultTy M88kAsmParser::parseImmWO(OperandVector &Operands) {
@@ -431,52 +411,15 @@ OperandMatchResultTy M88kAsmParser::parseImmWO(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-OperandMatchResultTy M88kAsmParser::parseRegister(OperandVector &Operands,
-                                                  RegisterKind RegKind) {
-  unsigned RegNo;
-  RegisterGroup RegGrp;
-  SMLoc StartLoc, EndLoc;
-  if (parseRegister(RegNo, RegGrp, StartLoc, EndLoc, false))
-      return MatchOperand_ParseFail;
-
-  RegisterGroup ExpectedRegGrp;
-  switch (RegKind) {
-  case GR:
-  case GR64:
-    ExpectedRegGrp = RegisterGroup::GR;
-    break;
-  case XR:
-    ExpectedRegGrp = RegisterGroup::XR;
-    break;
-  case CR:
-    ExpectedRegGrp = RegisterGroup::CR;
-    break;
-  case FCR:
-    ExpectedRegGrp = RegisterGroup::FCR;
-    break;
-  default:
-    llvm_unreachable("unexpected register kind");
-  }
-
-  if (ExpectedRegGrp != RegGrp) {
-    Error(StartLoc, "invalid operand for instruction");
-    return MatchOperand_ParseFail;
-  }
-
-  Operands.push_back(M88kOperand::createReg(RegKind, RegNo, StartLoc, EndLoc));
-  return MatchOperand_Success;
-}
-
 // Parses register of form %(r|x|cr|fcr)<No>.
-bool M88kAsmParser::parseRegister(unsigned &RegNo, RegisterGroup &RegGrp,
-                                  SMLoc &StartLoc, SMLoc &EndLoc,
-                                  bool RestoreOnFailure) {
+bool M88kAsmParser::parseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                  SMLoc &EndLoc, bool RestoreOnFailure) {
   StartLoc = Parser.getTok().getLoc();
 
   // Eat the '%' prefix.
   if (Parser.getTok().isNot(AsmToken::Percent))
     return true;
-    //return Error(Parser.getTok().getLoc(), "register expected");
+  // return Error(Parser.getTok().getLoc(), "register expected");
   const AsmToken &PercentTok = Parser.getTok();
   Parser.Lex();
 
@@ -488,24 +431,6 @@ bool M88kAsmParser::parseRegister(unsigned &RegNo, RegisterGroup &RegGrp,
     return Error(StartLoc, "invalid register");
   }
 
-  // Categorize register.
-  switch (Parser.getTok().getString()[0]) {
-  case 'r':
-    RegGrp = RegisterGroup::GR;
-    break;
-  case 'x':
-    RegGrp = RegisterGroup::XR;
-    break;
-  case 'f':
-    RegGrp = RegisterGroup::FCR;
-    break;
-  case 'c':
-    RegGrp = RegisterGroup::CR;
-    break;
-  default:
-    llvm_unreachable("unexpected register name");
-  }
-
   Parser.Lex(); // Eat identifier token
   EndLoc = Parser.getTok().getLoc();
   return false;
@@ -513,16 +438,14 @@ bool M88kAsmParser::parseRegister(unsigned &RegNo, RegisterGroup &RegGrp,
 
 bool M88kAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
-  RegisterGroup RegGrp;
-  return parseRegister(RegNo, RegGrp, StartLoc, EndLoc,
+  return parseRegister(RegNo, StartLoc, EndLoc,
                        /*RestoreOnFailure=*/false);
 }
 
 OperandMatchResultTy M88kAsmParser::tryParseRegister(unsigned &RegNo,
                                                      SMLoc &StartLoc,
                                                      SMLoc &EndLoc) {
-  RegisterGroup RegGrp;
-  bool Result = parseRegister(RegNo, RegGrp, StartLoc, EndLoc,
+  bool Result = parseRegister(RegNo, StartLoc, EndLoc,
                               /*RestoreOnFailure=*/true);
   bool PendingErrors = getParser().hasPendingError();
   getParser().clearPendingErrors();

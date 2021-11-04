@@ -23,19 +23,14 @@ class M88kRegWithSubregs<string n, list<Register> subregs>
   let Namespace = "M88k";
 }
 
-// Multiclass to define RegisterOperand, RegisterClass and AsmOperand together.
+// Multiclass to define RegisterClass and RegisterOperand together.
 multiclass M88kRegisterClass<list<ValueType> types, int size, int alignment,
                              dag regList, bit allocatable = 1> {
-  def AsmOperand : AsmOperandClass {
-    let Name = NAME;
-    let ParserMethod = "parse"#NAME#;
-  }
   let isAllocatable = allocatable in
     def RC : RegisterClass<"M88k", types, alignment, regList> {
       let Size = size;
     }
   def "" : RegisterOperand<!cast<RegisterClass>(NAME#"RC")> {
-    let ParserMatchClass = !cast<AsmOperandClass>(NAME#"AsmOperand");
     let DecoderMethod = "decode"#NAME#"RegisterClass";
   }
 }
@@ -76,8 +71,6 @@ foreach I = 0-31 in {
 
 defm XR : M88kRegisterClass<[f32, f64, f80], 128, 32,
                             (add (sequence "X%u", 0, 31))>;
-
-//def XROpnd : RegisterOperand<XR>;
 
 // Control registers.
 foreach I = 0-63 in {
