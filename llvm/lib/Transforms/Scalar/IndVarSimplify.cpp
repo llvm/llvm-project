@@ -1439,8 +1439,12 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     // For the range reasoning, avoid computing SCEVs in the loop to avoid
     // poisoning cache with sub-optimal results.  For the must-execute case,
     // this is a neccessary precondition for correctness.
-    if (!L->isLoopInvariant(RHS))
-      continue;
+    if (!L->isLoopInvariant(RHS)) {
+      if (!L->isLoopInvariant(LHS))
+        continue;
+      // Same logic applies for the inverse case
+      std::swap(LHS, RHS);
+    }
 
     // Match (icmp signed-cond zext, RHS)
     Value *LHSOp = nullptr;
@@ -1475,11 +1479,19 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     if (!ICmp || !ICmp->hasOneUse() || !ICmp->isUnsigned())
       continue;
 
+    bool Swapped = false;
     auto *LHS = ICmp->getOperand(0);
     auto *RHS = ICmp->getOperand(1);
-    if (L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS))
+    if (L->isLoopInvariant(LHS) == L->isLoopInvariant(RHS))
       // Nothing to rotate
       continue;
+    if (L->isLoopInvariant(LHS)) {
+      // Same logic applies for the inverse case until we actually pick
+      // which operand of the compare to update.
+      Swapped = true;
+      std::swap(LHS, RHS);
+    }
+    assert(!L->isLoopInvariant(LHS) && L->isLoopInvariant(RHS));
 
     if (!LHS->hasOneUse())
       // Can't rotate without increasing instruction count
@@ -1501,8 +1513,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       auto *NewRHS =
         CastInst::Create(Instruction::Trunc, RHS, LHSOp->getType(), "",
                          L->getLoopPreheader()->getTerminator());
-      ICmp->setOperand(0, LHSOp);
-      ICmp->setOperand(1, NewRHS);
+      ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
+      ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
       if (LHS->use_empty())
         DeadInsts.push_back(LHS);
     };
