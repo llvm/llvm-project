@@ -93,3 +93,60 @@ entry:
 }
 declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64)
 declare <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1>, <vscale x 1 x i1>, i64)
+
+; FIXME: There shouldn't be a vsetvli before the vmor.
+define void @test6(i32* nocapture readonly %A, i32* nocapture %B, i64 %n) {
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a3, a2, e32, m1, ta, mu
+; CHECK-NEXT:    beqz a3, .LBB5_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    mv a4, zero
+; CHECK-NEXT:  .LBB5_2: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    slli a6, a4, 2
+; CHECK-NEXT:    add a5, a0, a6
+; CHECK-NEXT:    vle32.v v8, (a5)
+; CHECK-NEXT:    vmsle.vi v9, v8, -3
+; CHECK-NEXT:    vmsgt.vi v10, v8, 2
+; CHECK-NEXT:    vsetvli zero, a3, e8, mf4, ta, mu
+; CHECK-NEXT:    vmor.mm v0, v9, v10
+; CHECK-NEXT:    add a5, a1, a6
+; CHECK-NEXT:    vse32.v v8, (a5), v0.t
+; CHECK-NEXT:    add a4, a4, a3
+; CHECK-NEXT:    vsetvli a3, a2, e32, m1, ta, mu
+; CHECK-NEXT:    bnez a3, .LBB5_2
+; CHECK-NEXT:  .LBB5_3: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 2, i64 0)
+  %cmp.not11 = icmp eq i64 %0, 0
+  br i1 %cmp.not11, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %1 = phi i64 [ %8, %for.body ], [ %0, %entry ]
+  %i.012 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %add.ptr = getelementptr inbounds i32, i32* %A, i64 %i.012
+  %2 = bitcast i32* %add.ptr to <vscale x 2 x i32>*
+  %3 = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>* %2, i64 %1)
+  %4 = tail call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32> %3, i32 -2, i64 %1)
+  %5 = tail call <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32> %3, i32 2, i64 %1)
+  %6 = tail call <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1> %4, <vscale x 2 x i1> %5, i64 %1)
+  %add.ptr1 = getelementptr inbounds i32, i32* %B, i64 %i.012
+  %7 = bitcast i32* %add.ptr1 to <vscale x 2 x i32>*
+  tail call void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32> %3, <vscale x 2 x i32>* %7, <vscale x 2 x i1> %6, i64 %1)
+  %add = add i64 %1, %i.012
+  %8 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 2, i64 0)
+  %cmp.not = icmp eq i64 %8, 0
+  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+}
+
+declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
+declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>* nocapture, i64)
+declare <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
+declare <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
+declare <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1>, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>* nocapture, <vscale x 2 x i1>, i64)
