@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
 // RUN:   -emit-llvm %s -o - -disable-llvm-passes -Wno-coroutine -Wno-unused | FileCheck %s
 
 namespace std {
-namespace experimental {
 template <typename... T>
 struct coroutine_traits;
 
@@ -20,29 +19,28 @@ struct coroutine_handle : coroutine_handle<> {
   static coroutine_handle from_address(void *) noexcept;
 };
 
-}
-}
+} // namespace std
 
 struct init_susp {
   bool await_ready();
-  void await_suspend(std::experimental::coroutine_handle<>);
+  void await_suspend(std::coroutine_handle<>);
   void await_resume();
 };
 struct final_susp {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
 struct suspend_always {
   int stuff;
   bool await_ready();
-  void await_suspend(std::experimental::coroutine_handle<>);
+  void await_suspend(std::coroutine_handle<>);
   void await_resume();
 };
 
-template<>
-struct std::experimental::coroutine_traits<void> {
+template <>
+struct std::coroutine_traits<void> {
   struct promise_type {
     void get_return_object();
     init_susp initial_suspend();
@@ -57,7 +55,7 @@ extern "C" void f0() {
 
   // See if initial_suspend was issued:
   // ----------------------------------
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJvEE12promise_type15initial_suspendEv(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type15initial_suspendEv(
   // CHECK-NEXT: call zeroext i1 @_ZN9init_susp11await_readyEv(%struct.init_susp*
   // CHECK: %[[INITSP_ID:.+]] = call token @llvm.coro.save(
   // CHECK: call i8 @llvm.coro.suspend(token %[[INITSP_ID]], i1 false)
@@ -75,10 +73,10 @@ extern "C" void f0() {
   // ---------------------------
   // Build the coroutine handle and pass it to await_suspend
   // ---------------------------
-  // CHECK: call i8* @_ZNSt12experimental16coroutine_handleINS_16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(i8* %[[FRAME]])
+  // CHECK: call i8* @_ZNSt16coroutine_handleINSt16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(i8* %[[FRAME]])
   //   ... many lines of code to coerce coroutine_handle into an i8* scalar
   // CHECK: %[[CH:.+]] = load i8*, i8** %{{.+}}
-  // CHECK: call void @_ZN14suspend_always13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.suspend_always* {{[^,]*}} %[[AWAITABLE]], i8* %[[CH]])
+  // CHECK: call void @_ZN14suspend_always13await_suspendESt16coroutine_handleIvE(%struct.suspend_always* {{[^,]*}} %[[AWAITABLE]], i8* %[[CH]])
   // -------------------------
   // Generate a suspend point:
   // -------------------------
@@ -99,7 +97,7 @@ extern "C" void f0() {
 
   // See if final_suspend was issued:
   // ----------------------------------
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJvEE12promise_type13final_suspendEv(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type13final_suspendEv(
   // CHECK-NEXT: call zeroext i1 @_ZN10final_susp11await_readyEv(%struct.final_susp*
   // CHECK: %[[FINALSP_ID:.+]] = call token @llvm.coro.save(
   // CHECK: call i8 @llvm.coro.suspend(token %[[FINALSP_ID]], i1 true)
@@ -109,13 +107,12 @@ struct suspend_maybe {
   float stuff;
   ~suspend_maybe();
   bool await_ready();
-  bool await_suspend(std::experimental::coroutine_handle<>);
+  bool await_suspend(std::coroutine_handle<>);
   void await_resume();
 };
 
-
-template<>
-struct std::experimental::coroutine_traits<void,int> {
+template <>
+struct std::coroutine_traits<void, int> {
   struct promise_type {
     void get_return_object();
     init_susp initial_suspend();
@@ -127,10 +124,10 @@ struct std::experimental::coroutine_traits<void,int> {
 
 // CHECK-LABEL: f1(
 extern "C" void f1(int) {
-  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::experimental::coroutine_traits<void, int>::promise_type"
+  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void, int>::promise_type"
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   co_yield 42;
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJviEE12promise_type11yield_valueEi(%struct.suspend_maybe* sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], %"struct.std::experimental::coroutine_traits<void, int>::promise_type"* {{[^,]*}} %[[PROMISE]], i32 42)
+  // CHECK: call void @_ZNSt16coroutine_traitsIJviEE12promise_type11yield_valueEi(%struct.suspend_maybe* sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], %"struct.std::coroutine_traits<void, int>::promise_type"* {{[^,]*}} %[[PROMISE]], i32 42)
 
   // See if we need to suspend:
   // --------------------------
@@ -144,10 +141,10 @@ extern "C" void f1(int) {
   // ---------------------------
   // Build the coroutine handle and pass it to await_suspend
   // ---------------------------
-  // CHECK: call i8* @_ZNSt12experimental16coroutine_handleINS_16coroutine_traitsIJviEE12promise_typeEE12from_addressEPv(i8* %[[FRAME]])
+  // CHECK: call i8* @_ZNSt16coroutine_handleINSt16coroutine_traitsIJviEE12promise_typeEE12from_addressEPv(i8* %[[FRAME]])
   //   ... many lines of code to coerce coroutine_handle into an i8* scalar
   // CHECK: %[[CH:.+]] = load i8*, i8** %{{.+}}
-  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.suspend_maybe* {{[^,]*}} %[[AWAITABLE]], i8* %[[CH]])
+  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendESt16coroutine_handleIvE(%struct.suspend_maybe* {{[^,]*}} %[[AWAITABLE]], i8* %[[CH]])
   // -------------------------------------------
   // See if await_suspend decided not to suspend
   // -------------------------------------------
@@ -264,7 +261,7 @@ extern "C" void EndlessLoop() {
 
   // See if initial_suspend was issued:
   // ----------------------------------
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJvEE12promise_type15initial_suspendEv(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type15initial_suspendEv(
   // CHECK-NEXT: call zeroext i1 @_ZN9init_susp11await_readyEv(%struct.init_susp*
 
   for (;;)
@@ -272,7 +269,7 @@ extern "C" void EndlessLoop() {
 
   // Verify that final_suspend was NOT issued:
   // ----------------------------------
-  // CHECK-NOT: call void @_ZNSt12experimental16coroutine_traitsIJvEE12promise_type13final_suspendEv(
+  // CHECK-NOT: call void @_ZNSt16coroutine_traitsIJvEE12promise_type13final_suspendEv(
   // CHECK-NOT: call zeroext i1 @_ZN10final_susp11await_readyEv(%struct.final_susp*
 }
 
@@ -287,13 +284,12 @@ struct RefTag { };
 
 struct AwaitResumeReturnsLValue {
   bool await_ready();
-  void await_suspend(std::experimental::coroutine_handle<>);
+  void await_suspend(std::coroutine_handle<>);
   RefTag& await_resume();
 };
 
-
-template<>
-struct std::experimental::coroutine_traits<void,double> {
+template <>
+struct std::coroutine_traits<void, double> {
   struct promise_type {
     void get_return_object();
     init_susp initial_suspend();
@@ -338,7 +334,7 @@ void AwaitReturnsLValue(double) {
 
 struct TailCallAwait {
   bool await_ready();
-  std::experimental::coroutine_handle<> await_suspend(std::experimental::coroutine_handle<>);
+  std::coroutine_handle<> await_suspend(std::coroutine_handle<>);
   void await_resume();
 };
 
@@ -346,9 +342,9 @@ struct TailCallAwait {
 extern "C" void TestTailcall() {
   co_await TailCallAwait{};
 
-  // CHECK: %[[RESULT:.+]] = call i8* @_ZN13TailCallAwait13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.TailCallAwait*
-  // CHECK: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::experimental::coroutine_handle", %"struct.std::experimental::coroutine_handle"* %[[TMP:.+]], i32 0, i32 0
+  // CHECK: %[[RESULT:.+]] = call i8* @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(%struct.TailCallAwait*
+  // CHECK: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::coroutine_handle", %"struct.std::coroutine_handle"* %[[TMP:.+]], i32 0, i32 0
   // CHECK: store i8* %[[RESULT]], i8** %[[COERCE]]
-  // CHECK: %[[ADDR:.+]] = call i8* @_ZNSt12experimental16coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutine_handle"* {{[^,]*}} %[[TMP]])
+  // CHECK: %[[ADDR:.+]] = call i8* @_ZNSt16coroutine_handleIvE7addressEv(%"struct.std::coroutine_handle"* {{[^,]*}} %[[TMP]])
   // CHECK: call void @llvm.coro.resume(i8* %[[ADDR]])
 }

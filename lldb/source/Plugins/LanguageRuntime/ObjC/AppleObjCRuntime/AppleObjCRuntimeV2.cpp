@@ -976,17 +976,16 @@ protected:
       lldb::addr_t arg_addr = OptionArgParser::ToAddress(
           &exe_ctx, arg_str, LLDB_INVALID_ADDRESS, &error);
       if (arg_addr == 0 || arg_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
-        result.AppendErrorWithFormat(
-            "could not convert '%s' to a valid address\n", arg_str);
+        result.AppendErrorWithFormatv(
+            "could not convert '{0}' to a valid address\n", arg_str);
         result.SetStatus(lldb::eReturnStatusFailed);
         return false;
       }
 
       auto descriptor_sp = tagged_ptr_vendor->GetClassDescriptor(arg_addr);
       if (!descriptor_sp) {
-        result.AppendErrorWithFormat(
-            "could not get class descriptor for 0x%" PRIx64 "\n",
-            (uint64_t)arg_addr);
+        result.AppendErrorWithFormatv(
+            "could not get class descriptor for {0:x}\n", arg_addr);
         result.SetStatus(lldb::eReturnStatusFailed);
         return false;
       }
@@ -996,14 +995,16 @@ protected:
       uint64_t payload = 0;
       if (descriptor_sp->GetTaggedPointerInfo(&info_bits, &value_bits,
                                               &payload)) {
-        result.GetOutputStream().Printf(
-            "0x%" PRIx64 " is tagged.\n\tpayload = 0x%" PRIx64
-            "\n\tvalue = 0x%" PRIx64 "\n\tinfo bits = 0x%" PRIx64
-            "\n\tclass = %s\n",
-            (uint64_t)arg_addr, payload, value_bits, info_bits,
+        result.GetOutputStream().Format(
+            "{0:x} is tagged\n"
+            "\tpayload = {1:x}\n"
+            "\tvalue = {2:x}\n"
+            "\tinfo bits = {3:x}\n"
+            "\tclass = {4}\n",
+            arg_addr, payload, value_bits, info_bits,
             descriptor_sp->GetClassName().AsCString("<unknown>"));
       } else {
-        result.GetOutputStream().Printf("0x%" PRIx64 " is not tagged.\n",
+        result.GetOutputStream().Format("{0:x16} is not tagged\n",
                                         (uint64_t)arg_addr);
       }
     }

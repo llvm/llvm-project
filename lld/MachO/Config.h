@@ -148,6 +148,7 @@ struct Configuration {
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
+  bool errorForArchMismatch = false;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =

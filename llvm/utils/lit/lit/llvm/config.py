@@ -38,7 +38,7 @@ class LLVMConfig(object):
             # Many tools behave strangely if these environment variables aren't
             # set.
             self.with_system_environment(
-                ['SystemDrive', 'SystemRoot', 'TEMP', 'TMP'])
+                ['SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'PLATFORM'])
             self.use_lit_shell = True
 
             global lit_path_displayed

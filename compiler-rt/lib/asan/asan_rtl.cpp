@@ -557,7 +557,8 @@ void UnpoisonStack(uptr bottom, uptr top, const char *type) {
         "False positive error reports may follow\n"
         "For details see "
         "https://github.com/google/sanitizers/issues/189\n",
-        type, top, bottom, top - bottom, top - bottom);
+        type, (void *)top, (void *)bottom, (void *)(top - bottom),
+        top - bottom);
     return;
   }
   PoisonShadow(bottom, RoundUpTo(top - bottom, SHADOW_GRANULARITY), 0);

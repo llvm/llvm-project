@@ -2660,6 +2660,16 @@ void Record::checkRecordAssertions() {
   }
 }
 
+// Report a warning if the record has unused template arguments.
+void Record::checkUnusedTemplateArgs() {
+  for (const Init *TA : getTemplateArgs()) {
+    const RecordVal *Arg = getValue(TA);
+    if (!Arg->isUsed())
+      PrintWarning(Arg->getLoc(),
+                   "unused template argument: " + Twine(Arg->getName()));
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 #endif

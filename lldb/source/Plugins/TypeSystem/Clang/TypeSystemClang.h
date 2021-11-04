@@ -343,11 +343,10 @@ public:
       clang::FunctionDecl *func_decl, clang::FunctionTemplateDecl *Template,
       const TemplateParameterInfos &infos);
 
-  clang::ClassTemplateDecl *
-  CreateClassTemplateDecl(clang::DeclContext *decl_ctx,
-                          OptionalClangModuleID owning_module,
-                          lldb::AccessType access_type, const char *class_name,
-                          int kind, const TemplateParameterInfos &infos);
+  clang::ClassTemplateDecl *CreateClassTemplateDecl(
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      lldb::AccessType access_type, llvm::StringRef class_name, int kind,
+      const TemplateParameterInfos &infos);
 
   clang::TemplateTemplateParmDecl *
   CreateTemplateTemplateParmDecl(const char *template_name);
@@ -417,7 +416,7 @@ public:
                                size_t element_count, bool is_vector);
 
   // Enumeration Types
-  CompilerType CreateEnumerationType(const char *name,
+  CompilerType CreateEnumerationType(llvm::StringRef name,
                                      clang::DeclContext *decl_ctx,
                                      OptionalClangModuleID owning_module,
                                      const Declaration &decl,

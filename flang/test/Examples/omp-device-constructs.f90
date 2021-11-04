@@ -1,5 +1,3 @@
-! Check flang-omp-report --femit-yaml for omp-device-constructs.f90
-
 ! REQUIRES: plugins, examples, shell
 
 !RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
@@ -55,25 +53,25 @@ end program main
 
 ! CHECK: ---
 ! CHECK-NEXT: - file:            '{{[^"]*}}omp-device-constructs.f90'
-! CHECK-NEXT:   line:            18
+! CHECK-NEXT:   line:            16
 ! CHECK-NEXT:   construct:       target
 ! CHECK-NEXT:   clauses:
 ! CHECK-NEXT:     - clause:          map
 ! CHECK-NEXT:       details:         arraya
 ! CHECK-NEXT: - file:            '{{[^"]*}}omp-device-constructs.f90'
-! CHECK-NEXT:   line:            24
+! CHECK-NEXT:   line:            22
 ! CHECK-NEXT:   construct:       target
 ! CHECK-NEXT:   clauses:
 ! CHECK-NEXT:     - clause:          device
 ! CHECK-NEXT:       details:         '0'
 ! CHECK-NEXT: - file:            '{{[^"]*}}omp-device-constructs.f90'
-! CHECK-NEXT:   line:            30
+! CHECK-NEXT:   line:            28
 ! CHECK-NEXT:   construct:       target
 ! CHECK-NEXT:   clauses:
 ! CHECK-NEXT:     - clause:          defaultmap
 ! CHECK-NEXT:       details:         'tofrom:scalar'
 ! CHECK-NEXT: - file:            '{{[^"]*}}omp-device-constructs.f90'
-! CHECK-NEXT:   line:            36
+! CHECK-NEXT:   line:            34
 ! CHECK-NEXT:   construct:       teams
 ! CHECK-NEXT:   clauses:
 ! CHECK-NEXT:     - clause:          default
@@ -87,13 +85,13 @@ end program main
 ! CHECK-NEXT:     - clause:          thread_limit
 ! CHECK-NEXT:       details:         '10'
 ! CHECK-NEXT: - file:            '{{[^"]*}}omp-device-constructs.f90'
-! CHECK-NEXT:   line:            42
+! CHECK-NEXT:   line:            40
 ! CHECK-NEXT:   construct:       target
 ! CHECK-NEXT:   clauses:
 ! CHECK-NEXT:     - clause:          map
 ! CHECK-NEXT:       details:         'tofrom:a'
 ! CHECK-NEXT: - file:            '{{[^"]*}}omp-device-constructs.f90'
-! CHECK-NEXT:   line:            48
+! CHECK-NEXT:   line:            46
 ! CHECK-NEXT:   construct:       target data
 ! CHECK-NEXT:   clauses:
 ! CHECK-NEXT:     - clause:          device

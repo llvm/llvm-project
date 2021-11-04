@@ -90,6 +90,23 @@ define i8 @wrongimm(i16 %add) {
   ret i8 %x
 }
 
+; PR52397 Some of the lanes of the xor/ashr are unused, becoming poison.
+define <4 x i32> @vectorpoison(<6 x i32> %0) {
+; CHECK-LABEL: @vectorpoison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = ashr <6 x i32> [[TMP0:%.*]], <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[SHR:%.*]] = xor <6 x i32> [[NEG]], <i32 -1, i32 -1, i32 -1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[SHR]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+;
+entry:
+  %neg = xor <6 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %shr = ashr <6 x i32> %neg, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
+  %1 = shufflevector <6 x i32> %shr, <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 2>
+  ret <4 x i32> %1
+}
+
+
 ; One use
 
 define i16 @extrause(i16 %add) {

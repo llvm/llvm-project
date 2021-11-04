@@ -277,7 +277,10 @@ class MsvcBuilder(Builder):
     def __init__(self, toolchain_type, args):
         Builder.__init__(self, toolchain_type, args, '.obj')
 
-        self.msvc_arch_str = 'x86' if self.arch == '32' else 'x64'
+        if os.getenv('PLATFORM') == 'arm64':
+            self.msvc_arch_str = 'arm' if self.arch == '32' else 'arm64'
+        else:
+            self.msvc_arch_str = 'x86' if self.arch == '32' else 'x64'
 
         if toolchain_type == 'msvc':
             # Make sure we're using the appropriate toolchain for the desired

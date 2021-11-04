@@ -9802,6 +9802,8 @@ def err_ppc_builtin_only_on_arch : Error<
   "this builtin is only valid on POWER%0 or later CPUs">;
 def err_ppc_builtin_requires_vsx : Error<
   "this builtin requires VSX to be enabled">;
+def err_ppc_builtin_requires_abi : Error<
+  "this builtin requires ABI -mabi=%0">;
 def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
@@ -11001,19 +11003,25 @@ def err_coroutine_invalid_func_context : Error<
   "|a function with a deduced return type|a varargs function"
   "|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
-  "%0 type was not found; include <experimental/coroutine> before defining "
-  "a coroutine">;
+  "%0 type was not found; include <coroutine> before defining "
+  "a coroutine; include <experimental/coroutine> if your version "
+  "of libcxx is less than 14.0">;
+def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error <
+  "Found mixed use of std namespace and std::experimental namespace for "
+  "coroutine, which is disallowed. The coroutine components in "
+  "std::experimental namespace is deprecated. Please use coroutine components "
+  "under std namespace.">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;
 def err_malformed_std_nothrow : Error<
   "std::nothrow must be a valid variable declaration">;
 def err_malformed_std_coroutine_handle : Error<
-  "std::experimental::coroutine_handle must be a class template">;
+  "std::coroutine_handle isn't a class template">;
 def err_coroutine_handle_missing_member : Error<
-  "std::experimental::coroutine_handle missing a member named '%0'">;
+  "std::coroutine_handle must have a member named '%0'">;
 def err_malformed_std_coroutine_traits : Error<
-  "'std::experimental::coroutine_traits' must be a class template">;
+  "std::coroutine_traits isn't a class template">;
 def err_implied_std_coroutine_traits_promise_type_not_found : Error<
   "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<

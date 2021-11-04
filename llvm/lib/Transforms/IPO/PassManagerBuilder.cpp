@@ -1017,7 +1017,7 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
         createPGOIndirectCallPromotionLegacyPass(true, !PGOSampleUse.empty()));
 
     // Propage constant function arguments by specializing the functions.
-    if (EnableFunctionSpecialization)
+    if (EnableFunctionSpecialization && OptLevel > 2)
       PM.add(createFunctionSpecializationPass());
 
     // Propagate constants at call sites into the functions they call.  This

@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
-; RUN: llc -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
+; RUN: llc -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX10 %s
+; RUN: llc -amdgpu-load-store-vectorizer=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11 %s
 
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1) #1
@@ -37,8 +37,12 @@ define amdgpu_kernel void @v_permlane16_b32_vll(i32 addrspace(1)* %out, i32 %src
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_vvv:
-; GFX10PLUS-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], v0
-; GFX10PLUS-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], v1
+; GFX10-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], v0
+; GFX10-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], v1
+; GFX11-DAG: v_and_b32_e32 [[VSRC1:v[0-9]+]],
+; GFX11-DAG: v_bfe_u32 [[VSRC2:v[0-9]+]],
+; GFX11-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], [[VSRC1]]
+; GFX11-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], [[VSRC2]]
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], [[SRC2]]{{$}}
 define amdgpu_kernel void @v_permlane16_b32_vvv(i32 addrspace(1)* %out, i32 %src0) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -130,8 +134,12 @@ define amdgpu_kernel void @v_permlanex16_b32_vll(i32 addrspace(1)* %out, i32 %sr
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vvv:
-; GFX10PLUS-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], v0
-; GFX10PLUS-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], v1
+; GFX10-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], v0
+; GFX10-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], v1
+; GFX11-DAG: v_and_b32_e32 [[VSRC1:v[0-9]+]],
+; GFX11-DAG: v_bfe_u32 [[VSRC2:v[0-9]+]],
+; GFX11-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], [[VSRC1]]
+; GFX11-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], [[VSRC2]]
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], [[SRC2]]{{$}}
 define amdgpu_kernel void @v_permlanex16_b32_vvv(i32 addrspace(1)* %out, i32 %src0) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()

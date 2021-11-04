@@ -1,7 +1,7 @@
 // Verify that we synthesized the coroutine for a lambda inside of a function template.
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
 
-namespace std::experimental {
+namespace std {
 template <typename R, typename... T> struct coroutine_traits {
   using promise_type = typename R::promise_type;
 };
@@ -17,11 +17,11 @@ template <class Promise> struct coroutine_handle : coroutine_handle<void> {
   coroutine_handle() = default;
   static coroutine_handle from_address(void *) noexcept;
 };
-}
+} // namespace std
 
 struct suspend_always {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
