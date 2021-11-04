@@ -173,8 +173,19 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+// This cache mostly exists to store system libraries (and .tbds) as they're
+// loaded, rather than the input archives, which are already cached at a higher
+// level, and other files like the filelist that are only read once.
+// Theoretically this caching could be more efficient by hoisting it, but that
+// would require altering many callers to track the state.
+static DenseMap<CachedHashStringRef, MemoryBufferRef> resolvedReads;
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
+  CachedHashStringRef key(path);
+  auto entry = resolvedReads.find(key);
+  if (entry != resolvedReads.end())
+    return entry->second;
+
   ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
@@ -192,7 +203,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
       read32be(&hdr->magic) != FAT_MAGIC) {
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
-    return mbref;
+    return resolvedReads[key] = mbref;
   }
 
   // Object files and archive files may be fat files, which contain multiple
@@ -217,7 +228,8 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
       error(path + ": slice extends beyond end of file");
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
-    return MemoryBufferRef(StringRef(buf + offset, size), path.copy(bAlloc));
+    return resolvedReads[key] = MemoryBufferRef(StringRef(buf + offset, size),
+                                                path.copy(bAlloc));
   }
 
   error("unable to find matching architecture in " + path);
