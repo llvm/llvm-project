@@ -389,7 +389,7 @@ endif()
 
 function(add_memset memset_name)
   add_implementation(memset ${memset_name}
-    SRCS ${MEMSET_SRC}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/memset.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memset.h
     DEPENDS
       .memory_utils.memory_utils
@@ -401,7 +401,6 @@ function(add_memset memset_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(MEMSET_SRC ${LIBC_SOURCE_DIR}/src/string/memset.cpp)
   add_memset(memset_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memset(memset_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memset(memset_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -409,12 +408,10 @@ if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
-  set(MEMSET_SRC ${LIBC_SOURCE_DIR}/src/string/aarch64/memset.cpp)
   add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
                                       COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
   add_memset(memset                   COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
 else()
-  set(MEMSET_SRC ${LIBC_SOURCE_DIR}/src/string/memset.cpp)
   add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 endif()

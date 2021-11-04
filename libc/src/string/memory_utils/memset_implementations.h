@@ -1,4 +1,4 @@
-//===-- Memset utils --------------------------------------------*- C++ -*-===//
+//===-- Implementation of memset and bzero --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
 
 #include "src/__support/architectures.h"
 #include "src/string/memory_utils/elements.h"
@@ -48,13 +48,65 @@ namespace __llvm_libc {
 // advance. SetAlignedBlocks<64> may waste up to 63 Bytes, SetAlignedBlocks<32>
 // may waste up to 31 Bytes. Benchmarks showed that SetAlignedBlocks<64> was not
 // superior for sizes that mattered.
-inline static void GeneralPurposeMemset(char *dst, unsigned char value,
-                                        size_t count) {
+inline static void inline_memset(char *dst, unsigned char value, size_t count) {
 #if defined(LLVM_LIBC_ARCH_X86)
-  using namespace ::__llvm_libc::x86;
+  /////////////////////////////////////////////////////////////////////////////
+  // LLVM_LIBC_ARCH_X86
+  /////////////////////////////////////////////////////////////////////////////
+  using namespace __llvm_libc::x86;
+  if (count == 0)
+    return;
+  if (count == 1)
+    return SplatSet<_1>(dst, value);
+  if (count == 2)
+    return SplatSet<_2>(dst, value);
+  if (count == 3)
+    return SplatSet<_3>(dst, value);
+  if (count <= 8)
+    return SplatSet<HeadTail<_4>>(dst, value, count);
+  if (count <= 16)
+    return SplatSet<HeadTail<_8>>(dst, value, count);
+  if (count <= 32)
+    return SplatSet<HeadTail<_16>>(dst, value, count);
+  if (count <= 64)
+    return SplatSet<HeadTail<_32>>(dst, value, count);
+  if (count <= 128)
+    return SplatSet<HeadTail<_64>>(dst, value, count);
+  return SplatSet<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+#elif defined(LLVM_LIBC_ARCH_AARCH64)
+  /////////////////////////////////////////////////////////////////////////////
+  // LLVM_LIBC_ARCH_AARCH64
+  /////////////////////////////////////////////////////////////////////////////
+  using namespace __llvm_libc::aarch64_memset;
+  if (count == 0)
+    return;
+  if (count <= 3) {
+    SplatSet<_1>(dst, value);
+    if (count > 1)
+      SplatSet<Tail<_2>>(dst, value, count);
+    return;
+  }
+  if (count <= 8)
+    return SplatSet<HeadTail<_4>>(dst, value, count);
+  if (count <= 16)
+    return SplatSet<HeadTail<_8>>(dst, value, count);
+  if (count <= 32)
+    return SplatSet<HeadTail<_16>>(dst, value, count);
+  if (count <= 96) {
+    SplatSet<_32>(dst, value);
+    if (count <= 64)
+      return SplatSet<Tail<_32>>(dst, value, count);
+    SplatSet<Skip<32>::Then<_32>>(dst, value);
+    SplatSet<Tail<_32>>(dst, value, count);
+    return;
+  }
+  if (count < 448 || value != 0 || !AArch64ZVA(dst, count))
+    return SplatSet<Align<_16, Arg::_1>::Then<Loop<_64>>>(dst, value, count);
 #else
+  /////////////////////////////////////////////////////////////////////////////
+  // Default
+  /////////////////////////////////////////////////////////////////////////////
   using namespace ::__llvm_libc::scalar;
-#endif
 
   if (count == 0)
     return;
@@ -75,8 +127,9 @@ inline static void GeneralPurposeMemset(char *dst, unsigned char value,
   if (count <= 128)
     return SplatSet<HeadTail<_64>>(dst, value, count);
   return SplatSet<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+#endif
 }
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
