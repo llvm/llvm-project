@@ -1361,11 +1361,11 @@ let Predicates = [HasStdExtV] in {
 let RVVConstraint = NoConstraint in {
 defm VMAND_M : VMALU_MV_Mask<"vmand", 0b011001, "m">;
 defm VMNAND_M : VMALU_MV_Mask<"vmnand", 0b011101, "m">;
-defm VMANDNOT_M : VMALU_MV_Mask<"vmandnot", 0b011000, "m">;
+defm VMANDN_M : VMALU_MV_Mask<"vmandn", 0b011000, "m">;
 defm VMXOR_M : VMALU_MV_Mask<"vmxor", 0b011011, "m">;
 defm VMOR_M : VMALU_MV_Mask<"vmor", 0b011010, "m">;
 defm VMNOR_M : VMALU_MV_Mask<"vmnor", 0b011110, "m">;
-defm VMORNOT_M : VMALU_MV_Mask<"vmornot", 0b011100, "m">;
+defm VMORN_M : VMALU_MV_Mask<"vmorn", 0b011100, "m">;
 defm VMXNOR_M : VMALU_MV_Mask<"vmxnor", 0b011111, "m">;
 }
 
@@ -1378,13 +1378,18 @@ def : InstAlias<"vmset.m $vd",
 def : InstAlias<"vmnot.m $vd, $vs",
                 (VMNAND_MM VR:$vd, VR:$vs, VR:$vs)>;
 
+def : InstAlias<"vmandnot.mm $vd, $vs2, $vs1",
+                (VMANDN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
+def : InstAlias<"vmornot.mm $vd, $vs2, $vs1",
+                (VMORN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     RVVConstraint = NoConstraint  in {
 
-// Vector mask population count vpopc
-def VPOPC_M : RVInstV<0b010000, 0b10000, OPMVV, (outs GPR:$vd),
+// Vector mask population count vcpop
+def VCPOP_M : RVInstV<0b010000, 0b10000, OPMVV, (outs GPR:$vd),
                       (ins VR:$vs2, VMaskOp:$vm),
-                      "vpopc.m", "$vd, $vs2$vm">,
+                      "vcpop.m", "$vd, $vs2$vm">,
               Sched<[WriteVMPopV, ReadVMPopV, ReadVMask]>;
 
 // vfirst find-first-set mask bit
@@ -1394,6 +1399,9 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
               Sched<[WriteVMFFSV, ReadVMFFSV, ReadVMask]>;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
+def : InstAlias<"vpopc.m $vd, $vs2$vm",
+                (VCPOP_M GPR:$vd, VR:$vs2, VMaskOp:$vm), 0>;
 
 let Constraints = "@earlyclobber $vd", RVVConstraint = Iota in {
 

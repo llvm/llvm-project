@@ -4007,11 +4007,11 @@ defm PseudoVFWREDOSUM  : VPseudoReductionV_VS;
 
 defm PseudoVMAND: VPseudoBinaryM_MM;
 defm PseudoVMNAND: VPseudoBinaryM_MM;
-defm PseudoVMANDNOT: VPseudoBinaryM_MM;
+defm PseudoVMANDN: VPseudoBinaryM_MM;
 defm PseudoVMXOR: VPseudoBinaryM_MM;
 defm PseudoVMOR: VPseudoBinaryM_MM;
 defm PseudoVMNOR: VPseudoBinaryM_MM;
-defm PseudoVMORNOT: VPseudoBinaryM_MM;
+defm PseudoVMORN: VPseudoBinaryM_MM;
 defm PseudoVMXNOR: VPseudoBinaryM_MM;
 
 // Pseudo instructions
@@ -4019,10 +4019,10 @@ defm PseudoVMCLR : VPseudoNullaryPseudoM<"VMXOR">;
 defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 
 //===----------------------------------------------------------------------===//
-// 16.2. Vector mask population count vpopc
+// 16.2. Vector mask population count vcpop
 //===----------------------------------------------------------------------===//
 
-defm PseudoVPOPC: VPseudoUnaryS_M;
+defm PseudoVCPOP: VPseudoUnaryS_M;
 
 //===----------------------------------------------------------------------===//
 // 16.3. vfirst find-first-set mask bit
@@ -4676,11 +4676,11 @@ let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 defm : VPatBinaryM_MM<"int_riscv_vmand", "PseudoVMAND">;
 defm : VPatBinaryM_MM<"int_riscv_vmnand", "PseudoVMNAND">;
-defm : VPatBinaryM_MM<"int_riscv_vmandnot", "PseudoVMANDNOT">;
+defm : VPatBinaryM_MM<"int_riscv_vmandn", "PseudoVMANDN">;
 defm : VPatBinaryM_MM<"int_riscv_vmxor", "PseudoVMXOR">;
 defm : VPatBinaryM_MM<"int_riscv_vmor", "PseudoVMOR">;
 defm : VPatBinaryM_MM<"int_riscv_vmnor", "PseudoVMNOR">;
-defm : VPatBinaryM_MM<"int_riscv_vmornot", "PseudoVMORNOT">;
+defm : VPatBinaryM_MM<"int_riscv_vmorn", "PseudoVMORN">;
 defm : VPatBinaryM_MM<"int_riscv_vmxnor", "PseudoVMXNOR">;
 
 // pseudo instructions
@@ -4688,9 +4688,9 @@ defm : VPatNullaryM<"int_riscv_vmclr", "PseudoVMCLR">;
 defm : VPatNullaryM<"int_riscv_vmset", "PseudoVMSET">;
 
 //===----------------------------------------------------------------------===//
-// 16.2. Vector mask population count vpopc
+// 16.2. Vector count population in mask vcpop.m
 //===----------------------------------------------------------------------===//
-defm : VPatUnaryS_M<"int_riscv_vpopc", "PseudoVPOPC">;
+defm : VPatUnaryS_M<"int_riscv_vcpop", "PseudoVCPOP">;
 
 //===----------------------------------------------------------------------===//
 // 16.3. vfirst find-first-set mask bit

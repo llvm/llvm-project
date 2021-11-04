@@ -199,7 +199,7 @@ def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
 
-def riscv_vpopc_vl : SDNode<"RISCVISD::VPOPC_VL",
+def riscv_vcpop_vl : SDNode<"RISCVISD::VCPOP_VL",
                             SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
                                                  SDTCisVec<1>, SDTCisInt<1>,
                                                  SDTCVecEltisVT<2, i1>,
@@ -1233,12 +1233,12 @@ foreach mti = AllMasks in {
   def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1,
                                       (riscv_vmnot_vl VR:$rs2, VLOpFrag),
                                       VLOpFrag)),
-            (!cast<Instruction>("PseudoVMANDNOT_MM_" # mti.LMul.MX)
+            (!cast<Instruction>("PseudoVMANDN_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
   def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1,
                                      (riscv_vmnot_vl VR:$rs2, VLOpFrag),
                                      VLOpFrag)),
-            (!cast<Instruction>("PseudoVMORNOT_MM_" # mti.LMul.MX)
+            (!cast<Instruction>("PseudoVMORN_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
   // XOR is associative so we need 2 patterns for VMXNOR.
   def : Pat<(mti.Mask (riscv_vmxor_vl (riscv_vmnot_vl VR:$rs1,
@@ -1268,14 +1268,14 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMNAND_MM_" # mti.LMul.MX)
                  VR:$rs, VR:$rs, GPR:$vl, mti.Log2SEW)>;
 
-  // 16.2 Vector Mask Population Count vpopc
-  def : Pat<(XLenVT (riscv_vpopc_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
+  // 16.2 Vector count population in mask vcpop.m
+  def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
                                     VLOpFrag)),
-            (!cast<Instruction>("PseudoVPOPC_M_" # mti.BX)
+            (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX)
                  VR:$rs2, GPR:$vl, mti.Log2SEW)>;
-  def : Pat<(XLenVT (riscv_vpopc_vl (mti.Mask VR:$rs2), (mti.Mask V0),
+  def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask V0),
                                     VLOpFrag)),
-            (!cast<Instruction>("PseudoVPOPC_M_" # mti.BX # "_MASK")
+            (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX # "_MASK")
                  VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
 }
 

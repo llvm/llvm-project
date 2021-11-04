@@ -20,8 +20,8 @@ vmnand.mm v8, v4, v20
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 24 4a 76 <unknown>
 
-vmandnot.mm v8, v4, v20
-# CHECK-INST: vmandnot.mm v8, v4, v20
+vmandn.mm v8, v4, v20
+# CHECK-INST: vmandn.mm v8, v4, v20
 # CHECK-ENCODING: [0x57,0x24,0x4a,0x62]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 24 4a 62 <unknown>
@@ -44,8 +44,8 @@ vmnor.mm v8, v4, v20
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 24 4a 7a <unknown>
 
-vmornot.mm v8, v4, v20
-# CHECK-INST: vmornot.mm v8, v4, v20
+vmorn.mm v8, v4, v20
+# CHECK-INST: vmorn.mm v8, v4, v20
 # CHECK-ENCODING: [0x57,0x24,0x4a,0x72]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 24 4a 72 <unknown>
@@ -56,14 +56,14 @@ vmxnor.mm v8, v4, v20
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 24 4a 7e <unknown>
 
-vpopc.m a2, v4, v0.t
-# CHECK-INST: vpopc.m a2, v4, v0.t
+vcpop.m a2, v4, v0.t
+# CHECK-INST: vcpop.m a2, v4, v0.t
 # CHECK-ENCODING: [0x57,0x26,0x48,0x40]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 26 48 40 <unknown>
 
-vpopc.m a2, v4
-# CHECK-INST: vpopc.m a2, v4
+vcpop.m a2, v4
+# CHECK-INST: vcpop.m a2, v4
 # CHECK-ENCODING: [0x57,0x26,0x48,0x42]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 26 48 42 <unknown>
