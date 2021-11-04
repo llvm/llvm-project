@@ -13090,7 +13090,7 @@ static SDValue performCommonVectorExtendCombine(SDValue VectorShuffle,
       DAG.getAnyExtOrTrunc(Extend.getOperand(0), DL, PreExtendType),
       DAG.getConstant(0, DL, MVT::i64));
 
-  std::vector<int> ShuffleMask(TargetType.getVectorElementCount().getValue());
+  std::vector<int> ShuffleMask(TargetType.getVectorNumElements());
 
   SDValue VectorShuffleNode =
       DAG.getVectorShuffle(PreExtendVT, DL, InsertVectorNode,
