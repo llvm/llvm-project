@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %s -o %t.o
-# RUN: not %lld -pie -lSystem -lc++ %t.o -o %t 2>&1 | FileCheck %s --check-prefix=TOO-MANY
-# RUN: not %lld -pie -lSystem %t.o -o %t 2>&1 | FileCheck %s --check-prefix=UNDEF
+# RUN: not %lld -lSystem -lc++ %t.o -o %t 2>&1 | FileCheck %s --check-prefix=TOO-MANY
+# RUN: not %lld -lSystem %t.o -o %t 2>&1 | FileCheck %s --check-prefix=UNDEF
 # TOO-MANY: error: too many personalities (4) for compact unwind to encode
 # UNDEF: error: undefined symbol: ___gxx_personality_v0
 

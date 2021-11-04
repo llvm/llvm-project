@@ -10,7 +10,7 @@
 # RUN: %lld %t/foo.o -dylib -o %t/libfoo.dylib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
-# RUN: %lld -lSystem -pie -adhoc_codesign -o %t/test %t/libfoo.dylib %t/test.o
+# RUN: %lld -lSystem -adhoc_codesign -o %t/test %t/libfoo.dylib %t/test.o
 
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s
 

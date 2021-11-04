@@ -130,7 +130,7 @@
 
 ## Check that we don't attempt to emit rebase opcodes for the debug sections
 ## when building a PIE (since we have filtered the sections out).
-# RUN: %lld -lSystem -pie %t/test.o %t/foo.a %t/no-debug.o -o %t/test
+# RUN: %lld -lSystem %t/test.o %t/foo.a %t/no-debug.o -o %t/test
 # RUN: llvm-objdump --macho --rebase %t/test | FileCheck %s --check-prefix=PIE
 # PIE:       Rebase table:
 # PIE-NEXT:  segment  section            address     type
