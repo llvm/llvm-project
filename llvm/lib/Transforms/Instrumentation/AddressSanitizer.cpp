@@ -26,6 +26,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -47,6 +48,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -210,6 +212,11 @@ static cl::opt<bool> ClInstrumentReads("asan-instrument-reads",
 static cl::opt<bool> ClInstrumentWrites(
     "asan-instrument-writes", cl::desc("instrument write instructions"),
     cl::Hidden, cl::init(true));
+
+static cl::opt<bool>
+    ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(false),
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
+                     cl::Optional);
 
 static cl::opt<bool> ClInstrumentAtomics(
     "asan-instrument-atomics",
@@ -647,6 +654,7 @@ char ASanGlobalsMetadataWrapperPass::ID = 0;
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer {
   AddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
+                   const StackSafetyGlobalInfo *SSGI,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false,
                    AsanDetectStackUseAfterReturnMode UseAfterReturn =
@@ -657,7 +665,7 @@ struct AddressSanitizer {
         UseAfterScope(UseAfterScope || ClUseAfterScope),
         UseAfterReturn(ClUseAfterReturn.getNumOccurrences() ? ClUseAfterReturn
                                                             : UseAfterReturn),
-        GlobalsMD(*GlobalsMD) {
+        GlobalsMD(*GlobalsMD), SSGI(SSGI) {
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -686,7 +694,7 @@ struct AddressSanitizer {
   /// Check if we want (and can) handle this alloca.
   bool isInterestingAlloca(const AllocaInst &AI);
 
-  bool ignoreAccess(Value *Ptr);
+  bool ignoreAccess(Instruction *Inst, Value *Ptr);
   void getInterestingMemoryOperands(
       Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
@@ -771,6 +779,7 @@ private:
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
   const GlobalsMetadata &GlobalsMD;
+  const StackSafetyGlobalInfo *SSGI;
   DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 
   FunctionCallee AMDGPUAddressShared;
@@ -797,16 +806,22 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ASanGlobalsMetadataWrapperPass>();
+    if (ClUseStackSafety)
+      AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
     GlobalsMetadata &GlobalsMD =
         getAnalysis<ASanGlobalsMetadataWrapperPass>().getGlobalsMD();
+    const StackSafetyGlobalInfo *const SSGI =
+        ClUseStackSafety
+            ? &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult()
+            : nullptr;
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    AddressSanitizer ASan(*F.getParent(), &GlobalsMD, CompileKernel, Recover,
-                          UseAfterScope, UseAfterReturn);
+    AddressSanitizer ASan(*F.getParent(), &GlobalsMD, SSGI, CompileKernel,
+                          Recover, UseAfterScope, UseAfterReturn);
     return ASan.instrumentFunction(F, TLI);
   }
 
@@ -1260,8 +1275,9 @@ PreservedAnalyses AddressSanitizerPass::run(Function &F,
   Module &M = *F.getParent();
   if (auto *R = MAMProxy.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
     const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
-    AddressSanitizer Sanitizer(M, R, Options.CompileKernel, Options.Recover,
-                               Options.UseAfterScope, Options.UseAfterReturn);
+    AddressSanitizer Sanitizer(M, R, nullptr, Options.CompileKernel,
+                               Options.Recover, Options.UseAfterScope,
+                               Options.UseAfterReturn);
     if (Sanitizer.instrumentFunction(F, TLI))
       return PreservedAnalyses::none();
     return PreservedAnalyses::all();
@@ -1307,10 +1323,12 @@ PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
                                          UseOdrIndicator, DestructorKind);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const StackSafetyGlobalInfo *const SSGI =
+      ClUseStackSafety ? &MAM.getResult<StackSafetyGlobalAnalysis>(M) : nullptr;
   for (Function &F : M) {
-    AddressSanitizer FunctionSanitizer(M, &GlobalsMD, Options.CompileKernel,
-                                       Options.Recover, Options.UseAfterScope,
-                                       Options.UseAfterReturn);
+    AddressSanitizer FunctionSanitizer(
+        M, &GlobalsMD, SSGI, Options.CompileKernel, Options.Recover,
+        Options.UseAfterScope, Options.UseAfterReturn);
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
   }
@@ -1330,6 +1348,7 @@ INITIALIZE_PASS_BEGIN(
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
     false)
 INITIALIZE_PASS_DEPENDENCY(ASanGlobalsMetadataWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(
     AddressSanitizerLegacyPass, "asan",
@@ -1468,7 +1487,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   return IsInteresting;
 }
 
-bool AddressSanitizer::ignoreAccess(Value *Ptr) {
+bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // Instrument acesses from different address spaces only for AMDGPU.
   Type *PtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
   if (PtrTy->getPointerAddressSpace() != 0 &&
@@ -1489,6 +1508,10 @@ bool AddressSanitizer::ignoreAccess(Value *Ptr) {
     if (ClSkipPromotableAllocas && !isInterestingAlloca(*AI))
       return true;
 
+  if (SSGI != nullptr && SSGI->stackAccessIsSafe(*Inst) &&
+      findAllocaForValue(Ptr))
+    return true;
+
   return false;
 }
 
@@ -1503,22 +1526,22 @@ void AddressSanitizer::getInterestingMemoryOperands(
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(LI->getPointerOperand()))
+    if (!ClInstrumentReads || ignoreAccess(LI, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(SI->getPointerOperand()))
+    if (!ClInstrumentWrites || ignoreAccess(LI, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(RMW->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(LI, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), None);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(XCHG->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(LI, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(), None);
@@ -1533,7 +1556,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
         return;
 
       auto BasePtr = CI->getOperand(OpOffset);
-      if (ignoreAccess(BasePtr))
+      if (ignoreAccess(LI, BasePtr))
         return;
       auto Ty = cast<PointerType>(BasePtr->getType())->getElementType();
       MaybeAlign Alignment = Align(1);
@@ -1545,7 +1568,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
     } else {
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
-            ignoreAccess(CI->getArgOperand(ArgNo)))
+            ignoreAccess(LI, CI->getArgOperand(ArgNo)))
           continue;
         Type *Ty = CI->getParamByValType(ArgNo);
         Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
