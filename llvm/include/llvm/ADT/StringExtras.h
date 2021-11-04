@@ -67,22 +67,27 @@ inline ArrayRef<uint8_t> arrayRefFromStringRef(StringRef Input) {
 ///
 /// If \p C is not a valid hex digit, -1U is returned.
 inline unsigned hexDigitValue(char C) {
-  struct HexTable {
-    unsigned LUT[255] = {};
-    constexpr HexTable() {
-      // Default initialize everything to invalid.
-      for (int i = 0; i < 255; ++i)
-        LUT[i] = ~0U;
-      // Initialize `0`-`9`.
-      for (int i = 0; i < 10; ++i)
-        LUT['0' + i] = i;
-      // Initialize `A`-`F` and `a`-`f`.
-      for (int i = 0; i < 6; ++i)
-        LUT['A' + i] = LUT['a' + i] = 10 + i;
-    }
+  /* clang-format off */
+  static const int16_t LUT[256] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,  // '0'..'9'
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 'A'..'F'
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 'a'..'f'
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   };
-  constexpr HexTable Table;
-  return Table.LUT[static_cast<unsigned char>(C)];
+  /* clang-format on */
+  return LUT[static_cast<unsigned char>(C)];
 }
 
 /// Checks if character \p C is one of the 10 decimal digits.
@@ -210,24 +215,31 @@ inline bool tryGetFromHex(StringRef Input, std::string &Output) {
   if (Input.empty())
     return true;
 
-  Output.reserve((Input.size() + 1) / 2);
+  // If the input string is not properly aligned on 2 nibbles we pad out the
+  // front with a 0 prefix; e.g. `ABC` -> `0ABC`.
+  Output.resize((Input.size() + 1) / 2);
+  char *OutputPtr = const_cast<char *>(Output.data());
   if (Input.size() % 2 == 1) {
     uint8_t Hex = 0;
     if (!tryGetHexFromNibbles('0', Input.front(), Hex))
       return false;
-
-    Output.push_back(Hex);
+    *OutputPtr++ = Hex;
     Input = Input.drop_front();
   }
 
-  assert(Input.size() % 2 == 0);
-  while (!Input.empty()) {
+  // Convert the nibble pairs (e.g. `9C`) into bytes (0x9C).
+  // With the padding above we know the input is aligned and the output expects
+  // exactly half as many bytes as nibbles in the input.
+  size_t InputSize = Input.size();
+  assert(InputSize % 2 == 0);
+  const char *InputPtr = Input.data();
+  for (size_t OutputIndex = 0; OutputIndex < InputSize / 2; ++OutputIndex) {
     uint8_t Hex = 0;
-    if (!tryGetHexFromNibbles(Input[0], Input[1], Hex))
+    if (!tryGetHexFromNibbles(InputPtr[OutputIndex * 2 + 0], // MSB
+                              InputPtr[OutputIndex * 2 + 1], // LSB
+                              Hex))
       return false;
-
-    Output.push_back(Hex);
-    Input = Input.drop_front(2);
+    OutputPtr[OutputIndex] = Hex;
   }
   return true;
 }

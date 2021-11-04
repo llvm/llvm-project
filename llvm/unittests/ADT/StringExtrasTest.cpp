@@ -91,7 +91,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
   EXPECT_EQ(EvenData, fromHex(EvenStr));
   EXPECT_EQ(StringRef(EvenStr).lower(), toHex(EvenData, true));
 
-  std::string InvalidStr = "A5ZX";
+  std::string InvalidStr = "A50\xFF";
   std::string IgnoredOutput;
   EXPECT_FALSE(tryGetFromHex(InvalidStr, IgnoredOutput));
 }
