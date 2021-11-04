@@ -382,7 +382,8 @@ asm("	.pushsection	.text.__cxa_end_cleanup,\"ax\",%progbits\n"
     "	bl	__cxa_end_cleanup_impl\n"
     "	pop	{r1, r2, r3, r4}\n"
     "	mov	lr, r4\n"
-    "	b	_Unwind_Resume\n"
+    "	ldr r4,	=_Unwind_Resume\n"
+    "	bx	r4\n"
     "	.popsection");
 #endif // defined(_LIBCXXABI_ARM_EHABI)
 
