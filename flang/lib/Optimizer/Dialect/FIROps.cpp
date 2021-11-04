@@ -1387,6 +1387,8 @@ void fir::FieldIndexOp::build(mlir::OpBuilder &builder,
 
 /// Range bounds must be nonnegative, and the range must not be empty.
 static mlir::LogicalResult verify(fir::InsertOnRangeOp op) {
+  if (fir::hasDynamicSize(op.seq().getType()))
+    return op.emitOpError("must have constant shape and size");
   if (op.coor().size() < 2 || op.coor().size() % 2 != 0)
     return op.emitOpError("has uneven number of values in ranges");
   bool rangeIsKnownToBeNonempty = false;
