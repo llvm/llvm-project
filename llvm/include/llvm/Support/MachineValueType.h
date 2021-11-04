@@ -1405,51 +1405,61 @@ namespace llvm {
     /// SimpleValueType Iteration
     /// @{
     static auto all_valuetypes() {
-      return seq_inclusive(MVT::FIRST_VALUETYPE, MVT::LAST_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_VALUETYPE, MVT::LAST_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto integer_valuetypes() {
-      return seq_inclusive(MVT::FIRST_INTEGER_VALUETYPE,
-                           MVT::LAST_INTEGER_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_INTEGER_VALUETYPE,
+                                MVT::LAST_INTEGER_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto fp_valuetypes() {
-      return seq_inclusive(MVT::FIRST_FP_VALUETYPE, MVT::LAST_FP_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_FP_VALUETYPE, MVT::LAST_FP_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_VECTOR_VALUETYPE,
-                           MVT::LAST_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_VECTOR_VALUETYPE,
+                                MVT::LAST_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto fixedlen_vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE,
-                           MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE,
+                                MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto scalable_vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_SCALABLE_VECTOR_VALUETYPE,
-                           MVT::LAST_SCALABLE_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_SCALABLE_VECTOR_VALUETYPE,
+                                MVT::LAST_SCALABLE_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto integer_fixedlen_vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE,
-                           MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE,
+                                MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto fp_fixedlen_vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_FP_FIXEDLEN_VECTOR_VALUETYPE,
-                           MVT::LAST_FP_FIXEDLEN_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_FP_FIXEDLEN_VECTOR_VALUETYPE,
+                                MVT::LAST_FP_FIXEDLEN_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto integer_scalable_vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_INTEGER_SCALABLE_VECTOR_VALUETYPE,
-                           MVT::LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_INTEGER_SCALABLE_VECTOR_VALUETYPE,
+                                MVT::LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
 
     static auto fp_scalable_vector_valuetypes() {
-      return seq_inclusive(MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
-                           MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE);
+      return enum_seq_inclusive(MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
+                                MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
     }
     /// @}
   };

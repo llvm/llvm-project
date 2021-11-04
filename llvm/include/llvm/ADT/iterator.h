@@ -296,8 +296,7 @@ public:
     return LHS.I < RHS.I;
   }
 
-  const ReferenceT operator*() const { return *I; }
-  ReferenceT operator*() { return *I; }
+  ReferenceT operator*() const { return *I; }
 };
 
 /// An iterator type that allows iterating over the pointees via some

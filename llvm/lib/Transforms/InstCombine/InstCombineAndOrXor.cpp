@@ -3601,7 +3601,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (match(Op0, m_OneUse(m_TruncOrSelf(
                        m_AShr(m_Value(X), m_APIntAllowUndef(CA))))) &&
         *CA == X->getType()->getScalarSizeInBits() - 1 &&
-        !C1->isAllOnesValue()) {
+        !match(C1, m_AllOnes())) {
       assert(!C1->isZeroValue() && "Unexpected xor with 0");
       Value *ICmp =
           Builder.CreateICmpSGT(X, Constant::getAllOnesValue(X->getType()));

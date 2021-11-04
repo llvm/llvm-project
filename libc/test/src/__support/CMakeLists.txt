@@ -27,7 +27,7 @@ add_libc_unittest(
   SRCS
     str_to_float_test.cpp
   DEPENDS
-    libc.src.__support.str_conv_utils
+    libc.src.__support.str_to_float
 )
 
 add_executable(

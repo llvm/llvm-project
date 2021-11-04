@@ -16,6 +16,7 @@
 using namespace llvm;
 
 using testing::ElementsAre;
+using testing::IsEmpty;
 
 namespace {
 
@@ -66,17 +67,6 @@ TYPED_TEST(StrongIntTest, Operations) {
   EXPECT_EQ(Actual - Actual, 0);
   EXPECT_EQ((Actual + 1) - Actual, 1);
   EXPECT_EQ(Actual - (Actual + 2), -2);
-}
-
-TEST(StrongIntTest, Enums) {
-  enum UntypedEnum { A = 3 };
-  EXPECT_EQ(CheckedInt::from(A).to<UntypedEnum>(), A);
-
-  enum TypedEnum : uint32_t { B = 3 };
-  EXPECT_EQ(CheckedInt::from(B).to<TypedEnum>(), B);
-
-  enum class ScopedEnum : uint16_t { C = 3 };
-  EXPECT_EQ(CheckedInt::from(ScopedEnum::C).to<ScopedEnum>(), ScopedEnum::C);
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
@@ -215,4 +205,94 @@ TEST(SequenceTest, Dereference) {
   EXPECT_EQ(Backward[2], 7);
 }
 
-} // anonymous namespace
+enum UntypedEnum { A = 3 };
+enum TypedEnum : uint32_t { B = 3 };
+
+namespace X {
+enum class ScopedEnum : uint16_t { C = 3 };
+} // namespace X
+
+struct S {
+  enum NestedEnum { D = 4 };
+  enum NestedEnum2 { E = 5 };
+
+private:
+  enum NestedEnum3 { F = 6 };
+  friend struct llvm::enum_iteration_traits<NestedEnum3>;
+
+public:
+  static auto getNestedEnum3() { return NestedEnum3::F; }
+};
+
+} // namespace
+
+namespace llvm {
+
+template <> struct enum_iteration_traits<UntypedEnum> {
+  static constexpr bool is_iterable = true;
+};
+
+template <> struct enum_iteration_traits<TypedEnum> {
+  static constexpr bool is_iterable = true;
+};
+
+template <> struct enum_iteration_traits<X::ScopedEnum> {
+  static constexpr bool is_iterable = true;
+};
+
+template <> struct enum_iteration_traits<S::NestedEnum> {
+  static constexpr bool is_iterable = true;
+};
+
+template <> struct enum_iteration_traits<S::NestedEnum3> {
+  static constexpr bool is_iterable = true;
+};
+
+} // namespace llvm
+
+namespace {
+
+TEST(StrongIntTest, Enums) {
+  EXPECT_EQ(CheckedInt::from(A).to<UntypedEnum>(), A);
+  EXPECT_EQ(CheckedInt::from(B).to<TypedEnum>(), B);
+  EXPECT_EQ(CheckedInt::from(X::ScopedEnum::C).to<X::ScopedEnum>(),
+            X::ScopedEnum::C);
+}
+
+TEST(SequenceTest, IterableEnums) {
+  EXPECT_THAT(enum_seq(UntypedEnum::A, UntypedEnum::A), IsEmpty());
+  EXPECT_THAT(enum_seq_inclusive(UntypedEnum::A, UntypedEnum::A),
+              ElementsAre(UntypedEnum::A));
+
+  EXPECT_THAT(enum_seq(TypedEnum::B, TypedEnum::B), IsEmpty());
+  EXPECT_THAT(enum_seq_inclusive(TypedEnum::B, TypedEnum::B),
+              ElementsAre(TypedEnum::B));
+
+  EXPECT_THAT(enum_seq(X::ScopedEnum::C, X::ScopedEnum::C), IsEmpty());
+  EXPECT_THAT(enum_seq_inclusive(X::ScopedEnum::C, X::ScopedEnum::C),
+              ElementsAre(X::ScopedEnum::C));
+
+  EXPECT_THAT(enum_seq_inclusive(S::NestedEnum::D, S::NestedEnum::D),
+              ElementsAre(S::NestedEnum::D));
+  EXPECT_THAT(enum_seq_inclusive(S::getNestedEnum3(), S::getNestedEnum3()),
+              ElementsAre(S::getNestedEnum3()));
+}
+
+TEST(SequenceTest, NonIterableEnums) {
+  EXPECT_THAT(enum_seq(S::NestedEnum2::E, S::NestedEnum2::E,
+                       force_iteration_on_noniterable_enum),
+              IsEmpty());
+  EXPECT_THAT(enum_seq_inclusive(S::NestedEnum2::E, S::NestedEnum2::E,
+                                 force_iteration_on_noniterable_enum),
+              ElementsAre(S::NestedEnum2::E));
+
+  // Check that this also works with enums marked as iterable.
+  EXPECT_THAT(enum_seq(UntypedEnum::A, UntypedEnum::A,
+                       force_iteration_on_noniterable_enum),
+              IsEmpty());
+  EXPECT_THAT(enum_seq_inclusive(UntypedEnum::A, UntypedEnum::A,
+                                 force_iteration_on_noniterable_enum),
+              ElementsAre(UntypedEnum::A));
+}
+
+} // namespace

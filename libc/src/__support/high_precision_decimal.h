@@ -10,7 +10,7 @@
 #define LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
 
 #include "src/__support/ctype_utils.h"
-#include "src/__support/str_conv_utils.h"
+#include "src/__support/str_to_integer.h"
 #include <stdint.h>
 
 namespace __llvm_libc {

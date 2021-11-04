@@ -862,7 +862,6 @@ def no_arch_warnings : Flag<["-"], "no_arch_warnings">,
     Group<grp_rare>;
 def arch_errors_fatal : Flag<["-"], "arch_errors_fatal">,
     HelpText<"Escalate to errors any warnings about inputs whose architecture does not match the -arch option">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def e : Separate<["-"], "e">,
     MetaVarName<"<symbol>">,
@@ -1278,10 +1277,6 @@ def no_new_main : Flag<["-"], "no_new_main">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
-def objc_abi_version : Separate<["-"], "objc_abi_version">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
 def pause : Flag<["-"], "pause">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
@@ -1325,3 +1320,10 @@ def new_linker : Flag<["-"], "new_linker">,
     HelpText<"This option is ignored in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_ignored>;
+
+def grp_ignored_silently : OptionGroup<"ignored_silently">, HelpText<"IGNORED SILENTLY">;
+
+def objc_abi_version : Separate<["-"], "objc_abi_version">,
+    HelpText<"This option only applies to i386 in ld64">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;

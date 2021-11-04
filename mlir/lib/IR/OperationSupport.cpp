@@ -226,26 +226,22 @@ void OperationState::addRegions(
 // OperandStorage
 //===----------------------------------------------------------------------===//
 
-detail::OperandStorage::OperandStorage(Operation *owner, ValueRange values)
-    : inlineStorage() {
-  auto &inlineStorage = getInlineStorage();
-  inlineStorage.numOperands = inlineStorage.capacity = values.size();
-  auto *operandPtrBegin = getTrailingObjects<OpOperand>();
-  for (unsigned i = 0, e = inlineStorage.numOperands; i < e; ++i)
-    new (&operandPtrBegin[i]) OpOperand(owner, values[i]);
+detail::OperandStorage::OperandStorage(Operation *owner,
+                                       OpOperand *trailingOperands,
+                                       ValueRange values)
+    : isStorageDynamic(false), operandStorage(trailingOperands) {
+  numOperands = capacity = values.size();
+  for (unsigned i = 0; i < numOperands; ++i)
+    new (&operandStorage[i]) OpOperand(owner, values[i]);
 }
 
 detail::OperandStorage::~OperandStorage() {
-  // Destruct the current storage container.
-  if (isDynamicStorage()) {
-    TrailingOperandStorage &storage = getDynamicStorage();
-    storage.~TrailingOperandStorage();
-    // Work around -Wfree-nonheap-object false positive fixed by D102728.
-    auto *mem = &storage;
-    free(mem);
-  } else {
-    getInlineStorage().~TrailingOperandStorage();
-  }
+  for (auto &operand : getOperands())
+    operand.~OpOperand();
+
+  // If the storage is dynamic, deallocate it.
+  if (isStorageDynamic)
+    free(operandStorage);
 }
 
 /// Replace the operands contained in the storage with the ones provided in
@@ -291,24 +287,22 @@ void detail::OperandStorage::setOperands(Operation *owner, unsigned start,
 
 /// Erase an operand held by the storage.
 void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
-  TrailingOperandStorage &storage = getStorage();
-  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  MutableArrayRef<OpOperand> operands = getOperands();
   assert((start + length) <= operands.size());
-  storage.numOperands -= length;
+  numOperands -= length;
 
   // Shift all operands down if the operand to remove is not at the end.
-  if (start != storage.numOperands) {
+  if (start != numOperands) {
     auto *indexIt = std::next(operands.begin(), start);
     std::rotate(indexIt, std::next(indexIt, length), operands.end());
   }
   for (unsigned i = 0; i != length; ++i)
-    operands[storage.numOperands + i].~OpOperand();
+    operands[numOperands + i].~OpOperand();
 }
 
 void detail::OperandStorage::eraseOperands(
     const llvm::BitVector &eraseIndices) {
-  TrailingOperandStorage &storage = getStorage();
-  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  MutableArrayRef<OpOperand> operands = getOperands();
   assert(eraseIndices.size() == operands.size());
 
   // Check that at least one operand is erased.
@@ -317,11 +311,11 @@ void detail::OperandStorage::eraseOperands(
     return;
 
   // Shift all of the removed operands to the end, and destroy them.
-  storage.numOperands = firstErasedIndice;
+  numOperands = firstErasedIndice;
   for (unsigned i = firstErasedIndice + 1, e = operands.size(); i < e; ++i)
     if (!eraseIndices.test(i))
-      operands[storage.numOperands++] = std::move(operands[i]);
-  for (OpOperand &operand : operands.drop_front(storage.numOperands))
+      operands[numOperands++] = std::move(operands[i]);
+  for (OpOperand &operand : operands.drop_front(numOperands))
     operand.~OpOperand();
 }
 
@@ -329,24 +323,21 @@ void detail::OperandStorage::eraseOperands(
 /// operands.
 MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
                                                           unsigned newSize) {
-  TrailingOperandStorage &storage = getStorage();
-
   // If the number of operands is less than or equal to the current amount, we
   // can just update in place.
-  unsigned &numOperands = storage.numOperands;
-  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  MutableArrayRef<OpOperand> origOperands = getOperands();
   if (newSize <= numOperands) {
     // If the number of new size is less than the current, remove any extra
     // operands.
     for (unsigned i = newSize; i != numOperands; ++i)
-      operands[i].~OpOperand();
+      origOperands[i].~OpOperand();
     numOperands = newSize;
-    return operands.take_front(newSize);
+    return origOperands.take_front(newSize);
   }
 
   // If the new size is within the original inline capacity, grow inplace.
-  if (newSize <= storage.capacity) {
-    OpOperand *opBegin = operands.data();
+  if (newSize <= capacity) {
+    OpOperand *opBegin = origOperands.data();
     for (unsigned e = newSize; numOperands != e; ++numOperands)
       new (&opBegin[numOperands]) OpOperand(owner);
     return MutableArrayRef<OpOperand>(opBegin, newSize);
@@ -354,36 +345,32 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
   // Otherwise, we need to allocate a new storage.
   unsigned newCapacity =
-      std::max(unsigned(llvm::NextPowerOf2(storage.capacity + 2)), newSize);
-  auto *newStorageMem =
-      malloc(TrailingOperandStorage::totalSizeToAlloc<OpOperand>(newCapacity));
-  auto *newStorage = ::new (newStorageMem) TrailingOperandStorage();
-  newStorage->numOperands = newSize;
-  newStorage->capacity = newCapacity;
+      std::max(unsigned(llvm::NextPowerOf2(capacity + 2)), newSize);
+  OpOperand *newOperandStorage =
+      reinterpret_cast<OpOperand *>(malloc(sizeof(OpOperand) * newCapacity));
 
   // Move the current operands to the new storage.
-  MutableArrayRef<OpOperand> newOperands = newStorage->getOperands();
-  std::uninitialized_copy(std::make_move_iterator(operands.begin()),
-                          std::make_move_iterator(operands.end()),
+  MutableArrayRef<OpOperand> newOperands(newOperandStorage, newSize);
+  std::uninitialized_copy(std::make_move_iterator(origOperands.begin()),
+                          std::make_move_iterator(origOperands.end()),
                           newOperands.begin());
 
   // Destroy the original operands.
-  for (auto &operand : operands)
+  for (auto &operand : origOperands)
     operand.~OpOperand();
 
   // Initialize any new operands.
   for (unsigned e = newSize; numOperands != e; ++numOperands)
     new (&newOperands[numOperands]) OpOperand(owner);
 
-  // If the current storage is also dynamic, free it.
-  if (isDynamicStorage()) {
-    // Work around -Wfree-nonheap-object false positive fixed by D102728.
-    auto *mem = &storage;
-    free(mem);
-  }
+  // If the current storage is dynamic, free it.
+  if (isStorageDynamic)
+    free(operandStorage);
 
   // Update the storage representation to use the new dynamic storage.
-  dynamicStorage.setPointerAndInt(newStorage, true);
+  operandStorage = newOperandStorage;
+  capacity = newCapacity;
+  isStorageDynamic = true;
   return newOperands;
 }
 
@@ -393,9 +380,6 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
 //===----------------------------------------------------------------------===//
 // OperandRange
-
-OperandRange::OperandRange(Operation *op)
-    : OperandRange(op->getOpOperands().data(), op->getNumOperands()) {}
 
 unsigned OperandRange::getBeginOperandIndex() const {
   assert(!empty() && "range must not be empty");

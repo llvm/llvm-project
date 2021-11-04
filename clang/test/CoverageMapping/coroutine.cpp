@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping %s -o - | FileCheck %s
 
-namespace std::experimental {
+namespace std {
 template <typename... T>
 struct coroutine_traits;
 
@@ -16,16 +16,16 @@ struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept {}
 };
-} // namespace std::experimental
+} // namespace std
 
 struct suspend_always {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
 template <>
-struct std::experimental::coroutine_traits<int, int> {
+struct std::coroutine_traits<int, int> {
   struct promise_type {
     int get_return_object();
     suspend_always initial_suspend();

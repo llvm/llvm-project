@@ -124,9 +124,6 @@ TEST(UnivariateLinearPolyBase, Univariate3D_GetValue) {
   EXPECT_EQ(Univariate3D(42, 1).getValue(0), 0);
   EXPECT_EQ(Univariate3D(42, 1).getValue(1), 42);
   EXPECT_EQ(Univariate3D(42, 1).getValue(2), 0);
-
-  EXPECT_EQ(Univariate3D(42, 0).getValue(), 42);
-  EXPECT_EQ(Univariate3D(42, 1).getValue(), 42);
 }
 
 TEST(UnivariateLinearPolyBase, Univariate3D_Add) {

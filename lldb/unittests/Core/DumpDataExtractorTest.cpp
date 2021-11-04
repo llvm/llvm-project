@@ -187,7 +187,7 @@ TEST(DumpDataExtractorTest, Formats) {
   // Some normal numbers.
   TestDump(std::vector<uint16_t>{0b0100001001001000},
            lldb::Format::eFormatVectorOfFloat16,
-#ifdef _WIN32
+#if defined(_MSC_VER) && _MSC_VER < 1920
            // FIXME: This should print the same on all platforms.
            "{3.14063}");
 #else

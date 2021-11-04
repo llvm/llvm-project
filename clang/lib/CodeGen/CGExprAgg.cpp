@@ -127,6 +127,8 @@ public:
   }
 
   void VisitConstantExpr(ConstantExpr *E) {
+    EnsureDest(E->getType());
+
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       CGF.EmitAggregateStore(Result, Dest.getAddress(),
                              E->getType().isVolatileQualified());
