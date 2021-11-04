@@ -90,7 +90,7 @@ define i8 @wrongimm(i16 %add) {
   ret i8 %x
 }
 
-; Some of the lanes of the xor/ashr are unused, becoming poison.
+; PR52397 Some of the lanes of the xor/ashr are unused, becoming poison.
 define <4 x i32> @vectorpoison(<6 x i32> %0) {
 ; CHECK-LABEL: @vectorpoison(
 ; CHECK-NEXT:  entry:
