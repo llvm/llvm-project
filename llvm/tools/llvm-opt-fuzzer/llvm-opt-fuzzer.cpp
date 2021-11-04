@@ -144,7 +144,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   ModulePassManager MPM;
   ModuleAnalysisManager MAM;
 
-  FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);

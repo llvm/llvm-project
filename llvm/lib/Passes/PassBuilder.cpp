@@ -413,6 +413,11 @@ void PassBuilder::registerCGSCCAnalyses(CGSCCAnalysisManager &CGAM) {
 }
 
 void PassBuilder::registerFunctionAnalyses(FunctionAnalysisManager &FAM) {
+  // We almost always want the default alias analysis pipeline.
+  // If a user wants a different one, they can register their own before calling
+  // registerFunctionAnalyses().
+  FAM.registerPass([&] { return buildDefaultAAPipeline(); });
+
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   FAM.registerPass([&] { return CREATE_PASS; });
 #include "PassRegistry.def"

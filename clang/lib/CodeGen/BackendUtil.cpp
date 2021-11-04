@@ -1312,9 +1312,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
 
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
-
   // Register the target library analysis directly and give it a customized
   // preset TLI.
   Triple TargetTriple(TheModule->getTargetTriple());

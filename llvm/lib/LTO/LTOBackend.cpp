@@ -251,18 +251,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
-  AAManager AA;
   // Parse a custom AA pipeline if asked to.
   if (!Conf.AAPipeline.empty()) {
+    AAManager AA;
     if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
       report_fatal_error(Twine("unable to parse AA pipeline description '") +
                          Conf.AAPipeline + "': " + toString(std::move(Err)));
     }
-  } else {
-    AA = PB.buildDefaultAAPipeline();
+    // Register the AA manager first so that our version is the one used.
+    FAM.registerPass([&] { return std::move(AA); });
   }
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return std::move(AA); });
 
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
