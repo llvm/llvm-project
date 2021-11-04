@@ -784,48 +784,14 @@ multiclass VAMO<RISCVAMOOP amoop, RISCVWidth width, string opcodestr> {
   def _UNWD : VAMONoWd<amoop, width, opcodestr>;
 }
 
-multiclass VWholeLoad1<string opcodestr, RegisterClass VRC> {
-  def E8_V : VWholeLoad<0, LSWidth8, opcodestr # "e8.v", VRC>,
-             Sched<[WriteVLD1R8, ReadVLDX]>;
-  def E16_V : VWholeLoad<0, LSWidth16, opcodestr # "e16.v", VRC>,
-              Sched<[WriteVLD1R16, ReadVLDX]>;
-  def E32_V : VWholeLoad<0, LSWidth32, opcodestr # "e32.v", VRC>,
-              Sched<[WriteVLD1R32, ReadVLDX]>;
-  def E64_V : VWholeLoad<0, LSWidth64, opcodestr # "e64.v", VRC>,
-              Sched<[WriteVLD1R64, ReadVLDX]>;
-}
+multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
+  foreach l = [8, 16, 32, 64] in {
+    defvar w = !cast<RISCVWidth>("LSWidth" # l);
+    defvar s = !cast<SchedWrite>("WriteVLD" # !add(nf, 1) # "R" # l);
 
-multiclass VWholeLoad2<string opcodestr, RegisterClass VRC> {
-  def E8_V : VWholeLoad<1, LSWidth8, opcodestr # "e8.v", VRC>,
-             Sched<[WriteVLD2R8, ReadVLDX]>;
-  def E16_V : VWholeLoad<1, LSWidth16, opcodestr # "e16.v", VRC>,
-              Sched<[WriteVLD2R16, ReadVLDX]>;
-  def E32_V : VWholeLoad<1, LSWidth32, opcodestr # "e32.v", VRC>,
-              Sched<[WriteVLD2R32, ReadVLDX]>;
-  def E64_V : VWholeLoad<1, LSWidth64, opcodestr # "e64.v", VRC>,
-              Sched<[WriteVLD2R64, ReadVLDX]>;
-}
-
-multiclass VWholeLoad4<string opcodestr, RegisterClass VRC> {
-  def E8_V : VWholeLoad<3, LSWidth8, opcodestr # "e8.v", VRC>,
-             Sched<[WriteVLD4R8, ReadVLDX]>;
-  def E16_V : VWholeLoad<3, LSWidth16, opcodestr # "e16.v", VRC>,
-              Sched<[WriteVLD4R16, ReadVLDX]>;
-  def E32_V : VWholeLoad<3, LSWidth32, opcodestr # "e32.v", VRC>,
-              Sched<[WriteVLD4R32, ReadVLDX]>;
-  def E64_V : VWholeLoad<3, LSWidth64, opcodestr # "e64.v", VRC>,
-              Sched<[WriteVLD1R64, ReadVLDX]>;
-}
-
-multiclass VWholeLoad8<string opcodestr, RegisterClass VRC> {
-  def E8_V : VWholeLoad<7, LSWidth8, opcodestr # "e8.v", VRC>,
-             Sched<[WriteVLD8R8, ReadVLDX]>;
-  def E16_V : VWholeLoad<7, LSWidth16, opcodestr # "e16.v", VRC>,
-              Sched<[WriteVLD8R16, ReadVLDX]>;
-  def E32_V : VWholeLoad<7, LSWidth32, opcodestr # "e32.v", VRC>,
-              Sched<[WriteVLD8R32, ReadVLDX]>;
-  def E64_V : VWholeLoad<7, LSWidth64, opcodestr # "e64.v", VRC>,
-              Sched<[WriteVLD8R64, ReadVLDX]>;
+    def E # l # _V : VWholeLoad<nf, w, opcodestr # "e" # l # ".v", VRC>,
+                     Sched<[s, ReadVLDX]>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -920,10 +886,10 @@ def VSOXEI # n # _V :
   VSXSched<n, "O">;
 }
 
-defm VL1R : VWholeLoad1<"vl1r", VR>;
-defm VL2R : VWholeLoad2<"vl2r", VRM2>;
-defm VL4R : VWholeLoad4<"vl4r", VRM4>;
-defm VL8R : VWholeLoad8<"vl8r", VRM8>;
+defm VL1R : VWholeLoadN<0, "vl1r", VR>;
+defm VL2R : VWholeLoadN<1, "vl2r", VRM2>;
+defm VL4R : VWholeLoadN<3, "vl4r", VRM4>;
+defm VL8R : VWholeLoadN<7, "vl8r", VRM8>;
 
 def : InstAlias<"vl1r.v $vd, (${rs1})", (VL1RE8_V VR:$vd, GPR:$rs1)>;
 def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;
