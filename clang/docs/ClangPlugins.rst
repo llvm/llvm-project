@@ -125,6 +125,28 @@ Running the plugin
 ==================
 
 
+Using the compiler driver
+--------------------------
+
+The Clang driver accepts the `-fplugin` option to load a plugin.
+Clang plugins can receive arguments from the compiler driver command
+line via the `fplugin-arg-<plugin name>-<argument>` option. Using this
+method, the plugin name cannot contain dashes itself, but the argument
+passed to the plugin can.
+
+
+.. code-block:: console
+
+  $ export BD=/path/to/build/directory
+  $ make -C $BD CallSuperAttr
+  $ clang++ -fplugin=$BD/lib/CallSuperAttr.so \
+            -fplugin-arg-call_super_plugin-help \
+            test.cpp
+
+If your plugin name contains dashes, either rename the plugin or used the
+cc1 command line options listed below.
+
+
 Using the cc1 command line
 --------------------------
 

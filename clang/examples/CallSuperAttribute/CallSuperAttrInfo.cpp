@@ -145,6 +145,8 @@ public:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &args) override {
+    if (!args.empty() && args[0] == "help")
+      llvm::errs() << "Help for the CallSuperAttr plugin goes here\n";
     return true;
   }
 

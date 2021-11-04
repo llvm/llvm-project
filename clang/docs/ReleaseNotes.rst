@@ -62,7 +62,8 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- ...
+- Clang plugin arguments can now be passed through the compiler driver via
+  ``-fplugin-arg-pluginname-arg``, similar to GCC's ``-fplugin-arg``.
 
 Deprecated Compiler Flags
 -------------------------
