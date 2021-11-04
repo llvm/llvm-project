@@ -843,7 +843,8 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     }
 
     clang_type = m_ast.CreateEnumerationType(
-        attrs.name.GetCString(), GetClangDeclContextContainingDIE(die, nullptr),
+        attrs.name.GetStringRef(),
+        GetClangDeclContextContainingDIE(die, nullptr),
         GetOwningClangModule(die), attrs.decl, enumerator_clang_type,
         attrs.is_scoped_enum);
   } else {
