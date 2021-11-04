@@ -25,7 +25,6 @@ class Module;
 class ArrayType;
 class StructType;
 class PointerType;
-class StringRef;
 class FunctionType;
 
 namespace omp {
@@ -79,33 +78,6 @@ enum class IdentFlag {
 
 #define OMP_IDENT_FLAG(Enum, ...) constexpr auto Enum = omp::IdentFlag::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
-
-/// Helper to describe assume clauses.
-struct AssumptionClauseMappingInfo {
-  /// The identifier describing the (beginning of the) clause.
-  llvm::StringLiteral Identifier;
-  /// Flag to determine if the identifier is a full name or the start of a name.
-  bool StartsWith;
-  /// Flag to determine if a directive lists follows.
-  bool HasDirectiveList;
-  /// Flag to determine if an expression follows.
-  bool HasExpression;
-};
-
-/// All known assume clauses.
-static constexpr AssumptionClauseMappingInfo AssumptionClauseMappings[] = {
-#define OMP_ASSUME_CLAUSE(Identifier, StartsWith, HasDirectiveList,            \
-                          HasExpression)                                       \
-  {Identifier, StartsWith, HasDirectiveList, HasExpression},
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-};
-
-inline std::string getAllAssumeClauseOptions() {
-  std::string S;
-  for (const AssumptionClauseMappingInfo &ACMI : AssumptionClauseMappings)
-    S += (S.empty() ? "'" : "', '") + ACMI.Identifier.str();
-  return S + "'";
-}
 
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
