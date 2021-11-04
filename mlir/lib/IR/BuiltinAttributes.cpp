@@ -1336,8 +1336,11 @@ Attribute SparseElementsAttr::getZeroAttr() const {
   if (eltType.isa<FloatType>())
     return FloatAttr::get(eltType, 0);
 
+  // Handle string type.
+  if (getValues().isa<DenseStringElementsAttr>())
+    return StringAttr::get("", eltType);
+
   // Otherwise, this is an integer.
-  // TODO: Handle StringAttr here.
   return IntegerAttr::get(eltType, 0);
 }
 
