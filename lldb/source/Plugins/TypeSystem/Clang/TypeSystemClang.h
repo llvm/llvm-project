@@ -417,7 +417,7 @@ public:
                                size_t element_count, bool is_vector);
 
   // Enumeration Types
-  CompilerType CreateEnumerationType(const char *name,
+  CompilerType CreateEnumerationType(llvm::StringRef name,
                                      clang::DeclContext *decl_ctx,
                                      OptionalClangModuleID owning_module,
                                      const Declaration &decl,

@@ -497,7 +497,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       // Class). Set it false for now.
       bool isScoped = false;
 
-      ast_enum = m_ast.CreateEnumerationType(name.c_str(), decl_context,
+      ast_enum = m_ast.CreateEnumerationType(name, decl_context,
                                              OptionalClangModuleID(), decl,
                                              builtin_type, isScoped);
 

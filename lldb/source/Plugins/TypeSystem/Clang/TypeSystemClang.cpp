@@ -2288,7 +2288,7 @@ CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
 #pragma mark Enumeration Types
 
 CompilerType TypeSystemClang::CreateEnumerationType(
-    const char *name, clang::DeclContext *decl_ctx,
+    llvm::StringRef name, clang::DeclContext *decl_ctx,
     OptionalClangModuleID owning_module, const Declaration &decl,
     const CompilerType &integer_clang_type, bool is_scoped) {
   // TODO: Do something intelligent with the Declaration object passed in
@@ -2299,7 +2299,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   //    const bool IsFixed = false;
   EnumDecl *enum_decl = EnumDecl::CreateDeserialized(ast, 0);
   enum_decl->setDeclContext(decl_ctx);
-  if (name && name[0])
+  if (!name.empty())
     enum_decl->setDeclName(&ast.Idents.get(name));
   enum_decl->setScoped(is_scoped);
   enum_decl->setScopedUsingClassTag(is_scoped);
