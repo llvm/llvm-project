@@ -442,6 +442,8 @@ def Tosa_AddOp : Tosa_Op<"add", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
