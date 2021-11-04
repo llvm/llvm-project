@@ -152,13 +152,13 @@ define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* n
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
+; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q3, [r4], #16
 ; CHECK-NEXT:    vmul.i32 q3, q3, q2
-; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vadd.i32 q0, q0, q3
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q3, [q1, #80]!
+; CHECK-NEXT:    vadd.i32 q0, q0, q3
 ; CHECK-NEXT:    le lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
 ; CHECK-NEXT:    vaddv.u32 r0, q0
@@ -244,13 +244,13 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vldrb.u32 q7, [r0, q1]
 ; CHECK-NEXT:    vldrb.u32 q5, [r0, q2]
+; CHECK-NEXT:    vldrb.u32 q6, [r0, q3]
+; CHECK-NEXT:    vldrb.u32 q7, [r0, q1]
+; CHECK-NEXT:    adds r0, #12
 ; CHECK-NEXT:    vmul.i32 q4, q5, r8
 ; CHECK-NEXT:    vmla.u32 q4, q7, r9
-; CHECK-NEXT:    vldrb.u32 q6, [r0, q3]
 ; CHECK-NEXT:    vmla.u32 q4, q6, r12
-; CHECK-NEXT:    adds r0, #12
 ; CHECK-NEXT:    vadd.i32 q4, q4, q0
 ; CHECK-NEXT:    vshr.u32 q4, q4, #16
 ; CHECK-NEXT:    vstrb.32 q4, [r1, q1]
@@ -263,8 +263,8 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:    vmla.u32 q4, q6, r4
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
 ; CHECK-NEXT:    vadd.i32 q4, q4, q0
-; CHECK-NEXT:    vshr.u32 q1, q1, #16
 ; CHECK-NEXT:    vshr.u32 q4, q4, #16
+; CHECK-NEXT:    vshr.u32 q1, q1, #16
 ; CHECK-NEXT:    vstrb.32 q4, [r1, q2]
 ; CHECK-NEXT:    vstrb.32 q1, [r1, q3]
 ; CHECK-NEXT:    adds r1, #12

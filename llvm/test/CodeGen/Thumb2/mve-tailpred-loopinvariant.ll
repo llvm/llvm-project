@@ -21,8 +21,8 @@ define i32 @a(i32* readnone %b, i8* %c) {
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r0, r1, r2
-; CHECK-NEXT:    adds r2, #16
 ; CHECK-NEXT:    vidup.u8 q0, r0, #1
+; CHECK-NEXT:    adds r2, #16
 ; CHECK-NEXT:    vstrb.8 q0, [r3], #16
 ; CHECK-NEXT:    letp lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end

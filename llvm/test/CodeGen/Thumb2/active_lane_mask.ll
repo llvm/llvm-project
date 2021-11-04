@@ -342,11 +342,11 @@ define <16 x i8> @v16i8(i32 %index, i32 %TC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    add r0, sp, #88
 ; CHECK-NEXT:    vcmp.i8 ne, q3, zr
 ; CHECK-NEXT:    vldr d1, [sp, #80]
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vmov d0, r2, r3
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.i8 ne, q2, zr
+; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1

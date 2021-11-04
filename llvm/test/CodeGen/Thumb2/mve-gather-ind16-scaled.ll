@@ -231,8 +231,8 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_passthru_icmp1(i16* %base, <8 x i16>* %offptr) {
 ; CHECK-LABEL: scaled_v8i16_i16_passthru_icmp1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i16 q0, #0x1
 ; CHECK-NEXT:    vldrh.u16 q1, [r1]
+; CHECK-NEXT:    vmov.i16 q0, #0x1
 ; CHECK-NEXT:    vpt.s16 gt, q1, zr
 ; CHECK-NEXT:    vldrht.u16 q2, [r0, q1, uxtw #1]
 ; CHECK-NEXT:    vpsel q0, q2, q0

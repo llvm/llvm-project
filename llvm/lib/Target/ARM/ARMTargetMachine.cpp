@@ -541,7 +541,6 @@ void ARMPassConfig::addPreSched2() {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }
-  addPass(createMVEVPTBlockPass());
   addPass(createThumb2ITBlockPass());
 
   // Add both scheduling passes to give the subtarget an opportunity to pick
@@ -551,6 +550,7 @@ void ARMPassConfig::addPreSched2() {
     addPass(&PostRASchedulerID);
   }
 
+  addPass(createMVEVPTBlockPass());
   addPass(createARMIndirectThunks());
   addPass(createARMSLSHardeningPass());
 }

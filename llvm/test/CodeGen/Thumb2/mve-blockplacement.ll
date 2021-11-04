@@ -453,8 +453,8 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ Parent Loop BB1_8 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    vadd.i32 q1, q1, q6
 ; CHECK-NEXT:    vadd.i32 q2, q2, r10
+; CHECK-NEXT:    vadd.i32 q1, q1, q6
 ; CHECK-NEXT:    vstrw.32 q0, [q2]
 ; CHECK-NEXT:    letp lr, .LBB1_10
 ; CHECK-NEXT:    b .LBB1_13
@@ -467,8 +467,8 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ Parent Loop BB1_8 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    vadd.i32 q1, q1, q5
 ; CHECK-NEXT:    vadd.i32 q2, q2, r10
+; CHECK-NEXT:    vadd.i32 q1, q1, q5
 ; CHECK-NEXT:    vstrw.32 q0, [q2]
 ; CHECK-NEXT:    letp lr, .LBB1_12
 ; CHECK-NEXT:  .LBB1_13: @ %for.cond9.for.cond15.preheader_crit_edge.us
