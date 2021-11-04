@@ -862,7 +862,6 @@ def no_arch_warnings : Flag<["-"], "no_arch_warnings">,
     Group<grp_rare>;
 def arch_errors_fatal : Flag<["-"], "arch_errors_fatal">,
     HelpText<"Escalate to errors any warnings about inputs whose architecture does not match the -arch option">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def e : Separate<["-"], "e">,
     MetaVarName<"<symbol>">,
