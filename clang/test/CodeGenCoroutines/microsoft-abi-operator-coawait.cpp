@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc18.0.0 -fcoroutines-ts -emit-llvm %s -o - -std=c++14 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc18.0.0 -emit-llvm %s -o - -std=c++20 -disable-llvm-passes | FileCheck %s
 struct no_suspend {
   bool await_ready() { return true; }
   template <typename F> void await_suspend(F) {}

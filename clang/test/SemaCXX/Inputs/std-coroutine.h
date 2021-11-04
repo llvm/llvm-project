@@ -1,9 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wno-unreachable-code -Wno-unused-value
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wno-unreachable-code -Wno-unused-value
 #ifndef STD_COROUTINE_H
 #define STD_COROUTINE_H
 
 namespace std {
-namespace experimental {
 
 template <class Ret, typename... T>
 struct coroutine_traits { using promise_type = typename Ret::promise_type; };
@@ -31,7 +30,6 @@ struct suspend_never {
   void await_resume() noexcept {}
 };
 
-} // namespace experimental
 } // namespace std
 
 #endif // STD_COROUTINE_H

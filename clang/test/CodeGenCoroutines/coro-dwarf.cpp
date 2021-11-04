@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -disable-llvm-optzns -std=c++2a -fcoroutines-ts \
+// RUN: %clang_cc1 -disable-llvm-optzns -std=c++20 \
 // RUN:            -triple=x86_64 -dwarf-version=4 -debug-info-kind=limited \
 // RUN:            -emit-llvm -o - %s | \
 // RUN:            FileCheck %s --implicit-check-not=DILocalVariable
 
-namespace std::experimental {
+namespace std {
 template <typename... T> struct coroutine_traits;
 
 template <class Promise = void> struct coroutine_handle {
@@ -16,15 +16,15 @@ template <> struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
 };
-} // namespace std::experimental
+} // namespace std
 
 struct suspend_always {
   bool await_ready() noexcept;
-  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
   void await_resume() noexcept;
 };
 
-template <typename... Args> struct std::experimental::coroutine_traits<void, Args...> {
+template <typename... Args> struct std::coroutine_traits<void, Args...> {
   struct promise_type {
     void get_return_object() noexcept;
     suspend_always initial_suspend() noexcept;

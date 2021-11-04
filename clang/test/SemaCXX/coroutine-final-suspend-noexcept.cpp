@@ -1,10 +1,9 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++20 -verify %s -fcxx-exceptions -fexceptions -Wunused-result
 
 namespace std {
-namespace experimental {
 
 template <class Ret, typename... T>
 struct coroutine_traits { using promise_type = typename Ret::promise_type; };
@@ -34,10 +33,9 @@ struct suspend_always {
   ~suspend_always() noexcept(false); // expected-note 2 {{must be declared with 'noexcept'}}
 };
 
-} // namespace experimental
 } // namespace std
 
-using namespace std::experimental;
+using namespace std;
 
 struct A {
   bool await_ready();

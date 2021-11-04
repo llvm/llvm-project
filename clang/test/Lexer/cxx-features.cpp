@@ -95,6 +95,10 @@
 #error "wrong value for __cpp_impl_three_way_comparison"
 #endif
 
+#if check(impl_coroutine, 0, 0, 0, 0, 201902L, 201902L)
+#error "wrong value for __cpp_impl_coroutine"
+#endif
+
 // init_captures checked below
 
 #if check(modules, 0, 0, 0, 0, 0, 0)
