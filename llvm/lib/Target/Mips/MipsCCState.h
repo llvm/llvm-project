@@ -147,6 +147,7 @@ public:
 
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn) {
+    PreAnalyzeFormalArguments(Ins, Fn);
     CCState::AnalyzeFormalArguments(Ins, Fn);
   }
 
