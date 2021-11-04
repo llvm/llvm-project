@@ -161,7 +161,7 @@ class F_IRCD<bits<6> func, string asm, list<dag> pattern = [],
 
 // Category: Load/Store/Exchange
 
-// Format: Load/Store with word index
+// Format: Load/Store register indirect with immediate index
 class F_LSINDEX<dag outs, dag ins, string asm, list<dag> pattern = [],
                 InstrItinClass itin = NoItinerary>
    : InstM88k<outs, ins, asm, " $rd, $rs1, $si16", pattern, itin> {
@@ -174,7 +174,7 @@ class F_LSINDEX<dag outs, dag ins, string asm, list<dag> pattern = [],
   let Inst{15-0}  = si16;
 }
 
-// Format: Load/Store
+// Format: Load/Store register indirect with immediate index (GRF)
 class F_LS<bits<4> func, bits<2> ty,
                dag outs, dag ins, string asm, list<dag> pattern = [],
                InstrItinClass itin = NoItinerary>
@@ -183,7 +183,7 @@ class F_LS<bits<4> func, bits<2> ty,
   let Inst{27-26} = ty;
 }
 
-// Format: Load unsigned
+// Format: Load register indirect with immediate index (GRF, unsigned)
 class F_LU<bits<1> b,
                dag outs, dag ins, string asm, list<dag> pattern = [],
                InstrItinClass itin = NoItinerary>
@@ -192,11 +192,19 @@ class F_LU<bits<1> b,
   let Inst{26}    = b;
 }
 
+// Format: Load register indirect with immediate index (XRF)
+class F_LX<bits<6> func,
+           dag outs, dag ins, string asm, list<dag> pattern = [],
+           InstrItinClass itin = NoItinerary>
+   : F_LSINDEX<outs, ins, asm, pattern, itin> {
+  let Inst{31-26} = func;
+}
+
 // Format: Load/Store register indirect with scaled or unscaled index
 class F_LSINDIRECT<bits<4> func, bits<2> ty, bits<1> scaled, bits<1> user,
-                   dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                   InstrItinClass itin = NoItinerary>
-   : InstM88k<outs, ins, asmstr, "", pattern, itin> {
+                   dag outs, dag ins, string asm, string operands,
+                   list<dag> pattern = [], InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asm, operands, pattern, itin> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<5>  rs2;
@@ -217,6 +225,17 @@ class F_LSINDIRECT<bits<4> func, bits<2> ty, bits<1> scaled, bits<1> user,
   let Inst{4-0}   = rs2;
 }
 
+class F_LSINDUSC<bits<4> func, bits<2> ty, bits<1> user,
+                 dag outs, dag ins, string asm, list<dag> pattern = [],
+                 InstrItinClass itin = NoItinerary>
+   : F_LSINDIRECT<func, ty, /*scaled=*/ 0b0, user, outs, ins, asm,
+                  " $rd, $rs1, $rs2", pattern, itin>;
+
+class F_LSINDSC<bits<4> func, bits<2> ty, bits<1> user,
+                dag outs, dag ins, string asm, list<dag> pattern = [],
+                InstrItinClass itin = NoItinerary>
+   : F_LSINDIRECT<func, ty, /*scaled=*/ 0b1, user, outs, ins, asm,
+                  " $rd, $rs1[$rs2]", pattern, itin>;
 
 // Category: Flow control.
 

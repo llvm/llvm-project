@@ -426,40 +426,192 @@ multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                   itin>;
 }
 
-class LoadUnsigned<bits<1> b, string OpcStr, PatFrag OpNode,
-                 InstrItinClass itin = NoItinerary> :
-  F_LU<b, (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
-       OpcStr,
-       [(set (i32 GPR:$rd), (OpNode (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))],
-       itin>;
+multiclass LoadUnsigned<InstrItinClass itin = NoItinerary> {
+  def urih : F_LU<0b0, (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  "ld.hu",
+                  [(set (i32 GPR:$rd), (zextloadi16 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))],
+                  itin>;
+  def urib : F_LU<0b1, (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  "ld.bu",
+                  [(set (i32 GPR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))],
+                  itin>;
+}
+
+class LoadXR<bits<6> Func, string OpcStr, ValueType VT, InstrItinClass itin = NoItinerary>
+  :  F_LX<Func, (outs XR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+          OpcStr,
+          [(set (VT XR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))],
+          itin>;
 
 multiclass LoadUnscaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                  InstrItinClass itin = NoItinerary> {
-  let regfile = 0 in {
-    def rruw  : F_LSINDIRECT<Func, /*ty=*/ 0b01, /*scaled=*/ 0b0, /*user=*/ 0b0,
+  let regfile = 1 in {
+    def rrud  : F_LSINDUSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".d"),
+                    [(set (i64 GPR64:$rd), (load (ADDRrr (i32 GPR:$rs1), (i32 GPR:$rs2))))],
+                    itin>;
+    def rruw  : F_LSINDUSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                    !strconcat(OpcStr, " $rd, $rs1, $rs2"),
+                    OpcStr,
                     [(set (i32 GPR:$rd), (load (ADDRrr (i32 GPR:$rs1), (i32 GPR:$rs2))))],
                     itin>;
-    def rrub  : F_LSINDIRECT<Func, /*ty=*/ 0b11, /*scaled=*/ 0b0, /*user=*/ 0b0,
+    def rrub  : F_LSINDUSC<Func, /*ty=*/ 0b11, /*user=*/ 0b0,
                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                    !strconcat(OpcStr, ".b $rd, $rs1, $rs2"),
+                    !strconcat(OpcStr, ".b"),
                     [(set (i32 GPR:$rd), (sextloadi8 (ADDRrr (i32 GPR:$rs1), (i32 GPR:$rs2))))],
                     itin>;
-    def rruh  : F_LSINDIRECT<Func, /*ty=*/ 0b10, /*scaled=*/ 0b0, /*user=*/ 0b0,
+    def rruh  : F_LSINDUSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                    !strconcat(OpcStr, ".h $rd, $rs1, $rs2"),
+                    !strconcat(OpcStr, ".h"),
                     [(set (i32 GPR:$rd), (sextloadi16 (ADDRrr (i32 GPR:$rs1), (i32 GPR:$rs2))))],
+                    itin>;
+    def rrudu : F_LSINDUSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".d.usr"),
+                    [],
+                    itin>;
+    def rruwu : F_LSINDUSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".usr"),
+                    [],
+                    itin>;
+    def rrubu : F_LSINDUSC<Func, /*ty=*/ 0b11, /*user=*/ 0b1,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".b.usr"),
+                    [],
+                    itin>;
+    def rruhu : F_LSINDUSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".h.usr"),
+                    [],
+                    itin>;
+  }
+  let regfile = 0, Predicates = [IsMC881100] in {
+    def xxuw  : F_LSINDUSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    OpcStr,
+                    [],
+                    itin>;
+    def xxud  : F_LSINDUSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".d"),
+                    [],
+                    itin>;
+    def xxuq  : F_LSINDUSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".x"),
+                    [],
+                    itin>;
+    def xxuwu : F_LSINDUSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".usr"),
+                    [],
+                    itin>;
+    def xxudu : F_LSINDUSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".d.usr"),
+                    [],
+                    itin>;
+    def xxuqu : F_LSINDUSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".x.usr"),
+                    [],
+                    itin>;
+  }
+}
+
+multiclass LoadScaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+                 InstrItinClass itin = NoItinerary> {
+  let regfile = 1 in {
+    def rrsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".d"),
+                    [],
+                    itin>;
+    def rrsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    OpcStr,
+                    [],
+                    itin>;
+    def rrsb  : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ 0b0,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".b"),
+                    [],
+                    itin>;
+    def rrsh  : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".h"),
+                    [],
+                    itin>;
+    def rrsdu : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".d.usr"),
+                    [],
+                    itin>;
+    def rrswu : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".usr"),
+                    [],
+                    itin>;
+    def rrsbu : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ 0b1,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".b.usr"),
+                    [],
+                    itin>;
+    def rrshu : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
+                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    !strconcat(OpcStr, ".h.usr"),
+                    [],
+                    itin>;
+  }
+  let regfile = 0, Predicates = [IsMC881100] in {
+    def xxsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    OpcStr,
+                    [],
+                    itin>;
+    def xxsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".d"),
+                    [],
+                    itin>;
+    def xxsq  : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".x"),
+                    [],
+                    itin>;
+    def xxswu : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".usr"),
+                    [],
+                    itin>;
+    def xxsdu : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".d.usr"),
+                    [],
+                    itin>;
+    def xxsqu : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
+                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    !strconcat(OpcStr, ".x.usr"),
+                    [],
                     itin>;
   }
 }
 
 defm LD : LoadIndexImm<0b0001, "ld", load>;
 defm ST : StoreIndexImm<0b0010, "st", store>;
-def LDurih : LoadUnsigned<0b0, "ld.hu", zextloadi16>;
-def LDurib : LoadUnsigned<0b1, "ld.bu", zextloadi8>;
+
+defm LD : LoadUnsigned<>;
 
 defm LD : LoadUnscaled<0b0001, "ld", load>;
+defm LD : LoadScaled<0b0001, "ld", load>;
+
+let Predicates = [IsMC881100] in {
+  def LDxri : LoadXR<0b000001, "ld", f32>;
+  def LDxrid : LoadXR<0b000000, "ld.d", f64>;
+  def LDxrix : LoadXR<0b001111, "ld.x", f80>;
+}
 
 //def : Pat<(load (ADDRri GPR:$rs1, imm32zx16:$si16)),
 //          (LDriw GPR:$rs1, imm32zx16:$si16)>;

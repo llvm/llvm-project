@@ -295,13 +295,11 @@ isns:
 # CHECK: jmp      %r0                    | encoding: [0xf4,0x00,0xc0,0x00]
 # CHECK: jmp.n    %r10                   | encoding: [0xf4,0x00,0xc4,0x0a]
 
-  # jump to subroutine
+# jump to subroutine
   jsr      %r10
   jsr.n    %r13
 # CHECK: jsr      %r10                   | encoding: [0xf4,0x00,0xc8,0x0a]
 # CHECK: jsr.n    %r13                   | encoding: [0xf4,0x00,0xcc,0x0d]
-
-####### All instruction until here
 
 # load register from memory
   ld.b     %r0, %r1, 0
@@ -314,8 +312,8 @@ isns:
   ld.hu    %r0, %r1, 4096
   ld       %r0, %r1, 0
   ld       %r0, %r1, 4096
-#  ld.d     %r0, %r1, 0
-#  ld.d     %r0, %r1, 4096
+  ld.d     %r0, %r1, 0
+  ld.d     %r0, %r1, 4096
 # CHECK: ld.b     %r0, %r1, 0            | encoding: [0x1c,0x01,0x00,0x00]
 # CHECK: ld.b     %r0, %r1, 4096         | encoding: [0x1c,0x01,0x10,0x00]
 # CHECK: ld.bu    %r0, %r1, 0            | encoding: [0x0c,0x01,0x00,0x00]
@@ -326,14 +324,63 @@ isns:
 # CHECK: ld.hu    %r0, %r1, 4096         | encoding: [0x08,0x01,0x10,0x00]
 # CHECK: ld       %r0, %r1, 0            | encoding: [0x14,0x01,0x00,0x00]
 # CHECK: ld       %r0, %r1, 4096         | encoding: [0x14,0x01,0x10,0x00]
-# COM: CHECK: ld.d     %r0, %r1, 0            | encoding: [0x10,0x01,0x00,0x00]
-# COM: CHECK: ld.d     %r0, %r1, 4096         | encoding: [0x10,0x01,0x10,0x00]
+# CHECK: ld.d     %r0, %r1, 0            | encoding: [0x10,0x01,0x00,0x00]
+# CHECK: ld.d     %r0, %r1, 4096         | encoding: [0x10,0x01,0x10,0x00]
+  ld.b         %r0, %r1, %r2
+#  ld.bu        %r1, %r2, %r3
+  ld.h         %r2, %r3, %r4
+#  ld.hu        %r3, %r4, %r5
+  ld           %r4, %r5, %r6
+  ld.d         %r5, %r6, %r7
+  ld.b.usr     %r6, %r7, %r8
+#  ld.bu.usr    %r7, %r8, %r9
+  ld.h.usr     %r8, %r9, %r1
+#  ld.hu.usr    %r9, %r1, %r2
+  ld.usr       %r1, %r2, %r3
+  ld.d.usr     %r2, %r3, %r4
+# CHECK: ld.b         %r0, %r1, %r2      | encoding: [0xf4,0x01,0x1c,0x02]
+# COM: CHECK: ld.bu        %r1, %r2, %r3      | encoding: [0xf4,0x22,0x0c,0x03]
+# CHECK: ld.h         %r2, %r3, %r4      | encoding: [0xf4,0x43,0x18,0x04]
+# COM: CHECK: ld.hu        %r3, %r4, %r5      | encoding: [0xf4,0x64,0x08,0x05]
+# CHECK: ld           %r4, %r5, %r6      | encoding: [0xf4,0x85,0x14,0x06]
+# CHECK: ld.d         %r5, %r6, %r7      | encoding: [0xf4,0xa6,0x10,0x07]
+# CHECK: ld.b.usr     %r6, %r7, %r8      | encoding: [0xf4,0xc7,0x1d,0x08]
+# COM: CHECK: ld.bu.usr    %r7, %r8, %r9      | encoding: [0xf4,0xe8,0x0d,0x09]
+# CHECK: ld.h.usr     %r8, %r9, %r1      | encoding: [0xf5,0x09,0x19,0x01]
+# COM: CHECK: ld.hu.usr    %r9, %r1, %r2      | encoding: [0xf5,0x21,0x09,0x02]
+# CHECK: ld.usr       %r1, %r2, %r3      | encoding: [0xf4,0x22,0x15,0x03]
+# CHECK: ld.d.usr     %r2, %r3, %r4      | encoding: [0xf4,0x43,0x11,0x04]
+
+#  ld.b         %r0, %r1[%r2]
+#  ld.bu        %r1, %r2[%r3]
+#  ld.h         %r2, %r3[%r4]
+#  ld.hu        %r3, %r4[%r5]
+#  ld           %r4, %r5[%r6]
+#  ld.d         %r5, %r6[%r7]
+#  ld.b.usr     %r6, %r7[%r8]
+#  ld.bu.usr    %r7, %r8[%r9]
+#  ld.h.usr     %r8, %r9[%r1]
+#  ld.hu.usr    %r9, %r1[%r2]
+#  ld.usr       %r1, %r2[%r3]
+#  ld.d.usr     %r2, %r3[%r4]
+
+# load address
+#  lda.h        %r0, %r1[%r2]
+#  lda          %r1, %r2[%r3]
+#  lda.d        %r2, %r3[%r4]
+# COM: CHECK: lda.h        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3a,0x02]
+# COM: CHECK: lda          %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x36,0x03]
+# COM: CHECK: lda.d        %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x32,0x04]
+
+# load from control register
+#  ldcr         %r0, %cr10
+# COM: CHECK: ldcr         %r0, %cr10         | encoding: [0x80,0x00,0x41,0x40]
 
 # make bit field
-  mak      %r0, %r1, 10<5>
-  mak      %r0, %r1, %r2
-  mak      %r0, %r1, 6
-  mak      %r0, %r1, <6>
+  mak          %r0, %r1, 10<5>
+  mak          %r0, %r1, %r2
+  mak          %r0, %r1, 6
+  mak          %r0, %r1, <6>
 # CHECK: mak      %r0, %r1, 10<5>        | encoding: [0xf0,0x01,0xa1,0x45]
 # CHECK: mak      %r0, %r1, %r2          | encoding: [0xf4,0x01,0xa0,0x02]
 # CHECK: mak      %r0, %r1, 0<6>         | encoding: [0xf0,0x01,0xa0,0x06]
@@ -348,6 +395,20 @@ isns:
 # CHECK: mask     %r0, %r1, 4096         | encoding: [0x48,0x01,0x10,0x00]
 # CHECK: mask.u   %r0, %r1, 0            | encoding: [0x4c,0x01,0x00,0x00]
 # CHECK: mask.u   %r0, %r1, 4096         | encoding: [0x4c,0x01,0x10,0x00]
+
+# integer multiply
+  mulu         %r0, %r1, %r2
+  mulu         %r0, %r1, 0
+  mulu         %r0, %r1, 4096
+# CHECK: mulu         %r0, %r1, %r2      | encoding: [0xf4,0x01,0x6c,0x02]
+# CHECK: mulu         %r0, %r1, 0        | encoding: [0x6c,0x01,0x00,0x00]
+# CHECK: mulu         %r0, %r1, 4096     | encoding: [0x6c,0x01,0x10,0x00]
+
+# floating point round to nearest integer
+  nint.ss      %r0, %r10
+  nint.sd      %r10, %r12
+# CHECK: nint.ss      %r0, %r10          | encoding: [0x84,0x00,0x50,0x0a]
+# CHECK: nint.sd      %r10, %r12         | encoding: [0x85,0x40,0x50,0x8c]
 
 # logical or
   or       %r0, %r1, %r2
@@ -369,6 +430,10 @@ isns:
 # CHECK: rot      %r0, %r1, <5>          | encoding: [0xf0,0x01,0xa8,0x05]
 # CHECK: rot      %r2, %r4, %r6          | encoding: [0xf4,0x44,0xa8,0x06]
 
+# return from exception
+#  rte
+# COM: CHECK: rte                             | encoding: [0xf4,0x00,0xfc,0x00]
+
 # set bit field
   set      %r0, %r1, 10<5>
   set      %r2, %r4, %r6
@@ -378,6 +443,8 @@ isns:
 # CHECK: set      %r2, %r4, %r6          | encoding: [0xf4,0x44,0x88,0x06]
 # CHECK: set      %r3, %r7, 0<6>         | encoding: [0xf0,0x67,0x88,0x06]
 # CHECK: set      %r3, %r7, 0<6>         | encoding: [0xf0,0x67,0x88,0x06]
+
+####### All instruction until here
 
 # store register to memory
   st.b     %r0, %r1, 0
