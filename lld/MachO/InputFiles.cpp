@@ -789,9 +789,12 @@ template <class LP> void ObjFile::parse() {
 
   Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
   if (arch != config->arch()) {
-    error(toString(this) + " has architecture " + getArchitectureName(arch) +
-          " which is incompatible with target architecture " +
-          getArchitectureName(config->arch()));
+    auto msg = config->errorForArchMismatch
+                   ? static_cast<void (*)(const Twine &)>(error)
+                   : warn;
+    msg(toString(this) + " has architecture " + getArchitectureName(arch) +
+        " which is incompatible with target architecture " +
+        getArchitectureName(config->arch()));
     return;
   }
 
