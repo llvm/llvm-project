@@ -70,9 +70,7 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
 
   // Loop over all of the basic blocks
   for (MachineBasicBlock &B : Fn) {
-    for (auto I = B.begin(), E = B.end(); I != E; ) {
-      MachineInstr &MI = *I;
-      ++I;
+    for (MachineInstr &MI : llvm::make_early_inc_range(B)) {
       unsigned Opc = MI.getOpcode();
 
       if (Opc == Hexagon::CONST32) {
