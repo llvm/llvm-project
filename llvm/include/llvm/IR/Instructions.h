@@ -1339,6 +1339,10 @@ public:
     return P == ICMP_SLE || P == ICMP_ULE;
   }
 
+  /// Returns the sequence of all ICmp predicates.
+  ///
+  static auto predicates() { return ICmpPredicates(); }
+
   /// Exchange the two operands to this instruction in such a way that it does
   /// not modify the semantics of the instruction. The predicate value may be
   /// changed to retain the same result if the predicate is order dependent
@@ -1460,6 +1464,10 @@ public:
     setPredicate(getSwappedPredicate());
     Op<0>().swap(Op<1>());
   }
+
+  /// Returns the sequence of all FCmp predicates.
+  ///
+  static auto predicates() { return FCmpPredicates(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {

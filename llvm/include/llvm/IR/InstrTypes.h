@@ -19,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -754,6 +755,20 @@ public:
   };
   using PredicateField =
       Bitfield::Element<Predicate, 0, 6, LAST_ICMP_PREDICATE>;
+
+  /// Returns the sequence of all FCmp predicates.
+  static auto FCmpPredicates() {
+    return enum_seq_inclusive(Predicate::FIRST_FCMP_PREDICATE,
+                              Predicate::LAST_FCMP_PREDICATE,
+                              force_iteration_on_noniterable_enum);
+  }
+
+  /// Returns the sequence of all ICmp predicates.
+  static auto ICmpPredicates() {
+    return enum_seq_inclusive(Predicate::FIRST_ICMP_PREDICATE,
+                              Predicate::LAST_ICMP_PREDICATE,
+                              force_iteration_on_noniterable_enum);
+  }
 
 protected:
   CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
