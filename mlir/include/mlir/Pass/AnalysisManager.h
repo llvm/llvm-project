@@ -212,7 +212,7 @@ private:
     return static_cast<AnalysisModel<AnalysisT> &>(*it->second).analysis;
   }
 
-  /// Construct analysis using two arguments contructor (OpT, AnalysisManager)
+  /// Construct analysis using two arguments constructor (OpT, AnalysisManager)
   template <typename AnalysisT, typename OpT,
             std::enable_if_t<std::is_constructible<
                 AnalysisT, OpT, AnalysisManager &>::value> * = nullptr>
@@ -220,7 +220,7 @@ private:
     return std::make_unique<AnalysisModel<AnalysisT>>(op, am);
   }
 
-  /// Construct analysis using single argument contructor (OpT)
+  /// Construct analysis using single argument constructor (OpT)
   template <typename AnalysisT, typename OpT,
             std::enable_if_t<!std::is_constructible<
                 AnalysisT, OpT, AnalysisManager &>::value> * = nullptr>
