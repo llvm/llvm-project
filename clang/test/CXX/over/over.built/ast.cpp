@@ -2,8 +2,8 @@
 
 struct A{};
 
-template <typename T>
-auto Test(T* pt) {
+template <typename T, typename U>
+auto Test(T* pt, U* pu) {
   // CHECK: UnaryOperator {{.*}} '<dependent type>' prefix '*'
   // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
   (void)*pt;
@@ -24,7 +24,18 @@ auto Test(T* pt) {
   // CHECK: BinaryOperator {{.*}} '<dependent type>' '-'
   // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
   // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
-  (void)(pt -pt);
+  (void)(pt - pt);
+
+  // CHECK: BinaryOperator {{.*}} '<dependent type>' '-'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'U *' lvalue ParmVar {{.*}} 'pu' 'U *'
+  (void)(pt - pu);
+
+  // CHECK: BinaryOperator {{.*}} '<dependent type>' '=='
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'U *' lvalue ParmVar {{.*}} 'pu' 'U *'
+  (void)(pt == pu);
+
 }
 
 
