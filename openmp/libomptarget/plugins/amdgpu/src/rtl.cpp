@@ -692,7 +692,7 @@ public:
       return ptr;
     }
 
-    int free(void *ptr) override {
+    int dev_free(void *ptr) override {
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;
@@ -1882,11 +1882,9 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
     __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
   }
 
-  hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(device_id);
-  hsa_status_t err = hsa_amd_memory_pool_allocate(MemoryPool, size, 0, &ptr);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
-  ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
+
   return ptr;
 }
 
@@ -1934,7 +1932,7 @@ int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  return DeviceInfo.DeviceAllocators[device_id].free(tgt_ptr);
+  return DeviceInfo.DeviceAllocators[device_id].dev_free(tgt_ptr);
 }
 
 // Determine launch values for threadsPerGroup and num_groups.
