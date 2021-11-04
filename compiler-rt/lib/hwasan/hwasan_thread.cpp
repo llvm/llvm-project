@@ -108,10 +108,9 @@ void Thread::Destroy() {
 }
 
 void Thread::Print(const char *Prefix) {
-  Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix,
-         unique_id_, this, stack_bottom(), stack_top(),
-         stack_top() - stack_bottom(),
-         tls_begin(), tls_end());
+  Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix, unique_id_,
+         (void *)this, stack_bottom(), stack_top(),
+         stack_top() - stack_bottom(), tls_begin(), tls_end());
 }
 
 static u32 xorshift(u32 state) {

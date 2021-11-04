@@ -916,7 +916,7 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
 // Consider refactoring these into a shared implementation.
 bool InitShadow(bool init_origins) {
   // Let user know mapping parameters first.
-  VPrintf(1, "dfsan_init %p\n", &__dfsan::dfsan_init);
+  VPrintf(1, "dfsan_init %p\n", (void *)&__dfsan::dfsan_init);
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
     VPrintf(1, "%s: %zx - %zx\n", kMemoryLayout[i].name, kMemoryLayout[i].start,
             kMemoryLayout[i].end - 1);

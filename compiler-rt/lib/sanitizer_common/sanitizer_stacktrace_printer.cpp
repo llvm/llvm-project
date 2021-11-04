@@ -198,7 +198,8 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       }
       break;
     default:
-      Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p, p);
+      Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
+             (void *)p);
       Die();
     }
   }
@@ -250,7 +251,7 @@ void RenderData(InternalScopedString *buffer, const char *format,
         break;
       default:
         Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
-               p);
+               (void *)p);
         Die();
     }
   }

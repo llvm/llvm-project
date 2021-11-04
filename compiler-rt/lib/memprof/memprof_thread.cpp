@@ -131,7 +131,7 @@ void MemprofThread::Init(const InitOptions *options) {
   int local = 0;
   VReport(1, "T%d: stack [%p,%p) size 0x%zx; local=%p\n", tid(),
           (void *)stack_bottom_, (void *)stack_top_, stack_top_ - stack_bottom_,
-          &local);
+          (void *)&local);
 }
 
 thread_return_t
@@ -198,7 +198,7 @@ MemprofThread *GetCurrentThread() {
 
 void SetCurrentThread(MemprofThread *t) {
   CHECK(t->context());
-  VReport(2, "SetCurrentThread: %p for thread %p\n", t->context(),
+  VReport(2, "SetCurrentThread: %p for thread %p\n", (void *)t->context(),
           (void *)GetThreadSelf());
   // Make sure we do not reset the current MemprofThread.
   CHECK_EQ(0, TSDGet());
