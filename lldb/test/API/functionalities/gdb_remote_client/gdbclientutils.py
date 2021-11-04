@@ -203,6 +203,8 @@ class MockGDBServerResponder:
         if packet.startswith("qRegisterInfo"):
             regnum = int(packet[len("qRegisterInfo"):], 16)
             return self.qRegisterInfo(regnum)
+        if packet == "k":
+            return self.k()
 
         return self.other(packet)
 
@@ -329,6 +331,9 @@ class MockGDBServerResponder:
         return "OK"
 
     def qRegisterInfo(self, num):
+        return ""
+
+    def k(self):
         return ""
 
     """
