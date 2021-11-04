@@ -220,7 +220,7 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
     reg_value.SetUInt64(tls_context.Pc);
     break;
   case gpr_cpsr_arm64:
-    reg_value.SetUInt64(tls_context.Cpsr);
+    reg_value.SetUInt32(tls_context.Cpsr);
     break;
 
   case gpr_w0_arm64:
@@ -317,7 +317,7 @@ NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
     tls_context.Pc = reg_value.GetAsUInt64();
     break;
   case gpr_cpsr_arm64:
-    tls_context.Cpsr = reg_value.GetAsUInt64();
+    tls_context.Cpsr = reg_value.GetAsUInt32();
     break;
 
   case gpr_w0_arm64:
