@@ -63,9 +63,9 @@ define i32 @bad(i32* readonly %x, i32* nocapture readonly %y, i32 %n) {
 ; CHECK-NEXT:  .LBB1_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0], #16
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmlava.s32 r12, q0, q1
 ; CHECK-NEXT:    le lr, .LBB1_1
