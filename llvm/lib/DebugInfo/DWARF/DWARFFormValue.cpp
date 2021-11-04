@@ -767,10 +767,10 @@ Optional<std::string>
 DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
   if (U == nullptr || !isFormClass(FC_Constant))
     return None;
-  DWARFUnit *DU = const_cast<DWARFUnit *>(U);
-  if (auto *LT = U->getContext().getLineTableForUnit(DU->getLinkedUnit())) {
+  DWARFUnit *DLU = const_cast<DWARFUnit *>(U)->getLinkedUnit();
+  if (auto *LT = DLU->getContext().getLineTableForUnit(DLU)) {
     std::string FileName;
-    if (LT->getFileNameByIndex(Value.uval, DU->getCompilationDir(), Kind,
+    if (LT->getFileNameByIndex(Value.uval, DLU->getCompilationDir(), Kind,
                                FileName))
       return FileName;
   }
