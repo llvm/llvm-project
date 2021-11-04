@@ -115,10 +115,11 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> MaxVarsPrep("ppc-formprep-max-vars",
-                                 cl::Hidden, cl::init(24),
-  cl::desc("Potential common base number threshold per function for PPC loop "
-           "prep"));
+static cl::opt<unsigned>
+    MaxVarsPrep("ppc-formprep-max-vars", cl::Hidden, cl::init(24),
+                cl::ZeroOrMore,
+                cl::desc("Potential common base number threshold per function "
+                         "for PPC loop prep"));
 
 static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
                                  cl::init(true), cl::Hidden,
