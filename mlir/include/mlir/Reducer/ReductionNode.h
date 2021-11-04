@@ -160,7 +160,7 @@ private:
   Tester::Interestingness interesting;
 
   /// `ranges` represents the selected subset of operations in the region. We
-  /// implictly number each operation in the region and ReductionTreePass will
+  /// implicitly number each operation in the region and ReductionTreePass will
   /// apply reducer patterns on the operation falls into the `ranges`. We will
   /// generate new ReductionNode with subset of `ranges` to see if we can do
   /// further reduction. we may split the element in the `ranges` so that we can

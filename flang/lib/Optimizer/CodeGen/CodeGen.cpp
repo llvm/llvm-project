@@ -19,6 +19,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -43,6 +44,25 @@ protected:
   fir::LLVMTypeConverter &lowerTy() const {
     return *static_cast<fir::LLVMTypeConverter *>(this->getTypeConverter());
   }
+};
+
+/// FIR conversion pattern template
+template <typename FromOp>
+class FIROpAndTypeConversion : public FIROpConversion<FromOp> {
+public:
+  using FIROpConversion<FromOp>::FIROpConversion;
+  using OpAdaptor = typename FromOp::Adaptor;
+
+  mlir::LogicalResult
+  matchAndRewrite(FromOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const final {
+    mlir::Type ty = this->convertType(op.getType());
+    return doRewrite(op, ty, adaptor, rewriter);
+  }
+
+  virtual mlir::LogicalResult
+  doRewrite(FromOp addr, mlir::Type ty, OpAdaptor adaptor,
+            mlir::ConversionPatternRewriter &rewriter) const = 0;
 };
 
 // Lower `fir.address_of` operation to `llvm.address_of` operation.
@@ -204,6 +224,82 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
   }
 };
 
+/// InsertOnRange inserts a value into a sequence over a range of offsets.
+struct InsertOnRangeOpConversion
+    : public FIROpAndTypeConversion<fir::InsertOnRangeOp> {
+  using FIROpAndTypeConversion::FIROpAndTypeConversion;
+
+  // Increments an array of subscripts in a row major fasion.
+  void incrementSubscripts(const SmallVector<uint64_t> &dims,
+                           SmallVector<uint64_t> &subscripts) const {
+    for (size_t i = dims.size(); i > 0; --i) {
+      if (++subscripts[i - 1] < dims[i - 1]) {
+        return;
+      }
+      subscripts[i - 1] = 0;
+    }
+  }
+
+  mlir::LogicalResult
+  doRewrite(fir::InsertOnRangeOp range, mlir::Type ty, OpAdaptor adaptor,
+            mlir::ConversionPatternRewriter &rewriter) const override {
+
+    llvm::SmallVector<uint64_t> dims;
+    auto type = adaptor.getOperands()[0].getType();
+
+    // Iteratively extract the array dimensions from the type.
+    while (auto t = type.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
+      dims.push_back(t.getNumElements());
+      type = t.getElementType();
+    }
+
+    SmallVector<uint64_t> lBounds;
+    SmallVector<uint64_t> uBounds;
+
+    // Extract integer value from the attribute
+    SmallVector<int64_t> coordinates = llvm::to_vector<4>(
+        llvm::map_range(range.coor(), [](Attribute a) -> int64_t {
+          return a.cast<IntegerAttr>().getInt();
+        }));
+
+    // Unzip the upper and lower bound and convert to a row major format.
+    for (auto i = coordinates.rbegin(), e = coordinates.rend(); i != e; ++i) {
+      uBounds.push_back(*i++);
+      lBounds.push_back(*i);
+    }
+
+    auto &subscripts = lBounds;
+    auto loc = range.getLoc();
+    mlir::Value lastOp = adaptor.getOperands()[0];
+    mlir::Value insertVal = adaptor.getOperands()[1];
+
+    auto i64Ty = rewriter.getI64Type();
+    while (subscripts != uBounds) {
+      // Convert uint64_t's to Attribute's.
+      SmallVector<mlir::Attribute> subscriptAttrs;
+      for (const auto &subscript : subscripts)
+        subscriptAttrs.push_back(IntegerAttr::get(i64Ty, subscript));
+      lastOp = rewriter.create<mlir::LLVM::InsertValueOp>(
+          loc, ty, lastOp, insertVal,
+          ArrayAttr::get(range.getContext(), subscriptAttrs));
+
+      incrementSubscripts(dims, subscripts);
+    }
+
+    // Convert uint64_t's to Attribute's.
+    SmallVector<mlir::Attribute> subscriptAttrs;
+    for (const auto &subscript : subscripts)
+      subscriptAttrs.push_back(
+          IntegerAttr::get(rewriter.getI64Type(), subscript));
+    mlir::ArrayRef<mlir::Attribute> arrayRef(subscriptAttrs);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+        range, ty, lastOp, insertVal,
+        ArrayAttr::get(range.getContext(), arrayRef));
+
+    return success();
+  }
+};
 } // namespace
 
 namespace {
@@ -221,10 +317,9 @@ public:
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
-    pattern
-        .insert<AddrOfOpConversion, HasValueOpConversion, GlobalOpConversion,
-                UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
-            typeConverter);
+    pattern.insert<AddrOfOpConversion, HasValueOpConversion, GlobalOpConversion,
+                   InsertOnRangeOpConversion, UndefOpConversion,
+                   UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
