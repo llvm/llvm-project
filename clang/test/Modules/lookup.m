@@ -10,8 +10,8 @@
 void test(id x) {
   [x method];
 // expected-warning@-1{{multiple methods named 'method' found}}
-// expected-note@Inputs/lookup_left.h:2{{using}}
-// expected-note@Inputs/lookup_right.h:3{{also found}}
+// expected-note@Inputs/lookup_right.h:3{{using}}
+// expected-note@Inputs/lookup_left.h:2{{also found}}
 }
 
 // CHECK-PRINT: - (int)method;
