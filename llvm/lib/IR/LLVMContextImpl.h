@@ -1398,6 +1398,7 @@ public:
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS) HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)
 #include "llvm/IR/Metadata.def"
 
   // Optional map for looking up composite types by identifier.

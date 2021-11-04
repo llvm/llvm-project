@@ -5200,21 +5200,22 @@ metadata nodes are related to debug info.
 DICompileUnit
 """""""""""""
 
-``DICompileUnit`` nodes represent a compile unit. The ``enums:``,
-``retainedTypes:``, ``globals:``, ``imports:`` and ``macros:`` fields are tuples
-containing the debug info to be emitted along with the compile unit, regardless
-of code optimizations (some nodes are only emitted if there are references to
-them from instructions). The ``debugInfoForProfiling:`` field is a boolean
-indicating whether or not line-table discriminators are updated to provide
-more-accurate debug info for profiling results.
+``DICompileUnit`` nodes represent a compile unit. ``DICompileUnit`` nodes must
+be ``distinct``. The ``enums:``, ``retainedTypes:``, ``globals:``, ``imports:``
+and ``macros:`` fields are tuples containing the debug info to be emitted along
+with the compile unit, regardless of code optimizations (some nodes are only
+emitted if there are references to them from instructions). The
+``debugInfoForProfiling:`` field is a boolean indicating whether or not
+line-table discriminators are updated to provide more-accurate debug info for
+profiling results.
 
 .. code-block:: text
 
-    !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
-                        isOptimized: true, flags: "-O2", runtimeVersion: 2,
-                        splitDebugFilename: "abc.debug", emissionKind: FullDebug,
-                        enums: !2, retainedTypes: !3, globals: !4, imports: !5,
-                        macros: !6, dwoId: 0x0abcd)
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
+                                 isOptimized: true, flags: "-O2", runtimeVersion: 2,
+                                 splitDebugFilename: "abc.debug", emissionKind: FullDebug,
+                                 enums: !2, retainedTypes: !3, globals: !4, imports: !5,
+                                 macros: !6, dwoId: 0x0abcd)
 
 Compile unit descriptors provide the root scope for objects declared in a
 specific compilation unit. File descriptors are defined using this scope.  These
@@ -5625,12 +5626,14 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
-(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
-referenced LLVM variable relates to the source language variable. Debug
-intrinsics are interpreted left-to-right: start by pushing the value/address
-operand of the intrinsic onto a stack, then repeatedly push and evaluate
-opcodes from the DIExpression until the final variable description is produced.
+expression language. ``DIExpression`` nodes must not be ``distinct``, and are
+canonically printed inline at each use. They are used in :ref:`debug
+intrinsics<dbg_intrinsics>` (such as ``llvm.dbg.declare`` and
+``llvm.dbg.value``) to describe how the referenced LLVM variable relates to the
+source language variable. Debug intrinsics are interpreted left-to-right: start
+by pushing the value/address operand of the intrinsic onto a stack, then
+repeatedly push and evaluate opcodes from the DIExpression until the final
+variable description is produced.
 
 The current supported opcode vocabulary is limited:
 
@@ -5708,23 +5711,23 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+    call void @llvm.dbg.value(metadata i32 4, metadata !17,
+                              metadata !DIExpression(DW_OP_LLVM_implicit_pointer)))
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
 
     IR for "**ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+    call void @llvm.dbg.value(metadata i32 4, metadata !17,
+                              metadata !DIExpression(DW_OP_LLVM_implicit_pointer,
+                                                     DW_OP_LLVM_implicit_pointer)))
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
-                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -5765,12 +5768,13 @@ valid debug intrinsic.
 DIArgList
 """"""""""""
 
-``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
+``DIArgList`` nodes hold a list of constant or SSA value references.
+``DIArgList`` must not be ``distinct``, must only be used as an argument to a
+function call, and must appear inline at each use. ``DIArgList`` may refer to
+function-local values of the containing function. ``DIArgList`` nodes are used
+in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
 ``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
-``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
-within a function, it must only be used as a function argument, must always be
-inlined, and cannot appear in named metadata.
+``DW_OP_LLVM_arg`` operator.
 
 .. code-block:: text
 
