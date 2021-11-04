@@ -1978,7 +1978,8 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
-    Insert copies of a value into an entity with an array type.
+    Insert copies of a value into an entity with an array type of constant shape
+    and size.
     Returns a new ssa value with the same type as the original entity.
     The values are inserted at a contiguous range of indices in Fortran
     row-to-column element order as specified by lower and upper bound
