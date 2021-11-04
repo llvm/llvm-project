@@ -8,7 +8,7 @@
 ; RUN: llvm-as %t/test.s -o %t/test.o
 ; RUN: llvm-as %t/baz.s -o %t/baz.o
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/regular.s -o %t/regular.o
-; RUN: %lld -pie -lSystem %t/test.o %t/baz.o %t/regular.o -o %t/test -save-temps
+; RUN: %lld -lSystem %t/test.o %t/baz.o %t/regular.o -o %t/test -save-temps
 ; RUN: llvm-dis < %t/test.0.2.internalize.bc | FileCheck %s
 ; RUN: llvm-objdump --macho --syms %t/test | FileCheck %s --check-prefix=SYMTAB
 
