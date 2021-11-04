@@ -319,10 +319,13 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
                 .addImm(P2::NOEFF)
                 .setMIFlag(MachineInstr::FrameDestroy);
 
+            LLVM_DEBUG(errs() << "New block transfer at reg " << block_first_reg << "\n");
+
             block_size = 0;
+            block_first_reg = reg; // if this is a new block, save the register
         } else {
             block_size++;
-            block_first_reg = reg;
+            block_first_reg--; // if not a new block, reduce reg by 1
         }
     }
 
@@ -340,6 +343,8 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
         .addImm(P2::ALWAYS)
         .addImm(P2::NOEFF)
         .setMIFlag(MachineInstr::FrameDestroy);
+
+    LLVM_DEBUG(errs() << "New block transfer to reg " << block_first_reg << "\n");
 
     return true;
 }

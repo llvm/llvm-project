@@ -786,15 +786,13 @@ std::pair<unsigned, const TargetRegisterClass *> P2TargetLowering::getRegForInli
                                                                                                 MVT VT) const {
     if (Constraint.size() == 1) {
         switch (Constraint[0]) {
-        case 'r':
-            if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8) {
-                return std::make_pair(0U, &P2::P2GPRRegClass);
-            } else {
-                llvm_unreachable("Unexpected type for constraint r");
-            }
-            break;
-        default:
-            llvm_unreachable("Unexpected type.");
+            case 'r':
+                if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8) {
+                    return std::make_pair(0U, &P2::P2GPRRegClass);
+                } else {
+                    llvm_unreachable("Unexpected type for constraint r");
+                }
+                break;
         }
     }
 

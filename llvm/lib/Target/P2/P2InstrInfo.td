@@ -43,7 +43,7 @@ def calltarget : Operand<iPTR> {
 def NegateImm : SDNodeXForm<imm, [{return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32, true);}]>;
 def NegSubInlineConst32 : ImmLeaf<i32, [{return Imm < 0;}], NegateImm>;
 
-def s9imm : Operand<i32>; // 9 bit immediate
+// def s9imm : Operand<i32>; // 9 bit immediate
 
 def imm9 : PatLeaf<(i32 imm), [{ // select this leaf when the immediate is between 0 and 2^9
     int32_t v = N->getZExtValue();
@@ -82,9 +82,8 @@ def wrlut : PatFrag<(ops node:$val, node:$ptr), (P2WRLUT node:$val, node:$ptr)> 
 /*--------------------------------*/
 
 // place this first so that the below pattern matches before the standard addition pattern matches
-let Constraints = "$src1 = $d" in {
-    def SUBrr   : P2InstCZIDS<0b0001100, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "sub $d, $s">;
-    def SUBri   : P2InstCZIDS<0b0001100, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "sub $d, #$s">;
+let Constraints = "$s1 = $d" in {
+    defm SUB : P2InstCZIDSm<0b0001100, (ins P2GPR:$s1), "sub">;
 }
 
 // convert add -c to sub c
@@ -92,86 +91,39 @@ def : Pat<(sub P2GPR:$src1, P2GPR:$s), (SUBrr P2GPR:$src1, P2GPR:$s, always, noe
 def : Pat<(sub P2GPR:$src1, imm9:$s), (SUBri P2GPR:$src1, s9imm:$s, always, noeff)>;
 def : Pat<(add i32:$d, NegSubInlineConst32:$s), (SUBri $d, NegSubInlineConst32:$s, always, noeff)>;
 
-let Constraints = "$src1 = $d" in {
-    def RORrr   : P2InstCZIDS<0b0000000, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "ror $d, $s">;
-    def RORri   : P2InstCZIDS<0b0000000, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "ror $d, #$s">;
-
-    def ROLrr   : P2InstCZIDS<0b0000001, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "rol $d, $s">;
-    def ROLri   : P2InstCZIDS<0b0000001, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "rol $d, #$s">;
-
-    def SHRrr   : P2InstCZIDS<0b0000010, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "shr $d, $s">;
-    def SHRri   : P2InstCZIDS<0b0000010, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "shr $d, #$s">;
-
-    def SHLrr   : P2InstCZIDS<0b0000011, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "shl $d, $s">;
-    def SHLri   : P2InstCZIDS<0b0000011, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "shl $d, #$s">;
-
-    def RCRrr   : P2InstCZIDS<0b0000100, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "rcr $d, $s">;
-    def RCRri   : P2InstCZIDS<0b0000100, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "rcr $d, #$s">;
-
-    def RCLrr   : P2InstCZIDS<0b0000101, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "rcl $d, $s">;
-    def RCLri   : P2InstCZIDS<0b0000101, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "rcl $d, #$s">;
-
-    def SARrr   : P2InstCZIDS<0b0000110, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "sar $d, $s">;
-    def SARri   : P2InstCZIDS<0b0000110, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "sar $d, #$s">;
-
-    def SALrr   : P2InstCZIDS<0b0000111, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "sal $d, $s">;
-    def SALri   : P2InstCZIDS<0b0000111, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "sal $d, #$s">;
-
-    def ADDrr   : P2InstCZIDS<0b0001000, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "add $d, $s">;
-    def ADDri   : P2InstCZIDS<0b0001000, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "add $d, #$s">;
-
-    def ADDXrr  : P2InstCZIDS<0b0001001, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "addx $d, $s">;
-    def ADDXri  : P2InstCZIDS<0b0001001, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "addx $d, #$s">;
-
-    def ADDSrr  : P2InstCZIDS<0b0001010, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "adds $d, $s">;
-    def ADDSri  : P2InstCZIDS<0b0001010, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "adds $d, #$s">;
-
-    def ADDSXrr : P2InstCZIDS<0b0001011, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "addsx $d, $s">;
-    def ADDSXri : P2InstCZIDS<0b0001011, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "addsx $d, #$s">;
-
-    def SUBXrr  : P2InstCZIDS<0b0001101, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "subx $d, $s">;
-    def SUBXri  : P2InstCZIDS<0b0001101, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "subx $d, #$s">;
-
-    def SUBSrr  : P2InstCZIDS<0b0001110, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "subs $d, $s">;
-    def SUBSri  : P2InstCZIDS<0b0001110, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "subs $d, #$s">;
-
-    def SUBSXrr : P2InstCZIDS<0b0001111, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "subsx $d, $s">;
-    def SUBSXri : P2InstCZIDS<0b0001111, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "subsx $d, #$s">;
-
-    def ANDrr   : P2InstCZIDS<0b0101000, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "and $d, $s">;
-    def ANDri   : P2InstCZIDS<0b0101000, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "and $d, #$s">;
-
-    def ORrr    : P2InstCZIDS<0b0101010, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "or $d, $s">;
-    def ORri    : P2InstCZIDS<0b0101010, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "or $d, #$s">;
-
-    def XORrr   : P2InstCZIDS<0b0101011, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "xor $d, $s">;
-    def XORri   : P2InstCZIDS<0b0101011, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "xor $d, #$s">;
-
-    def MULrr   : P2InstZIDS<0b10100000, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "mul $d, $s">;
-    def MULri   : P2InstZIDS<0b10100000, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "mul $d, #$s">;
-
-    def MULSrr  : P2InstZIDS<0b10100001, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "muls $d, $s">;
-    def MULSri  : P2InstZIDS<0b10100001, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "muls $d, #$s">;
-
-    def SIGNXrr : P2InstCZIDS<0b0111011, 0b0, (outs P2GPR:$d), (ins P2GPR:$src1, P2GPR:$s), "signx $d, $s">;
-    def SIGNXri : P2InstCZIDS<0b0111011, 0b1, (outs P2GPR:$d), (ins P2GPR:$src1, s9imm:$s), "signx $d, #$s">;
+let Constraints = "$s1 = $d" in {
+    defm ROR    : P2InstCZIDSm<0b0000000, (ins P2GPR:$s1), "ror">;
+    defm ROL    : P2InstCZIDSm<0b0000001, (ins P2GPR:$s1), "rol">;
+    defm SHR    : P2InstCZIDSm<0b0000010, (ins P2GPR:$s1), "shr">;
+    defm SHL    : P2InstCZIDSm<0b0000011, (ins P2GPR:$s1), "shl">;
+    defm RCR    : P2InstCZIDSm<0b0000100, (ins P2GPR:$s1), "rcr">;
+    defm RCL    : P2InstCZIDSm<0b0000101, (ins P2GPR:$s1), "rcl">;
+    defm SAR    : P2InstCZIDSm<0b0000110, (ins P2GPR:$s1), "sar">;
+    defm SAL    : P2InstCZIDSm<0b0000111, (ins P2GPR:$s1), "sal">;
+    defm ADD    : P2InstCZIDSm<0b0001000, (ins P2GPR:$s1), "add">;
+    defm ADDX   : P2InstCZIDSm<0b0001001, (ins P2GPR:$s1), "addx">;
+    defm ADDS   : P2InstCZIDSm<0b0001010, (ins P2GPR:$s1), "adds">;
+    defm ADDSX  : P2InstCZIDSm<0b0001011, (ins P2GPR:$s1), "addsx">;
+    defm SUBX   : P2InstCZIDSm<0b0001101, (ins P2GPR:$s1), "subx">;
+    defm SUBS   : P2InstCZIDSm<0b0001110, (ins P2GPR:$s1), "subs">;
+    defm SUBSX  : P2InstCZIDSm<0b0001111, (ins P2GPR:$s1), "subsx">;
+    defm AND    : P2InstCZIDSm<0b0101000, (ins P2GPR:$s1), "and">;
+    defm OR     : P2InstCZIDSm<0b0101010, (ins P2GPR:$s1), "or">;
+    defm XOR    : P2InstCZIDSm<0b0101011, (ins P2GPR:$s1), "xor">;
+    defm SIGNX  : P2InstCZIDSm<0b0111011, (ins P2GPR:$s1), "signx">;
+    defm MUL    : P2InstZIDSm<0b10100000, (ins P2GPR:$s1), "mul">;
+    defm MULS   : P2InstZIDSm<0b10100001, (ins P2GPR:$s1), "muls">;
 }
 
-
-def NOTrr   : P2InstCZIDS<0b0110001, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "not $d, $s">;
-def NOTri   : P2InstCZIDS<0b0110001, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "not $d, #$s">;
-
-def ABSrr   : P2InstCZIDS<0b0110010, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "abs $d, $s">;
-def ABSri   : P2InstCZIDS<0b0110010, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "abs $d, #$s">;
-
-def NEGrr   : P2InstCZIDS<0b0110011, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "neg $d, $s">;
-def NEGri   : P2InstCZIDS<0b0110011, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "neg $d, #$s">;
+defm NOT    : P2InstCZIDSm<0b0110001, (ins), "not">;
+defm ABS    : P2InstCZIDSm<0b0110010, (ins), "abs">;
+defm NEG    : P2InstCZIDSm<0b0110011, (ins), "neg">;
 
 let Constraints = "$s = $d" in {
-    def REVr    : P2InstD<0b1101011, 0b001101001, (outs P2GPR:$d), (ins P2GPR:$s), "rev $d">;
+    def REV    : P2InstD<0b1101011, 0b001101001, (outs P2GPR:$d), (ins P2GPR:$s), "rev $d">;
 }
 
-def ENCODrr : P2InstCZIDS<0b0111100, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "encod $d, $s">;
+defm ENCOD  : P2InstCZIDSm<0b0111100, (ins), "encod">;
 
 def : Pat<(rotl P2GPR:$src1, P2GPR:$s), (ROLrr P2GPR:$src1, P2GPR:$s, always, noeff)>;
 def : Pat<(rotl P2GPR:$src1, imm9:$s), (ROLri P2GPR:$src1, imm9:$s, always, noeff)>;
@@ -199,7 +151,7 @@ def : Pat<(abs P2GPR:$s), (ABSrr P2GPR:$s, always, noeff)>;
 def : Pat<(abs imm9:$s), (ABSri imm9:$s, always, noeff)>;
 def : Pat<(ineg P2GPR:$s), (NEGrr P2GPR:$s, always, noeff)>;
 def : Pat<(ineg imm9:$s), (NEGri imm9:$s, always, noeff)>;
-def : Pat<(bitreverse P2GPR:$s), (REVr P2GPR:$s, always)>;
+def : Pat<(bitreverse P2GPR:$s), (REV P2GPR:$s, always)>;
 
 def : Pat<(sext_inreg P2GPR:$d, i1), (SIGNXri P2GPR:$d, 0, always, noeff)>;
 def : Pat<(sext_inreg P2GPR:$d, i8), (SIGNXri P2GPR:$d, 7, always, noeff)>;
@@ -215,17 +167,9 @@ let DecoderMethod = "DecodeGetQInstruction" in {
 }
 
 let DecoderMethod = "DecodeCordicInstruction" in {
-    def QMULrr    : P2InstLIDS<0b11010000, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "qmul $d, $s">;
-    def QMULri    : P2InstLIDS<0b11010000, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "qmul $d, #$s">;
-    def QMULir    : P2InstLIDS<0b11010000, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "qmul #$d, $s">;
-    def QMULii    : P2InstLIDS<0b11010000, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "qmul #$d, #$s">;
-
-    def QDIVrr    : P2InstLIDS<0b11010001, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "qdiv $d, $s">;
-    def QDIVri    : P2InstLIDS<0b11010001, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "qdiv $d, #$s">;
-    def QDIVir    : P2InstLIDS<0b11010001, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "qdiv #$d, $s">;
-    def QDIVii    : P2InstLIDS<0b11010001, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "qdiv #$d, #$s">;
+    defm QMUL   : P2InstLIDSm<0b11010000, "qmul">;
+    defm QDIV   : P2InstLIDSm<0b11010001, "qdiv">;
 }
-
 
 def QUDIV   : Pseudo<(outs P2GPR:$dst), (ins P2GPR:$src1, P2GPR:$src2), "udiv $dst, $src1, $src2">;
 def QUREM   : Pseudo<(outs P2GPR:$dst), (ins P2GPR:$src1, P2GPR:$src2), "urem $dst, $src1, $src2">;
@@ -242,6 +186,7 @@ def : Pat<(urem P2GPR:$src1, P2GPR:$src2), (QUREM P2GPR:$src1, P2GPR:$src2)>;
 // define a pattern that matched a compare instruction output inputting to one of the branch instructions for various IR conditional branch patterns
 
 let DecoderMethod = "DecodeCmpInstruction" in {
+    // don't use the multiclass for this because these don't output to d
     def CMPrr    : P2InstCZIDS<0b0010000, 0b0, (outs P2Implicit:$cmp), (ins P2GPR:$d, P2GPR:$s), "cmp $d, $s">;
     def CMPri    : P2InstCZIDS<0b0010000, 0b1, (outs P2Implicit:$cmp), (ins P2GPR:$d, s9imm:$s), "cmp $d, #$s">;
     def CMPRrr   : P2InstCZIDS<0b0010100, 0b0, (outs P2Implicit:$cmp), (ins P2GPR:$d, P2GPR:$s), "cmpr $d, $s">;
@@ -251,20 +196,14 @@ let DecoderMethod = "DecodeCmpInstruction" in {
     def CMPSri    : P2InstCZIDS<0b0010010, 0b1, (outs P2Implicit:$cmp), (ins P2GPR:$d, s9imm:$s), "cmps $d, #$s">;
 }
 
-def JMPr    : P2InstCZD<0b1101011, 0b000101100, (outs), (ins P2GPR:$d), "jmp $d">;
+def JMPr        : P2InstCZD<0b1101011, 0b000101100, (outs), (ins P2GPR:$d), "jmp $d">;
 
 let DecoderMethod = "DecodeJumpInstruction", isBarrier = 1, isBranch = 1, isTerminator = 1 in {
     def JMP     : P2InstRA<0b1101100, 0b1, (outs), (ins jmptarget:$d, P2Implicit:$cmp), "jmp #$d">;
-    /*
-    def JMPeq   : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_z>;
-    def JMPne   : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_nz>;
-    def JMPlt   : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_c>;
-    def JMPgte  : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_nc>;
-    def JMPgt   : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_nc_and_nz>;
-    def JMPlte  : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_c_or_z>;*/
 }
 
 let DecoderMethod = "DecodeTJInstruction", isBranch = 1, isBarrier = 1, isTerminator = 1 in {
+    // don't use multiclass here because we don't want to use the s9imm operand type
     def TJZrr   : P2InstIDS<0b101110010, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjz $d, $s">;
     def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjz $d, #$s">;
 
@@ -273,17 +212,14 @@ let DecoderMethod = "DecodeTJInstruction", isBranch = 1, isBarrier = 1, isTermin
 }
 
 let Constraints = "$s1 = $d" in {
+    // don't use multiclass here because we don't want to use the s9imm operand type
     def DJNZrr  : P2InstIDS<0b101101101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s1, P2GPR:$s), "djnz $d, $s">;
     def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, cogjmptarget:$s), "djnz $d, #$s">;
 }
 
-def REPrr   : P2InstLIDS<0b11001101, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rep $d, $s">;
-def REPri   : P2InstLIDS<0b11001101, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rep $d, #$s">;
-def REPir   : P2InstLIDS<0b11001101, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "rep #$d, $s">;
-def REPii   : P2InstLIDS<0b11001101, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "rep #$d, #$s">;
+defm REP    : P2InstLIDSm<0b11001101, "rep">;
 
-def TESTrr  : P2InstCZIDS<0b0111110, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "test $d, $s">;
-def TESTri  : P2InstCZIDS<0b0111110, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "test $d, #$s">;
+defm TEST   : P2InstCZIDSm<0b0111110, (ins), "test">;
 
 // Patterns for various branch conditions and types of branch instructions
 // unsigned comparison
@@ -382,58 +318,32 @@ def : Pat<(select P2GPR:$c, imm9:$t, imm9:$f), (SELECTCC P2GPR:$c, 0, imm9:$t, i
 
 def MOVri32     : Pseudo<(outs P2GPR:$d), (ins i32imm:$s), "mov $d, ##s">;
 
-def MOVri       : P2InstCZIDS<0b0110000, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "mov $d, #$s">;
-def MOVrr       : P2InstCZIDS<0b0110000, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "mov $d, $s">;
+defm MOV        : P2InstCZIDSm<0b0110000, (ins), "mov">;
 
 def : Pat<(imm:$s), (MOVri32 imm:$s)>;
 def : Pat<(imm9:$s), (MOVri imm9:$s, always, noeff)>;
 
-def RDBYTEri    : P2InstCZIDS<0b1010110, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdbyte $d, #$s">;
-def RDBYTErr    : P2InstCZIDS<0b1010110, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdbyte $d, $s">;
+defm RDBYTE     : P2InstCZIDSm<0b1010110, (ins), "rdbyte">;
+defm RDWORD     : P2InstCZIDSm<0b1010111, (ins), "rdword">;
+defm RDLONG     : P2InstCZIDSm<0b1011000, (ins), "rdlong">;
 
-def RDWORDri    : P2InstCZIDS<0b1010111, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdword $d, #$s">;
-def RDWORDrr    : P2InstCZIDS<0b1010111, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdword $d, $s">;
-
-def RDLONGri    : P2InstCZIDS<0b1011000, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdlong $d, #$s">;
-def RDLONGrr    : P2InstCZIDS<0b1011000, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdlong $d, $s">;
-
-def WRBYTErr    : P2InstLIDS<0b11000100, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrbyte $d, $s">;
-def WRBYTEir    : P2InstLIDS<0b11000100, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrbyte #$d, $s">;
-
-def WRWORDrr    : P2InstLIDS<0b11000101, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrword $d, $s">;
-def WRWORDir    : P2InstLIDS<0b11000101, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrword #$d, $s">;
-
-def WRLONGri    : P2InstLIDS<0b11000110, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrlong $d, #$s">;
-def WRLONGii    : P2InstLIDS<0b11000110, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrlong #$d, #$s">;
-
-def WRLONGrr    : P2InstLIDS<0b11000110, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrlong $d, $s">;
-def WRLONGir    : P2InstLIDS<0b11000110, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrlong #$d, $s">;
-
-def SETQr       : P2InstLD<0b1101011, 0b000101000, 0b0, (outs), (ins P2GPR:$d), "setq $d">;
-def SETQi       : P2InstLD<0b1101011, 0b000101000, 0b1, (outs), (ins s9imm:$d), "setq #$d">;
-
-def RDLUTrr     : P2InstCZIDS<0b1010101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdlut $d, $s">;
-def RDLUTri     : P2InstCZIDS<0b1010101, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdlut $d, #$s">;
-
-def WRLUTrr     : P2InstLIDS<0b11000011, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrlut $d, $s">;
-def WRLUTri     : P2InstLIDS<0b11000011, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrlut $d, #$s">;
-def WRLUTir     : P2InstLIDS<0b11000011, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrlut #$d, $s">;
-def WRLUTii     : P2InstLIDS<0b11000011, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrlut #$d, #$s">;
-
-def RDFASTrr    : P2InstLIDS<0b11000111, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rdfast $d, $s">;
-def RDFASTri    : P2InstLIDS<0b11000111, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rdfast $d, #$s">;
-def RDFASTir    : P2InstLIDS<0b11000111, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "rdfast #$d, $s">;
-def RDFASTii    : P2InstLIDS<0b11000111, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "rdfast #$d, #$s">;
+defm WRBYTE     : P2InstLIDSm<0b11000100, "wrbyte">;
+defm WRWORD     : P2InstLIDSm<0b11000101, "wrword">;
+defm WRLONG     : P2InstLIDSm<0b11000110, "wrlong">;
 
 def RFBYTE      : P2InstCZD<0b1101011, 0b000010000, (outs P2GPR:$d), (ins), "rfbyte $d">;
 def RFWORD      : P2InstCZD<0b1101011, 0b000010001, (outs P2GPR:$d), (ins), "rfword $d">;
 def RFLONG      : P2InstCZD<0b1101011, 0b000010010, (outs P2GPR:$d), (ins), "rflong $d">;
 
-def WRFASTrr    : P2InstLIDS<0b11001000, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrfast $d, $s">;
-def WRFASTri    : P2InstLIDS<0b11001000, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrfast $d, #$s">;
-def WRFASTir    : P2InstLIDS<0b11001000, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrfast #$d, $s">;
-def WRFASTii    : P2InstLIDS<0b11001000, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrfast #$d, #$s">;
+defm SETQ       : P2InstLDm<0b1101011, 0b000101000, "setq">;
 
+defm RDLUT      : P2InstCZIDSm<0b1010101, (ins), "rdlut">;
+defm WRLUT      : P2InstLIDSm<0b11000011, "wrlut">;
+
+defm RDFAST     : P2InstLIDSm<0b11000111, "rdfast">;
+defm WRFAST     : P2InstLIDSm<0b11001000, "wrfast">;
+
+// these have an output and no input, leave without multiclass for now
 def WFBYTEr     : P2InstLD<0b1101011, 0b000010101, 0b0, (outs P2GPR:$d), (ins), "wfbyte $d">;
 def WFBYTEi     : P2InstLD<0b1101011, 0b000010101, 0b1, (outs s9imm:$d), (ins), "wfbyte #$d">;
 def WFWORDr     : P2InstLD<0b1101011, 0b000010110, 0b0, (outs P2GPR:$d), (ins), "wfword $d">;
@@ -501,117 +411,62 @@ def : Pat<(P2CALL (i32 P2GPR:$d)), (CALLAr P2GPR:$d, always, noeff)>;
 /*--------------------------------*/
 
 let DecoderMethod = "DecodeIOInstruction" in {
-    def DIRLr       : P2InstCZLD<0b1101011, 0b001000000, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "dirl $d">;
-    def DIRLi       : P2InstCZLD<0b1101011, 0b001000000, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "dirl #$d">;
 
-    def DIRHr       : P2InstCZLD<0b1101011, 0b001000001, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "dirh $d">;
-    def DIRHi       : P2InstCZLD<0b1101011, 0b001000001, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "dirh #$d">;
-
-    def OUTLr       : P2InstCZLD<0b1101011, 0b001001000, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "outl $d">;
-    def OUTLi       : P2InstCZLD<0b1101011, 0b001001000, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "outl #$d">;
-
-    def OUTHr       : P2InstCZLD<0b1101011, 0b001001001, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "outh $d">;
-    def OUTHi       : P2InstCZLD<0b1101011, 0b001001001, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "outh #$d">;
-
-    def OUTNOTr     : P2InstCZLD<0b1101011, 0b001001111, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "outnot $d">;
-    def OUTNOTi     : P2InstCZLD<0b1101011, 0b001001111, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "outnot #$d">;
-
-    def DRVLr       : P2InstCZLD<0b1101011, 0b001011000, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "drvl $d">;
-    def DRVLi       : P2InstCZLD<0b1101011, 0b001011000, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "drvl #$d">;
-
-    def DRVHr       : P2InstCZLD<0b1101011, 0b001011001, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "drvh $d">;
-    def DRVHi       : P2InstCZLD<0b1101011, 0b001011001, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "drvh #$d">;
-
-    def DRVNOTr     : P2InstCZLD<0b1101011, 0b001011111, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "drvnot $d">;
-    def DRVNOTi     : P2InstCZLD<0b1101011, 0b001011111, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "drvnot #$d">;
-
-    let cz = 0b10 in {
-        def TESTPrc      : P2InstCZLD<0b1101011, 0b001000000, 0b0, (outs), (ins P2GPR:$d), "testp $d">;
-        def TESTPic      : P2InstCZLD<0b1101011, 0b001000000, 0b1, (outs), (ins s9imm:$d), "testp #$d">;
-    }
-
-    let cz = 0b01 in {
-        def TESTPrz      : P2InstCZLD<0b1101011, 0b001000000, 0b0, (outs), (ins P2GPR:$d), "testp $d">;
-        def TESTPiz      : P2InstCZLD<0b1101011, 0b001000000, 0b1, (outs), (ins s9imm:$d), "testp #$d">;
-    }
+    defm DIRL       : P2InstCZLDm<0b1101011, 0b001000000, "dirl">;
+    defm DIRH       : P2InstCZLDm<0b1101011, 0b001000001, "dirh">;
+    defm OUTL       : P2InstCZLDm<0b1101011, 0b001001000, "outl">;
+    defm OUTH       : P2InstCZLDm<0b1101011, 0b001001001, "outh">;
+    defm OUTNOT     : P2InstCZLDm<0b1101011, 0b001001111, "outnot">;
+    defm DRVL       : P2InstCZLDm<0b1101011, 0b001011000, "drvl">;
+    defm DRVH       : P2InstCZLDm<0b1101011, 0b001011001, "drvh">;
+    defm DRVNOT     : P2InstCZLDm<0b1101011, 0b001011111, "drvnot">;
+    let cz = 0b10 in defm TESTPc      : P2InstCZLDm<0b1101011, 0b001000000, "testp">;
+    let cz = 0b01 in defm TESTPz      : P2InstCZLDm<0b1101011, 0b001000000, "testp">;
 }
 
+// no multiclass, since this is an output instead of an input
 def COGIDr      : P2InstCLD<0b1101011, 0b000000001, 0b0, (outs P2GPR:$d), (ins), "cogid $d">;
+def GETCT       : P2InstCZD<0b1101011, 0b000011010, (outs P2GPR:$d), (ins), "getct $d">;
 
-def WAITXr      : P2InstLD<0b1101011, 0b000011111, 0b0, (outs), (ins P2GPR:$d), "waitx $d">;
-def WAITXi      : P2InstLD<0b1101011, 0b000011111, 0b1, (outs), (ins s9imm:$d), "waitx #$d">;
+defm COGINIT    : P2InstCLIDSm<0b1100111, "coginit">;
+defm WAITX      : P2InstLDm<0b1101011, 0b000011111, "waitx">;
+defm HUBSET     : P2InstLDm<0b1101011, 0b000000000, "hubset">;
 
-def GETCTr      : P2InstCZD<0b1101011, 0b000011010, (outs P2GPR:$d), (ins), "getct $d">;
+defm WRPIN      : P2InstLIDSm<0b11000000, "wrpin">;
+defm WXPIN      : P2InstLIDSm<0b11000001, "wxpin">;
+defm WYPIN      : P2InstLIDSm<0b11000010, "wypin">;
 
-def COGINITrr   : P2InstCLIDS<0b1100111, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "coginit $d, $s">;
-def COGINITir   : P2InstCLIDS<0b1100111, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "coginit #$d, $s">;
-def COGINITri   : P2InstCLIDS<0b1100111, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "coginit $d, #$s">;
-def COGINITii   : P2InstCLIDS<0b1100111, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "coginit #$d, #$s">;
-
-def HUBSETrr    : P2InstLD<0b1101011, 0b000000000, 0b0, (outs), (ins P2GPR:$d), "hubset $d">;
-def HUBSETri    : P2InstLD<0b1101011, 0b000000000, 0b1, (outs), (ins s9imm:$d), "hubset #$d">;
-
-def WRPINrr     : P2InstLIDS<0b11000000, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrpin $d, $s">;
-def WRPINii     : P2InstLIDS<0b11000000, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrpin #$d, #$s">;
-def WRPINri     : P2InstLIDS<0b11000000, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrpin $d, #$s">;
-def WRPINir     : P2InstLIDS<0b11000000, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrpin #$d, $s">;
-
-def WXPINrr     : P2InstLIDS<0b11000001, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wxpin $d, $s">;
-def WXPINii     : P2InstLIDS<0b11000001, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wxpin #$d, #$s">;
-def WXPINri     : P2InstLIDS<0b11000001, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wxpin $d, #$s">;
-def WXPINir     : P2InstLIDS<0b11000001, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wxpin #$d, $s">;
-
-def WYPINrr     : P2InstLIDS<0b11000010, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wypin $d, $s">;
-def WYPINii     : P2InstLIDS<0b11000010, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wypin #$d, #$s">;
-def WYPINri     : P2InstLIDS<0b11000010, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wypin $d, #$s">;
-def WYPINir     : P2InstLIDS<0b11000010, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wypin #$d, $s">;
-
+// no multiclass, since there's an output
 def RQPINrr     : P2InstCIDS<0b10101000, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rqpin $d, $s">;
 def RQPINri     : P2InstCIDS<0b10101000, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rqpin $d, #$s">;
-
 def RDPINrr     : P2InstCIDS<0b10101001, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdpin $d, $s">;
 def RDPINri     : P2InstCIDS<0b10101001, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdpin $d, #$s">;
 
 def LOCKNEW     : P2InstCLD<0b1101011, 0b000000100, 0b0, (outs P2GPR:$d), (ins), "locknew $d">; // this instruction has no L=1 variant
+defm LOCKRET    : P2InstLDm<0b1101011, 0b000000101, "lockret">;
+defm LOCKTRY    : P2InstCLDm<0b1101011, 0b000000110, "locktry">;
+defm LOCKREL    : P2InstCLDm<0b1101011, 0b000000111, "lockrel">;
 
-def LOCKRETr    : P2InstLD<0b1101011, 0b000000101, 0b0, (outs), (ins P2GPR:$d), "lockret $d">;
-def LOCKRETi    : P2InstLD<0b1101011, 0b000000101, 0b1, (outs), (ins s9imm:$d), "lockret #$d">;
+defm SETXFRQ    : P2InstLDm<0b1101011, 0b000011101, "setxfrq">;
 
-def LOCKTRYr    : P2InstCLD<0b1101011, 0b000000110, 0b0, (outs), (ins P2GPR:$d), "locktry $d">;
-def LOCKTRYi    : P2InstCLD<0b1101011, 0b000000110, 0b1, (outs), (ins s9imm:$d), "locktry #$d">;
-
-def LOCKRELr    : P2InstCLD<0b1101011, 0b000000111, 0b0, (outs), (ins P2GPR:$d), "lockrel $d">;
-def LOCKRELi    : P2InstCLD<0b1101011, 0b000000111, 0b1, (outs), (ins s9imm:$d), "lockrel #$d">;
-
-def SETXFRQr    : P2InstLD<0b1101011, 0b000011101, 0b0, (outs), (ins P2GPR:$d), "setxfrq $d">;
-def SETXFRQi    : P2InstLD<0b1101011, 0b000011101, 0b1, (outs), (ins s9imm:$d), "setxfrq #$d">;
-
-def XINITrr     : P2InstLIDS<0b11001010, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xinit $d, $s">;
-def XINITri     : P2InstLIDS<0b11001010, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xinit $d, #$s">;
-def XINITir     : P2InstLIDS<0b11001010, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xinit #$d, $s">;
-def XINITii     : P2InstLIDS<0b11001010, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xinit #$d, #$s">;
-
-def XCONTrr     : P2InstLIDS<0b11001100, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xcont $d, $s">;
-def XCONTri     : P2InstLIDS<0b11001100, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xcont $d, #$s">;
-def XCONTir     : P2InstLIDS<0b11001100, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xcont #$d, $s">;
-def XCONTii     : P2InstLIDS<0b11001100, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xcont #$d, #$s">;
+defm XINIT      : P2InstLIDSm<0b11001010, "xinit">;
+defm XCONT      : P2InstLIDSm<0b11001100, "xcont">;
 
 /*--------------------------------*/
 /* Interrupts and events          */
 /*--------------------------------*/
 
-def ADDCT1rr    : P2InstIDS<0b101001100, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "addct1 $d, $s">;
-def ADDCT1ri    : P2InstIDS<0b101001100, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "addct1 $d, #$s">;
-
-def ADDCT2rr    : P2InstIDS<0b101001101, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "addct2 $d, $s">;
-def ADDCT2ri    : P2InstIDS<0b101001101, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "addct2 $d, #$s">;
-
-def ADDCT3rr    : P2InstIDS<0b101001110, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "addct3 $d, $s">;
-def ADDCT3ri    : P2InstIDS<0b101001110, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "addct3 $d, #$s">;
+defm ADDCT1     : P2InstIDSm<0b101001100, "addct1">;
+defm ADDCT2     : P2InstIDSm<0b101001101, "addct2">;
+defm ADDCT3     : P2InstIDSm<0b101001110, "addct3">;
 
 def WAITCT1     : P2InstCZ<0b11010110, 0b000010001, 0b000100100, (outs), (ins), "waitct1">;
 def WAITCT2     : P2InstCZ<0b11010110, 0b000010010, 0b000100100, (outs), (ins), "waitct2">;
 def WAITCT3     : P2InstCZ<0b11010110, 0b000010011, 0b000100100, (outs), (ins), "waitct3">;
+
+def GETBRK      : P2InstCZD<0b1101011, 0b000110101, (outs P2GPR:$d), (ins), "getbrk $d">;
+defm COGBRK     : P2InstLDm<0b1101011, 0b000110101, "cogbrk">;
+defm BRK        : P2InstLDm<0b1101011, 0b000110110, "brk">;
 
 /*--------------------------------*/
 /* misc instructions              */

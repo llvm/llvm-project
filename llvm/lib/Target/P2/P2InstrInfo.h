@@ -30,6 +30,30 @@ namespace llvm {
 
     public:
 
+        // This MUST match what is in P2InstrFormats.td for each instruction type
+        enum InstTypes {
+            P2InstNOP,
+            P2InstCZIDS,
+            P2Inst3NIDS,
+            P2Inst2NIDS,
+            P2Inst1NIDS,
+            P2InstIDS,
+            P2InstZIDS,
+            P2InstCIDS,
+            P2InstLIDS,
+            P2InstIS,
+            P2InstCLIDS,
+            P2InstLD,
+            P2InstCLD,
+            P2InstCZD,
+            P2InstCZ,
+            P2InstCZLD,
+            P2InstD,
+            P2InstRA,
+            P2InstWRA,
+            P2InstN
+        };
+
         explicit P2InstrInfo();
 
         /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As

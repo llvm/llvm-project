@@ -89,6 +89,11 @@ let Namespace = "P2" in {
     def OUTB : P2Reg<0x1fd, "outb">, DwarfRegNum<[49]>;
     def INA  : P2Reg<0x1fe, "ina">, DwarfRegNum<[50]>;
     def INB  : P2Reg<0x1ff, "inb">, DwarfRegNum<[51]>;
+
+    foreach i = 0-463 in {
+        def C#i : P2Reg<i, "c"#i>,  DwarfRegNum<[!add(i, 52)]>;
+    }
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -110,3 +115,6 @@ def P2GPR : RegisterClass<"P2", [i32], 32, (add
 
 def P2Implicit : RegisterClass<"P2", [i32], 32, (add SW, QX, QY, N)>;
 
+let isAllocatable = 0 in def P2CogRAM : RegisterClass<"P2", [i32], 32, (add
+    (sequence "C%u", 0, 463)
+)>;

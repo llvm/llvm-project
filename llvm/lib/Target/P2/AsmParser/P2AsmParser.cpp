@@ -12,6 +12,7 @@
 #include "MCTargetDesc/P2BaseInfo.h"
 #include "P2RegisterInfo.h"
 #include "TargetInfo/P2TargetInfo.h"
+#include "P2InstrInfo.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -258,11 +259,6 @@ namespace {
     };
 }
 
-namespace {
-
-
-}
-
 void printP2Operands(OperandVector &Operands) {
     for (size_t i = 0; i < Operands.size(); i++) {
         P2Operand* op = static_cast<P2Operand*>(&*Operands[i]);
@@ -271,6 +267,107 @@ void printP2Operands(OperandVector &Operands) {
     }
     LLVM_DEBUG(dbgs() << "\n");
 }
+
+/**
+ * helper function to determine if a preceding AUGD is required. 
+ * 
+ * in augs and augd the requried size is returned. if no aug is required, 0 is returned
+ */
+// void getAugRequirements(MCInst inst, int &augd, int &augs) {
+//     augs = 0;
+//     augd = 0;
+
+//     int i_type = (inst.getFlags() >> 4) & 0x1f;
+
+//     LLVM_DEBUG(errs() << "Get aug requirements for isntruction of type " << i_type << "\n");
+
+//     switch (i_type) {
+//         case P2InstrInfo::P2InstNOP: 
+//             // no D register in this instruction
+//         break;
+
+//         case P2InstrInfo::P2InstCZIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2Inst3NIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2Inst2NIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2Inst1NIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstZIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstCIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstLIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstIS: 
+//             // no D register in this instruction
+//         break;
+
+//         case P2InstrInfo::P2InstCLIDS: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstLD: 
+//             for (auto op : inst) {
+//                 LLVM_DEBUG(op.dump());
+//             }
+//         break;
+
+//         case P2InstrInfo::P2InstCLD: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstCZD: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstCZ: 
+//             // no D register in this instruction
+//         break;
+
+//         case P2InstrInfo::P2InstCZLD: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstD: 
+
+//         break;
+
+//         case P2InstrInfo::P2InstRA: 
+//             // no D register in this instruction
+//         break;
+
+//         case P2InstrInfo::P2InstWRA: 
+//             // no D register in this instruction
+//         break;
+
+//         case P2InstrInfo::P2InstN: 
+//             // no D register in this instruction
+//         break;
+
+//     default:
+//         break;
+//     }
+// }
 
 /*
 implement virtual functions
@@ -289,6 +386,11 @@ bool P2AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, Operand
         case Match_Success: {
             Inst.setLoc(IDLoc);
             LLVM_DEBUG(Inst.dump());
+
+            // int augd_size; 
+            // int augs_size;
+            // getAugRequirements(Inst, augd_size, augs_size);
+
             Out.emitInstruction(Inst, getSTI());
             return false;
         }
@@ -464,14 +566,18 @@ int P2AsmParser::parseRegister(StringRef Mnemonic) {
 }
 
 int P2AsmParser::matchRegisterByNumber(unsigned RegNum, StringRef Mnemonic) {
-    if (RegNum > 15)
+    // we only match cog RAM registers by number
+    LLVM_DEBUG(dbgs() << "Matching register by number: " << RegNum << "\n");
+    if (RegNum > 464)
         return -1;
 
-    return getReg(P2::P2GPRRegClassID, RegNum);
+    return getReg(P2::P2CogRAMRegClassID, RegNum);
 }
 
 int P2AsmParser::matchRegisterName(StringRef Name) {
+    LLVM_DEBUG(dbgs() << "Matching register by name: " << Name << "\n");
 
+    // don't try to match Cog RAM by our fake register name, only match specific registers by name
     int reg = StringSwitch<unsigned>(Name)
             .Case("r0",     P2::R0)
             .Case("r1",     P2::R1)
@@ -522,7 +628,7 @@ int P2AsmParser::matchRegisterName(StringRef Name) {
             .Case("ina",    P2::INA)
             .Case("inb",    P2::INB)
             .Default(-1);
-
+    
     return reg;
 }
 
