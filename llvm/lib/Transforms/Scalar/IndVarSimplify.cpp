@@ -1493,15 +1493,20 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     }
     assert(!L->isLoopInvariant(LHS) && L->isLoopInvariant(RHS));
 
-    if (!LHS->hasOneUse())
-      // Can't rotate without increasing instruction count
-      continue;
-
     // Match (icmp unsigned-cond zext, RHS)
     // TODO: Extend to handle corresponding sext/signed-cmp case
     // TODO: Extend to other invertible functions
     Value *LHSOp = nullptr;
     if (!match(LHS, m_ZExt(m_Value(LHSOp))))
+      continue;
+
+    // In general, we only rotate if we can do so without increasing the number
+    // of instructions.  The exception is when we have an zext(add-rec).  The
+    // reason for allowing this exception is that we know we need to get rid
+    // of the zext for SCEV to be able to compute a trip count for said loops;
+    // we consider the new trip count valuable enough to increase instruction
+    // count by one.
+    if (!LHS->hasOneUse() && !isa<SCEVAddRecExpr>(SE->getSCEV(LHSOp)))
       continue;
 
     // Given a icmp unsigned-cond zext(Op) where zext(trunc(RHS)) == RHS

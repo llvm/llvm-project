@@ -928,3 +928,64 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
+
+define i16 @ult_multiuse_profit(i16 %n.raw, i8 %start) mustprogress {
+; CHECK-LABEL: @ult_multiuse_profit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 254 to i8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[START:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[ZEXT_LCSSA:%.*]] = phi i16 [ [[ZEXT]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i16 [[ZEXT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i8 [ %iv.next, %for.body ], [ %start, %entry ]
+  %iv.next = add i8 %iv, 1
+  %zext = zext i8 %iv.next to i16
+  %cmp = icmp ult i16 %zext, 254
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret i16 %zext
+}
+
+define i16 @ult_multiuse_profit2(i16 %n.raw, i8 %start) mustprogress {
+; CHECK-LABEL: @ult_multiuse_profit2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 254 to i8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[START:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i16 [ [[ZEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[ZEXT]] = zext i8 [[IV_NEXT]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[IV2_LCSSA:%.*]] = phi i16 [ [[IV2]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i16 [[IV2_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i8 [ %iv.next, %for.body ], [ %start, %entry ]
+  %iv2 = phi i16 [%zext, %for.body], [0, %entry]
+  %iv.next = add i8 %iv, 1
+  %zext = zext i8 %iv.next to i16
+  %cmp = icmp ult i16 %zext, 254
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret i16 %iv2
+}
+
