@@ -444,7 +444,7 @@ define <2 x i32> @splatconstant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    pslld $4, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movsd %xmm2, %xmm0
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: splatconstant_funnnel_v2i32:
@@ -523,7 +523,7 @@ define <2 x i32> @splatconstant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; X86-SSE2-NEXT:    pslld $4, %xmm2
 ; X86-SSE2-NEXT:    por %xmm1, %xmm2
-; X86-SSE2-NEXT:    movsd %xmm2, %xmm0
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; X86-SSE2-NEXT:    retl
   %res = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %x, <2 x i32> <i32 4, i32 4>)
   ret <2 x i32> %res

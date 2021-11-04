@@ -35,7 +35,7 @@ define <2 x i64> @var_funnnel_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %amt) 
 ; SSE2-NEXT:    psrlq %xmm4, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; SSE2-NEXT:    psrlq %xmm4, %xmm1
-; SSE2-NEXT:    shufpd{{.*#+}} xmm5 = xmm5[0],xmm1[1]
+; SSE2-NEXT:    shufpd {{.*#+}} xmm5 = xmm5[0],xmm1[1]
 ; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psllq %xmm2, %xmm1
