@@ -824,12 +824,12 @@ for.end:                                          ; preds = %for.body, %entry
 define void @slt_constant_lhs(i16 %n.raw, i8 %start) mustprogress {
 ; CHECK-LABEL: @slt_constant_lhs(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 254 to i8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[START:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 254, [[ZEXT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -878,12 +878,12 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_constant_lhs(i16 %n.raw, i8 %start) mustprogress {
 ; CHECK-LABEL: @ult_constant_lhs(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 254 to i8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[START:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 254, [[ZEXT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
