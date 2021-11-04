@@ -27,6 +27,10 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %10 = spv.AtomicUMin "Device" "Release" %ptr, %value : !spv.ptr<i32, Workgroup>
     // CHECK: spv.AtomicXor "Workgroup" "AcquireRelease" %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>
     %11 = spv.AtomicXor "Workgroup" "AcquireRelease" %ptr, %value : !spv.ptr<i32, Workgroup>
+    // CHECK: spv.AtomicCompareExchange "Workgroup" "Release" "Acquire" %{{.*}}, %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>
+    %12 = spv.AtomicCompareExchange "Workgroup" "Release" "Acquire" %ptr, %value, %comparator: !spv.ptr<i32, Workgroup>
+    // CHECK: spv.AtomicExchange "Workgroup" "Release" %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>
+    %13 = spv.AtomicExchange "Workgroup" "Release" %ptr, %value: !spv.ptr<i32, Workgroup>
     spv.ReturnValue %0: i32
   }
 }

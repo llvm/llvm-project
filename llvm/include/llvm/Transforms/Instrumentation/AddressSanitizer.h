@@ -90,17 +90,11 @@ private:
 };
 
 struct AddressSanitizerOptions {
-  AddressSanitizerOptions()
-      : AddressSanitizerOptions(false, false, false,
-                                AsanDetectStackUseAfterReturnMode::Runtime){};
-  AddressSanitizerOptions(bool CompileKernel, bool Recover, bool UseAfterScope,
-                          AsanDetectStackUseAfterReturnMode UseAfterReturn)
-      : CompileKernel(CompileKernel), Recover(Recover),
-        UseAfterScope(UseAfterScope), UseAfterReturn(UseAfterReturn){};
-  bool CompileKernel;
-  bool Recover;
-  bool UseAfterScope;
-  AsanDetectStackUseAfterReturnMode UseAfterReturn;
+  bool CompileKernel = false;
+  bool Recover = false;
+  bool UseAfterScope = false;
+  AsanDetectStackUseAfterReturnMode UseAfterReturn =
+      AsanDetectStackUseAfterReturnMode::Runtime;
 };
 
 /// Public interface to the address sanitizer pass for instrumenting code to

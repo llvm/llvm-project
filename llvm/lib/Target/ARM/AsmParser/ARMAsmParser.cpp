@@ -10961,7 +10961,7 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
       // Only after the instruction is fully processed, we can validate it
       if (wasInITBlock && hasV8Ops() && isThumb() &&
-          !isV8EligibleForIT(&Inst)) {
+          !isV8EligibleForIT(&Inst) && !getTargetOptions().MCNoDeprecatedWarn) {
         Warning(IDLoc, "deprecated instruction in IT block");
       }
     }

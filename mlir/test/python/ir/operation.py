@@ -741,6 +741,7 @@ def testOperationLoc():
     assert op.location == loc
     assert op.operation.location == loc
 
+
 # CHECK-LABEL: TEST: testModuleMerge
 @run
 def testModuleMerge():
@@ -876,3 +877,13 @@ def testSymbolTable():
         raise
     else:
       assert False, "exepcted ValueError when adding a non-symbol"
+
+
+# CHECK-LABEL: TEST: testOperationHash
+@run
+def testOperationHash():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with ctx, Location.unknown():
+    op = Operation.create("custom.op1")
+    assert hash(op) == hash(op.operation)

@@ -1239,6 +1239,9 @@ public:
     assert(Indices.size() <= Factor &&
            "Interleaved memory op has too many members");
 
+    const APInt DemandedAllSubElts = APInt::getAllOnes(NumSubElts);
+    const APInt DemandedAllResultElts = APInt::getAllOnes(NumElts);
+
     APInt DemandedLoadStoreElts = APInt::getZero(NumElts);
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
@@ -1256,7 +1259,8 @@ public:
       // The cost is estimated as extract elements at 0, 2, 4, 6 from the
       // <8 x i32> vector and insert them into a <4 x i32> vector.
       InstructionCost InsSubCost =
-          getScalarizationOverhead(SubVT, /*Insert*/ true, /*Extract*/ false);
+          thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
+                                            /*Insert*/ true, /*Extract*/ false);
       Cost += Indices.size() * InsSubCost;
       Cost +=
           thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
@@ -1276,7 +1280,8 @@ public:
       // excluding gaps) from both <4 x i32> vectors and insert into the <12 x
       // i32> vector.
       InstructionCost ExtSubCost =
-          getScalarizationOverhead(SubVT, /*Insert*/ false, /*Extract*/ true);
+          thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
+                                            /*Insert*/ false, /*Extract*/ true);
       Cost += ExtSubCost * Indices.size();
       Cost += thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
                                                 /*Insert*/ true,
@@ -1300,9 +1305,12 @@ public:
     // The cost is estimated as extract all mask elements from the <8xi1> mask
     // vector and insert them factor times into the <24xi1> shuffled mask
     // vector.
-    Cost += getScalarizationOverhead(SubVT, /*Insert*/ false, /*Extract*/ true);
     Cost +=
-        getScalarizationOverhead(MaskVT, /*Insert*/ true, /*Extract*/ false);
+        thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
+                                          /*Insert*/ false, /*Extract*/ true);
+    Cost += thisT()->getScalarizationOverhead(
+        MaskVT, UseMaskForGaps ? DemandedLoadStoreElts : DemandedAllResultElts,
+        /*Insert*/ true, /*Extract*/ false);
 
     // The Gaps mask is invariant and created outside the loop, therefore the
     // cost of creating it is not accounted for here. However if we have both
