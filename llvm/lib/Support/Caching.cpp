@@ -1,4 +1,4 @@
-//===-Caching.cpp - LLVM File Cache Handling ------------------------------===//
+//===-Caching.cpp - LLVM Local File Cache ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the Caching used by ThinLTO.
+// This file implements the localCache function, which simplifies creating,
+// adding to, and querying a local file system cache. localCache takes care of
+// periodically pruning older files from the cache using a CachePruningPolicy.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Caching.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -27,10 +26,10 @@
 
 using namespace llvm;
 
-Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
-                                             Twine TempFilePrefixRef,
-                                             Twine CacheDirectoryPathRef,
-                                             AddBufferFn AddBuffer) {
+Expected<FileCache> llvm::localCache(Twine CacheNameRef,
+                                     Twine TempFilePrefixRef,
+                                     Twine CacheDirectoryPathRef,
+                                     AddBufferFn AddBuffer) {
   if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPathRef))
     return errorCodeToError(EC);
 
@@ -40,7 +39,7 @@ Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
   TempFilePrefixRef.toVector(TempFilePrefix);
   CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
-  return [=](unsigned Task, StringRef Key) -> AddStreamFn {
+  return [=](unsigned Task, StringRef Key) -> Expected<AddStreamFn> {
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
     SmallString<64> EntryPath;
@@ -72,12 +71,12 @@ Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
     // Since the file is probably being deleted we handle it in the same way as
     // if the file did not exist at all.
     if (EC != errc::no_such_file_or_directory && EC != errc::permission_denied)
-      report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
-                         ": " + EC.message() + "\n");
+      return createStringError(EC, Twine("Failed to open cache file ") +
+                                       EntryPath + ": " + EC.message() + "\n");
 
-    // This native object stream is responsible for commiting the resulting
-    // file to the cache and calling AddBuffer to add it to the link.
-    struct CacheStream : NativeObjectStream {
+    // This file stream is responsible for commiting the resulting file to the
+    // cache and calling AddBuffer to add it to the link.
+    struct CacheStream : CachedFileStream {
       AddBufferFn AddBuffer;
       sys::fs::TempFile TempFile;
       std::string EntryPath;
@@ -86,11 +85,14 @@ Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
                   sys::fs::TempFile TempFile, std::string EntryPath,
                   unsigned Task)
-          : NativeObjectStream(std::move(OS)), AddBuffer(std::move(AddBuffer)),
+          : CachedFileStream(std::move(OS)), AddBuffer(std::move(AddBuffer)),
             TempFile(std::move(TempFile)), EntryPath(std::move(EntryPath)),
             Task(Task) {}
 
       ~CacheStream() {
+        // TODO: Manually commit rather than using non-trivial destructor,
+        // allowing to replace report_fatal_errors with a return Error.
+
         // Make sure the stream is closed before committing it.
         OS.reset();
 
@@ -138,17 +140,17 @@ Expected<NativeObjectCache> llvm::localCache(Twine CacheNameRef,
       }
     };
 
-    return [=](size_t Task) -> std::unique_ptr<NativeObjectStream> {
+    return [=](size_t Task) -> Expected<std::unique_ptr<CachedFileStream>> {
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;
       sys::path::append(TempFilenameModel, CacheDirectoryPath,
                         TempFilePrefix + "-%%%%%%.tmp.o");
       Expected<sys::fs::TempFile> Temp = sys::fs::TempFile::create(
           TempFilenameModel, sys::fs::owner_read | sys::fs::owner_write);
-      if (!Temp) {
-        errs() << "Error: " << toString(Temp.takeError()) << "\n";
-        report_fatal_error(CacheName + ": Can't get a temporary file");
-      }
+      if (!Temp)
+        return createStringError(errc::io_error,
+                                 toString(Temp.takeError()) + ": " + CacheName +
+                                     ": Can't get a temporary file");
 
       // This CacheStream will move the temporary file into the cache when done.
       return std::make_unique<CacheStream>(

@@ -362,20 +362,20 @@ static int run(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  auto AddStream = [&](size_t Task) -> std::unique_ptr<NativeObjectStream> {
+  auto AddStream = [&](size_t Task) -> std::unique_ptr<CachedFileStream> {
     std::string Path = OutputFilename + "." + utostr(Task);
 
     std::error_code EC;
     auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
     check(EC, Path);
-    return std::make_unique<NativeObjectStream>(std::move(S));
+    return std::make_unique<CachedFileStream>(std::move(S));
   };
 
   auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
     *AddStream(Task)->OS << MB->getBuffer();
   };
 
-  NativeObjectCache Cache;
+  FileCache Cache;
   if (!CacheDir.empty())
     Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
                   "failed to create cache");
