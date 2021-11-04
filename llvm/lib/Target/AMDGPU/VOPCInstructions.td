@@ -50,7 +50,7 @@ class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
 class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt0> :
   VOPProfile <[i1, vt0, vt1, untyped]> {
   // We want to exclude 64bit operand insts.
-  let HasExtDPP = getHasVOP3DPP<NumSrcArgs, DstVT, Src0VT, Src1VT, Src2VT>.ret;
+  let HasExtDPP = getHasVOP3DPP<DstVT, Src0VT, Src1VT, Src2VT>.ret;
   let Asm32 = "$src0, $src1";
 
   let AsmDPP = !if (HasModifiers,
@@ -1007,7 +1007,7 @@ class VOPC_DPPe_Common<bits<8> op> : Enc64 {
 }
 
 class VOPC_DPP_Base<bits<8> op, string OpName, VOPProfile P>
-    : VOP_DPP_Base<OpName, P, 1, P.InsDPP16, " " #P.AsmDPP16>,
+    : VOP_DPP_Base<OpName, P, P.InsDPP16, " " #P.AsmDPP16>,
       VOPC_DPPe_Common<op> {
   bits<2> src0_modifiers;
   bits<8> src0;

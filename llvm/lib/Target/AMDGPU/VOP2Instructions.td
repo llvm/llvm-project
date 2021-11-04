@@ -155,7 +155,7 @@ multiclass VOP2Inst_e64<string opName,
                         string revOp = opName,
                         bit GFX9Renamed = 0> {
   let renamedInGFX9 = GFX9Renamed in {
-    def _e64 : VOP3InstBase <opName, P, node, 0, 1>,
+    def _e64 : VOP3InstBase <opName, P, node, 1>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
     let SubtargetPredicate = isGFX11Plus in {
@@ -226,7 +226,7 @@ multiclass VOP2bInst <string opName,
           def _dpp  : VOP2_DPP_Pseudo <opName, P>;
       } // End Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC]
 
-      def _e64 : VOP3InstBase <opName, P, node, 0, 1>,
+      def _e64 : VOP3InstBase <opName, P, node, 1>,
                  Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
       let SubtargetPredicate = isGFX11Plus in {
@@ -274,7 +274,7 @@ multiclass VOP2eInst <string opName,
         def _dpp  : VOP2_DPP_Pseudo <opName, P>;
     }
 
-    def _e64 : VOP3InstBase <opName, P, node, 0, 1>,
+    def _e64 : VOP3InstBase <opName, P, node, 1>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
       let isReMaterializable = 1;
     }
@@ -310,7 +310,7 @@ multiclass VOP2eInst_VOPD <string opName,
         def _dpp  : VOP2_DPP_Pseudo <opName, P>;
     }
 
-    def _e64 : VOP3InstBase <opName, P, node, 0, 1>,
+    def _e64 : VOP3InstBase <opName, P, node, 1>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
       let isReMaterializable = 1;
     }

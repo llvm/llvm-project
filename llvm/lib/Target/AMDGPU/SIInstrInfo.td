@@ -2225,7 +2225,7 @@ class BitAnd<bit a, bit b> {
   bit ret = !if(a, !if(b, 1, 0), 0);
 }
 
-class getHasVOP3DPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
+class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
   bit ret =    !if(!eq(DstVT.Size, 64),
                     0, // 64-bit dst No DPP for 64-bit operands
@@ -2331,7 +2331,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasSrc2Mods = !if(HasModifiers, !or(HasSrc2FloatMods, HasSrc2IntMods), 0);
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
-  field bit HasExtVOP3DPP = getHasVOP3DPP<NumSrcArgs, DstVT, Src0VT, Src1VT, Src2VT>.ret;
+  field bit HasExtVOP3DPP = getHasVOP3DPP<DstVT, Src0VT, Src1VT, Src2VT>.ret;
   field bit HasExtDPP = !if(!or(getHasDPP<NumSrcArgs>.ret,
                 HasExtVOP3DPP), 1, 0);
   field bit HasExt64BitDPP = getHasExt64BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
