@@ -780,6 +780,8 @@ static void warnIfUnimplementedOption(const Option &opt) {
   case OPT_grp_ignored:
     warn("Option `" + opt.getPrefixedName() + "' is ignored.");
     break;
+  case OPT_grp_ignored_silently:
+    break;
   default:
     warn("Option `" + opt.getPrefixedName() +
          "' is not yet implemented. Stay tuned...");
@@ -1226,6 +1228,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->omitDebugInfo = args.hasArg(OPT_S);
   config->outputType = getOutputType(args);
+  config->errorForArchMismatch = args.hasArg(OPT_arch_errors_fatal);
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
