@@ -1,10 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts \
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 \
 // RUN:    -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify \
 // RUN:    -fblocks
 #include "Inputs/std-coroutine.h"
 
-using namespace std::experimental;
-
+using namespace std;
 
 template <class Begin>
 struct Awaiter {

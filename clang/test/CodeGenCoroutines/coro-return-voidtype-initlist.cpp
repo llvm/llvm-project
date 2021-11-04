@@ -1,11 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++1z -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 namespace std {
 template <typename a>
 struct b { b(int, a); };
 template <typename, typename = int>
 struct c {};
-namespace experimental {
 template <typename d>
 struct coroutine_traits : d {};
 template <typename = void>
@@ -21,7 +20,6 @@ struct e {
   void await_suspend(coroutine_handle<>);
   void await_resume();
 };
-} // namespace experimental
 } // namespace std
 template <typename ag>
 auto ah(ag) { return ag().ah(0); }
@@ -31,10 +29,10 @@ struct g {
   struct h {
     int await_ready() noexcept;
     template <typename al>
-    void await_suspend(std::experimental::coroutine_handle<al>) noexcept;
+    void await_suspend(std::coroutine_handle<al>) noexcept;
     void await_resume() noexcept;
   };
-  std::experimental::e initial_suspend();
+  std::e initial_suspend();
   h final_suspend() noexcept;
   template <typename ag>
   auto await_transform(ag) { return ah(ag()); }
@@ -45,20 +43,20 @@ struct j : g {
   void unhandled_exception();
 };
 struct k {
-  k(std::experimental::coroutine_handle<>);
+  k(std::coroutine_handle<>);
   int await_ready();
 };
 template <typename am>
 struct f {
   using promise_type = j;
-  std::experimental::coroutine_handle<> ar;
+  std::coroutine_handle<> ar;
   struct l : k {
     using at = k;
-    l(std::experimental::coroutine_handle<> m) : at(m) {}
-    void await_suspend(std::experimental::coroutine_handle<>);
+    l(std::coroutine_handle<> m) : at(m) {}
+    void await_suspend(std::coroutine_handle<>);
   };
   struct n : l {
-    n(std::experimental::coroutine_handle<> m) : l(m) {}
+    n(std::coroutine_handle<> m) : l(m) {}
     am await_resume();
   };
   auto ah(int) { return n(ar); }
