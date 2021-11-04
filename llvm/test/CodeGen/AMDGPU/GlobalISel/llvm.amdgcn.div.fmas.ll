@@ -1271,11 +1271,11 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; GFX11_W32-NEXT:    s_load_b32 s0, s[0:1], 0x54
 ; GFX11_W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11_W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11_W32-NEXT:    global_load_b32 v2, v1, s[6:7] glc dlc
+; GFX11_W32-NEXT:    global_load_b32 v2, v1, s[6:7] glc
 ; GFX11_W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX11_W32-NEXT:    global_load_b32 v3, v1, s[6:7] offset:4 glc dlc
+; GFX11_W32-NEXT:    global_load_b32 v3, v1, s[6:7] offset:4 glc
 ; GFX11_W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX11_W32-NEXT:    global_load_b32 v1, v1, s[6:7] offset:8 glc dlc
+; GFX11_W32-NEXT:    global_load_b32 v1, v1, s[6:7] offset:8 glc
 ; GFX11_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11_W32-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11_W32-NEXT:    s_cselect_b32 s0, 1, 0
@@ -1294,11 +1294,11 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; GFX11_W64-NEXT:    s_load_b32 s0, s[0:1], 0x54
 ; GFX11_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX11_W64-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11_W64-NEXT:    global_load_b32 v2, v1, s[6:7] glc dlc
+; GFX11_W64-NEXT:    global_load_b32 v2, v1, s[6:7] glc
 ; GFX11_W64-NEXT:    s_waitcnt vmcnt(0)
-; GFX11_W64-NEXT:    global_load_b32 v3, v1, s[6:7] offset:4 glc dlc
+; GFX11_W64-NEXT:    global_load_b32 v3, v1, s[6:7] offset:4 glc
 ; GFX11_W64-NEXT:    s_waitcnt vmcnt(0)
-; GFX11_W64-NEXT:    global_load_b32 v1, v1, s[6:7] offset:8 glc dlc
+; GFX11_W64-NEXT:    global_load_b32 v1, v1, s[6:7] offset:8 glc
 ; GFX11_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11_W64-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11_W64-NEXT:    s_cselect_b32 s0, 1, 0

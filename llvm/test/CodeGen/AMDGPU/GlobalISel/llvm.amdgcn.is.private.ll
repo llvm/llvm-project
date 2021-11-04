@@ -59,7 +59,7 @@ define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[0:1] glc dlc
+; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 16

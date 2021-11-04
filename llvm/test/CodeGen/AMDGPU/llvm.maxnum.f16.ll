@@ -129,9 +129,9 @@ define amdgpu_kernel void @maxnum_f16(
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s12, s6
 ; GFX11-NEXT:    s_mov_b32 s13, s7
-; GFX11-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX11-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_load_u16 v1, off, s[0:3], 0 glc dlc
+; GFX11-NEXT:    buffer_load_u16 v1, off, s[0:3], 0 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s8, s4
 ; GFX11-NEXT:    s_mov_b32 s9, s5

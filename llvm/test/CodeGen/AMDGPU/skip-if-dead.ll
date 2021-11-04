@@ -1096,7 +1096,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX11-NEXT:  ; %bb.2: ; %bb
 ; GFX11-NEXT:    ; in Loop: Header=BB10_1 Depth=1
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
-; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX11-NEXT:    s_and_b64 vcc, exec, vcc

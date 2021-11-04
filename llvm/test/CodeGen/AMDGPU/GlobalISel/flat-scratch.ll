@@ -53,7 +53,7 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s0
-; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:4
+; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v2, off offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -114,7 +114,7 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_lshlrev_b32 v1, 2, v1
-; GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:4
+; GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, off offset:128 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -176,7 +176,7 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX11-NEXT:    scratch_store_b32 v0, v2, s32
+; GFX11-NEXT:    scratch_store_b32 v0, v2, s32 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, s32 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -281,7 +281,7 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s0
-; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:260
+; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:260 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v2, off offset:260 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -352,7 +352,7 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 ; GFX11-NEXT:    scratch_load_b32 v3, off, off offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:260
+; GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:260 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, off offset:384 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -424,7 +424,7 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX11-NEXT:    scratch_load_b32 v3, off, s32 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX11-NEXT:    scratch_store_b32 v0, v2, s32 offset:256
+; GFX11-NEXT:    scratch_store_b32 v0, v2, s32 offset:256 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, s32 offset:256 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -502,7 +502,7 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s0
-; GFX11-NEXT:    scratch_store_b32 v0, v1, vcc_lo
+; GFX11-NEXT:    scratch_store_b32 v0, v1, vcc_lo dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_movk_i32 vcc_lo, 0x4004
 ; GFX11-NEXT:    scratch_load_b32 v0, v2, vcc_lo glc dlc
@@ -575,7 +575,7 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 ; GFX11-NEXT:    scratch_load_b32 v3, off, off offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX11-NEXT:    scratch_store_b32 v0, v2, vcc_lo
+; GFX11-NEXT:    scratch_store_b32 v0, v2, vcc_lo dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_movk_i32 vcc_lo, 0x4004
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, vcc_lo offset:124 glc dlc
@@ -649,7 +649,7 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX11-NEXT:    scratch_load_b32 v3, off, s32 offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX11-NEXT:    scratch_store_b32 v0, v2, vcc_lo
+; GFX11-NEXT:    scratch_store_b32 v0, v2, vcc_lo dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_add_i32 vcc_lo, s32, 0x4004
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, vcc_lo glc dlc
@@ -711,9 +711,9 @@ define amdgpu_kernel void @store_load_large_imm_offset_kernel() {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 0x3e80
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 15
-; GFX11-NEXT:    scratch_store_b32 off, v0, off offset:4
+; GFX11-NEXT:    scratch_store_b32 off, v0, off offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_store_b32 v1, v2, off offset:4
+; GFX11-NEXT:    scratch_store_b32 v1, v2, off offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, off offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -769,9 +769,9 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 0x3e80
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 15
-; GFX11-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; GFX11-NEXT:    scratch_store_b32 off, v0, s32 offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_store_b32 v1, v2, s32 offset:4
+; GFX11-NEXT:    scratch_store_b32 v1, v2, s32 offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v1, s32 offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -826,7 +826,7 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_lshl_u32 v0, s0, v0, 2
-; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:1028
+; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:1028 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, v0, off offset:1028 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -872,7 +872,7 @@ define void @store_load_i64_aligned(i64 addrspace(5)* nocapture %arg) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off
+; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b64 v[0:1], v0, off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -913,7 +913,7 @@ define void @store_load_i64_unaligned(i64 addrspace(5)* nocapture %arg) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off
+; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b64 v[0:1], v0, off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -965,7 +965,7 @@ define void @store_load_v3i32_unaligned(<3 x i32> addrspace(5)* nocapture %arg) 
 ; GFX11-NEXT:    s_mov_b32 s0, 1
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_mov_b32 v2, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s0
-; GFX11-NEXT:    scratch_store_b96 v0, v[1:3], off
+; GFX11-NEXT:    scratch_store_b96 v0, v[1:3], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b96 v[0:2], v0, off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1022,7 +1022,7 @@ define void @store_load_v4i32_unaligned(<4 x i32> addrspace(5)* nocapture %arg) 
 ; GFX11-NEXT:    s_mov_b32 s0, 1
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b128 v[0:3], v0, off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

@@ -24,7 +24,7 @@
 ; GCNHSA7_10: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
 
 ; GCNHSA11: scratch_store_b32 {{v[0-9]+}}, {{v[0-9]+}}, vcc_lo offset:-4
-; GCNHSA11: scratch_load_b32 {{v[0-9]+}}, off, {{s[0-9]+}} glc dlc
+; GCNHSA11: scratch_load_b32 {{v[0-9]+}}, off, {{s[0-9]+}} glc
 
 ; GCNHSA: .amdhsa_kernel large_alloca_compute_shader
 ; GCNHSA:         .amdhsa_group_segment_fixed_size 0

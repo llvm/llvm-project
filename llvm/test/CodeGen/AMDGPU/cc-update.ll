@@ -469,7 +469,7 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ;
 ; GFX1100-LABEL: test_sgpr_offset_kernel:
 ; GFX1100:       ; %bb.0: ; %entry
-; GFX1100-NEXT:    scratch_load_b32 v0, off, off offset:8 glc dlc
+; GFX1100-NEXT:    scratch_load_b32 v0, off, off offset:8 glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    s_movk_i32 s0, 0x1000
 ; GFX1100-NEXT:    scratch_store_b32 off, v0, s0 ; 4-byte Folded Spill

@@ -281,7 +281,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_writelane_b32 v40, s33, 2
 ; GFX11-NEXT:    s_mov_b32 s33, s32
@@ -409,7 +409,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_writelane_b32 v40, s33, 2
 ; GFX11-NEXT:    s_mov_b32 s33, s32
@@ -648,7 +648,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    global_load_i8 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_i8 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_writelane_b32 v40, s33, 2
 ; GFX11-NEXT:    s_mov_b32 s33, s32
@@ -768,7 +768,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_writelane_b32 v40, s33, 2
 ; GFX11-NEXT:    s_mov_b32 s33, s32
@@ -1003,7 +1003,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    global_load_u16 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_writelane_b32 v40, s33, 2
 ; GFX11-NEXT:    s_mov_b32 s33, s32
@@ -1123,7 +1123,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    global_load_u16 v0, v[0:1], off glc dlc
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_writelane_b32 v40, s33, 2
 ; GFX11-NEXT:    s_mov_b32 s33, s32
