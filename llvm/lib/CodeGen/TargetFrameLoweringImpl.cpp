@@ -136,6 +136,16 @@ unsigned TargetFrameLowering::getStackAlignmentSkew(
   return 0;
 }
 
+bool TargetFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
+  const MachineFunction &MF) const {
+  if (!hasFP(MF))
+    return false;
+
+  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  return RegInfo->useFPForScavengingIndex(MF) &&
+         !RegInfo->hasStackRealignment(MF);
+}
+
 bool TargetFrameLowering::isSafeForNoCSROpt(const Function &F) {
   if (!F.hasLocalLinkage() || F.hasAddressTaken() ||
       !F.hasFnAttribute(Attribute::NoRecurse))
