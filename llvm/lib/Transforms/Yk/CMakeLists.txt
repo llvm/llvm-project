@@ -1,4 +1,5 @@
-add_llvm_component_library(LLVMYkControlPoint
+add_llvm_component_library(LLVMYkPasses
+  BlockDisambiguate.cpp
   ControlPoint.cpp
 
   DEPENDS
