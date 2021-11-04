@@ -2500,6 +2500,11 @@ static void parseIntArg(const llvm::opt::InputArgList &InputArgs, int ID,
   }
 }
 
+static void invalidArgValue(const opt::Arg *A) {
+  reportCmdLineError("'" + StringRef(A->getValue()) +
+                     "' is not a valid value for '" + A->getSpelling() + "'");
+}
+
 static std::vector<std::string>
 commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   std::vector<std::string> Values;
@@ -2573,8 +2578,11 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
       commaSeparatedValues(InputArgs, OBJDUMP_disassemble_symbols_EQ);
   DisassembleZeroes = InputArgs.hasArg(OBJDUMP_disassemble_zeroes);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_dwarf_EQ)) {
-    DwarfDumpType =
-        StringSwitch<DIDumpType>(A->getValue()).Case("frames", DIDT_DebugFrame);
+    DwarfDumpType = StringSwitch<DIDumpType>(A->getValue())
+                        .Case("frames", DIDT_DebugFrame)
+                        .Default(DIDT_Null);
+    if (DwarfDumpType == DIDT_Null)
+      invalidArgValue(A);
   }
   DynamicRelocations = InputArgs.hasArg(OBJDUMP_dynamic_reloc);
   FaultMapSection = InputArgs.hasArg(OBJDUMP_fault_map_section);
@@ -2611,7 +2619,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugVarsFormat>(A->getValue())
                        .Case("ascii", DVASCII)
-                       .Case("unicode", DVUnicode);
+                       .Case("unicode", DVUnicode)
+                       .Default(DVInvalid);
+    if (DbgVariables == DVInvalid)
+      invalidArgValue(A);
   }
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
 
