@@ -343,11 +343,10 @@ public:
       clang::FunctionDecl *func_decl, clang::FunctionTemplateDecl *Template,
       const TemplateParameterInfos &infos);
 
-  clang::ClassTemplateDecl *
-  CreateClassTemplateDecl(clang::DeclContext *decl_ctx,
-                          OptionalClangModuleID owning_module,
-                          lldb::AccessType access_type, const char *class_name,
-                          int kind, const TemplateParameterInfos &infos);
+  clang::ClassTemplateDecl *CreateClassTemplateDecl(
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      lldb::AccessType access_type, llvm::StringRef class_name, int kind,
+      const TemplateParameterInfos &infos);
 
   clang::TemplateTemplateParmDecl *
   CreateTemplateTemplateParmDecl(const char *template_name);
