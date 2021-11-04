@@ -15561,6 +15561,18 @@ static SDValue performSpliceCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG) {
+  assert((N->getOpcode() == AArch64ISD::UUNPKHI ||
+          N->getOpcode() == AArch64ISD::UUNPKLO) &&
+         "Unexpected Opcode!");
+
+  // uunpklo/hi undef -> undef
+  if (N->getOperand(0).isUndef())
+    return DAG.getUNDEF(N->getValueType(0));
+
+  return SDValue();
+}
+
 static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue Op0 = N->getOperand(0);
@@ -17227,6 +17239,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performNVCASTCombine(N);
   case AArch64ISD::SPLICE:
     return performSpliceCombine(N, DAG);
+  case AArch64ISD::UUNPKLO:
+  case AArch64ISD::UUNPKHI:
+    return performUnpackCombine(N, DAG);
   case AArch64ISD::UZP1:
     return performUzpCombine(N, DAG);
   case AArch64ISD::SETCC_MERGE_ZERO:
