@@ -4,9 +4,9 @@
 define void @vctp8(i32 %arg, <16 x i8> *%in, <16 x i8>* %out) {
 ; CHECK-LABEL: vctp8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    vctp.8 r0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vctp.8 r0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r2]
@@ -21,9 +21,9 @@ define void @vctp8(i32 %arg, <16 x i8> *%in, <16 x i8>* %out) {
 define void @vctp16(i32 %arg, <8 x i16> *%in, <8 x i16>* %out) {
 ; CHECK-LABEL: vctp16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    vctp.16 r0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r2]
@@ -38,9 +38,9 @@ define void @vctp16(i32 %arg, <8 x i16> *%in, <8 x i16>* %out) {
 define void @vctp32(i32 %arg, <4 x i32> *%in, <4 x i32>* %out) {
 ; CHECK-LABEL: vctp32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    vctp.32 r0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r2]

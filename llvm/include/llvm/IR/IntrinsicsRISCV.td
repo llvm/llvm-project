@@ -1194,16 +1194,16 @@ let TargetPrefix = "riscv" in {
 
   def int_riscv_vmand: RISCVBinaryAAANoMask;
   def int_riscv_vmnand: RISCVBinaryAAANoMask;
-  def int_riscv_vmandnot: RISCVBinaryAAANoMask;
+  def int_riscv_vmandn: RISCVBinaryAAANoMask;
   def int_riscv_vmxor: RISCVBinaryAAANoMask;
   def int_riscv_vmor: RISCVBinaryAAANoMask;
   def int_riscv_vmnor: RISCVBinaryAAANoMask;
-  def int_riscv_vmornot: RISCVBinaryAAANoMask;
+  def int_riscv_vmorn: RISCVBinaryAAANoMask;
   def int_riscv_vmxnor: RISCVBinaryAAANoMask;
   def int_riscv_vmclr : RISCVNullaryIntrinsic;
   def int_riscv_vmset : RISCVNullaryIntrinsic;
 
-  defm vpopc : RISCVMaskUnarySOut;
+  defm vcpop : RISCVMaskUnarySOut;
   defm vfirst : RISCVMaskUnarySOut;
   defm vmsbf : RISCVMaskUnaryMOut;
   defm vmsof : RISCVMaskUnaryMOut;

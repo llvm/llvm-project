@@ -314,10 +314,10 @@ define void @shlor(i32* nocapture readonly %x, i32* noalias nocapture %y, i32 %n
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q4, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q6, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vadd.i32 q5, q4, q7
+; CHECK-NEXT:    vldrw.u32 q4, [r0], #16
 ; CHECK-NEXT:    vadd.i32 q6, q4, q6
+; CHECK-NEXT:    vadd.i32 q5, q4, q7
 ; CHECK-NEXT:    vstrw.32 q6, [q3, #128]!
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #16] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.i32 q6, q4, q6

@@ -520,9 +520,8 @@ define arm_aapcs_vfpcc void @ssatmul_4t_q31(i32* nocapture readonly %pSrcA, i32*
 ; CHECK-NEXT:    vdup.32 q4, r9
 ; CHECK-NEXT:    add.w r9, r9, #4
 ; CHECK-NEXT:    vorr q4, q4, q0
-; CHECK-NEXT:    vpt.u32 cs, q1, q4
+; CHECK-NEXT:    vptt.u32 cs, q1, q4
 ; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
-; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q5, [r1], #16
 ; CHECK-NEXT:    vmov.f32 s24, s18
 ; CHECK-NEXT:    vmov.f32 s26, s19

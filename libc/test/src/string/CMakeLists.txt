@@ -43,6 +43,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  stpcpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    stpcpy_test.cpp
+  DEPENDS
+    libc.src.string.stpcpy
+)
+
+add_libc_unittest(
+  stpncpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    stpncpy_test.cpp
+  DEPENDS
+    libc.src.string.stpncpy
+)
+
+add_libc_unittest(
   strcat_test
   SUITE
     libc_string_unittests

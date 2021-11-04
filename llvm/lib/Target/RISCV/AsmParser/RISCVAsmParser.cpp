@@ -2377,7 +2377,7 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
     // masked va >= x, vd == v0
     //
     //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
-    //  expansion: vmslt{u}.vx vt, va, x;  vmandnot.mm vd, vd, vt
+    //  expansion: vmslt{u}.vx vt, va, x;  vmandn.mm vd, vd, vt
     assert(Inst.getOperand(0).getReg() == RISCV::V0 &&
            "The destination register should be V0.");
     assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
@@ -2387,7 +2387,7 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                             .addOperand(Inst.getOperand(2))
                             .addOperand(Inst.getOperand(3))
                             .addOperand(Inst.getOperand(4)));
-    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDNOT_MM)
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDN_MM)
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(1)));
@@ -2395,7 +2395,7 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
     // masked va >= x, any vd
     //
     // pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
-    // expansion: vmslt{u}.vx vt, va, x; vmandnot.mm vt, v0, vt; vmandnot.mm vd,
+    // expansion: vmslt{u}.vx vt, va, x; vmandn.mm vt, v0, vt; vmandn.mm vd,
     // vd, v0; vmor.mm vd, vt, vd
     assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
            "The temporary vector register should not be V0.");
@@ -2404,11 +2404,11 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                             .addOperand(Inst.getOperand(2))
                             .addOperand(Inst.getOperand(3))
                             .addReg(RISCV::NoRegister));
-    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDNOT_MM)
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDN_MM)
                             .addOperand(Inst.getOperand(1))
                             .addReg(RISCV::V0)
                             .addOperand(Inst.getOperand(1)));
-    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDNOT_MM)
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDN_MM)
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(0))
                             .addReg(RISCV::V0));
