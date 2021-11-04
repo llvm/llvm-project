@@ -832,7 +832,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     C(MPM, Level);
 
   // Specialize functions with IPSCCP.
-  if (EnableFunctionSpecialization)
+  if (EnableFunctionSpecialization && Level == OptimizationLevel::O3)
     MPM.addPass(FunctionSpecializationPass());
 
   // Interprocedural constant propagation now that basic cleanup has occurred
@@ -1406,7 +1406,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
-    if (EnableFunctionSpecialization)
+    if (EnableFunctionSpecialization && Level == OptimizationLevel::O3)
       MPM.addPass(FunctionSpecializationPass());
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
