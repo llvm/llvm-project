@@ -264,6 +264,12 @@ class SignExtInRegNM<string opstr, ValueType vt, RegisterOperand RO> :
   InstNM<(outs RO:$rd), (ins RO:$rt), !strconcat(opstr, "\t$rd, $rt"),
          [(set RO:$rd, (sext_inreg RO:$rt, vt))]>, InstSize32;
 
+class LoadScaledAddressNM<string opstr, RegisterOperand RO> :
+  InstNM<(outs RO:$rd), (ins RO:$rs, RO:$rt, uimm2:$shift),
+         !strconcat(opstr, "\t$rd, $rs, $rt, $shift"),
+         [(set RO:$rd, (add (shl RO:$rs, immZExt2:$shift), RO:$rt))]>,
+  InstSize32;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -313,6 +319,8 @@ def INS_NM : InsBaseNM;
 
 def ADDiu_NM : ArithLogicINM<"addiu", uimm16_simm12, GPR32NMOpnd,
                              imm32SExt12OrZExt16, add>;
+
+def LSA_NM : LoadScaledAddressNM<"lsa", GPR32NMOpnd>;
 
 def SEB_NM : SignExtInRegNM<"seb", i8, GPR32NMOpnd>;
 def SEH_NM : SignExtInRegNM<"seh", i16, GPR32NMOpnd>;
