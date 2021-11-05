@@ -2433,9 +2433,12 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
 //  because we aren't pointing to the LOCATION that stores the pointer to us,
 //  we're pointing to us..."
 // See inlined comments for exceptions to this general rule.
-Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
-    Value::ValueType static_value_type, CompilerType static_type,
-    CompilerType dynamic_type, bool is_indirect_enum_case) {
+Value::ValueType
+SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
+                                       CompilerType dynamic_type,
+                                       bool is_indirect_enum_case) {
+  Value::ValueType static_value_type = in_value.GetValue().GetValueType();
+  CompilerType static_type = in_value.GetCompilerType();
   Flags static_type_flags(static_type.GetTypeInfo());
   Flags dynamic_type_flags(dynamic_type.GetTypeInfo());
 
@@ -2456,21 +2459,50 @@ Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
         return Value::ValueType::LoadAddress;
       }
 
-      if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(
-              dynamic_type.GetTypeSystem()))
-        switch (ts->GetAllocationStrategy(dynamic_type.GetOpaqueQualType())) {
-        case SwiftASTContext::TypeAllocationStrategy::eDynamic:
-        case SwiftASTContext::TypeAllocationStrategy::eUnknown:
-          break;
-        case SwiftASTContext::TypeAllocationStrategy::eInline: // inline data;
-                                                               // same as the
-                                                               // static data
-          return static_value_type;
-        case SwiftASTContext::TypeAllocationStrategy::ePointer: // pointed-to;
-                                                                // in the target
-          return Value::ValueType::LoadAddress;
-        }
+      lldb::addr_t existential_address;
+      bool use_local_buffer = false;
+
+      if (in_value.GetValueType() == eValueTypeConstResult &&
+          // We have a locally materialized value that is a host address;
+          // register it with MemoryReader so it does not treat it as a load
+          // address.  Note that this assumes that any address at that host
+          // address is also a load address. If this assumption breaks there
+          // will be a crash in readBytes().
+          static_value_type == lldb_private::Value::ValueType::HostAddress) {
+        existential_address = in_value.GetValue().GetScalar().ULongLong();
+        use_local_buffer = true;
+      } else {
+        existential_address = in_value.GetAddressOf();
+      }
+
+      if (use_local_buffer)
+        PushLocalBuffer(existential_address,
+                        in_value.GetByteSize().getValueOr(0));
+
+      // Read the value witness table and check if the data is inlined in
+      // the existential container or not.
+      swift::remote::RemoteAddress remote_existential(existential_address);
+      auto *reflection_ctx = GetReflectionContext();
+      llvm::Optional<bool> is_inlined =
+          reflection_ctx->isValueInlinedInExistentialContainer(
+              remote_existential);
+
+      if (use_local_buffer)
+        PopLocalBuffer();
+
+      // An error has occurred when trying to read value witness table,
+      // default to treating it as pointer.
+      if (!is_inlined.hasValue())
+        return Value::ValueType::LoadAddress;
+
+      // Inlined data, same as static data.
+      if (*is_inlined)
+        return static_value_type;
+
+      // If the data is not inlined, we have a pointer.
+      return Value::ValueType::LoadAddress;
     }
+
     if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsGenericTypeParam)) {
       // if I am handling a non-pointer Swift type obtained from an archetype,
       // then the runtime vends the location
@@ -2497,8 +2529,7 @@ Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
       dynamic_type_flags.AllSet(eTypeIsSwift) &&
       dynamic_type_flags.AllClear(eTypeIsPointer | eTypeInstanceIsPointer))
     return static_value_type;
-  else
-    return Value::ValueType::Scalar;
+  return Value::ValueType::Scalar;
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
@@ -2575,9 +2606,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
     return false;
   class_type_or_name = dyn_class_type_or_name;
   class_type_or_name.SetCompilerType(swift_type);
-  value_type = GetValueType(in_value.GetValue().GetValueType(),
-                            in_value.GetCompilerType(),
-                            class_type_or_name.GetCompilerType(), false);
+  value_type = Value::ValueType::Scalar;
   return true;
 }
 
@@ -2611,7 +2640,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
     return false;
 
   LLDB_SCOPED_TIMER();
-   
+
   // Try to import a Clang type into Swift.
   if (in_value.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
     return GetDynamicTypeAndAddress_ClangType(
@@ -2696,9 +2725,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   }
 
   if (success)
-    value_type = GetValueType(
-        in_value.GetValue().GetValueType(), in_value.GetCompilerType(),
-        class_type_or_name.GetCompilerType(), is_indirect_enum_case);
+    value_type = GetValueType(in_value, class_type_or_name.GetCompilerType(),
+                              is_indirect_enum_case);
   else if (scratch_ctx->HasFatalErrors())
     return retry_once();
   return success;
