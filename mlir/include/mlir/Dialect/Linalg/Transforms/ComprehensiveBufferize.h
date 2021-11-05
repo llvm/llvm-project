@@ -48,37 +48,12 @@ public:
   /// `alias`. Additionally, merge their equivalence classes.
   void insertNewBufferEquivalence(Value newValue, Value alias);
 
-  /// Return true if, under current bufferization decisions, the buffer of
-  /// `value` is not writable.
-  bool aliasesNonWritableBuffer(Value value) const;
-
-  /// Return true if the buffer to which `operand` would bufferize is equivalent
-  /// to some buffer write.
-  bool aliasesInPlaceWrite(Value v) const;
-
   /// Set the inPlace bufferization spec to true.
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
   void bufferizeInPlace(OpResult result, OpOperand &operand);
 
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpResult result);
-
-  /// Return true if `value` has an ExtractSliceOp matching the given
-  /// InsertSliceOp in its reverse SSA use-def chain.
-  bool hasMatchingExtractSliceOp(Value value,
-                                 tensor::InsertSliceOp insertOp) const;
-
-  /// Return true if bufferizing `opOperand` inplace with `opResult` would
-  /// create a write to a non-writable buffer.
-  bool wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
-                                           OpResult opResult) const;
-
-  /// Assume that result bufferizes in-place with one of the operation's
-  /// operands. Return true if it is possible to find an inplace write W that
-  /// creates a conflict.
-  bool
-  wouldCreateReadAfterWriteInterference(OpOperand &operand, OpResult result,
-                                        const DominanceInfo &domInfo) const;
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
@@ -91,14 +66,13 @@ public:
            equivalentInfo.getLeaderValue(v2);
   }
 
-  /// Return true if the source of an `insertSliceOp` bufferizes to an
-  /// equivalent ExtractSliceOp.
-  bool isSourceEquivalentToAMatchingInplaceExtractSliceOp(
-      tensor::InsertSliceOp insertSliceOp) const;
-
   /// Apply `fun` to all the members of the equivalence class of `v`.
   void applyOnEquivalenceClass(Value v, function_ref<void(Value)> fun) const;
 
+  /// Apply `fun` to all aliases of `v`.
+  void applyOnAliases(Value v, function_ref<void(Value)> fun) const;
+
+  // TODO: Move these out of BufferizationAliasInfo.
   /// Return true if the value is known to bufferize to writable memory.
   bool bufferizesToWritableMemory(Value v) const;
 
@@ -127,22 +101,6 @@ private:
       llvm::EquivalenceClasses<Value, ValueComparator>::member_iterator>;
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
-
-  /// Return true if the (ExtractSliceOp, InsertSliceOp) pair match (i.e.
-  /// equivalent operand / result and same offset/sizes/strides specification).
-  ///
-  /// This is one particular type of relationship between ops on tensors that
-  /// reduce to an equivalence on buffers. This should be generalized and
-  /// exposed as interfaces on the proper types.
-  bool areEquivalentExtractSliceOps(tensor::ExtractSliceOp st,
-                                    tensor::InsertSliceOp sti) const;
-
-  /// Given sets of uses and writes, return true if there is a RaW conflict
-  /// under the assumption that all given reads/writes alias the same buffer and
-  /// that all given writes bufferize inplace.
-  bool hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
-                                     const DenseSet<OpOperand *> &usesWrite,
-                                     const DominanceInfo &domInfo) const;
 
   /// Set of tensors that are known to bufferize to writable memory.
   llvm::DenseSet<Value> bufferizeToWritableMemory;
