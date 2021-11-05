@@ -425,9 +425,9 @@ public:
     for (const StringMapEntry<Comdat> &SMEC : M.getComdatSymbolTable())
       visitComdat(SMEC.getValue());
 
-    visitModuleFlags(M);
-    visitModuleIdents(M);
-    visitModuleCommandLines(M);
+    visitModuleFlags();
+    visitModuleIdents();
+    visitModuleCommandLines();
 
     verifyCompileUnits();
 
@@ -453,9 +453,9 @@ private:
   void visitMetadataAsValue(const MetadataAsValue &MD, Function *F);
   void visitValueAsMetadata(const ValueAsMetadata &MD, Function *F);
   void visitComdat(const Comdat &C);
-  void visitModuleIdents(const Module &M);
-  void visitModuleCommandLines(const Module &M);
-  void visitModuleFlags(const Module &M);
+  void visitModuleIdents();
+  void visitModuleCommandLines();
+  void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
                        SmallVectorImpl<const MDNode *> &Requirements);
@@ -1526,7 +1526,7 @@ void Verifier::visitComdat(const Comdat &C) {
              "comdat global value has private linkage", GV);
 }
 
-void Verifier::visitModuleIdents(const Module &M) {
+void Verifier::visitModuleIdents() {
   const NamedMDNode *Idents = M.getNamedMetadata("llvm.ident");
   if (!Idents)
     return;
@@ -1543,7 +1543,7 @@ void Verifier::visitModuleIdents(const Module &M) {
   }
 }
 
-void Verifier::visitModuleCommandLines(const Module &M) {
+void Verifier::visitModuleCommandLines() {
   const NamedMDNode *CommandLines = M.getNamedMetadata("llvm.commandline");
   if (!CommandLines)
     return;
@@ -1561,7 +1561,7 @@ void Verifier::visitModuleCommandLines(const Module &M) {
   }
 }
 
-void Verifier::visitModuleFlags(const Module &M) {
+void Verifier::visitModuleFlags() {
   const NamedMDNode *Flags = M.getModuleFlagsMetadata();
   if (!Flags) return;
 
