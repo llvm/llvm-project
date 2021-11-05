@@ -5256,7 +5256,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
     return SDValue();
 
-  // For now, the array Ops should only contain two values.
+  // TODO: For now, the array Ops should only contain two values.
   // This enforcement will be removed once this function is merged with
   // FoldConstantVectorArithmetic
   if (Ops.size() != 2)
@@ -5293,6 +5293,19 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
       return FoldSymbolOffset(Opcode, VT, GA, N1);
 
+  // If this is a bitwise logic opcode see if we can fold bitcasted ops.
+  // TODO: Can we generalize this and fold any bitcasted constant data?
+  if (ISD::isBitwiseLogicOp(Opcode) && N1->getOpcode() == ISD::BITCAST &&
+      N2->getOpcode() == ISD::BITCAST) {
+    SDValue InnerN1 = peekThroughBitcasts(N1->getOperand(0));
+    SDValue InnerN2 = peekThroughBitcasts(N2->getOperand(0));
+    EVT InnerVT = InnerN1.getValueType();
+    if (InnerVT == InnerN2.getValueType() && InnerVT.isInteger())
+      if (SDValue C =
+              FoldConstantArithmetic(Opcode, DL, InnerVT, {InnerN1, InnerN2}))
+        return getBitcast(VT, C);
+  }
+
   // For fixed width vectors, extract each constant element and fold them
   // individually. Either input may be an undef value.
   bool IsBVOrSV1 = N1->getOpcode() == ISD::BUILD_VECTOR ||
@@ -5316,18 +5329,18 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   }
 
   SmallVector<SDValue, 4> Outputs;
-  unsigned NumOps = 0;
+  unsigned NumElts = 0;
   if (IsBVOrSV1)
-    NumOps = std::max(NumOps, N1->getNumOperands());
+    NumElts = std::max(NumElts, N1->getNumOperands());
   if (IsBVOrSV2)
-    NumOps = std::max(NumOps, N2->getNumOperands());
-  assert(NumOps != 0 && "Expected non-zero operands");
+    NumElts = std::max(NumElts, N2->getNumOperands());
+  assert(NumElts != 0 && "Expected non-zero operands");
   // Scalable vectors should only be SPLAT_VECTOR or UNDEF here. We only need
   // one iteration for that.
-  assert((!VT.isScalableVector() || NumOps == 1) &&
+  assert((!VT.isScalableVector() || NumElts == 1) &&
          "Scalable vector should only have one scalar");
 
-  for (unsigned I = 0; I != NumOps; ++I) {
+  for (unsigned I = 0; I != NumElts; ++I) {
     // We can have a fixed length SPLAT_VECTOR and a BUILD_VECTOR so we need
     // to use operand 0 of the SPLAT_VECTOR for each fixed element.
     SDValue V1;

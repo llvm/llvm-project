@@ -64,6 +64,13 @@ using namespace llvm::sys;
 
 namespace {
 
+void checkSeparators(StringRef Path) {
+#ifdef _WIN32
+  char UndesiredSeparator = sys::path::get_separator()[0] == '/' ? '\\' : '/';
+  ASSERT_EQ(Path.find(UndesiredSeparator), StringRef::npos);
+#endif
+}
+
 struct FileDescriptorCloser {
   explicit FileDescriptorCloser(int FD) : FD(FD) {}
   ~FileDescriptorCloser() { ::close(FD); }
@@ -75,7 +82,9 @@ TEST(is_style_Style, Works) {
   // Check platform-independent results.
   EXPECT_TRUE(is_style_posix(Style::posix));
   EXPECT_TRUE(is_style_windows(Style::windows));
+  EXPECT_TRUE(is_style_windows(Style::windows_slash));
   EXPECT_FALSE(is_style_posix(Style::windows));
+  EXPECT_FALSE(is_style_posix(Style::windows_slash));
   EXPECT_FALSE(is_style_windows(Style::posix));
 
   // Check platform-dependent results.
@@ -95,10 +104,17 @@ TEST(is_separator, Works) {
   EXPECT_FALSE(path::is_separator(' '));
 
   EXPECT_TRUE(path::is_separator('\\', path::Style::windows));
+  EXPECT_TRUE(path::is_separator('\\', path::Style::windows_slash));
   EXPECT_FALSE(path::is_separator('\\', path::Style::posix));
 
   EXPECT_EQ(path::is_style_windows(path::Style::native),
             path::is_separator('\\'));
+}
+
+TEST(get_separator, Works) {
+  EXPECT_EQ(path::get_separator(path::Style::posix), "/");
+  EXPECT_EQ(path::get_separator(path::Style::windows_backslash), "\\");
+  EXPECT_EQ(path::get_separator(path::Style::windows_slash), "/");
 }
 
 TEST(is_absolute_gnu, Works) {
@@ -383,6 +399,8 @@ TEST(Support, PathIterator) {
               testing::ElementsAre("/", ".c", ".d", "..", "."));
   EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows),
               testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
+  EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows_slash),
+              testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
   EXPECT_THAT(GetComponents("//net/"), testing::ElementsAre("//net", "/"));
   EXPECT_THAT(GetComponents("//net/c/foo.txt"),
               testing::ElementsAre("//net", "/", "c", "foo.txt"));
@@ -425,6 +443,9 @@ std::string getEnvWin(const wchar_t *Var) {
     ArrayRef<char> ref{reinterpret_cast<char const *>(path),
                        pathLen * sizeof(wchar_t)};
     convertUTF16ToUTF8String(ref, expected);
+    SmallString<32> Buf(expected);
+    path::make_preferred(Buf);
+    expected.assign(Buf.begin(), Buf.end());
   }
   return expected;
 }
@@ -572,9 +593,15 @@ TEST(Support, TempDirectory) {
 #ifdef _WIN32
 static std::string path2regex(std::string Path) {
   size_t Pos = 0;
+  bool Forward = path::get_separator()[0] == '/';
   while ((Pos = Path.find('\\', Pos)) != std::string::npos) {
-    Path.replace(Pos, 1, "\\\\");
-    Pos += 2;
+    if (Forward) {
+      Path.replace(Pos, 1, "/");
+      Pos += 1;
+    } else {
+      Path.replace(Pos, 1, "\\\\");
+      Pos += 2;
+    }
   }
   return Path;
 }
@@ -721,10 +748,12 @@ TEST_F(FileSystemTest, RealPath) {
   // how we specified it.  Make sure to compare against the real_path of the
   // TestDirectory, and not just the value of TestDirectory.
   ASSERT_NO_ERROR(fs::real_path(TestDirectory, RealBase));
+  checkSeparators(RealBase);
   path::native(Twine(RealBase) + "/test1/test2", Expected);
 
   ASSERT_NO_ERROR(fs::real_path(
       Twine(TestDirectory) + "/././test1/../test1/test2/./test3/..", Actual));
+  checkSeparators(Actual);
 
   EXPECT_EQ(Expected, Actual);
 
@@ -733,7 +762,9 @@ TEST_F(FileSystemTest, RealPath) {
   // This can fail if $HOME is not set and getpwuid fails.
   bool Result = llvm::sys::path::home_directory(HomeDir);
   if (Result) {
+    checkSeparators(HomeDir);
     ASSERT_NO_ERROR(fs::real_path(HomeDir, Expected));
+    checkSeparators(Expected);
     ASSERT_NO_ERROR(fs::real_path("~", Actual, true));
     EXPECT_EQ(Expected, Actual);
     ASSERT_NO_ERROR(fs::real_path("~/", Actual, true));
@@ -1425,10 +1456,25 @@ TEST(Support, NormalizePath) {
   for (auto &T : Tests) {
     SmallString<64> Win(std::get<0>(T));
     SmallString<64> Posix(Win);
+    SmallString<64> WinSlash(Win);
     path::native(Win, path::Style::windows);
     path::native(Posix, path::Style::posix);
+    path::native(WinSlash, path::Style::windows_slash);
     EXPECT_EQ(std::get<1>(T), Win);
     EXPECT_EQ(std::get<2>(T), Posix);
+    EXPECT_EQ(std::get<2>(T), WinSlash);
+  }
+
+  for (auto &T : Tests) {
+    SmallString<64> WinBackslash(std::get<0>(T));
+    SmallString<64> Posix(WinBackslash);
+    SmallString<64> WinSlash(WinBackslash);
+    path::make_preferred(WinBackslash, path::Style::windows_backslash);
+    path::make_preferred(Posix, path::Style::posix);
+    path::make_preferred(WinSlash, path::Style::windows_slash);
+    EXPECT_EQ(std::get<1>(T), WinBackslash);
+    EXPECT_EQ(std::get<0>(T), Posix); // Posix remains unchanged here
+    EXPECT_EQ(std::get<2>(T), WinSlash);
   }
 
 #if defined(_WIN32)
@@ -1437,8 +1483,13 @@ TEST(Support, NormalizePath) {
 
   const char *Path7a = "~/aaa";
   SmallString<64> Path7(Path7a);
-  path::native(Path7);
+  path::native(Path7, path::Style::windows_backslash);
   EXPECT_TRUE(Path7.endswith("\\aaa"));
+  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
+  Path7 = Path7a;
+  path::native(Path7, path::Style::windows_slash);
+  EXPECT_TRUE(Path7.endswith("/aaa"));
   EXPECT_TRUE(Path7.startswith(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
 
@@ -1454,7 +1505,7 @@ TEST(Support, NormalizePath) {
 
   const char *Path10a = "aaa/~/b";
   SmallString<64> Path10(Path10a);
-  path::native(Path10);
+  path::native(Path10, path::Style::windows_backslash);
   EXPECT_EQ(Path10, "aaa\\~\\b");
 #endif
 }
@@ -2234,6 +2285,30 @@ TEST_F(FileSystemTest, widenPath) {
                   LongPathPrefix.end());
 
   ASSERT_NO_ERROR(windows::widenPath(Input, Result));
+  EXPECT_EQ(Result, Expected);
+  // Pass a path with forward slashes, check that it ends up with
+  // backslashes when widened with the long path prefix.
+  SmallString<MAX_PATH + 16> InputForward(Input);
+  path::make_preferred(InputForward, path::Style::windows_slash);
+  ASSERT_NO_ERROR(windows::widenPath(InputForward, Result));
+  EXPECT_EQ(Result, Expected);
+
+  // Pass a path which has the long path prefix prepended originally, but
+  // which is short enough to not require the long path prefix. If such a
+  // path is passed with forward slashes, make sure it gets normalized to
+  // backslashes.
+  SmallString<MAX_PATH + 16> PrefixedPath("\\\\?\\C:\\foldername");
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(PrefixedPath, Expected));
+  // Mangle the input to forward slashes.
+  path::make_preferred(PrefixedPath, path::Style::windows_slash);
+  ASSERT_NO_ERROR(windows::widenPath(PrefixedPath, Result));
+  EXPECT_EQ(Result, Expected);
+
+  // A short path with an inconsistent prefix is passed through as-is; this
+  // is a degenerate case that we currently don't care about handling.
+  PrefixedPath.assign("/\\?/C:/foldername");
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(PrefixedPath, Expected));
+  ASSERT_NO_ERROR(windows::widenPath(PrefixedPath, Result));
   EXPECT_EQ(Result, Expected);
 
   // Test that UNC paths are handled correctly.

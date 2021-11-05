@@ -17,7 +17,7 @@ define i16 @uaddlv4h_from_v8i8(<8 x i8>* %A) nounwind {
 ; CHECK-LABEL: uaddlv4h_from_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uaddlv s0, v0.4h
+; CHECK-NEXT:    uaddlv h0, v0.8b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A

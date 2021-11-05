@@ -174,6 +174,13 @@ enum OpenMPAdjustArgsOpKind {
   OMPC_ADJUST_ARGS_unknown,
 };
 
+/// OpenMP bindings for the 'bind' clause.
+enum OpenMPBindClauseKind {
+#define OPENMP_BIND_KIND(Name) OMPC_BIND_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_BIND_unknown
+};
+
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);
 const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);

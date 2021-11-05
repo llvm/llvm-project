@@ -185,26 +185,30 @@ DictionaryAttr DictionaryAttr::getWithSorted(MLIRContext *context,
 
 /// Return the specified attribute if present, null otherwise.
 Attribute DictionaryAttr::get(StringRef name) const {
-  Optional<NamedAttribute> attr = getNamed(name);
-  return attr ? attr->second : nullptr;
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? it.first->second : Attribute();
 }
 Attribute DictionaryAttr::get(Identifier name) const {
-  Optional<NamedAttribute> attr = getNamed(name);
-  return attr ? attr->second : nullptr;
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? it.first->second : Attribute();
 }
 
 /// Return the specified named attribute if present, None otherwise.
 Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
-  ArrayRef<NamedAttribute> values = getValue();
-  const auto *it = llvm::lower_bound(values, name);
-  return it != values.end() && it->first == name ? *it
-                                                 : Optional<NamedAttribute>();
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
 }
 Optional<NamedAttribute> DictionaryAttr::getNamed(Identifier name) const {
-  for (auto elt : getValue())
-    if (elt.first == name)
-      return elt;
-  return llvm::None;
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
+}
+
+/// Return whether the specified attribute is present.
+bool DictionaryAttr::contains(StringRef name) const {
+  return impl::findAttrSorted(begin(), end(), name).second;
+}
+bool DictionaryAttr::contains(Identifier name) const {
+  return impl::findAttrSorted(begin(), end(), name).second;
 }
 
 DictionaryAttr::iterator DictionaryAttr::begin() const {

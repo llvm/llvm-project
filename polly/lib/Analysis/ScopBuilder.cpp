@@ -73,7 +73,7 @@ bool polly::ModelReadOnlyScalars;
 // More complex access ranges will result in very high compile time and are also
 // unlikely to result in good code. This value is very high and should only
 // trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
-static int const MaxDimensionsInAccessRange = 9;
+static unsigned const MaxDimensionsInAccessRange = 9;
 
 static cl::opt<bool, true> XModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
@@ -108,7 +108,7 @@ static cl::opt<unsigned> RunTimeChecksMaxArraysPerGroup(
     cl::desc("The maximal number of arrays to compare in each alias group."),
     cl::Hidden, cl::ZeroOrMore, cl::init(20), cl::cat(PollyCategory));
 
-static cl::opt<int> RunTimeChecksMaxAccessDisjuncts(
+static cl::opt<unsigned> RunTimeChecksMaxAccessDisjuncts(
     "polly-rtc-max-array-disjuncts",
     cl::desc("The maximal number of disjunts allowed in memory accesses to "
              "to build RTCs."),
@@ -198,8 +198,8 @@ static bool containsErrorBlock(RegionNode *RN, const Region &R,
 static isl::map createNextIterationMap(isl::space SetSpace, unsigned Dim) {
   isl::space MapSpace = SetSpace.map_from_set();
   isl::map NextIterationMap = isl::map::universe(MapSpace);
-  for (auto u : seq<isl_size>(0, NextIterationMap.domain_tuple_dim().release()))
-    if (u != (isl_size)Dim)
+  for (unsigned u : rangeIslSize(0, NextIterationMap.domain_tuple_dim()))
+    if (u != Dim)
       NextIterationMap =
           NextIterationMap.equate(isl::dim::in, u, isl::dim::out, u);
   isl::constraint C =
@@ -226,10 +226,10 @@ static isl::set collectBoundedParts(isl::set S) {
 ///          both with regards to the dimension @p Dim.
 static std::pair<isl::set, isl::set> partitionSetParts(isl::set S,
                                                        unsigned Dim) {
-  for (unsigned u = 0, e = S.tuple_dim().release(); u < e; u++)
+  for (unsigned u : rangeIslSize(0, S.tuple_dim()))
     S = S.lower_bound_si(isl::dim::set, u, 0);
 
-  unsigned NumDimsS = S.tuple_dim().release();
+  unsigned NumDimsS = unsignedFromIslSize(S.tuple_dim());
   isl::set OnlyDimS = S;
 
   // Remove dimensions that are greater than Dim as they are not interesting.
@@ -323,8 +323,8 @@ isl::set ScopBuilder::adjustDomainDimensions(isl::set Dom, Loop *OldL,
     Dom = Dom.add_dims(isl::dim::set, 1);
   } else {
     assert(OldDepth > NewDepth);
-    int Diff = OldDepth - NewDepth;
-    int NumDim = Dom.tuple_dim().release();
+    unsigned Diff = OldDepth - NewDepth;
+    unsigned NumDim = unsignedFromIslSize(Dom.tuple_dim());
     assert(NumDim >= Diff);
     Dom = Dom.project_out(isl::dim::set, NumDim - Diff, Diff);
   }
@@ -540,13 +540,13 @@ bool ScopBuilder::buildConditionSets(
 
   isl_set *AlternativeCondSet = nullptr;
   bool TooComplex =
-      isl_set_n_basic_set(ConsequenceCondSet) >= MaxDisjunctsInDomain;
+      isl_set_n_basic_set(ConsequenceCondSet) >= (int)MaxDisjunctsInDomain;
 
   if (!TooComplex) {
     AlternativeCondSet = isl_set_subtract(isl_set_copy(Domain),
                                           isl_set_copy(ConsequenceCondSet));
     TooComplex =
-        isl_set_n_basic_set(AlternativeCondSet) >= MaxDisjunctsInDomain;
+        isl_set_n_basic_set(AlternativeCondSet) >= (int)MaxDisjunctsInDomain;
   }
 
   if (TooComplex) {
@@ -910,7 +910,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       continue;
     isl::set Domain = scop->getDomainConditions(BB);
 
-    scop->updateMaxLoopDepth(Domain.tuple_dim().release());
+    scop->updateMaxLoopDepth(unsignedFromIslSize(Domain.tuple_dim()));
 
     auto *BBLoop = getRegionNodeLoop(RN, LI);
     // Propagate the domain from BB directly to blocks that have a superset
@@ -984,7 +984,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
-      if (SuccDomain.n_basic_set().release() < MaxDisjunctsInDomain)
+      if (unsignedFromIslSize(SuccDomain.n_basic_set()) < MaxDisjunctsInDomain)
         continue;
 
       scop->invalidate(COMPLEXITY, DebugLoc());
@@ -1064,7 +1064,8 @@ bool ScopBuilder::propagateInvalidStmtDomains(
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will bail.
-      if (SuccInvalidDomain.n_basic_set().release() < MaxDisjunctsInDomain)
+      if (unsignedFromIslSize(SuccInvalidDomain.n_basic_set()) <
+          MaxDisjunctsInDomain)
         continue;
 
       InvalidDomainMap.erase(BB);
@@ -1155,15 +1156,15 @@ static isl::schedule combineInSequence(isl::schedule Prev, isl::schedule Succ) {
 //               mapping.
 // @param N      The dimension to map to.
 // @returns      A mapping from USet to its N-th dimension.
-static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
-  assert(N >= 0);
+static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, unsigned N) {
   assert(!USet.is_null());
   assert(!USet.is_empty());
 
   auto Result = isl::union_pw_multi_aff::empty(USet.get_space());
 
   for (isl::set S : USet.get_set_list()) {
-    int Dim = S.tuple_dim().release();
+    unsigned Dim = unsignedFromIslSize(S.tuple_dim());
+    assert(Dim >= N);
     auto PMA = isl::pw_multi_aff::project_out_map(S.get_space(), isl::dim::set,
                                                   N, Dim - N);
     if (N > 1)
@@ -2212,8 +2213,8 @@ void ScopBuilder::foldSizeConstantsToRight() {
     isl::map Transform = isl::map::universe(Array->getSpace().map_from_set());
 
     std::vector<int> Int;
-    int Dims = Elements.tuple_dim().release();
-    for (int i = 0; i < Dims; i++) {
+    unsigned Dims = unsignedFromIslSize(Elements.tuple_dim());
+    for (unsigned i = 0; i < Dims; i++) {
       isl::set DimOnly = isl::set(Elements).project_out(isl::dim::set, 0, i);
       DimOnly = DimOnly.project_out(isl::dim::set, 1, Dims - i - 1);
       DimOnly = DimOnly.lower_bound_si(isl::dim::set, 0, 0);
@@ -2226,7 +2227,7 @@ void ScopBuilder::foldSizeConstantsToRight() {
         continue;
       }
 
-      if (DimHull.dim(isl::dim::div).release() == 1) {
+      if (unsignedFromIslSize(DimHull.dim(isl::dim::div)) == 1) {
         isl::aff Diff = DimHull.get_div(0);
         isl::val Val = Diff.get_denominator_val();
 
@@ -2625,11 +2626,11 @@ void ScopBuilder::hoistInvariantLoads() {
 ///
 /// @returns True if the access range is too complex.
 static bool isAccessRangeTooComplex(isl::set AccessRange) {
-  int NumTotalDims = 0;
+  unsigned NumTotalDims = 0;
 
   for (isl::basic_set BSet : AccessRange.get_basic_set_list()) {
-    NumTotalDims += BSet.dim(isl::dim::div).release();
-    NumTotalDims += BSet.dim(isl::dim::set).release();
+    NumTotalDims += unsignedFromIslSize(BSet.dim(isl::dim::div));
+    NumTotalDims += unsignedFromIslSize(BSet.dim(isl::dim::set));
   }
 
   if (NumTotalDims > MaxDimensionsInAccessRange)
@@ -2658,8 +2659,9 @@ void ScopBuilder::addUserContext() {
 
   isl::set UserContext = isl::set(scop->getIslCtx(), UserContextStr.c_str());
   isl::space Space = scop->getParamSpace();
-  if (Space.dim(isl::dim::param).release() !=
-      UserContext.dim(isl::dim::param).release()) {
+  isl::size SpaceParams = Space.dim(isl::dim::param);
+  if (unsignedFromIslSize(SpaceParams) !=
+      unsignedFromIslSize(UserContext.dim(isl::dim::param))) {
     std::string SpaceStr = stringFromIslObj(Space, "null");
     errs() << "Error: the context provided in -polly-context has not the same "
            << "number of dimensions than the computed context. Due to this "
@@ -2668,7 +2670,7 @@ void ScopBuilder::addUserContext() {
     return;
   }
 
-  for (auto i : seq<isl_size>(0, Space.dim(isl::dim::param).release())) {
+  for (auto i : rangeIslSize(0, SpaceParams)) {
     std::string NameContext =
         scop->getContext().get_dim_name(isl::dim::param, i);
     std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);
@@ -2752,7 +2754,8 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
     return WrittenCtx;
 
   WrittenCtx = WrittenCtx.remove_divs();
-  bool TooComplex = WrittenCtx.n_basic_set().release() >= MaxDisjunctsInDomain;
+  bool TooComplex =
+      unsignedFromIslSize(WrittenCtx.n_basic_set()) >= MaxDisjunctsInDomain;
   if (TooComplex || !isRequiredInvariantLoad(LI))
     return {};
 
@@ -2818,7 +2821,7 @@ void ScopBuilder::addInvariantLoads(ScopStmt &Stmt,
   isl::set DomainCtx = Stmt.getDomain().params();
   DomainCtx = DomainCtx.subtract(StmtInvalidCtx);
 
-  if (DomainCtx.n_basic_set().release() >= MaxDisjunctsInDomain) {
+  if (unsignedFromIslSize(DomainCtx.n_basic_set()) >= MaxDisjunctsInDomain) {
     auto *AccInst = InvMAs.front().MA->getAccessInstruction();
     scop->invalidate(COMPLEXITY, AccInst->getDebugLoc(), AccInst->getParent());
     return;
@@ -3094,7 +3097,7 @@ static bool buildMinMaxAccess(isl::set Set,
   Set = Set.remove_divs();
   polly::simplify(Set);
 
-  if (Set.n_basic_set().release() > RunTimeChecksMaxAccessDisjuncts)
+  if (unsignedFromIslSize(Set.n_basic_set()) > RunTimeChecksMaxAccessDisjuncts)
     Set = Set.simple_hull();
 
   // Restrict the number of parameters involved in the access as the lexmin/
@@ -3128,14 +3131,18 @@ static bool buildMinMaxAccess(isl::set Set,
   MinPMA = MinPMA.coalesce();
   MaxPMA = MaxPMA.coalesce();
 
+  if (MaxPMA.is_null())
+    return false;
+
+  unsigned MaxOutputSize = unsignedFromIslSize(MaxPMA.dim(isl::dim::out));
+
   // Adjust the last dimension of the maximal access by one as we want to
   // enclose the accessed memory region by MinPMA and MaxPMA. The pointer
   // we test during code generation might now point after the end of the
   // allocated array but we will never dereference it anyway.
-  assert((MaxPMA.is_null() || MaxPMA.dim(isl::dim::out).release()) &&
-         "Assumed at least one output dimension");
+  assert(MaxOutputSize >= 1 && "Assumed at least one output dimension");
 
-  Pos = MaxPMA.dim(isl::dim::out).release() - 1;
+  Pos = MaxOutputSize - 1;
   LastDimAff = MaxPMA.at(Pos);
   OneAff = isl::aff(isl::local_space(LastDimAff.get_domain_space()));
   OneAff = OneAff.add_constant_si(1);
@@ -3176,7 +3183,8 @@ bool ScopBuilder::calculateMinMaxAccess(AliasGroupTy AliasGroup,
 
 static isl::set getAccessDomain(MemoryAccess *MA) {
   isl::set Domain = MA->getStatement()->getDomain();
-  Domain = Domain.project_out(isl::dim::set, 0, Domain.tuple_dim().release());
+  Domain = Domain.project_out(isl::dim::set, 0,
+                              unsignedFromIslSize(Domain.tuple_dim()));
   return Domain.reset_tuple_id();
 }
 

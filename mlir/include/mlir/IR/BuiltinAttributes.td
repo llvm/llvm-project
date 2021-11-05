@@ -389,6 +389,10 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
     Optional<NamedAttribute> getNamed(StringRef name) const;
     Optional<NamedAttribute> getNamed(Identifier name) const;
 
+    /// Return whether the specified attribute is present.
+    bool contains(StringRef name) const;
+    bool contains(Identifier name) const;
+
     /// Support range iteration.
     using iterator = llvm::ArrayRef<NamedAttribute>::iterator;
     iterator begin() const;

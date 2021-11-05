@@ -332,8 +332,8 @@ public:
 
   /// Return true if the operation has an attribute with the provided name,
   /// false otherwise.
-  bool hasAttr(Identifier name) { return static_cast<bool>(getAttr(name)); }
-  bool hasAttr(StringRef name) { return static_cast<bool>(getAttr(name)); }
+  bool hasAttr(Identifier name) { return attrs.contains(name); }
+  bool hasAttr(StringRef name) { return attrs.contains(name); }
   template <typename AttrClass, typename NameT>
   bool hasAttrOfType(NameT &&name) {
     return static_cast<bool>(

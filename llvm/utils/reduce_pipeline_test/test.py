@@ -45,19 +45,32 @@ class Test(unittest.TestCase):
         self.assertEqual(run.returncode, 0)
         self.assertEqual(getFinalPasses(run), '-passes="a,i"')
 
-    def test_2(self):
-        """Test the '--dont-expand-passes' option."""
+    def test_2_0(self):
+        """Test expansion of EXPAND_a_to_f (expands into 'a,b,c,d,e,f')."""
         run_args = [
             './utils/reduce_pipeline.py',
             '--opt-binary=./utils/reduce_pipeline_test/fake_opt.py',
-            '--input=/dev/null', '--passes=a,b,c,A(d,B(e,f),g),h,i',
-            '-crash-seq=b,d,f', '--dont-expand-passes'
+            '--input=/dev/null', '--passes=EXPAND_a_to_f', '-crash-seq=b,e'
         ]
         run = subprocess.run(run_args,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         self.assertEqual(run.returncode, 0)
-        self.assertEqual(getFinalPasses(run), '-passes="b,A(d,B(f))"')
+        self.assertEqual(getFinalPasses(run), '-passes="b,e"')
+
+    def test_2_1(self):
+        """Test EXPAND_a_to_f and the '--dont-expand-passes' option."""
+        run_args = [
+            './utils/reduce_pipeline.py',
+            '--opt-binary=./utils/reduce_pipeline_test/fake_opt.py',
+            '--input=/dev/null', '--passes=EXPAND_a_to_f',
+            '-crash-seq=EXPAND_a_to_f', '--dont-expand-passes'
+        ]
+        run = subprocess.run(run_args,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        self.assertEqual(run.returncode, 0)
+        self.assertEqual(getFinalPasses(run), '-passes="EXPAND_a_to_f"')
 
     def test_3(self):
         """Test that empty pass-managers get removed by default."""

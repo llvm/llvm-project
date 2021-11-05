@@ -119,6 +119,7 @@ write_cmake_config("config") {
     "LLVM_TARGET_TRIPLE_ENV=",
     "LLVM_VERSION_INFO=",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
+    "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
     "PACKAGE_BUGREPORT=https://bugs.llvm.org/",
     "PACKAGE_NAME=LLVM",
     "PACKAGE_STRING=LLVM ${llvm_version}git",

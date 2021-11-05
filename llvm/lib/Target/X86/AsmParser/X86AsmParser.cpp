@@ -1758,8 +1758,8 @@ bool X86AsmParser::CreateMemForMSInlineAsm(
   // It is widely common for MS InlineAsm to use a global variable and one/two
   // registers in a mmory expression, and though unaccessible via rip/eip.
   if (IsGlobalLV && (BaseReg || IndexReg)) {
-    Operands.push_back(
-        X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size));
+    Operands.push_back(X86Operand::CreateMem(getPointerWidth(), Disp, Start,
+                                             End, Size, Identifier, Decl));
     return false;
   }
   // Otherwise, we set the base register to a non-zero value
@@ -2551,6 +2551,8 @@ bool X86AsmParser::ParseIntelOperand(OperandVector &Operands) {
   StringRef ErrMsg;
   unsigned BaseReg = SM.getBaseReg();
   unsigned IndexReg = SM.getIndexReg();
+  if (IndexReg && BaseReg == X86::RIP)
+    BaseReg = 0;
   unsigned Scale = SM.getScale();
   if (!PtrInOperand)
     Size = SM.getElementSize() << 3;

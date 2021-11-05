@@ -360,10 +360,13 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-  case CallingConv::AMDGPU_Gfx:
     return MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts()
         ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
         : CSR_AMDGPU_HighRegs_SaveList;
+  case CallingConv::AMDGPU_Gfx:
+    return MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts()
+               ? CSR_AMDGPU_SI_Gfx_With_AGPRs_SaveList
+               : CSR_AMDGPU_SI_Gfx_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
     static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
@@ -383,10 +386,13 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-  case CallingConv::AMDGPU_Gfx:
     return MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()
         ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
         : CSR_AMDGPU_HighRegs_RegMask;
+  case CallingConv::AMDGPU_Gfx:
+    return MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()
+               ? CSR_AMDGPU_SI_Gfx_With_AGPRs_RegMask
+               : CSR_AMDGPU_SI_Gfx_RegMask;
   default:
     return nullptr;
   }

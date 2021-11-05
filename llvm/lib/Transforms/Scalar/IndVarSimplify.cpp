@@ -1439,8 +1439,12 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     // For the range reasoning, avoid computing SCEVs in the loop to avoid
     // poisoning cache with sub-optimal results.  For the must-execute case,
     // this is a neccessary precondition for correctness.
-    if (!L->isLoopInvariant(RHS))
-      continue;
+    if (!L->isLoopInvariant(RHS)) {
+      if (!L->isLoopInvariant(LHS))
+        continue;
+      // Same logic applies for the inverse case
+      std::swap(LHS, RHS);
+    }
 
     // Match (icmp signed-cond zext, RHS)
     Value *LHSOp = nullptr;
@@ -1452,7 +1456,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
     FullCR = FullCR.zeroExtend(OuterBitWidth);
-    if (FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS)))) {
+    auto RHSCR = SE->getUnsignedRange(SE->applyLoopGuards(SE->getSCEV(RHS), L));
+    if (FullCR.contains(RHSCR)) {
       // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
       // replace the signed condition with the unsigned version.
       ICmp->setPredicate(ICmp->getUnsignedPredicate());
@@ -1475,21 +1480,34 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     if (!ICmp || !ICmp->hasOneUse() || !ICmp->isUnsigned())
       continue;
 
+    bool Swapped = false;
     auto *LHS = ICmp->getOperand(0);
     auto *RHS = ICmp->getOperand(1);
-    if (L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS))
+    if (L->isLoopInvariant(LHS) == L->isLoopInvariant(RHS))
       // Nothing to rotate
       continue;
-
-    if (!LHS->hasOneUse())
-      // Can't rotate without increasing instruction count
-      continue;
+    if (L->isLoopInvariant(LHS)) {
+      // Same logic applies for the inverse case until we actually pick
+      // which operand of the compare to update.
+      Swapped = true;
+      std::swap(LHS, RHS);
+    }
+    assert(!L->isLoopInvariant(LHS) && L->isLoopInvariant(RHS));
 
     // Match (icmp unsigned-cond zext, RHS)
     // TODO: Extend to handle corresponding sext/signed-cmp case
     // TODO: Extend to other invertible functions
     Value *LHSOp = nullptr;
     if (!match(LHS, m_ZExt(m_Value(LHSOp))))
+      continue;
+
+    // In general, we only rotate if we can do so without increasing the number
+    // of instructions.  The exception is when we have an zext(add-rec).  The
+    // reason for allowing this exception is that we know we need to get rid
+    // of the zext for SCEV to be able to compute a trip count for said loops;
+    // we consider the new trip count valuable enough to increase instruction
+    // count by one.
+    if (!LHS->hasOneUse() && !isa<SCEVAddRecExpr>(SE->getSCEV(LHSOp)))
       continue;
 
     // Given a icmp unsigned-cond zext(Op) where zext(trunc(RHS)) == RHS
@@ -1501,8 +1519,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       auto *NewRHS =
         CastInst::Create(Instruction::Trunc, RHS, LHSOp->getType(), "",
                          L->getLoopPreheader()->getTerminator());
-      ICmp->setOperand(0, LHSOp);
-      ICmp->setOperand(1, NewRHS);
+      ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
+      ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
       if (LHS->use_empty())
         DeadInsts.push_back(LHS);
     };
@@ -1513,7 +1531,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
     FullCR = FullCR.zeroExtend(OuterBitWidth);
-    if (FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS)))) {
+    auto RHSCR = SE->getUnsignedRange(SE->applyLoopGuards(SE->getSCEV(RHS), L));
+    if (FullCR.contains(RHSCR)) {
       doRotateTransform();
       Changed = true;
       // Note, we are leaving SCEV in an unfortunately imprecise case here
