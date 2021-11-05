@@ -2247,8 +2247,8 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
 }
 
 void HexagonDAGToDAGISel::rebalanceAddressTrees() {
-  for (auto I = CurDAG->allnodes_begin(), E = CurDAG->allnodes_end(); I != E;) {
-    SDNode *N = &*I++;
+  for (SDNode &Node : llvm::make_early_inc_range(CurDAG->allnodes())) {
+    SDNode *N = &Node;
     if (N->getOpcode() != ISD::LOAD && N->getOpcode() != ISD::STORE)
       continue;
 

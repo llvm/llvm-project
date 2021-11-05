@@ -9,11 +9,16 @@
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <sstream>
+
+#define DEBUG_TYPE "orc"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -370,6 +375,78 @@ void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
     return;
   for (auto *MF : MFs->operands())
     Dst.addModuleFlag(MapMetadata(MF, VMap));
+}
+
+Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
+                                                   jitlink::LinkGraph &G,
+                                                   MCDisassembler &Disassembler,
+                                                   MCInstrAnalysis &MIA) {
+  // AArch64 appears to already come with the necessary relocations. Among other
+  // architectures, only x86_64 is currently implemented here.
+  if (G.getTargetTriple().getArch() != Triple::x86_64)
+    return Error::success();
+
+  raw_null_ostream CommentStream;
+  auto &STI = Disassembler.getSubtargetInfo();
+
+  // Determine the function bounds
+  auto &B = Sym.getBlock();
+  assert(!B.isZeroFill() && "expected content block");
+  auto SymAddress = Sym.getAddress();
+  auto SymStartInBlock =
+      (const uint8_t *)B.getContent().data() + Sym.getOffset();
+  auto SymSize = Sym.getSize() ? Sym.getSize() : B.getSize() - Sym.getOffset();
+  auto Content = makeArrayRef(SymStartInBlock, SymSize);
+
+  LLVM_DEBUG(dbgs() << "Adding self-relocations to " << Sym.getName() << "\n");
+
+  SmallDenseSet<uintptr_t, 8> ExistingRelocations;
+  for (auto &E : B.edges()) {
+    if (E.isRelocation())
+      ExistingRelocations.insert(E.getOffset());
+  }
+
+  size_t I = 0;
+  while (I < Content.size()) {
+    MCInst Instr;
+    uint64_t InstrSize = 0;
+    uint64_t InstrStart = SymAddress + I;
+    auto DecodeStatus = Disassembler.getInstruction(
+        Instr, InstrSize, Content.drop_front(I), InstrStart, CommentStream);
+    if (DecodeStatus != MCDisassembler::Success) {
+      LLVM_DEBUG(dbgs() << "Aborting due to disassembly failure at address "
+                        << InstrStart);
+      return make_error<StringError>(
+          formatv("failed to disassemble at address {0:x16}", InstrStart),
+          inconvertibleErrorCode());
+    }
+    // Advance to the next instruction.
+    I += InstrSize;
+
+    // Check for a PC-relative address equal to the symbol itself.
+    auto PCRelAddr =
+        MIA.evaluateMemoryOperandAddress(Instr, &STI, InstrStart, InstrSize);
+    if (!PCRelAddr.hasValue() || PCRelAddr.getValue() != SymAddress)
+      continue;
+
+    auto RelocOffInInstr =
+        MIA.getMemoryOperandRelocationOffset(Instr, InstrSize);
+    if (!RelocOffInInstr.hasValue() ||
+        InstrSize - RelocOffInInstr.getValue() != 4) {
+      LLVM_DEBUG(dbgs() << "Skipping unknown self-relocation at "
+                        << InstrStart);
+      continue;
+    }
+
+    auto RelocOffInBlock =
+        InstrStart + *RelocOffInInstr - SymAddress + Sym.getOffset();
+    if (ExistingRelocations.contains(RelocOffInBlock))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Adding delta32 self-relocation at " << InstrStart);
+    B.addEdge(jitlink::x86_64::Delta32, RelocOffInBlock, Sym, /*Addend=*/-4);
+  }
+  return Error::success();
 }
 
 } // End namespace orc.

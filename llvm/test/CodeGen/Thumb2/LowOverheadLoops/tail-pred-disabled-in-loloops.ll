@@ -57,13 +57,13 @@ define dso_local void @check_option(i32* noalias nocapture %A, i32* noalias noca
 ; DISABLED-NEXT:  .LBB0_3: @ %vector.body
 ; DISABLED-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; DISABLED-NEXT:    @ => This Inner Loop Header: Depth=2
-; DISABLED-NEXT:    mov lr, r7
 ; DISABLED-NEXT:    vctp.32 r6
-; DISABLED-NEXT:    subs r7, #1
-; DISABLED-NEXT:    subs r6, #4
+; DISABLED-NEXT:    mov lr, r7
 ; DISABLED-NEXT:    vpstt
 ; DISABLED-NEXT:    vldrwt.u32 q0, [r5], #16
 ; DISABLED-NEXT:    vldrwt.u32 q1, [r4], #16
+; DISABLED-NEXT:    subs r7, #1
+; DISABLED-NEXT:    subs r6, #4
 ; DISABLED-NEXT:    vadd.i32 q0, q1, q0
 ; DISABLED-NEXT:    vpst
 ; DISABLED-NEXT:    vstrwt.32 q0, [r12], #16

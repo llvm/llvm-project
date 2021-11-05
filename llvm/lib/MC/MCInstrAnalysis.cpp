@@ -34,3 +34,9 @@ Optional<uint64_t> MCInstrAnalysis::evaluateMemoryOperandAddress(
     uint64_t Size) const {
   return None;
 }
+
+Optional<uint64_t>
+MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
+                                                  uint64_t Size) const {
+  return None;
+}
