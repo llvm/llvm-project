@@ -1,4 +1,4 @@
-//===-- SnippetGeneratorTest.cpp --------------------------------*- C++ -*-===//
+//===- llvm/unittest/ADT/CombinationGeneratorTest.cpp ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SnippetGenerator.h"
+#include "llvm/ADT/CombinationGenerator.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <initializer_list>
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <tuple>
+#include <vector>
 
-namespace llvm {
-namespace exegesis {
+using namespace llvm;
 
 namespace {
 
@@ -170,6 +178,4 @@ TEST(CombinationGenerator, Singleton) {
   ASSERT_THAT(Variants, ::testing::ContainerEq(ExpectedVariants));
 }
 
-} // namespace
-} // namespace exegesis
-} // namespace llvm
+} // end anonymous namespace
