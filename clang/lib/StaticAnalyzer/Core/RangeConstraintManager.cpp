@@ -606,9 +606,10 @@ public:
                                               const SymbolRef Old);
 
   /// Iterate over all symbols and try to simplify them.
-  LLVM_NODISCARD static inline ProgramStateRef
-  simplify(SValBuilder &SVB, RangeSet::Factory &F, RangedConstraintManager &RCM,
-           ProgramStateRef State, EquivalenceClass Class);
+  LLVM_NODISCARD static inline ProgramStateRef simplify(SValBuilder &SVB,
+                                                        RangeSet::Factory &F,
+                                                        ProgramStateRef State,
+                                                        EquivalenceClass Class);
 
   void dumpToStream(ProgramStateRef State, raw_ostream &os) const;
   LLVM_DUMP_METHOD void dump(ProgramStateRef State) const {
@@ -1604,13 +1605,12 @@ class ConstraintAssignor : public ConstraintAssignorBase<ConstraintAssignor> {
 public:
   template <class ClassOrSymbol>
   LLVM_NODISCARD static ProgramStateRef
-  assign(ProgramStateRef State, RangeConstraintManager &RCM,
-         SValBuilder &Builder, RangeSet::Factory &F, ClassOrSymbol CoS,
-         RangeSet NewConstraint) {
+  assign(ProgramStateRef State, SValBuilder &Builder, RangeSet::Factory &F,
+         ClassOrSymbol CoS, RangeSet NewConstraint) {
     if (!State || NewConstraint.isEmpty())
       return nullptr;
 
-    ConstraintAssignor Assignor{State, RCM, Builder, F};
+    ConstraintAssignor Assignor{State, Builder, F};
     return Assignor.assign(CoS, NewConstraint);
   }
 
@@ -1640,9 +1640,9 @@ public:
                                          RangeSet Constraint);
 
 private:
-  ConstraintAssignor(ProgramStateRef State, RangeConstraintManager &RCM,
-                     SValBuilder &Builder, RangeSet::Factory &F)
-      : State(State), RCM(RCM), Builder(Builder), RangeFactory(F) {}
+  ConstraintAssignor(ProgramStateRef State, SValBuilder &Builder,
+                     RangeSet::Factory &F)
+      : State(State), Builder(Builder), RangeFactory(F) {}
   using Base = ConstraintAssignorBase<ConstraintAssignor>;
 
   /// Base method for handling new constraints for symbols.
@@ -1720,7 +1720,6 @@ private:
   }
 
   ProgramStateRef State;
-  RangeConstraintManager &RCM;
   SValBuilder &Builder;
   RangeSet::Factory &RangeFactory;
 };
@@ -1733,8 +1732,7 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   ClassMembersTy Members = State->get<ClassMembers>();
   for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
     EquivalenceClass Class = ClassToSymbolSet.first;
-    State =
-        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
     SimplifiedClasses.insert(Class);
@@ -1748,8 +1746,7 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
     EquivalenceClass Class = ClassConstraint.first;
     if (SimplifiedClasses.count(Class)) // Already simplified.
       continue;
-    State =
-        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
   }
@@ -1761,8 +1758,7 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
        DisequalityInfo) {
     EquivalenceClass Class = DisequalityEntry.first;
     ClassSet DisequalClasses = DisequalityEntry.second;
-    State =
-        EquivalenceClass::simplify(Builder, RangeFactory, RCM, State, Class);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
   }
@@ -2200,9 +2196,9 @@ LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
 // class to this class. This way, we simplify not just the symbols but the
 // classes as well: we strive to keep the number of the classes to be the
 // absolute minimum.
-LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
-    SValBuilder &SVB, RangeSet::Factory &F, RangedConstraintManager &RCM,
-    ProgramStateRef State, EquivalenceClass Class) {
+LLVM_NODISCARD ProgramStateRef
+EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
+                           ProgramStateRef State, EquivalenceClass Class) {
   SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
 
@@ -2553,8 +2549,7 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
 ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
                                                  SymbolRef Sym,
                                                  RangeSet Range) {
-  return ConstraintAssignor::assign(State, *this, getSValBuilder(), F, Sym,
-                                    Range);
+  return ConstraintAssignor::assign(State, getSValBuilder(), F, Sym, Range);
 }
 
 //===------------------------------------------------------------------------===
