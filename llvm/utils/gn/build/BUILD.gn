@@ -262,10 +262,7 @@ config("compiler_defaults") {
       }
     }
     if (use_relative_paths_in_debug_info) {
-      cflags += [
-        "-fdebug-compilation-dir",
-        ".",
-      ]
+      cflags += [ "-fdebug-compilation-dir=." ]
     }
   }
   if (sysroot != "") {
