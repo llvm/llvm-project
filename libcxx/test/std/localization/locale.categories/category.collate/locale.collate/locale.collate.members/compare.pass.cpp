@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // https://llvm.org/PR41018
-// XFAIL: windows-dll
+// XFAIL: windows-dll && msvc
 
 // <locale>
 
