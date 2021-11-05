@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 
 namespace mlir {
 namespace linalg {
 
-#include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp.inc"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.cpp.inc"
 
 } // namespace linalg
 } // namespace mlir

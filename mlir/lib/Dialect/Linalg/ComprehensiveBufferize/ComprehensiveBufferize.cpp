@@ -105,16 +105,12 @@
 //  expected layouts after transformations. Combinations of memref.cast +
 //  canonicalization are responsible for clean ups.
 
-#include "mlir/Dialect/Linalg/Transforms/ComprehensiveBufferize.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
 
 #include <random>
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.h"
-#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -125,8 +121,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/BufferUtils.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -141,9 +135,6 @@ using namespace tensor;
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
-
-// TODO: from some HW description.
-static constexpr int64_t kBufferAlignments = 128;
 
 // Forward declarations.
 static std::string printOperationInfo(Operation *, bool prefix = true);
@@ -1208,6 +1199,17 @@ Operation *getFirstParentOfType(Value v) {
   return nullptr;
 }
 
+/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
+/// the type of `source`.
+static Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
+                               int64_t dim) {
+  if (source.getType().isa<UnrankedMemRefType, MemRefType>())
+    return b.createOrFold<memref::DimOp>(loc, source, dim);
+  if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
+    return b.createOrFold<tensor::DimOp>(loc, source, dim);
+  llvm_unreachable("Expected MemRefType or TensorType");
+}
+
 /// Compute the type of the `memref` to use for allocating the buffer for
 /// `shapedValue`. Also returns (by reference in `dynShape`), the value for the
 /// dynamic dimensions in the returned `memref` type. The function also sets the
@@ -1664,14 +1666,6 @@ mlir::linalg::defaultAllocationFn(OpBuilder &b, Location loc, MemRefType type,
   return allocated;
 }
 
-static Optional<Value>
-allocationFnUsingAlloca(OpBuilder &b, Location loc, MemRefType type,
-                        const SmallVector<Value> &dynShape) {
-  Value allocated = b.create<memref::AllocaOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
-  return allocated;
-}
-
 void mlir::linalg::defaultDeallocationFn(OpBuilder &b, Location loc,
                                          Value allocatedBuffer) {
   b.create<memref::DeallocOp>(loc, allocatedBuffer);
@@ -2018,36 +2012,6 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   return success();
 }
 
-namespace {
-struct LinalgComprehensiveModuleBufferize
-    : public LinalgComprehensiveModuleBufferizeBase<
-          LinalgComprehensiveModuleBufferize> {
-  LinalgComprehensiveModuleBufferize() {}
-
-  LinalgComprehensiveModuleBufferize(
-      const LinalgComprehensiveModuleBufferize &p) {}
-
-  void runOnOperation() override;
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<linalg::LinalgDialect, memref::MemRefDialect,
-                tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
-                arith::ArithmeticDialect, StandardOpsDialect>();
-    registerBufferizableOpInterfaceExternalModels(registry);
-  }
-
-private:
-  std::unique_ptr<AllocationCallbacks> allocationFns;
-};
-} // end namespace
-
-static void applyEnablingTransformations(ModuleOp moduleOp) {
-  RewritePatternSet patterns(moduleOp.getContext());
-  patterns.add<GeneralizePadTensorOpPattern>(moduleOp.getContext());
-  (void)applyPatternsAndFoldGreedily(moduleOp, std::move(patterns));
-}
-
 static void
 foreachCaller(const DenseMap<FuncOp, DenseSet<Operation *>> &callerMap,
               FuncOp callee, llvm::function_ref<void(Operation *)> doit) {
@@ -2261,33 +2225,14 @@ LogicalResult mlir::linalg::eliminateInsertSliceAnchoredInitTensorOps(
       });
 }
 
-void LinalgComprehensiveModuleBufferize::runOnOperation() {
-  if (!allocationFns) {
-    // The allocation functions to use needs to be set here. The flag for the
-    // pass and flag for the use of alloca map to LLVM command line
-    // options. These being static global objects have no set order in which
-    // they are defined. So ideally this should be in the constructor, but the
-    // constructor might be called before the flag is initialized using the
-    // command line option. So this is set up at the start of the pass.
-    if (useAlloca) {
-      AllocationCallbacks allocaAllocationFns = {
-          allocationFnUsingAlloca, [](OpBuilder &b, Location loc, Value v) {},
-          defaultMemCpyFn};
-      allocationFns =
-          std::make_unique<AllocationCallbacks>(std::move(allocaAllocationFns));
-    } else {
-      allocationFns = std::make_unique<AllocationCallbacks>(
-          defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn);
-    }
-  }
-  ModuleOp moduleOp = getOperation();
-  applyEnablingTransformations(moduleOp);
-
+LogicalResult
+mlir::linalg::runComprehensiveBufferize(ModuleOp moduleOp,
+                                        const BufferizationOptions &options) {
   SmallVector<FuncOp> orderedFuncOps;
   DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
   DenseMap<FuncOp, FunctionType> bufferizedFunctionTypes;
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
-    return signalPassFailure();
+    return failure();
 
   DominanceInfo domInfo(moduleOp);
   BufferizationAliasInfo aliasInfo(moduleOp);
@@ -2313,49 +2258,41 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
 
     // If the analysis fails, just return.
     if (failed(inPlaceAnalysisFuncOpBody(funcOp, aliasInfo, domInfo,
-                                         analysisFuzzerSeed))) {
-      signalPassFailure();
-      return;
-    }
+                                         options.analysisFuzzerSeed)))
+      return failure();
 
     // Try to eliminate InitTensorOps to avoid new allocations during the
     // bufferization phase.
     if (failed(eliminateInsertSliceAnchoredInitTensorOps(funcOp, aliasInfo,
-                                                         domInfo))) {
-      signalPassFailure();
-      return;
-    }
+                                                         domInfo)))
+      return failure();
 
     // Bufferization phase.
-    if (!testAnalysisOnly) {
+    if (!options.testAnalysisOnly) {
       BlockAndValueMapping tensorToBufferMap;
       if (failed(bufferizeFuncOpInternals(funcOp, tensorToBufferMap, aliasInfo,
-                                          *allocationFns,
-                                          bufferizedFunctionTypes))) {
-        signalPassFailure();
-        return;
-      }
+                                          *options.allocationFns,
+                                          bufferizedFunctionTypes)))
+        return failure();
     }
   }
   // Don't drop the attributes if we only want to report the analysis.
-  if (testAnalysisOnly)
-    return;
+  if (options.testAnalysisOnly)
+    return success();
 
   for (FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
     if (failed(bufferizeFuncOpBoundary(funcOp, aliasInfo,
-                                       bufferizedFunctionTypes))) {
-      signalPassFailure();
-      return;
-    }
-    if (!allowReturnMemref &&
+                                       bufferizedFunctionTypes)))
+      return failure();
+
+    if (!options.allowReturnMemref &&
         llvm::any_of(funcOp.getType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
         })) {
       funcOp->emitError("memref return type is unsupported");
-      signalPassFailure();
-      return;
+      return failure();
     }
   }
 
@@ -2371,15 +2308,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
       removeBufferizationFuncArguments(bbArg);
   });
 
-  OpPassManager cleanupPipeline("builtin.module");
-  cleanupPipeline.addPass(createCanonicalizerPass());
-  cleanupPipeline.addPass(createCSEPass());
-  cleanupPipeline.addPass(createLoopInvariantCodeMotionPass());
-  (void)runPipeline(cleanupPipeline, moduleOp);
-}
-
-std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass() {
-  return std::make_unique<LinalgComprehensiveModuleBufferize>();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

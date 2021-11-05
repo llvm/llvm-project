@@ -6129,7 +6129,7 @@ gentbl_cc_library(
 td_library(
     name = "BufferizableOpInterfaceTdFiles",
     srcs = [
-        "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.td",
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.td",
     ],
     includes = ["include"],
     deps = [
@@ -6143,15 +6143,15 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.h.inc",
+            "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp.inc",
+            "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.td",
+    td_file = "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.td",
     deps = [
         ":BufferizableOpInterfaceTdFiles",
     ],
@@ -6160,10 +6160,10 @@ gentbl_cc_library(
 cc_library(
     name = "BufferizableOpInterface",
     srcs = [
-        "lib/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp",
+        "lib/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.h",
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h",
     ],
     includes = ["include"],
     deps = [
@@ -6352,13 +6352,10 @@ gentbl_cc_library(
 
 cc_library(
     name = "LinalgTransforms",
-    srcs = glob(
-        [
-            "lib/Dialect/Linalg/Transforms/*.cpp",
-            "lib/Dialect/Linalg/Transforms/*.h",
-        ],
-        exclude = ["lib/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp"],
-    ) + [
+    srcs = glob([
+        "lib/Dialect/Linalg/Transforms/*.cpp",
+        "lib/Dialect/Linalg/Transforms/*.h",
+    ]) + [
         "lib/Dialect/Linalg/Analysis/DependenceAnalysis.cpp",
         "lib/Dialect/Linalg/Utils/Utils.cpp",
     ],
@@ -6366,7 +6363,6 @@ cc_library(
         "include/mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h",
         "include/mlir/Dialect/Linalg/Passes.h",
         "include/mlir/Dialect/Linalg/Transforms/CodegenStrategy.h",
-        "include/mlir/Dialect/Linalg/Transforms/ComprehensiveBufferize.h",
         "include/mlir/Dialect/Linalg/Transforms/HoistPadding.h",
         "include/mlir/Dialect/Linalg/Transforms/Hoisting.h",
         "include/mlir/Dialect/Linalg/Transforms/Transforms.h",
@@ -6378,8 +6374,8 @@ cc_library(
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
-        ":BufferizableOpInterface",
         ":ComplexDialect",
+        ":ComprehensiveBufferize",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -6398,6 +6394,35 @@ cc_library(
         ":TransformUtils",
         ":VectorOps",
         ":VectorToSCF",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ComprehensiveBufferize",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithmeticDialect",
+        ":BufferizableOpInterface",
+        ":DialectUtils",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":LinalgOps",
+        ":LinalgStructuredOpsIncGen",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":StandardOps",
+        ":Support",
+        ":TensorDialect",
+        ":TransformUtils",
+        ":VectorOps",
         "//llvm:Support",
     ],
 )

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_COMPREHENSIVE_BUFFERIZE_H
-#define MLIR_DIALECT_LINALG_TRANSFORMS_COMPREHENSIVE_BUFFERIZE_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Value.h"
@@ -19,8 +19,12 @@ namespace mlir {
 class DominanceInfo;
 class FuncOp;
 class GlobalCreator;
+class ModuleOp;
 
 namespace linalg {
+
+// TODO: from some HW description.
+static constexpr int64_t kBufferAlignments = 128;
 
 /// The BufferizationAliasInfo class maintains a list of buffer aliases and
 /// equivalence classes to support bufferization.
@@ -120,6 +124,7 @@ LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                               const DominanceInfo &domInfo,
                               unsigned analysisFuzzerSeed = 0);
 
+// TODO: Do not expose those functions in the header file.
 /// Default allocation function that is used by the comprehensive bufferization
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
 Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc, MemRefType type,
@@ -148,6 +153,10 @@ struct AllocationCallbacks {
   AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
                       MemCpyFn copyFn)
       : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn) {}
+
+  AllocationCallbacks()
+      : allocationFn(defaultAllocationFn),
+        deallocationFn(defaultDeallocationFn), memCpyFn(defaultMemCpyFn) {}
 
   AllocationFn allocationFn;
   DeallocationFn deallocationFn;
@@ -188,7 +197,20 @@ LogicalResult initTensorElimination(
 LogicalResult eliminateInsertSliceAnchoredInitTensorOps(
     FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo);
 
+struct BufferizationOptions {
+  BufferizationOptions()
+      : allocationFns(std::make_unique<AllocationCallbacks>()) {}
+
+  std::unique_ptr<AllocationCallbacks> allocationFns;
+  bool allowReturnMemref = false;
+  unsigned analysisFuzzerSeed = 0;
+  bool testAnalysisOnly = false;
+};
+
+LogicalResult runComprehensiveBufferize(ModuleOp moduleOp,
+                                        const BufferizationOptions &options);
+
 } // namespace linalg
 } // namespace mlir
 
-#endif // define MLIR_DIALECT_LINALG_TRANSFORMS_COMPREHENSIVE_BUFFERIZE_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
