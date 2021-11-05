@@ -26,12 +26,12 @@ body:             |
   ; CHECK:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[DEF]]
   ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 872415232
   ; CHECK:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
-  ; CHECK:   FCMPSrr [[COPY3]], [[COPY4]], implicit-def $nzcv
+  ; CHECK:   FCMPSrr [[COPY3]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
   ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
   ; CHECK:   [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY1]], 1, 0
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[SUBWri]], %subreg.sub_32
   ; CHECK:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   FCMPSrr [[COPY5]], [[COPY4]], implicit-def $nzcv
+  ; CHECK:   FCMPSrr [[COPY5]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
   ; CHECK:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
   ; CHECK:   [[EORWrr:%[0-9]+]]:gpr32 = EORWrr [[CSINCWr]], [[CSINCWr1]]
   ; CHECK:   TBNZW [[EORWrr]], 0, %bb.2
@@ -41,9 +41,9 @@ body:             |
   ; CHECK:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 60, 59
   ; CHECK:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[UBFMXri]], 0, 0 :: (load (s32))
   ; CHECK:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   [[FMULSrr:%[0-9]+]]:fpr32 = FMULSrr [[COPY6]], [[LDRSroX]]
+  ; CHECK:   [[FMULSrr:%[0-9]+]]:fpr32 = FMULSrr [[COPY6]], [[LDRSroX]], implicit $fpcr
   ; CHECK:   [[COPY7:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[FMULSrr]], [[COPY7]]
+  ; CHECK:   [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[FMULSrr]], [[COPY7]], implicit $fpcr
   ; CHECK:   STRSui [[FADDSrr]], [[COPY2]], 0 :: (store (s32))
   ; CHECK: bb.2:
   ; CHECK:   RET_ReallyLR
@@ -57,12 +57,12 @@ body:             |
     %29:fpr32 = COPY %3
     %33:gpr32 = MOVi32imm 872415232
     %4:fpr32 = COPY %33
-    FCMPSrr %29, %4, implicit-def $nzcv
+    FCMPSrr %29, %4, implicit-def $nzcv, implicit $fpcr
     %28:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     %7:gpr32 = SUBSWri %1, 1, 0, implicit-def $nzcv
     %8:gpr64 = SUBREG_TO_REG 0, %7, %subreg.sub_32
     %30:fpr32 = COPY %3
-    FCMPSrr %30, %4, implicit-def $nzcv
+    FCMPSrr %30, %4, implicit-def $nzcv, implicit $fpcr
     %27:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     %26:gpr32 = EORWrr %28, %27
     TBNZW %26, 0, %bb.3
@@ -72,9 +72,9 @@ body:             |
     %12:gpr64 = UBFMXri %8, 60, 59
     %15:fpr32 = LDRSroX %0, %12, 0, 0 :: (load (s32))
     %31:fpr32 = COPY %3
-    %16:fpr32 = FMULSrr %31, %15
+    %16:fpr32 = FMULSrr %31, %15, implicit $fpcr
     %32:fpr32 = COPY %3
-    %17:fpr32 = FADDSrr %16, %32
+    %17:fpr32 = FADDSrr %16, %32, implicit $fpcr
     STRSui %17, %2, 0 :: (store (s32))
 
   bb.3:

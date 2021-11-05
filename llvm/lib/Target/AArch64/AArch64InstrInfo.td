@@ -1506,8 +1506,16 @@ let Predicates = [HasPerfMon] in
 def : Pat<(readcyclecounter), (MRS 0xdce8)>;
 
 // FPCR register
-def : Pat<(i64 (int_aarch64_get_fpcr)), (MRS 0xda20)>;
-def : Pat<(int_aarch64_set_fpcr i64:$val), (MSR 0xda20, GPR64:$val)>;
+let Uses = [FPCR] in
+def MRS_FPCR : Pseudo<(outs GPR64:$dst), (ins),
+                      [(set GPR64:$dst, (int_aarch64_get_fpcr))]>,
+               PseudoInstExpansion<(MRS GPR64:$dst, 0xda20)>,
+               Sched<[WriteSys]>;
+let Defs = [FPCR] in
+def MSR_FPCR : Pseudo<(outs), (ins GPR64:$val),
+                      [(int_aarch64_set_fpcr i64:$val)]>,
+               PseudoInstExpansion<(MSR 0xda20, GPR64:$val)>,
+               Sched<[WriteSys]>;
 
 // Generic system instructions
 def SYSxt  : SystemXtI<0, "sys">;
