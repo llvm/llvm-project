@@ -383,3 +383,240 @@ define <4 x i64> @signbit_mask_v4i64(<4 x i64> %a, <4 x i64> %b) {
   %r = select <4 x i1> %cond, <4 x i64> %b, <4 x i64> zeroinitializer
   ret <4 x i64> %r
 }
+
+define <16 x i8> @signbit_setmask_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; SSE-LABEL: signbit_setmask_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtb %xmm0, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: signbit_setmask_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cond = icmp slt <16 x i8> %a, zeroinitializer
+  %r = select <16 x i1> %cond, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %b
+  ret <16 x i8> %r
+}
+
+define <8 x i16> @signbit_setmask_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; SSE-LABEL: signbit_setmask_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtw %xmm0, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: signbit_setmask_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cond = icmp slt <8 x i16> %a, zeroinitializer
+  %r = select <8 x i1> %cond, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %b
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @signbit_setmask_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; SSE-LABEL: signbit_setmask_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: signbit_setmask_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cond = icmp slt <4 x i32> %a, zeroinitializer
+  %r = select <4 x i1> %cond, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %b
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
+; SSE2-LABEL: signbit_setmask_v2i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: signbit_setmask_v2i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm0, %xmm2
+; SSE42-NEXT:    por %xmm1, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: signbit_setmask_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cond = icmp slt <2 x i64> %a, zeroinitializer
+  %r = select <2 x i1> %cond, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %b
+  ret <2 x i64> %r
+}
+
+define <32 x i8> @signbit_setmask_v32i8(<32 x i8> %a, <32 x i8> %b) {
+; SSE-LABEL: signbit_setmask_v32i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm4, %xmm4
+; SSE-NEXT:    pxor %xmm5, %xmm5
+; SSE-NEXT:    pcmpgtb %xmm1, %xmm5
+; SSE-NEXT:    pcmpgtb %xmm0, %xmm4
+; SSE-NEXT:    por %xmm2, %xmm4
+; SSE-NEXT:    por %xmm3, %xmm5
+; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm5, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: signbit_setmask_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: signbit_setmask_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cond = icmp slt <32 x i8> %a, zeroinitializer
+  %r = select <32 x i1> %cond, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %b
+  ret <32 x i8> %r
+}
+
+define <16 x i16> @signbit_setmask_v16i16(<16 x i16> %a, <16 x i16> %b) {
+; SSE-LABEL: signbit_setmask_v16i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm4, %xmm4
+; SSE-NEXT:    pxor %xmm5, %xmm5
+; SSE-NEXT:    pcmpgtw %xmm1, %xmm5
+; SSE-NEXT:    pcmpgtw %xmm0, %xmm4
+; SSE-NEXT:    por %xmm2, %xmm4
+; SSE-NEXT:    por %xmm3, %xmm5
+; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm5, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: signbit_setmask_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtw %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: signbit_setmask_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cond = icmp slt <16 x i16> %a, zeroinitializer
+  %r = select <16 x i1> %cond, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %b
+  ret <16 x i16> %r
+}
+
+define <8 x i32> @signbit_setmask_v8i32(<8 x i32> %a, <8 x i32> %b) {
+; SSE-LABEL: signbit_setmask_v8i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm4, %xmm4
+; SSE-NEXT:    pxor %xmm5, %xmm5
+; SSE-NEXT:    pcmpgtd %xmm1, %xmm5
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE-NEXT:    por %xmm2, %xmm4
+; SSE-NEXT:    por %xmm3, %xmm5
+; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm5, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: signbit_setmask_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtd %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: signbit_setmask_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cond = icmp slt <8 x i32> %a, zeroinitializer
+  %r = select <8 x i1> %cond, <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <8 x i32> %b
+  ret <8 x i32> %r
+}
+
+define <4 x i64> @signbit_setmask_v4i64(<4 x i64> %a, <4 x i64> %b) {
+; SSE2-LABEL: signbit_setmask_v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm5, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    movdqa %xmm4, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: signbit_setmask_v4i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pxor %xmm4, %xmm4
+; SSE42-NEXT:    pxor %xmm5, %xmm5
+; SSE42-NEXT:    pcmpgtq %xmm1, %xmm5
+; SSE42-NEXT:    pcmpgtq %xmm0, %xmm4
+; SSE42-NEXT:    por %xmm2, %xmm4
+; SSE42-NEXT:    por %xmm3, %xmm5
+; SSE42-NEXT:    movdqa %xmm4, %xmm0
+; SSE42-NEXT:    movdqa %xmm5, %xmm1
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: signbit_setmask_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: signbit_setmask_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cond = icmp slt <4 x i64> %a, zeroinitializer
+  %r = select <4 x i1> %cond, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> %b
+  ret <4 x i64> %r
+}
