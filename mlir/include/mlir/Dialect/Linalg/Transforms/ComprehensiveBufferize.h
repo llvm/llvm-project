@@ -122,8 +122,8 @@ LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
 
 /// Default allocation function that is used by the comprehensive bufferization
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
-Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
-                                    Value shapedValue);
+Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc, MemRefType type,
+                                    const SmallVector<Value> &dynShape);
 
 /// Default deallocation function that is used by the comprehensive
 /// bufferization pass. It expects to recieve back the value called from the
@@ -140,8 +140,8 @@ void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to);
 /// caller. The `deallocationFn` is gauranteed to recieve the `Value` returned
 /// by the `allocationFn`.
 struct AllocationCallbacks {
-  using AllocationFn =
-      std::function<Optional<Value>(OpBuilder &, Location, Value)>;
+  using AllocationFn = std::function<Optional<Value>(
+      OpBuilder &, Location, MemRefType, const SmallVector<Value> &)>;
   using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
   using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
 
