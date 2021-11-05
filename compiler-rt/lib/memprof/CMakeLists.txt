@@ -35,6 +35,7 @@ SET(MEMPROF_HEADERS
   memprof_interface_internal.h
   memprof_internal.h
   memprof_mapping.h
+  memprof_meminfoblock.h
   memprof_stack.h
   memprof_stats.h
   memprof_thread.h
