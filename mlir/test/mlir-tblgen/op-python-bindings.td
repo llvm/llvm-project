@@ -18,7 +18,7 @@ class TestOp<string mnemonic, list<OpTrait> traits = []> :
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class AttrSizedOperandsOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.attr_sized_operands"
-// CHECK: _ODS_OPERAND_SEGMENTS = [-1,1,-1,]
+// CHECK: _ODS_OPERAND_SEGMENTS = [-1,1,0,]
 def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   // CHECK: def __init__(self, variadic1, non_variadic, variadic2, *, loc=None, ip=None):
@@ -28,7 +28,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:   regions = None
   // CHECK:   operands.append(_get_op_results_or_values(variadic1))
   // CHECK:   operands.append(_get_op_result_or_value(non_variadic))
-  // CHECK:   if variadic2 is not None: operands.append(_get_op_result_or_value(variadic2))
+  // CHECK:   operands.append(_get_op_result_or_value(variadic2) if variadic2 is not None else None)
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -40,6 +40,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:       self.operation.operands,
   // CHECK:       self.operation.attributes["operand_segment_sizes"], 0)
   // CHECK:   return operand_range
+  // CHECK-NOT: if len(operand_range)
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
@@ -61,7 +62,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class AttrSizedResultsOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.attr_sized_results"
-// CHECK: _ODS_RESULT_SEGMENTS = [-1,1,-1,]
+// CHECK: _ODS_RESULT_SEGMENTS = [0,1,-1,]
 def AttrSizedResultsOp : TestOp<"attr_sized_results",
                                [AttrSizedResultSegments]> {
   // CHECK: def __init__(self, variadic1, non_variadic, variadic2, *, loc=None, ip=None):
@@ -71,7 +72,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:   regions = None
   // CHECK:   if variadic1 is not None: results.append(variadic1)
   // CHECK:   results.append(non_variadic)
-  // CHECK:   if variadic2 is not None: results.append(variadic2)
+  // CHECK:   results.append(variadic2)
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,
@@ -97,8 +98,9 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:       self.operation.results,
   // CHECK:       self.operation.attributes["result_segment_sizes"], 2)
   // CHECK:   return result_range
+  // CHECK-NOT: if len(result_range)
   let results = (outs Optional<AnyType>:$variadic1, AnyType:$non_variadic,
-                 Optional<AnyType>:$variadic2);
+                 Variadic<AnyType>:$variadic2);
 }
 
 
@@ -275,6 +277,35 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK: def i64(self):
   // CHECK:   return self.operation.results[2]
   let results = (outs I32:$i32, AnyFloat, I64:$i64);
+}
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK: class OneOptionalOperandOp(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.one_optional_operand"
+// CHECK-NOT: _ODS_OPERAND_SEGMENTS
+// CHECK-NOT: _ODS_RESULT_SEGMENTS
+def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
+  let arguments = (ins AnyType:$non_optional, Optional<AnyType>:$optional);
+  // CHECK: def __init__(self, non_optional, optional, *, loc=None, ip=None):
+  // CHECK:   operands = []
+  // CHECK:   results = []
+  // CHECK:   attributes = {}
+  // CHECK:   regions = None
+  // CHECK:   operands.append(_get_op_result_or_value(non_optional))
+  // CHECK:   if optional is not None: operands.append(_get_op_result_or_value(optional))
+  // CHECK:   _ods_successors = None
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, results=results, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
+
+  // CHECK: @builtins.property
+  // CHECK: def non_optional(self):
+  // CHECK:   return self.operation.operands[0]
+
+  // CHECK: @builtins.property
+  // CHECK: def optional(self):
+  // CHECK:   return self.operation.operands[1] if len(self.operation.operands) > 2 else None
+
 }
 
 // CHECK: @_ods_cext.register_operation(_Dialect)

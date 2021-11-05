@@ -67,6 +67,7 @@ class {0}(_ods_ir.OpView):
 /// Each segment spec is either None (default) or an array of integers
 /// where:
 ///   1 = single element (expect non sequence operand/result)
+///   0 = optional element (expect a value or None)
 ///   -1 = operand/result is a sequence corresponding to a variadic
 constexpr const char *opClassSizedSegmentsTemplate = R"Py(
   _ODS_{0}_SEGMENTS = {1}
@@ -505,6 +506,9 @@ constexpr const char *singleResultAppendTemplate = "results.append({0})";
 ///   {0} is the field name.
 constexpr const char *optionalAppendOperandTemplate =
     "if {0} is not None: operands.append(_get_op_result_or_value({0}))";
+constexpr const char *optionalAppendAttrSizedOperandsTemplate =
+    "operands.append(_get_op_result_or_value({0}) if {0} is not None else "
+    "None)";
 constexpr const char *optionalAppendResultTemplate =
     "if {0} is not None: results.append({0})";
 
@@ -693,7 +697,11 @@ populateBuilderLinesOperand(const Operator &op,
     if (!element.isVariableLength()) {
       formatString = singleOperandAppendTemplate;
     } else if (element.isOptional()) {
-      formatString = optionalAppendOperandTemplate;
+      if (sizedSegments) {
+        formatString = optionalAppendAttrSizedOperandsTemplate;
+      } else {
+        formatString = optionalAppendOperandTemplate;
+      }
     } else {
       assert(element.isVariadic() && "unhandled element group type");
       // If emitting with sizedSegments, then we add the actual list-typed
@@ -882,10 +890,10 @@ static void emitSegmentSpec(
   std::string segmentSpec("[");
   for (int i = 0, e = getNumElements(op); i < e; ++i) {
     const NamedTypeConstraint &element = getElement(op, i);
-    if (element.isVariableLength()) {
-      segmentSpec.append("-1,");
-    } else if (element.isOptional()) {
+    if (element.isOptional()) {
       segmentSpec.append("0,");
+    } else if (element.isVariadic()) {
+      segmentSpec.append("-1,");
     } else {
       segmentSpec.append("1,");
     }
