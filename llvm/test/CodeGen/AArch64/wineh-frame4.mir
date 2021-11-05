@@ -52,8 +52,8 @@ constants:
 body:             |
   bb.0.entry:
     liveins: $d0, $d1
-    $d8 = FADDDrr $d0, killed $d1
-    $d10 = FADDDrr killed $d8, $d0
+    $d8 = FADDDrr $d0, killed $d1, implicit $fpcr
+    $d10 = FADDDrr killed $d8, $d0, implicit $fpcr
     $x0 = COPY killed $d10
     RET_ReallyLR implicit $x0
 ...
