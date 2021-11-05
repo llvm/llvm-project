@@ -355,7 +355,7 @@ ProfileGenerator::preprocessRangeCounter(const RangeSample &RangeCounter) {
   if (FillZeroForAllFuncs) {
     for (auto &FuncI : Binary->getAllBinaryFunctions()) {
       for (auto &R : FuncI.second.Ranges) {
-        Ranges[{R.first, R.second}] += 0;
+        Ranges[{R.first, R.second - 1}] += 0;
       }
     }
   } else {
@@ -385,7 +385,10 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
     // Disjoint ranges may have range in the middle of two instr,
     // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
     // can be Addr1+1 to Addr2-1. We should ignore such range.
-    while (IP.Address <= RangeEnd) {
+    if (IP.Address > RangeEnd)
+      continue;
+
+    do {
       uint64_t Offset = Binary->virtualAddrToOffset(IP.Address);
       const SampleContextFrameVector &FrameVec =
           Binary->getFrameLocationStack(Offset);
@@ -394,9 +397,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
         updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
                                             Count);
       }
-      // Move to next IP within the range.
-      IP.advance();
-    }
+    } while (IP.advance() && IP.Address <= RangeEnd);
   }
 }
 
@@ -538,17 +539,17 @@ void CSProfileGenerator::populateBodySamplesForFunction(
     // Disjoint ranges may have range in the middle of two instr,
     // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
     // can be Addr1+1 to Addr2-1. We should ignore such range.
-    while (IP.Address <= RangeEnd) {
+    if (IP.Address > RangeEnd)
+      continue;
+
+    do {
       uint64_t Offset = Binary->virtualAddrToOffset(IP.Address);
       auto LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
       if (LeafLoc.hasValue()) {
         // Recording body sample for this specific context
         updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
       }
-
-      // Move to next IP within the range
-      IP.advance();
-    }
+    } while (IP.advance() && IP.Address <= RangeEnd);
   }
 }
 
@@ -714,14 +715,13 @@ void CSProfileGenerator::extractProbesFromRange(const RangeSample &RangeCounter,
       continue;
 
     InstructionPointer IP(Binary, RangeBegin, true);
-
     // Disjoint ranges may have range in the middle of two instr,
     // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
     // can be Addr1+1 to Addr2-1. We should ignore such range.
     if (IP.Address > RangeEnd)
       continue;
 
-    while (IP.Address <= RangeEnd) {
+    do {
       const AddressProbesMap &Address2ProbesMap =
           Binary->getAddress2ProbesMap();
       auto It = Address2ProbesMap.find(IP.Address);
@@ -732,9 +732,7 @@ void CSProfileGenerator::extractProbesFromRange(const RangeSample &RangeCounter,
           ProbeCounter[&Probe] += Count;
         }
       }
-
-      IP.advance();
-    }
+    } while (IP.advance() && IP.Address <= RangeEnd);
   }
 }
 
