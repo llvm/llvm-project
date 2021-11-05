@@ -281,6 +281,15 @@ class F_BCOND<bits<5> func,
   let Inst{15-0}  = d16;
 }
 
+// Format: RTE/ILLOP
+class F_RTEILLOP<bits<2> il, string asm, InstrItinClass itin = NoItinerary>
+   : InstM88k<(outs), (ins), asm, "", [], itin> {
+  let Inst{31-26} = 0b111101;
+  let Inst{25-16} = 0b0000000000;
+  let Inst{15-2} = 0b11111100000000;
+  let Inst{1-0}   = il;
+}
+
 // Category: Floating point/graphics.
 
 // Format: Special function unit.
@@ -329,17 +338,33 @@ class F_SFU1D<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
   let Inst{6-5} = td;
 }
 
+// Format: Dyadic register, for flt.
+class F_SFU1FLT<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
+                dag outs, dag ins, string asmstr, list<dag> pattern = [],
+                InstrItinClass itin = NoItinerary>
+   : F_SFU<outs, ins, asmstr, "$rd, $rs2", pattern, itin> {
+  bits<1>  regfile;
+
+  let rs1 = 0b00000;
+
+  let Inst{28-26} = 0b001;
+  let Inst{15-10} = 0b001000;
+  let Inst{9} = regfile;
+  let Inst{8-7} = 0b00;
+  let Inst{6-5} = td;
+}
+
 // Format: Control register.
 class F_SFU1CR<bits<5> func,
                dag outs, dag ins, string asm, string operands,
                InstrItinClass itin = NoItinerary>
    : F_SFU<outs, ins, asm, operands, [], itin> {
 
-  bits<6>  fcr;
+  bits<6>  cr;
 
   let Inst{28-26} = 0b000;
   let Inst{15-11} = func;
-  let Inst{10-5} = fcr;
+  let Inst{10-5} = cr;
 }
 
 class F_SFU1CR2<bits<5> func,

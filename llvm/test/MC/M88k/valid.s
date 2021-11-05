@@ -285,9 +285,19 @@ isns:
   fxcr     %r0, %r1, %fcr50
 # CHECK: fxcr     %r0, %r1, %fcr50       | encoding: [0x80,0x01,0xce,0x41]
 
-  # round floating point to integer
-#  int.ss   %r0, %r1
-#  int.sd   %r10, %r2
+  # illegal operation
+  illop1
+  illop2
+  illop3
+# CHECK: illop1                          | encoding: [0xf4,0x00,0xfc,0x01]
+# CHECK: illop2                          | encoding: [0xf4,0x00,0xfc,0x02]
+# CHECK: illop3                          | encoding: [0xf4,0x00,0xfc,0x03]
+
+# round floating point to integer
+  int.ss       %r0, %r1
+  int.sd       %r10, %r2
+# CHECK: int.ss       %r0, %r1           | encoding: [0x84,0x00,0x48,0x01]
+# CHECK: int.sd       %r10, %r2          | encoding: [0x85,0x40,0x48,0x82]
 
   # unconditional jump
   jmp      %r0
@@ -373,8 +383,8 @@ isns:
 # COM: CHECK: lda.d        %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x32,0x04]
 
 # load from control register
-#  ldcr         %r0, %cr10
-# COM: CHECK: ldcr         %r0, %cr10         | encoding: [0x80,0x00,0x41,0x40]
+  ldcr         %r0, %cr10
+# CHECK: ldcr         %r0, %cr10         | encoding: [0x80,0x00,0x41,0x40]
 
 # make bit field
   mak          %r0, %r1, 10<5>
@@ -431,8 +441,8 @@ isns:
 # CHECK: rot      %r2, %r4, %r6          | encoding: [0xf4,0x44,0xa8,0x06]
 
 # return from exception
-#  rte
-# COM: CHECK: rte                             | encoding: [0xf4,0x00,0xfc,0x00]
+  rte
+# CHECK: rte                             | encoding: [0xf4,0x00,0xfc,0x00]
 
 # set bit field
   set      %r0, %r1, 10<5>
@@ -496,9 +506,9 @@ isns:
 # COM: CHECK: st.usr   %r1, %r2[%r3]          | encoding: [0xf4,0x22,0x27,0x03]
 # COM: CHECK: st.d.usr %r2, %r3[%r4]          | encoding: [0xf4,0x43,0x23,0x04]
 
-  # store to control register
-#  stcr %r0, %cr10
-# COM: CHECK: stcr     %r0, %cr10             | encoding: [0x80,0x00,0x81,0x40]
+# store to control register
+  stcr %r0, %cr10
+# CHECK: stcr     %r0, %cr10             | encoding: [0x80,0x00,0x81,0x40]
 
 # integer subtract
   sub      %r0, %r1, %r2
@@ -527,6 +537,25 @@ isns:
 # CHECK: subu.cio %r4, %r5, %r6          | encoding: [0xf4,0x85,0x67,0x06]
 # CHECK: subu     %r5, %r6, 0            | encoding: [0x64,0xa6,0x00,0x00]
 # CHECK: subu     %r5, %r6, 4096         | encoding: [0x64,0xa6,0x10,0x00]
+
+# conditional trap
+#  tcnd  eq0, %r10, 12
+#  tcnd  ne0, %r9, 12
+#  tcnd  gt0, %r8, 7
+#  tcnd  lt0, %r7, 1
+#  tcnd  ge0, %r6, 35
+#  tcnd  le0, %r5, 33
+#  tcnd  10, %r4, 12
+
+# truncate floating point to integer
+  trnc.ss      %r0, %r1
+  trnc.sd      %r1, %r3
+# CHECK: trnc.ss      %r0, %r1           | encoding: [0x84,0x00,0x58,0x01]
+# CHECK: trnc.sd      %r1, %r3           | encoding: [0x84,0x20,0x58,0x83]
+
+# exchange control register
+  xcr          %r0, %r3, %cr10
+# CHECK: xcr          %r0, %r3, %cr10    | encoding: [0x80,0x03,0xc1,0x43]
 
 # logical exclusive or
   xor      %r0, %r1, %r2

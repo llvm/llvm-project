@@ -622,6 +622,9 @@ let Predicates = [IsMC881100] in {
 def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu (i32 R0), tglobaladdr:$dst)>;
 //def : Pat<(m88k_lo tglobaladdr:$dst), (OR_I_LO (i32 R0), tglobaladdr:$dst)>;
 
+// ---------------------------------------------------------------------------//
+// Flow control
+// ---------------------------------------------------------------------------//
 
 let isTerminator = 1, isBarrier = 1 in {
   def JMP : F_JMP<0b11000, (outs), (ins GPR:$rs2),
@@ -710,6 +713,13 @@ defm : BranchPat<SETUGT, setugt, 8>;
 defm : BranchPat<SETULE, setule, 9>;
 defm : BranchPat<SETULT, setult, 10>;
 defm : BranchPat<SETUGE, setuge, 11>;
+
+let isTerminator = 1, isBarrier = 1 in {
+  def RTE : F_RTEILLOP<0b00, "rte">;
+  def ILLOP1 : F_RTEILLOP<0b01, "illop1">;
+  def ILLOP2 : F_RTEILLOP<0b10, "illop2">;
+  def ILLOP3 : F_RTEILLOP<0b11, "illop3">;
+}
 
 // Alias for no operation.
 def : InstAlias<"nop", (ORrr R0, R0, R0)>;
@@ -840,11 +850,14 @@ defm : FloatBinPat<"FADD", fadd>;
 defm : FloatBinPat<"FSUB", fsub>;
 defm : FloatBinPat<"FDIV", fdiv>;
 
-defm FCMP : FArith2<0b0001, "fcvt">;
 defm INT : FArith2<0b1001, "int">;
 defm NINT : FArith2<0b1010, "nint">;
 defm TRNC : FArith2<0b1011, "trnc">;
+
+let Predicates = [IsMC881100] in {
+defm FCVT : FArith2<0b0001, "fcvt">;
 defm FSQRT : FArith2<0b1111, "fsqrt">;
+}
 
 let regfile = 1, Predicates = [IsMC881100] in {
 def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
@@ -877,16 +890,24 @@ def MOVxrd : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b01,
 // Control register instructions.
 // ---------------------------------------------------------------------------//
 
-let rs1 = 0, rs2 = 0 in
-def FLDCR : F_SFU1CR<0b01001, (outs GPR:$rd), (ins FCR:$fcr),
-                    "fldcr", " $rd, $fcr">;
+let rs1 = 0, rs2 = 0 in {
+def LDCR : F_SFU1CR<0b01000, (outs GPR:$rd), (ins CR:$cr),
+                    "ldcr", "$rd, $cr">;
+def FLDCR : F_SFU1CR<0b01001, (outs GPR:$rd), (ins FCR:$cr),
+                     "fldcr", "$rd, $cr">;
+}
 
-let rd = 0 in
-def FSTCR : F_SFU1CR2<0b10001, (outs FCR:$fcr), (ins GPR:$rs1),
-                      "fstcr", " $rs1, $fcr">;
+let rd = 0 in {
+def STCR : F_SFU1CR2<0b10000, (outs CR:$cr), (ins GPR:$rs1),
+                     "stcr", "$rs1, $cr">;
+def FSTCR : F_SFU1CR2<0b10001, (outs FCR:$cr), (ins GPR:$rs1),
+                      "fstcr", "$rs1, $cr">;
+}
 
-def FXCR : F_SFU1CR2<0b11001, (outs GPR:$rd), (ins GPR:$rs1, FCR:$fcr),
-                     "fxcr", " $rd, $rs1, $fcr">;
+def XCR : F_SFU1CR2<0b11000, (outs GPR:$rd), (ins GPR:$rs1, CR:$cr),
+                    "xcr", "$rd, $rs1, $cr">;
+def FXCR : F_SFU1CR2<0b11001, (outs GPR:$rd), (ins GPR:$rs1, FCR:$cr),
+                     "fxcr", "$rd, $rs1, $cr">;
 
 // ---------------------------------------------------------------------------//
 // Graphics/vector instructions. 881100 only.
