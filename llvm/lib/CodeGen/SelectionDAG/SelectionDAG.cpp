@@ -5293,6 +5293,19 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
       return FoldSymbolOffset(Opcode, VT, GA, N1);
 
+  // If this is a bitwise logic opcode see if we can fold bitcasted ops.
+  // TODO: Can we generalize this and fold any bitcasted constant data?
+  if (ISD::isBitwiseLogicOp(Opcode) && N1->getOpcode() == ISD::BITCAST &&
+      N2->getOpcode() == ISD::BITCAST) {
+    SDValue InnerN1 = peekThroughBitcasts(N1->getOperand(0));
+    SDValue InnerN2 = peekThroughBitcasts(N2->getOperand(0));
+    EVT InnerVT = InnerN1.getValueType();
+    if (InnerVT == InnerN2.getValueType() && InnerVT.isInteger())
+      if (SDValue C =
+              FoldConstantArithmetic(Opcode, DL, InnerVT, {InnerN1, InnerN2}))
+        return getBitcast(VT, C);
+  }
+
   // For fixed width vectors, extract each constant element and fold them
   // individually. Either input may be an undef value.
   bool IsBVOrSV1 = N1->getOpcode() == ISD::BUILD_VECTOR ||

@@ -158,13 +158,20 @@ define arm_aapcs_vfpcc <2 x i64> @build_upper_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI14_0
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vbic q1, q1, q2
+; CHECK-NEXT:    adr r0, .LCPI14_1
+; CHECK-NEXT:    vand q1, q1, q2
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vand q0, q0, q2
 ; CHECK-NEXT:    vorr q0, q0, q1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI14_0:
+; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:  .LCPI14_1:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
@@ -179,13 +186,20 @@ define arm_aapcs_vfpcc <2 x i64> @build_lower_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI15_0
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vbic q1, q1, q2
+; CHECK-NEXT:    adr r0, .LCPI15_1
+; CHECK-NEXT:    vand q1, q1, q2
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vand q0, q0, q2
 ; CHECK-NEXT:    vorr q0, q0, q1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI15_0:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-NEXT:  .LCPI15_1:
 ; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
 ; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
 ; CHECK-NEXT:    .long 0 @ 0x0

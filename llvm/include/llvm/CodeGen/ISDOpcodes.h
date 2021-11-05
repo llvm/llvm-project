@@ -1260,6 +1260,11 @@ static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END + 400;
 /// be used with SelectionDAG::getMemIntrinsicNode.
 static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
 
+/// Whether this is bitwise logic opcode.
+inline bool isBitwiseLogicOp(unsigned Opcode) {
+  return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
+}
+
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
