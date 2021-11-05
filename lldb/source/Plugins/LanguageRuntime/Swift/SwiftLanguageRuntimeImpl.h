@@ -202,8 +202,7 @@ protected:
                              std::function<bool(SuperClassType)> fn);
 
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
-  Value::ValueType GetValueType(Value::ValueType static_value_type,
-                                CompilerType static_type,
+  Value::ValueType GetValueType(ValueObject &in_value,
                                 CompilerType dynamic_type,
                                 bool is_indirect_enum_case);
 
