@@ -1131,7 +1131,7 @@ TEST(InstructionsTest, ShuffleMaskIsReplicationMask) {
 }
 
 TEST(InstructionsTest, ShuffleMaskIsReplicationMask_undef) {
-  for (int ReplicationFactor : seq_inclusive(1, 6)) {
+  for (int ReplicationFactor : seq_inclusive(1, 4)) {
     for (int VF : seq_inclusive(1, 4)) {
       const auto ReplicatedMask = createReplicatedMask(ReplicationFactor, VF);
       int GuessedReplicationFactor = -1, GuessedVF = -1;
@@ -1165,7 +1165,7 @@ TEST(InstructionsTest, ShuffleMaskIsReplicationMask_undef) {
 }
 
 TEST(InstructionsTest, ShuffleMaskIsReplicationMask_Exhaustive_Correctness) {
-  for (int ShufMaskNumElts : seq_inclusive(1, 8)) {
+  for (int ShufMaskNumElts : seq_inclusive(1, 6)) {
     SmallVector<int> PossibleShufMaskElts;
     PossibleShufMaskElts.reserve(ShufMaskNumElts + 2);
     for (int PossibleShufMaskElt : seq_inclusive(-1, ShufMaskNumElts))
