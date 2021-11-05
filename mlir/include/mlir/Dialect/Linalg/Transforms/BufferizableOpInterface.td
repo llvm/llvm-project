@@ -60,11 +60,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           llvm_unreachable("bufferizesToMemoryWrite not implemented");
          }]
       >,
-      // TODO: Simplify this interface by removing `bufferizesToAliasOnly` and
-      // `getInplaceableOpResult`. Instead, always use `getAliasingOpResult`. If
-      // `getAliasingOpResult` returns a non-null value, we know that an alias
-      // is created. If `bufferizesToMemoryRead` and `bufferizesToMemoryWrite`
-      // return `false`, we know that the operands "bufferizes to alias only".
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpOperand creates an alias but does neither
@@ -73,51 +68,37 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           be called on OpOperands that do not have a tensor type.
 
           Examples of such ops are `tensor.extract_slice` and `tensor.cast`.
+
+          Note: This method is not meant to be reimplemented.
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToAliasOnly",
         /*args=*/(ins "OpOperand &":$opOperand),
         /*methodBody=*/"",
+        // TODO: This should be in methodBody instead of defaultImplementation.
+        // Due to a bug in TableGen codegen, this does not compile.
         /*defaultImplementation=*/[{
-          // For better debugging, run `bufferizesToMemoryWrite`, which fires an
-          // assertion when called on an op that should not have tensor
-          // OpOperands.
-          (void) cast<BufferizableOpInterface>($_op.getOperation())
-              .bufferizesToMemoryWrite(opOperand);
-          // Return `false` by default, as most ops are not "alias only".
-          return false;
+          auto bufferizableOp =
+              cast<BufferizableOpInterface>($_op.getOperation());
+          return !bufferizableOp.bufferizesToMemoryRead(opOperand)
+              && !bufferizableOp.bufferizesToMemoryWrite(opOperand)
+              && static_cast<bool>(
+                  bufferizableOp.getAliasingOpResult(opOperand));
          }]
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the OpResult that can bufferize in-place with a given
-          OpOperand. Return a null value if the OpOperand cannot bufferize
-          in-place. This method will never be called on OpOperands that do not
-          have a tensor type.
-        }],
-        /*retType=*/"OpResult",
-        /*methodName=*/"getInplaceableOpResult",
-        /*args=*/(ins "OpOperand &":$opOperand),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          // Does not have to be implemented for ops without tensor OpOperands.
-          llvm_unreachable("getInplaceableOpResult not implemented");
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
           Return the OpResult that aliases with a given OpOperand when
-          bufferized in-place. This is a superset of `getInplaceableOpResult`.
-          This method will never be called on OpOperands that do not have a
-          tensor type.
+          bufferized in-place. This method will never be called on OpOperands
+          that do not have a tensor type.
         }],
         /*retType=*/"OpResult",
         /*methodName=*/"getAliasingOpResult",
         /*args=*/(ins "OpOperand &":$opOperand),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return cast<BufferizableOpInterface>($_op.getOperation())
-              .getInplaceableOpResult(opOperand);
+          // Does not have to be implemented for ops without tensor OpOperands.
+          llvm_unreachable("getAliasingOpResult not implemented");
         }]
       >,
       InterfaceMethod<

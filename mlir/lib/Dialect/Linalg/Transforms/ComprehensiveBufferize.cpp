@@ -427,50 +427,12 @@ static SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) {
 }
 
 /// Determine which OpResult will alias with `opOperand` if the op is bufferized
-/// in place. This is a superset of `getInplaceableOpResult`. Return an empty
-/// OpResult if the op is not bufferizable.
+/// in place. Return an empty OpResult if the op is not bufferizable.
 static OpResult getAliasingOpResult(OpOperand &opOperand) {
   if (auto bufferizableOp =
           dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
     return bufferizableOp.getAliasingOpResult(opOperand);
   return OpResult();
-}
-
-/// Return `true` if the given OpOperand does not bufferize to a memory read or
-/// write, but creates an alias when bufferized inplace. Return `false` if the
-/// op is not bufferizable.
-static bool bufferizesToAliasOnly(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.bufferizesToAliasOnly(opOperand);
-
-  // Unknown op that returns a tensor. The inplace analysis does not support it.
-  // Conservatively return false.
-  return false;
-}
-
-// Predeclaration of function.
-static bool bufferizesToMemoryRead(OpOperand &opOperand);
-
-/// Return true if the given value is read by an op that bufferizes to a memory
-/// read. Also takes into account ops that create an alias but do not read by
-/// themselves (e.g., ExtractSliceOp).
-static bool isValueRead(Value value) {
-  SmallVector<OpOperand *> workingSet;
-  for (OpOperand &use : value.getUses())
-    workingSet.push_back(&use);
-
-  while (!workingSet.empty()) {
-    OpOperand *uMaybeReading = workingSet.pop_back_val();
-    // Skip over all ops that create an alias but do not read.
-    if (bufferizesToAliasOnly(*uMaybeReading))
-      for (OpOperand &use : getAliasingOpResult(*uMaybeReading).getUses())
-        workingSet.push_back(&use);
-    if (bufferizesToMemoryRead(*uMaybeReading))
-      return true;
-  }
-
-  return false;
 }
 
 /// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
@@ -495,6 +457,39 @@ static bool bufferizesToMemoryWrite(OpOperand &opOperand) {
   // Unknown op that returns a tensor. The inplace analysis does not support it.
   // Conservatively return true.
   return true;
+}
+
+/// Return true if `opOperand` does neither read nor write but bufferizes to an
+/// alias. Return false if the op is not bufferizable.
+static bool bufferizesToAliasOnly(OpOperand &opOperand) {
+  if (auto bufferizableOp =
+          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+    return bufferizableOp.bufferizesToAliasOnly(opOperand);
+
+  // Unknown op that returns a tensor. The inplace analysis does not support it.
+  // Conservatively return false.
+  return false;
+}
+
+/// Return true if the given value is read by an op that bufferizes to a memory
+/// read. Also takes into account ops that create an alias but do not read by
+/// themselves (e.g., ExtractSliceOp).
+static bool isValueRead(Value value) {
+  SmallVector<OpOperand *> workingSet;
+  for (OpOperand &use : value.getUses())
+    workingSet.push_back(&use);
+
+  while (!workingSet.empty()) {
+    OpOperand *uMaybeReading = workingSet.pop_back_val();
+    // Skip over all ops that neither read nor write (but create an alias).
+    if (bufferizesToAliasOnly(*uMaybeReading))
+      for (OpOperand &use : getAliasingOpResult(*uMaybeReading).getUses())
+        workingSet.push_back(&use);
+    if (bufferizesToMemoryRead(*uMaybeReading))
+      return true;
+  }
+
+  return false;
 }
 
 /// Return the relationship between the operand and the its corresponding
@@ -1493,8 +1488,12 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OpResult result,
   return success();
 }
 
-/// This analysis function is used for OpOperands that alias with an OpResult
-/// but are not inplaceable on it. E.g., ExtractSliceOp.
+/// Determine if `operand` can be bufferized in-place with one of the op's
+/// results. If so, set InPlaceSpec::True on the result. Otherwise, set
+/// InPlaceSpec::False on the result.
+///
+/// Even if an op does not read or write, it may still create an alias when
+/// bufferized in-place. An example of such ops is tensor.extract_slice.
 ///
 /// Rationale for bufferizing `%1 = tensor.extract_slice %0[...]` inplace:
 ///
@@ -1509,27 +1508,13 @@ bufferizableInPlaceAnalysisImpl(OpOperand &operand, OpResult result,
 /// An analysis is required to ensure inplace bufferization would not result in
 /// RaW dependence violations.
 static LogicalResult
-bufferizableInPlaceAnalysisAliasOnlyOp(OpOperand &operand,
-                                       BufferizationAliasInfo &aliasInfo,
-                                       const DominanceInfo &domInfo) {
-  auto bufferizableOp = dyn_cast<BufferizableOpInterface>(operand.getOwner());
-  assert(bufferizableOp && "expected op with known bufferization behavior");
-  OpResult result = bufferizableOp.getAliasingOpResult(operand);
-  assert(result && "expected that the OpOperand has an aliasing OpResult");
-  return bufferizableInPlaceAnalysisImpl(operand, result, aliasInfo, domInfo);
-}
-
-/// Determine if `operand` can be bufferized in-place with one of the op's
-/// results. If so, set InPlaceSpec::True on the result. Otherwise, set
-/// InPlaceSpec::False on the result.
-static LogicalResult
 bufferizableInPlaceAnalysis(OpOperand &operand,
                             BufferizationAliasInfo &aliasInfo,
                             const DominanceInfo &domInfo) {
   auto bufferizableOp = dyn_cast<BufferizableOpInterface>(operand.getOwner());
   if (!bufferizableOp)
     return success();
-  if (OpResult result = bufferizableOp.getInplaceableOpResult(operand))
+  if (OpResult result = bufferizableOp.getAliasingOpResult(operand))
     return bufferizableInPlaceAnalysisImpl(operand, result, aliasInfo, domInfo);
   return success();
 }
@@ -1550,20 +1535,11 @@ LogicalResult mlir::linalg::inPlaceAnalysis(SmallVector<Operation *> &ops,
   }
 
   // Walk ops in reverse for better interference analysis.
-  for (Operation *op : reverse(ops)) {
+  for (Operation *op : reverse(ops))
     for (OpOperand &opOperand : op->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>()) {
+      if (opOperand.get().getType().isa<TensorType>())
         if (failed(bufferizableInPlaceAnalysis(opOperand, aliasInfo, domInfo)))
           return failure();
-
-        // Special logic to analyze OpOperands that are not inplaceable on an
-        // OpResult but may create an alias.
-        if (bufferizesToAliasOnly(opOperand))
-          if (failed(bufferizableInPlaceAnalysisAliasOnlyOp(
-                  opOperand, aliasInfo, domInfo)))
-            return failure();
-      }
-  }
 
   return success();
 }
@@ -2460,7 +2436,7 @@ static LogicalResult allocateBuffersForResults(
   // matching OpOperands.
   for (OpOperand *opOperand : op.getOutputOperands()) {
     OpResult opResult = cast<BufferizableOpInterface>(op.getOperation())
-                            .getInplaceableOpResult(*opOperand);
+                            .getAliasingOpResult(*opOperand);
     assert(opResult && "could not find correspond OpResult");
     bool skipCopy = !op.payloadUsesValueFromOperand(opOperand);
     Value resultBuffer =
@@ -2544,7 +2520,7 @@ struct LinalgOpInterface
     return {genericOp.getOutputTensorOperands()[opResult.getResultNumber()]};
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
     if (!opOperand.get().getType().isa<RankedTensorType>())
       return OpResult();
@@ -2630,7 +2606,7 @@ struct TiledLoopOpInterface
                               opResult.getResultNumber())};
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     auto tiledLoopOp = cast<linalg::TiledLoopOp>(op);
     return tiledLoopOp.getTiedOpResult(opOperand);
   }
@@ -2775,7 +2751,7 @@ struct YieldOpInterface
     return false;
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
 
@@ -2870,7 +2846,7 @@ struct ForOpInterface
     return {&forOp.getIterOpOperands()[opResult.getResultNumber()]};
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     auto forOp = cast<scf::ForOp>(op);
     if (!opOperand.get().getType().isa<RankedTensorType>())
       return OpResult();
@@ -2927,7 +2903,7 @@ struct YieldOpInterface
     return false;
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
 
@@ -3011,7 +2987,7 @@ struct CallOpInterface
     return {};
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     // CallOpInterface is special, it needs to wait for the callee to be
     // bufferized and needs to inspect the BufferAliasInfo object. It can't
     // make a proper determination by itself and needs to be conservative.
@@ -3042,7 +3018,7 @@ struct ReturnOpInterface
     return false;
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
 
@@ -3089,17 +3065,9 @@ struct CastOpInterface
     return false;
   }
 
-  bool bufferizesToAliasOnly(Operation *op, OpOperand &opOperand) const {
-    return true;
-  }
-
   SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
                                                 OpResult opResult) const {
     return {&op->getOpOperand(0)};
-  }
-
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
-    return OpResult();
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
@@ -3157,7 +3125,7 @@ struct DimOpInterface
     return false;
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
 
@@ -3192,17 +3160,9 @@ struct ExtractSliceOpInterface
     return false;
   }
 
-  bool bufferizesToAliasOnly(Operation *op, OpOperand &opOperand) const {
-    return true;
-  }
-
   SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
                                                 OpResult opResult) const {
     return {&op->getOpOperand(0) /*source*/};
-  }
-
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
-    return OpResult();
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
@@ -3282,7 +3242,7 @@ struct ExtractOpInterface
     return false;
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
 
@@ -3320,7 +3280,7 @@ struct InsertSliceOpInterface
     return {&op->getOpOperand(1) /*dest*/};
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return &opOperand == &op->getOpOperand(1) /*dest*/
                ? op->getResult(0)
                : OpResult();
@@ -3412,7 +3372,7 @@ struct TransferReadOpInterface
     return false;
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     return OpResult();
   }
 
@@ -3457,7 +3417,7 @@ struct TransferWriteOpInterface
     return {&op->getOpOperand(1)};
   }
 
-  OpResult getInplaceableOpResult(Operation *op, OpOperand &opOperand) const {
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
     assert(opOperand.get().getType().isa<TensorType>() &&
            "only tensor types expected");
     return op->getOpResult(0);
