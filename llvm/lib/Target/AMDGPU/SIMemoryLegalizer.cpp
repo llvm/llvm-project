@@ -368,7 +368,7 @@ protected:
 
 public:
 
-  SIGfx6CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {};
+  SIGfx6CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -409,7 +409,7 @@ public:
 class SIGfx7CacheControl : public SIGfx6CacheControl {
 public:
 
-  SIGfx7CacheControl(const GCNSubtarget &ST) : SIGfx6CacheControl(ST) {};
+  SIGfx7CacheControl(const GCNSubtarget &ST) : SIGfx6CacheControl(ST) {}
 
   bool insertAcquire(MachineBasicBlock::iterator &MI,
                      SIAtomicScope Scope,
@@ -421,7 +421,7 @@ public:
 class SIGfx90ACacheControl : public SIGfx7CacheControl {
 public:
 
-  SIGfx90ACacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {};
+  SIGfx90ACacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -470,7 +470,7 @@ protected:
 
 public:
 
-  SIGfx10CacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {};
+  SIGfx10CacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -855,7 +855,7 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   // instructions. The latter are always marked as volatile so cannot sensibly
   // handle it as do not want to pessimize all atomics. Also they do not support
   // the nontemporal attribute.
-  assert( Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
+  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
 
   bool Changed = false;
 
@@ -1031,8 +1031,8 @@ bool SIGfx6CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                                        SIAtomicAddrSpace AddrSpace,
                                        bool IsCrossAddrSpaceOrdering,
                                        Position Pos) const {
-    return insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                      IsCrossAddrSpaceOrdering, Pos);
+  return insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                    IsCrossAddrSpaceOrdering, Pos);
 }
 
 bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
@@ -1104,7 +1104,8 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
       // different CUs. Therefore need to bypass the L1 which is per CU.
       // Otherwise in non-threadgroup split mode all waves of a work-group are
       // on the same CU, and so the L1 does not need to be bypassed.
-      if (ST.isTgSplitEnabled()) Changed |= enableGLCBit(MI);
+      if (ST.isTgSplitEnabled())
+        Changed |= enableGLCBit(MI);
       break;
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1200,14 +1201,13 @@ bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
   // instructions. The latter are always marked as volatile so cannot sensibly
   // handle it as do not want to pessimize all atomics. Also they do not support
   // the nontemporal attribute.
-  assert( Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
+  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
 
   bool Changed = false;
 
   if (IsVolatile) {
-    if (Op == SIMemOp::LOAD) {
+    if (Op == SIMemOp::LOAD)
       Changed |= enableGLCBit(MI);
-    }
 
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
@@ -1394,7 +1394,8 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
       // the WGP. Therefore need to bypass the L0 which is per CU. Otherwise in
       // CU mode all waves of a work-group are on the same CU, and so the L0
       // does not need to be bypassed.
-      if (!ST.isCuModeEnabled()) Changed |= enableGLCBit(MI);
+      if (!ST.isCuModeEnabled())
+        Changed |= enableGLCBit(MI);
       break;
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1428,12 +1429,11 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
   // instructions. The latter are always marked as volatile so cannot sensibly
   // handle it as do not want to pessimize all atomics. Also they do not support
   // the nontemporal attribute.
-  assert( Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
+  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
 
   bool Changed = false;
 
   if (IsVolatile) {
-
     if (Op == SIMemOp::LOAD) {
       Changed |= enableGLCBit(MI);
       Changed |= enableDLCBit(MI);
