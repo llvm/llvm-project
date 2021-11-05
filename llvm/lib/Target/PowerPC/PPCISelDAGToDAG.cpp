@@ -5826,66 +5826,67 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
   }
   case PPCISD::LD_SPLAT: {
-    // For v16i8 and v8i16, if target has no direct move, we can still handle
-    // this without using stack.
-    if (Subtarget->hasAltivec() && !Subtarget->hasDirectMove()) {
-      SDValue ZeroReg =
-          CurDAG->getRegister(Subtarget->isPPC64() ? PPC::ZERO8 : PPC::ZERO,
-                              Subtarget->isPPC64() ? MVT::i64 : MVT::i32);
-      unsigned LIOpcode = Subtarget->isPPC64() ? PPC::LI8 : PPC::LI;
-      EVT Type = N->getValueType(0);
-      if (Type == MVT::v16i8 || Type == MVT::v8i16) {
-        // v16i8 LD_SPLAT addr
-        // ======>
-        // Mask = LVSR/LVSL 0, addr
-        // LoadLow = LXV 0, addr
-        // Perm = VPERM LoadLow, LoadLow, Mask
-        // Splat = VSPLTB 15/0, Perm
-        //
-        // v8i16 LD_SPLAT addr
-        // ======>
-        // Mask = LVSR/LVSL 0, addr
-        // LoadLow = LXV 0, addr
-        // LoadHigh = LXV (LI, 1), addr
-        // Perm = VPERM LoadLow, LoadHigh, Mask
-        // Splat = VSPLTH 7/0, Perm
-        unsigned SplatOp = (Type == MVT::v16i8) ? PPC::VSPLTB : PPC::VSPLTH;
-        unsigned SplatElemIndex =
-            Subtarget->isLittleEndian() ? ((Type == MVT::v16i8) ? 15 : 7) : 0;
+    // Here we want to handle splat load for type v16i8 and v8i16 when there is
+    // no direct move, we don't need to use stack for this case. If target has
+    // direct move, we should be able to get the best selection in the .td file.
+    if (!Subtarget->hasAltivec() || Subtarget->hasDirectMove())
+      break;
 
-        SDNode *Mask = CurDAG->getMachineNode(
-            Subtarget->isLittleEndian() ? PPC::LVSR : PPC::LVSL, dl, Type,
-            ZeroReg, N->getOperand(1));
+    EVT Type = N->getValueType(0);
+    if (Type != MVT::v16i8 && Type != MVT::v8i16)
+      break;
 
-        SDNode *LoadLow = CurDAG->getMachineNode(
-            PPC::LVX, dl, MVT::v16i8, MVT::Other,
-            {ZeroReg, N->getOperand(1), N->getOperand(0)});
+    SDValue ZeroReg =
+        CurDAG->getRegister(Subtarget->isPPC64() ? PPC::ZERO8 : PPC::ZERO,
+                            Subtarget->isPPC64() ? MVT::i64 : MVT::i32);
+    unsigned LIOpcode = Subtarget->isPPC64() ? PPC::LI8 : PPC::LI;
+    // v16i8 LD_SPLAT addr
+    // ======>
+    // Mask = LVSR/LVSL 0, addr
+    // LoadLow = LXV 0, addr
+    // Perm = VPERM LoadLow, LoadLow, Mask
+    // Splat = VSPLTB 15/0, Perm
+    //
+    // v8i16 LD_SPLAT addr
+    // ======>
+    // Mask = LVSR/LVSL 0, addr
+    // LoadLow = LXV 0, addr
+    // LoadHigh = LXV (LI, 1), addr
+    // Perm = VPERM LoadLow, LoadHigh, Mask
+    // Splat = VSPLTH 7/0, Perm
+    unsigned SplatOp = (Type == MVT::v16i8) ? PPC::VSPLTB : PPC::VSPLTH;
+    unsigned SplatElemIndex =
+        Subtarget->isLittleEndian() ? ((Type == MVT::v16i8) ? 15 : 7) : 0;
 
-        SDNode *LoadHigh = LoadLow;
-        if (Type == MVT::v8i16) {
-          LoadHigh = CurDAG->getMachineNode(
-              PPC::LVX, dl, MVT::v16i8, MVT::Other,
-              {SDValue(CurDAG->getMachineNode(
-                           LIOpcode, dl, MVT::i32,
-                           CurDAG->getTargetConstant(1, dl, MVT::i8)),
-                       0),
-               N->getOperand(1), SDValue(LoadLow, 1)});
-        }
+    SDNode *Mask = CurDAG->getMachineNode(
+        Subtarget->isLittleEndian() ? PPC::LVSR : PPC::LVSL, dl, Type, ZeroReg,
+        N->getOperand(1));
 
-        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 1), SDValue(LoadHigh, 1));
-        transferMemOperands(N, LoadHigh);
+    SDNode *LoadLow =
+        CurDAG->getMachineNode(PPC::LVX, dl, MVT::v16i8, MVT::Other,
+                               {ZeroReg, N->getOperand(1), N->getOperand(0)});
 
-        SDNode *Perm =
-            CurDAG->getMachineNode(PPC::VPERM, dl, Type, SDValue(LoadLow, 0),
-                                   SDValue(LoadHigh, 0), SDValue(Mask, 0));
-        CurDAG->SelectNodeTo(
-            N, SplatOp, Type,
-            CurDAG->getTargetConstant(SplatElemIndex, dl, MVT::i8),
-            SDValue(Perm, 0));
-        return;
-      }
+    SDNode *LoadHigh = LoadLow;
+    if (Type == MVT::v8i16) {
+      LoadHigh = CurDAG->getMachineNode(
+          PPC::LVX, dl, MVT::v16i8, MVT::Other,
+          {SDValue(CurDAG->getMachineNode(
+                       LIOpcode, dl, MVT::i32,
+                       CurDAG->getTargetConstant(1, dl, MVT::i8)),
+                   0),
+           N->getOperand(1), SDValue(LoadLow, 1)});
     }
-    break;
+
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 1), SDValue(LoadHigh, 1));
+    transferMemOperands(N, LoadHigh);
+
+    SDNode *Perm =
+        CurDAG->getMachineNode(PPC::VPERM, dl, Type, SDValue(LoadLow, 0),
+                               SDValue(LoadHigh, 0), SDValue(Mask, 0));
+    CurDAG->SelectNodeTo(N, SplatOp, Type,
+                         CurDAG->getTargetConstant(SplatElemIndex, dl, MVT::i8),
+                         SDValue(Perm, 0));
+    return;
   }
   }
 

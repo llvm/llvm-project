@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_COMPREHENSIVE_BUFFERIZE_H
-#define MLIR_DIALECT_LINALG_TRANSFORMS_COMPREHENSIVE_BUFFERIZE_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Value.h"
@@ -19,8 +19,12 @@ namespace mlir {
 class DominanceInfo;
 class FuncOp;
 class GlobalCreator;
+class ModuleOp;
 
 namespace linalg {
+
+// TODO: from some HW description.
+static constexpr int64_t kBufferAlignments = 128;
 
 /// The BufferizationAliasInfo class maintains a list of buffer aliases and
 /// equivalence classes to support bufferization.
@@ -48,37 +52,12 @@ public:
   /// `alias`. Additionally, merge their equivalence classes.
   void insertNewBufferEquivalence(Value newValue, Value alias);
 
-  /// Return true if, under current bufferization decisions, the buffer of
-  /// `value` is not writable.
-  bool aliasesNonWritableBuffer(Value value) const;
-
-  /// Return true if the buffer to which `operand` would bufferize is equivalent
-  /// to some buffer write.
-  bool aliasesInPlaceWrite(Value v) const;
-
   /// Set the inPlace bufferization spec to true.
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
   void bufferizeInPlace(OpResult result, OpOperand &operand);
 
   /// Set the inPlace bufferization spec to false.
   void bufferizeOutOfPlace(OpResult result);
-
-  /// Return true if `value` has an ExtractSliceOp matching the given
-  /// InsertSliceOp in its reverse SSA use-def chain.
-  bool hasMatchingExtractSliceOp(Value value,
-                                 tensor::InsertSliceOp insertOp) const;
-
-  /// Return true if bufferizing `opOperand` inplace with `opResult` would
-  /// create a write to a non-writable buffer.
-  bool wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
-                                           OpResult opResult) const;
-
-  /// Assume that result bufferizes in-place with one of the operation's
-  /// operands. Return true if it is possible to find an inplace write W that
-  /// creates a conflict.
-  bool
-  wouldCreateReadAfterWriteInterference(OpOperand &operand, OpResult result,
-                                        const DominanceInfo &domInfo) const;
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
@@ -91,14 +70,13 @@ public:
            equivalentInfo.getLeaderValue(v2);
   }
 
-  /// Return true if the source of an `insertSliceOp` bufferizes to an
-  /// equivalent ExtractSliceOp.
-  bool isSourceEquivalentToAMatchingInplaceExtractSliceOp(
-      tensor::InsertSliceOp insertSliceOp) const;
-
   /// Apply `fun` to all the members of the equivalence class of `v`.
   void applyOnEquivalenceClass(Value v, function_ref<void(Value)> fun) const;
 
+  /// Apply `fun` to all aliases of `v`.
+  void applyOnAliases(Value v, function_ref<void(Value)> fun) const;
+
+  // TODO: Move these out of BufferizationAliasInfo.
   /// Return true if the value is known to bufferize to writable memory.
   bool bufferizesToWritableMemory(Value v) const;
 
@@ -128,22 +106,6 @@ private:
   /// Check that aliasInfo for `v` exists and return a reference to it.
   EquivalenceClassRangeType getAliases(Value v) const;
 
-  /// Return true if the (ExtractSliceOp, InsertSliceOp) pair match (i.e.
-  /// equivalent operand / result and same offset/sizes/strides specification).
-  ///
-  /// This is one particular type of relationship between ops on tensors that
-  /// reduce to an equivalence on buffers. This should be generalized and
-  /// exposed as interfaces on the proper types.
-  bool areEquivalentExtractSliceOps(tensor::ExtractSliceOp st,
-                                    tensor::InsertSliceOp sti) const;
-
-  /// Given sets of uses and writes, return true if there is a RaW conflict
-  /// under the assumption that all given reads/writes alias the same buffer and
-  /// that all given writes bufferize inplace.
-  bool hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
-                                     const DenseSet<OpOperand *> &usesWrite,
-                                     const DominanceInfo &domInfo) const;
-
   /// Set of tensors that are known to bufferize to writable memory.
   llvm::DenseSet<Value> bufferizeToWritableMemory;
 
@@ -162,15 +124,20 @@ LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                               const DominanceInfo &domInfo,
                               unsigned analysisFuzzerSeed = 0);
 
+// TODO: Do not expose those functions in the header file.
 /// Default allocation function that is used by the comprehensive bufferization
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
-Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
-                                    Value shapedValue);
+Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc, MemRefType type,
+                                    const SmallVector<Value> &dynShape);
 
 /// Default deallocation function that is used by the comprehensive
 /// bufferization pass. It expects to recieve back the value called from the
 /// `defaultAllocationFn`.
 void defaultDeallocationFn(OpBuilder &b, Location loc, Value allocatedBuffer);
+
+/// Default memory copy function that is used by the comprehensive bufferization
+/// pass. Creates a `linalg.copy` op.
+void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to);
 
 /// Callback functions that are used by the comprehensive bufferization pass to
 /// allocate/deallocate memory. These default to use the
@@ -178,10 +145,22 @@ void defaultDeallocationFn(OpBuilder &b, Location loc, Value allocatedBuffer);
 /// caller. The `deallocationFn` is gauranteed to recieve the `Value` returned
 /// by the `allocationFn`.
 struct AllocationCallbacks {
-  std::function<Optional<Value>(OpBuilder &b, Location loc, Value shapedValue)>
-      allocationFn = defaultAllocationFn;
-  std::function<void(OpBuilder &b, Location loc, Value v)> deallocationFn =
-      defaultDeallocationFn;
+  using AllocationFn = std::function<Optional<Value>(
+      OpBuilder &, Location, MemRefType, const SmallVector<Value> &)>;
+  using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
+  using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
+
+  AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
+                      MemCpyFn copyFn)
+      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn) {}
+
+  AllocationCallbacks()
+      : allocationFn(defaultAllocationFn),
+        deallocationFn(defaultDeallocationFn), memCpyFn(defaultMemCpyFn) {}
+
+  AllocationFn allocationFn;
+  DeallocationFn deallocationFn;
+  MemCpyFn memCpyFn;
 };
 
 /// Bufferize one particular op.
@@ -218,7 +197,20 @@ LogicalResult initTensorElimination(
 LogicalResult eliminateInsertSliceAnchoredInitTensorOps(
     FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo);
 
+struct BufferizationOptions {
+  BufferizationOptions()
+      : allocationFns(std::make_unique<AllocationCallbacks>()) {}
+
+  std::unique_ptr<AllocationCallbacks> allocationFns;
+  bool allowReturnMemref = false;
+  unsigned analysisFuzzerSeed = 0;
+  bool testAnalysisOnly = false;
+};
+
+LogicalResult runComprehensiveBufferize(ModuleOp moduleOp,
+                                        const BufferizationOptions &options);
+
 } // namespace linalg
 } // namespace mlir
 
-#endif // define MLIR_DIALECT_LINALG_TRANSFORMS_COMPREHENSIVE_BUFFERIZE_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
