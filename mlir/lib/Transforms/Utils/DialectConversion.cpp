@@ -682,14 +682,6 @@ LogicalResult ArgConverter::materializeLiveConversions(
 
     // Process the remapping for each of the original arguments.
     for (unsigned i = 0, e = origBlock->getNumArguments(); i != e; ++i) {
-      // FIXME: We should run the below checks even if a type converter wasn't
-      // provided, but a lot of existing lowering rely on the block argument
-      // being blindly replaced. We should rework argument materialization to be
-      // more robust for temporary source materializations, update existing
-      // patterns, and remove these checks.
-      if (!blockInfo.converter && blockInfo.argInfo[i])
-        continue;
-
       // If the type of this argument changed and the argument is still live, we
       // need to materialize a conversion.
       BlockArgument origArg = origBlock->getArgument(i);
