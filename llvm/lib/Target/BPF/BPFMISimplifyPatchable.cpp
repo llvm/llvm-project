@@ -97,15 +97,13 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
 
   // Go through all uses of %1 as in %1 = ADD_rr %2, %3
   const MachineOperand Op0 = Inst->getOperand(0);
-  auto Begin = MRI->use_begin(Op0.getReg()), End = MRI->use_end();
-  decltype(End) NextI;
-  for (auto I = Begin; I != End; I = NextI) {
-    NextI = std::next(I);
+  for (MachineOperand &MO :
+       llvm::make_early_inc_range(MRI->use_operands(Op0.getReg()))) {
     // The candidate needs to have a unique definition.
-    if (!MRI->getUniqueVRegDef(I->getReg()))
+    if (!MRI->getUniqueVRegDef(MO.getReg()))
       continue;
 
-    MachineInstr *DefInst = I->getParent();
+    MachineInstr *DefInst = MO.getParent();
     unsigned Opcode = DefInst->getOpcode();
     unsigned COREOp;
     if (Opcode == BPF::LDB || Opcode == BPF::LDH || Opcode == BPF::LDW ||
@@ -131,7 +129,7 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
         Opcode == BPF::STD || Opcode == BPF::STB32 || Opcode == BPF::STH32 ||
         Opcode == BPF::STW32) {
       const MachineOperand &Opnd = DefInst->getOperand(0);
-      if (Opnd.isReg() && Opnd.getReg() == I->getReg())
+      if (Opnd.isReg() && Opnd.getReg() == MO.getReg())
         continue;
     }
 

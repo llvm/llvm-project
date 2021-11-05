@@ -1045,13 +1045,9 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
   // erase instructions during rewriting, so this needs to be delayed until
   // now.
   for (MachineBasicBlock &B : MF) {
-    MachineBasicBlock::iterator I = B.begin(), E = B.end();
-    while (I != E) {
-      auto Next = std::next(I);
-      if (I->isBranch() && !InstrExec.count(&*I))
-        B.erase(I);
-      I = Next;
-    }
+    for (MachineInstr &MI : llvm::make_early_inc_range(B))
+      if (MI.isBranch() && !InstrExec.count(&MI))
+        B.erase(&MI);
   }
   return Changed;
 }

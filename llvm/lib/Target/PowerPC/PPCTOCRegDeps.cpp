@@ -131,11 +131,9 @@ public:
     bool runOnMachineFunction(MachineFunction &MF) override {
       bool Changed = false;
 
-      for (MachineFunction::iterator I = MF.begin(); I != MF.end();) {
-        MachineBasicBlock &B = *I++;
+      for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
         if (processBlock(B))
           Changed = true;
-      }
 
       return Changed;
     }

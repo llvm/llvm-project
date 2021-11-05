@@ -234,16 +234,9 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   // dependence between Insn 0 and Insn 2. This can lead to incorrect
   // packetization
   for (MachineBasicBlock &MB : MF) {
-    auto End = MB.end();
-    auto MI = MB.begin();
-    while (MI != End) {
-      auto NextI = std::next(MI);
-      if (MI->isKill()) {
-        MB.erase(MI);
-        End = MB.end();
-      }
-      MI = NextI;
-    }
+    for (MachineInstr &MI : llvm::make_early_inc_range(MB))
+      if (MI.isKill())
+        MB.erase(&MI);
   }
 
   // TinyCore with Duplexes: Translate to big-instructions.

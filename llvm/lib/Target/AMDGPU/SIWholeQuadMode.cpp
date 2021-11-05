@@ -1029,11 +1029,8 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
   SmallVector<MachineInstr *, 4> SplitPoints;
   char State = BI.InitialState;
 
-  auto II = MBB.getFirstNonPHI(), IE = MBB.end();
-  while (II != IE) {
-    auto Next = std::next(II);
-    MachineInstr &MI = *II;
-
+  for (MachineInstr &MI : llvm::make_early_inc_range(
+           llvm::make_range(MBB.getFirstNonPHI(), MBB.end()))) {
     if (StateTransition.count(&MI))
       State = StateTransition[&MI];
 
@@ -1051,8 +1048,6 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
     }
     if (SplitPoint)
       SplitPoints.push_back(SplitPoint);
-
-    II = Next;
   }
 
   // Perform splitting after instruction scan to simplify iteration.
