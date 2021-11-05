@@ -825,7 +825,7 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P8-LABEL: testByteSplat:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lbzx r3, 0, r3
-; CHECK-P8-NEXT:    mtvsrd v2, r3
+; CHECK-P8-NEXT:    mtvsrwz v2, r3
 ; CHECK-P8-NEXT:    vspltb v2, v2, 7
 ; CHECK-P8-NEXT:    stvx v2, 0, r3
 ; CHECK-P8-NEXT:    blr
