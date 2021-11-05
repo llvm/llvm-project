@@ -26,10 +26,11 @@ namespace {
 /// i.e. there are two constants Min and Max, such that every value x of the
 /// chosen dimensions is Min <= x <= Max.
 bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
-  auto ParamDims = Set.dim(isl::dim::param).release();
+  auto ParamDims = unsignedFromIslSize(Set.dim(isl::dim::param));
   Set = Set.project_out(isl::dim::param, 0, ParamDims);
   Set = Set.project_out(isl::dim::set, 0, dim);
-  auto SetDims = Set.tuple_dim().release();
+  auto SetDims = unsignedFromIslSize(Set.tuple_dim());
+  assert(SetDims >= 1);
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
@@ -40,7 +41,8 @@ bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
 /// Min_p <= x <= Max_p.
 bool isDimBoundedByParameter(isl::set Set, unsigned dim) {
   Set = Set.project_out(isl::dim::set, 0, dim);
-  auto SetDims = Set.tuple_dim().release();
+  auto SetDims = unsignedFromIslSize(Set.tuple_dim());
+  assert(SetDims >= 1);
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
@@ -124,27 +126,12 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
   return Result;
 }
 
-/// Return the number of dimensions in the input map's range.
-///
-/// Because this function takes an isl_union_map, the out dimensions could be
-/// different. We return the maximum number in this case. However, a different
-/// number of dimensions is not supported by the other code in this file.
-isl_size scheduleScatterDims(const isl::union_map &Schedule) {
-  isl_size Dims = 0;
-  for (isl::map Map : Schedule.get_map_list()) {
-    if (Map.is_null())
-      continue;
-
-    Dims = std::max(Dims, Map.range_tuple_dim().release());
-  }
-  return Dims;
-}
-
 /// Return the @p pos' range dimension, converted to an isl_union_pw_aff.
 isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
   auto SingleUMap = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
-    unsigned MapDims = Map.range_tuple_dim().release();
+    unsigned MapDims = unsignedFromIslSize(Map.range_tuple_dim());
+    assert(MapDims > pos);
     isl::map SingleMap = Map.project_out(isl::dim::out, 0, pos);
     SingleMap = SingleMap.project_out(isl::dim::out, 1, MapDims - pos - 1);
     SingleUMap = SingleUMap.unite(SingleMap);
@@ -179,8 +166,8 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
   auto ScatterSet = isl::set(Schedule.range());
 
   auto ParamSpace = Schedule.get_space().params();
-  auto Dims = ScatterSet.tuple_dim().release();
-  assert(Dims >= 2);
+  auto Dims = unsignedFromIslSize(ScatterSet.tuple_dim());
+  assert(Dims >= 2u);
 
   // Would cause an infinite loop.
   if (!isDimBoundedByConstant(ScatterSet, 0)) {
@@ -205,7 +192,8 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
     SubSchedule = scheduleProjectOut(SubSchedule, 0, 1);
     SubSchedule = flattenSchedule(SubSchedule);
 
-    auto SubDims = scheduleScatterDims(SubSchedule);
+    unsigned SubDims = getNumScatterDims(SubSchedule);
+    assert(SubDims >= 1);
     auto FirstSubSchedule = scheduleProjectOut(SubSchedule, 1, SubDims - 1);
     auto FirstScheduleAff = scheduleExtractDimAff(FirstSubSchedule, 0);
     auto RemainingSubSchedule = scheduleProjectOut(SubSchedule, 0, 1);
@@ -264,14 +252,16 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
 /// largest value. Then, construct a new schedule
 ///   { Stmt[i] -> [i * (u_X() - l_X() + 1), ...] }
 isl::union_map tryFlattenLoop(isl::union_map Schedule) {
-  assert(scheduleScatterDims(Schedule) >= 2);
+  assert(getNumScatterDims(Schedule) >= 2);
 
   auto Remaining = scheduleProjectOut(Schedule, 0, 1);
   auto SubSchedule = flattenSchedule(Remaining);
-  auto SubDims = scheduleScatterDims(SubSchedule);
+  unsigned SubDims = getNumScatterDims(SubSchedule);
+
+  assert(SubDims >= 1);
 
   auto SubExtent = isl::set(SubSchedule.range());
-  auto SubExtentDims = SubExtent.dim(isl::dim::param).release();
+  auto SubExtentDims = unsignedFromIslSize(SubExtent.dim(isl::dim::param));
   SubExtent = SubExtent.project_out(isl::dim::param, 0, SubExtentDims);
   SubExtent = SubExtent.project_out(isl::dim::set, 1, SubDims - 1);
 
@@ -313,7 +303,7 @@ isl::union_map tryFlattenLoop(isl::union_map Schedule) {
 } // anonymous namespace
 
 isl::union_map polly::flattenSchedule(isl::union_map Schedule) {
-  auto Dims = scheduleScatterDims(Schedule);
+  unsigned Dims = getNumScatterDims(Schedule);
   LLVM_DEBUG(dbgs() << "Recursive schedule to process:\n  " << Schedule
                     << "\n");
 

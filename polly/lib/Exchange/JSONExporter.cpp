@@ -16,6 +16,7 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/ScopLocation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
@@ -230,8 +231,8 @@ static bool importContext(Scop &S, const json::Object &JScop) {
     return false;
   }
 
-  unsigned OldContextDim = OldContext.dim(isl::dim::param).release();
-  unsigned NewContextDim = NewContext.dim(isl::dim::param).release();
+  unsigned OldContextDim = unsignedFromIslSize(OldContext.dim(isl::dim::param));
+  unsigned NewContextDim = unsignedFromIslSize(NewContext.dim(isl::dim::param));
 
   // Check if the imported context has the right number of parameters.
   if (OldContextDim != NewContextDim) {
