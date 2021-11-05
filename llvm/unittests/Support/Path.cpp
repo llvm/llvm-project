@@ -75,7 +75,9 @@ TEST(is_style_Style, Works) {
   // Check platform-independent results.
   EXPECT_TRUE(is_style_posix(Style::posix));
   EXPECT_TRUE(is_style_windows(Style::windows));
+  EXPECT_TRUE(is_style_windows(Style::windows_slash));
   EXPECT_FALSE(is_style_posix(Style::windows));
+  EXPECT_FALSE(is_style_posix(Style::windows_slash));
   EXPECT_FALSE(is_style_windows(Style::posix));
 
   // Check platform-dependent results.
@@ -95,10 +97,17 @@ TEST(is_separator, Works) {
   EXPECT_FALSE(path::is_separator(' '));
 
   EXPECT_TRUE(path::is_separator('\\', path::Style::windows));
+  EXPECT_TRUE(path::is_separator('\\', path::Style::windows_slash));
   EXPECT_FALSE(path::is_separator('\\', path::Style::posix));
 
   EXPECT_EQ(path::is_style_windows(path::Style::native),
             path::is_separator('\\'));
+}
+
+TEST(get_separator, Works) {
+  EXPECT_EQ(path::get_separator(path::Style::posix), "/");
+  EXPECT_EQ(path::get_separator(path::Style::windows_backslash), "\\");
+  EXPECT_EQ(path::get_separator(path::Style::windows_slash), "/");
 }
 
 TEST(is_absolute_gnu, Works) {
@@ -382,6 +391,8 @@ TEST(Support, PathIterator) {
   EXPECT_THAT(GetComponents("/.c/.d/../."),
               testing::ElementsAre("/", ".c", ".d", "..", "."));
   EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows),
+              testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
+  EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows_slash),
               testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
   EXPECT_THAT(GetComponents("//net/"), testing::ElementsAre("//net", "/"));
   EXPECT_THAT(GetComponents("//net/c/foo.txt"),
@@ -1425,10 +1436,25 @@ TEST(Support, NormalizePath) {
   for (auto &T : Tests) {
     SmallString<64> Win(std::get<0>(T));
     SmallString<64> Posix(Win);
+    SmallString<64> WinSlash(Win);
     path::native(Win, path::Style::windows);
     path::native(Posix, path::Style::posix);
+    path::native(WinSlash, path::Style::windows_slash);
     EXPECT_EQ(std::get<1>(T), Win);
     EXPECT_EQ(std::get<2>(T), Posix);
+    EXPECT_EQ(std::get<2>(T), WinSlash);
+  }
+
+  for (auto &T : Tests) {
+    SmallString<64> WinBackslash(std::get<0>(T));
+    SmallString<64> Posix(WinBackslash);
+    SmallString<64> WinSlash(WinBackslash);
+    path::make_preferred(WinBackslash, path::Style::windows_backslash);
+    path::make_preferred(Posix, path::Style::posix);
+    path::make_preferred(WinSlash, path::Style::windows_slash);
+    EXPECT_EQ(std::get<1>(T), WinBackslash);
+    EXPECT_EQ(std::get<0>(T), Posix); // Posix remains unchanged here
+    EXPECT_EQ(std::get<2>(T), WinSlash);
   }
 
 #if defined(_WIN32)
@@ -1437,8 +1463,13 @@ TEST(Support, NormalizePath) {
 
   const char *Path7a = "~/aaa";
   SmallString<64> Path7(Path7a);
-  path::native(Path7);
+  path::native(Path7, path::Style::windows_backslash);
   EXPECT_TRUE(Path7.endswith("\\aaa"));
+  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
+  Path7 = Path7a;
+  path::native(Path7, path::Style::windows_slash);
+  EXPECT_TRUE(Path7.endswith("/aaa"));
   EXPECT_TRUE(Path7.startswith(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
 
@@ -1454,7 +1485,7 @@ TEST(Support, NormalizePath) {
 
   const char *Path10a = "aaa/~/b";
   SmallString<64> Path10(Path10a);
-  path::native(Path10);
+  path::native(Path10, path::Style::windows_backslash);
   EXPECT_EQ(Path10, "aaa\\~\\b");
 #endif
 }
