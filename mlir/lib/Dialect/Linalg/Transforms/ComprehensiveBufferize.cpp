@@ -1274,7 +1274,7 @@ static Value getResultBuffer(OpBuilder &b, OpResult result,
     if (!skipCopy) {
       // Set insertion point now that potential alloc/dealloc are introduced.
       b.setInsertionPoint(op);
-      b.create<CopyOp>(loc, operandBuffer, resultBuffer);
+      allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
     }
     return resultBuffer;
   }
@@ -1667,6 +1667,11 @@ void mlir::linalg::defaultDeallocationFn(OpBuilder &b, Location loc,
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(allocatedBuffer.getParentBlock()->getTerminator());
   b.create<memref::DeallocOp>(loc, allocatedBuffer);
+}
+
+void mlir::linalg::defaultMemCpyFn(OpBuilder &b, Location loc, Value from,
+                                   Value to) {
+  b.create<CopyOp>(loc, from, to);
 }
 
 LogicalResult mlir::linalg::bufferizeOp(
@@ -2258,11 +2263,13 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     // command line option. So this is set up at the start of the pass.
     if (useAlloca) {
       AllocationCallbacks allocaAllocationFns = {
-          allocationFnUsingAlloca, [](OpBuilder &b, Location loc, Value v) {}};
+          allocationFnUsingAlloca, [](OpBuilder &b, Location loc, Value v) {},
+          defaultMemCpyFn};
       allocationFns =
           std::make_unique<AllocationCallbacks>(std::move(allocaAllocationFns));
     } else {
-      allocationFns = std::make_unique<AllocationCallbacks>();
+      allocationFns = std::make_unique<AllocationCallbacks>(
+          defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn);
     }
   }
   ModuleOp moduleOp = getOperation();
@@ -3222,7 +3229,7 @@ struct ExtractSliceOpInterface
     if (alloc) {
       // Do not copy if the copied data is never read.
       if (isValueRead(extractSliceOp.result()))
-        b.create<CopyOp>(extractSliceOp.getLoc(), subView, alloc);
+        allocationFn.memCpyFn(b, extractSliceOp.getLoc(), subView, alloc);
       subView = alloc;
     }
 
@@ -3344,7 +3351,7 @@ struct InsertSliceOpInterface
           insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
       // Insert new alias.
       aliasInfo.insertNewBufferAlias(subView, dstMemref);
-      b.create<CopyOp>(insertSliceOp.getLoc(), srcMemref, subView);
+      allocationFn.memCpyFn(b, insertSliceOp.getLoc(), srcMemref, subView);
     }
 
     map(bvm, insertSliceOp.result(), dstMemref);
