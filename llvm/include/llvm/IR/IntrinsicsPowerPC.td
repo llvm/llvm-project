@@ -1755,6 +1755,11 @@ let TargetPrefix = "ppc" in {
   def int_ppc_test_data_class_f : Intrinsic<[llvm_i32_ty],
                                             [llvm_float_ty, llvm_i32_ty],
                                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+  def int_ppc_convert_f128_to_ppcf128
+      : Intrinsic<[llvm_ppcf128_ty], [llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_convert_ppcf128_to_f128
+      : Intrinsic<[llvm_f128_ty], [llvm_ppcf128_ty], [IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//
