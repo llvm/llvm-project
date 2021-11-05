@@ -2373,14 +2373,7 @@ public:
   }
 
   /// Return true if this shuffle mask is a replication mask.
-  bool isReplicationMask(int &ReplicationFactor, int &VF) const {
-    // Not possible to express a shuffle mask for a scalable vector for this
-    // case.
-    if (isa<ScalableVectorType>(getType()))
-      return false;
-
-    return isReplicationMask(ShuffleMask, ReplicationFactor, VF);
-  }
+  bool isReplicationMask(int &ReplicationFactor, int &VF) const;
 
   /// Change values in a shuffle permute mask assuming the two vector operands
   /// of length InVecNumElts have swapped position.
