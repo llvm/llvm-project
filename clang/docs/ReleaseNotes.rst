@@ -167,6 +167,14 @@ AST Matchers
 clang-format
 ------------
 
+- **Important change**: Renamed ``IndentRequires`` to ``IndentRequiresClause``
+  and changed the default for all styles from ``false`` to ``true``.
+
+- Reworked and improved handling of concepts and requires. Added the
+  ``RequiresClausePosition`` option as part of that.
+
+- Changed ``BreakBeforeConceptDeclarations`` from ``Boolean`` to an enum.
+
 libclang
 --------
 

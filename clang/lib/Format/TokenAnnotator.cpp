@@ -1019,7 +1019,7 @@ private:
         return false;
       if (Line.MustBeDeclaration && Contexts.size() == 1 &&
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
-          !Tok->is(TT_TypeDeclarationParen) &&
+          !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen) &&
           (!Tok->Previous || !Tok->Previous->isOneOf(tok::kw___attribute,
                                                      TT_LeadingJavaAnnotation)))
         Line.MightBeFunctionDecl = true;
@@ -1151,6 +1151,10 @@ private:
         Tok->setType(TT_CSharpGenericTypeConstraint);
         parseCSharpGenericTypeConstraint();
       }
+      break;
+    case tok::arrow:
+      if (Tok->Previous && Tok->Previous->is(tok::kw_noexcept))
+        Tok->setType(TT_TrailingReturnArrow);
       break;
     default:
       break;
@@ -1412,9 +1416,12 @@ private:
             TT_ImplicitStringLiteral, TT_InlineASMBrace, TT_FatArrow,
             TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
             TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
-            TT_UntouchableMacroFunc, TT_ConstraintJunctions,
-            TT_StatementAttributeLikeMacro, TT_FunctionLikeOrFreestandingMacro,
-            TT_RecordLBrace))
+            TT_UntouchableMacroFunc, TT_StatementAttributeLikeMacro,
+            TT_FunctionLikeOrFreestandingMacro, TT_RecordLBrace,
+            TT_RequiresClause, TT_RequiresClauseInARequiresExpression,
+            TT_RequiresExpression, TT_RequiresExpressionLParen,
+            TT_RequiresExpressionLBrace, TT_BinaryOperator,
+            TT_CompoundRequirementLBrace, TT_BracedListLBrace))
       CurrentToken->setType(TT_Unknown);
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -1609,7 +1616,8 @@ private:
             PriorLeadingIdentifier = PriorLeadingIdentifier->Previous;
 
           return (PriorLeadingIdentifier &&
-                  PriorLeadingIdentifier->is(TT_TemplateCloser) &&
+                  (PriorLeadingIdentifier->is(TT_TemplateCloser) ||
+                   PriorLeadingIdentifier->ClosesRequiresClause) &&
                   LeadingIdentifier->TokenText == Current.Next->TokenText);
         }
       }
@@ -1824,6 +1832,9 @@ private:
         PreviousNotConst = PreviousNotConst->getPreviousNonComment();
 
     if (!PreviousNotConst)
+      return false;
+
+    if (PreviousNotConst->ClosesRequiresClause)
       return false;
 
     bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
@@ -2164,7 +2175,7 @@ class ExpressionParser {
 public:
   ExpressionParser(const FormatStyle &Style, const AdditionalKeywords &Keywords,
                    AnnotatedLine &Line)
-      : Style(Style), Keywords(Keywords), Current(Line.First) {}
+      : Style(Style), Keywords(Keywords), Line(Line), Current(Line.First) {}
 
   /// Parse expressions with the given operator precedence.
   void parse(int Precedence = 0) {
@@ -2219,7 +2230,11 @@ public:
         break;
 
       // Consume scopes: (), [], <> and {}
-      if (Current->opensScope()) {
+      // In addition to that we handle require clauses as scope, so that the
+      // constraints in that are correctly indented.
+      if (Current->opensScope() ||
+          Current->isOneOf(TT_RequiresClause,
+                           TT_RequiresClauseInARequiresExpression)) {
         // In fragment of a JavaScript template string can look like '}..${' and
         // thus close a scope and open a new one at the same time.
         while (Current && (!Current->closesScope() || Current->opensScope())) {
@@ -2241,12 +2256,26 @@ public:
     }
 
     if (LatestOperator && (Current || Precedence > 0)) {
-      // LatestOperator->LastOperator = true;
+      // The requires clauses do not neccessarily end in a semicolon or a brace,
+      // but just go over to struct/class or a function declaration, we need to
+      // intervene so that the fake right paren is inserted correctly.
+      auto End =
+          (Start->Previous &&
+           Start->Previous->isOneOf(TT_RequiresClause,
+                                    TT_RequiresClauseInARequiresExpression))
+              ? [this](){
+                  auto Ret = Current ? Current : Line.Last;
+                  while (!Ret->ClosesRequiresClause && Ret->Previous)
+                    Ret = Ret->Previous;
+                  return Ret;
+                }()
+              : nullptr;
+
       if (Precedence == PrecedenceArrowAndPeriod) {
         // Call expressions don't have a binary operator precedence.
-        addFakeParenthesis(Start, prec::Unknown);
+        addFakeParenthesis(Start, prec::Unknown, End);
       } else {
-        addFakeParenthesis(Start, prec::Level(Precedence));
+        addFakeParenthesis(Start, prec::Level(Precedence), End);
       }
     }
   }
@@ -2295,17 +2324,17 @@ private:
     return -1;
   }
 
-  void addFakeParenthesis(FormatToken *Start, prec::Level Precedence) {
+  void addFakeParenthesis(FormatToken *Start, prec::Level Precedence,
+                          FormatToken *End = nullptr) {
     Start->FakeLParens.push_back(Precedence);
     if (Precedence > prec::Unknown)
       Start->StartsBinaryExpression = true;
-    if (Current) {
-      FormatToken *Previous = Current->Previous;
-      while (Previous->is(tok::comment) && Previous->Previous)
-        Previous = Previous->Previous;
-      ++Previous->FakeRParens;
+    if (!End && Current)
+      End = Current->getPreviousNonComment();
+    if (End) {
+      ++End->FakeRParens;
       if (Precedence > prec::Unknown)
-        Previous->EndsBinaryExpression = true;
+        End->EndsBinaryExpression = true;
     }
   }
 
@@ -2350,6 +2379,7 @@ private:
 
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
+  const AnnotatedLine &Line;
   FormatToken *Current;
 };
 
@@ -2920,6 +2950,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
   if (Left.ClosesTemplateDeclaration)
     return Style.PenaltyBreakTemplateDeclaration;
+  if (Left.ClosesRequiresClause)
+    return 0;
   if (Left.is(TT_ConditionalExpr))
     return prec::Conditional;
   prec::Level Level = Left.getPrecedence();
@@ -2986,9 +3018,6 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   // co_await (x), co_yield (x), co_return (x)
   if (Left.isOneOf(tok::kw_co_await, tok::kw_co_yield, tok::kw_co_return) &&
       Right.isNot(tok::semi))
-    return true;
-  // requires clause Concept1<T> && Concept2<T>
-  if (Left.is(TT_ConstraintJunctions) && Right.is(tok::identifier))
     return true;
 
   if (Left.is(tok::l_paren) || Right.is(tok::r_paren))
@@ -3892,6 +3921,15 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
       Right.Next->is(tok::string_literal))
     return true;
+  if (Right.is(TT_RequiresClause)) {
+    switch (Style.RequiresClausePosition) {
+    case FormatStyle::RCPS_OwnLine:
+    case FormatStyle::RCPS_WithFollowing:
+      return true;
+    default:
+      break;
+    }
+  }
   // Can break after template<> declaration
   if (Left.ClosesTemplateDeclaration && Left.MatchingParen &&
       Left.MatchingParen->NestingLevel == 0) {
@@ -3899,8 +3937,17 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // template<typename T>
     // concept ...
     if (Right.is(tok::kw_concept))
-      return Style.BreakBeforeConceptDeclarations;
+      return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
     return (Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes);
+  }
+  if (Left.ClosesRequiresClause) {
+    switch (Style.RequiresClausePosition) {
+    case FormatStyle::RCPS_OwnLine:
+    case FormatStyle::RCPS_WithPreceding:
+      return true;
+    default:
+      break;
+    }
   }
   if (Style.PackConstructorInitializers == FormatStyle::PCIS_Never) {
     if (Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeColon &&
@@ -4296,7 +4343,13 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Left.isNot(tok::period); // FIXME: Properly parse ObjC calls.
   if (Left.is(tok::r_paren) && Line.Type == LT_ObjCProperty)
     return true;
+  if (Right.is(tok::kw_concept))
+    return Style.BreakBeforeConceptDeclarations != FormatStyle::BBCDS_Never;
+  if (Right.is(TT_RequiresClause))
+    return true;
   if (Left.ClosesTemplateDeclaration || Left.is(TT_FunctionAnnotationRParen))
+    return true;
+  if (Left.ClosesRequiresClause)
     return true;
   if (Right.isOneOf(TT_RangeBasedForLoopColon, TT_OverloadedOperatorLParen,
                     TT_OverloadedOperator))

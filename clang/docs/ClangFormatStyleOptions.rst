@@ -1988,17 +1988,33 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**BreakBeforeConceptDeclarations** (``Boolean``) :versionbadge:`clang-format 13`
-  If ``true``, concept will be placed on a new line.
+**BreakBeforeConceptDeclarations** (``BreakBeforeConceptDeclarationsStyle``) :versionbadge:`clang-format 13`
+  The concept declaration style to use.
 
-  .. code-block:: c++
+  Possible values:
 
-    true:
-     template<typename T>
-     concept ...
+  * ``BBCDS_Never`` (in configuration: ``Never``)
+    Keep the template declaration line together with ``concept``.
 
-    false:
-     template<typename T> concept ...
+    .. code-block:: c++
+
+      template <typename T> concept C = ...;
+
+  * ``BBCDS_Allowed`` (in configuration: ``Allowed``)
+    Breaking between template declaration and ``concept`` is allowed. The
+    actual behavior depends on the content and line breaking rules and
+    penalities.
+
+  * ``BBCDS_Always`` (in configuration: ``Always``)
+    Always break before ``concept``, putting it in the line after the
+    template declaration.
+
+    .. code-block:: c++
+
+      template <typename T>
+      concept C = ...;
+
+
 
 **BreakBeforeTernaryOperators** (``Boolean``) :versionbadge:`clang-format 3.7`
   If ``true``, ternary operators will be placed after line breaks.
@@ -2690,8 +2706,9 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IndentRequires** (``Boolean``) :versionbadge:`clang-format 13`
-  Indent the requires clause in a template
+**IndentRequiresClause** (``Boolean``) :versionbadge:`clang-format 13`
+  Indent the requires clause in a template. This only applies when
+  ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
 
   .. code-block:: c++
 
@@ -3473,6 +3490,92 @@ the configuration (without a prefix: ``Auto``).
         e();
       }
     }
+
+**RequiresClausePosition** (``RequiresClausePositionStyle``) :versionbadge:`clang-format 15`
+  The position of the ``requires`` clause.
+
+  Possible values:
+
+  * ``RCPS_OwnLine`` (in configuration: ``OwnLine``)
+    Always put the ``requires`` clause on its own line.
+
+    .. code-block:: c++
+
+      template <typename T>
+      requires C<T>
+      struct Foo {...
+
+      template <typename T>
+      requires C<T>
+      void bar(T t) {...
+
+      template <typename T>
+      void baz(T t)
+      requires C<T>
+      {...
+
+  * ``RCPS_WithPreceding`` (in configuration: ``WithPreceding``)
+    Try to put the clause together with the preceding part of a declaration.
+    For class templates: stick to the template declaration.
+    For function templates: stick to the template declaration.
+    For function declaration followed by a requires clause: stick to the
+    parameter list.
+
+    .. code-block:: c++
+
+      template <typename T> requires C<T>
+      struct Foo {...
+
+      template <typename T> requires C<T>
+      void bar(T t) {...
+
+      template <typename T>
+      void baz(T t) requires C<T>
+      {...
+
+  * ``RCPS_WithFollowing`` (in configuration: ``WithFollowing``)
+    Try to put the ``requires`` clause together with the class or function
+    declaration.
+
+    .. code-block:: c++
+
+      template <typename T>
+      requires C<T> struct Foo {...
+
+      template <typename T>
+      requires C<T> void bar(T t) {...
+
+      template <typename T>
+      void baz(T t)
+      requires C<T> {...
+
+  * ``RCPS_SingleLine`` (in configuration: ``SingleLine``)
+    Try to put everything in the same line if possible. Otherwise normal
+    line breaking rules take over.
+
+    .. code-block:: c++
+
+      // Fitting:
+      template <typename T> requires C<T> struct Foo {...
+
+      template <typename T> requires C<T> void bar(T t) {...
+
+      template <typename T> void bar(T t) requires C<T> {...
+
+      // Not fitting, one possible example:
+      template <typename LongName>
+      requires C<LongName>
+      struct Foo {...
+
+      template <typename LongName>
+      requires C<LongName>
+      void bar(LongName ln) {
+
+      template <typename LongName>
+      void bar(LongName ln)
+          requires C<LongName> {
+
+
 
 **SeparateDefinitionBlocks** (``SeparateDefinitionStyle``) :versionbadge:`clang-format 14`
   Specifies the use of empty lines to separate definition blocks, including

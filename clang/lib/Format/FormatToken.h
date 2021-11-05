@@ -35,12 +35,13 @@ namespace format {
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
+  TYPE(BracedListLBrace)                                                       \
   TYPE(CastRParen)                                                             \
+  TYPE(CompoundRequirementLBrace)                                              \
   TYPE(ConditionalExpr)                                                        \
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
-  TYPE(ConstraintJunctions)                                                    \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
   TYPE(DesignatedInitializerLSquare)                                           \
@@ -98,6 +99,11 @@ namespace format {
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RegexLiteral)                                                           \
+  TYPE(RequiresClause)                                                         \
+  TYPE(RequiresClauseInARequiresExpression)                                    \
+  TYPE(RequiresExpression)                                                     \
+  TYPE(RequiresExpressionLBrace)                                               \
+  TYPE(RequiresExpressionLParen)                                               \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
@@ -245,8 +251,9 @@ struct FormatToken {
         CanBreakBefore(false), ClosesTemplateDeclaration(false),
         StartsBinaryExpression(false), EndsBinaryExpression(false),
         PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
-        Finalized(false), BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), Type(TT_Unknown) {}
+        Finalized(false), ClosesRequiresClause(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -311,6 +318,9 @@ struct FormatToken {
   /// potentially re-formatted inside), and we do not allow further formatting
   /// changes.
   unsigned Finalized : 1;
+
+  /// \c true if this is the last token within requires clause.
+  unsigned ClosesRequiresClause : 1;
 
 private:
   /// Contains the kind of block if this token is a brace.
