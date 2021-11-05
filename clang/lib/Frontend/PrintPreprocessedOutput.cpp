@@ -188,19 +188,17 @@ public:
   /// @return Whether column adjustments are necessary.
   bool MoveToLine(const Token &Tok, bool RequireStartOfLine) {
     PresumedLoc PLoc = SM.getPresumedLoc(Tok.getLocation());
-    if (PLoc.isInvalid())
-      return false;
+    unsigned TargetLine = PLoc.isValid() ? PLoc.getLine() : CurLine;
     bool IsFirstInFile = Tok.isAtStartOfLine() && PLoc.getLine() == 1;
-    return MoveToLine(PLoc.getLine(), RequireStartOfLine) || IsFirstInFile;
+    return MoveToLine(TargetLine, RequireStartOfLine) || IsFirstInFile;
   }
 
   /// Move to the line of the provided source location. Returns true if a new
   /// line was inserted.
   bool MoveToLine(SourceLocation Loc, bool RequireStartOfLine) {
     PresumedLoc PLoc = SM.getPresumedLoc(Loc);
-    if (PLoc.isInvalid())
-      return false;
-    return MoveToLine(PLoc.getLine(), RequireStartOfLine);
+    unsigned TargetLine = PLoc.isValid() ? PLoc.getLine() : CurLine;
+    return MoveToLine(TargetLine, RequireStartOfLine);
   }
   bool MoveToLine(unsigned LineNo, bool RequireStartOfLine);
 
