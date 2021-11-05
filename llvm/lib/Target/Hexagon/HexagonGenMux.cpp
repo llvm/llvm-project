@@ -232,22 +232,19 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
   CondsetMap CM;
   MuxInfoList ML;
 
-  MachineBasicBlock::iterator NextI, End = B.end();
-  for (MachineBasicBlock::iterator I = B.begin(); I != End; I = NextI) {
-    MachineInstr *MI = &*I;
-    NextI = std::next(I);
-    unsigned Opc = MI->getOpcode();
+  for (MachineInstr &MI : llvm::make_early_inc_range(B)) {
+    unsigned Opc = MI.getOpcode();
     if (!isCondTransfer(Opc))
       continue;
-    Register DR = MI->getOperand(0).getReg();
+    Register DR = MI.getOperand(0).getReg();
     if (isRegPair(DR))
       continue;
-    MachineOperand &PredOp = MI->getOperand(1);
+    MachineOperand &PredOp = MI.getOperand(1);
     if (PredOp.isUndef())
       continue;
 
     Register PR = PredOp.getReg();
-    unsigned Idx = I2X.lookup(MI);
+    unsigned Idx = I2X.lookup(&MI);
     CondsetMap::iterator F = CM.find(DR);
     bool IfTrue = HII->isPredicatedTrue(Opc);
 

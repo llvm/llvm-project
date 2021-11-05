@@ -171,6 +171,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   // Check integrity with tensor type specifics. Dimension ordering is optional,
   // but we always should have dimension level types for the full rank.
   unsigned size = shape.size();
+  if (size == 0)
+    return emitError() << "expected non-scalar sparse tensor";
   if (getDimOrdering() && getDimOrdering().getNumResults() != size)
     return emitError() << "expected an affine map of size " << size
                        << " for dimension ordering";

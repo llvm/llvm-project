@@ -1481,9 +1481,9 @@ define void @shlor(i32* nocapture %x, i32* noalias nocapture readonly %y, i32 %n
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q4, [q3, #128]!
 ; CHECK-NEXT:    vldrw.u32 q5, [q2, #128]!
+; CHECK-NEXT:    vldrw.u32 q6, [q0, #128]!
 ; CHECK-NEXT:    vadd.i32 q4, q5, q4
 ; CHECK-NEXT:    vldrw.u32 q5, [q1, #128]!
-; CHECK-NEXT:    vldrw.u32 q6, [q0, #128]!
 ; CHECK-NEXT:    vadd.i32 q4, q4, q5
 ; CHECK-NEXT:    vadd.i32 q4, q4, q6
 ; CHECK-NEXT:    vstrw.32 q4, [r0], #16

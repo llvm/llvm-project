@@ -44,8 +44,8 @@ define void @arm_cmplx_dot_prod_f32(float* %pSrcA, float* %pSrcB, i32 %numSample
 ; CHECK-NEXT:    vcmla.f32 q0, q2, q1, #90
 ; CHECK-NEXT:    cbz r2, .LBB0_8
 ; CHECK-NEXT:  @ %bb.4: @ %while.body9
-; CHECK-NEXT:    cmp r2, #4
 ; CHECK-NEXT:    vctp.32 r2
+; CHECK-NEXT:    cmp r2, #4
 ; CHECK-NEXT:    vpstttt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r1]
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0]

@@ -212,6 +212,7 @@ private:
   bool isEmpty();
 
   /// Returns true if the tile loop nest invariants are satisfied:
+  /// - The `rootOp` has been tiled at least once.
   /// - The number of tile loop operations and dimensions match.
   /// - The innermost tile loop is the parent of `tiledOp`.
   /// - The tile loops are directly nested.
@@ -233,8 +234,8 @@ private:
   bool hasOtherUses(BlockArgument bbArg, tensor::ExtractSliceOp sliceOp);
 
   LinalgOp rootOp;
-  SmallVector<scf::ForOp> loopOps;
-  SmallVector<int64_t> loopDims;
+  SmallVector<scf::ForOp> tileLoopOps;
+  DenseMap<Operation *, SmallVector<int64_t>> tiledRootAndFusedOpsLoops;
 };
 
 /// Tiles `consumerOp` and fuses its dependencies if possible. Uses the

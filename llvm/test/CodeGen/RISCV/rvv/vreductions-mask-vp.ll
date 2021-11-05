@@ -10,7 +10,7 @@ define signext i1 @vpreduce_and_nxv1i1(i1 signext %s, <vscale x 1 x i1> %v, <vsc
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -27,7 +27,7 @@ define signext i1 @vpreduce_or_nxv1i1(i1 signext %s, <vscale x 1 x i1> %v, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -45,7 +45,7 @@ define signext i1 @vpreduce_xor_nxv1i1(i1 signext %s, <vscale x 1 x i1> %v, <vsc
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -62,7 +62,7 @@ define signext i1 @vpreduce_and_nxv2i1(i1 signext %s, <vscale x 2 x i1> %v, <vsc
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -79,7 +79,7 @@ define signext i1 @vpreduce_or_nxv2i1(i1 signext %s, <vscale x 2 x i1> %v, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -97,7 +97,7 @@ define signext i1 @vpreduce_xor_nxv2i1(i1 signext %s, <vscale x 2 x i1> %v, <vsc
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -114,7 +114,7 @@ define signext i1 @vpreduce_and_nxv4i1(i1 signext %s, <vscale x 4 x i1> %v, <vsc
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -131,7 +131,7 @@ define signext i1 @vpreduce_or_nxv4i1(i1 signext %s, <vscale x 4 x i1> %v, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -149,7 +149,7 @@ define signext i1 @vpreduce_xor_nxv4i1(i1 signext %s, <vscale x 4 x i1> %v, <vsc
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -166,7 +166,7 @@ define signext i1 @vpreduce_and_nxv8i1(i1 signext %s, <vscale x 8 x i1> %v, <vsc
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -183,7 +183,7 @@ define signext i1 @vpreduce_or_nxv8i1(i1 signext %s, <vscale x 8 x i1> %v, <vsca
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -201,7 +201,7 @@ define signext i1 @vpreduce_xor_nxv8i1(i1 signext %s, <vscale x 8 x i1> %v, <vsc
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -218,7 +218,7 @@ define signext i1 @vpreduce_and_nxv16i1(i1 signext %s, <vscale x 16 x i1> %v, <v
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -235,7 +235,7 @@ define signext i1 @vpreduce_or_nxv16i1(i1 signext %s, <vscale x 16 x i1> %v, <vs
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -253,7 +253,7 @@ define signext i1 @vpreduce_xor_nxv16i1(i1 signext %s, <vscale x 16 x i1> %v, <v
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -270,7 +270,7 @@ define signext i1 @vpreduce_and_nxv32i1(i1 signext %s, <vscale x 32 x i1> %v, <v
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -287,7 +287,7 @@ define signext i1 @vpreduce_or_nxv32i1(i1 signext %s, <vscale x 32 x i1> %v, <vs
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -305,7 +305,7 @@ define signext i1 @vpreduce_xor_nxv32i1(i1 signext %s, <vscale x 32 x i1> %v, <v
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -322,7 +322,7 @@ define signext i1 @vpreduce_and_nxv64i1(i1 signext %s, <vscale x 64 x i1> %v, <v
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; CHECK-NEXT:    vmnand.mm v9, v0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -339,7 +339,7 @@ define signext i1 @vpreduce_or_nxv64i1(i1 signext %s, <vscale x 64 x i1> %v, <vs
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    snez a1, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -357,7 +357,7 @@ define signext i1 @vpreduce_xor_nxv64i1(i1 signext %s, <vscale x 64 x i1> %v, <v
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vpopc.m a1, v9, v0.t
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0

@@ -13,8 +13,8 @@ define arm_aapcs_vfpcc void @reg(<8 x i16> %acc0, <8 x i16> %acc1, i32* nocaptur
 ; CHECK-NEXT:    vaddve.s16 r2, q1
 ; CHECK-NEXT:    vaddvt.s16 r4, q0
 ; CHECK-NEXT:    vaddve.s16 r6, q0
-; CHECK-NEXT:    strd r6, r4, [r0]
 ; CHECK-NEXT:    strd r2, r12, [r0, #8]
+; CHECK-NEXT:    strd r6, r4, [r0]
 ; CHECK-NEXT:    pop {r4, r6, r7, pc}
 entry:
   %0 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 13107)
@@ -164,10 +164,10 @@ define arm_aapcs_vfpcc i32 @const_mask_not1(<4 x i32> %0, <4 x i32> %1, i32 %2) 
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #1
 ; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    movw r1, #65533
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    movw r1, #65533
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
@@ -242,8 +242,8 @@ define arm_aapcs_vfpcc i32 @const_mask_abbreakab(<4 x i32> %0, <4 x i32> %1, i32
 ; CHECK-NEXT:    vpste
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvae.s32 r0, q1
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vpste
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
 ; CHECK-NEXT:    vaddvae.s32 r0, q0
@@ -272,8 +272,8 @@ define arm_aapcs_vfpcc i32 @const_mask_break(<4 x i32> %0, <4 x i32> %1, i32 %2)
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
@@ -299,14 +299,14 @@ define arm_aapcs_vfpcc i32 @const_mask_threepred(<4 x i32> %0, <4 x i32> %1, i32
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movw r1, #1234
 ; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    movw r1, #64300
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q0
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    movw r1, #64300
 ; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    movw r1, #64301
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
-; CHECK-NEXT:    movw r1, #64301
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vaddvat.s32 r0, q1
