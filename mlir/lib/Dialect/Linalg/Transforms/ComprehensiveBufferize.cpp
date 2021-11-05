@@ -587,12 +587,12 @@ bool BufferizationAliasInfo::aliasesNonWritableBuffer(Value value) const {
       return true;
     }
 
-    if (Operation *op = v.getDefiningOp()) {
-      if (isa<arith::ConstantOp>(op) ||
-          !dyn_cast<BufferizableOpInterface>(op)) {
-        LDBG("-----------notWritable op\n");
-        return true;
-      }
+    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(v.getDefiningOp());
+    if (!bufferizableOp || !bufferizableOp.isWritable(v.cast<OpResult>())) {
+      // Unknown ops are treated conservatively: Assume that it is illegal to
+      // write to their OpResults in-place.
+      LDBG("-----------notWritable op\n");
+      return true;
     }
   }
   LDBG("---->value is writable\n");
@@ -2420,6 +2420,11 @@ struct ConstantOpInterface
     map(bvm, constantOp, memref);
 
     return success();
+  }
+
+  bool isWritable(Operation *op, OpResult opResult) const {
+    // Memory locations returned by memref::GetGlobalOp may not be written to.
+    return false;
   }
 };
 

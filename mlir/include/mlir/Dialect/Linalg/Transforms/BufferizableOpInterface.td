@@ -158,6 +158,21 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return failure();
         }]
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given OpOperand can be written to in-place. This
+          is the case for most ops, but some ops such as ConstantOp may
+          bufferize to non-writable (read-only) memory locations. This method
+          will never be called on OpResults that do not have a tensor type.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isWritable",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return true;
+        }]
+      >
   ];
 }
 
