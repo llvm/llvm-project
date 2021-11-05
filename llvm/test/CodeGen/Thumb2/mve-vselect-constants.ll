@@ -137,9 +137,8 @@ define arm_aapcs_vfpcc <4 x i32> @cmp_sel_0_or_1_vec(<4 x i32> %x, <4 x i32> %y)
 define arm_aapcs_vfpcc <16 x i8> @signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: signbit_mask_v16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    vcmp.s8 lt, q0, zr
-; CHECK-NEXT:    vpsel q0, q1, q2
+; CHECK-NEXT:    vshr.s8 q0, q0, #7
+; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %cond = icmp slt <16 x i8> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i8> %b, <16 x i8> zeroinitializer
@@ -149,9 +148,8 @@ define arm_aapcs_vfpcc <16 x i8> @signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b)
 define arm_aapcs_vfpcc <8 x i16> @signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: signbit_mask_v8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    vcmp.s16 lt, q0, zr
-; CHECK-NEXT:    vpsel q0, q1, q2
+; CHECK-NEXT:    vshr.s16 q0, q0, #15
+; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %cond = icmp slt <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> zeroinitializer
@@ -161,9 +159,8 @@ define arm_aapcs_vfpcc <8 x i16> @signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b)
 define arm_aapcs_vfpcc <4 x i32> @signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: signbit_mask_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    vcmp.s32 lt, q0, zr
-; CHECK-NEXT:    vpsel q0, q1, q2
+; CHECK-NEXT:    vshr.s32 q0, q0, #31
+; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %cond = icmp slt <4 x i32> %a, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i32> %b, <4 x i32> zeroinitializer

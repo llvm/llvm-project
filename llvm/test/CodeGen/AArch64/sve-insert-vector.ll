@@ -404,8 +404,7 @@ declare <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.nxv2f16(<vs
 define <vscale x 3 x i32> @insert_nxv3i32_nxv2i32(<vscale x 2 x i32> %sv0) {
 ; CHECK-LABEL: insert_nxv3i32_nxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 3 x i32> @llvm.experimental.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32> undef, <vscale x 2 x i32> %sv0, i64 0)
  ret <vscale x 3 x i32> %v0
@@ -443,13 +442,9 @@ define <vscale x 6 x i32>  @insert_nxv6i32_nxv2i32(<vscale x 2 x i32> %sv0, <vsc
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    st1w { z1.d }, p1, [sp, #2, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [sp]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload

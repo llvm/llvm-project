@@ -2,11 +2,11 @@
 
 The object format emitted by the WebAssembly backed is documented in:
 
-  * https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
+  * https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md
 
 The C ABI is described in:
 
-  * https://github.com/WebAssembly/tool-conventions/blob/master/BasicCABI.md
+  * https://github.com/WebAssembly/tool-conventions/blob/main/BasicCABI.md
 
 For more information on WebAssembly itself, see the home page:
 
@@ -31,8 +31,8 @@ For more information, see:
 
 The following documents contain some information on the semantics and binary
 encoding of WebAssembly itself:
-  * https://github.com/WebAssembly/design/blob/master/Semantics.md
-  * https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
+  * https://github.com/WebAssembly/design/blob/main/Semantics.md
+  * https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md
 
 Some notes on ways that the generated code could be improved follow:
 
