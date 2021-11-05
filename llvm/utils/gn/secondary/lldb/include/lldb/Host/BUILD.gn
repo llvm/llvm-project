@@ -52,7 +52,7 @@ write_cmake_config("Config") {
       "LLDB_ENABLE_TERMIOS=1",
     ]
   }
-  
+
   if (current_os == "win" || current_os == "linux" || current_os == "android") {
     values += [ "HAVE_SYS_EVENT_H=" ]
   } else {

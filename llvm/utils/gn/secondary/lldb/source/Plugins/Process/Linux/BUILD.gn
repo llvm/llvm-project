@@ -4,13 +4,14 @@ static_library("Linux") {
   deps = [
     "//lldb/source/Core",
     "//lldb/source/Host",
+    "//lldb/source/Plugins/Process/POSIX",
+    "//lldb/source/Plugins/Process/Utility",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
-    "//lldb/source/Plugins/Process/POSIX",
-    "//lldb/source/Plugins/Process/Utility",
     "//llvm/lib/Support",
   ]
+
   # Uses source-relative includes for own headers.
   include_dirs = [ "//lldb/source" ]
   sources = [
@@ -26,4 +27,3 @@ static_library("Linux") {
     "SingleStepCheck.cpp",
   ]
 }
-

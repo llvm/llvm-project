@@ -370,7 +370,8 @@ config("no_rtti") {
 config("zdefs") {
   # -Wl,-z,defs doesn't work with sanitizers.
   # https://clang.llvm.org/docs/AddressSanitizer.html
-  if (current_os != "ios" && current_os != "mac" && current_os != "win" && !(use_asan || use_tsan || use_ubsan)) {
+  if (current_os != "ios" && current_os != "mac" && current_os != "win" &&
+      !(use_asan || use_tsan || use_ubsan)) {
     ldflags = [ "-Wl,-z,defs" ]
   }
 }

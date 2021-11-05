@@ -9,10 +9,10 @@ unittest("ClangReplInterpreterExceptionTests") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/Basic",
-    "//clang/lib/Interpreter",
     "//clang/lib/Frontend",
-    "//llvm/lib/IR",
+    "//clang/lib/Interpreter",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
   ]
