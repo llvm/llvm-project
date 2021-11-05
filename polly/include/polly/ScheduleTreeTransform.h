@@ -13,6 +13,7 @@
 #ifndef POLLY_SCHEDULETREETRANSFORM_H
 #define POLLY_SCHEDULETREETRANSFORM_H
 
+#include "polly/Support/ISLTools.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "isl/isl-noexceptions.h"
@@ -147,8 +148,7 @@ struct RecursiveScheduleTreeVisitor
 
   /// By default, recursively visit the child nodes.
   RetTy visitNode(isl::schedule_node Node, Args... args) {
-    isl_size NumChildren = Node.n_children().release();
-    for (isl_size i = 0; i < NumChildren; i += 1)
+    for (unsigned i : rangeIslSize(0, Node.n_children()))
       getDerived().visit(Node.child(i), std::forward<Args>(args)...);
     return RetTy();
   }
@@ -208,7 +208,7 @@ isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
 ///                      belong to the current band node.
 /// @param OutDimsNum    A number of dimensions that should belong to
 ///                      the current band node.
-isl::union_set getIsolateOptions(isl::set IsolateDomain, isl_size OutDimsNum);
+isl::union_set getIsolateOptions(isl::set IsolateDomain, unsigned OutDimsNum);
 
 /// Create an isl::union_set, which describes the specified option for the
 /// dimension of the current node.

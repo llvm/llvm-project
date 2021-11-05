@@ -17,6 +17,7 @@
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -688,8 +689,7 @@ void BlockGenerator::generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,
   Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "("));
 
   // Add the coordinate of the statement instance.
-  int DomDims = ScheduleMultiPwAff.dim(isl::dim::out).release();
-  for (int i = 0; i < DomDims; i += 1) {
+  for (unsigned i : rangeIslSize(0, ScheduleMultiPwAff.dim(isl::dim::out))) {
     if (i > 0)
       Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, ","));
 
