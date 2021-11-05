@@ -989,3 +989,65 @@ for.end:                                          ; preds = %for.body, %entry
   ret i16 %iv2
 }
 
+define void @slt_restricted_rhs(i16 %n.raw) mustprogress {
+; CHECK-LABEL: @slt_restricted_rhs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = and i16 [[N_RAW:%.*]], 255
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 [[N]] to i8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n = and i16 %n.raw, 255
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i8 %iv, 1
+  %zext = zext i8 %iv.next to i16
+  %cmp = icmp slt i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @slt_guarded_rhs(i16 %n) mustprogress {
+; CHECK-LABEL: @slt_guarded_rhs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i16 [[N:%.*]], 256
+; CHECK-NEXT:    br i1 [[IN_RANGE]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i16 [[N]] to i8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in_range = icmp ult i16 %n, 256
+  br i1 %in_range, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i8 %iv, 1
+  %zext = zext i8 %iv.next to i16
+  %cmp = icmp slt i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+

@@ -1456,7 +1456,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
     FullCR = FullCR.zeroExtend(OuterBitWidth);
-    if (FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS)))) {
+    auto RHSCR = SE->getUnsignedRange(SE->applyLoopGuards(SE->getSCEV(RHS), L));
+    if (FullCR.contains(RHSCR)) {
       // We have now matched icmp signed-cond zext(X), zext(Y'), and can thus
       // replace the signed condition with the unsigned version.
       ICmp->setPredicate(ICmp->getUnsignedPredicate());
@@ -1530,7 +1531,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
     FullCR = FullCR.zeroExtend(OuterBitWidth);
-    if (FullCR.contains(SE->getUnsignedRange(SE->getSCEV(RHS)))) {
+    auto RHSCR = SE->getUnsignedRange(SE->applyLoopGuards(SE->getSCEV(RHS), L));
+    if (FullCR.contains(RHSCR)) {
       doRotateTransform();
       Changed = true;
       // Note, we are leaving SCEV in an unfortunately imprecise case here
