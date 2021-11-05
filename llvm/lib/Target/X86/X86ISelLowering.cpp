@@ -1682,6 +1682,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
     }
 
+    // With BWI, expanding (and promoting the shifts) is the better.
+    if (!Subtarget.useBWIRegs())
+      setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
+
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::ABS,     VT, HasBWI ? Legal : Custom);
       setOperationAction(ISD::CTPOP,   VT, Subtarget.hasBITALG() ? Legal : Custom);
@@ -29127,7 +29131,7 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
   MVT VT = Amt.getSimpleValueType();
   if (!(VT == MVT::v8i16 || VT == MVT::v4i32 ||
         (Subtarget.hasInt256() && VT == MVT::v16i16) ||
-        (Subtarget.hasVBMI2() && VT == MVT::v32i16) ||
+        (Subtarget.hasAVX512() && VT == MVT::v32i16) ||
         (!Subtarget.hasAVX512() && VT == MVT::v16i8)))
     return SDValue();
 
@@ -29839,9 +29843,11 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
   }
 
-  // As with shifts, convert the rotation amount to a multiplication factor.
+  // As with shifts, attempt to convert the rotation amount to a multiplication
+  // factor, fallback to general expansion.
   SDValue Scale = convertShiftLeftToScale(Amt, DL, Subtarget, DAG);
-  assert(Scale && "Failed to convert ROTL amount to scale");
+  if (!Scale)
+    return SDValue();
 
   // v8i16/v16i16: perform unsigned multiply hi/lo and OR the results.
   if (EltSizeInBits == 16) {
