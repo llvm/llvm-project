@@ -33,8 +33,9 @@ public:
   static const char *getRegisterName(unsigned RegNo);
 
   // Print an address with the given base, displacement and index.
-  static void printAddress(const MCAsmInfo *MAI, unsigned Base, int64_t Disp,
-                           unsigned Index, raw_ostream &O);
+  static void printAddress(const MCAsmInfo *MAI, unsigned Base,
+                           const MCOperand &DispMO, unsigned Index,
+                           raw_ostream &O);
 
   // Print the given operand.
   static void printOperand(const MCOperand &MO, const MCAsmInfo *MAI,

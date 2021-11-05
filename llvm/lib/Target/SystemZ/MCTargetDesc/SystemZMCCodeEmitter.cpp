@@ -12,6 +12,7 @@
 
 #include "MCTargetDesc/SystemZMCFixups.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZInstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -59,6 +60,12 @@ private:
   uint64_t getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  // Return the displacement value for the OpNum operand. If it is a symbol,
+  // add a fixup for it and return 0.
+  uint64_t getDispOpValue(const MCInst &MI, unsigned OpNum,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          SystemZ::FixupKind Kind) const;
 
   // Called by the TableGen code to get the binary encoding of an address.
   // The index or length, if any, is encoded first, followed by the base,
@@ -180,11 +187,29 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 }
 
 uint64_t SystemZMCCodeEmitter::
+getDispOpValue(const MCInst &MI, unsigned OpNum,
+               SmallVectorImpl<MCFixup> &Fixups,
+               SystemZ::FixupKind Kind) const {
+  const MCOperand &MO = MI.getOperand(OpNum);
+  if (MO.isImm())
+    return static_cast<uint64_t>(MO.getImm());
+  if (MO.isExpr()) {
+    // All instructions follow the pattern where the first displacement has a
+    // 2 bytes offset, and the second one 4 bytes.
+    unsigned ByteOffs = Fixups.size() == 0 ? 2 : 4;
+    Fixups.push_back(MCFixup::create(ByteOffs, MO.getExpr(), (MCFixupKind)Kind));
+    assert(Fixups.size() <= 2 && "More than two memory operands in MI?");
+    return 0;
+  }
+  llvm_unreachable("Unexpected operand type!");
+}
+
+uint64_t SystemZMCCodeEmitter::
 getBDAddr12Encoding(const MCInst &MI, unsigned OpNum,
                     SmallVectorImpl<MCFixup> &Fixups,
                     const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_12);
   assert(isUInt<4>(Base) && isUInt<12>(Disp));
   return (Base << 12) | Disp;
 }
@@ -194,7 +219,7 @@ getBDAddr20Encoding(const MCInst &MI, unsigned OpNum,
                     SmallVectorImpl<MCFixup> &Fixups,
                     const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_20);
   assert(isUInt<4>(Base) && isInt<20>(Disp));
   return (Base << 20) | ((Disp & 0xfff) << 8) | ((Disp & 0xff000) >> 12);
 }
@@ -204,7 +229,7 @@ getBDXAddr12Encoding(const MCInst &MI, unsigned OpNum,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_12);
   uint64_t Index = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI);
   assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<4>(Index));
   return (Index << 16) | (Base << 12) | Disp;
@@ -215,7 +240,7 @@ getBDXAddr20Encoding(const MCInst &MI, unsigned OpNum,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_20);
   uint64_t Index = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI);
   assert(isUInt<4>(Base) && isInt<20>(Disp) && isUInt<4>(Index));
   return (Index << 24) | (Base << 20) | ((Disp & 0xfff) << 8)
@@ -227,7 +252,7 @@ getBDLAddr12Len4Encoding(const MCInst &MI, unsigned OpNum,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_12);
   uint64_t Len  = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI) - 1;
   assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<4>(Len));
   return (Len << 16) | (Base << 12) | Disp;
@@ -238,7 +263,7 @@ getBDLAddr12Len8Encoding(const MCInst &MI, unsigned OpNum,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_12);
   uint64_t Len  = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI) - 1;
   assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<8>(Len));
   return (Len << 16) | (Base << 12) | Disp;
@@ -249,7 +274,7 @@ getBDRAddr12Encoding(const MCInst &MI, unsigned OpNum,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_12);
   uint64_t Len  = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI);
   assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<4>(Len));
   return (Len << 16) | (Base << 12) | Disp;
@@ -260,7 +285,7 @@ getBDVAddr12Encoding(const MCInst &MI, unsigned OpNum,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
   uint64_t Base = getMachineOpValue(MI, MI.getOperand(OpNum), Fixups, STI);
-  uint64_t Disp = getMachineOpValue(MI, MI.getOperand(OpNum + 1), Fixups, STI);
+  uint64_t Disp = getDispOpValue(MI, OpNum + 1, Fixups, SystemZ::FK_390_12);
   uint64_t Index = getMachineOpValue(MI, MI.getOperand(OpNum + 2), Fixups, STI);
   assert(isUInt<4>(Base) && isUInt<12>(Disp) && isUInt<5>(Index));
   return (Index << 16) | (Base << 12) | Disp;
