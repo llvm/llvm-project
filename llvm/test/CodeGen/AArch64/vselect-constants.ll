@@ -236,3 +236,47 @@ define <2 x i64> @signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
   ret <2 x i64> %r
 }
+
+define <16 x i8> @signbit_setmask_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: signbit_setmask_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %cond = icmp slt <16 x i8> %a, zeroinitializer
+  %r = select <16 x i1> %cond, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %b
+  ret <16 x i8> %r
+}
+
+define <8 x i16> @signbit_setmask_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: signbit_setmask_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %cond = icmp slt <8 x i16> %a, zeroinitializer
+  %r = select <8 x i1> %cond, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %b
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @signbit_setmask_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: signbit_setmask_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %cond = icmp slt <4 x i32> %a, zeroinitializer
+  %r = select <4 x i1> %cond, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %b
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: signbit_setmask_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %cond = icmp slt <2 x i64> %a, zeroinitializer
+  %r = select <2 x i1> %cond, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %b
+  ret <2 x i64> %r
+}

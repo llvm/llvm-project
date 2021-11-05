@@ -183,3 +183,55 @@ define arm_aapcs_vfpcc <2 x i64> @signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %r
 }
 
+define arm_aapcs_vfpcc <16 x i8> @signbit_setmask_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: signbit_setmask_v16i8:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    vcmp.s8 lt, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+  %cond = icmp slt <16 x i8> %a, zeroinitializer
+  %r = select <16 x i1> %cond, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %b
+  ret <16 x i8> %r
+}
+
+define arm_aapcs_vfpcc <8 x i16> @signbit_setmask_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: signbit_setmask_v8i16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    vcmp.s16 lt, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+  %cond = icmp slt <8 x i16> %a, zeroinitializer
+  %r = select <8 x i1> %cond, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %b
+  ret <8 x i16> %r
+}
+
+define arm_aapcs_vfpcc <4 x i32> @signbit_setmask_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: signbit_setmask_v4i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    vcmp.s32 lt, q0, zr
+; CHECK-NEXT:    vpsel q0, q2, q1
+; CHECK-NEXT:    bx lr
+  %cond = icmp slt <4 x i32> %a, zeroinitializer
+  %r = select <4 x i1> %cond, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %b
+  ret <4 x i32> %r
+}
+
+define arm_aapcs_vfpcc <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: signbit_setmask_v2i64:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    asrs r1, r1, #31
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    vorr q0, q1, q0
+; CHECK-NEXT:    bx lr
+  %cond = icmp slt <2 x i64> %a, zeroinitializer
+  %r = select <2 x i1> %cond, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %b
+  ret <2 x i64> %r
+}
+
