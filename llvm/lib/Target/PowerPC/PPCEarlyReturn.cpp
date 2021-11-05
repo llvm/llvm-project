@@ -185,12 +185,9 @@ public:
       // nothing to do.
       if (MF.size() < 2)
         return Changed;
-      
-      // We can't use a range-based for loop due to clobbering the iterator.
-      for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E;) {
-        MachineBasicBlock &B = *I++;
+
+      for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
         Changed |= processBlock(B);
-      }
 
       return Changed;
     }
