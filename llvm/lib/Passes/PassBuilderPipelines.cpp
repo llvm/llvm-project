@@ -832,7 +832,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     C(MPM, Level);
 
   // Specialize functions with IPSCCP.
-  if (EnableFunctionSpecialization)
+  if (EnableFunctionSpecialization && Level == OptimizationLevel::O3)
     MPM.addPass(FunctionSpecializationPass());
 
   // Interprocedural constant propagation now that basic cleanup has occurred
@@ -1093,11 +1093,16 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   for (auto &C : VectorizerStartEPCallbacks)
     C(OptimizePM, Level);
 
+  LoopPassManager LPM;
   // First rotate loops that may have been un-rotated by prior passes.
   // Disable header duplication at -Oz.
+  LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink));
+  // Some loops may have become dead by now. Try to delete them.
+  // FIXME: see disscussion in https://reviews.llvm.org/D112851
+  //        this may need to be revisited once GVN is more powerful.
+  LPM.addPass(LoopDeletionPass());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
-      LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink),
-      /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
+      std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
@@ -1401,7 +1406,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
-    if (EnableFunctionSpecialization)
+    if (EnableFunctionSpecialization && Level == OptimizationLevel::O3)
       MPM.addPass(FunctionSpecializationPass());
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function

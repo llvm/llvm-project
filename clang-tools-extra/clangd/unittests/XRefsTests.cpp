@@ -675,7 +675,7 @@ TEST(LocateSymbol, All) {
 
       R"cpp(// Declaration of explicit template specialization
         template <typename T>
-        struct $decl[[Foo]] {};
+        struct $decl[[$def[[Foo]]]] {};
 
         template <>
         struct Fo^o<int> {};
@@ -683,10 +683,23 @@ TEST(LocateSymbol, All) {
 
       R"cpp(// Declaration of partial template specialization
         template <typename T>
-        struct $decl[[Foo]] {};
+        struct $decl[[$def[[Foo]]]] {};
 
         template <typename T>
         struct Fo^o<T*> {};
+      )cpp",
+
+      R"cpp(// Definition on ClassTemplateDecl
+        namespace ns {
+          // Forward declaration.
+          template<typename T>
+          struct $decl[[Foo]];
+
+          template <typename T>
+          struct $def[[Foo]] {};
+        }
+
+        using ::ns::Fo^o;
       )cpp",
 
       R"cpp(// auto builtin type (not supported)

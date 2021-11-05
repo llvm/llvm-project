@@ -44,7 +44,6 @@ template <class ELFT> struct Elf_Nhdr_Impl;
 template <class ELFT> class Elf_Note_Impl;
 template <class ELFT> class Elf_Note_Iterator_Impl;
 template <class ELFT> struct Elf_CGProfile_Impl;
-template <class ELFT> struct Elf_BBAddrMap_Impl;
 
 template <endianness E, bool Is64> struct ELFType {
 private:
@@ -76,7 +75,6 @@ public:
   using Note = Elf_Note_Impl<ELFType<E, Is64>>;
   using NoteIterator = Elf_Note_Iterator_Impl<ELFType<E, Is64>>;
   using CGProfile = Elf_CGProfile_Impl<ELFType<E, Is64>>;
-  using BBAddrMap = Elf_BBAddrMap_Impl<ELFType<E, Is64>>;
   using DynRange = ArrayRef<Dyn>;
   using ShdrRange = ArrayRef<Shdr>;
   using SymRange = ArrayRef<Sym>;
@@ -131,7 +129,6 @@ using ELF64BE = ELFType<support::big, true>;
   using Elf_Note = typename ELFT::Note;                                        \
   using Elf_Note_Iterator = typename ELFT::NoteIterator;                       \
   using Elf_CGProfile = typename ELFT::CGProfile;                              \
-  using Elf_BBAddrMap = typename ELFT::BBAddrMap;                              \
   using Elf_Dyn_Range = typename ELFT::DynRange;                               \
   using Elf_Shdr_Range = typename ELFT::ShdrRange;                             \
   using Elf_Sym_Range = typename ELFT::SymRange;                               \
@@ -797,9 +794,8 @@ template <class ELFT> struct Elf_Mips_ABIFlags {
 };
 
 // Struct representing the BBAddrMap for one function.
-template <class ELFT> struct Elf_BBAddrMap_Impl {
-  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-  uintX_t Addr; // Function address
+struct BBAddrMap {
+  uint64_t Addr; // Function address
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
     uint32_t Offset; // Offset of basic block relative to function start.

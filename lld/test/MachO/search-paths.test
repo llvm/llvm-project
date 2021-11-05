@@ -1,6 +1,4 @@
-UNSUPPORTED: darwin
-
-RUN: mkdir -p %t1 %t2
+RUN: rm -rf %t1 %t2; mkdir -p %t1 %t2
 
 RUN: %lld -v -dylib -o /dev/null -L%t1 -F%t2 2>&1 \
 RUN:     | FileCheck -DLDIR=%t1 -DFDIR=%t2 %s

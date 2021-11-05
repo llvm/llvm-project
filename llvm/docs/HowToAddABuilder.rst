@@ -121,6 +121,14 @@ Here are the steps you can follow to do so:
    Please make sure your builder name and its builddir are unique through the
    file.
 
+   All new builders should default to using the "'collapseRequests': False"
+   configuration.  This causes the builder to build each commit individually
+   and not merge build requests.  To maximize quality of feedback to developers,
+   we *strongly prefer* builders to be configured not to collapse requests.
+   This flag should be removed only after all reasonable efforts have been
+   exhausted to improve build times such that the builder can keep up with
+   commit flow.
+
    It is possible to allow email addresses to unconditionally receive
    notifications on build failure; for this you'll need to add an
    ``InformativeMailNotifier`` to ``buildbot/osuosl/master/config/status.py``.

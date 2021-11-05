@@ -14,7 +14,7 @@
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
-#include "src/__support/str_conv_utils.h"
+#include "src/__support/str_to_integer.h"
 #include <errno.h>
 
 namespace __llvm_libc {

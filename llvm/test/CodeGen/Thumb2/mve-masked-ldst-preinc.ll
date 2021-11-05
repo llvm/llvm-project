@@ -24,8 +24,8 @@ entry:
 define i8* @ldrwu32_3(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwu32_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -44,8 +44,8 @@ entry:
 define i8* @ldrwu32_2(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwu32_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #2
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #2
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -83,8 +83,8 @@ entry:
 define i8* @ldrwu32_512(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwu32_512:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -122,8 +122,8 @@ entry:
 define i8* @ldrwu32_m512(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwu32_m512:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -162,8 +162,8 @@ entry:
 define i8* @ldrhu32_3(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrhu32_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -223,8 +223,8 @@ entry:
 define i8* @ldrhu32_256(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrhu32_256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -264,8 +264,8 @@ entry:
 define i8* @ldrhu32_m256(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrhu32_m256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -305,8 +305,8 @@ entry:
 define i8* @ldrhs32_3(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrhs32_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrht.s32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -366,8 +366,8 @@ entry:
 define i8* @ldrhs32_256(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrhs32_256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrht.s32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -407,8 +407,8 @@ entry:
 define i8* @ldrhs32_m256(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrhs32_m256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrht.s32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -447,8 +447,8 @@ entry:
 define i8* @ldrhu16_3(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrhu16_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -505,8 +505,8 @@ entry:
 define i8* @ldrhu16_256(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrhu16_256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -544,8 +544,8 @@ entry:
 define i8* @ldrhu16_m256(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrhu16_m256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -644,8 +644,8 @@ entry:
 define i8* @ldrbu32_128(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrbu32_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -685,8 +685,8 @@ entry:
 define i8* @ldrbu32_m128(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrbu32_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -786,8 +786,8 @@ entry:
 define i8* @ldrbs32_128(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrbs32_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.s32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -827,8 +827,8 @@ entry:
 define i8* @ldrbs32_m128(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrbs32_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.s32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -928,8 +928,8 @@ entry:
 define i8* @ldrbu16_128(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrbu16_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -969,8 +969,8 @@ entry:
 define i8* @ldrbu16_m128(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrbu16_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -1070,8 +1070,8 @@ entry:
 define i8* @ldrbs16_128(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrbs16_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.s16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -1111,8 +1111,8 @@ entry:
 define i8* @ldrbs16_m128(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrbs16_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.s16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -1208,8 +1208,8 @@ entry:
 define i8* @ldrbu8_128(i8* %x, i8* %y, <16 x i8> *%m) {
 ; CHECK-LABEL: ldrbu8_128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u8 q0, [r2]
+; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vpt.i8 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.u8 q0, [r0]
 ; CHECK-NEXT:    vstrb.8 q0, [r1]
@@ -1247,8 +1247,8 @@ entry:
 define i8* @ldrbu8_m128(i8* %x, i8* %y, <16 x i8> *%m) {
 ; CHECK-LABEL: ldrbu8_m128:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u8 q0, [r2]
+; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vpt.i8 ne, q0, zr
 ; CHECK-NEXT:    vldrbt.u8 q0, [r0]
 ; CHECK-NEXT:    vstrb.8 q0, [r1]
@@ -1286,8 +1286,8 @@ entry:
 define i8* @ldrwf32_3(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwf32_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -1306,8 +1306,8 @@ entry:
 define i8* @ldrwf32_2(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwf32_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #2
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adds r0, #2
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -1345,8 +1345,8 @@ entry:
 define i8* @ldrwf32_512(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwf32_512:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -1384,8 +1384,8 @@ entry:
 define i8* @ldrwf32_m512(i8* %x, i8* %y, <4 x i32> *%m) {
 ; CHECK-LABEL: ldrwf32_m512:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vpt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
@@ -1423,8 +1423,8 @@ entry:
 define i8* @ldrhf16_3(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrhf16_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -1481,8 +1481,8 @@ entry:
 define i8* @ldrhf16_256(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrhf16_256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -1520,8 +1520,8 @@ entry:
 define i8* @ldrhf16_m256(i8* %x, i8* %y, <8 x i16> *%m) {
 ; CHECK-LABEL: ldrhf16_m256:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
+; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vpt.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrht.u16 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r1]
@@ -1543,8 +1543,8 @@ entry:
 define i8* @strw32_4(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -1562,9 +1562,9 @@ entry:
 define i8* @strw32_3(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_3:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1582,9 +1582,9 @@ entry:
 define i8* @strw32_2(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_2:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    adds r0, #2
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1602,8 +1602,8 @@ entry:
 define i8* @strw32_508(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_508:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0, #508]!
 ; CHECK-NEXT:    bx lr
@@ -1621,9 +1621,9 @@ entry:
 define i8* @strw32_512(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_512:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1641,8 +1641,8 @@ entry:
 define i8* @strw32_m508(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_m508:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0, #-508]!
 ; CHECK-NEXT:    bx lr
@@ -1660,9 +1660,9 @@ entry:
 define i8* @strw32_m512(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strw32_m512:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1680,8 +1680,8 @@ entry:
 define i8* @strh32_4(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -1699,9 +1699,9 @@ entry:
 define i8* @strh32_3(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_3:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1719,8 +1719,8 @@ entry:
 define i8* @strh32_2(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0, #2]!
 ; CHECK-NEXT:    bx lr
@@ -1738,8 +1738,8 @@ entry:
 define i8* @strh32_254(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_254:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0, #254]!
 ; CHECK-NEXT:    bx lr
@@ -1757,9 +1757,9 @@ entry:
 define i8* @strh32_256(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_256:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1777,8 +1777,8 @@ entry:
 define i8* @strh32_m254(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_m254:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0, #-254]!
 ; CHECK-NEXT:    bx lr
@@ -1796,9 +1796,9 @@ entry:
 define i8* @strh32_m256(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strh32_m256:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrht.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1816,8 +1816,8 @@ entry:
 define i8* @strh16_4(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -1835,9 +1835,9 @@ entry:
 define i8* @strh16_3(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_3:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1855,8 +1855,8 @@ entry:
 define i8* @strh16_2(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #2]!
 ; CHECK-NEXT:    bx lr
@@ -1874,8 +1874,8 @@ entry:
 define i8* @strh16_254(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_254:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #254]!
 ; CHECK-NEXT:    bx lr
@@ -1893,9 +1893,9 @@ entry:
 define i8* @strh16_256(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_256:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1913,8 +1913,8 @@ entry:
 define i8* @strh16_m254(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_m254:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #-254]!
 ; CHECK-NEXT:    bx lr
@@ -1932,9 +1932,9 @@ entry:
 define i8* @strh16_m256(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strh16_m256:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -1952,8 +1952,8 @@ entry:
 define i8* @strb32_4(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -1971,8 +1971,8 @@ entry:
 define i8* @strb32_3(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0, #3]!
 ; CHECK-NEXT:    bx lr
@@ -1990,8 +1990,8 @@ entry:
 define i8* @strb32_2(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0, #2]!
 ; CHECK-NEXT:    bx lr
@@ -2009,8 +2009,8 @@ entry:
 define i8* @strb32_127(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_127:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0, #127]!
 ; CHECK-NEXT:    bx lr
@@ -2028,9 +2028,9 @@ entry:
 define i8* @strb32_128(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2048,8 +2048,8 @@ entry:
 define i8* @strb32_m127(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_m127:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0, #-127]!
 ; CHECK-NEXT:    bx lr
@@ -2067,9 +2067,9 @@ entry:
 define i8* @strb32_m128(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strb32_m128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2087,8 +2087,8 @@ entry:
 define i8* @strb16_4(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -2106,8 +2106,8 @@ entry:
 define i8* @strb16_3(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0, #3]!
 ; CHECK-NEXT:    bx lr
@@ -2125,8 +2125,8 @@ entry:
 define i8* @strb16_2(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0, #2]!
 ; CHECK-NEXT:    bx lr
@@ -2144,8 +2144,8 @@ entry:
 define i8* @strb16_127(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_127:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0, #127]!
 ; CHECK-NEXT:    bx lr
@@ -2163,9 +2163,9 @@ entry:
 define i8* @strb16_128(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2183,8 +2183,8 @@ entry:
 define i8* @strb16_m127(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_m127:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0, #-127]!
 ; CHECK-NEXT:    bx lr
@@ -2202,9 +2202,9 @@ entry:
 define i8* @strb16_m128(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strb16_m128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2222,8 +2222,8 @@ entry:
 define i8* @strb8_4(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vldrb.u8 q1, [r2]
+; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -2241,8 +2241,8 @@ entry:
 define i8* @strb8_3(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vldrb.u8 q1, [r2]
+; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0, #3]!
 ; CHECK-NEXT:    bx lr
@@ -2260,8 +2260,8 @@ entry:
 define i8* @strb8_2(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vldrb.u8 q1, [r2]
+; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0, #2]!
 ; CHECK-NEXT:    bx lr
@@ -2279,8 +2279,8 @@ entry:
 define i8* @strb8_127(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_127:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vldrb.u8 q1, [r2]
+; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0, #127]!
 ; CHECK-NEXT:    bx lr
@@ -2298,9 +2298,9 @@ entry:
 define i8* @strb8_128(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrb.u8 q1, [r2]
 ; CHECK-NEXT:    adds r0, #128
 ; CHECK-NEXT:    vldrb.u8 q0, [r1]
-; CHECK-NEXT:    vldrb.u8 q1, [r2]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2318,8 +2318,8 @@ entry:
 define i8* @strb8_m127(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_m127:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vldrb.u8 q1, [r2]
+; CHECK-NEXT:    vldrb.u8 q0, [r1]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0, #-127]!
 ; CHECK-NEXT:    bx lr
@@ -2337,9 +2337,9 @@ entry:
 define i8* @strb8_m128(i8* %y, i8* %x, <16 x i8> *%m) {
 ; CHECK-LABEL: strb8_m128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrb.u8 q1, [r2]
 ; CHECK-NEXT:    subs r0, #128
 ; CHECK-NEXT:    vldrb.u8 q0, [r1]
-; CHECK-NEXT:    vldrb.u8 q1, [r2]
 ; CHECK-NEXT:    vpt.i8 ne, q1, zr
 ; CHECK-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2357,8 +2357,8 @@ entry:
 define i8* @strwf32_4(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -2376,9 +2376,9 @@ entry:
 define i8* @strwf32_3(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_3:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2396,9 +2396,9 @@ entry:
 define i8* @strwf32_2(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_2:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    adds r0, #2
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2416,8 +2416,8 @@ entry:
 define i8* @strwf32_508(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_508:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0, #508]!
 ; CHECK-NEXT:    bx lr
@@ -2435,9 +2435,9 @@ entry:
 define i8* @strwf32_512(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_512:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    add.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2455,8 +2455,8 @@ entry:
 define i8* @strwf32_m508(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_m508:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0, #-508]!
 ; CHECK-NEXT:    bx lr
@@ -2474,9 +2474,9 @@ entry:
 define i8* @strwf32_m512(i8* %y, i8* %x, <4 x i32> *%m) {
 ; CHECK-LABEL: strwf32_m512:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    sub.w r0, r0, #512
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2494,8 +2494,8 @@ entry:
 define i8* @strhf16_4(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #4]!
 ; CHECK-NEXT:    bx lr
@@ -2513,9 +2513,9 @@ entry:
 define i8* @strhf16_3(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_3:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    adds r0, #3
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2533,8 +2533,8 @@ entry:
 define i8* @strhf16_2(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #2]!
 ; CHECK-NEXT:    bx lr
@@ -2552,8 +2552,8 @@ entry:
 define i8* @strhf16_254(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_254:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #254]!
 ; CHECK-NEXT:    bx lr
@@ -2571,9 +2571,9 @@ entry:
 define i8* @strhf16_256(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_256:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    add.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
@@ -2591,8 +2591,8 @@ entry:
 define i8* @strhf16_m254(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_m254:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0, #-254]!
 ; CHECK-NEXT:    bx lr
@@ -2610,9 +2610,9 @@ entry:
 define i8* @strhf16_m256(i8* %y, i8* %x, <8 x i16> *%m) {
 ; CHECK-LABEL: strhf16_m256:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    sub.w r0, r0, #256
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-NEXT:    bx lr

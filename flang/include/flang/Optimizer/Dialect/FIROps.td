@@ -1725,11 +1725,6 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoSideEffect]> {
   let assemblyFormat = [{
     $adt `,` $coor attr-dict `:` functional-type(operands, results)
   }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt,
-      "llvm::ArrayRef<mlir::Value>":$vcoor)>
-  ];
 }
 
 def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
@@ -1976,11 +1971,6 @@ def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoSideEffect]> {
     $adt `,` $val `,` $coor attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt, "mlir::Value":$val,
-      "llvm::ArrayRef<mlir::Value>":$vcoor)>
-  ];
-
   let hasCanonicalizer = 1;
 }
 
@@ -1988,7 +1978,8 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
-    Insert copies of a value into an entity with an array type.
+    Insert copies of a value into an entity with an array type of constant shape
+    and size.
     Returns a new ssa value with the same type as the original entity.
     The values are inserted at a contiguous range of indices in Fortran
     row-to-column element order as specified by lower and upper bound
@@ -2010,11 +2001,6 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   let assemblyFormat = [{
     $seq `,` $val `,` $coor attr-dict `:` functional-type(operands, results)
   }];
-
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$rty, "mlir::Value":$adt, "mlir::Value":$val,
-      "llvm::ArrayRef<mlir::Value>":$vcoor)>
-  ];
 
   let verifier = "return ::verify(*this);";
 }

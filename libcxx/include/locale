@@ -2892,51 +2892,31 @@ money_get<_CharT, _InputIterator>::__do_get(iter_type& __b, iter_type __e,
             }
             break;
         case money_base::sign:
-            if (__psn.size() + __nsn.size() > 0)
+            if (__psn.size() > 0 && *__b == __psn[0])
             {
-                if (__psn.size() == 0 || __nsn.size() == 0)
-                {   // sign is optional
-                    if (__psn.size() > 0)
-                    {   // __nsn.size() == 0
-                        if (*__b == __psn[0])
-                        {
-                            ++__b;
-                            if (__psn.size() > 1)
-                                __trailing_sign = &__psn;
-                        }
-                        else
-                            __neg = true;
-                    }
-                    else if (*__b == __nsn[0])  // __nsn.size() > 0 &&  __psn.size() == 0
-                    {
-                        ++__b;
-                        __neg = true;
-                        if (__nsn.size() > 1)
-                            __trailing_sign = &__nsn;
-                    }
-                }
-                else  // sign is required
-                {
-                    if (*__b == __psn[0])
-                    {
-                        ++__b;
-                        if (__psn.size() > 1)
-                            __trailing_sign = &__psn;
-                    }
-                    else if (*__b == __nsn[0])
-                    {
-                        ++__b;
-                        __neg = true;
-                        if (__nsn.size() > 1)
-                            __trailing_sign = &__nsn;
-                    }
-                    else
-                    {
-                        __err |= ios_base::failbit;
-                        return false;
-                    }
-                }
+                ++__b;
+                __neg = false;
+                if (__psn.size() > 1)
+                  __trailing_sign = &__psn;
+                break;
             }
+            if (__nsn.size() > 0 && *__b == __nsn[0])
+            {
+                ++__b;
+                __neg = true;
+                if (__nsn.size() > 1)
+                    __trailing_sign = &__nsn;
+                break;
+            }
+            if (__psn.size() > 0 && __nsn.size() > 0)
+            {   // sign is required
+                __err |= ios_base::failbit;
+                return false;
+            }
+            if (__psn.size() == 0 && __nsn.size() == 0)
+                // locale has no way of specifying a sign. Use the initial value of __neg as a default
+                break;
+            __neg = (__nsn.size() == 0);
             break;
         case money_base::symbol:
             {

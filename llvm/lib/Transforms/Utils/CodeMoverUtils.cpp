@@ -410,11 +410,9 @@ void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                           DominatorTree &DT,
                                           const PostDominatorTree &PDT,
                                           DependenceInfo &DI) {
-  for (auto It = ++FromBB.rbegin(); It != FromBB.rend();) {
+  for (Instruction &I :
+       llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(FromBB)))) {
     Instruction *MovePos = ToBB.getFirstNonPHIOrDbg();
-    Instruction &I = *It;
-    // Increment the iterator before modifying FromBB.
-    ++It;
 
     if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
       I.moveBefore(MovePos);

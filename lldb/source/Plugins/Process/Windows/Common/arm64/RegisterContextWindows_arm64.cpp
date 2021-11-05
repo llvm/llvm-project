@@ -171,7 +171,7 @@ bool RegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
     reg_value.SetUInt64(m_context.Pc);
     break;
   case gpr_cpsr:
-    reg_value.SetUInt64(m_context.Cpsr);
+    reg_value.SetUInt32(m_context.Cpsr);
     break;
 
   case gpr_w0:
@@ -385,7 +385,7 @@ bool RegisterContextWindows_arm64::WriteRegister(
     m_context.Pc = reg_value.GetAsUInt64();
     break;
   case gpr_cpsr:
-    m_context.Cpsr = reg_value.GetAsUInt64();
+    m_context.Cpsr = reg_value.GetAsUInt32();
     break;
 
   case fpu_v0:

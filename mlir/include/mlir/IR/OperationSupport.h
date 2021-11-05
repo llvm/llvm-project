@@ -246,6 +246,63 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// Attribute Dictionary-Like Interface
+//===----------------------------------------------------------------------===//
+
+/// Attribute collections provide a dictionary-like interface. Define common
+/// lookup functions.
+namespace impl {
+
+/// Unsorted string search or identifier lookups are linear scans.
+template <typename IteratorT, typename NameT>
+std::pair<IteratorT, bool> findAttrUnsorted(IteratorT first, IteratorT last,
+                                            NameT name) {
+  for (auto it = first; it != last; ++it)
+    if (it->first == name)
+      return {it, true};
+  return {last, false};
+}
+
+/// Using llvm::lower_bound requires an extra string comparison to check whether
+/// the returned iterator points to the found element or whether it indicates
+/// the lower bound. Skip this redundant comparison by checking if `compare ==
+/// 0` during the binary search.
+template <typename IteratorT>
+std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
+                                          StringRef name) {
+  ptrdiff_t length = std::distance(first, last);
+
+  while (length > 0) {
+    ptrdiff_t half = length / 2;
+    IteratorT mid = first + half;
+    int compare = mid->first.strref().compare(name);
+    if (compare < 0) {
+      first = mid + 1;
+      length = length - half - 1;
+    } else if (compare > 0) {
+      length = half;
+    } else {
+      return {mid, true};
+    }
+  }
+  return {first, false};
+}
+
+/// Identifier lookups on large attribute lists will switch to string binary
+/// search. String binary searches become significantly faster than linear scans
+/// with the identifier when the attribute list becomes very large.
+template <typename IteratorT>
+std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
+                                          Identifier name) {
+  constexpr unsigned kSmallAttributeList = 16;
+  if (std::distance(first, last) > kSmallAttributeList)
+    return findAttrSorted(first, last, name.strref());
+  return findAttrUnsorted(first, last, name);
+}
+
+} // end namespace impl
+
+//===----------------------------------------------------------------------===//
 // NamedAttrList
 //===----------------------------------------------------------------------===//
 
@@ -253,9 +310,10 @@ private:
 /// and does some basic work to remain sorted.
 class NamedAttrList {
 public:
+  using iterator = SmallVectorImpl<NamedAttribute>::iterator;
   using const_iterator = SmallVectorImpl<NamedAttribute>::const_iterator;
-  using const_reference = const NamedAttribute &;
   using reference = NamedAttribute &;
+  using const_reference = const NamedAttribute &;
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
@@ -346,6 +404,8 @@ public:
   Attribute erase(Identifier name);
   Attribute erase(StringRef name);
 
+  iterator begin() { return attrs.begin(); }
+  iterator end() { return attrs.end(); }
   const_iterator begin() const { return attrs.begin(); }
   const_iterator end() const { return attrs.end(); }
 
@@ -358,6 +418,14 @@ private:
 
   /// Erase the attribute at the given iterator position.
   Attribute eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it);
+
+  /// Lookup an attribute in the list.
+  template <typename AttrListT, typename NameT>
+  static auto findAttr(AttrListT &attrs, NameT name) {
+    return attrs.isSorted()
+               ? impl::findAttrSorted(attrs.begin(), attrs.end(), name)
+               : impl::findAttrUnsorted(attrs.begin(), attrs.end(), name);
+  }
 
   // These are marked mutable as they may be modified (e.g., sorted)
   mutable SmallVector<NamedAttribute, 4> attrs;
@@ -520,47 +588,12 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-/// This class contains the information for a trailing operand storage.
-struct TrailingOperandStorage final
-    : public llvm::TrailingObjects<TrailingOperandStorage, OpOperand> {
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && (BYTE_ORDER == BIG_ENDIAN)
-  TrailingOperandStorage() : numOperands(0), capacity(0), reserved(0) {}
-#else
-  TrailingOperandStorage() : reserved(0), capacity(0), numOperands(0) {}
-#endif
-  ~TrailingOperandStorage() {
-    for (auto &operand : getOperands())
-      operand.~OpOperand();
-  }
-
-  /// Return the operands held by this storage.
-  MutableArrayRef<OpOperand> getOperands() {
-    return {getTrailingObjects<OpOperand>(), numOperands};
-  }
-
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && (BYTE_ORDER == BIG_ENDIAN)
-  /// The number of operands within the storage.
-  unsigned numOperands;
-  /// The total capacity number of operands that the storage can hold.
-  unsigned capacity : 31;
-  /// We reserve a range of bits for use by the operand storage.
-  unsigned reserved : 1;
-#else
-  /// We reserve a range of bits for use by the operand storage.
-  unsigned reserved : 1;
-  /// The total capacity number of operands that the storage can hold.
-  unsigned capacity : 31;
-  /// The number of operands within the storage.
-  unsigned numOperands;
-#endif
-};
-
 /// This class handles the management of operation operands. Operands are
 /// stored either in a trailing array, or a dynamically resizable vector.
-class OperandStorage final
-    : private llvm::TrailingObjects<OperandStorage, OpOperand> {
+class alignas(8) OperandStorage {
 public:
-  OperandStorage(Operation *owner, ValueRange values);
+  OperandStorage(Operation *owner, OpOperand *trailingOperands,
+                 ValueRange values);
   ~OperandStorage();
 
   /// Replace the operands contained in the storage with the ones provided in
@@ -581,62 +614,25 @@ public:
   void eraseOperands(const llvm::BitVector &eraseIndices);
 
   /// Get the operation operands held by the storage.
-  MutableArrayRef<OpOperand> getOperands() {
-    return getStorage().getOperands();
-  }
+  MutableArrayRef<OpOperand> getOperands() { return {operandStorage, size()}; }
 
   /// Return the number of operands held in the storage.
-  unsigned size() { return getStorage().numOperands; }
-
-  /// Returns the additional size necessary for allocating this object.
-  static size_t additionalAllocSize(unsigned numOperands) {
-    return additionalSizeToAlloc<OpOperand>(numOperands);
-  }
+  unsigned size() { return numOperands; }
 
 private:
-  /// Pointer type traits for the storage pointer that ensures that we use the
-  /// lowest bit for the storage pointer.
-  struct StoragePointerLikeTypeTraits
-      : llvm::PointerLikeTypeTraits<TrailingOperandStorage *> {
-    static constexpr int NumLowBitsAvailable = 1;
-  };
-
   /// Resize the storage to the given size. Returns the array containing the new
   /// operands.
   MutableArrayRef<OpOperand> resize(Operation *owner, unsigned newSize);
 
-  /// Returns the current internal storage instance.
-  TrailingOperandStorage &getStorage() {
-    return LLVM_UNLIKELY(isDynamicStorage()) ? getDynamicStorage()
-                                             : getInlineStorage();
-  }
-
-  /// Returns the storage container if the storage is inline.
-  TrailingOperandStorage &getInlineStorage() {
-    assert(!isDynamicStorage() && "expected storage to be inline");
-    return inlineStorage;
-  }
-
-  /// Returns the storage container if this storage is dynamic.
-  TrailingOperandStorage &getDynamicStorage() {
-    assert(isDynamicStorage() && "expected dynamic storage");
-    return *dynamicStorage.getPointer();
-  }
-
-  /// Returns true if the storage is currently dynamic.
-  bool isDynamicStorage() const { return dynamicStorage.getInt(); }
-
-  /// The current representation of the storage. This is either a
-  /// InlineOperandStorage, or a pointer to a InlineOperandStorage.
-  union {
-    TrailingOperandStorage inlineStorage;
-    llvm::PointerIntPair<TrailingOperandStorage *, 1, bool,
-                         StoragePointerLikeTypeTraits>
-        dynamicStorage;
-  };
-
-  /// This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<OperandStorage, OpOperand>;
+  /// The total capacity number of operands that the storage can hold.
+  unsigned capacity : 31;
+  /// A flag indicating if the operand storage was dynamically allocated, as
+  /// opposed to inlined into the owning operation.
+  unsigned isStorageDynamic : 1;
+  /// The number of operands within the storage.
+  unsigned numOperands;
+  /// A pointer to the operand storage.
+  OpOperand *operandStorage;
 };
 } // end namespace detail
 
@@ -718,7 +714,6 @@ class OperandRange final : public llvm::detail::indexed_accessor_range_base<
                                OperandRange, OpOperand *, Value, Value, Value> {
 public:
   using RangeBaseT::RangeBaseT;
-  OperandRange(Operation *op);
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;

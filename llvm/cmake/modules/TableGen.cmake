@@ -80,6 +80,10 @@ function(tablegen project ofn)
     set(tblgen_change_flag "--write-if-changed")
   endif()
 
+  if (NOT LLVM_ENABLE_WARNINGS)
+    list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
+  endif()
+
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
   # a tablegen change, as cmake does not propagate file-level dependencies

@@ -4411,7 +4411,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // It is safe to remove CmpInstr if EFLAGS is redefined or killed.
   // If we are done with the basic block, we need to check whether EFLAGS is
   // live-out.
-  bool IsSafe = false;
+  bool FlagsMayLiveOut = true;
   SmallVector<std::pair<MachineInstr*, X86::CondCode>, 4> OpsToUpdate;
   MachineBasicBlock::iterator AfterCmpInstr =
       std::next(MachineBasicBlock::iterator(CmpInstr));
@@ -4421,7 +4421,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     // We should check the usage if this instruction uses and updates EFLAGS.
     if (!UseEFLAGS && ModifyEFLAGS) {
       // It is safe to remove CmpInstr if EFLAGS is updated again.
-      IsSafe = true;
+      FlagsMayLiveOut = false;
       break;
     }
     if (!UseEFLAGS && !ModifyEFLAGS)
@@ -4542,14 +4542,14 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     }
     if (ModifyEFLAGS || Instr.killsRegister(X86::EFLAGS, TRI)) {
       // It is safe to remove CmpInstr if EFLAGS is updated again or killed.
-      IsSafe = true;
+      FlagsMayLiveOut = false;
       break;
     }
   }
 
-  // If EFLAGS is not killed nor re-defined, we should check whether it is
-  // live-out. If it is live-out, do not optimize.
-  if ((MI || IsSwapped) && !IsSafe) {
+  // If we have to update users but EFLAGS is live-out abort, since we cannot
+  // easily find all of the users.
+  if (ShouldUpdateCC && FlagsMayLiveOut) {
     for (MachineBasicBlock *Successor : CmpMBB.successors())
       if (Successor->isLiveIn(X86::EFLAGS))
         return false;

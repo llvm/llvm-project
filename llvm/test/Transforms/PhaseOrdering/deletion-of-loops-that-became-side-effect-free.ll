@@ -11,17 +11,8 @@
 define dso_local zeroext i1 @is_not_empty_variant1(%struct.node* %p) {
 ; ALL-LABEL: @is_not_empty_variant1(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[TOBOOL_NOT3_I:%.*]] = icmp eq %struct.node* [[P:%.*]], null
-; ALL-NEXT:    br i1 [[TOBOOL_NOT3_I]], label [[COUNT_NODES_VARIANT1_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
-; ALL:       while.body.i:
-; ALL-NEXT:    [[P_ADDR_04_I:%.*]] = phi %struct.node* [ [[TMP0:%.*]], [[WHILE_BODY_I]] ], [ [[P]], [[ENTRY:%.*]] ]
-; ALL-NEXT:    [[NEXT_I:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], %struct.node* [[P_ADDR_04_I]], i64 0, i32 0
-; ALL-NEXT:    [[TMP0]] = load %struct.node*, %struct.node** [[NEXT_I]], align 8
-; ALL-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq %struct.node* [[TMP0]], null
-; ALL-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[COUNT_NODES_VARIANT1_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP0:![0-9]+]]
-; ALL:       count_nodes_variant1.exit:
-; ALL-NEXT:    [[TMP1:%.*]] = xor i1 [[TOBOOL_NOT3_I]], true
-; ALL-NEXT:    ret i1 [[TMP1]]
+; ALL-NEXT:    [[TOBOOL_NOT3_I:%.*]] = icmp ne %struct.node* [[P:%.*]], null
+; ALL-NEXT:    ret i1 [[TOBOOL_NOT3_I]]
 ;
 entry:
   %p.addr = alloca %struct.node*, align 8
@@ -113,39 +104,13 @@ while.end:
 define dso_local zeroext i1 @is_not_empty_variant3(%struct.node* %p) {
 ; O3-LABEL: @is_not_empty_variant3(
 ; O3-NEXT:  entry:
-; O3-NEXT:    [[TOBOOL_NOT4_I:%.*]] = icmp eq %struct.node* [[P:%.*]], null
-; O3-NEXT:    br i1 [[TOBOOL_NOT4_I]], label [[COUNT_NODES_VARIANT3_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
-; O3:       while.body.i:
-; O3-NEXT:    [[SIZE_06_I:%.*]] = phi i64 [ [[INC_I:%.*]], [[WHILE_BODY_I]] ], [ 0, [[ENTRY:%.*]] ]
-; O3-NEXT:    [[P_ADDR_05_I:%.*]] = phi %struct.node* [ [[TMP0:%.*]], [[WHILE_BODY_I]] ], [ [[P]], [[ENTRY]] ]
-; O3-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[SIZE_06_I]], -1
-; O3-NEXT:    tail call void @llvm.assume(i1 [[CMP_I]]) #[[ATTR3:[0-9]+]]
-; O3-NEXT:    [[NEXT_I:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], %struct.node* [[P_ADDR_05_I]], i64 0, i32 0
-; O3-NEXT:    [[TMP0]] = load %struct.node*, %struct.node** [[NEXT_I]], align 8
-; O3-NEXT:    [[INC_I]] = add nuw i64 [[SIZE_06_I]], 1
-; O3-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq %struct.node* [[TMP0]], null
-; O3-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[COUNT_NODES_VARIANT3_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP2:![0-9]+]]
-; O3:       count_nodes_variant3.exit:
-; O3-NEXT:    [[TMP1:%.*]] = xor i1 [[TOBOOL_NOT4_I]], true
-; O3-NEXT:    ret i1 [[TMP1]]
+; O3-NEXT:    [[TOBOOL_NOT4_I:%.*]] = icmp ne %struct.node* [[P:%.*]], null
+; O3-NEXT:    ret i1 [[TOBOOL_NOT4_I]]
 ;
 ; O2-LABEL: @is_not_empty_variant3(
 ; O2-NEXT:  entry:
-; O2-NEXT:    [[TOBOOL_NOT4_I:%.*]] = icmp eq %struct.node* [[P:%.*]], null
-; O2-NEXT:    br i1 [[TOBOOL_NOT4_I]], label [[COUNT_NODES_VARIANT3_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
-; O2:       while.body.i:
-; O2-NEXT:    [[SIZE_06_I:%.*]] = phi i64 [ [[INC_I:%.*]], [[WHILE_BODY_I]] ], [ 0, [[ENTRY:%.*]] ]
-; O2-NEXT:    [[P_ADDR_05_I:%.*]] = phi %struct.node* [ [[TMP0:%.*]], [[WHILE_BODY_I]] ], [ [[P]], [[ENTRY]] ]
-; O2-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[SIZE_06_I]], -1
-; O2-NEXT:    tail call void @llvm.assume(i1 [[CMP_I]]) #[[ATTR3:[0-9]+]]
-; O2-NEXT:    [[NEXT_I:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], %struct.node* [[P_ADDR_05_I]], i64 0, i32 0
-; O2-NEXT:    [[TMP0]] = load %struct.node*, %struct.node** [[NEXT_I]], align 8
-; O2-NEXT:    [[INC_I]] = add nuw i64 [[SIZE_06_I]], 1
-; O2-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq %struct.node* [[TMP0]], null
-; O2-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[COUNT_NODES_VARIANT3_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP2:![0-9]+]]
-; O2:       count_nodes_variant3.exit:
-; O2-NEXT:    [[TMP1:%.*]] = xor i1 [[TOBOOL_NOT4_I]], true
-; O2-NEXT:    ret i1 [[TMP1]]
+; O2-NEXT:    [[TOBOOL_NOT4_I:%.*]] = icmp ne %struct.node* [[P:%.*]], null
+; O2-NEXT:    ret i1 [[TOBOOL_NOT4_I]]
 ;
 ; O1-LABEL: @is_not_empty_variant3(
 ; O1-NEXT:  entry:
@@ -160,7 +125,7 @@ define dso_local zeroext i1 @is_not_empty_variant3(%struct.node* %p) {
 ; O1-NEXT:    [[TMP0]] = load %struct.node*, %struct.node** [[NEXT_I]], align 8
 ; O1-NEXT:    [[INC_I]] = add i64 [[SIZE_06_I]], 1
 ; O1-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq %struct.node* [[TMP0]], null
-; O1-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[COUNT_NODES_VARIANT3_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP2:![0-9]+]]
+; O1-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[COUNT_NODES_VARIANT3_EXIT_LOOPEXIT:%.*]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP0:![0-9]+]]
 ; O1:       count_nodes_variant3.exit.loopexit:
 ; O1-NEXT:    [[PHI_CMP:%.*]] = icmp ne i64 [[INC_I]], 0
 ; O1-NEXT:    br label [[COUNT_NODES_VARIANT3_EXIT]]

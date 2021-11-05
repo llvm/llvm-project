@@ -1176,20 +1176,18 @@ static void addSanitizers(const Triple &TargetTriple,
 
     auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
-        bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
-        bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
-        bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+        bool UseGlobalGC = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
         bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
         llvm::AsanDtorKind DestructorKind =
             CodeGenOpts.getSanitizeAddressDtor();
-        llvm::AsanDetectStackUseAfterReturnMode UseAfterReturn =
-            CodeGenOpts.getSanitizeAddressUseAfterReturn();
+        AddressSanitizerOptions Opts;
+        Opts.CompileKernel = CompileKernel;
+        Opts.Recover = CodeGenOpts.SanitizeRecover.has(Mask);
+        Opts.UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
+        Opts.UseAfterReturn = CodeGenOpts.getSanitizeAddressUseAfterReturn();
         MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
         MPM.addPass(ModuleAddressSanitizerPass(
-            CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator,
-            DestructorKind));
-        MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-            {CompileKernel, Recover, UseAfterScope, UseAfterReturn})));
+            Opts, UseGlobalGC, UseOdrIndicator, DestructorKind));
       }
     };
     ASanPass(SanitizerKind::Address, false);
@@ -1313,9 +1311,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
-
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
 
   // Register the target library analysis directly and give it a customized
   // preset TLI.
@@ -1561,7 +1556,7 @@ static void runThinLTOBackend(
     return;
 
   auto AddStream = [&](size_t Task) {
-    return std::make_unique<NativeObjectStream>(std::move(OS));
+    return std::make_unique<CachedFileStream>(std::move(OS));
   };
   lto::Config Conf;
   if (CGOpts.SaveTempsFilePrefix != "") {

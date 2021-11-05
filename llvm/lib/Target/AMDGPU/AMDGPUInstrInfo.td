@@ -359,6 +359,10 @@ def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTypeProfile<0, 1, [SDTCisPt
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+def AMDGPUret_gfx_flag : SDNode<"AMDGPUISD::RET_GFX_FLAG", SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 
 //===----------------------------------------------------------------------===//
 // Intrinsic/Custom node compatibility PatFrags

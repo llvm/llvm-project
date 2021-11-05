@@ -63,7 +63,7 @@ static hsa_status_t (*_dl_hsa_agent_iterate_isas)(
 // These two static vectors are created by HSA iterators and needed after
 // iterators complete, so we save them statically.
 static std::vector<amdgpu_features_t> AMDGPU_FEATUREs;
-static std::vector<hsa_agent_t *> HSA_AGENTs;
+static std::vector<hsa_agent_t> HSA_AGENTs;
 
 static std::string offload_arch_requested;
 static bool first_call = true;
@@ -154,7 +154,6 @@ void *_aot_dynload_hsa_runtime() {
 #endif
   return dlhandle;
 }
-
 std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
                                   std::string oa) {
   std::string amdgpu_capabilities;
@@ -190,7 +189,7 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
         if (Status != HSA_STATUS_SUCCESS)
           return Status;
         GPUs->push_back(GPUName);
-        HSA_AGENTs.push_back(&Agent);
+        HSA_AGENTs.push_back(Agent);
         return HSA_STATUS_SUCCESS;
       },
       &GPUs);
@@ -205,8 +204,8 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
   }
 
   int isa_number = 0;
-  hsa_agent_t *agent_ptr = HSA_AGENTs[isa_number];
-  Status = _dl_hsa_agent_iterate_isas(*agent_ptr, get_isa_info, &isa_number);
+  hsa_agent_t xagent = HSA_AGENTs[isa_number];
+  Status = _dl_hsa_agent_iterate_isas(xagent, get_isa_info, &isa_number);
   if (Status == HSA_STATUS_ERROR_INVALID_AGENT) {
     amdgpu_capabilities.append(" HSAERROR-INVALID_AGENT");
     return amdgpu_capabilities;

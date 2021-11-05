@@ -2194,11 +2194,12 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     fprintf(traceToStdout ? stdout : stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
             "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
-            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu n:%s\n",
+            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d n:%s\n",
             device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
             arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
             group_segment_size, sgpr_count, vgpr_count, sgpr_spill_count,
-            vgpr_spill_count, loop_tripcount, KernelInfo->Name);
+            vgpr_spill_count, loop_tripcount, DeviceInfo.hostcall_required,
+            KernelInfo->Name);
   }
 
   // Run on the device.
