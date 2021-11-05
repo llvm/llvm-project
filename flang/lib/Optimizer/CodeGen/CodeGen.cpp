@@ -839,6 +839,18 @@ struct GenTypeDescOpConversion : public FIROpConversion<fir::GenTypeDescOp> {
   }
 };
 
+/// Convert `fir.end`
+struct FirEndOpConversion : public FIROpConversion<fir::FirEndOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::FirEndOp firEnd, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        firEnd, "fir.end codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -2108,9 +2120,9 @@ public:
         CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
         DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
         DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-        EmboxProcOpConversion, ExtractValueOpConversion, HasValueOpConversion,
-        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        InsertOnRangeOpConversion, InsertValueOpConversion,
+        EmboxProcOpConversion, ExtractValueOpConversion, FirEndOpConversion,
+        HasValueOpConversion, GenTypeDescOpConversion, GlobalLenOpConversion,
+        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
         IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
         MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
