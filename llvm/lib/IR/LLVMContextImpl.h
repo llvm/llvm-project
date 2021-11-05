@@ -1461,10 +1461,7 @@ public:
   unsigned NamedStructTypesUniqueID = 0;
 
   DenseMap<std::pair<Type *, uint64_t>, ArrayType*> ArrayTypes;
-  DenseMap<std::pair<Type *, ElementCount>, VectorType*> VectorTypes;
-  // TODO: clean up the following after we no longer support non-opaque pointer
-  // types.
-  bool OpaquePointers;
+  DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
   DenseMap<Type*, PointerType*> PointerTypes;  // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type*, unsigned>, PointerType*> ASPointerTypes;
 
@@ -1544,6 +1541,14 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
+
+  // TODO: clean up the following after we no longer support non-opaque pointer
+  // types.
+  bool getOpaquePointers();
+  void setOpaquePointers(bool OP);
+
+private:
+  Optional<bool> OpaquePointers;
 };
 
 } // end namespace llvm
