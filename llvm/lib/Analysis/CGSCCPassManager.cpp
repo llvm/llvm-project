@@ -38,8 +38,6 @@ using namespace llvm;
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
-extern cl::opt<bool> EagerlyInvalidateAnalyses;
-
 static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
     "abort-on-max-devirt-iterations-reached",
     cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
@@ -557,8 +555,7 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
     // We know that the function pass couldn't have invalidated any other
     // function's analyses (that's the contract of a function pass), so
     // directly handle the function analysis manager's invalidation here.
-    FAM.invalidate(F, EagerlyInvalidateAnalyses ? PreservedAnalyses::none()
-                                                : PassPA);
+    FAM.invalidate(F, EagerlyInvalidate ? PreservedAnalyses::none() : PassPA);
 
     // Then intersect the preserved set so that invalidation of module
     // analyses will eventually occur when the module pass completes.
