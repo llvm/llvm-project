@@ -271,7 +271,7 @@ class TwinePrinter:
       # register the LazyString type, so we can't check
       # "type(s) == gdb.LazyString".
       if 'LazyString' in type(s).__name__:
-        s = s.value().address.string()
+        s = s.value().string()
 
     else:
       print(('No pretty printer for {} found. The resulting Twine ' +
