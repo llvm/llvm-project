@@ -172,16 +172,28 @@ Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
 /// `defaultAllocationFn`.
 void defaultDeallocationFn(OpBuilder &b, Location loc, Value allocatedBuffer);
 
+/// Default memory copy function that is used by the comprehensive bufferization
+/// pass. Creates a `linalg.copy` op.
+void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to);
+
 /// Callback functions that are used by the comprehensive bufferization pass to
 /// allocate/deallocate memory. These default to use the
 /// `defaultAllocationFn`/`defaultDeallocationFn`, but can be overridden by the
 /// caller. The `deallocationFn` is gauranteed to recieve the `Value` returned
 /// by the `allocationFn`.
 struct AllocationCallbacks {
-  std::function<Optional<Value>(OpBuilder &b, Location loc, Value shapedValue)>
-      allocationFn = defaultAllocationFn;
-  std::function<void(OpBuilder &b, Location loc, Value v)> deallocationFn =
-      defaultDeallocationFn;
+  using AllocationFn =
+      std::function<Optional<Value>(OpBuilder &, Location, Value)>;
+  using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
+  using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
+
+  AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
+                      MemCpyFn copyFn)
+      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn) {}
+
+  AllocationFn allocationFn;
+  DeallocationFn deallocationFn;
+  MemCpyFn memCpyFn;
 };
 
 /// Bufferize one particular op.
