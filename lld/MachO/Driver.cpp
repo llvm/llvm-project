@@ -396,9 +396,10 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
 }
 
 // Parses LC_LINKER_OPTION contents, which can add additional command line
-// flags.
+// flags. This directly parses the flags instead of using the standard argument
+// parser to improve performance.
 void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
-  SmallVector<const char *, 4> argv;
+  SmallVector<StringRef, 4> argv;
   size_t offset = 0;
   for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
     argv.push_back(data.data() + offset);
@@ -407,32 +408,20 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   if (argv.size() != argc || offset > data.size())
     fatal(toString(f) + ": invalid LC_LINKER_OPTION");
 
-  MachOOptTable table;
-  unsigned missingIndex, missingCount;
-  InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
-  if (missingCount)
-    fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
-  for (const Arg *arg : args.filtered(OPT_UNKNOWN))
-    error("unknown argument: " + arg->getAsString(args));
-
-  for (const Arg *arg : args) {
-    switch (arg->getOption().getID()) {
-    case OPT_l: {
-      StringRef name = arg->getValue();
-      ForceLoad forceLoadArchive =
-          config->forceLoadSwift && name.startswith("swift") ? ForceLoad::Yes
-                                                             : ForceLoad::No;
-      addLibrary(name, /*isNeeded=*/false, /*isWeak=*/false,
-                 /*isReexport=*/false, /*isExplicit=*/false, forceLoadArchive);
-      break;
-    }
-    case OPT_framework:
-      addFramework(arg->getValue(), /*isNeeded=*/false, /*isWeak=*/false,
-                   /*isReexport=*/false, /*isExplicit=*/false, ForceLoad::No);
-      break;
-    default:
-      error(arg->getSpelling() + " is not allowed in LC_LINKER_OPTION");
-    }
+  unsigned i = 0;
+  StringRef arg = argv[i];
+  if (arg.consume_front("-l")) {
+    ForceLoad forceLoadArchive =
+        config->forceLoadSwift && arg.startswith("swift") ? ForceLoad::Yes
+                                                          : ForceLoad::No;
+    addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
+               /*isReexport=*/false, /*isExplicit=*/false, forceLoadArchive);
+  } else if (arg == "-framework") {
+    StringRef name = argv[++i];
+    addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isExplicit=*/false, ForceLoad::No);
+  } else {
+    error(arg + " is not allowed in LC_LINKER_OPTION");
   }
 }
 
