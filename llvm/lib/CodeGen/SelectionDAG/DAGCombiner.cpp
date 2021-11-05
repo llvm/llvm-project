@@ -9549,7 +9549,7 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
   EVT VT = N->getValueType(0);
-  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse() || !isNullOrNullSplat(N2))
+  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse())
     return SDValue();
 
   SDValue Cond0 = N0.getOperand(0);
@@ -9559,11 +9559,20 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & N1
-  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1)) {
+  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1) && isNullOrNullSplat(N2)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
     return DAG.getNode(ISD::AND, DL, VT, Sra, N1);
+  }
+
+  // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | N2
+  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1) &&
+      isAllOnesOrAllOnesSplat(N1)) {
+    SDLoc DL(N);
+    SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
+    return DAG.getNode(ISD::OR, DL, VT, Sra, N2);
   }
 
   return SDValue();

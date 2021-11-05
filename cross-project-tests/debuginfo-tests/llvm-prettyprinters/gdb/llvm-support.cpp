@@ -27,8 +27,8 @@ llvm::StringRef StringRef = "bar";
 // Should test std::string in Twine too, but it's currently broken because I
 // don't know how to add 'str' and 'gdb.LazyString' (can't figure out any way to
 // string-ify LazyString).
-//std::string String = "foo";
-llvm::Twine TempTwine = llvm::Twine(3) + StringRef;
+std::string String = "foo";
+llvm::Twine TempTwine = llvm::Twine(String) + StringRef;
 llvm::Twine Twine = TempTwine + "baz";
 llvm::PointerIntPair<int *, 1> PointerIntPair(IntPtr, 1);
 
