@@ -1077,20 +1077,12 @@ define <4 x i64> @ternlog_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y) {
 }
 
 define <4 x i32> @ternlog_maskz_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %mask) {
-; KNL-LABEL: ternlog_maskz_or_and_mask:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vpcmpgtd %xmm3, %xmm2, %k1
-; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    vpord %xmm1, %xmm0, %xmm0 {%k1} {z}
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_maskz_or_and_mask:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovd2m %xmm3, %k1
-; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; SKX-NEXT:    vorps %xmm1, %xmm0, %xmm0 {%k1} {z}
-; SKX-NEXT:    retq
+; CHECK-LABEL: ternlog_maskz_or_and_mask:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
+; CHECK-NEXT:    vpsrad $31, %xmm3, %xmm0
+; CHECK-NEXT:    vpternlogd $224, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
   %m = icmp slt <4 x i32> %mask, zeroinitializer
   %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %b = or <4 x i32> %a, %y
@@ -1099,20 +1091,12 @@ define <4 x i32> @ternlog_maskz_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 }
 
 define <8 x i32> @ternlog_maskz_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x i32> %mask) {
-; KNL-LABEL: ternlog_maskz_or_and_mask_ymm:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpgtd %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpord %ymm1, %ymm0, %ymm0 {%k1} {z}
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_maskz_or_and_mask_ymm:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovd2m %ymm2, %k1
-; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; SKX-NEXT:    vorps %ymm1, %ymm0, %ymm0 {%k1} {z}
-; SKX-NEXT:    retq
+; CHECK-LABEL: ternlog_maskz_or_and_mask_ymm:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm3
+; CHECK-NEXT:    vpsrad $31, %ymm2, %ymm0
+; CHECK-NEXT:    vpternlogd $224, %ymm1, %ymm3, %ymm0
+; CHECK-NEXT:    retq
   %m = icmp slt <8 x i32> %mask, zeroinitializer
   %a = and <8 x i32> %x, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
   %b = or <8 x i32> %a, %y
@@ -1121,20 +1105,12 @@ define <8 x i32> @ternlog_maskz_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x
 }
 
 define <2 x i64> @ternlog_maskz_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask) {
-; KNL-LABEL: ternlog_maskz_xor_and_mask:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpgtq %xmm2, %xmm3, %k1
-; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    vpxorq %xmm1, %xmm0, %xmm0 {%k1} {z}
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_maskz_xor_and_mask:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovq2m %xmm2, %k1
-; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; SKX-NEXT:    vxorpd %xmm1, %xmm0, %xmm0 {%k1} {z}
-; SKX-NEXT:    retq
+; CHECK-LABEL: ternlog_maskz_xor_and_mask:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
+; CHECK-NEXT:    vpsraq $63, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogq $96, %xmm1, %xmm3, %xmm0
+; CHECK-NEXT:    retq
   %m = icmp slt <2 x i64> %mask, zeroinitializer
   %a = and <2 x i64> %x, <i64 1099511627775, i64 1099511627775>
   %b = xor <2 x i64> %a, %y
@@ -1143,20 +1119,12 @@ define <2 x i64> @ternlog_maskz_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 }
 
 define <4 x i64> @ternlog_maskz_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 x i64> %mask) {
-; KNL-LABEL: ternlog_maskz_xor_and_mask_ymm:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpgtq %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpxorq %ymm1, %ymm0, %ymm0 {%k1} {z}
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_maskz_xor_and_mask_ymm:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovq2m %ymm2, %k1
-; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; SKX-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 {%k1} {z}
-; SKX-NEXT:    retq
+; CHECK-LABEL: ternlog_maskz_xor_and_mask_ymm:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm3
+; CHECK-NEXT:    vpsraq $63, %ymm2, %ymm0
+; CHECK-NEXT:    vpternlogq $96, %ymm1, %ymm3, %ymm0
+; CHECK-NEXT:    retq
   %m = icmp slt <4 x i64> %mask, zeroinitializer
   %a = and <4 x i64> %x, <i64 72057594037927935, i64 72057594037927935, i64 72057594037927935, i64 72057594037927935>
   %b = xor <4 x i64> %a, %y
