@@ -1100,6 +1100,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     resolvedFrameworks.clear();
     resolvedLibraries.clear();
+    cachedReads.clear();
     concatOutputSections.clear();
     inputFiles.clear();
     inputSections.clear();
