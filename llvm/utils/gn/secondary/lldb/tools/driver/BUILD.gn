@@ -43,7 +43,7 @@ executable("lldb") {
   if (current_os == "linux") {
     deps += [ "//lldb/tools/lldb-server" ]
   }
-  foreach (toolchain, supported_toolchains) {
+  foreach(toolchain, supported_toolchains) {
     deps += [ "//lldb/tools/lldb-server($toolchain)" ]
   }
 
