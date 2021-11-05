@@ -23,9 +23,12 @@ parser.add_argument('-o', action='store', dest='output')
 parser.add_argument('input')
 [args, unknown_args] = parser.parse_known_args()
 
-# Echo pipeline if '-print-pipeline-passes'.
+# Expand pipeline if '-print-pipeline-passes'.
 if args.print_pipeline_passes:
-    print(args.passes)
+    if args.passes == 'EXPAND_a_to_f':
+        print('a,b,c,d,e,f')
+    else:
+        print(args.passes)
     exit(0)
 
 # Parse '-crash-seq'.
