@@ -36,6 +36,8 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-delete"
 
 STATISTIC(NumDeleted, "Number of loops deleted");
+STATISTIC(NumBackedgesBroken,
+          "Number of loops for which we managed to break the backedge");
 
 static cl::opt<bool> EnableSymbolicExecution(
     "loop-deletion-enable-symbolic-execution", cl::Hidden, cl::init(true),
@@ -409,6 +411,7 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (BTC->isZero()) {
     // SCEV knows this backedge isn't taken!
     breakLoopBackedge(L, DT, SE, LI, MSSA);
+    ++NumBackedgesBroken;
     return LoopDeletionResult::Deleted;
   }
 
@@ -418,6 +421,7 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (isa<SCEVCouldNotCompute>(BTC) || !SE.isKnownNonZero(BTC))
     if (canProveExitOnFirstIteration(L, DT, LI)) {
       breakLoopBackedge(L, DT, SE, LI, MSSA);
+      ++NumBackedgesBroken;
       return LoopDeletionResult::Deleted;
     }
 

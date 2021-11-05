@@ -7407,7 +7407,9 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
   // C++1z [temp.arg.template]p3: (DR 150)
   //   A template-argument matches a template template-parameter P when P
   //   is at least as specialized as the template-argument A.
-  // FIXME: RelaxedTemplateTemplateArgs is deprecated, should be always on.
+  // FIXME: We should enable RelaxedTemplateTemplateArgs by default as it is a
+  //  defect report resolution from C++17 and shouldn't be introduced by
+  //  concepts.
   if (getLangOpts().RelaxedTemplateTemplateArgs) {
     // Quick check for the common case:
     //   If P contains a parameter pack, then A [...] matches P if each of A's
@@ -10917,9 +10919,9 @@ Sema::getTemplateArgumentBindingsText(const TemplateParameterList *Params,
     }
 
     Out << " = ";
-    Args[I].print(
-        getPrintingPolicy(), Out,
-        TemplateParameterList::shouldIncludeTypeForArgument(Params, I));
+    Args[I].print(getPrintingPolicy(), Out,
+                  TemplateParameterList::shouldIncludeTypeForArgument(
+                      getPrintingPolicy(), Params, I));
   }
 
   Out << ']';

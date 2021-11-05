@@ -492,7 +492,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name.equals("dwarf")) {
             value.getAsInteger(0, reg_info.regnum_dwarf);
           } else if (name.equals("generic")) {
-            value.getAsInteger(0, reg_info.regnum_generic);
+            reg_info.regnum_generic = Args::StringToGenericRegister(value);
           } else if (name.equals("container-regs")) {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
           } else if (name.equals("invalidate-regs")) {
@@ -2903,8 +2903,8 @@ lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
   return allocated_addr;
 }
 
-Status ProcessGDBRemote::GetMemoryRegionInfo(addr_t load_addr,
-                                             MemoryRegionInfo &region_info) {
+Status ProcessGDBRemote::DoGetMemoryRegionInfo(addr_t load_addr,
+                                               MemoryRegionInfo &region_info) {
 
   Status error(m_gdb_comm.GetMemoryRegionInfo(load_addr, region_info));
   return error;

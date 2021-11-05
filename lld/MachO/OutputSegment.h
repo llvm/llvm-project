@@ -68,6 +68,7 @@ private:
 extern std::vector<OutputSegment *> outputSegments;
 
 void sortOutputSegments();
+void resetOutputSegments();
 
 OutputSegment *getOrCreateOutputSegment(StringRef name);
 

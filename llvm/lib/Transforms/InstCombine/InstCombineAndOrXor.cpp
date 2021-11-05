@@ -2292,18 +2292,18 @@ static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
 /// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
 /// B, it can be used as the condition operand of a select instruction.
 Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
-  // Step 1: We may have peeked through bitcasts in the caller.
+  // We may have peeked through bitcasts in the caller.
   // Exit immediately if we don't have (vector) integer types.
   Type *Ty = A->getType();
   if (!Ty->isIntOrIntVectorTy() || !B->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  // Step 2: We need 0 or all-1's bitmasks.
+  // We need 0 or all-1's bitmasks.
   if (ComputeNumSignBits(A) != Ty->getScalarSizeInBits())
     return nullptr;
 
-  // Step 3: If B is the 'not' value of A, we have our answer.
-  if (match(A, m_Not(m_Specific(B)))) {
+  // If B is the 'not' value of A, we have our answer.
+  if (match(B, m_Not(m_Specific(A)))) {
     // If these are scalars or vectors of i1, A can be used directly.
     if (Ty->isIntOrIntVectorTy(1))
       return A;
@@ -2699,62 +2699,56 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateXor(Or, ConstantInt::get(I.getType(), *CV));
   }
 
-  // (A & C)|(B & D)
+  // (A & C) | (B & D)
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
-    // (A & C1)|(B & C2)
-    ConstantInt *C1, *C2;
-    if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
-      Value *V1 = nullptr, *V2 = nullptr;
-      if ((C1->getValue() & C2->getValue()).isZero()) {
-        // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
-        // iff (C1&C2) == 0 and (N&~C1) == 0
-        if (match(A, m_Or(m_Value(V1), m_Value(V2))) &&
-            ((V1 == B &&
-              MaskedValueIsZero(V2, ~C1->getValue(), 0, &I)) || // (V|N)
-             (V2 == B &&
-              MaskedValueIsZero(V1, ~C1->getValue(), 0, &I))))  // (N|V)
-          return BinaryOperator::CreateAnd(A,
-                                Builder.getInt(C1->getValue()|C2->getValue()));
-        // Or commutes, try both ways.
-        if (match(B, m_Or(m_Value(V1), m_Value(V2))) &&
-            ((V1 == A &&
-              MaskedValueIsZero(V2, ~C2->getValue(), 0, &I)) || // (V|N)
-             (V2 == A &&
-              MaskedValueIsZero(V1, ~C2->getValue(), 0, &I))))  // (N|V)
-          return BinaryOperator::CreateAnd(B,
-                                 Builder.getInt(C1->getValue()|C2->getValue()));
 
-        // ((V|C3)&C1) | ((V|C4)&C2) --> (V|C3|C4)&(C1|C2)
-        // iff (C1&C2) == 0 and (C3&~C1) == 0 and (C4&~C2) == 0.
-        ConstantInt *C3 = nullptr, *C4 = nullptr;
-        if (match(A, m_Or(m_Value(V1), m_ConstantInt(C3))) &&
-            (C3->getValue() & ~C1->getValue()).isZero() &&
-            match(B, m_Or(m_Specific(V1), m_ConstantInt(C4))) &&
-            (C4->getValue() & ~C2->getValue()).isZero()) {
-          V2 = Builder.CreateOr(V1, ConstantExpr::getOr(C3, C4), "bitfield");
-          return BinaryOperator::CreateAnd(V2,
-                                 Builder.getInt(C1->getValue()|C2->getValue()));
-        }
+    // (A & C0) | (B & C1)
+    const APInt *C0, *C1;
+    if (match(C, m_APInt(C0)) && match(D, m_APInt(C1))) {
+      Value *X;
+      if (*C0 == ~*C1) {
+        // ((X | B) & MaskC) | (B & ~MaskC) -> (X & MaskC) | B
+        if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
+          return BinaryOperator::CreateOr(Builder.CreateAnd(X, *C0), B);
+        // (A & MaskC) | ((X | A) & ~MaskC) -> (X & ~MaskC) | A
+        if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
+          return BinaryOperator::CreateOr(Builder.CreateAnd(X, *C1), A);
+
+        // ((X ^ B) & MaskC) | (B & ~MaskC) -> (X & MaskC) ^ B
+        if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
+          return BinaryOperator::CreateXor(Builder.CreateAnd(X, *C0), B);
+        // (A & MaskC) | ((X ^ A) & ~MaskC) -> (X & ~MaskC) ^ A
+        if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
+          return BinaryOperator::CreateXor(Builder.CreateAnd(X, *C1), A);
       }
 
-      if (C1->getValue() == ~C2->getValue()) {
-        Value *X;
-
-        // ((X|B)&C1)|(B&C2) -> (X&C1) | B iff C1 == ~C2
-        if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C1), B);
-        // (A&C2)|((X|A)&C1) -> (X&C2) | A iff C1 == ~C2
-        if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C2), A);
-
-        // ((X^B)&C1)|(B&C2) -> (X&C1) ^ B iff C1 == ~C2
-        if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C1), B);
-        // (A&C2)|((X^A)&C1) -> (X&C2) ^ A iff C1 == ~C2
-        if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
-          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C2), A);
+      if ((*C0 & *C1).isZero()) {
+        // ((X | B) & C0) | (B & C1) --> (X | B) & (C0 | C1)
+        // iff (C0 & C1) == 0 and (X & ~C0) == 0
+        if (match(A, m_c_Or(m_Value(X), m_Specific(B))) &&
+            MaskedValueIsZero(X, ~*C0, 0, &I)) {
+          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          return BinaryOperator::CreateAnd(A, C01);
+        }
+        // (A & C0) | ((X | A) & C1) --> (X | A) & (C0 | C1)
+        // iff (C0 & C1) == 0 and (X & ~C1) == 0
+        if (match(B, m_c_Or(m_Value(X), m_Specific(A))) &&
+            MaskedValueIsZero(X, ~*C1, 0, &I)) {
+          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          return BinaryOperator::CreateAnd(B, C01);
+        }
+        // ((X | C2) & C0) | ((X | C3) & C1) --> (X | C2 | C3) & (C0 | C1)
+        // iff (C0 & C1) == 0 and (C2 & ~C0) == 0 and (C3 & ~C1) == 0.
+        const APInt *C2, *C3;
+        if (match(A, m_Or(m_Value(X), m_APInt(C2))) &&
+            match(B, m_Or(m_Specific(X), m_APInt(C3))) &&
+            (*C2 & ~*C0).isZero() && (*C3 & ~*C1).isZero()) {
+          Value *Or = Builder.CreateOr(X, *C2 | *C3, "bitfield");
+          Constant *C01 = ConstantInt::get(I.getType(), *C0 | *C1);
+          return BinaryOperator::CreateAnd(Or, C01);
+        }
       }
     }
 
@@ -2816,6 +2810,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       Value *Xor = Builder.CreateXor(A, C);
       return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B));
     }
+  }
+
+  // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
+  // TODO: One use checks are conservative. We just need to check that a total
+  //       number of multiple used values does not exceed 3.
+  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
+                                  m_Value(C))))) {
+    if (match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(C)))))
+      return BinaryOperator::CreateNot(
+          Builder.CreateOr(Builder.CreateAnd(B, C), A));
+
+    if (match(Op1, m_Not(m_c_Or(m_Specific(B), m_Specific(C)))))
+      return BinaryOperator::CreateNot(
+          Builder.CreateOr(Builder.CreateAnd(A, C), B));
   }
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
@@ -3569,10 +3577,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;
 
-  // Use DeMorgan and reassociation to eliminate a 'not' op.
   Value *X, *Y;
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
+    // Use DeMorgan and reassociation to eliminate a 'not' op.
     Constant *C2;
     if (match(Op0, m_OneUse(m_Or(m_Not(m_Value(X)), m_Constant(C2))))) {
       // (~X | C2) ^ C1 --> ((X & ~C2) ^ -1) ^ C1 --> (X & ~C2) ^ ~C1
@@ -3583,6 +3591,21 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // (~X & C2) ^ C1 --> ((X | ~C2) ^ -1) ^ C1 --> (X | ~C2) ^ ~C1
       Value *Or = Builder.CreateOr(X, ConstantExpr::getNot(C2));
       return BinaryOperator::CreateXor(Or, ConstantExpr::getNot(C1));
+    }
+
+    // Convert xor ([trunc] (ashr X, BW-1)), C =>
+    //   select(X >s -1, C, ~C)
+    // The ashr creates "AllZeroOrAllOne's", which then optionally inverses the
+    // constant depending on whether this input is less than 0.
+    const APInt *CA;
+    if (match(Op0, m_OneUse(m_TruncOrSelf(
+                       m_AShr(m_Value(X), m_APIntAllowUndef(CA))))) &&
+        *CA == X->getType()->getScalarSizeInBits() - 1 &&
+        !match(C1, m_AllOnes())) {
+      assert(!C1->isZeroValue() && "Unexpected xor with 0");
+      Value *ICmp =
+          Builder.CreateICmpSGT(X, Constant::getAllOnesValue(X->getType()));
+      return SelectInst::Create(ICmp, Op1, Builder.CreateNot(Op1));
     }
   }
 

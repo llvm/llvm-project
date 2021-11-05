@@ -43,6 +43,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  stpcpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    stpcpy_test.cpp
+  DEPENDS
+    libc.src.string.stpcpy
+)
+
+add_libc_unittest(
+  stpncpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    stpncpy_test.cpp
+  DEPENDS
+    libc.src.string.stpncpy
+)
+
+add_libc_unittest(
   strcat_test
   SUITE
     libc_string_unittests
@@ -141,6 +161,17 @@ add_libc_unittest(
     strncpy_test.cpp
   DEPENDS
     libc.src.string.strncpy
+)
+
+add_libc_unittest(
+  strndup_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strndup_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.string.strndup
 )
 
 add_libc_unittest(

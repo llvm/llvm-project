@@ -3454,7 +3454,7 @@ static void removeRedundantPaths(std::list<FullPathTy> &FullPaths) {
       if (&SpecificPath == &OtherPath)
         continue;
       if (llvm::all_of(SpecificPath, [&](const BaseSubobject &BSO) {
-            return OtherPath.count(BSO) != 0;
+            return OtherPath.contains(BSO);
           })) {
         return true;
       }

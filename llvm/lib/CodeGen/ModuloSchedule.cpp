@@ -141,13 +141,11 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
 
   // Copy any terminator instructions to the new kernel, and update
   // names as needed.
-  for (MachineBasicBlock::iterator I = BB->getFirstTerminator(),
-                                   E = BB->instr_end();
-       I != E; ++I) {
-    MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+  for (MachineInstr &MI : BB->terminators()) {
+    MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
     updateInstruction(NewMI, false, MaxStageCount, 0, VRMap);
     KernelBB->push_back(NewMI);
-    InstrMap[NewMI] = &*I;
+    InstrMap[NewMI] = &MI;
   }
 
   NewKernel = KernelBB;
@@ -1619,32 +1617,32 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
     MachineBasicBlock *DestBB, MachineBasicBlock *SourceBB, unsigned Stage) {
   auto InsertPt = DestBB->getFirstNonPHI();
   DenseMap<Register, Register> Remaps;
-  for (auto I = SourceBB->getFirstNonPHI(); I != SourceBB->end();) {
-    MachineInstr *MI = &*I++;
-    if (MI->isPHI()) {
+  for (MachineInstr &MI : llvm::make_early_inc_range(
+           llvm::make_range(SourceBB->getFirstNonPHI(), SourceBB->end()))) {
+    if (MI.isPHI()) {
       // This is an illegal PHI. If we move any instructions using an illegal
       // PHI, we need to create a legal Phi.
-      if (getStage(MI) != Stage) {
+      if (getStage(&MI) != Stage) {
         // The legal Phi is not necessary if the illegal phi's stage
         // is being moved.
-        Register PhiR = MI->getOperand(0).getReg();
+        Register PhiR = MI.getOperand(0).getReg();
         auto RC = MRI.getRegClass(PhiR);
         Register NR = MRI.createVirtualRegister(RC);
         MachineInstr *NI = BuildMI(*DestBB, DestBB->getFirstNonPHI(),
                                    DebugLoc(), TII->get(TargetOpcode::PHI), NR)
                                .addReg(PhiR)
                                .addMBB(SourceBB);
-        BlockMIs[{DestBB, CanonicalMIs[MI]}] = NI;
-        CanonicalMIs[NI] = CanonicalMIs[MI];
+        BlockMIs[{DestBB, CanonicalMIs[&MI]}] = NI;
+        CanonicalMIs[NI] = CanonicalMIs[&MI];
         Remaps[PhiR] = NR;
       }
     }
-    if (getStage(MI) != Stage)
+    if (getStage(&MI) != Stage)
       continue;
-    MI->removeFromParent();
-    DestBB->insert(InsertPt, MI);
-    auto *KernelMI = CanonicalMIs[MI];
-    BlockMIs[{DestBB, KernelMI}] = MI;
+    MI.removeFromParent();
+    DestBB->insert(InsertPt, &MI);
+    auto *KernelMI = CanonicalMIs[&MI];
+    BlockMIs[{DestBB, KernelMI}] = &MI;
     BlockMIs.erase({SourceBB, KernelMI});
   }
   SmallVector<MachineInstr *, 4> PhiToDelete;

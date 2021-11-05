@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Testing that two distinct (distinct by writing them in separate files, while
 ; still fulfilling C++'s ODR by having identical token sequences) functions,
@@ -27,13 +27,13 @@
 ; The DISubprogram should show up in compile unit a.
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; CHECK:    DW_AT_name {{.*}}"b.cpp"
+; CHECK:    DW_AT_name ("b.cpp")
 ; CHECK-NOT: DW_TAG_subprogram
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}}"a.cpp"
-; CHECK:     DW_AT_name {{.*}} "func"
+; CHECK:     DW_AT_name ("a.cpp")
+; CHECK:     DW_AT_name ("func")
 
 source_filename = "test/DebugInfo/Generic/cross-cu-linkonce-distinct.ll"
 

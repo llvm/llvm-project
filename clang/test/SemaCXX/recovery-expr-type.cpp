@@ -143,3 +143,11 @@ int fun(int *foo = no_such_function()); // expected-error {{undeclared identifie
 void crash1() { fun(); }
 void crash2() { constexpr int s = fun(); }
 } // namespace test12
+
+namespace test13 {
+enum Circular {             // expected-note {{not complete until the closing '}'}}
+  Circular_A = Circular(1), // expected-error {{'test13::Circular' is an incomplete type}}
+};
+// Enumerators can be evaluated (they evaluate as zero, but we don't care).
+static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static_assert failed}}
+}

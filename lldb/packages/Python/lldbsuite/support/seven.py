@@ -1,5 +1,6 @@
 import binascii
 import six
+import shlex
 
 if six.PY2:
     import commands
@@ -49,3 +50,7 @@ def unhexlify(hexstr):
 def hexlify(data):
     """Hex-encode string data. The result if always a string."""
     return bitcast_to_string(binascii.hexlify(bitcast_to_bytes(data)))
+
+# TODO: Replace this with `shlex.join` when minimum Python version is >= 3.8
+def join_for_shell(split_command):
+    return " ".join([shlex.quote(part) for part in split_command])

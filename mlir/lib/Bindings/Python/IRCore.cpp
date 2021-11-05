@@ -875,6 +875,24 @@ py::object PyOperationBase::getAsm(bool binary,
   return fileObject.attr("getvalue")();
 }
 
+void PyOperationBase::moveAfter(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  mlirOperationMoveAfter(operation, otherOp);
+  operation.parentKeepAlive = otherOp.parentKeepAlive;
+}
+
+void PyOperationBase::moveBefore(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  mlirOperationMoveBefore(operation, otherOp);
+  operation.parentKeepAlive = otherOp.parentKeepAlive;
+}
+
 llvm::Optional<PyOperationRef> PyOperation::getParentOperation() {
   checkValid();
   if (!isAttached())
@@ -1512,6 +1530,57 @@ PyValue PyValue::createFromCapsule(pybind11::object capsule) {
   return PyValue(ownerRef, value);
 }
 
+//------------------------------------------------------------------------------
+// PySymbolTable.
+//------------------------------------------------------------------------------
+
+PySymbolTable::PySymbolTable(PyOperationBase &operation)
+    : operation(operation.getOperation().getRef()) {
+  symbolTable = mlirSymbolTableCreate(operation.getOperation().get());
+  if (mlirSymbolTableIsNull(symbolTable)) {
+    throw py::cast_error("Operation is not a Symbol Table.");
+  }
+}
+
+py::object PySymbolTable::dunderGetItem(const std::string &name) {
+  operation->checkValid();
+  MlirOperation symbol = mlirSymbolTableLookup(
+      symbolTable, mlirStringRefCreate(name.data(), name.length()));
+  if (mlirOperationIsNull(symbol))
+    throw py::key_error("Symbol '" + name + "' not in the symbol table.");
+
+  return PyOperation::forOperation(operation->getContext(), symbol,
+                                   operation.getObject())
+      ->createOpView();
+}
+
+void PySymbolTable::erase(PyOperationBase &symbol) {
+  operation->checkValid();
+  symbol.getOperation().checkValid();
+  mlirSymbolTableErase(symbolTable, symbol.getOperation().get());
+  // The operation is also erased, so we must invalidate it. There may be Python
+  // references to this operation so we don't want to delete it from the list of
+  // live operations here.
+  symbol.getOperation().valid = false;
+}
+
+void PySymbolTable::dunderDel(const std::string &name) {
+  py::object operation = dunderGetItem(name);
+  erase(py::cast<PyOperationBase &>(operation));
+}
+
+PyAttribute PySymbolTable::insert(PyOperationBase &symbol) {
+  operation->checkValid();
+  symbol.getOperation().checkValid();
+  MlirAttribute symbolAttr = mlirOperationGetAttributeByName(
+      symbol.getOperation().get(), mlirSymbolTableGetSymbolAttributeName());
+  if (mlirAttributeIsNull(symbolAttr))
+    throw py::value_error("Expected operation to have a symbol name.");
+  return PyAttribute(
+      symbol.getOperation().getContext(),
+      mlirSymbolTableInsert(symbolTable, symbol.getOperation().get()));
+}
+
 namespace {
 /// CRTP base class for Python MLIR values that subclass Value and should be
 /// castable from it. The value hierarchy is one level deep and is not supposed
@@ -2102,6 +2171,10 @@ void mlir::python::populateIRCore(py::module &m) {
            })
       .def("__eq__",
            [](PyOperationBase &self, py::object other) { return false; })
+      .def("__hash__",
+           [](PyOperationBase &self) {
+             return static_cast<size_t>(llvm::hash_value(&self.getOperation()));
+           })
       .def_property_readonly("attributes",
                              [](PyOperationBase &self) {
                                return PyOpAttributeMap(
@@ -2185,7 +2258,25 @@ void mlir::python::populateIRCore(py::module &m) {
             return mlirOperationVerify(self.getOperation());
           },
           "Verify the operation and return true if it passes, false if it "
-          "fails.");
+          "fails.")
+      .def("move_after", &PyOperationBase::moveAfter, py::arg("other"),
+           "Puts self immediately after the other operation in its parent "
+           "block.")
+      .def("move_before", &PyOperationBase::moveBefore, py::arg("other"),
+           "Puts self immediately before the other operation in its parent "
+           "block.")
+      .def(
+          "detach_from_parent",
+          [](PyOperationBase &self) {
+            PyOperation &operation = self.getOperation();
+            operation.checkValid();
+            if (!operation.isAttached())
+              throw py::value_error("Detached operation has no parent.");
+
+            operation.detachFromParent();
+            return operation.createOpView();
+          },
+          "Detaches the operation from its parent block.");
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation", py::module_local())
       .def_static("create", &PyOperation::create, py::arg("name"),
@@ -2380,7 +2471,20 @@ void mlir::python::populateIRCore(py::module &m) {
                            printAccum.getUserData());
             return printAccum.join();
           },
-          "Returns the assembly form of the block.");
+          "Returns the assembly form of the block.")
+      .def(
+          "append",
+          [](PyBlock &self, PyOperationBase &operation) {
+            if (operation.getOperation().isAttached())
+              operation.getOperation().detachFromParent();
+
+            MlirOperation mlirOperation = operation.getOperation().get();
+            mlirBlockAppendOwnedOperation(self.get(), mlirOperation);
+            operation.getOperation().setAttached(
+                self.getParentOperation().getObject());
+          },
+          "Appends an operation to this block. If the operation is currently "
+          "in another block, it will be moved.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyInsertionPoint.
@@ -2458,7 +2562,10 @@ void mlir::python::populateIRCore(py::module &m) {
       .def("__eq__",
            [](PyAttribute &self, PyAttribute &other) { return self == other; })
       .def("__eq__", [](PyAttribute &self, py::object &other) { return false; })
-      .def("__hash__", [](PyAttribute &self) { return (size_t)self.get().ptr; })
+      .def("__hash__",
+           [](PyAttribute &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
           kDumpDocstring)
@@ -2552,7 +2659,10 @@ void mlir::python::populateIRCore(py::module &m) {
           "Context that owns the Type")
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def("__eq__", [](PyType &self, py::object &other) { return false; })
-      .def("__hash__", [](PyType &self) { return (size_t)self.get().ptr; })
+      .def("__hash__",
+           [](PyType &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
       .def(
@@ -2603,6 +2713,10 @@ void mlir::python::populateIRCore(py::module &m) {
              return self.get().ptr == other.get().ptr;
            })
       .def("__eq__", [](PyValue &self, py::object other) { return false; })
+      .def("__hash__",
+           [](PyValue &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "__str__",
           [](PyValue &self) {
@@ -2620,6 +2734,20 @@ void mlir::python::populateIRCore(py::module &m) {
       });
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of SymbolTable.
+  //----------------------------------------------------------------------------
+  py::class_<PySymbolTable>(m, "SymbolTable", py::module_local())
+      .def(py::init<PyOperationBase &>())
+      .def("__getitem__", &PySymbolTable::dunderGetItem)
+      .def("insert", &PySymbolTable::insert)
+      .def("erase", &PySymbolTable::erase)
+      .def("__delitem__", &PySymbolTable::dunderDel)
+      .def("__contains__", [](PySymbolTable &table, const std::string &name) {
+        return !mlirOperationIsNull(mlirSymbolTableLookup(
+            table, mlirStringRefCreate(name.data(), name.length())));
+      });
 
   // Container bindings.
   PyBlockArgumentList::bind(m);

@@ -75,7 +75,7 @@
 /* #undef CLANG_HAVE_LIBXML */
 
 /* Define if we have sys/resource.h (rlimits) */
-#define CLANG_HAVE_RLIMITS 1
+/* CLANG_HAVE_RLIMITS defined conditionally below */
 
 /* The LLVM product name and version */
 #define BACKEND_PACKAGE_STRING "LLVM 12.0.0git"
@@ -99,5 +99,15 @@
 
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #define CLANG_SPAWN_CC1 0
+
+/* Directly provide definitions here behind platform preprocessor definitions.
+ * The preprocessor conditions are sufficient to handle all of the configuration
+ * on platforms targeted by Bazel, and defining these here more faithfully
+ * matches how the users of this header expect things to work with CMake.
+ */
+
+#ifndef _WIN32
+#define CLANG_HAVE_RLIMITS 1
+#endif
 
 #endif

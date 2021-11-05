@@ -642,8 +642,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     uint32_t OffsetVal = Offset->getZExtValue();
     uint32_t WidthVal = Width->getZExtValue();
 
-    ReplaceNode(N, getS_BFE(Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32,
-                            SDLoc(N), N->getOperand(0), OffsetVal, WidthVal));
+    ReplaceNode(N, getBFE32(Signed, SDLoc(N), N->getOperand(0), OffsetVal,
+                            WidthVal));
     return;
   }
   case AMDGPUISD::DIV_SCALE: {
@@ -2008,9 +2008,17 @@ bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
   return true;
 }
 
-SDNode *AMDGPUDAGToDAGISel::getS_BFE(unsigned Opcode, const SDLoc &DL,
+SDNode *AMDGPUDAGToDAGISel::getBFE32(bool IsSigned, const SDLoc &DL,
                                      SDValue Val, uint32_t Offset,
                                      uint32_t Width) {
+  if (Val->isDivergent()) {
+    unsigned Opcode = IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
+    SDValue Off = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+    SDValue W = CurDAG->getTargetConstant(Width, DL, MVT::i32);
+
+    return CurDAG->getMachineNode(Opcode, DL, MVT::i32, Val, Off, W);
+  }
+  unsigned Opcode = IsSigned ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
   // Transformation function, pack the offset and width of a BFE into
   // the format expected by the S_BFE_I32 / S_BFE_U32. In the second
   // source, bits [5:0] contain the offset and bits [22:16] the width.
@@ -2035,10 +2043,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFEFromShifts(SDNode *N) {
 
     if (0 < BVal && BVal <= CVal && CVal < 32) {
       bool Signed = N->getOpcode() == ISD::SRA;
-      unsigned Opcode = Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
-
-      ReplaceNode(N, getS_BFE(Opcode, SDLoc(N), Shl.getOperand(0), CVal - BVal,
-                              32 - CVal));
+      ReplaceNode(N, getBFE32(Signed, SDLoc(N), Shl.getOperand(0), CVal - BVal,
+                  32 - CVal));
       return;
     }
   }
@@ -2061,9 +2067,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
 
         if (isMask_32(MaskVal)) {
           uint32_t WidthVal = countPopulation(MaskVal);
-
-          ReplaceNode(N, getS_BFE(AMDGPU::S_BFE_U32, SDLoc(N),
-                                  Srl.getOperand(0), ShiftVal, WidthVal));
+          ReplaceNode(N, getBFE32(false, SDLoc(N), Srl.getOperand(0), ShiftVal,
+                                  WidthVal));
           return;
         }
       }
@@ -2083,9 +2088,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
 
         if (isMask_32(MaskVal)) {
           uint32_t WidthVal = countPopulation(MaskVal);
-
-          ReplaceNode(N, getS_BFE(AMDGPU::S_BFE_U32, SDLoc(N),
-                                  And.getOperand(0), ShiftVal, WidthVal));
+          ReplaceNode(N, getBFE32(false, SDLoc(N), And.getOperand(0), ShiftVal,
+                      WidthVal));
           return;
         }
       }
@@ -2112,7 +2116,7 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
       break;
 
     unsigned Width = cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits();
-    ReplaceNode(N, getS_BFE(AMDGPU::S_BFE_I32, SDLoc(N), Src.getOperand(0),
+    ReplaceNode(N, getBFE32(true, SDLoc(N), Src.getOperand(0),
                             Amt->getZExtValue(), Width));
     return;
   }

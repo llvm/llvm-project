@@ -874,8 +874,9 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
 
     Record *TemplateRec = CurMultiClass ? &CurMultiClass->Rec : CurRec;
     if (TemplateRec->isTemplateArg(TemplateArgName)) {
-      const RecordVal *RV = TemplateRec->getValue(TemplateArgName);
+      RecordVal *RV = TemplateRec->getValue(TemplateArgName);
       assert(RV && "Template arg doesn't exist??");
+      RV->setUsed(true);
       return VarInit::get(TemplateArgName, RV->getType());
     } else if (Name->getValue() == "NAME") {
       return VarInit::get(TemplateArgName, StringRecTy::get());
@@ -3346,7 +3347,12 @@ bool TGParser::ParseClass() {
     if (ParseTemplateArgList(CurRec))
       return true;
 
-  return ParseObjectBody(CurRec);
+  if (ParseObjectBody(CurRec))
+    return true;
+
+  if (!NoWarnOnUnusedTemplateArgs)
+    CurRec->checkUnusedTemplateArgs();
+  return false;
 }
 
 /// ParseLetList - Parse a non-empty list of assignment expressions into a list
@@ -3540,6 +3546,9 @@ bool TGParser::ParseMultiClass() {
 
     PopLocalScope(MulticlassScope);
   }
+
+  if (!NoWarnOnUnusedTemplateArgs)
+    CurMultiClass->Rec.checkUnusedTemplateArgs();
 
   CurMultiClass = nullptr;
   return false;

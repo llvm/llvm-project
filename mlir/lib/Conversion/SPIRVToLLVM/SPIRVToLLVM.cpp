@@ -1364,6 +1364,65 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// VectorShuffleOp conversion
+//===----------------------------------------------------------------------===//
+
+class VectorShufflePattern
+    : public SPIRVToLLVMConversion<spirv::VectorShuffleOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::VectorShuffleOp>::SPIRVToLLVMConversion;
+  LogicalResult
+  matchAndRewrite(spirv::VectorShuffleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto components = adaptor.components();
+    auto vector1 = adaptor.vector1();
+    auto vector2 = adaptor.vector2();
+    int vector1Size = vector1.getType().cast<VectorType>().getNumElements();
+    int vector2Size = vector2.getType().cast<VectorType>().getNumElements();
+    if (vector1Size == vector2Size) {
+      rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(op, vector1, vector2,
+                                                         components);
+      return success();
+    }
+
+    auto dstType = typeConverter.convertType(op.getType());
+    auto scalarType = dstType.cast<VectorType>().getElementType();
+    auto componentsArray = components.getValue();
+    auto context = rewriter.getContext();
+    auto llvmI32Type = IntegerType::get(context, 32);
+    Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
+    for (unsigned i = 0; i < componentsArray.size(); i++) {
+      if (componentsArray[i].isa<IntegerAttr>())
+        op.emitError("unable to support non-constant component");
+
+      int indexVal = componentsArray[i].cast<IntegerAttr>().getInt();
+      if (indexVal == -1)
+        continue;
+
+      int offsetVal = 0;
+      Value baseVector = vector1;
+      if (indexVal >= vector1Size) {
+        offsetVal = vector1Size;
+        baseVector = vector2;
+      }
+
+      Value dstIndex = rewriter.create<LLVM::ConstantOp>(
+          loc, llvmI32Type, rewriter.getIntegerAttr(rewriter.getI32Type(), i));
+      Value index = rewriter.create<LLVM::ConstantOp>(
+          loc, llvmI32Type,
+          rewriter.getIntegerAttr(rewriter.getI32Type(), indexVal - offsetVal));
+
+      auto extractOp = rewriter.create<LLVM::ExtractElementOp>(
+          loc, scalarType, baseVector, index);
+      targetOp = rewriter.create<LLVM::InsertElementOp>(loc, dstType, targetOp,
+                                                        extractOp, dstIndex);
+    }
+    rewriter.replaceOp(op, targetOp);
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1489,6 +1548,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       CompositeExtractPattern, CompositeInsertPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
+      VectorShufflePattern,
 
       // Shift ops
       ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,

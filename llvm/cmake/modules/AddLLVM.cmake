@@ -166,33 +166,43 @@ function(add_llvm_symbol_exports target_name export_file)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 endfunction(add_llvm_symbol_exports)
 
-if (NOT DEFINED LLVM_LINKER_DETECTED)
+if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
+  # Detect what linker we have here.
   if(APPLE)
-    execute_process(
-      COMMAND "${CMAKE_LINKER}" -v
-      ERROR_VARIABLE stderr
-      )
+    # Linkers with ld64-compatible flags.
+    set(version_flag "-Wl,-v")
+  else()
+    # Linkers with BFD ld-compatible flags.
+    set(version_flag "-Wl,--version")
+  endif()
+
+  if(LLVM_USE_LINKER)
+    set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} ${version_flag})
+  else()
+    separate_arguments(flags UNIX_COMMAND "${CMAKE_EXE_LINKER_FLAGS}")
+    set(command ${CMAKE_C_COMPILER} ${flags} ${version_flag})
+  endif()
+  execute_process(
+    COMMAND ${command}
+    OUTPUT_VARIABLE stdout
+    ERROR_VARIABLE stderr
+    )
+
+  if(APPLE)
     if("${stderr}" MATCHES "PROJECT:ld64")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_LD64 YES CACHE INTERNAL "")
       message(STATUS "Linker detection: ld64")
+    elseif("${stderr}" MATCHES "^LLD" OR
+           "${stdout}" MATCHES "^LLD")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_LLD YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: lld")
     else()
       set(LLVM_LINKER_DETECTED NO CACHE INTERNAL "")
       message(STATUS "Linker detection: unknown")
     endif()
-  elseif(NOT WIN32)
-    # Detect what linker we have here
-    if( LLVM_USE_LINKER )
-      set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} -Wl,--version)
-    else()
-      separate_arguments(flags UNIX_COMMAND "${CMAKE_EXE_LINKER_FLAGS}")
-      set(command ${CMAKE_C_COMPILER} ${flags} -Wl,--version)
-    endif()
-    execute_process(
-      COMMAND ${command}
-      OUTPUT_VARIABLE stdout
-      ERROR_VARIABLE stderr
-      )
+  else()
     if("${stdout}" MATCHES "^mold")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       message(STATUS "Linker detection: mold")

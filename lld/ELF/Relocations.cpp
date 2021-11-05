@@ -224,20 +224,16 @@ static bool isRelExpr(RelExpr expr) {
 static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
                                      InputSectionBase &s, uint64_t relOff) {
   // These expressions always compute a constant
-  if (oneof<R_DTPREL, R_GOTPLT, R_GOT_OFF, R_TLSLD_GOT_OFF,
-            R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
-            R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
+  if (oneof<R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
+            R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
-            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
-            R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
-            R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT,
-            R_AARCH64_GOT_PAGE>(e))
+            R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
+            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
-  if (e == R_GOT || e == R_PLT || e == R_TLSDESC)
+  if (e == R_GOT || e == R_PLT)
     return target->usesOnlyLowPageBits(type) || !config->isPic;
 
   if (sym.isPreemptible)
@@ -1098,25 +1094,10 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
     }
   }
 
-  if (config->isPic) {
-    if (!canWrite && !isRelExpr(expr))
-      errorOrWarn(
-          "can't create dynamic relocation " + toString(type) + " against " +
-          (sym.getName().empty() ? "local symbol"
-                                 : "symbol: " + toString(sym)) +
-          " in readonly segment; recompile object files with -fPIC "
-          "or pass '-Wl,-z,notext' to allow text relocations in the output" +
-          getLocation(sec, sym, offset));
-    else
-      errorOrWarn(
-          "relocation " + toString(type) + " cannot be used against " +
-          (sym.getName().empty() ? "local symbol" : "symbol " + toString(sym)) +
-          "; recompile with -fPIC" + getLocation(sec, sym, offset));
-    return;
-  }
-
-  errorOrWarn("symbol '" + toString(sym) + "' has no type" +
-              getLocation(sec, sym, offset));
+  errorOrWarn("relocation " + toString(type) + " cannot be used against " +
+              (sym.getName().empty() ? "local symbol"
+                                     : "symbol '" + toString(sym) + "'") +
+              "; recompile with -fPIC" + getLocation(sec, sym, offset));
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -1216,9 +1197,10 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (expr == R_DTPREL && toExecRelax) {
-    c.relocations.push_back({target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE),
-                             type, offset, addend, &sym});
+  if (expr == R_DTPREL) {
+    if (toExecRelax)
+      expr = target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
+    c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
 
@@ -1292,8 +1274,11 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     } else if (expr != R_TLSIE_HINT) {
       if (!sym.isInGot())
         addTpOffsetGotEntry(sym);
-      // R_GOT may not be a link-time constant.
-      processRelocAux<ELFT>(c, expr, type, offset, sym, addend);
+      // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
+      if (expr == R_GOT && config->isPic && !target->usesOnlyLowPageBits(type))
+        addRelativeReloc(&c, offset, sym, addend, expr, type);
+      else
+        c.relocations.push_back({expr, type, offset, addend, &sym});
     }
     return 1;
   }

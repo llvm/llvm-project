@@ -90,3 +90,12 @@ vfredsum.vs v8, v4, v20, v0.t
 # ALIAS:    vfwredusum.vs v8, v4, v20, v0.t   # encoding: [0x57,0x14,0x4a,0xc4]
 # NO-ALIAS: vfwredusum.vs v8, v4, v20, v0.t  # encoding: [0x57,0x14,0x4a,0xc4]
 vfwredsum.vs v8, v4, v20, v0.t
+# ALIAS:    vcpop.m         a2, v4, v0.t     # encoding: [0x57,0x26,0x48,0x40]
+# NO-ALIAS: vcpop.m         a2, v4, v0.t     # encoding: [0x57,0x26,0x48,0x40]
+vpopc.m a2, v4, v0.t
+# ALIAS:    vmandn.mm       v8, v4, v20      # encoding: [0x57,0x24,0x4a,0x62]
+# NO-ALIAS: vmandn.mm       v8, v4, v20      # encoding: [0x57,0x24,0x4a,0x62]
+vmandnot.mm v8, v4, v20
+# ALIAS:    vmorn.mm        v8, v4, v20      # encoding: [0x57,0x24,0x4a,0x72]
+# NO-ALIAS: vmorn.mm        v8, v4, v20      # encoding: [0x57,0x24,0x4a,0x72]
+vmornot.mm v8, v4, v20

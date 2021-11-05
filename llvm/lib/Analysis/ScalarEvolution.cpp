@@ -1098,7 +1098,6 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
     SCEV *S = new (SCEVAllocator)
         SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -1219,7 +1218,6 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
     SCEV *S =
         new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator), Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -1274,7 +1272,6 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
   SCEV *S = new (SCEVAllocator) SCEVTruncateExpr(ID.Intern(SCEVAllocator),
                                                  Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, Op);
   return S;
 }
@@ -1604,7 +1601,6 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     SCEV *S = new (SCEVAllocator) SCEVZeroExtendExpr(ID.Intern(SCEVAllocator),
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -1874,7 +1870,6 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   SCEV *S = new (SCEVAllocator) SCEVZeroExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, Op);
   return S;
 }
@@ -1914,7 +1909,6 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                      Op, Ty);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Op);
     return S;
   }
@@ -2112,7 +2106,6 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, { Op });
   return S;
 }
@@ -2898,7 +2891,6 @@ ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
     S = new (SCEVAllocator)
         SCEVAddExpr(ID.Intern(SCEVAllocator), O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
@@ -2922,7 +2914,7 @@ ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
     S = new (SCEVAllocator)
         SCEVAddRecExpr(ID.Intern(SCEVAllocator), O, Ops.size(), L);
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
+    LoopUsers[L].push_back(S);
     registerUser(S, Ops);
   }
   setNoWrapFlags(S, Flags);
@@ -2945,7 +2937,6 @@ ScalarEvolution::getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
     S = new (SCEVAllocator) SCEVMulExpr(ID.Intern(SCEVAllocator),
                                         O, Ops.size());
     UniqueSCEVs.InsertNode(S, IP);
-    addToLoopUseLists(S);
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
@@ -3455,7 +3446,6 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
   SCEV *S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator),
                                              LHS, RHS);
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, {LHS, RHS});
   return S;
 }
@@ -3850,7 +3840,6 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
       SCEVMinMaxExpr(ID.Intern(SCEVAllocator), Kind, O, Ops.size());
 
   UniqueSCEVs.InsertNode(S, IP);
-  addToLoopUseLists(S);
   registerUser(S, Ops);
   return S;
 }
@@ -6589,6 +6578,26 @@ ScalarEvolution::getNonTrivialDefiningScopeBound(const SCEV *S) {
   return nullptr;
 }
 
+/// Fills \p Ops with unique operands of \p S, if it has operands. If not,
+/// \p Ops remains unmodified.
+static void collectUniqueOps(const SCEV *S,
+                             SmallVectorImpl<const SCEV *> &Ops) {
+  SmallPtrSet<const SCEV *, 4> Unique;
+  auto InsertUnique = [&](const SCEV *S) {
+    if (Unique.insert(S).second)
+      Ops.push_back(S);
+  };
+  if (auto *S2 = dyn_cast<SCEVCastExpr>(S))
+    for (auto *Op : S2->operands())
+      InsertUnique(Op);
+  else if (auto *S2 = dyn_cast<SCEVNAryExpr>(S))
+    for (auto *Op : S2->operands())
+      InsertUnique(Op);
+  else if (auto *S2 = dyn_cast<SCEVUDivExpr>(S))
+    for (auto *Op : S2->operands())
+      InsertUnique(Op);
+}
+
 const Instruction *
 ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
   // Do a bounded search of the def relation of the requested SCEVs.
@@ -6612,15 +6621,12 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
     if (auto *DefI = getNonTrivialDefiningScopeBound(S)) {
       if (!Bound || DT.dominates(Bound, DefI))
         Bound = DefI;
-    } else if (auto *S2 = dyn_cast<SCEVCastExpr>(S))
-      for (auto *Op : S2->operands())
+    } else {
+      SmallVector<const SCEV *, 4> Ops;
+      collectUniqueOps(S, Ops);
+      for (auto *Op : Ops)
         pushOp(Op);
-    else if (auto *S2 = dyn_cast<SCEVNAryExpr>(S))
-      for (auto *Op : S2->operands())
-        pushOp(Op);
-    else if (auto *S2 = dyn_cast<SCEVUDivExpr>(S))
-      for (auto *Op : S2->operands())
-        pushOp(Op);
+    }
   }
   return Bound ? Bound : &*F.getEntryBlock().begin();
 }
@@ -7261,6 +7267,131 @@ unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
   const auto *MaxExitCount =
       dyn_cast<SCEVConstant>(getConstantMaxBackedgeTakenCount(L));
   return getConstantTripCount(MaxExitCount);
+}
+
+const SCEV *ScalarEvolution::getConstantMaxTripCountFromArray(const Loop *L) {
+  // We can't infer from Array in Irregular Loop.
+  // FIXME: It's hard to infer loop bound from array operated in Nested Loop.
+  if (!L->isLoopSimplifyForm() || !L->isInnermost())
+    return getCouldNotCompute();
+
+  // FIXME: To make the scene more typical, we only analysis loops that have
+  // one exiting block and that block must be the latch. To make it easier to
+  // capture loops that have memory access and memory access will be executed
+  // in each iteration.
+  const BasicBlock *LoopLatch = L->getLoopLatch();
+  assert(LoopLatch && "See defination of simplify form loop.");
+  if (L->getExitingBlock() != LoopLatch)
+    return getCouldNotCompute();
+
+  const DataLayout &DL = getDataLayout();
+  SmallVector<const SCEV *> InferCountColl;
+  for (auto *BB : L->getBlocks()) {
+    // Go here, we can know that Loop is a single exiting and simplified form
+    // loop. Make sure that infer from Memory Operation in those BBs must be
+    // executed in loop. First step, we can make sure that max execution time
+    // of MemAccessBB in loop represents latch max excution time.
+    // If MemAccessBB does not dom Latch, skip.
+    //            Entry
+    //              │
+    //        ┌─────▼─────┐
+    //        │Loop Header◄─────┐
+    //        └──┬──────┬─┘     │
+    //           │      │       │
+    //  ┌────────▼──┐ ┌─▼─────┐ │
+    //  │MemAccessBB│ │OtherBB│ │
+    //  └────────┬──┘ └─┬─────┘ │
+    //           │      │       │
+    //         ┌─▼──────▼─┐     │
+    //         │Loop Latch├─────┘
+    //         └────┬─────┘
+    //              ▼
+    //             Exit
+    if (!DT.dominates(BB, LoopLatch))
+      continue;
+
+    for (Instruction &Inst : *BB) {
+      // Find Memory Operation Instruction.
+      auto *GEP = getLoadStorePointerOperand(&Inst);
+      if (!GEP)
+        continue;
+
+      auto *ElemSize = dyn_cast<SCEVConstant>(getElementSize(&Inst));
+      // Do not infer from scalar type, eg."ElemSize = sizeof()".
+      if (!ElemSize)
+        continue;
+
+      // Use a existing polynomial recurrence on the trip count.
+      auto *AddRec = dyn_cast<SCEVAddRecExpr>(getSCEV(GEP));
+      if (!AddRec)
+        continue;
+      auto *ArrBase = dyn_cast<SCEVUnknown>(getPointerBase(AddRec));
+      auto *Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(*this));
+      if (!ArrBase || !Step)
+        continue;
+      assert(isLoopInvariant(ArrBase, L) && "See addrec definition");
+
+      // Only handle { %array + step },
+      // FIXME: {(SCEVAddRecExpr) + step } could not be analysed here.
+      if (AddRec->getStart() != ArrBase)
+        continue;
+
+      // Memory operation pattern which have gaps.
+      // Or repeat memory opreation.
+      // And index of GEP wraps arround.
+      if (Step->getAPInt().getActiveBits() > 32 ||
+          Step->getAPInt().getZExtValue() !=
+              ElemSize->getAPInt().getZExtValue() ||
+          Step->isZero() || Step->getAPInt().isNegative())
+        continue;
+
+      // Only infer from stack array which has certain size.
+      // Make sure alloca instruction is not excuted in loop.
+      AllocaInst *AllocateInst = dyn_cast<AllocaInst>(ArrBase->getValue());
+      if (!AllocateInst || L->contains(AllocateInst->getParent()))
+        continue;
+
+      // Make sure only handle normal array.
+      auto *Ty = dyn_cast<ArrayType>(AllocateInst->getAllocatedType());
+      auto *ArrSize = dyn_cast<ConstantInt>(AllocateInst->getArraySize());
+      if (!Ty || !ArrSize || !ArrSize->isOne())
+        continue;
+      // Also make sure step was increased the same with sizeof allocated
+      // element type.
+      const PointerType *GEPT = dyn_cast<PointerType>(GEP->getType());
+      if (Ty->getElementType() != GEPT->getElementType())
+        continue;
+
+      // FIXME: Since gep indices are silently zext to the indexing type,
+      // we will have a narrow gep index which wraps around rather than
+      // increasing strictly, we shoule ensure that step is increasing
+      // strictly by the loop iteration.
+      // Now we can infer a max execution time by MemLength/StepLength.
+      const SCEV *MemSize =
+          getConstant(Step->getType(), DL.getTypeAllocSize(Ty));
+      auto *MaxExeCount =
+          dyn_cast<SCEVConstant>(getUDivCeilSCEV(MemSize, Step));
+      if (!MaxExeCount || MaxExeCount->getAPInt().getActiveBits() > 32)
+        continue;
+
+      // If the loop reaches the maximum number of executions, we can not
+      // access bytes starting outside the statically allocated size without
+      // being immediate UB. But it is allowed to enter loop header one more
+      // time.
+      auto *InferCount = dyn_cast<SCEVConstant>(
+          getAddExpr(MaxExeCount, getOne(MaxExeCount->getType())));
+      // Discard the maximum number of execution times under 32bits.
+      if (!InferCount || InferCount->getAPInt().getActiveBits() > 32)
+        continue;
+
+      InferCountColl.push_back(InferCount);
+    }
+  }
+
+  if (InferCountColl.size() == 0)
+    return getCouldNotCompute();
+
+  return getUMinFromMismatchedTypes(InferCountColl);
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
@@ -12808,13 +12939,6 @@ ScalarEvolution::getUsedLoops(const SCEV *S,
   SCEVTraversal<FindUsedLoops>(F).visitAll(S);
 }
 
-void ScalarEvolution::addToLoopUseLists(const SCEV *S) {
-  SmallPtrSet<const Loop *, 8> LoopsUsed;
-  getUsedLoops(S, LoopsUsed);
-  for (auto *L : LoopsUsed)
-    LoopUsers[L].push_back(S);
-}
-
 void ScalarEvolution::verify() const {
   ScalarEvolution &SE = *const_cast<ScalarEvolution *>(this);
   ScalarEvolution SE2(F, TLI, AC, DT, LI);
@@ -12908,15 +13032,8 @@ void ScalarEvolution::verify() const {
 
   // Verify intergity of SCEV users.
   for (const auto &S : UniqueSCEVs) {
-    SmallPtrSet<const SCEV *, 4> Ops;
-    if (const auto *NS = dyn_cast<SCEVNAryExpr>(&S))
-      Ops.insert(NS->op_begin(), NS->op_end());
-    else if (const auto *CS = dyn_cast<SCEVCastExpr>(&S))
-      Ops.insert(CS->getOperand());
-    else if (const auto *DS = dyn_cast<SCEVUDivExpr>(&S)) {
-      Ops.insert(DS->getLHS());
-      Ops.insert(DS->getRHS());
-    }
+    SmallVector<const SCEV *, 4> Ops;
+    collectUniqueOps(&S, Ops);
     for (const auto *Op : Ops) {
       // We do not store dependencies of constants.
       if (isa<SCEVConstant>(Op))

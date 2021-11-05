@@ -695,45 +695,6 @@ static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return None;
 }
 
-static Optional<Instruction *> instCombineSVEVectorFMLA(InstCombiner &IC,
-                                                        IntrinsicInst &II) {
-  // fold (fadd p a (fmul p b c)) -> (fma p a b c)
-  Value *p, *FMul, *a, *b, *c;
-  auto m_SVEFAdd = [](auto p, auto w, auto x) {
-    return m_CombineOr(m_Intrinsic<Intrinsic::aarch64_sve_fadd>(p, w, x),
-                       m_Intrinsic<Intrinsic::aarch64_sve_fadd>(p, x, w));
-  };
-  auto m_SVEFMul = [](auto p, auto y, auto z) {
-    return m_Intrinsic<Intrinsic::aarch64_sve_fmul>(p, y, z);
-  };
-  if (!match(&II, m_SVEFAdd(m_Value(p), m_Value(a),
-                            m_CombineAnd(m_Value(FMul),
-                                         m_SVEFMul(m_Deferred(p), m_Value(b),
-                                                   m_Value(c))))))
-    return None;
-
-  if (!FMul->hasOneUse())
-    return None;
-
-  llvm::FastMathFlags FAddFlags = II.getFastMathFlags();
-  llvm::FastMathFlags FMulFlags = cast<CallInst>(FMul)->getFastMathFlags();
-  // Don't combine when FMul & Fadd flags differ to prevent the loss of any
-  // additional important flags
-  if (FAddFlags != FMulFlags)
-    return None;
-  bool AllowReassoc = FAddFlags.allowReassoc() && FMulFlags.allowReassoc();
-  bool AllowContract = FAddFlags.allowContract() && FMulFlags.allowContract();
-  if (!AllowReassoc || !AllowContract)
-    return None;
-
-  IRBuilder<> Builder(II.getContext());
-  Builder.SetInsertPoint(&II);
-  auto FMLA = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fmla,
-                                      {II.getType()}, {p, a, b, c}, &II);
-  FMLA->setFastMathFlags(FAddFlags);
-  return IC.replaceInstUsesWith(II, FMLA);
-}
-
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul:
@@ -761,14 +722,6 @@ static Optional<Instruction *> instCombineSVEVectorBinOp(InstCombiner &IC,
   auto BinOp =
       Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2));
   return IC.replaceInstUsesWith(II, BinOp);
-}
-
-static Optional<Instruction *> instCombineSVEVectorFAdd(InstCombiner &IC,
-                                                        IntrinsicInst &II) {
-  auto FMLA = instCombineSVEVectorFMLA(IC, II);
-  if (FMLA)
-    return FMLA;
-  return instCombineSVEVectorBinOp(IC, II);
 }
 
 static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
@@ -911,6 +864,74 @@ static Optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
   return None;
 }
 
+static Optional<Instruction *> instCombineLD1GatherIndex(InstCombiner &IC,
+                                                         IntrinsicInst &II) {
+  Value *Mask = II.getOperand(0);
+  Value *BasePtr = II.getOperand(1);
+  Value *Index = II.getOperand(2);
+  Type *Ty = II.getType();
+  Type *BasePtrTy = BasePtr->getType();
+  Value *PassThru = ConstantAggregateZero::get(Ty);
+
+  // Contiguous gather => masked load.
+  // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
+  // => (masked.load (gep BasePtr IndexBase) Align Mask zeroinitializer)
+  Value *IndexBase;
+  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
+                       m_Value(IndexBase), m_SpecificInt(1)))) {
+    IRBuilder<> Builder(II.getContext());
+    Builder.SetInsertPoint(&II);
+
+    Align Alignment =
+        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+
+    Type *VecPtrTy = PointerType::getUnqual(Ty);
+    Value *Ptr = Builder.CreateGEP(BasePtrTy->getPointerElementType(), BasePtr,
+                                   IndexBase);
+    Ptr = Builder.CreateBitCast(Ptr, VecPtrTy);
+    CallInst *MaskedLoad =
+        Builder.CreateMaskedLoad(Ty, Ptr, Alignment, Mask, PassThru);
+    MaskedLoad->takeName(&II);
+    return IC.replaceInstUsesWith(II, MaskedLoad);
+  }
+
+  return None;
+}
+
+static Optional<Instruction *> instCombineST1ScatterIndex(InstCombiner &IC,
+                                                          IntrinsicInst &II) {
+  Value *Val = II.getOperand(0);
+  Value *Mask = II.getOperand(1);
+  Value *BasePtr = II.getOperand(2);
+  Value *Index = II.getOperand(3);
+  Type *Ty = Val->getType();
+  Type *BasePtrTy = BasePtr->getType();
+
+  // Contiguous scatter => masked store.
+  // (sve.ld1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
+  // => (masked.store Value (gep BasePtr IndexBase) Align Mask)
+  Value *IndexBase;
+  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
+                       m_Value(IndexBase), m_SpecificInt(1)))) {
+    IRBuilder<> Builder(II.getContext());
+    Builder.SetInsertPoint(&II);
+
+    Align Alignment =
+        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+
+    Value *Ptr = Builder.CreateGEP(BasePtrTy->getPointerElementType(), BasePtr,
+                                   IndexBase);
+    Type *VecPtrTy = PointerType::getUnqual(Ty);
+    Ptr = Builder.CreateBitCast(Ptr, VecPtrTy);
+
+    (void)Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
+
+    return IC.eraseInstFromFunction(II);
+  }
+
+  return None;
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -948,7 +969,6 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fmul:
     return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fadd:
-    return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorBinOp(IC, II);
   case Intrinsic::aarch64_sve_tbl:
@@ -963,6 +983,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
+  case Intrinsic::aarch64_sve_ld1_gather_index:
+    return instCombineLD1GatherIndex(IC, II);
+  case Intrinsic::aarch64_sve_st1_scatter_index:
+    return instCombineST1ScatterIndex(IC, II);
   }
 
   return None;
@@ -1758,9 +1782,10 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
+    bool UseScalable;
     if (NumElts % Factor == 0 &&
-        TLI->isLegalInterleavedAccessType(SubVecTy, DL))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL);
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,

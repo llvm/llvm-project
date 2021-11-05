@@ -157,7 +157,7 @@ llvm::StringRef getTimeInverseForScale(DurationScale Scale) {
 }
 
 /// Returns `true` if `Node` is a value which evaluates to a literal `0`.
-bool IsLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
+bool isLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
   auto ZeroMatcher =
       anyOf(integerLiteral(equals(0)), floatLiteral(equals(0.0)));
 
@@ -276,7 +276,7 @@ std::string rewriteExprFromNumberToDuration(
           rewriteInverseDurationCall(Result, Scale, RootNode))
     return *MaybeRewrite;
 
-  if (IsLiteralZero(Result, RootNode))
+  if (isLiteralZero(Result, RootNode))
     return std::string("absl::ZeroDuration()");
 
   return (llvm::Twine(getDurationFactoryForScale(Scale)) + "(" +
@@ -294,7 +294,7 @@ std::string rewriteExprFromNumberToTime(
           rewriteInverseTimeCall(Result, Scale, RootNode))
     return *MaybeRewrite;
 
-  if (IsLiteralZero(Result, RootNode))
+  if (isLiteralZero(Result, RootNode))
     return std::string("absl::UnixEpoch()");
 
   return (llvm::Twine(getTimeFactoryForScale(Scale)) + "(" +

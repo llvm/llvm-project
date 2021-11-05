@@ -3430,29 +3430,31 @@ struct FormatStyle {
   /// How many spaces are allowed at the start of a line comment. To disable the
   /// maximum set it to ``-1``, apart from that the maximum takes precedence
   /// over the minimum.
-  /// \code Minimum = 1 Maximum = -1
-  /// // One space is forced
+  /// \code
+  ///   Minimum = 1
+  ///   Maximum = -1
+  ///   // One space is forced
   ///
-  /// //  but more spaces are possible
+  ///   //  but more spaces are possible
   ///
-  /// Minimum = 0
-  /// Maximum = 0
-  /// //Forces to start every comment directly after the slashes
+  ///   Minimum = 0
+  ///   Maximum = 0
+  ///   //Forces to start every comment directly after the slashes
   /// \endcode
   ///
   /// Note that in line comment sections the relative indent of the subsequent
   /// lines is kept, that means the following:
   /// \code
-  /// before:                                   after:
-  /// Minimum: 1
-  /// //if (b) {                                // if (b) {
-  /// //  return true;                          //   return true;
-  /// //}                                       // }
+  ///   before:                                   after:
+  ///   Minimum: 1
+  ///   //if (b) {                                // if (b) {
+  ///   //  return true;                          //   return true;
+  ///   //}                                       // }
   ///
-  /// Maximum: 0
-  /// /// List:                                 ///List:
-  /// ///  - Foo                                /// - Foo
-  /// ///    - Bar                              ///   - Bar
+  ///   Maximum: 0
+  ///   /// List:                                 ///List:
+  ///   ///  - Foo                                /// - Foo
+  ///   ///    - Bar                              ///   - Bar
   /// \endcode
   /// \version 14
   SpacesInLineComment SpacesInLineCommentPrefix;

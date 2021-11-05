@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains defintions for the debug action framework. This framework
-// allows for external entites to control certain actions taken by the compiler
+// This file contains definitions for the debug action framework. This framework
+// allows for external entities to control certain actions taken by the compiler
 // by registering handler functions. A debug action handler provides the
 // internal implementation for the various queries on a debug action, such as
 // whether it should execute or not.
@@ -64,7 +64,7 @@ public:
 
   /// This class represents a generic action handler. A generic handler allows
   /// for handling any action type. Handlers of this type are useful for
-  /// implementing general functionality that doesn’t necessarily need to
+  /// implementing general functionality that doesn't necessarily need to
   /// interpret the exact action parameters, or can rely on an external
   /// interpreter (such as the user). Given that these handlers are generic,
   /// they take a set of opaque parameters that try to map the context of the
@@ -90,7 +90,7 @@ public:
   /// Register the given action handler with the manager.
   void registerActionHandler(std::unique_ptr<HandlerBase> handler) {
     // The manager is always disabled if built without debug.
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     actionHandlers.emplace_back(std::move(handler));
 #endif
   }
@@ -109,7 +109,7 @@ public:
   template <typename ActionType, typename... Args>
   bool shouldExecute(Args &&... args) {
     // The manager is always disabled if built without debug.
-#ifdef NDEBUG
+#if !LLVM_ENABLE_ABI_BREAKING_CHECKS
     return true;
 #else
     // Invoke the `shouldExecute` method on the provided handler.
@@ -127,7 +127,7 @@ public:
 
 private:
 // The manager is always disabled if built without debug.
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   //===--------------------------------------------------------------------===//
   // Query to Handler Dispatch
   //===--------------------------------------------------------------------===//
@@ -175,7 +175,7 @@ private:
 
 /// A debug action is a specific action that is to be taken by the compiler,
 /// that can be toggled and controlled by an external user. There are no
-/// constraints on the granulity of an action, it could be as simple as
+/// constraints on the granularity of an action, it could be as simple as
 /// "perform this fold" and as complex as "run this pass pipeline". Via template
 /// parameters `ParameterTs`, a user may provide the set of argument types that
 /// are provided when handling a query on this action. Derived classes are

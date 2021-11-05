@@ -3607,7 +3607,7 @@ void NewGVN::convertClassToDFSOrdered(
 
         // Skip uses in unreachable blocks, as we're going
         // to delete them.
-        if (ReachableBlocks.count(IBlock) == 0)
+        if (!ReachableBlocks.contains(IBlock))
           continue;
 
         DomTreeNode *DomNode = DT->getNode(IBlock);

@@ -57,9 +57,15 @@ macos_defines = posix_defines + [
 ]
 
 win32_defines = [
-    # MSVC specific
-    "stricmp=_stricmp",
-    "strdup=_strdup",
+    # Windows system library specific defines.
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_CRT_SECURE_NO_WARNINGS",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_NONSTDC_NO_WARNINGS",
+    "_SCL_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "UNICODE",
+    "_UNICODE",
 
     # LLVM features
     r'LTDL_SHLIB_EXT=\".dll\"',

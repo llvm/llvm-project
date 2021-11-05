@@ -31,11 +31,7 @@ struct VersionEntry;
 
 namespace objdump {
 
-enum DebugVarsFormat {
-  DVDisabled,
-  DVUnicode,
-  DVASCII,
-};
+enum DebugVarsFormat { DVDisabled, DVUnicode, DVASCII, DVInvalid };
 
 extern bool ArchiveHeaders;
 extern int DbgIndent;

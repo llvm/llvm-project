@@ -225,7 +225,7 @@ define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 ; CHECK-LABEL: vselect_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vmandnot.mm v8, v8, v9
+; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
@@ -237,7 +237,7 @@ define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 ; CHECK-LABEL: vselect_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vmandnot.mm v8, v8, v9
+; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
@@ -249,7 +249,7 @@ define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 ; CHECK-LABEL: vselect_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmandnot.mm v8, v8, v9
+; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
@@ -261,7 +261,7 @@ define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 ; CHECK-LABEL: vselect_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; CHECK-NEXT:    vmandnot.mm v8, v8, v9
+; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
@@ -274,7 +274,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
-; CHECK-NEXT:    vmandnot.mm v8, v8, v9
+; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
@@ -287,7 +287,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, zero, 64
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
-; CHECK-NEXT:    vmandnot.mm v8, v8, v9
+; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret

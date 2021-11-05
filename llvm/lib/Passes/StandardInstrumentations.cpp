@@ -29,10 +29,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -40,10 +44,11 @@ using namespace llvm;
 cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
     "verify-cfg-preserved", cl::Hidden,
 #ifdef NDEBUG
-    cl::init(false));
+    cl::init(false)
 #else
-    cl::init(true));
+    cl::init(true)
 #endif
+    );
 
 // An option that prints out the IR after passes, similar to
 // -print-after-all except that it only prints the IR after passes that
@@ -79,7 +84,9 @@ enum class ChangePrinter {
   PrintChangedDiffVerbose,
   PrintChangedDiffQuiet,
   PrintChangedColourDiffVerbose,
-  PrintChangedColourDiffQuiet
+  PrintChangedColourDiffQuiet,
+  PrintChangedDotCfgVerbose,
+  PrintChangedDotCfgQuiet
 };
 static cl::opt<ChangePrinter> PrintChanged(
     "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
@@ -95,6 +102,10 @@ static cl::opt<ChangePrinter> PrintChanged(
                    "Display patch-like changes with color"),
         clEnumValN(ChangePrinter::PrintChangedColourDiffQuiet, "cdiff-quiet",
                    "Display patch-like changes in quiet mode with color"),
+        clEnumValN(ChangePrinter::PrintChangedDotCfgVerbose, "dot-cfg",
+                   "Create a website with graphical changes"),
+        clEnumValN(ChangePrinter::PrintChangedDotCfgQuiet, "dot-cfg-quiet",
+                   "Create a website with graphical changes in quiet mode"),
         // Sentinel value for unspecified option.
         clEnumValN(ChangePrinter::PrintChangedVerbose, "", "")));
 
@@ -118,6 +129,40 @@ static cl::opt<bool>
 static cl::opt<std::string>
     DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
                cl::desc("system diff used by change reporters"));
+
+// An option for specifying the dot used by
+// print-changed=[dot-cfg | dot-cfg-quiet]
+static cl::opt<std::string>
+    DotBinary("print-changed-dot-path", cl::Hidden, cl::init("dot"),
+              cl::desc("system dot used by change reporters"));
+
+// An option that determines the colour used for elements that are only
+// in the before part.  Must be a colour named in appendix J of
+// https://graphviz.org/pdf/dotguide.pdf
+cl::opt<std::string>
+    BeforeColour("dot-cfg-before-color",
+                 cl::desc("Color for dot-cfg before elements."), cl::Hidden,
+                 cl::init("red"));
+// An option that determines the colour used for elements that are only
+// in the after part.  Must be a colour named in appendix J of
+// https://graphviz.org/pdf/dotguide.pdf
+cl::opt<std::string> AfterColour("dot-cfg-after-color",
+                                 cl::desc("Color for dot-cfg after elements."),
+                                 cl::Hidden, cl::init("forestgreen"));
+// An option that determines the colour used for elements that are in both
+// the before and after parts.  Must be a colour named in appendix J of
+// https://graphviz.org/pdf/dotguide.pdf
+cl::opt<std::string>
+    CommonColour("dot-cfg-common-color",
+                 cl::desc("Color for dot-cfg common elements."), cl::Hidden,
+                 cl::init("black"));
+
+// An option that determines where the generated website file (named
+// passes.html) and the associated pdf files (named diff_*.pdf) are saved.
+static cl::opt<std::string> DotCfgDir(
+    "dot-cfg-dir",
+    cl::desc("Generate dot files into specified directory for changed IRs"),
+    cl::Hidden, cl::init("./"));
 
 namespace {
 
@@ -365,6 +410,21 @@ bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
+}
+
+std::string makeHTMLReady(StringRef SR) {
+  std::string S;
+  while (true) {
+    StringRef Clean =
+        SR.take_until([](char C) { return C == '<' || C == '>'; });
+    S.append(Clean.str());
+    SR = SR.drop_front(Clean.size());
+    if (SR.size() == 0)
+      return S;
+    S.append(SR[0] == '<' ? "&lt;" : "&gt;");
+    SR = SR.drop_front();
+  }
+  llvm_unreachable("problems converting string to HTML");
 }
 
 // Return the module when that is the appropriate level of comparison for \p IR.
@@ -644,7 +704,7 @@ void IRComparer<T>::compare(
   }
 
   unsigned Minor = 0;
-  FuncDataT<T> Missing;
+  FuncDataT<T> Missing("");
   IRDataT<T>::report(Before, After,
                      [&](const FuncDataT<T> *B, const FuncDataT<T> *A) {
                        assert((B || A) && "Both functions cannot be missing.");
@@ -679,7 +739,7 @@ template <typename T> void IRComparer<T>::analyzeIR(Any IR, IRDataT<T> &Data) {
 template <typename T>
 bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const Function &F) {
   if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
-    FuncDataT<T> FD;
+    FuncDataT<T> FD(F.getEntryBlock().getName().str());
     for (const auto &B : F) {
       FD.getOrder().emplace_back(B.getName());
       FD.getData().insert({B.getName(), B});
@@ -1200,7 +1260,861 @@ void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     TextChangeReporter<IRDataT<EmptyData>>::registerRequiredCallbacks(PIC);
 }
 
+namespace {
+
+enum IRChangeDiffType { InBefore, InAfter, IsCommon, NumIRChangeDiffTypes };
+
+// Describe where a given element exists.
+std::string Colours[NumIRChangeDiffTypes];
+
+class DisplayNode;
+class DotCfgDiffDisplayGraph;
+
+// Base class for a node or edge in the dot-cfg-changes graph.
+class DisplayElement {
+public:
+  // Is this in before, after, or both?
+  IRChangeDiffType getType() const { return Type; }
+
+protected:
+  DisplayElement(IRChangeDiffType T) : Type(T) {}
+  const IRChangeDiffType Type;
+};
+
+// An edge representing a transition between basic blocks in the
+// dot-cfg-changes graph.
+class DisplayEdge : public DisplayElement {
+public:
+  DisplayEdge(std::string V, DisplayNode &Node, IRChangeDiffType T)
+      : DisplayElement(T), Value(V), Node(Node) {}
+  // The value on which the transition is made.
+  std::string getValue() const { return Value; }
+  // The node (representing a basic block) reached by this transition.
+  const DisplayNode &getDestinationNode() const { return Node; }
+
+protected:
+  std::string Value;
+  const DisplayNode &Node;
+};
+
+// A node in the dot-cfg-changes graph which represents a basic block.
+class DisplayNode : public DisplayElement {
+public:
+  // \p C is the content for the node, \p T indicates the colour for the
+  // outline of the node
+  DisplayNode(std::string C, IRChangeDiffType T)
+      : DisplayElement(T), Content(C) {}
+
+  // Iterator to the child nodes.  Required by GraphWriter.
+  using ChildIterator = std::unordered_set<DisplayNode *>::const_iterator;
+  ChildIterator children_begin() const { return Children.cbegin(); }
+  ChildIterator children_end() const { return Children.cend(); }
+
+  // Iterator for the edges.  Required by GraphWriter.
+  using EdgeIterator = std::vector<DisplayEdge *>::const_iterator;
+  EdgeIterator edges_begin() const { return EdgePtrs.cbegin(); }
+  EdgeIterator edges_end() const { return EdgePtrs.cend(); }
+
+  // Create an edge to \p Node on value \p V, with type \p T.
+  void createEdge(StringRef V, DisplayNode &Node, IRChangeDiffType T);
+
+  // Return the content of this node.
+  std::string getContent() const { return Content; }
+
+  // Return the type of the edge to node \p S.
+  const DisplayEdge &getEdge(const DisplayNode &To) const {
+    assert(EdgeMap.find(&To) != EdgeMap.end() && "Expected to find edge.");
+    return *EdgeMap.find(&To)->second;
+  }
+
+  // Return the value for the transition to basic block \p S.
+  // Required by GraphWriter.
+  std::string getEdgeSourceLabel(const DisplayNode &Sink) const {
+    return getEdge(Sink).getValue();
+  }
+
+  void createEdgeMap();
+
+protected:
+  const std::string Content;
+
+  // Place to collect all of the edges.  Once they are all in the vector,
+  // the vector will not reallocate so then we can use pointers to them,
+  // which are required by the graph writing routines.
+  std::vector<DisplayEdge> Edges;
+
+  std::vector<DisplayEdge *> EdgePtrs;
+  std::unordered_set<DisplayNode *> Children;
+  std::unordered_map<const DisplayNode *, const DisplayEdge *> EdgeMap;
+
+  // Safeguard adding of edges.
+  bool AllEdgesCreated = false;
+};
+
+// Class representing a difference display (corresponds to a pdf file).
+class DotCfgDiffDisplayGraph {
+public:
+  DotCfgDiffDisplayGraph(std::string Name) : GraphName(Name) {}
+
+  // Generate the file into \p DotFile.
+  void generateDotFile(StringRef DotFile);
+
+  // Iterator to the nodes.  Required by GraphWriter.
+  using NodeIterator = std::vector<DisplayNode *>::const_iterator;
+  NodeIterator nodes_begin() const {
+    assert(NodeGenerationComplete && "Unexpected children iterator creation");
+    return NodePtrs.cbegin();
+  }
+  NodeIterator nodes_end() const {
+    assert(NodeGenerationComplete && "Unexpected children iterator creation");
+    return NodePtrs.cend();
+  }
+
+  // Record the index of the entry node.  At this point, we can build up
+  // vectors of pointers that are required by the graph routines.
+  void setEntryNode(unsigned N) {
+    // At this point, there will be no new nodes.
+    assert(!NodeGenerationComplete && "Unexpected node creation");
+    NodeGenerationComplete = true;
+    for (auto &N : Nodes)
+      NodePtrs.emplace_back(&N);
+
+    EntryNode = NodePtrs[N];
+  }
+
+  // Create a node.
+  void createNode(std::string C, IRChangeDiffType T) {
+    assert(!NodeGenerationComplete && "Unexpected node creation");
+    Nodes.emplace_back(C, T);
+  }
+  // Return the node at index \p N to avoid problems with vectors reallocating.
+  DisplayNode &getNode(unsigned N) {
+    assert(N < Nodes.size() && "Node is out of bounds");
+    return Nodes[N];
+  }
+  unsigned size() const {
+    assert(NodeGenerationComplete && "Unexpected children iterator creation");
+    return Nodes.size();
+  }
+
+  // Return the name of the graph.  Required by GraphWriter.
+  std::string getGraphName() const { return GraphName; }
+
+  // Return the string representing the differences for basic block \p Node.
+  // Required by GraphWriter.
+  std::string getNodeLabel(const DisplayNode &Node) const {
+    return Node.getContent();
+  }
+
+  // Return a string with colour information for Dot.  Required by GraphWriter.
+  std::string getNodeAttributes(const DisplayNode &Node) const {
+    return attribute(Node.getType());
+  }
+
+  // Return a string with colour information for Dot.  Required by GraphWriter.
+  std::string getEdgeColorAttr(const DisplayNode &From,
+                               const DisplayNode &To) const {
+    return attribute(From.getEdge(To).getType());
+  }
+
+  // Get the starting basic block.  Required by GraphWriter.
+  DisplayNode *getEntryNode() const {
+    assert(NodeGenerationComplete && "Unexpected children iterator creation");
+    return EntryNode;
+  }
+
+protected:
+  // Return the string containing the colour to use as a Dot attribute.
+  std::string attribute(IRChangeDiffType T) const;
+
+  bool NodeGenerationComplete = false;
+  const std::string GraphName;
+  std::vector<DisplayNode> Nodes;
+  std::vector<DisplayNode *> NodePtrs;
+  DisplayNode *EntryNode = nullptr;
+};
+
+void DisplayNode::createEdge(StringRef V, DisplayNode &Node,
+                             IRChangeDiffType T) {
+  assert(!AllEdgesCreated && "Expected to be able to still create edges.");
+  Edges.emplace_back(V.str(), Node, T);
+  Children.insert(&Node);
+}
+
+void DisplayNode::createEdgeMap() {
+  // No more edges will be added so we can now use pointers to the edges
+  // as the vector will not grow and reallocate.
+  AllEdgesCreated = true;
+  for (auto &E : Edges)
+    EdgeMap.insert({&E.getDestinationNode(), &E});
+}
+
+class DotCfgDiffNode;
+class DotCfgDiff;
+
+// A class representing a basic block in the Dot difference graph.
+class DotCfgDiffNode {
+public:
+  DotCfgDiffNode() = delete;
+
+  // Create a node in Dot difference graph \p G representing the basic block
+  // represented by \p BD with type \p T (where it exists).
+  DotCfgDiffNode(DotCfgDiff &G, unsigned N, const BlockDataT<DCData> &BD,
+                 IRChangeDiffType T)
+      : Graph(G), N(N), Data{&BD, nullptr}, Type(T) {}
+  DotCfgDiffNode(const DotCfgDiffNode &DN)
+      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]}, Type(DN.Type),
+        EdgesMap(DN.EdgesMap), Children(DN.Children), Edges(DN.Edges) {}
+
+  unsigned getIndex() const { return N; }
+
+  // The label of the basic block
+  StringRef getLabel() const {
+    assert(Data[0] && "Expected Data[0] to be set.");
+    return Data[0]->getLabel();
+  }
+  // Return where this block exists.
+  IRChangeDiffType getType() const { return Type; }
+  // Change this basic block from being only in before to being common.
+  // Save the pointer to \p Other.
+  void setCommon(const BlockDataT<DCData> &Other) {
+    assert(!Data[1] && "Expected only one block datum");
+    Data[1] = &Other;
+    Type = IsCommon;
+  }
+  // Add an edge to \p E of type {\p Value, \p T}.
+  void addEdge(unsigned E, StringRef Value, IRChangeDiffType T) {
+    // This is a new edge or it is an edge being made common.
+    assert((EdgesMap.count(E) == 0 || T == IsCommon) &&
+           "Unexpected edge count and type.");
+    EdgesMap[E] = {Value.str(), T};
+  }
+  // Record the children and create edges.
+  void finalize(DotCfgDiff &G);
+
+  // Return the type of the edge to node \p S.
+  std::pair<std::string, IRChangeDiffType> getEdge(const unsigned S) const {
+    assert(EdgesMap.count(S) == 1 && "Expected to find edge.");
+    return EdgesMap.at(S);
+  }
+
+  // Return the string representing the basic block.
+  std::string getBodyContent() const;
+
+  void createDisplayEdges(DotCfgDiffDisplayGraph &Graph, unsigned DisplayNode,
+                          std::map<const unsigned, unsigned> &NodeMap) const;
+
+protected:
+  DotCfgDiff &Graph;
+  const unsigned N;
+  const BlockDataT<DCData> *Data[2];
+  IRChangeDiffType Type;
+  std::map<const unsigned, std::pair<std::string, IRChangeDiffType>> EdgesMap;
+  std::vector<unsigned> Children;
+  std::vector<unsigned> Edges;
+};
+
+// Class representing the difference graph between two functions.
+class DotCfgDiff {
+public:
+  // \p Title is the title given to the graph.  \p EntryNodeName is the
+  // entry node for the function.  \p Before and \p After are the before
+  // after versions of the function, respectively.  \p Dir is the directory
+  // in which to store the results.
+  DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
+             const FuncDataT<DCData> &After);
+
+  DotCfgDiff(const DotCfgDiff &) = delete;
+  DotCfgDiff &operator=(const DotCfgDiff &) = delete;
+
+  DotCfgDiffDisplayGraph createDisplayGraph(StringRef Title,
+                                            StringRef EntryNodeName);
+
+  // Return a string consisting of the labels for the \p Source and \p Sink.
+  // The combination allows distinguishing changing transitions on the
+  // same value (ie, a transition went to X before and goes to Y after).
+  // Required by GraphWriter.
+  StringRef getEdgeSourceLabel(const unsigned &Source,
+                               const unsigned &Sink) const {
+    std::string S =
+        getNode(Source).getLabel().str() + " " + getNode(Sink).getLabel().str();
+    assert(EdgeLabels.count(S) == 1 && "Expected to find edge label.");
+    return EdgeLabels.find(S)->getValue();
+  }
+
+  // Return the number of basic blocks (nodes).  Required by GraphWriter.
+  unsigned size() const { return Nodes.size(); }
+
+  const DotCfgDiffNode &getNode(unsigned N) const {
+    assert(N < Nodes.size() && "Unexpected index for node reference");
+    return Nodes[N];
+  }
+
+protected:
+  // Return the string surrounded by HTML to make it the appropriate colour.
+  std::string colourize(std::string S, IRChangeDiffType T) const;
+
+  void createNode(StringRef Label, const BlockDataT<DCData> &BD,
+                  IRChangeDiffType T) {
+    unsigned Pos = Nodes.size();
+    Nodes.emplace_back(*this, Pos, BD, T);
+    NodePosition.insert({Label, Pos});
+  }
+
+  // TODO Nodes should probably be a StringMap<DotCfgDiffNode> after the
+  // display graph is separated out, which would remove the need for
+  // NodePosition.
+  std::vector<DotCfgDiffNode> Nodes;
+  StringMap<unsigned> NodePosition;
+  const std::string GraphName;
+
+  StringMap<std::string> EdgeLabels;
+};
+
+std::string DotCfgDiffNode::getBodyContent() const {
+  if (Type == IsCommon) {
+    assert(Data[1] && "Expected Data[1] to be set.");
+
+    StringRef SR[2];
+    for (unsigned I = 0; I < 2; ++I) {
+      SR[I] = Data[I]->getBody();
+      // drop initial '\n' if present
+      if (SR[I][0] == '\n')
+        SR[I] = SR[I].drop_front();
+      // drop predecessors as they can be big and are redundant
+      SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
+    }
+
+    SmallString<80> OldLineFormat = formatv(
+        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", Colours[InBefore]);
+    SmallString<80> NewLineFormat = formatv(
+        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", Colours[InAfter]);
+    SmallString<80> UnchangedLineFormat = formatv(
+        "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", Colours[IsCommon]);
+    std::string Diff = Data[0]->getLabel().str();
+    Diff += ":\n<BR align=\"left\"/>" +
+            doSystemDiff(makeHTMLReady(SR[0]), makeHTMLReady(SR[1]),
+                         OldLineFormat, NewLineFormat, UnchangedLineFormat);
+
+    // Diff adds in some empty colour changes which are not valid HTML
+    // so remove them.  Colours are all lowercase alpha characters (as
+    // listed in https://graphviz.org/pdf/dotguide.pdf).
+    Regex R("<FONT COLOR=\"\\w+\"></FONT>");
+    while (true) {
+      std::string Error;
+      std::string S = R.sub("", Diff, &Error);
+      if (Error != "")
+        return Error;
+      if (S == Diff)
+        return Diff;
+      Diff = S;
+    }
+    llvm_unreachable("Should not get here");
+  }
+
+  // Put node out in the appropriate colour.
+  assert(!Data[1] && "Data[1] is set unexpectedly.");
+  std::string Body = makeHTMLReady(Data[0]->getBody());
+  const StringRef BS = Body;
+  StringRef BS1 = BS;
+  // Drop leading newline, if present.
+  if (BS.front() == '\n')
+    BS1 = BS1.drop_front(1);
+  // Get label.
+  StringRef Label = BS1.take_until([](char C) { return C == ':'; });
+  // drop predecessors as they can be big and are redundant
+  BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
+
+  std::string S = "<FONT COLOR=\"" + Colours[Type] + "\">" + Label.str() + ":";
+
+  // align each line to the left.
+  while (BS1.size()) {
+    S.append("<BR align=\"left\"/>");
+    StringRef Line = BS1.take_until([](char C) { return C == '\n'; });
+    S.append(Line.str());
+    BS1 = BS1.drop_front(Line.size() + 1);
+  }
+  S.append("<BR align=\"left\"/></FONT>");
+  return S;
+}
+
+std::string DotCfgDiff::colourize(std::string S, IRChangeDiffType T) const {
+  if (S.length() == 0)
+    return S;
+  return "<FONT COLOR=\"" + Colours[T] + "\">" + S + "</FONT>";
+}
+
+std::string DotCfgDiffDisplayGraph::attribute(IRChangeDiffType T) const {
+  return "color=" + Colours[T];
+}
+
+DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
+                       const FuncDataT<DCData> &After)
+    : GraphName(Title.str()) {
+  StringMap<IRChangeDiffType> EdgesMap;
+
+  // Handle each basic block in the before IR.
+  for (auto &B : Before.getData()) {
+    StringRef Label = B.getKey();
+    const BlockDataT<DCData> &BD = B.getValue();
+    createNode(Label, BD, InBefore);
+
+    // Create transitions with names made up of the from block label, the value
+    // on which the transition is made and the to block label.
+    for (StringMap<std::string>::const_iterator Sink = BD.getData().begin(),
+                                                E = BD.getData().end();
+         Sink != E; ++Sink) {
+      std::string Key = (Label + " " + Sink->getKey().str()).str() + " " +
+                        BD.getData().getSuccessorLabel(Sink->getKey()).str();
+      EdgesMap.insert({Key, InBefore});
+    }
+  }
+
+  // Handle each basic block in the after IR
+  for (auto &A : After.getData()) {
+    StringRef Label = A.getKey();
+    const BlockDataT<DCData> &BD = A.getValue();
+    unsigned C = NodePosition.count(Label);
+    if (C == 0)
+      // This only exists in the after IR.  Create the node.
+      createNode(Label, BD, InAfter);
+    else {
+      assert(C == 1 && "Unexpected multiple nodes.");
+      Nodes[NodePosition[Label]].setCommon(BD);
+    }
+    // Add in the edges between the nodes (as common or only in after).
+    for (StringMap<std::string>::const_iterator Sink = BD.getData().begin(),
+                                                E = BD.getData().end();
+         Sink != E; ++Sink) {
+      std::string Key = (Label + " " + Sink->getKey().str()).str() + " " +
+                        BD.getData().getSuccessorLabel(Sink->getKey()).str();
+      unsigned C = EdgesMap.count(Key);
+      if (C == 0)
+        EdgesMap.insert({Key, InAfter});
+      else {
+        EdgesMap[Key] = IsCommon;
+      }
+    }
+  }
+
+  // Now go through the map of edges and add them to the node.
+  for (auto &E : EdgesMap) {
+    // Extract the source, sink and value from the edge key.
+    StringRef S = E.getKey();
+    auto SP1 = S.rsplit(' ');
+    auto &SourceSink = SP1.first;
+    auto SP2 = SourceSink.split(' ');
+    StringRef Source = SP2.first;
+    StringRef Sink = SP2.second;
+    StringRef Value = SP1.second;
+
+    assert(NodePosition.count(Source) == 1 && "Expected to find node.");
+    DotCfgDiffNode &SourceNode = Nodes[NodePosition[Source]];
+    assert(NodePosition.count(Sink) == 1 && "Expected to find node.");
+    unsigned SinkNode = NodePosition[Sink];
+    IRChangeDiffType T = E.second;
+
+    // Look for an edge from Source to Sink
+    if (EdgeLabels.count(SourceSink) == 0)
+      EdgeLabels.insert({SourceSink, colourize(Value.str(), T)});
+    else {
+      StringRef V = EdgeLabels.find(SourceSink)->getValue();
+      std::string NV = colourize(V.str() + " " + Value.str(), T);
+      T = IsCommon;
+      EdgeLabels[SourceSink] = NV;
+    }
+    SourceNode.addEdge(SinkNode, Value, T);
+  }
+  for (auto &I : Nodes)
+    I.finalize(*this);
+}
+
+DotCfgDiffDisplayGraph DotCfgDiff::createDisplayGraph(StringRef Title,
+                                                      StringRef EntryNodeName) {
+  assert(NodePosition.count(EntryNodeName) == 1 &&
+         "Expected to find entry block in map.");
+  unsigned Entry = NodePosition[EntryNodeName];
+  assert(Entry < Nodes.size() && "Expected to find entry node");
+  DotCfgDiffDisplayGraph G(Title.str());
+
+  std::map<const unsigned, unsigned> NodeMap;
+
+  int EntryIndex = -1;
+  unsigned Index = 0;
+  for (auto &I : Nodes) {
+    if (I.getIndex() == Entry)
+      EntryIndex = Index;
+    G.createNode(I.getBodyContent(), I.getType());
+    NodeMap.insert({I.getIndex(), Index++});
+  }
+  assert(EntryIndex >= 0 && "Expected entry node index to be set.");
+  G.setEntryNode(EntryIndex);
+
+  for (auto &I : NodeMap) {
+    unsigned SourceNode = I.first;
+    unsigned DisplayNode = I.second;
+    getNode(SourceNode).createDisplayEdges(G, DisplayNode, NodeMap);
+  }
+  return G;
+}
+
+void DotCfgDiffNode::createDisplayEdges(
+    DotCfgDiffDisplayGraph &DisplayGraph, unsigned DisplayNodeIndex,
+    std::map<const unsigned, unsigned> &NodeMap) const {
+
+  DisplayNode &SourceDisplayNode = DisplayGraph.getNode(DisplayNodeIndex);
+
+  for (auto I : Edges) {
+    unsigned SinkNodeIndex = I;
+    IRChangeDiffType Type = getEdge(SinkNodeIndex).second;
+    const DotCfgDiffNode *SinkNode = &Graph.getNode(SinkNodeIndex);
+
+    StringRef Label = Graph.getEdgeSourceLabel(getIndex(), SinkNodeIndex);
+    DisplayNode &SinkDisplayNode = DisplayGraph.getNode(SinkNode->getIndex());
+    SourceDisplayNode.createEdge(Label, SinkDisplayNode, Type);
+  }
+  SourceDisplayNode.createEdgeMap();
+}
+
+void DotCfgDiffNode::finalize(DotCfgDiff &G) {
+  for (auto E : EdgesMap) {
+    Children.emplace_back(E.first);
+    Edges.emplace_back(E.first);
+  }
+}
+
+} // namespace
+
 namespace llvm {
+
+template <> struct GraphTraits<DotCfgDiffDisplayGraph *> {
+  using NodeRef = const DisplayNode *;
+  using ChildIteratorType = DisplayNode::ChildIterator;
+  using nodes_iterator = DotCfgDiffDisplayGraph::NodeIterator;
+  using EdgeRef = const DisplayEdge *;
+  using ChildEdgeIterator = DisplayNode::EdgeIterator;
+
+  static NodeRef getEntryNode(const DotCfgDiffDisplayGraph *G) {
+    return G->getEntryNode();
+  }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return N->children_begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) { return N->children_end(); }
+  static nodes_iterator nodes_begin(const DotCfgDiffDisplayGraph *G) {
+    return G->nodes_begin();
+  }
+  static nodes_iterator nodes_end(const DotCfgDiffDisplayGraph *G) {
+    return G->nodes_end();
+  }
+  static ChildEdgeIterator child_edge_begin(NodeRef N) {
+    return N->edges_begin();
+  }
+  static ChildEdgeIterator child_edge_end(NodeRef N) { return N->edges_end(); }
+  static NodeRef edge_dest(EdgeRef E) { return &E->getDestinationNode(); }
+  static unsigned size(const DotCfgDiffDisplayGraph *G) { return G->size(); }
+};
+
+template <>
+struct DOTGraphTraits<DotCfgDiffDisplayGraph *> : public DefaultDOTGraphTraits {
+  explicit DOTGraphTraits(bool Simple = false)
+      : DefaultDOTGraphTraits(Simple) {}
+
+  static bool renderNodesUsingHTML() { return true; }
+  static std::string getGraphName(const DotCfgDiffDisplayGraph *DiffData) {
+    return DiffData->getGraphName();
+  }
+  static std::string
+  getGraphProperties(const DotCfgDiffDisplayGraph *DiffData) {
+    return "\tsize=\"190, 190\";\n";
+  }
+  static std::string getNodeLabel(const DisplayNode *Node,
+                                  const DotCfgDiffDisplayGraph *DiffData) {
+    return DiffData->getNodeLabel(*Node);
+  }
+  static std::string getNodeAttributes(const DisplayNode *Node,
+                                       const DotCfgDiffDisplayGraph *DiffData) {
+    return DiffData->getNodeAttributes(*Node);
+  }
+  static std::string getEdgeSourceLabel(const DisplayNode *From,
+                                        DisplayNode::ChildIterator &To) {
+    return From->getEdgeSourceLabel(**To);
+  }
+  static std::string getEdgeAttributes(const DisplayNode *From,
+                                       DisplayNode::ChildIterator &To,
+                                       const DotCfgDiffDisplayGraph *DiffData) {
+    return DiffData->getEdgeColorAttr(*From, **To);
+  }
+};
+
+} // namespace llvm
+
+namespace {
+
+void DotCfgDiffDisplayGraph::generateDotFile(StringRef DotFile) {
+  std::error_code EC;
+  raw_fd_ostream OutStream(DotFile, EC);
+  if (EC) {
+    errs() << "Error: " << EC.message() << "\n";
+    return;
+  }
+  WriteGraph(OutStream, this, false);
+  OutStream.flush();
+  OutStream.close();
+}
+
+} // namespace
+
+namespace llvm {
+
+DCData::DCData(const BasicBlock &B) {
+  // Build up transition labels.
+  const Instruction *Term = B.getTerminator();
+  if (const BranchInst *Br = dyn_cast<const BranchInst>(Term))
+    if (Br->isUnconditional())
+      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "");
+    else {
+      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
+      addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
+    }
+  else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
+    addSuccessorLabel(Sw->case_default()->getCaseSuccessor()->getName().str(),
+                      "default");
+    for (auto &C : Sw->cases()) {
+      assert(C.getCaseValue() && "Expected to find case value.");
+      SmallString<20> Value = formatv("{0}", C.getCaseValue()->getSExtValue());
+      addSuccessorLabel(C.getCaseSuccessor()->getName().str(), Value);
+    }
+  } else
+    for (const_succ_iterator I = succ_begin(&B), E = succ_end(&B); I != E; ++I)
+      addSuccessorLabel((*I)->getName().str(), "");
+}
+
+DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)
+    : ChangeReporter<IRDataT<DCData>>(Verbose) {
+  // Set up the colours based on the hidden options.
+  Colours[InBefore] = BeforeColour;
+  Colours[InAfter] = AfterColour;
+  Colours[IsCommon] = CommonColour;
+}
+
+void DotCfgChangeReporter::handleFunctionCompare(
+    StringRef Name, StringRef Prefix, StringRef PassID, StringRef Divider,
+    bool InModule, unsigned Minor, const FuncDataT<DCData> &Before,
+    const FuncDataT<DCData> &After) {
+  assert(HTML && "Expected outstream to be set");
+  SmallString<8> Extender;
+  SmallString<8> Number;
+  // Handle numbering and file names.
+  if (InModule) {
+    Extender = formatv("{0}_{1}", N, Minor);
+    Number = formatv("{0}.{1}", N, Minor);
+  } else {
+    Extender = formatv("{0}", N);
+    Number = formatv("{0}", N);
+  }
+  // Create a temporary file name for the dot file.
+  SmallVector<char, 128> SV;
+  sys::fs::createUniquePath("cfgdot-%%%%%%.dot", SV, true);
+  std::string DotFile = Twine(SV).str();
+
+  SmallString<20> PDFFileName = formatv("diff_{0}.pdf", Extender);
+  SmallString<200> Text;
+
+  Text = formatv("{0}.{1}{2}{3}{4}", Number, Prefix, makeHTMLReady(PassID),
+                 Divider, Name);
+
+  DotCfgDiff Diff(Text, Before, After);
+  std::string EntryBlockName = After.getEntryBlockName();
+  // Use the before entry block if the after entry block was removed.
+  if (EntryBlockName == "")
+    EntryBlockName = Before.getEntryBlockName();
+  assert(EntryBlockName != "" && "Expected to find entry block");
+
+  DotCfgDiffDisplayGraph DG = Diff.createDisplayGraph(Text, EntryBlockName);
+  DG.generateDotFile(DotFile);
+
+  *HTML << genHTML(Text, DotFile, PDFFileName);
+  std::error_code EC = sys::fs::remove(DotFile);
+  if (EC)
+    errs() << "Error: " << EC.message() << "\n";
+}
+
+std::string DotCfgChangeReporter::genHTML(StringRef Text, StringRef DotFile,
+                                          StringRef PDFFileName) {
+  SmallString<20> PDFFile = formatv("{0}/{1}", DotCfgDir, PDFFileName);
+  // Create the PDF file.
+  static ErrorOr<std::string> DotExe = sys::findProgramByName(DotBinary);
+  if (!DotExe)
+    return "Unable to find dot executable.";
+
+  StringRef Args[] = {DotBinary, "-Tpdf", "-o", PDFFile, DotFile};
+  int Result = sys::ExecuteAndWait(*DotExe, Args, None);
+  if (Result < 0)
+    return "Error executing system dot.";
+
+  // Create the HTML tag refering to the PDF file.
+  SmallString<200> S = formatv(
+      "  <a href=\"{0}\" target=\"_blank\">{1}</a><br/>\n", PDFFileName, Text);
+  return S.c_str();
+}
+
+void DotCfgChangeReporter::handleInitialIR(Any IR) {
+  assert(HTML && "Expected outstream to be set");
+  *HTML << "<button type=\"button\" class=\"collapsible\">0. "
+        << "Initial IR (by function)</button>\n"
+        << "<div class=\"content\">\n"
+        << "  <p>\n";
+  // Create representation of IR
+  IRDataT<DCData> Data;
+  IRComparer<DCData>::analyzeIR(IR, Data);
+  // Now compare it against itself, which will have everything the
+  // same and will generate the files.
+  IRComparer<DCData>(Data, Data)
+      .compare(getModuleForComparison(IR),
+               [&](bool InModule, unsigned Minor,
+                   const FuncDataT<DCData> &Before,
+                   const FuncDataT<DCData> &After) -> void {
+                 handleFunctionCompare("", " ", "Initial IR", "", InModule,
+                                       Minor, Before, After);
+               });
+  *HTML << "  </p>\n"
+        << "</div><br/>\n";
+  ++N;
+}
+
+void DotCfgChangeReporter::generateIRRepresentation(Any IR, StringRef PassID,
+                                                    IRDataT<DCData> &Data) {
+  IRComparer<DCData>::analyzeIR(IR, Data);
+}
+
+void DotCfgChangeReporter::omitAfter(StringRef PassID, std::string &Name) {
+  assert(HTML && "Expected outstream to be set");
+  SmallString<20> Banner =
+      formatv("  <a>{0}. Pass {1} on {2} omitted because no change</a><br/>\n",
+              N, makeHTMLReady(PassID), Name);
+  *HTML << Banner;
+  ++N;
+}
+
+void DotCfgChangeReporter::handleAfter(StringRef PassID, std::string &Name,
+                                       const IRDataT<DCData> &Before,
+                                       const IRDataT<DCData> &After, Any IR) {
+  assert(HTML && "Expected outstream to be set");
+  IRComparer<DCData>(Before, After)
+      .compare(getModuleForComparison(IR),
+               [&](bool InModule, unsigned Minor,
+                   const FuncDataT<DCData> &Before,
+                   const FuncDataT<DCData> &After) -> void {
+                 handleFunctionCompare(Name, " Pass ", PassID, " on ", InModule,
+                                       Minor, Before, After);
+               });
+  *HTML << "    </p></div>\n";
+  ++N;
+}
+
+void DotCfgChangeReporter::handleInvalidated(StringRef PassID) {
+  assert(HTML && "Expected outstream to be set");
+  SmallString<20> Banner =
+      formatv("  <a>{0}. {1} invalidated</a><br/>\n", N, makeHTMLReady(PassID));
+  *HTML << Banner;
+  ++N;
+}
+
+void DotCfgChangeReporter::handleFiltered(StringRef PassID, std::string &Name) {
+  assert(HTML && "Expected outstream to be set");
+  SmallString<20> Banner =
+      formatv("  <a>{0}. Pass {1} on {2} filtered out</a><br/>\n", N,
+              makeHTMLReady(PassID), Name);
+  *HTML << Banner;
+  ++N;
+}
+
+void DotCfgChangeReporter::handleIgnored(StringRef PassID, std::string &Name) {
+  assert(HTML && "Expected outstream to be set");
+  SmallString<20> Banner = formatv("  <a>{0}. {1} on {2} ignored</a><br/>\n", N,
+                                   makeHTMLReady(PassID), Name);
+  *HTML << Banner;
+  ++N;
+}
+
+bool DotCfgChangeReporter::initializeHTML() {
+  std::error_code EC;
+  HTML = std::make_unique<raw_fd_ostream>(DotCfgDir + "/passes.html", EC);
+  if (EC) {
+    HTML = nullptr;
+    return false;
+  }
+
+  *HTML << "<!doctype html>"
+        << "<html>"
+        << "<head>"
+        << "<style>.collapsible { "
+        << "background-color: #777;"
+        << " color: white;"
+        << " cursor: pointer;"
+        << " padding: 18px;"
+        << " width: 100%;"
+        << " border: none;"
+        << " text-align: left;"
+        << " outline: none;"
+        << " font-size: 15px;"
+        << "} .active, .collapsible:hover {"
+        << " background-color: #555;"
+        << "} .content {"
+        << " padding: 0 18px;"
+        << " display: none;"
+        << " overflow: hidden;"
+        << " background-color: #f1f1f1;"
+        << "}"
+        << "</style>"
+        << "<title>passes.html</title>"
+        << "</head>\n"
+        << "<body>";
+  return true;
+}
+
+DotCfgChangeReporter::~DotCfgChangeReporter() {
+  if (!HTML)
+    return;
+  *HTML
+      << "<script>var coll = document.getElementsByClassName(\"collapsible\");"
+      << "var i;"
+      << "for (i = 0; i < coll.length; i++) {"
+      << "coll[i].addEventListener(\"click\", function() {"
+      << " this.classList.toggle(\"active\");"
+      << " var content = this.nextElementSibling;"
+      << " if (content.style.display === \"block\"){"
+      << " content.style.display = \"none\";"
+      << " }"
+      << " else {"
+      << " content.style.display= \"block\";"
+      << " }"
+      << " });"
+      << " }"
+      << "</script>"
+      << "</body>"
+      << "</html>\n";
+  HTML->flush();
+  HTML->close();
+}
+
+void DotCfgChangeReporter::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if ((PrintChanged == ChangePrinter::PrintChangedDotCfgVerbose ||
+       PrintChanged == ChangePrinter::PrintChangedDotCfgQuiet)) {
+    SmallString<128> OutputDir;
+    sys::fs::expand_tilde(DotCfgDir, OutputDir);
+    sys::fs::make_absolute(OutputDir);
+    assert(!OutputDir.empty() && "expected output dir to be non-empty");
+    DotCfgDir = OutputDir.c_str();
+    if (initializeHTML()) {
+      ChangeReporter<IRDataT<DCData>>::registerRequiredCallbacks(PIC);
+      return;
+    }
+    dbgs() << "Unable to open output stream for -cfg-dot-changed\n";
+  }
+}
 
 StandardInstrumentations::StandardInstrumentations(
     bool DebugLogging, bool VerifyEach, PrintPassOptions PrintPassOpts)
@@ -1211,6 +2125,8 @@ StandardInstrumentations::StandardInstrumentations(
               PrintChanged == ChangePrinter::PrintChangedColourDiffVerbose,
           PrintChanged == ChangePrinter::PrintChangedColourDiffVerbose ||
               PrintChanged == ChangePrinter::PrintChangedColourDiffQuiet),
+      WebsiteChangeReporter(PrintChanged ==
+                            ChangePrinter::PrintChangedDotCfgVerbose),
       Verify(DebugLogging), VerifyEach(VerifyEach) {}
 
 void StandardInstrumentations::registerCallbacks(
@@ -1227,6 +2143,7 @@ void StandardInstrumentations::registerCallbacks(
   if (VerifyEach)
     Verify.registerCallbacks(PIC);
   PrintChangedDiff.registerCallbacks(PIC);
+  WebsiteChangeReporter.registerCallbacks(PIC);
 }
 
 template class ChangeReporter<std::string>;

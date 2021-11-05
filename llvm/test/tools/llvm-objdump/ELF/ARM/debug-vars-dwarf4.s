@@ -8,26 +8,23 @@
 ## Generated with this compile command, with the source code in Inputs/debug.c:
 ## clang --target=arm--none-eabi -march=armv7-a -c debug.c -O1 -gdwarf-4 -S -o -
 
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars | \
+# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj -o %t.o
+
+# RUN: llvm-objdump %t.o -d --debug-vars | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
 
 ## Check that passing the default value for --debug-vars-indent (52) makes no
 ## change to the output.
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars --debug-vars-indent=52 | \
+# RUN: llvm-objdump %t.o -d --debug-vars --debug-vars-indent=52 | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
 
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars --debug-vars-indent=30 | \
+# RUN: llvm-objdump %t.o -d --debug-vars --debug-vars-indent=30 | \
 # RUN:     FileCheck %s --check-prefix=INDENT --strict-whitespace
 
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars --no-show-raw-insn | \
+# RUN: llvm-objdump %t.o -d --debug-vars --no-show-raw-insn | \
 # RUN:     FileCheck %s --check-prefix=NO-RAW --strict-whitespace
 
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars --no-show-raw-insn --line-numbers | \
+# RUN: llvm-objdump %t.o -d --debug-vars --no-show-raw-insn --line-numbers | \
 # RUN:     FileCheck %s --check-prefix=LINE-NUMS --strict-whitespace
 
 # RUN: mkdir -p %t/a
@@ -39,12 +36,12 @@
 
 ## An optional argument to the --debug-vars= option can be used to switch
 ## between unicode and ascii output (with unicode being the default).
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars=unicode | \
+# RUN: llvm-objdump %t.o -d --debug-vars=unicode | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
-# RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars=ascii | \
+# RUN: llvm-objdump %t.o -d --debug-vars=ascii | \
 # RUN:     FileCheck %s --check-prefix=ASCII --strict-whitespace
+# RUN: not llvm-objdump %t.o -d --debug-vars=bad_value 2>&1 | \
+# RUN: FileCheck %s --check-prefix=ERROR
 
 ## Note that llvm-objdump emits tab characters in the disassembly, assuming an
 ## 8-byte tab stop, so these might not look aligned in a text editor.
@@ -145,6 +142,8 @@
 # ASCII-NEXT:                                                                             |- a = R0 
 # ASCII-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                                  |         
 # ASCII-NEXT:       10: 1e ff 2f e1  	bx	lr                                          v         
+
+# ERROR: error: 'bad_value' is not a valid value for '--debug-vars='
 
 	.text
 	.syntax unified

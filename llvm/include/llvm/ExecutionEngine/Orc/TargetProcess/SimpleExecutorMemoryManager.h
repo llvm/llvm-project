@@ -50,13 +50,13 @@ private:
 
   Error deallocateImpl(void *Base, Allocation &A);
 
-  static llvm::orc::shared::detail::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionResult
   reserveWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::detail::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionResult
   finalizeWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::detail::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionResult
   deallocateWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;

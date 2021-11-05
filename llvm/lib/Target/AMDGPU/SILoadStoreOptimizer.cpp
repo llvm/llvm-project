@@ -2065,7 +2065,7 @@ SILoadStoreOptimizer::collectMergeableInsts(
     // adjacent to each other in the list, which will make it easier to find
     // matches.
     MergeList.sort(
-        [] (const CombineInfo &A, CombineInfo &B) {
+        [] (const CombineInfo &A, const CombineInfo &B) {
           return A.Offset < B.Offset;
         });
     ++I;

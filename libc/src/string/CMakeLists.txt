@@ -57,6 +57,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  stpcpy
+  SRCS
+    stpcpy.cpp
+  HDRS
+    stpcpy.h
+  DEPENDS
+    .mempcpy
+    .string_utils
+)
+
+add_entrypoint_object(
+  stpncpy
+  SRCS
+    stpncpy.cpp
+  HDRS
+    stpncpy.h
+  DEPENDS
+    .bzero
+)
+
+add_entrypoint_object(
   strcat
   SRCS
     strcat.cpp
@@ -151,6 +172,18 @@ add_entrypoint_object(
     strncpy.cpp
   HDRS
     strncpy.h
+)
+
+add_entrypoint_object(
+  strndup
+  SRCS
+    strndup.cpp
+  HDRS
+    strndup.h
+  DEPENDS
+    .memcpy
+    .string_utils
+    libc.include.stdlib
 )
 
 add_entrypoint_object(
@@ -310,7 +343,7 @@ endif()
 
 function(add_memcmp memcmp_name)
   add_implementation(memcmp ${memcmp_name}
-    SRCS ${LIBC_MEMCMP_SRC}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/memcmp.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcmp.h
     DEPENDS
       .memory_utils.memory_utils
@@ -322,7 +355,6 @@ function(add_memcmp memcmp_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(LIBC_MEMCMP_SRC ${LIBC_SOURCE_DIR}/src/string/memcmp.cpp)
   add_memcmp(memcmp_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memcmp(memcmp_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memcmp(memcmp_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -330,11 +362,9 @@ if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_memcmp(memcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcmp(memcmp)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
-  set(LIBC_MEMCMP_SRC ${LIBC_SOURCE_DIR}/src/string/aarch64/memcmp.cpp)
-  add_memcmp(memcmp)
   add_memcmp(memcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcmp(memcmp)
 else()
-  set(LIBC_MEMCMP_SRC ${LIBC_SOURCE_DIR}/src/string/memcmp.cpp)
   add_memcmp(memcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcmp(memcmp)
 endif()
@@ -345,7 +375,7 @@ endif()
 
 function(add_memcpy memcpy_name)
   add_implementation(memcpy ${memcpy_name}
-    SRCS ${MEMCPY_SRC}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcpy.h
     DEPENDS
       .memory_utils.memory_utils
@@ -357,7 +387,6 @@ function(add_memcpy memcpy_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/x86_64/memcpy.cpp)
   add_memcpy(memcpy_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memcpy(memcpy_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memcpy(memcpy_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -365,14 +394,12 @@ if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
-  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/aarch64/memcpy.cpp)
   # Disable tail merging as it leads to lower performance.
   # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
   add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
                                       COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
   add_memcpy(memcpy                   COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
 else()
-  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp)
   add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
 endif()
@@ -383,7 +410,7 @@ endif()
 
 function(add_memset memset_name)
   add_implementation(memset ${memset_name}
-    SRCS ${MEMSET_SRC}
+    SRCS ${LIBC_SOURCE_DIR}/src/string/memset.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memset.h
     DEPENDS
       .memory_utils.memory_utils
@@ -395,7 +422,6 @@ function(add_memset memset_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(MEMSET_SRC ${LIBC_SOURCE_DIR}/src/string/memset.cpp)
   add_memset(memset_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memset(memset_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_memset(memset_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -403,12 +429,10 @@ if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
-  set(MEMSET_SRC ${LIBC_SOURCE_DIR}/src/string/aarch64/memset.cpp)
   add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
                                       COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
   add_memset(memset                   COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
 else()
-  set(MEMSET_SRC ${LIBC_SOURCE_DIR}/src/string/memset.cpp)
   add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 endif()

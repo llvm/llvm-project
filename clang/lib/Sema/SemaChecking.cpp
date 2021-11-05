@@ -1985,6 +1985,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinElementwiseMath(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_reduce_max:
+  case Builtin::BI__builtin_reduce_min:
+    if (SemaBuiltinReduceMath(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_matrix_transpose:
     return SemaBuiltinMatrixTranspose(TheCall, TheCallResult);
 
@@ -3377,6 +3382,18 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_tabortdci:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  // According to GCC 'Basic PowerPC Built-in Functions Available on ISA 2.05',
+  // __builtin_(un)pack_longdouble are available only if long double uses IBM
+  // extended double representation.
+  case PPC::BI__builtin_unpack_longdouble:
+    if (SemaBuiltinConstantArgRange(TheCall, 1, 0, 1))
+      return true;
+    LLVM_FALLTHROUGH;
+  case PPC::BI__builtin_pack_longdouble:
+    if (&TI.getLongDoubleFormat() != &llvm::APFloat::PPCDoubleDouble())
+      return Diag(TheCall->getBeginLoc(), diag::err_ppc_builtin_requires_abi)
+             << "ibmlongdouble";
+    return false;
   case PPC::BI__builtin_altivec_dst:
   case PPC::BI__builtin_altivec_dstt:
   case PPC::BI__builtin_altivec_dstst:
@@ -4887,7 +4904,7 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
   if (ArgAlign < ParamAlign)
     Diag(Loc, diag::warn_param_mismatched_alignment)
         << (int)ArgAlign.getQuantity() << (int)ParamAlign.getQuantity()
-        << ParamName << FDecl;
+        << ParamName << (FDecl != nullptr) << FDecl;
 }
 
 /// Handles the checks for format strings, non-POD arguments to vararg
@@ -16593,6 +16610,26 @@ bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
   TheCall->setArg(0, A.get());
   TheCall->setArg(1, B.get());
   TheCall->setType(Res);
+  return false;
+}
+
+bool Sema::SemaBuiltinReduceMath(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 1))
+    return true;
+
+  ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
+  if (A.isInvalid())
+    return true;
+
+  TheCall->setArg(0, A.get());
+  const VectorType *TyA = A.get()->getType()->getAs<VectorType>();
+  if (!TyA) {
+    SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
+    return Diag(ArgLoc, diag::err_builtin_invalid_arg_type)
+           << 1 << /* vector ty*/ 4 << A.get()->getType();
+  }
+
+  TheCall->setType(TyA->getElementType());
   return false;
 }
 

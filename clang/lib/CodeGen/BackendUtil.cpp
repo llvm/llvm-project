@@ -1176,20 +1176,18 @@ static void addSanitizers(const Triple &TargetTriple,
 
     auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
-        bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
-        bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
-        bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+        bool UseGlobalGC = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
         bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
         llvm::AsanDtorKind DestructorKind =
             CodeGenOpts.getSanitizeAddressDtor();
-        llvm::AsanDetectStackUseAfterReturnMode UseAfterReturn =
-            CodeGenOpts.getSanitizeAddressUseAfterReturn();
+        AddressSanitizerOptions Opts;
+        Opts.CompileKernel = CompileKernel;
+        Opts.Recover = CodeGenOpts.SanitizeRecover.has(Mask);
+        Opts.UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
+        Opts.UseAfterReturn = CodeGenOpts.getSanitizeAddressUseAfterReturn();
         MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
         MPM.addPass(ModuleAddressSanitizerPass(
-            CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator,
-            DestructorKind));
-        MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-            {CompileKernel, Recover, UseAfterScope, UseAfterReturn})));
+            Opts, UseGlobalGC, UseOdrIndicator, DestructorKind));
       }
     };
     ASanPass(SanitizerKind::Address, false);

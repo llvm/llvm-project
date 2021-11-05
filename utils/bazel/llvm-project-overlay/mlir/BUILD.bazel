@@ -2768,6 +2768,14 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir/Dialect/GPU/GPUOps.cpp.inc",
         ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/GPU/GPUOpsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/GPU/GPUOpsEnums.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/GPU/GPUOps.td",
@@ -3294,6 +3302,14 @@ gentbl_cc_library(
                 "-dialect=nvvm",
             ],
             "include/mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -5373,7 +5389,7 @@ cc_library(
     name = "mlir_c_runner_utils",
     srcs = [
         "lib/ExecutionEngine/CRunnerUtils.cpp",
-        "lib/ExecutionEngine/SparseUtils.cpp",
+        "lib/ExecutionEngine/SparseTensorUtils.cpp",
     ],
     hdrs = ["include/mlir/ExecutionEngine/CRunnerUtils.h"],
     includes = ["include"],
@@ -6111,6 +6127,54 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BufferizableOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferizableOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.td",
+    deps = [
+        ":BufferizableOpInterfaceTdFiles",
+    ],
+)
+
+cc_library(
+    name = "BufferizableOpInterface",
+    srcs = [
+        "lib/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/Transforms/BufferizableOpInterface.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizableOpInterfaceIncGen",
+        ":IR",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "LinalgDocTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/LinalgDoc.td"],
     includes = ["include"],
@@ -6288,10 +6352,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "LinalgTransforms",
-    srcs = glob([
-        "lib/Dialect/Linalg/Transforms/*.cpp",
-        "lib/Dialect/Linalg/Transforms/*.h",
-    ]) + [
+    srcs = glob(
+        [
+            "lib/Dialect/Linalg/Transforms/*.cpp",
+            "lib/Dialect/Linalg/Transforms/*.h",
+        ],
+        exclude = ["lib/Dialect/Linalg/Transforms/BufferizableOpInterface.cpp"],
+    ) + [
         "lib/Dialect/Linalg/Analysis/DependenceAnalysis.cpp",
         "lib/Dialect/Linalg/Utils/Utils.cpp",
     ],
@@ -6311,6 +6378,7 @@ cc_library(
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":ComplexDialect",
         ":DialectUtils",
         ":IR",

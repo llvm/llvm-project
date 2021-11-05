@@ -173,8 +173,19 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+// This cache mostly exists to store system libraries (and .tbds) as they're
+// loaded, rather than the input archives, which are already cached at a higher
+// level, and other files like the filelist that are only read once.
+// Theoretically this caching could be more efficient by hoisting it, but that
+// would require altering many callers to track the state.
+static DenseMap<CachedHashStringRef, MemoryBufferRef> resolvedReads;
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
+  CachedHashStringRef key(path);
+  auto entry = resolvedReads.find(key);
+  if (entry != resolvedReads.end())
+    return entry->second;
+
   ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
@@ -192,7 +203,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
       read32be(&hdr->magic) != FAT_MAGIC) {
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
-    return mbref;
+    return resolvedReads[key] = mbref;
   }
 
   // Object files and archive files may be fat files, which contain multiple
@@ -217,7 +228,8 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
       error(path + ": slice extends beyond end of file");
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
-    return MemoryBufferRef(StringRef(buf + offset, size), path.copy(bAlloc));
+    return resolvedReads[key] = MemoryBufferRef(StringRef(buf + offset, size),
+                                                path.copy(bAlloc));
   }
 
   error("unable to find matching architecture in " + path);
@@ -269,7 +281,7 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
 
     auto splitRecords = [&](int recordSize) -> void {
       subsections.push_back({});
-      if (data.size() == 0)
+      if (data.empty())
         return;
 
       SubsectionMap &subsecMap = subsections.back();
@@ -619,8 +631,7 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
   }
 }
 
-template <class NList>
-static bool isUndef(const NList &sym) {
+template <class NList> static bool isUndef(const NList &sym) {
   return (sym.n_type & N_TYPE) == N_UNDF && sym.n_value == 0;
 }
 
@@ -790,9 +801,12 @@ template <class LP> void ObjFile::parse() {
 
   Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
   if (arch != config->arch()) {
-    error(toString(this) + " has architecture " + getArchitectureName(arch) +
-          " which is incompatible with target architecture " +
-          getArchitectureName(config->arch()));
+    auto msg = config->errorForArchMismatch
+                   ? static_cast<void (*)(const Twine &)>(error)
+                   : warn;
+    msg(toString(this) + " has architecture " + getArchitectureName(arch) +
+        " which is incompatible with target architecture " +
+        getArchitectureName(config->arch()));
     return;
   }
 
@@ -1211,7 +1225,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 void DylibFile::parseReexports(const InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
-  for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
+  for (const InterfaceFileRef &intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
         is_contained(targets, config->platformInfo.target))

@@ -223,6 +223,8 @@ TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
 
   std::string str = formatv("{0}", *op).str();
   ASSERT_STREQ(str.c_str(), "\"foo.bar\"() : () -> ()");
+
+  op->destroy();
 }
 
 TEST(NamedAttrListTest, TestAppendAssign) {

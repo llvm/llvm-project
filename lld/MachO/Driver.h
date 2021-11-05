@@ -56,6 +56,7 @@ llvm::Optional<StringRef> resolveDylibPath(llvm::StringRef path);
 
 DylibFile *loadDylib(llvm::MemoryBufferRef mbref, DylibFile *umbrella = nullptr,
                      bool isBundleLoader = false);
+void resetLoadedDylibs();
 
 // Search for all possible combinations of `{root}/{name}.{extension}`.
 // If \p extensions are not specified, then just search for `{root}/{name}`.

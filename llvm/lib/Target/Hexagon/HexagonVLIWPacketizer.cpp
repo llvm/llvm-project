@@ -1160,12 +1160,9 @@ bool HexagonPacketizerList::cannotCoexist(const MachineInstr &MI,
 void HexagonPacketizerList::unpacketizeSoloInstrs(MachineFunction &MF) {
   for (auto &B : MF) {
     MachineBasicBlock::iterator BundleIt;
-    MachineBasicBlock::instr_iterator NextI;
-    for (auto I = B.instr_begin(), E = B.instr_end(); I != E; I = NextI) {
-      NextI = std::next(I);
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::make_early_inc_range(B.instrs())) {
       if (MI.isBundle())
-        BundleIt = I;
+        BundleIt = MI.getIterator();
       if (!MI.isInsideBundle())
         continue;
 

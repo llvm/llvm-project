@@ -71,10 +71,10 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    vldrht.s32 q1, [r0], #8
 ; ENABLED-NEXT:    vldrht.s32 q2, [r7], #8
 ; ENABLED-NEXT:    mov lr, r6
-; ENABLED-NEXT:    vmul.i32 q1, q2, q1
 ; ENABLED-NEXT:    subs r6, #1
-; ENABLED-NEXT:    vshl.s32 q1, r5
+; ENABLED-NEXT:    vmul.i32 q1, q2, q1
 ; ENABLED-NEXT:    subs r4, #4
+; ENABLED-NEXT:    vshl.s32 q1, r5
 ; ENABLED-NEXT:    vadd.i32 q1, q1, q0
 ; ENABLED-NEXT:    le lr, .LBB0_6
 ; ENABLED-NEXT:  @ %bb.7: @ %middle.block
@@ -142,10 +142,10 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    vldrht.s32 q1, [r0], #8
 ; NOREDUCTIONS-NEXT:    vldrht.s32 q2, [r7], #8
 ; NOREDUCTIONS-NEXT:    mov lr, r6
-; NOREDUCTIONS-NEXT:    vmul.i32 q1, q2, q1
 ; NOREDUCTIONS-NEXT:    subs r6, #1
-; NOREDUCTIONS-NEXT:    vshl.s32 q1, r5
+; NOREDUCTIONS-NEXT:    vmul.i32 q1, q2, q1
 ; NOREDUCTIONS-NEXT:    subs r4, #4
+; NOREDUCTIONS-NEXT:    vshl.s32 q1, r5
 ; NOREDUCTIONS-NEXT:    vadd.i32 q1, q1, q0
 ; NOREDUCTIONS-NEXT:    le lr, .LBB0_6
 ; NOREDUCTIONS-NEXT:  @ %bb.7: @ %middle.block

@@ -37,7 +37,7 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 /// call. This function expects the direct address and size of the eh-frame
 /// section to register as its arguments (it does not treat its arguments as
 /// pointers to an SPS-serialized arg buffer).
-extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_registerEHFrameSectionCustomDirectWrapper(
     const char *EHFrameSectionAddr, uint64_t Size);
 
@@ -45,14 +45,14 @@ llvm_orc_registerEHFrameSectionCustomDirectWrapper(
 /// call. This function expects the direct address and size of the eh-frame
 /// section to register as its arguments (it does not treat its arguments as
 /// pointers to an SPS-serialized arg buffer).
-extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_deregisterEHFrameSectionCustomDirectWrapper(
     const char *EHFrameSectionAddr, uint64_t Size);
 
-extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size);
 
-extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REGISTEREHFRAMES_H

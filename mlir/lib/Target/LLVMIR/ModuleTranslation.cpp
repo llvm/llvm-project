@@ -374,9 +374,9 @@ static Value getPHISourceValue(Block *current, Block *pred,
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(terminator)) {
     // For switches, we take the operands from either the default case, or from
     // the case branch that was taken.
-    if (switchOp.defaultDestination() == current)
-      return switchOp.defaultOperands()[index];
-    for (auto i : llvm::enumerate(switchOp.caseDestinations()))
+    if (switchOp.getDefaultDestination() == current)
+      return switchOp.getDefaultOperands()[index];
+    for (auto i : llvm::enumerate(switchOp.getCaseDestinations()))
       if (i.value() == current)
         return switchOp.getCaseOperands(i.index())[index];
   }
@@ -440,29 +440,6 @@ llvm::Value *mlir::LLVM::detail::createIntrinsicCall(
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Function *fn = llvm::Intrinsic::getDeclaration(module, intrinsic, tys);
-  return builder.CreateCall(fn, args);
-}
-
-llvm::Value *
-mlir::LLVM::detail::createNvvmIntrinsicCall(llvm::IRBuilderBase &builder,
-                                            llvm::Intrinsic::ID intrinsic,
-                                            ArrayRef<llvm::Value *> args) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *fn;
-  if (llvm::Intrinsic::isOverloaded(intrinsic)) {
-    if (intrinsic != llvm::Intrinsic::nvvm_wmma_m16n16k16_mma_row_row_f16_f16 &&
-        intrinsic != llvm::Intrinsic::nvvm_wmma_m16n16k16_mma_row_row_f32_f32) {
-      // NVVM load and store instrinsic names are overloaded on the
-      // source/destination pointer type. Pointer is the first argument in the
-      // corresponding NVVM Op.
-      fn = llvm::Intrinsic::getDeclaration(module, intrinsic,
-                                           {args[0]->getType()});
-    } else {
-      fn = llvm::Intrinsic::getDeclaration(module, intrinsic, {});
-    }
-  } else {
-    fn = llvm::Intrinsic::getDeclaration(module, intrinsic);
-  }
   return builder.CreateCall(fn, args);
 }
 
@@ -790,10 +767,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   }
 
   // Check the personality and set it.
-  if (func.personality().hasValue()) {
+  if (func.getPersonality().hasValue()) {
     llvm::Type *ty = llvm::Type::getInt8PtrTy(llvmFunc->getContext());
-    if (llvm::Constant *pfunc =
-            getLLVMConstant(ty, func.personalityAttr(), func.getLoc(), *this))
+    if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
+                                                func.getLoc(), *this))
       llvmFunc->setPersonalityFn(pfunc);
   }
 
@@ -837,13 +814,13 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
         function.getName(),
         cast<llvm::FunctionType>(convertType(function.getType())));
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
-    llvmFunc->setLinkage(convertLinkageToLLVM(function.linkage()));
+    llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
     mapFunction(function.getName(), llvmFunc);
-    addRuntimePreemptionSpecifier(function.dso_local(), llvmFunc);
+    addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Forward the pass-through attributes to LLVM.
-    if (failed(forwardPassthroughAttributes(function.getLoc(),
-                                            function.passthrough(), llvmFunc)))
+    if (failed(forwardPassthroughAttributes(
+            function.getLoc(), function.getPassthrough(), llvmFunc)))
       return failure();
   }
 

@@ -115,17 +115,18 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> MaxVarsPrep("ppc-formprep-max-vars",
-                                 cl::Hidden, cl::init(24),
-  cl::desc("Potential common base number threshold per function for PPC loop "
-           "prep"));
+static cl::opt<unsigned>
+    MaxVarsPrep("ppc-formprep-max-vars", cl::Hidden, cl::init(24),
+                cl::ZeroOrMore,
+                cl::desc("Potential common base number threshold per function "
+                         "for PPC loop prep"));
 
 static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
                                  cl::init(true), cl::Hidden,
   cl::desc("prefer update form when ds form is also a update form"));
 
 static cl::opt<bool> EnableChainCommoning(
-    "ppc-formprep-chain-commoning", cl::init(true), cl::Hidden,
+    "ppc-formprep-chain-commoning", cl::init(false), cl::Hidden,
     cl::desc("Enable chain commoning in PPC loop prepare pass."));
 
 // Sum of following 3 per loop thresholds for all loops can not be larger
@@ -494,7 +495,7 @@ bool PPCLoopInstrFormPrep::prepareBasesForCommoningChains(Bucket &CBucket) {
   // All elements are increased by FirstOffset.
   // The number of chains should be sqrt(EleNum).
   if (!SawChainSeparater)
-    ChainNum = (unsigned)sqrt(EleNum);
+    ChainNum = (unsigned)sqrt((double)EleNum);
 
   CBucket.ChainSize = (unsigned)(EleNum / ChainNum);
 

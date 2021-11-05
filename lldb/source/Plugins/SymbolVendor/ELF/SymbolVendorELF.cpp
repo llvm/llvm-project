@@ -40,12 +40,7 @@ void SymbolVendorELF::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SymbolVendorELF::GetPluginNameStatic() {
-  static ConstString g_name("ELF");
-  return g_name;
-}
-
-const char *SymbolVendorELF::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolVendorELF::GetPluginDescriptionStatic() {
   return "Symbol vendor for ELF that looks for dSYM files that match "
          "executables.";
 }

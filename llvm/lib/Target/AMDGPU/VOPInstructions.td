@@ -792,7 +792,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let TRANS                = ps.TRANS;
 }
 
-class VOP_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
+class VOP_DPP_Base <string OpName, VOPProfile P,
                dag InsDPP,
                string AsmDPP > :
   InstSI <P.OutsDPP, InsDPP, OpName#AsmDPP, []> {
@@ -819,12 +819,12 @@ class VOP_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
 class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
                dag InsDPP = !if(IsDPP16, P.InsDPP16, P.InsDPP),
                string AsmDPP = !if(IsDPP16, P.AsmDPP16, P.AsmDPP)> :
-  VOP_DPP_Base<OpName, P, IsDPP16, InsDPP, AsmDPP>, VOP_DPPe<P, IsDPP16>;
+  VOP_DPP_Base<OpName, P, InsDPP, AsmDPP>, VOP_DPPe<P, IsDPP16>;
 
 class VOP3_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
                dag InsDPP = !if(IsDPP16, P.InsVOP3DPP16, P.InsVOP3DPP),
                string AsmDPP = !if(IsDPP16, P.AsmVOP3DPP16, P.AsmVOP3DPP)> :
-  VOP_DPP_Base<OpName, P, IsDPP16, InsDPP, AsmDPP> {
+  VOP_DPP_Base<OpName, P, InsDPP, AsmDPP> {
   let OutOperandList = P.OutsVOP3DPP;
   let AsmMatchConverter = "cvtVOP3DPP";
   let VOP3 = 1;
@@ -1164,7 +1164,7 @@ multiclass VOP3Inst_Pseudo_Wrapper<string opName, VOPProfile P, list<dag> patter
     def _e64 : VOP3_Pseudo<opName, P, pattern, VOP3Only>;
 }
 
-class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0, bit IsVOP2 = 0> :
+class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit IsVOP2 = 0> :
   VOP3_Pseudo<OpName, P,
     !if(P.HasOpSel,
         !if(P.HasModifiers,
@@ -1191,8 +1191,8 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0, bit IsVOP2 = 0> {
-  def _e64 : VOP3InstBase<OpName, P, node, VOP3Only, IsVOP2>;
+multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
+  def _e64 : VOP3InstBase<OpName, P, node>;
   let SubtargetPredicate = isGFX11Plus in {
     foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in
       def _e64_dpp : VOP3_DPP_Pseudo <OpName, P>;

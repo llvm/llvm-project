@@ -1490,10 +1490,8 @@ void PolynomialMultiplyRecognize::cleanupLoopBody(BasicBlock *LoopB) {
     if (Value *SV = SimplifyInstruction(&I, {DL, &TLI, &DT}))
       I.replaceAllUsesWith(SV);
 
-  for (auto I = LoopB->begin(), N = I; I != LoopB->end(); I = N) {
-    N = std::next(I);
-    RecursivelyDeleteTriviallyDeadInstructions(&*I, &TLI);
-  }
+  for (Instruction &I : llvm::make_early_inc_range(*LoopB))
+    RecursivelyDeleteTriviallyDeadInstructions(&I, &TLI);
 }
 
 unsigned PolynomialMultiplyRecognize::getInverseMxN(unsigned QP) {

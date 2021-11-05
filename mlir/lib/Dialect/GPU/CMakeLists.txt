@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRGPUOps
 
   DEPENDS
   MLIRGPUOpsIncGen
+  MLIRGPUOpsEnumsGen
   MLIRGPUOpInterfacesIncGen
 
   LINK_LIBS PUBLIC

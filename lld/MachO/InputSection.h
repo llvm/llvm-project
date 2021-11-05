@@ -38,6 +38,7 @@ public:
   Kind kind() const { return shared->sectionKind; }
   virtual ~InputSection() = default;
   virtual uint64_t getSize() const { return data.size(); }
+  virtual bool empty() const { return data.empty(); }
   InputFile *getFile() const { return shared->file; }
   StringRef getName() const { return shared->name; }
   StringRef getSegName() const { return shared->segname; }
@@ -115,14 +116,14 @@ public:
   // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
   bool isLive(uint64_t off) const override { return live; }
   void markLive(uint64_t off) override { live = true; }
-  bool isCoalescedWeak() const { return wasCoalesced && symbols.size() == 0; }
+  bool isCoalescedWeak() const { return wasCoalesced && symbols.empty(); }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   bool isHashableForICF() const;
   void hashForICF();
   void writeTo(uint8_t *buf);
 
   void foldIdentical(ConcatInputSection *redundant);
-  InputSection *canonical() override {
+  ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }
 
@@ -131,7 +132,7 @@ public:
   }
 
   // Points to the surviving section after this one is folded by ICF
-  InputSection *replacement = nullptr;
+  ConcatInputSection *replacement = nullptr;
   // Equivalence-class ID for ICF
   uint64_t icfEqClass[2] = {0, 0};
 

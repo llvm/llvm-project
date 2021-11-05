@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; This isn't a very pretty test case - I imagine there might be other ways to
 ; tickle the optimizers into producing the desired code, but I haven't found
@@ -38,20 +38,20 @@
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: [[M_FN2_DECL:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "m_fn2"
+; CHECK:     DW_AT_name ("m_fn2")
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_formal_parameter
 
 ; The abstract definition of C::m_fn2
 ; CHECK: [[M_FN2_ABS_DEF:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_specification {{.*}} {[[M_FN2_DECL]]}
+; CHECK:   DW_AT_specification {{.*}}[[M_FN2_DECL]]
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_AT_inline
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: [[M_FN2_THIS_ABS_DEF:.*]]:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "this"
+; CHECK:     DW_AT_name ("this")
 
 ; Skip some other functions
 ; CHECK: DW_TAG_subprogram
@@ -61,11 +61,11 @@
 ; The concrete definition of C::m_fn2
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_abstract_origin {{.*}} {[[M_FN2_ABS_DEF]]}
+; CHECK:   DW_AT_abstract_origin {{.*}}[[M_FN2_ABS_DEF]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_abstract_origin {{.*}} {[[M_FN2_THIS_ABS_DEF]]}
+; CHECK:     DW_AT_abstract_origin {{.*}}[[M_FN2_THIS_ABS_DEF]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; Inlined fn3:
 ; CHECK:     DW_TAG_inlined_subroutine
@@ -76,11 +76,11 @@
 ; Inlined C::m_fn2:
 ; CHECK:         DW_TAG_inlined_subroutine
 ; CHECK-NOT: DW_TAG
-; CHECK:           DW_AT_abstract_origin {{.*}} {[[M_FN2_ABS_DEF]]}
+; CHECK:           DW_AT_abstract_origin {{.*}}[[M_FN2_ABS_DEF]]
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:           DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:              DW_AT_abstract_origin {{.*}} {[[M_FN2_THIS_ABS_DEF]]}
+; CHECK:              DW_AT_abstract_origin {{.*}}[[M_FN2_THIS_ABS_DEF]]
 
 source_filename = "test/DebugInfo/Generic/recursive_inlining.ll"
 

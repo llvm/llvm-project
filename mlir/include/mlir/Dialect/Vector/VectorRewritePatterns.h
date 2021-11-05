@@ -29,6 +29,8 @@ enum class VectorTransposeLowering {
   /// Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix
   /// intrinsics.
   Flat = 1,
+  /// Lower 2-D transpose to `vector.shuffle`.
+  Shuffle = 2,
 };
 /// Enum to control the lowering of `vector.multi_reduction` operations.
 enum class VectorMultiReductionLowering {

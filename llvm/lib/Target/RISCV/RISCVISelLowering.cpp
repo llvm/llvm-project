@@ -545,6 +545,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTLZ, VT, Expand);
       setOperationAction(ISD::CTPOP, VT, Expand);
 
+      setOperationAction(ISD::BSWAP, VT, Expand);
+
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction(ISD::ANY_EXTEND, VT, Custom);
       setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
@@ -4187,26 +4189,26 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
     llvm_unreachable("Unhandled reduction");
   case ISD::VECREDUCE_AND:
   case ISD::VP_REDUCE_AND: {
-    // vpopc ~x == 0
+    // vcpop ~x == 0
     SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
     Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
-    Vec = DAG.getNode(RISCVISD::VPOPC_VL, DL, XLenVT, Vec, Mask, VL);
+    Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
     BaseOpc = ISD::AND;
     break;
   }
   case ISD::VECREDUCE_OR:
   case ISD::VP_REDUCE_OR:
-    // vpopc x != 0
-    Vec = DAG.getNode(RISCVISD::VPOPC_VL, DL, XLenVT, Vec, Mask, VL);
+    // vcpop x != 0
+    Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETNE;
     BaseOpc = ISD::OR;
     break;
   case ISD::VECREDUCE_XOR:
   case ISD::VP_REDUCE_XOR: {
-    // ((vpopc x) & 1) != 0
+    // ((vcpop x) & 1) != 0
     SDValue One = DAG.getConstant(1, DL, XLenVT);
-    Vec = DAG.getNode(RISCVISD::VPOPC_VL, DL, XLenVT, Vec, Mask, VL);
+    Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     Vec = DAG.getNode(ISD::AND, DL, XLenVT, Vec, One);
     CC = ISD::SETNE;
     BaseOpc = ISD::XOR;
@@ -4221,7 +4223,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
 
   // Now include the start value in the operation.
   // Note that we must return the start value when no elements are operated
-  // upon. The vpopc instructions we've emitted in each case above will return
+  // upon. The vcpop instructions we've emitted in each case above will return
   // 0 for an inactive vector, and so we've already received the neutral value:
   // AND gives us (0 == 0) -> 1 and OR/XOR give us (0 != 0) -> 0. Therefore we
   // can simply include the start value.
@@ -4869,24 +4871,38 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     PassThru = MLoad->getPassThru();
   }
 
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+
   MVT XLenVT = Subtarget.getXLenVT();
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(VT);
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
-
-    Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
+    if (!IsUnmasked) {
+      MVT MaskVT =
+          MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+    }
   }
 
   if (!VL)
     VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
+  unsigned IntID =
+      IsUnmasked ? Intrinsic::riscv_vle : Intrinsic::riscv_vle_mask;
+  SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
+  if (!IsUnmasked)
+    Ops.push_back(PassThru);
+  Ops.push_back(BasePtr);
+  if (!IsUnmasked)
+    Ops.push_back(Mask);
+  Ops.push_back(VL);
+  if (!IsUnmasked)
+    Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
+
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
-  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
-  SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
-  SDValue Ops[] = {Chain, IntID, PassThru, BasePtr, Mask, VL, Policy};
+
   SDValue Result =
       DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT, MMO);
   Chain = Result.getValue(1);
@@ -9257,7 +9273,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VRGATHEREI16_VV_VL)
   NODE_NAME_CASE(VSEXT_VL)
   NODE_NAME_CASE(VZEXT_VL)
-  NODE_NAME_CASE(VPOPC_VL)
+  NODE_NAME_CASE(VCPOP_VL)
   NODE_NAME_CASE(VLE_VL)
   NODE_NAME_CASE(VSE_VL)
   NODE_NAME_CASE(READ_CSR)

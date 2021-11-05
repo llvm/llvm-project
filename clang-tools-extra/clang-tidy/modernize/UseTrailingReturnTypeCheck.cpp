@@ -78,7 +78,7 @@ public:
     return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(TL);
   }
 
-  // Replace the base method in order to call ower own
+  // Replace the base method in order to call our own
   // TraverseTypeLoc().
   bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
     return TraverseTypeLoc(TL.getUnqualifiedLoc());
@@ -172,8 +172,8 @@ static llvm::Optional<ClassifiedToken>
 classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   ClassifiedToken CT;
   CT.T = Tok;
-  CT.isQualifier = true;
-  CT.isSpecifier = true;
+  CT.IsQualifier = true;
+  CT.IsSpecifier = true;
   bool ContainsQualifiers = false;
   bool ContainsSpecifiers = false;
   bool ContainsSomethingElse = false;
@@ -193,8 +193,8 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
 
     bool Qual = isCvr(T);
     bool Spec = isSpecifier(T);
-    CT.isQualifier &= Qual;
-    CT.isSpecifier &= Spec;
+    CT.IsQualifier &= Qual;
+    CT.IsSpecifier &= Spec;
     ContainsQualifiers |= Qual;
     ContainsSpecifiers |= Spec;
     ContainsSomethingElse |= !Qual && !Spec;
@@ -329,7 +329,7 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
         !ExtendedLeft) {
       assert(I <= size_t(std::numeric_limits<int>::max()) &&
              "Integer overflow detected");
-      for (int J = static_cast<int>(I) - 1; J >= 0 && Tokens[J].isQualifier;
+      for (int J = static_cast<int>(I) - 1; J >= 0 && Tokens[J].IsQualifier;
            J--)
         ReturnTypeRange.setBegin(Tokens[J].T.getLocation());
       ExtendedLeft = true;
@@ -337,7 +337,7 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     // If we found the end of the return type, include right qualifiers.
     if (SM.isBeforeInTranslationUnit(ReturnTypeRange.getEnd(),
                                      Tokens[I].T.getLocation())) {
-      for (size_t J = I; J < Tokens.size() && Tokens[J].isQualifier; J++)
+      for (size_t J = I; J < Tokens.size() && Tokens[J].IsQualifier; J++)
         ReturnTypeRange.setEnd(Tokens[J].T.getLocation());
       break;
     }
@@ -380,7 +380,7 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
         SM.isBeforeInTranslationUnit(ReturnTypeCVRange.getEnd(),
                                      CT.T.getLocation()))
       continue;
-    if (!CT.isSpecifier)
+    if (!CT.IsSpecifier)
       continue;
 
     // Add the token to 'auto' and remove it from the return type, including

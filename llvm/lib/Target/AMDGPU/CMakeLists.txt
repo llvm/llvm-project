@@ -130,7 +130,6 @@ add_llvm_target(AMDGPUCodeGen
   R600TargetMachine.cpp
   R600TargetTransformInfo.cpp
   SIAnnotateControlFlow.cpp
-  SIFixScratchSize.cpp
   SIFixSGPRCopies.cpp
   SIFixVGPRCopies.cpp
   SIFoldOperands.cpp
@@ -138,7 +137,6 @@ add_llvm_target(AMDGPUCodeGen
   SIFrameLowering.cpp
   SIInsertDelayAlu.cpp
   SIInsertHardClauses.cpp
-  SIInsertScratchBounds.cpp
   SIInsertWaitcnts.cpp
   SIInsertWaterfall.cpp
   SIInstrInfo.cpp

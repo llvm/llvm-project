@@ -2,6 +2,13 @@
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/function_metadata.compact.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes='pseudo-probe,thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/pseudo-probe-func-metadata.prof -S | FileCheck %s
 
+;; Validate that with replay in effect, we import call sites even if they are below the threshold
+;; Baseline import decisions
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-summary-hot-count=2000 -profile-file=%S/Inputs/function_metadata.prof -S | FileCheck -check-prefix=THRESHOLD %s
+;; With replay decisions
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-summary-hot-count=2000 -profile-file=%S/Inputs/function_metadata.prof -S -sample-profile-inline-replay-scope=Function -sample-profile-inline-replay=%S/Inputs/function_metadata_replay.txt | FileCheck -check-prefix=THRESHOLD-REPLAY %s
+
+
 ; Tests whether the functions in the inline stack are added to the
 ; function_entry_count metadata.
 
@@ -16,6 +23,8 @@ define void @bar_available() #0 !dbg !14 {
 }
 
 ; CHECK: define void @test({{.*}} !prof ![[ENTRY_TEST:[0-9]+]]
+; THRESHOLD: define void @test({{.*}} !prof ![[ENTRY_THRESHOLD:[0-9]+]]
+; THRESHOLD-REPLAY: define void @test({{.*}} !prof ![[ENTRY_REPLAY_TEST:[0-9]+]]
 define void @test(void ()*) #0 !dbg !7 {
   %2 = alloca void ()*
   store void ()* %0, void ()** %2
@@ -27,6 +36,8 @@ define void @test(void ()*) #0 !dbg !7 {
 }
 
 ; CHECK: define void @test_liveness({{.*}} !prof ![[ENTRY_TEST_LIVENESS:[0-9]+]]
+; THRESHOLD: define void @test_liveness({{.*}} !prof ![[ENTRY_THRESHOLD:[0-9]+]]
+; THRESHOLD-REPLAY: define void @test_liveness({{.*}} !prof ![[ENTRY_REPLAY_TEST_LIVENESS:[0-9]+]]
 define void @test_liveness() #0 !dbg !12 {
   call void @foo(), !dbg !20
   ret void
@@ -42,6 +53,13 @@ define void @test_liveness() #0 !dbg !12 {
 ; make sure the liveness analysis can capture the dependency from test_liveness
 ; to bar. bar_available should not be included as it's within the same module.
 ; CHECK: ![[ENTRY_TEST_LIVENESS]] = !{!"function_entry_count", i64 1, i64 6699318081062747564, i64 -2012135647395072713, i64 -1522495160813492905}
+
+; With high threshold, nothing should be imported
+; THRESHOLD: ![[ENTRY_THRESHOLD]] = !{!"function_entry_count", i64 1}
+
+; With high threshold and replay, sites that are in the replay (foo, and transitively bar and bar_dbg in function test_liveness) should be imported
+; THRESHOLD-REPLAY: ![[ENTRY_REPLAY_TEST]] = !{!"function_entry_count", i64 1}
+; THRESHOLD-REPLAY: ![[ENTRY_REPLAY_TEST_LIVENESS]] = !{!"function_entry_count", i64 1, i64 6699318081062747564, i64 -2012135647395072713, i64 -1522495160813492905}
 
 attributes #0 = {"use-sample-profile"}
 

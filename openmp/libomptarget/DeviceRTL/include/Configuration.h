@@ -21,6 +21,7 @@ namespace config {
 enum DebugKind : uint32_t {
   Assertion = 1U << 0,
   FunctionTracing = 1U << 1,
+  CommonIssues = 1U << 2,
 };
 
 /// Return the number of devices in the system, same number as returned on the

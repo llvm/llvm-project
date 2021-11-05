@@ -246,7 +246,7 @@ void SimpleRemoteEPCServer::handleCallWrapper(
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   D->dispatch([this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
     using WrapperFnTy =
-        shared::detail::CWrapperFunctionResult (*)(const char *, size_t);
+        shared::CWrapperFunctionResult (*)(const char *, size_t);
     auto *Fn = TagAddr.toPtr<WrapperFnTy>();
     shared::WrapperFunctionResult ResultBytes(
         Fn(ArgBytes.data(), ArgBytes.size()));
@@ -281,7 +281,7 @@ SimpleRemoteEPCServer::doJITDispatch(const void *FnTag, const char *ArgData,
   return ResultF.get();
 }
 
-shared::detail::CWrapperFunctionResult
+shared::CWrapperFunctionResult
 SimpleRemoteEPCServer::jitDispatchEntry(void *DispatchCtx, const void *FnTag,
                                         const char *ArgData, size_t ArgSize) {
   return reinterpret_cast<SimpleRemoteEPCServer *>(DispatchCtx)

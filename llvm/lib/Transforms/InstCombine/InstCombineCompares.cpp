@@ -541,7 +541,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         if (!CI->isNoopCast(DL))
           return false;
 
-        if (Explored.count(CI->getOperand(0)) == 0)
+        if (!Explored.contains(CI->getOperand(0)))
           WorkList.push_back(CI->getOperand(0));
       }
 
@@ -553,7 +553,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
             GEP->getType() != Start->getType())
           return false;
 
-        if (Explored.count(GEP->getOperand(0)) == 0)
+        if (!Explored.contains(GEP->getOperand(0)))
           WorkList.push_back(GEP->getOperand(0));
       }
 
@@ -575,7 +575,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
     // Explore the PHI nodes further.
     for (auto *PN : PHIs)
       for (Value *Op : PN->incoming_values())
-        if (Explored.count(Op) == 0)
+        if (!Explored.contains(Op))
           WorkList.push_back(Op);
   }
 
@@ -589,7 +589,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
       auto *Inst = dyn_cast<Instruction>(Val);
 
       if (Inst == Base || Inst == PHI || !Inst || !PHI ||
-          Explored.count(PHI) == 0)
+          !Explored.contains(PHI))
         continue;
 
       if (PHI->getParent() == Inst->getParent())
@@ -4586,6 +4586,22 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
         : new ICmpInst(ICmpInst::ICMP_UGT, CtPop, ConstantInt::get(Ty, 1));
   }
 
+  // Match icmp eq (trunc (lshr A, BW), (ashr (trunc A), BW-1)), which checks the
+  // top BW/2 + 1 bits are all the same. Create "A >=s INT_MIN && A <=s INT_MAX",
+  // which we generate as "icmp ult (add A, 2^(BW-1)), 2^BW" to skip a few steps
+  // of instcombine.
+  unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+  if (match(Op0, m_AShr(m_Trunc(m_Value(A)), m_SpecificInt(BitWidth - 1))) &&
+      match(Op1, m_Trunc(m_LShr(m_Specific(A), m_SpecificInt(BitWidth)))) &&
+      A->getType()->getScalarSizeInBits() == BitWidth * 2 &&
+      (I.getOperand(0)->hasOneUse() || I.getOperand(1)->hasOneUse())) {
+    APInt C = APInt::getOneBitSet(BitWidth * 2, BitWidth - 1);
+    Value *Add = Builder.CreateAdd(A, ConstantInt::get(A->getType(), C));
+    return new ICmpInst(Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT
+                                                  : ICmpInst::ICMP_UGE,
+                        Add, ConstantInt::get(A->getType(), C.shl(1)));
+  }
+
   return nullptr;
 }
 
@@ -4598,18 +4614,22 @@ static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
   // The trunc masks high bits while the compare may effectively mask low bits.
   Value *X;
   const APInt *C;
-  if (match(Op0, m_OneUse(m_Trunc(m_Value(X)))) && match(Op1, m_Power2(C))) {
-    if (Pred == ICmpInst::ICMP_ULT) {
-      // (trunc X) u< Pow2C --> (X & MaskC) == 0
-      unsigned SrcBits = X->getType()->getScalarSizeInBits();
-      unsigned DstBits = Op0->getType()->getScalarSizeInBits();
-      APInt MaskC = APInt::getOneBitSet(SrcBits, DstBits) - C->zext(SrcBits);
+  if (!match(Op0, m_OneUse(m_Trunc(m_Value(X)))) || !match(Op1, m_APInt(C)))
+    return nullptr;
+
+  unsigned SrcBits = X->getType()->getScalarSizeInBits();
+  if (Pred == ICmpInst::ICMP_ULT) {
+    if (C->isPowerOf2()) {
+      // If C is a power-of-2:
+      // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
+      Constant *MaskC = ConstantInt::get(X->getType(), (-*C).zext(SrcBits));
       Value *And = Builder.CreateAnd(X, MaskC);
       Constant *Zero = ConstantInt::getNullValue(X->getType());
       return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
     }
-    // TODO: Handle ugt.
+    // TODO: Handle C is negative-power-of-2.
   }
+  // TODO: Handle ugt.
 
   return nullptr;
 }

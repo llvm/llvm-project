@@ -129,7 +129,7 @@ IncludeSorter::IncludeSorter(const SourceManager *SourceMgr,
     : SourceMgr(SourceMgr), Style(Style), CurrentFileID(FileID),
       CanonicalFile(makeCanonicalName(FileName, Style)) {}
 
-void IncludeSorter::AddInclude(StringRef FileName, bool IsAngled,
+void IncludeSorter::addInclude(StringRef FileName, bool IsAngled,
                                SourceLocation HashLocation,
                                SourceLocation EndLocation) {
   int Offset = findNextLine(SourceMgr->getCharacterData(EndLocation));
@@ -150,7 +150,7 @@ void IncludeSorter::AddInclude(StringRef FileName, bool IsAngled,
     IncludeBucket[Kind].push_back(FileName.str());
 }
 
-Optional<FixItHint> IncludeSorter::CreateIncludeInsertion(StringRef FileName,
+Optional<FixItHint> IncludeSorter::createIncludeInsertion(StringRef FileName,
                                                           bool IsAngled) {
   std::string IncludeStmt;
   if (Style == IncludeStyle::IS_Google_ObjC) {

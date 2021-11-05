@@ -178,7 +178,7 @@ static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
     // All macro issues are simply resolved by ensuring it's a semicolon.
     if (NextTok && NextTok->is(tok::TokenKind::semi)) {
       // Ideally this would return `F` with spelling location `;` (NextTok)
-      // following the examle above. For now simply return NextTok location.
+      // following the example above. For now simply return NextTok location.
       return NextTok->getLocation();
     }
 

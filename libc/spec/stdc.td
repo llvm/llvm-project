@@ -285,6 +285,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "strndup",
+              RetValSpec<CharPtr>,
+              [ArgSpec<ConstCharPtr>,ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
               "strpbrk",
               RetValSpec<CharPtr>,
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]

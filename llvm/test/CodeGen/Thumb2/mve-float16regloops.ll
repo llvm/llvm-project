@@ -835,10 +835,10 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    and r5, r3, #3
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vctp.16 r5
+; CHECK-NEXT:    add.w r1, r10, #2
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.16 q0, [r4]
 ; CHECK-NEXT:    vldrw.u32 q0, [r10]
-; CHECK-NEXT:    add.w r1, r10, #2
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    add.w r1, r10, #6
 ; CHECK-NEXT:    vmul.f16 q0, q0, r7

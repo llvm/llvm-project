@@ -131,13 +131,14 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_64:
   case R_MIPS_GOT_OFST:
   case R_MIPS_SUB:
+    return R_ABS;
   case R_MIPS_TLS_DTPREL_HI16:
   case R_MIPS_TLS_DTPREL_LO16:
   case R_MIPS_TLS_DTPREL32:
   case R_MIPS_TLS_DTPREL64:
   case R_MICROMIPS_TLS_DTPREL_HI16:
   case R_MICROMIPS_TLS_DTPREL_LO16:
-    return R_ABS;
+    return R_DTPREL;
   case R_MIPS_TLS_TPREL_HI16:
   case R_MIPS_TLS_TPREL_LO16:
   case R_MIPS_TLS_TPREL32:

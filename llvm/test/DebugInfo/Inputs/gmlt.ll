@@ -41,7 +41,7 @@
 ; definitions from -gmlt here.
 
 ; CHECK: DW_TAG_subprogram
-; CHECK-NEXT:     DW_AT_name {{.*}} "f3"
+; CHECK-NEXT:     DW_AT_name {{.*}}"f3"
 ; CHECK-NEXT:     DW_AT_inline
 
 ; Check that we only provide the minimal attributes on a subprogram to save space.

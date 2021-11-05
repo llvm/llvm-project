@@ -90,17 +90,11 @@ private:
 };
 
 struct AddressSanitizerOptions {
-  AddressSanitizerOptions()
-      : AddressSanitizerOptions(false, false, false,
-                                AsanDetectStackUseAfterReturnMode::Runtime){};
-  AddressSanitizerOptions(bool CompileKernel, bool Recover, bool UseAfterScope,
-                          AsanDetectStackUseAfterReturnMode UseAfterReturn)
-      : CompileKernel(CompileKernel), Recover(Recover),
-        UseAfterScope(UseAfterScope), UseAfterReturn(UseAfterReturn){};
-  bool CompileKernel;
-  bool Recover;
-  bool UseAfterScope;
-  AsanDetectStackUseAfterReturnMode UseAfterReturn;
+  bool CompileKernel = false;
+  bool Recover = false;
+  bool UseAfterScope = false;
+  AsanDetectStackUseAfterReturnMode UseAfterReturn =
+      AsanDetectStackUseAfterReturnMode::Runtime;
 };
 
 /// Public interface to the address sanitizer pass for instrumenting code to
@@ -112,7 +106,7 @@ struct AddressSanitizerOptions {
 /// surrounding requested memory to be checked for invalid accesses.
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
-  explicit AddressSanitizerPass(AddressSanitizerOptions Options)
+  AddressSanitizerPass(const AddressSanitizerOptions &Options)
       : Options(Options){};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
@@ -131,8 +125,8 @@ private:
 class ModuleAddressSanitizerPass
     : public PassInfoMixin<ModuleAddressSanitizerPass> {
 public:
-  explicit ModuleAddressSanitizerPass(
-      bool CompileKernel = false, bool Recover = false, bool UseGlobalGC = true,
+  ModuleAddressSanitizerPass(
+      const AddressSanitizerOptions &Options, bool UseGlobalGC = true,
       bool UseOdrIndicator = false,
       AsanDtorKind DestructorKind = AsanDtorKind::Global);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -141,8 +135,7 @@ public:
   static bool isRequired() { return true; }
 
 private:
-  bool CompileKernel;
-  bool Recover;
+  AddressSanitizerOptions Options;
   bool UseGlobalGC;
   bool UseOdrIndicator;
   AsanDtorKind DestructorKind;

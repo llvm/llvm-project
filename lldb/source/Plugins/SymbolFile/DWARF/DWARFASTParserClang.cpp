@@ -843,7 +843,8 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     }
 
     clang_type = m_ast.CreateEnumerationType(
-        attrs.name.GetCString(), GetClangDeclContextContainingDIE(die, nullptr),
+        attrs.name.GetStringRef(),
+        GetClangDeclContextContainingDIE(die, nullptr),
         GetOwningClangModule(die), attrs.decl, enumerator_clang_type,
         attrs.is_scoped_enum);
   } else {
@@ -2675,11 +2676,6 @@ void DWARFASTParserClang::ParseSingleMember(
 
   // FIXME: Remove the workarounds below and make this const.
   MemberAttributes attrs(die, parent_die, module_sp);
-  // Skip artificial members such as vtable pointers.
-  // FIXME: This check should verify that this is indeed an artificial member
-  // we are supposed to ignore.
-  if (attrs.is_artificial)
-    return;
 
   const bool class_is_objc_object_or_interface =
       TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type);
@@ -2844,6 +2840,17 @@ void DWARFASTParserClang::ParseSingleMember(
 
     last_field_info.SetIsBitfield(false);
   }
+
+  // Don't turn artificial members such as vtable pointers into real FieldDecls
+  // in our AST. Clang will re-create those articial members and they would
+  // otherwise just overlap in the layout with the FieldDecls we add here.
+  // This needs to be done after updating FieldInfo which keeps track of where
+  // field start/end so we don't later try to fill the the space of this
+  // artificial member with (unnamed bitfield) padding.
+  // FIXME: This check should verify that this is indeed an artificial member
+  // we are supposed to ignore.
+  if (attrs.is_artificial)
+    return;
 
   if (!member_clang_type.IsCompleteType())
     member_clang_type.GetCompleteType();

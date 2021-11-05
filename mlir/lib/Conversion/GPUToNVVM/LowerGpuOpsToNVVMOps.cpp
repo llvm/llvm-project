@@ -134,34 +134,8 @@ struct LowerGpuOpsToNVVMOpsPass
 
     // Lowering for MMAMatrixType.
     converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
-      // The number of items in structToReturn are dependent on the the dataType
-      // and the MMA operand that this operation is associated with.
-      llvm::DenseMap<StringRef, int64_t> numElemsPerThreadF16,
-          numElemsPerThreadF32;
-      numElemsPerThreadF16["AOp"] = 8;
-      numElemsPerThreadF16["BOp"] = 8;
-      numElemsPerThreadF16["COp"] = 4;
-      numElemsPerThreadF32["AOp"] = 8;
-      numElemsPerThreadF32["BOp"] = 8;
-      numElemsPerThreadF32["COp"] = 8;
-      Type structToReturn;
-      if (type.getElementType().isF16()) {
-        // Number of f16's in 32-bit.
-        unsigned vecSize = 2;
-        Type vec = VectorType::get(vecSize, FloatType::getF16(&getContext()));
-        unsigned size = numElemsPerThreadF16[type.getOperand()];
-        SmallVector<Type> elements(size, vec);
-        structToReturn =
-            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
-      } else if (type.getElementType().isF32()) {
-        unsigned size = numElemsPerThreadF32[type.getOperand()];
-        SmallVector<Type> elements(size, FloatType::getF32(&getContext()));
-        structToReturn =
-            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
-      }
-      return structToReturn;
+      return convertMMAToLLVMType(type);
     });
-
     RewritePatternSet patterns(m.getContext());
     RewritePatternSet llvmPatterns(m.getContext());
 

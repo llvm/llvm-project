@@ -192,12 +192,12 @@ void ErrorHandler::log(const Twine &msg) {
   reportDiagnostic(logName, Colors::RESET, "", msg);
 }
 
-void ErrorHandler::message(const Twine &msg) {
+void ErrorHandler::message(const Twine &msg, llvm::raw_ostream &s) {
   if (disableOutput)
     return;
   std::lock_guard<std::mutex> lock(mu);
-  lld::outs() << msg << "\n";
-  lld::outs().flush();
+  s << msg << "\n";
+  s.flush();
 }
 
 void ErrorHandler::warn(const Twine &msg) {

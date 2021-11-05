@@ -1100,7 +1100,7 @@ public:
   ///     an implicit conversion.
   void addConversion(const CXXMethodDecl *ConvFun, QualType FromType,
                      QualType ToType) {
-    // Try to go from the FromType to the ToType wiht only a single implicit
+    // Try to go from the FromType to the ToType with only a single implicit
     // conversion, to see if the conversion function is applicable.
     MixData Mix = calculateMixability(
         Check, FromType, ToType, ConvFun->getASTContext(),
@@ -1553,7 +1553,7 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
 }
 
 /// This namespace contains the implementations for the suppression of
-/// diagnostics from similaly used ("related") parameters.
+/// diagnostics from similarly-used ("related") parameters.
 namespace relatedness_heuristic {
 
 static constexpr std::size_t SmallDataStructureSize = 4;

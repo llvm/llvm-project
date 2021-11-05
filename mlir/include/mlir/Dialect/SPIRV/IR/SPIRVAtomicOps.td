@@ -102,6 +102,77 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
 
 // -----
 
+def SPV_AtomicCompareExchangeOp : SPV_Op<"AtomicCompareExchange", []> {
+  let summary = [{
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+  }];
+
+  let description = [{
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value from Value only if Original Value equals Comparator,
+    and
+
+    3) store the New Value back through Pointer'only if 'Original Value
+    equaled Comparator.
+
+    The instruction's result is the Original Value.
+
+    Result Type must be an integer type scalar.
+
+    Use Equal for the memory semantics of this instruction when Value and
+    Original Value compare equal.
+
+    Use Unequal for the memory semantics of this instruction when Value and
+    Original Value compare unequal. Unequal must not be set to Release or
+    Acquire and Release. In addition, Unequal cannot be set to a stronger
+    memory-order then Equal.
+
+     The type of Value must be the same as Result Type.  The type of the
+    value pointed to by Pointer must be the same as Result Type.  This type
+    must also match the type of Comparator.
+
+    Memory is a memory Scope.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    atomic-compare-exchange-op ::=
+        `spv.AtomicCompareExchange` scope memory-semantics memory-semantics
+                                    ssa-use `,` ssa-use `,` ssa-use
+                                    `:` spv-pointer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spv.AtomicCompareExchange "Workgroup" "Acquire" "None"
+                                    %pointer, %value, %comparator
+                                    : !spv.ptr<i32, WorkGroup>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer,
+    SPV_ScopeAttr:$memory_scope,
+    SPV_MemorySemanticsAttr:$equal_semantics,
+    SPV_MemorySemanticsAttr:$unequal_semantics,
+    SPV_Integer:$value,
+    SPV_Integer:$comparator
+  );
+
+  let results = (outs
+    SPV_Integer:$result
+  );
+
+  let parser = [{ return ::parseAtomicCompareExchangeImpl(parser, result); }];
+  let printer = [{ return ::printAtomicCompareExchangeImpl(*this, p); }];
+  let verifier = [{ return ::verifyAtomicCompareExchangeImpl(*this); }];
+}
+
+// -----
+
 def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
   let summary = "Deprecated (use OpAtomicCompareExchange).";
 
@@ -146,6 +217,62 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
 
   let results = (outs
     SPV_Integer:$result
+  );
+
+  let parser = [{ return ::parseAtomicCompareExchangeImpl(parser, result); }];
+  let printer = [{ return ::printAtomicCompareExchangeImpl(*this, p); }];
+  let verifier = [{ return ::verifyAtomicCompareExchangeImpl(*this); }];
+}
+
+// -----
+
+def SPV_AtomicExchangeOp : SPV_Op<"AtomicExchange", []> {
+  let summary = [{
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+  }];
+
+  let description = [{
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value from copying Value, and
+
+    3) store the New Value back through Pointer.
+
+    The instruction's result is the Original Value.
+
+    Result Type must be a scalar of integer type or floating-point type.
+
+     The type of Value must be the same as Result Type.  The type of the
+    value pointed to by Pointer must be the same as Result Type.
+
+    Memory is a memory Scope.
+
+    <!-- End of AutoGen section -->
+
+     ```
+    atomic-exchange-op ::=
+        `spv.AtomicCompareExchange` scope memory-semantics
+                                    ssa-use `,` ssa-use `:` spv-pointer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spv.AtomicExchange "Workgroup" "Acquire" %pointer, %value,
+                            : !spv.ptr<i32, WorkGroup>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer,
+    SPV_ScopeAttr:$memory_scope,
+    SPV_MemorySemanticsAttr:$semantics,
+    SPV_Numerical:$value
+  );
+
+  let results = (outs
+    SPV_Numerical:$result
   );
 }
 

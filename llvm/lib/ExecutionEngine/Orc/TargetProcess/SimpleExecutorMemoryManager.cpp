@@ -223,7 +223,7 @@ Error SimpleExecutorMemoryManager::deallocateImpl(void *Base, Allocation &A) {
   return Err;
 }
 
-llvm::orc::shared::detail::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionResult
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<
@@ -234,7 +234,7 @@ SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::detail::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionResult
 SimpleExecutorMemoryManager::finalizeWrapper(const char *ArgData,
                                              size_t ArgSize) {
   return shared::WrapperFunction<
@@ -245,7 +245,7 @@ SimpleExecutorMemoryManager::finalizeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::detail::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionResult
 SimpleExecutorMemoryManager::deallocateWrapper(const char *ArgData,
                                                size_t ArgSize) {
   return shared::WrapperFunction<
