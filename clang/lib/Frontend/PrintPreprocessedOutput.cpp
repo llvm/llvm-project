@@ -700,7 +700,7 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
     // - The whitespace is necessary to keep the tokens apart and there is not
     //   already a newline between them
     if (RequireSpace || (!MinimizeWhitespace && Tok.hasLeadingSpace()) ||
-        ((EmittedTokensOnThisLine || EmittedTokensOnThisLine) &&
+        ((EmittedTokensOnThisLine || EmittedDirectiveOnThisLine) &&
          AvoidConcat(PrevPrevTok, PrevTok, Tok)))
       OS << ' ';
   }
