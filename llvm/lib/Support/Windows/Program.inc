@@ -103,6 +103,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   if (U8Result.empty())
     return mapWindowsError(::GetLastError());
 
+  llvm::sys::path::make_preferred(U8Result);
   return std::string(U8Result.begin(), U8Result.end());
 }
 

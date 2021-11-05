@@ -1112,6 +1112,11 @@ TEST(CommandLineTest, PositionalEatArgsError) {
 }
 
 #ifdef _WIN32
+void checkSeparators(StringRef Path) {
+  char UndesiredSeparator = sys::path::get_separator()[0] == '/' ? '\\' : '/';
+  ASSERT_EQ(Path.find(UndesiredSeparator), StringRef::npos);
+}
+
 TEST(CommandLineTest, GetCommandLineArguments) {
   int argc = __argc;
   char **argv = __argv;
@@ -1121,6 +1126,7 @@ TEST(CommandLineTest, GetCommandLineArguments) {
 
   EXPECT_EQ(llvm::sys::path::is_absolute(argv[0]),
             llvm::sys::path::is_absolute(__argv[0]));
+  checkSeparators(argv[0]);
 
   EXPECT_TRUE(
       llvm::sys::path::filename(argv[0]).equals_insensitive("supporttests.exe"))
