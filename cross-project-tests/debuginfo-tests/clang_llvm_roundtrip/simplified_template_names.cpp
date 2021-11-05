@@ -1,5 +1,6 @@
-// RUN: %clang %target_itanium_abi_host_triple %s -c -o - -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params \
+// RUN: %clang %target_itanium_abi_host_triple %s -c -o - -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 \
 // RUN:   | llvm-dwarfdump --verify -
+#include <cstdint>
 template<typename ...Ts>
 struct t1 {
 };
@@ -67,7 +68,70 @@ struct t6 {
   operator t1<float>*() {
     return nullptr;
   }
+  template<typename T>
+  void operator-(int) {
+  }
+  template<typename T>
+  void operator*(int) {
+  }
+  template<typename T>
+  void operator/(int) {
+  }
+  template<typename T>
+  void operator%(int) {
+  }
+  template<typename T>
+  void operator^(int) {
+  }
+  template<typename T>
+  void operator&(int) {
+  }
+  template<typename T>
+  void operator|(int) {
+  }
+  template<typename T>
+  void operator~() {
+  }
+  template<typename T>
+  void operator!() {
+  }
+  template<typename T>
+  void operator=(int) {
+  }
+  template<typename T>
+  void operator>(int) {
+  }
+  template<typename T>
+  void operator,(int) {
+  }
+  template<typename T>
+  void operator()() {
+  }
+  template<typename T>
+  void operator[](int) {
+  }
+  template<typename T>
+  void operator<=>(int) {
+  }
+  template<typename T>
+  void* operator new(std::size_t, T) {
+    __builtin_unreachable();
+  }
+  template<typename T>
+  void operator delete(void*, T) {
+  }
+  template<typename T>
+  void* operator new[](std::size_t, T) {
+    __builtin_unreachable();
+  }
+  template<typename T>
+  void operator delete[](void*, T) {
+  }
+  template<typename T>
+  int operator co_await() { __builtin_unreachable(); }
+
 };
+void operator"" _suff(unsigned long long) {}
 template<template<typename...> class T> void f7() { }
 template<template<typename...> class T, typename T2> void f8() { }
 template<typename T>
@@ -94,6 +158,11 @@ struct t10 {
   template<typename T = void>
   t10() { }
 };
+
+template<typename T>
+void operator_not_really() {
+}
+
 int main() {
   struct { } A;
   auto L = []{};
@@ -127,7 +196,7 @@ int main() {
   f3<decltype(ns::AnonEnum1), ns::AnonEnum3, (decltype(ns::AnonEnum1))2>();
   f3<int*, &i>();
   f3<int*, nullptr>();
-  // t4<3> v2;
+  t4<3> v2;
   f3<unsigned long, 1>();
   f3<unsigned long long, 1>();
   f3<long, 1>();
@@ -169,6 +238,27 @@ int main() {
   v6.operator< <int>(1);
   v6.operator<= <int>(1);
   v6.operator t1<float>*();
+  v6.operator- <int>(3);
+  v6.operator* <int>(3);
+  v6.operator/ <int>(3);
+  v6.operator% <int>(3);
+  v6.operator^ <int>(3);
+  v6.operator& <int>(3);
+  v6.operator| <int>(3);
+  v6.operator~ <int>();
+  v6.operator! <int>();
+  v6.operator= <int>(3);
+  v6.operator> <int>(3);
+  v6.operator, <int>(3);
+  v6.operator() <int>();
+  v6.operator[] <int>(3);
+  v6.operator<=> <int>(3);
+  t6::operator new(0, 0);
+  t6::operator new[](0, 0);
+  t6::operator delete(nullptr, 0);
+  t6::operator delete[](nullptr, 0);
+  v6.operator co_await<int>();
+  42_suff;
   struct t7 { };
   f1<t7>();
   f1<int(&)[3]>();
@@ -207,6 +297,7 @@ int main() {
   struct t8 { decltype(A) m; };
   f1<void(t8, decltype(A))>();
   f1<void(t8)>();
+  operator_not_really<int>();
 }
 void t8::mem() {
   struct t7 { };
