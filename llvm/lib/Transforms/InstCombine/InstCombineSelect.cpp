@@ -2304,16 +2304,6 @@ Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
 
   // Create the new type (which can be a vector type)
   Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
-  // Match the two extends from the add/sub
-  Value *A, *B;
-  if(!match(AddSub, m_BinOp(m_SExt(m_Value(A)), m_SExt(m_Value(B)))))
-    return nullptr;
-  // And check the incoming values are of a type smaller than or equal to the
-  // size of the saturation. Otherwise the higher bits can cause different
-  // results.
-  if (A->getType()->getScalarSizeInBits() > NewBitWidth ||
-      B->getType()->getScalarSizeInBits() > NewBitWidth)
-    return nullptr;
 
   Intrinsic::ID IntrinsicID;
   if (AddSub->getOpcode() == Instruction::Add)
@@ -2323,10 +2313,16 @@ Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
   else
     return nullptr;
 
+  // The two operands of the add/sub must be nsw-truncatable to the NewTy. This
+  // is usually achieved via a sext from a smaller type.
+  if (ComputeMinSignedBits(AddSub->getOperand(0), 0, AddSub) > NewBitWidth ||
+      ComputeMinSignedBits(AddSub->getOperand(1), 0, AddSub) > NewBitWidth)
+    return nullptr;
+
   // Finally create and return the sat intrinsic, truncated to the new type
   Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
-  Value *AT = Builder.CreateSExt(A, NewTy);
-  Value *BT = Builder.CreateSExt(B, NewTy);
+  Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
+  Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
   Value *Sat = Builder.CreateCall(F, {AT, BT});
   return CastInst::Create(Instruction::SExt, Sat, Ty);
 }
