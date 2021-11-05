@@ -10912,7 +10912,7 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
 
-    if (!isTypeLegal(VT) || !VT.isInteger())
+    if (!isTypeLegal(VT))
       return SDValue();
 
     SDValue Vec0 = Op.getOperand(0);
@@ -10922,9 +10922,19 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     if (VT.getVectorElementCount() != (InVT.getVectorElementCount() * 2))
       return SDValue();
 
-    // Extend elements of smaller vector...
-    EVT WideVT = InVT.widenIntegerVectorElementType(*(DAG.getContext()));
-    SDValue ExtVec = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Vec1);
+    EVT WideVT;
+    SDValue ExtVec;
+
+    if (VT.isFloatingPoint()) {
+      // The InVT type should be legal. We can safely cast the unpacked
+      // subvector from InVT -> VT.
+      WideVT = VT;
+      ExtVec = getSVESafeBitCast(VT, Vec1, DAG);
+    } else {
+      // Extend elements of smaller vector...
+      WideVT = InVT.widenIntegerVectorElementType(*(DAG.getContext()));
+      ExtVec = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Vec1);
+    }
 
     if (Idx == 0) {
       SDValue HiVec0 = DAG.getNode(AArch64ISD::UUNPKHI, DL, WideVT, Vec0);
