@@ -2502,6 +2502,21 @@ bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
   return false;
 }
 
+bool ShuffleVectorInst::isReplicationMask(int &ReplicationFactor,
+                                          int &VF) const {
+  // Not possible to express a shuffle mask for a scalable vector for this
+  // case.
+  if (isa<ScalableVectorType>(getType()))
+    return false;
+
+  VF = cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
+  if (ShuffleMask.size() % VF != 0)
+    return false;
+  ReplicationFactor = ShuffleMask.size() / VF;
+
+  return isReplicationMaskWithParams(ShuffleMask, ReplicationFactor, VF);
+}
+
 //===----------------------------------------------------------------------===//
 //                             InsertValueInst Class
 //===----------------------------------------------------------------------===//
