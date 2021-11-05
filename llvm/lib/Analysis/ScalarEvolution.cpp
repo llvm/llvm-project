@@ -11792,9 +11792,34 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
           SmallVector<const SCEV*> Operands{AR->operands()};
           Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-
-          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
         }
+
+        auto canProveNUW = [&]() {
+          if (!isLoopInvariant(RHS, L))
+            return false;
+
+          if (!isKnownNonZero(AR->getStepRecurrence(*this)))
+            // We need the sequence defined by AR to strictly increase in the
+            // unsigned integer domain for the logic below to hold.
+            return false;
+
+          const unsigned InnerBitWidth = getTypeSizeInBits(AR->getType());
+          const unsigned OuterBitWidth = getTypeSizeInBits(RHS->getType());
+          // If RHS <=u Limit, then there must exist a value V in the sequence
+          // defined by AR (e.g. {Start,+,Step}) such that V >u RHS, and
+          // V <=u UINT_MAX.  Thus, we must exit the loop before unsigned
+          // overflow occurs.  This limit also implies that a signed comparison
+          // (in the wide bitwidth) is equivalent to an unsigned comparison as
+          // the high bits on both sides must be zero.
+          APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
+          APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
+          Limit = Limit.zext(OuterBitWidth);
+          return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
+        };
+        if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
+          Flags = setFlags(Flags, SCEV::FlagNUW);
+
+        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
         if (AR->hasNoUnsignedWrap()) {
           // Emulate what getZeroExtendExpr would have done during construction
           // if we'd been able to infer the fact just above at that time.
