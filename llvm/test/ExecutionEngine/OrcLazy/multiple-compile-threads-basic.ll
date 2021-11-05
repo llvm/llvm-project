@@ -1,6 +1,9 @@
 ; RUN: lli -jit-kind=orc-lazy -compile-threads=2 -thread-entry hello %s | FileCheck %s
 ; REQUIRES: thread_support
 ;
+; FIXME: Something hangs here.
+; UNSUPPORTED: use_msan_with_origins
+;
 ; CHECK: Hello
 
 @.str = private unnamed_addr constant [7 x i8] c"Hello\0A\00", align 1
