@@ -18,6 +18,8 @@
 ; CHECK: no-op-function
 ; CHECK: Function alias analyses:
 ; CHECK: basic-aa
+; CHECK: LoopNest passes:
+; CHECK: no-op-loopnest
 ; CHECK: Loop passes:
 ; CHECK: no-op-loop
 ; CHECK: Loop passes with params:
