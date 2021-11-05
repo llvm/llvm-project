@@ -34,7 +34,7 @@
 - (A*) test2 { return 0; } // expected-warning {{conflicting return type in implementation of 'test2': 'B *' vs 'A *'}}
 @end
 
-// The particular case of overriding with an id return is white-listed.
+// The particular case of overriding with an id return is permitted.
 @interface Test4 {}
 - (id) test1;
 - (A*) test2;
