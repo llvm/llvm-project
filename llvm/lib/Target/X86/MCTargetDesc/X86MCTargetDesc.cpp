@@ -408,6 +408,9 @@ public:
                                                   const MCSubtargetInfo *STI,
                                                   uint64_t Addr,
                                                   uint64_t Size) const override;
+  Optional<uint64_t>
+  getMemoryOperandRelocationOffset(const MCInst &Inst,
+                                   uint64_t Size) const override;
 };
 
 #define GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS
@@ -555,6 +558,30 @@ Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     return Addr + Size + Disp.getImm();
 
   return None;
+}
+
+Optional<uint64_t>
+X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
+                                                     uint64_t Size) const {
+  if (Inst.getOpcode() != X86::LEA64r)
+    return None;
+  const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
+  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  if (MemOpStart == -1)
+    return None;
+  MemOpStart += X86II::getOperandBias(MCID);
+  const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
+  const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
+  const MCOperand &IndexReg = Inst.getOperand(MemOpStart + X86::AddrIndexReg);
+  const MCOperand &ScaleAmt = Inst.getOperand(MemOpStart + X86::AddrScaleAmt);
+  const MCOperand &Disp = Inst.getOperand(MemOpStart + X86::AddrDisp);
+  // Must be a simple rip-relative address.
+  if (BaseReg.getReg() != X86::RIP || SegReg.getReg() != 0 ||
+      IndexReg.getReg() != 0 || ScaleAmt.getImm() != 1 || !Disp.isImm())
+    return None;
+  // rip-relative ModR/M immediate is 32 bits.
+  assert(Size > 4 && "invalid instruction size for rip-relative lea");
+  return Size - 4;
 }
 
 } // end of namespace X86_MC
