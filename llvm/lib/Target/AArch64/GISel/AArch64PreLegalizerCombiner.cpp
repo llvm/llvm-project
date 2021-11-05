@@ -220,6 +220,121 @@ static bool applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+static bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
+                               CombinerHelper &Helper,
+                               GISelChangeObserver &Observer) {
+  // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
+  // result is only used in the no-overflow case. It is restricted to cases
+  // where we know that the high-bits of the operands are 0. If there's an
+  // overflow, then the the 9th or 17th bit must be set, which can be checked
+  // using TBNZ.
+  //
+  // Change (for UADDOs on 8 and 16 bits):
+  //
+  //   %z0 = G_ASSERT_ZEXT _
+  //   %op0 = G_TRUNC %z0
+  //   %z1 = G_ASSERT_ZEXT _
+  //   %op1 = G_TRUNC %z1
+  //   %val, %cond = G_UADDO %op0, %op1
+  //   G_BRCOND %cond, %error.bb
+  //
+  // error.bb:
+  //   (no successors and no uses of %val)
+  //
+  // To:
+  //
+  //   %z0 = G_ASSERT_ZEXT _
+  //   %z1 = G_ASSERT_ZEXT _
+  //   %add = G_ADD %z0, %z1
+  //   %val = G_TRUNC %add
+  //   %bit = G_AND %add, 1 << scalar-size-in-bits(%op1)
+  //   %cond = G_ICMP NE, %bit, 0
+  //   G_BRCOND %cond, %error.bb
+
+  auto &MRI = *B.getMRI();
+
+  MachineOperand *DefOp0 = MRI.getOneDef(MI.getOperand(2).getReg());
+  MachineOperand *DefOp1 = MRI.getOneDef(MI.getOperand(3).getReg());
+  Register Op0Wide;
+  Register Op1Wide;
+  if (!mi_match(DefOp0->getParent(), MRI, m_GTrunc(m_Reg(Op0Wide))) ||
+      !mi_match(DefOp1->getParent(), MRI, m_GTrunc(m_Reg(Op1Wide))))
+    return false;
+  LLT WideTy0 = MRI.getType(Op0Wide);
+  LLT WideTy1 = MRI.getType(Op1Wide);
+  Register ResVal = MI.getOperand(0).getReg();
+  LLT OpTy = MRI.getType(ResVal);
+  MachineInstr *Op0WideDef = MRI.getVRegDef(Op0Wide);
+  MachineInstr *Op1WideDef = MRI.getVRegDef(Op1Wide);
+
+  unsigned OpTySize = OpTy.getScalarSizeInBits();
+  // First check that the G_TRUNC feeding the G_UADDO are no-ops, because the
+  // inputs have been zero-extended.
+  if (Op0WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
+      Op1WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
+      OpTySize != Op0WideDef->getOperand(2).getImm() ||
+      OpTySize != Op1WideDef->getOperand(2).getImm())
+    return false;
+
+  // Only scalar UADDO with either 8 or 16 bit operands are handled.
+  if (!WideTy0.isScalar() || !WideTy1.isScalar() || WideTy0 != WideTy1 ||
+      OpTySize >= WideTy0.getScalarSizeInBits() ||
+      (OpTySize != 8 && OpTySize != 16))
+    return false;
+
+  // The overflow-status result must be used by a branch only.
+  Register ResStatus = MI.getOperand(1).getReg();
+  if (!MRI.hasOneNonDBGUse(ResStatus))
+    return false;
+  MachineInstr *CondUser = &*MRI.use_instr_nodbg_begin(ResStatus);
+  if (CondUser->getOpcode() != TargetOpcode::G_BRCOND)
+    return false;
+
+  // Make sure the computed result is only used in the no-overflow blocks.
+  MachineBasicBlock *CurrentMBB = MI.getParent();
+  MachineBasicBlock *FailMBB = CondUser->getOperand(1).getMBB();
+  if (!FailMBB->succ_empty() || CondUser->getParent() != CurrentMBB)
+    return false;
+  if (any_of(MRI.use_nodbg_instructions(ResVal),
+             [&MI, FailMBB, CurrentMBB](MachineInstr &I) {
+               return &MI != &I &&
+                      (I.getParent() == FailMBB || I.getParent() == CurrentMBB);
+             }))
+    return false;
+
+  // Remove G_ADDO.
+  B.setInstrAndDebugLoc(*MI.getNextNode());
+  MI.eraseFromParent();
+
+  // Emit wide add.
+  Register AddDst = MRI.cloneVirtualRegister(Op0Wide);
+  B.buildInstr(TargetOpcode::G_ADD, {AddDst}, {Op0Wide, Op1Wide});
+
+  // Emit check of the 9th or 17th bit and update users (the branch). This will
+  // later be folded to TBNZ.
+  Register CondBit = MRI.cloneVirtualRegister(Op0Wide);
+  B.buildAnd(
+      CondBit, AddDst,
+      B.buildConstant(LLT::scalar(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
+  B.buildICmp(CmpInst::ICMP_NE, ResStatus, CondBit,
+              B.buildConstant(LLT::scalar(32), 0));
+
+  // Update ZEXts users of the result value. Because all uses are in the
+  // no-overflow case, we know that the top bits are 0 and we can ignore ZExts.
+  B.buildZExtOrTrunc(ResVal, AddDst);
+  for (MachineOperand &U : make_early_inc_range(MRI.use_operands(ResVal))) {
+    Register WideReg;
+    if (mi_match(U.getParent(), MRI, m_GZExt(m_Reg(WideReg)))) {
+      auto OldR = U.getParent()->getOperand(0).getReg();
+      Observer.erasingInstr(*U.getParent());
+      U.getParent()->eraseFromParent();
+      Helper.replaceRegWith(MRI, OldR, AddDst);
+    }
+  }
+
+  return true;
+}
+
 class AArch64PreLegalizerCombinerHelperState {
 protected:
   CombinerHelper &Helper;
@@ -272,6 +387,8 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return Helper.tryCombineShuffleVector(MI);
+  case TargetOpcode::G_UADDO:
+    return tryToSimplifyUADDO(MI, B, Helper, Observer);
   case TargetOpcode::G_MEMCPY_INLINE:
     return Helper.tryEmitMemcpyInline(MI);
   case TargetOpcode::G_MEMCPY:
