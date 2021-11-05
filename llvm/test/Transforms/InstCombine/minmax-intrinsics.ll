@@ -2129,3 +2129,27 @@ define <3 x i8> @umax_vector_splat_undef(<3 x i8> %x) {
   %r = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %a, <3 x i8> <i8 13, i8 130, i8 130>)
   ret <3 x i8> %r
 }
+
+define <3 x i8> @umax_sub_vec(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @umax_sub_vec(
+; CHECK-NEXT:    [[U:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub <3 x i8> [[U]], [[Y]]
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %u = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %x, <3 x i8> %y)
+  %r = sub <3 x i8> %u, %y
+  ret <3 x i8> %r
+}
+
+define i8 @umax_sub_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_sub_use(
+; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    call void @use(i8 [[U]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[U]], [[Y]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %u = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  call void @use(i8 %u)
+  %r = sub i8 %u, %y
+  ret i8 %r
+}
