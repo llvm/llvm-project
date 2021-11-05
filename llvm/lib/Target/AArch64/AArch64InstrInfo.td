@@ -5753,7 +5753,7 @@ def : Pat<(i32 (vector_extract (v8i16 (insert_subvector undef,
             (v4i16 (AArch64uaddv (v4i16 (AArch64uaddlp (v8i8 V64:$op))))),
             (i64 0))), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-           (UADDLVv4i16v V64:$op), ssub), ssub)>;
+           (UADDLVv8i8v V64:$op), hsub), ssub)>;
 def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (AArch64uaddlp
            (v16i8 V128:$op))))), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
