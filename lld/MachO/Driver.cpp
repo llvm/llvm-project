@@ -1021,10 +1021,10 @@ static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
-    for (const SubsectionMap &map : file->subsections) {
+    for (const Section &section : file->sections) {
       ConcatOutputSection *osec = nullptr;
-      for (const SubsectionEntry &entry : map) {
-        if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
+      for (const Subsection &subsection : section.subsections) {
+        if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
           if (isec->isCoalescedWeak())
             continue;
           if (isec->getSegName() == segment_names::ld) {
@@ -1036,11 +1036,13 @@ static void gatherInputSections() {
             osec = ConcatOutputSection::getOrCreateForInput(isec);
           isec->parent = osec;
           inputSections.push_back(isec);
-        } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
+        } else if (auto *isec =
+                       dyn_cast<CStringInputSection>(subsection.isec)) {
           if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
             in.cStringSection->inputOrder = inputOrder++;
           in.cStringSection->addInput(isec);
-        } else if (auto *isec = dyn_cast<WordLiteralInputSection>(entry.isec)) {
+        } else if (auto *isec =
+                       dyn_cast<WordLiteralInputSection>(subsection.isec)) {
           if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
             in.wordLiteralSection->inputOrder = inputOrder++;
           in.wordLiteralSection->addInput(isec);

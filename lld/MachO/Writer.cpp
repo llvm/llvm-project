@@ -227,7 +227,7 @@ public:
 
   void writeTo(uint8_t *buf) const override {
     using SegmentCommand = typename LP::segment_command;
-    using Section = typename LP::section;
+    using SectionHeader = typename LP::section;
 
     auto *c = reinterpret_cast<SegmentCommand *>(buf);
     buf += sizeof(SegmentCommand);
@@ -248,8 +248,8 @@ public:
       if (osec->isHidden())
         continue;
 
-      auto *sectHdr = reinterpret_cast<Section *>(buf);
-      buf += sizeof(Section);
+      auto *sectHdr = reinterpret_cast<SectionHeader *>(buf);
+      buf += sizeof(SectionHeader);
 
       memcpy(sectHdr->sectname, osec->name.data(), osec->name.size());
       memcpy(sectHdr->segname, name.data(), name.size());
