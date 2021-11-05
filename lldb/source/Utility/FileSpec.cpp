@@ -43,9 +43,7 @@ static constexpr FileSpec::Style GetNativeStyle() {
 }
 
 bool PathStyleIsPosix(FileSpec::Style style) {
-  return (style == FileSpec::Style::posix ||
-          (style == FileSpec::Style::native &&
-           GetNativeStyle() == FileSpec::Style::posix));
+  return llvm::sys::path::is_style_posix(style);
 }
 
 const char *GetPathSeparators(FileSpec::Style style) {
