@@ -12,6 +12,7 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
@@ -41,7 +42,8 @@ namespace {
       return style;
     if (is_style_posix(style))
       return Style::posix;
-    return Style::windows;
+    return LLVM_WINDOWS_PREFER_FORWARD_SLASH ? Style::windows_slash
+                                             : Style::windows_backslash;
   }
 
   inline const char *separators(Style style) {
