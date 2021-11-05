@@ -5,7 +5,7 @@
 // Note: -fopemp and -fopenmp-simd behavior are expected to be the same.
 
 // This test checks the values of Widest Data Size (WDS), as defined
-// in https://github.com/ARM-software/abi-aa/tree/master/vfabia64
+// in https://github.com/ARM-software/abi-aa/tree/main/vfabia64
 //
 // WDS is used to check the accepted values <N> of `simdlen(<N>)` when
 // targeting fixed-length SVE vector function names. The values of
