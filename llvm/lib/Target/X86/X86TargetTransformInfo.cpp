@@ -5074,9 +5074,9 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
         DemandedLoadStoreElts.setBit(Index + Elm * Factor);
     }
 
-    Type *I1Type = Type::getInt1Ty(VecTy->getContext());
-    auto *MaskVT = FixedVectorType::get(I1Type, VecTy->getNumElements());
-    auto *MaskSubVT = FixedVectorType::get(I1Type, VF);
+    Type *I8Type = Type::getInt8Ty(VecTy->getContext());
+    auto *MaskVT = FixedVectorType::get(I8Type, VecTy->getNumElements());
+    auto *MaskSubVT = FixedVectorType::get(I8Type, VF);
 
     // The Mask shuffling cost is extract all the elements of the Mask
     // and insert each of them Factor times into the wide vector:
