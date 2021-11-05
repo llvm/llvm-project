@@ -79,6 +79,22 @@ struct AddrOfOpConversion : public FIROpConversion<fir::AddrOfOp> {
   }
 };
 
+// `fir.call` -> `llvm.call`
+struct CallOpConversion : public FIROpConversion<fir::CallOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::CallOp call, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    SmallVector<mlir::Type> resultTys;
+    for (auto r : call.getResults())
+      resultTys.push_back(convertType(r.getType()));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        call, resultTys, adaptor.getOperands(), call->getAttrs());
+    return success();
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -489,10 +505,11 @@ public:
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<
-        AddrOfOpConversion, ExtractValueOpConversion, HasValueOpConversion,
-        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
-        SelectOpConversion, SelectRankOpConversion, UndefOpConversion,
-        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+        AddrOfOpConversion, CallOpConversion, ExtractValueOpConversion,
+        HasValueOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
+        InsertValueOpConversion, SelectOpConversion, SelectRankOpConversion,
+        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+        typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
