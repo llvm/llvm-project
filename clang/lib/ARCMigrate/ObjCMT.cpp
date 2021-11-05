@@ -104,7 +104,7 @@ public:
   bool FoundationIncluded;
   llvm::SmallPtrSet<ObjCProtocolDecl *, 32> ObjCProtocolDecls;
   llvm::SmallVector<const Decl *, 8> CFFunctionIBCandidates;
-  llvm::StringSet<> WhiteListFilenames;
+  llvm::StringSet<> AllowListFilenames;
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) {
     if (!Summaries)
@@ -118,14 +118,14 @@ public:
                          FileRemapper &remapper, FileManager &fileMgr,
                          const PPConditionalDirectiveRecord *PPRec,
                          Preprocessor &PP, bool isOutputFile,
-                         ArrayRef<std::string> WhiteList)
+                         ArrayRef<std::string> AllowList)
       : MigrateDir(migrateDir), ASTMigrateActions(astMigrateActions),
         NSIntegerTypedefed(nullptr), NSUIntegerTypedefed(nullptr),
         Remapper(remapper), FileMgr(fileMgr), PPRec(PPRec), PP(PP),
         IsOutputFile(isOutputFile), FoundationIncluded(false) {
     // FIXME: StringSet should have insert(iter, iter) to use here.
-    for (const std::string &Val : WhiteList)
-      WhiteListFilenames.insert(Val);
+    for (const std::string &Val : AllowList)
+      AllowListFilenames.insert(Val);
   }
 
 protected:
@@ -151,10 +151,10 @@ protected:
   void HandleTranslationUnit(ASTContext &Ctx) override;
 
   bool canModifyFile(StringRef Path) {
-    if (WhiteListFilenames.empty())
+    if (AllowListFilenames.empty())
       return true;
-    return WhiteListFilenames.find(llvm::sys::path::filename(Path))
-        != WhiteListFilenames.end();
+    return AllowListFilenames.find(llvm::sys::path::filename(Path)) !=
+           AllowListFilenames.end();
   }
   bool canModifyFile(Optional<FileEntryRef> FE) {
     if (!FE)
@@ -1986,7 +1986,7 @@ bool MigrateSourceAction::BeginInvocation(CompilerInstance &CI) {
   return true;
 }
 
-static std::vector<std::string> getWhiteListFilenames(StringRef DirPath) {
+static std::vector<std::string> getAllowListFilenames(StringRef DirPath) {
   using namespace llvm::sys::fs;
   using namespace llvm::sys::path;
 
@@ -2017,16 +2017,16 @@ MigrateSourceAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (ObjCMTOpts == FrontendOptions::ObjCMT_None) {
     // If no specific option was given, enable literals+subscripting transforms
     // by default.
-    ObjCMTAction |= FrontendOptions::ObjCMT_Literals |
-                    FrontendOptions::ObjCMT_Subscripting;
+    ObjCMTAction |=
+        FrontendOptions::ObjCMT_Literals | FrontendOptions::ObjCMT_Subscripting;
   }
   CI.getPreprocessor().addPPCallbacks(std::unique_ptr<PPCallbacks>(PPRec));
-  std::vector<std::string> WhiteList =
-    getWhiteListFilenames(CI.getFrontendOpts().ObjCMTWhiteListPath);
+  std::vector<std::string> AllowList =
+      getAllowListFilenames(CI.getFrontendOpts().ObjCMTAllowListPath);
   return std::make_unique<ObjCMigrateASTConsumer>(
       CI.getFrontendOpts().OutputFile, ObjCMTAction, Remapper,
       CI.getFileManager(), PPRec, CI.getPreprocessor(),
-      /*isOutputFile=*/true, WhiteList);
+      /*isOutputFile=*/true, AllowList);
 }
 
 namespace {

@@ -359,6 +359,14 @@ endif()
 
 option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
 
+set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
+if (MINGW)
+  # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
+  # as native path style, regardless of what this is set to.
+  set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT ON)
+endif()
+option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
+
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")
 set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for ffi.h or ffi/ffi.h")
@@ -804,7 +812,7 @@ if(LLVM_INCLUDE_TESTS)
 endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
-# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 # In this case, the latest C API library is available for download from
 # https://www.tensorflow.org/install/lang_c.
 # We will expose the conditional compilation variable,
@@ -838,7 +846,7 @@ if (TENSORFLOW_C_LIB_PATH)
 endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
-# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 # Specifically, assuming python3 is installed:
 # python3 -m pip install --upgrade pip && python3 -m pip install --user tf_nightly==2.3.0.dev20200528
 # Then set TENSORFLOW_AOT_PATH to the package install - usually it's ~/.local/lib/python3.7/site-packages/tensorflow

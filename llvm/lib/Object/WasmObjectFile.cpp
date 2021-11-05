@@ -359,7 +359,7 @@ Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
   // See
-  // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+  // https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
   HasDylinkSection = true;
 
   const uint8_t *OrigEnd = Ctx.End;

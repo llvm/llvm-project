@@ -982,10 +982,15 @@ protected:
         return false;
       }
 
+      if (!tagged_ptr_vendor->IsPossibleTaggedPointer(arg_addr)) {
+        result.GetOutputStream().Format("{0:x16} is not tagged\n", arg_addr);
+        continue;
+      }
+
       auto descriptor_sp = tagged_ptr_vendor->GetClassDescriptor(arg_addr);
       if (!descriptor_sp) {
         result.AppendErrorWithFormatv(
-            "could not get class descriptor for {0:x}\n", arg_addr);
+            "could not get class descriptor for {0:x16}\n", arg_addr);
         result.SetStatus(lldb::eReturnStatusFailed);
         return false;
       }
@@ -997,15 +1002,14 @@ protected:
                                               &payload)) {
         result.GetOutputStream().Format(
             "{0:x} is tagged\n"
-            "\tpayload = {1:x}\n"
-            "\tvalue = {2:x}\n"
-            "\tinfo bits = {3:x}\n"
+            "\tpayload = {1:x16}\n"
+            "\tvalue = {2:x16}\n"
+            "\tinfo bits = {3:x16}\n"
             "\tclass = {4}\n",
             arg_addr, payload, value_bits, info_bits,
             descriptor_sp->GetClassName().AsCString("<unknown>"));
       } else {
-        result.GetOutputStream().Format("{0:x16} is not tagged\n",
-                                        (uint64_t)arg_addr);
+        result.GetOutputStream().Format("{0:x16} is not tagged\n", arg_addr);
       }
     }
 

@@ -3,7 +3,7 @@
 MLIR (Multi-Level IR) is a compiler intermediate representation with
 similarities to traditional three-address SSA representations (like
 [LLVM IR](http://llvm.org/docs/LangRef.html) or
-[SIL](https://github.com/apple/swift/blob/master/docs/SIL.rst)), but which
+[SIL](https://github.com/apple/swift/blob/main/docs/SIL.rst)), but which
 introduces notions from polyhedral loop optimization as first-class concepts.
 This hybrid design is optimized to represent, analyze, and transform high level
 dataflow graphs as well as target-specific code generated for high performance

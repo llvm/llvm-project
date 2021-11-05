@@ -209,11 +209,11 @@ static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
 // StackTrace::GetCurrentPc() faster.
 #if defined(__x86_64__)
 #  define GET_CURRENT_PC()                \
-    ({                                    \
+    (__extension__({                      \
       uptr pc;                            \
       asm("lea 0(%%rip), %0" : "=r"(pc)); \
       pc;                                 \
-    })
+    }))
 #else
 #  define GET_CURRENT_PC() StackTrace::GetCurrentPc()
 #endif

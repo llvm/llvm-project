@@ -15,7 +15,6 @@ set(exegesis_sources
   ClusteringTest.cpp
   PerfHelperTest.cpp
   RegisterValueTest.cpp
-  SnippetGeneratorTest.cpp
   )
 
 set(exegesis_link_libraries LLVMExegesis)

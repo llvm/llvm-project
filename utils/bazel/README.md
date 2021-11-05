@@ -28,7 +28,7 @@ for adding this configuration.
    you don't have a checkout yet.
 2. Install Bazel at the version indicated by [.bazelversion](./.bazelversion),
    following the official instructions, if you don't have it installed yet:
-   https://docs.bazel.build/versions/master/install.html.
+   https://docs.bazel.build/versions/main/install.html.
 3. `cd utils/bazel`
 4. `bazel build --config=generic_clang @llvm-project//...` (if building on Unix
    with Clang). `--config=generic_gcc` and `--config=msvc` are also available.
@@ -45,7 +45,7 @@ build --config=generic_clang
 ```
 
 You can enable
-[disk caching](https://docs.bazel.build/versions/master/remote-caching.html#disk-cache),
+[disk caching](https://docs.bazel.build/versions/main/remote-caching.html#disk-cache),
 which will cache build results
 
 ```.bazelrc
@@ -53,7 +53,7 @@ build --disk_cache=~/.cache/bazel-disk-cache
 ```
 
 You can instruct Bazel to use a ramdisk for its sandboxing operations via
-[--sandbox_base](https://docs.bazel.build/versions/master/command-line-reference.html#flag--sandbox_base),
+[--sandbox_base](https://docs.bazel.build/versions/main/command-line-reference.html#flag--sandbox_base),
 which can help avoid IO bottlenecks for the symlink stragegy used for
 sandboxing. This is especially important with many inputs and many cores (see
 https://github.com/bazelbuild/bazel/issues/11868):

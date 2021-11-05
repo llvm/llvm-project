@@ -158,7 +158,7 @@ build:rbe --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 # Platform flags:
 # The toolchain container used for execution is defined in the target indicated
 # by "extra_execution_platforms", "host_platform" and "platforms".
-# More about platforms: https://docs.bazel.build/versions/master/platforms.html
+# More about platforms: https://docs.bazel.build/versions/main/platforms.html
 build:rbe --extra_toolchains=@rbe_default//config:cc-toolchain
 build:rbe --extra_execution_platforms=@rbe_default//config:platform
 build:rbe --host_platform=@rbe_default//config:platform

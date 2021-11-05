@@ -550,7 +550,7 @@ bb7:                                             ; preds = %bb6
 define void @test_12(i32* %p) {
 ; CHECK-LABEL: @test_12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64

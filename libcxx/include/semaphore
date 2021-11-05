@@ -105,16 +105,21 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire_for(chrono::duration<Rep, Period> const& __rel_time)
     {
-        auto const __test_fn = [this]() -> bool {
-            auto __old = __a.load(memory_order_acquire);
-            while(1) {
-                if (__old == 0)
-                    return false;
-                if(__a.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed))
-                    return true;
-            }
-        };
+        if (__rel_time == chrono::duration<Rep, Period>::zero())
+            return try_acquire();
+        auto const __test_fn = [this]() { return try_acquire(); };
         return __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
+    }
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    bool try_acquire()
+    {
+        auto __old = __a.load(memory_order_acquire);
+        while (true) {
+            if (__old == 0)
+                return false;
+            if (__a.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed))
+                return true;
+        }
     }
 };
 
@@ -156,14 +161,14 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire()
     {
-        return try_acquire_for(chrono::nanoseconds::zero());
+        return __semaphore.try_acquire();
     }
     template <class Clock, class Duration>
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire_until(chrono::time_point<Clock, Duration> const& __abs_time)
     {
         auto const current = Clock::now();
-        if(current >= __abs_time)
+        if (current >= __abs_time)
             return try_acquire();
         else
             return try_acquire_for(__abs_time - current);

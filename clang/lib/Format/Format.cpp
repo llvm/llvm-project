@@ -1386,7 +1386,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.ContinuationIndentWidth = 8;
     ChromiumStyle.IndentWidth = 4;
     // See styleguide for import groups:
-    // https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Import-Order
+    // https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/java/java.md#Import-Order
     ChromiumStyle.JavaImportGroups = {
         "android",
         "androidx",

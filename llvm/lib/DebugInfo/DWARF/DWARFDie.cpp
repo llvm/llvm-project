@@ -305,18 +305,19 @@ struct DWARFTypePrinter {
       } else
         EndedWithTemplate = Name.endswith(">");
       OS << Name;
-      // FIXME: This needs to be a bit more narrow, it would fail to
-      // reconstitute a non-operator overload that is a template, like
-      // "operator_thing<int>"
-      if (!Name.endswith(">") && !Name.startswith("operator")) {
-        if (appendTemplateParameters(D)) {
-          if (EndedWithTemplate)
-            OS << ' ';
-          OS << '>';
-          EndedWithTemplate = true;
-          Word = true;
-        }
-      }
+      // This check would be insufficient for operator overloads like
+      // "operator>>" - but for now Clang doesn't try to simplify them, so this
+      // is OK. Add more nuanced operator overload handling here if/when needed.
+      if (Name.endswith(">"))
+        break;
+      if (!appendTemplateParameters(D))
+        break;
+
+      if (EndedWithTemplate)
+        OS << ' ';
+      OS << '>';
+      EndedWithTemplate = true;
+      Word = true;
       break;
     }
     }

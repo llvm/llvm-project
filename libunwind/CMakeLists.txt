@@ -23,7 +23,11 @@ set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_BUILD)
-  project(libunwind LANGUAGES C CXX ASM)
+  # We may have an incomplete toolchain - do language support tests without
+  # linking.
+  include(EnableLanguageNolink)
+  project(libunwind LANGUAGES NONE)
+  llvm_enable_language_nolink(C CXX ASM)
 
   set(PACKAGE_NAME libunwind)
   set(PACKAGE_VERSION 14.0.0git)
@@ -179,6 +183,14 @@ include(HandleLibunwindFlags)
 # Get required flags.
 add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
 
+# Compiler tests may be failing if the compiler implicitly links in libunwind,
+# which doesn't exist yet. This gets waived by --unwindlib=none
+# later in config-ix below, but the tests for --target etc before that may
+# be failing due to it. Only test compilation, not linking, for these
+# tests here now.
+set(CMAKE_TRY_COMPILE_TARGET_TYPE_ORIG ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
 if(LIBUNWIND_TARGET_TRIPLE)
   add_target_flags_if_supported("--target=${LIBUNWIND_TARGET_TRIPLE}")
 endif()
@@ -188,6 +200,7 @@ endif()
 if(LIBUNWIND_SYSROOT)
   add_target_flags_if_supported("--sysroot=${LIBUNWIND_SYSROOT}")
 endif()
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE_ORIG})
 
 # Configure compiler.
 include(config-ix)
