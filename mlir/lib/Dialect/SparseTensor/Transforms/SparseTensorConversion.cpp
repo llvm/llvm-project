@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/ExecutionEngine/SparseTensorUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -29,68 +30,9 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-/// New tensor storage action. Keep these values consistent with
-/// the sparse runtime support library.
-enum Action : uint32_t {
-  kEmpty = 0,
-  kFromFile = 1,
-  kFromCOO = 2,
-  kEmptyCOO = 3,
-  kToCOO = 4,
-  kToIter = 5
-};
-
 //===----------------------------------------------------------------------===//
 // Helper methods.
 //===----------------------------------------------------------------------===//
-
-/// Returns internal type encoding for primary storage. Keep these
-/// values consistent with the sparse runtime support library.
-static uint32_t getPrimaryTypeEncoding(Type tp) {
-  if (tp.isF64())
-    return 1;
-  if (tp.isF32())
-    return 2;
-  if (tp.isInteger(64))
-    return 3;
-  if (tp.isInteger(32))
-    return 4;
-  if (tp.isInteger(16))
-    return 5;
-  if (tp.isInteger(8))
-    return 6;
-  return 0;
-}
-
-/// Returns internal type encoding for overhead storage. Keep these
-/// values consistent with the sparse runtime support library.
-static uint32_t getOverheadTypeEncoding(unsigned width) {
-  switch (width) {
-  default:
-    return 1;
-  case 32:
-    return 2;
-  case 16:
-    return 3;
-  case 8:
-    return 4;
-  }
-}
-
-/// Returns internal dimension level type encoding. Keep these
-/// values consistent with the sparse runtime support library.
-static uint32_t
-getDimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt) {
-  switch (dlt) {
-  case SparseTensorEncodingAttr::DimLevelType::Dense:
-    return 0;
-  case SparseTensorEncodingAttr::DimLevelType::Compressed:
-    return 1;
-  case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    return 2;
-  }
-  llvm_unreachable("Unknown SparseTensorEncodingAttr::DimLevelType");
-}
 
 /// Generates a constant zero of the given type.
 inline static Value constantZero(ConversionPatternRewriter &rewriter,
@@ -114,6 +56,75 @@ inline static Value constantI32(ConversionPatternRewriter &rewriter,
 inline static Value constantI8(ConversionPatternRewriter &rewriter,
                                Location loc, int8_t i) {
   return rewriter.create<arith::ConstantIntOp>(loc, i, 8);
+}
+
+/// Generates a constant of the given `Action`.
+static Value constantAction(ConversionPatternRewriter &rewriter, Location loc,
+                            Action action) {
+  return constantI32(rewriter, loc, static_cast<uint32_t>(action));
+}
+
+/// Generates a constant of the internal type encoding for overhead storage.
+static Value constantOverheadTypeEncoding(ConversionPatternRewriter &rewriter,
+                                          Location loc, unsigned width) {
+  OverheadType sec;
+  switch (width) {
+  default:
+    sec = OverheadType::kU64;
+    break;
+  case 32:
+    sec = OverheadType::kU32;
+    break;
+  case 16:
+    sec = OverheadType::kU16;
+    break;
+  case 8:
+    sec = OverheadType::kU8;
+    break;
+  }
+  return constantI32(rewriter, loc, static_cast<uint32_t>(sec));
+}
+
+/// Generates a constant of the internal type encoding for primary storage.
+static Value constantPrimaryTypeEncoding(ConversionPatternRewriter &rewriter,
+                                         Location loc, Type tp) {
+  PrimaryType primary;
+  if (tp.isF64())
+    primary = PrimaryType::kF64;
+  else if (tp.isF32())
+    primary = PrimaryType::kF32;
+  else if (tp.isInteger(64))
+    primary = PrimaryType::kI64;
+  else if (tp.isInteger(32))
+    primary = PrimaryType::kI32;
+  else if (tp.isInteger(16))
+    primary = PrimaryType::kI16;
+  else if (tp.isInteger(8))
+    primary = PrimaryType::kI8;
+  else
+    llvm_unreachable("Unknown element type");
+  return constantI32(rewriter, loc, static_cast<uint32_t>(primary));
+}
+
+/// Generates a constant of the internal dimension level type encoding.
+static Value
+constantDimLevelTypeEncoding(ConversionPatternRewriter &rewriter, Location loc,
+                             SparseTensorEncodingAttr::DimLevelType dlt) {
+  DimLevelType dlt2;
+  switch (dlt) {
+  case SparseTensorEncodingAttr::DimLevelType::Dense:
+    dlt2 = DimLevelType::kDense;
+    break;
+  case SparseTensorEncodingAttr::DimLevelType::Compressed:
+    dlt2 = DimLevelType::kCompressed;
+    break;
+  case SparseTensorEncodingAttr::DimLevelType::Singleton:
+    dlt2 = DimLevelType::kSingleton;
+    break;
+  default:
+    llvm_unreachable("Unknown SparseTensorEncodingAttr::DimLevelType");
+  }
+  return constantI8(rewriter, loc, static_cast<uint8_t>(dlt2));
 }
 
 /// Returns a function reference (first hit also inserts into module). Sets
@@ -238,7 +249,7 @@ static Value genBuffer(ConversionPatternRewriter &rewriter, Location loc,
 /// computation.
 static void newParams(ConversionPatternRewriter &rewriter,
                       SmallVector<Value, 8> &params, Operation *op,
-                      SparseTensorEncodingAttr &enc, uint32_t action,
+                      SparseTensorEncodingAttr &enc, Action action,
                       ValueRange szs, Value ptr = Value()) {
   Location loc = op->getLoc();
   ArrayRef<SparseTensorEncodingAttr::DimLevelType> dlt = enc.getDimLevelType();
@@ -246,7 +257,7 @@ static void newParams(ConversionPatternRewriter &rewriter,
   // Sparsity annotations.
   SmallVector<Value, 4> attrs;
   for (unsigned i = 0; i < sz; i++)
-    attrs.push_back(constantI8(rewriter, loc, getDimLevelTypeEncoding(dlt[i])));
+    attrs.push_back(constantDimLevelTypeEncoding(rewriter, loc, dlt[i]));
   params.push_back(genBuffer(rewriter, loc, attrs));
   // Dimension sizes array of the enveloping tensor. Useful for either
   // verification of external data, or for construction of internal data.
@@ -268,18 +279,17 @@ static void newParams(ConversionPatternRewriter &rewriter,
   params.push_back(genBuffer(rewriter, loc, rev));
   // Secondary and primary types encoding.
   ShapedType resType = op->getResult(0).getType().cast<ShapedType>();
-  uint32_t secPtr = getOverheadTypeEncoding(enc.getPointerBitWidth());
-  uint32_t secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());
-  uint32_t primary = getPrimaryTypeEncoding(resType.getElementType());
-  assert(primary);
-  params.push_back(constantI32(rewriter, loc, secPtr));
-  params.push_back(constantI32(rewriter, loc, secInd));
-  params.push_back(constantI32(rewriter, loc, primary));
+  params.push_back(
+      constantOverheadTypeEncoding(rewriter, loc, enc.getPointerBitWidth()));
+  params.push_back(
+      constantOverheadTypeEncoding(rewriter, loc, enc.getIndexBitWidth()));
+  params.push_back(
+      constantPrimaryTypeEncoding(rewriter, loc, resType.getElementType()));
   // User action and pointer.
   Type pTp = LLVM::LLVMPointerType::get(rewriter.getI8Type());
   if (!ptr)
     ptr = rewriter.create<LLVM::NullOp>(loc, pTp);
-  params.push_back(constantI32(rewriter, loc, action));
+  params.push_back(constantAction(rewriter, loc, action));
   params.push_back(ptr);
 }
 
@@ -530,7 +540,7 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
     SmallVector<Value, 8> params;
     sizesFromType(rewriter, sizes, op.getLoc(), resType.cast<ShapedType>());
     Value ptr = adaptor.getOperands()[0];
-    newParams(rewriter, params, op, enc, kFromFile, sizes, ptr);
+    newParams(rewriter, params, op, enc, Action::kFromFile, sizes, ptr);
     rewriter.replaceOp(op, genNewCall(rewriter, op, params));
     return success();
   }
@@ -549,7 +559,7 @@ class SparseTensorInitConverter : public OpConversionPattern<InitOp> {
     // Generate the call to construct empty tensor. The sizes are
     // explicitly defined by the arguments to the init operator.
     SmallVector<Value, 8> params;
-    newParams(rewriter, params, op, enc, kEmpty, adaptor.getOperands());
+    newParams(rewriter, params, op, enc, Action::kEmpty, adaptor.getOperands());
     rewriter.replaceOp(op, genNewCall(rewriter, op, params));
     return success();
   }
@@ -588,13 +598,13 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       auto enc = SparseTensorEncodingAttr::get(
           op->getContext(), encDst.getDimLevelType(), encDst.getDimOrdering(),
           encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
-      newParams(rewriter, params, op, enc, kToCOO, sizes, src);
+      newParams(rewriter, params, op, enc, Action::kToCOO, sizes, src);
       Value coo = genNewCall(rewriter, op, params);
-      params[3] = constantI32(
-          rewriter, loc, getOverheadTypeEncoding(encDst.getPointerBitWidth()));
-      params[4] = constantI32(
-          rewriter, loc, getOverheadTypeEncoding(encDst.getIndexBitWidth()));
-      params[6] = constantI32(rewriter, loc, kFromCOO);
+      params[3] = constantOverheadTypeEncoding(rewriter, loc,
+                                               encDst.getPointerBitWidth());
+      params[4] = constantOverheadTypeEncoding(rewriter, loc,
+                                               encDst.getIndexBitWidth());
+      params[6] = constantAction(rewriter, loc, Action::kFromCOO);
       params[7] = coo;
       rewriter.replaceOp(op, genNewCall(rewriter, op, params));
       return success();
@@ -613,7 +623,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       Type elemTp = dstTensorTp.getElementType();
       // Fabricate a no-permutation encoding for newParams().
       // The pointer/index types must be those of `src`.
-      // The dimLevelTypes aren't actually used by kToIter.
+      // The dimLevelTypes aren't actually used by Action::kToIterator.
       encDst = SparseTensorEncodingAttr::get(
           op->getContext(),
           SmallVector<SparseTensorEncodingAttr::DimLevelType>(
@@ -622,7 +632,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
       SmallVector<Value, 4> sizes;
       SmallVector<Value, 8> params;
       sizesFromPtr(rewriter, sizes, op, encSrc, srcTensorTp, src);
-      newParams(rewriter, params, op, encDst, kToIter, sizes, src);
+      newParams(rewriter, params, op, encDst, Action::kToIterator, sizes, src);
       Value iter = genNewCall(rewriter, op, params);
       Value ind = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
       Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
@@ -677,7 +687,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     SmallVector<Value, 4> sizes;
     SmallVector<Value, 8> params;
     sizesFromSrc(rewriter, sizes, loc, src);
-    newParams(rewriter, params, op, encDst, kEmptyCOO, sizes);
+    newParams(rewriter, params, op, encDst, Action::kEmptyCOO, sizes);
     Value ptr = genNewCall(rewriter, op, params);
     Value ind = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
     Value perm = params[2];
@@ -718,7 +728,7 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
           return {};
         });
     // Final call to construct sparse tensor storage.
-    params[6] = constantI32(rewriter, loc, kFromCOO);
+    params[6] = constantAction(rewriter, loc, Action::kFromCOO);
     params[7] = ptr;
     rewriter.replaceOp(op, genNewCall(rewriter, op, params));
     return success();
