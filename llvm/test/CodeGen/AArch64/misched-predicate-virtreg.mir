@@ -12,7 +12,7 @@
 # CHECK-NEXT:    Successors:
 # CHECK-NEXT:      SU(1): Data Latency=2 Reg=%0
 # CHECK-NEXT:    Single Issue       : false;
-# CHECK-NEXT:  SU(1):   %1:fpr32 = FMINVv4i32v %0:fpr128
+# CHECK-NEXT:  SU(1):   %1:fpr32 = FMINVv4i32v %0:fpr128, implicit $fpcr
 # CHECK-NEXT:    # preds left       : 1
 # CHECK-NEXT:    # succs left       : 1
 # CHECK-NEXT:    # rdefs left       : 0
@@ -31,7 +31,7 @@ body: |
   bb.0:
     liveins: $s0, $q1
     %0:fpr128 = COPY $q1
-    %1:fpr32 = FMINVv4i32v %0:fpr128
+    %1:fpr32 = FMINVv4i32v %0:fpr128, implicit $fpcr
     $s0 = COPY %1
     RET_ReallyLR implicit $s0
 
