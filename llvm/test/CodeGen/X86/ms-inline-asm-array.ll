@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=x86-64  | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 @arr = internal global [10 x i32] zeroinitializer, align 16
 
