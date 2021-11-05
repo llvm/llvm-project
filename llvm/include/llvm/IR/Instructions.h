@@ -2372,7 +2372,7 @@ public:
     return isReplicationMask(MaskAsInts, ReplicationFactor, VF);
   }
 
-  /// Return true if this shuffle mask is an replication mask.
+  /// Return true if this shuffle mask is a replication mask.
   bool isReplicationMask(int &ReplicationFactor, int &VF) const {
     // Not possible to express a shuffle mask for a scalable vector for this
     // case.
