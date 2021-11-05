@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple armv7-arm-linux-gnueabihf -O2 -mcpu=cortex-a7 < %s | FileCheck %s
+; RUN: llc -mtriple armv7-arm-linux-gnueabihf -O2 -mcpu=cortex-a7 -early-live-intervals < %s | FileCheck %s
 
 %struct.twofloat = type { float, float }
 %struct.twodouble = type { double, double }
