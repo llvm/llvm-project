@@ -171,22 +171,19 @@ using string_view = std::string_view;
 
 void string_view_test() {
   std::string_view i_am_empty;
-  ComparePrettyPrintToChars(i_am_empty, "std::string_view of length 0: \"\"");
+  ComparePrettyPrintToChars(i_am_empty, "\"\"");
 
   std::string source_string("to be or not to be");
   std::string_view to_be(source_string);
-  ComparePrettyPrintToChars(
-      to_be, "std::string_view of length 18: \"to be or not to be\"");
+  ComparePrettyPrintToChars(to_be, "\"to be or not to be\"");
 
   const char char_arr[] = "what a wonderful world";
   std::string_view wonderful(&char_arr[7], 9);
-  ComparePrettyPrintToChars(
-      wonderful, "std::string_view of length 9: \"wonderful\"");
+  ComparePrettyPrintToChars(wonderful, "\"wonderful\"");
 
   const char char_arr1[] = "namespace_stringview";
   string_view namespace_stringview(&char_arr1[10], 10);
-  ComparePrettyPrintToChars(
-      namespace_stringview, "std::string_view of length 10: \"stringview\"");
+  ComparePrettyPrintToChars(namespace_stringview, "\"stringview\"");
 }
 }
 
