@@ -1126,6 +1126,16 @@ TEST(InstructionsTest, ShuffleMaskIsReplicationMask) {
           ReplicatedMask, GuessedReplicationFactor, GuessedVF));
       EXPECT_EQ(GuessedReplicationFactor, ReplicationFactor);
       EXPECT_EQ(GuessedVF, VF);
+
+      for (int OpVF : seq_inclusive(VF, 2 * VF + 1)) {
+        LLVMContext Ctx;
+        Type *OpVFTy = FixedVectorType::get(IntegerType::getInt1Ty(Ctx), OpVF);
+        Value *Op = ConstantVector::getNullValue(OpVFTy);
+        ShuffleVectorInst *SVI = new ShuffleVectorInst(Op, Op, ReplicatedMask);
+        EXPECT_EQ(SVI->isReplicationMask(GuessedReplicationFactor, GuessedVF),
+                  OpVF == VF);
+        delete SVI;
+      }
     }
   }
 }
