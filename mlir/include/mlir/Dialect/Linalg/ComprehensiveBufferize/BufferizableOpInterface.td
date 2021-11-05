@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_BUFFERIZABLEOPINTERFACE
-#define MLIR_DIALECT_LINALG_TRANSFORMS_BUFFERIZABLEOPINTERFACE
+#ifndef BUFFERIZABLE_OP_INTERFACE
+#define BUFFERIZABLE_OP_INTERFACE
 
 include "mlir/IR/OpBase.td"
 
@@ -176,4 +176,4 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   ];
 }
 
-#endif  // MLIR_DIALECT_LINALG_TRANSFORMS_BUFFERIZABLEOPINTERFACE
+#endif  // BUFFERIZABLE_OP_INTERFACE
