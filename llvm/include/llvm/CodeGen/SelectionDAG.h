@@ -1733,8 +1733,7 @@ public:
                                  ArrayRef<SDValue> Ops);
 
   SDValue FoldConstantVectorArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                       ArrayRef<SDValue> Ops,
-                                       const SDNodeFlags Flags = SDNodeFlags());
+                                       ArrayRef<SDValue> Ops);
 
   /// Fold floating-point operations with 2 operands when both operands are
   /// constants and/or undefined.
