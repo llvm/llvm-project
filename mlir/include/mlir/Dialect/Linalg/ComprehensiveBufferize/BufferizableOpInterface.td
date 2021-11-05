@@ -62,32 +62,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return `true` if the given OpOperand creates an alias but does neither
-          read nor write. This implies that `bufferizesToMemoryRead` and
-          `bufferizesToMemoryWrite` must return `false`. This method will never
-          be called on OpOperands that do not have a tensor type.
-
-          Examples of such ops are `tensor.extract_slice` and `tensor.cast`.
-
-          Note: This method is not meant to be reimplemented.
-        }],
-        /*retType=*/"bool",
-        /*methodName=*/"bufferizesToAliasOnly",
-        /*args=*/(ins "OpOperand &":$opOperand),
-        /*methodBody=*/"",
-        // TODO: This should be in methodBody instead of defaultImplementation.
-        // Due to a bug in TableGen codegen, this does not compile.
-        /*defaultImplementation=*/[{
-          auto bufferizableOp =
-              cast<BufferizableOpInterface>($_op.getOperation());
-          return !bufferizableOp.bufferizesToMemoryRead(opOperand)
-              && !bufferizableOp.bufferizesToMemoryWrite(opOperand)
-              && static_cast<bool>(
-                  bufferizableOp.getAliasingOpResult(opOperand));
-         }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
           Return the OpResult that aliases with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
@@ -174,6 +148,23 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }]
       >
   ];
+
+  let extraClassDeclaration = [{
+    /// Return `true` if the given OpOperand creates an alias but does neither
+    /// read nor write. This implies that `bufferizesToMemoryRead` and
+    /// `bufferizesToMemoryWrite` must return `false`. This method will never
+    /// be called on OpOperands that do not have a tensor type.
+    ///
+    /// Examples of such ops are `tensor.extract_slice` and `tensor.cast`.
+    bool bufferizesToAliasOnly(OpOperand &opOperand) {
+      auto bufferizableOp =
+          cast<BufferizableOpInterface>(getOperation());
+      return !bufferizableOp.bufferizesToMemoryRead(opOperand)
+          && !bufferizableOp.bufferizesToMemoryWrite(opOperand)
+          && static_cast<bool>(
+              bufferizableOp.getAliasingOpResult(opOperand));
+    }
+  }];
 }
 
 #endif  // BUFFERIZABLE_OP_INTERFACE
