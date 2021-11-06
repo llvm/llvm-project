@@ -1143,6 +1143,41 @@ public:
     return Cost;
   }
 
+  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                            int VF, ArrayRef<int> Mask,
+                                            TTI::TargetCostKind CostKind) {
+    assert(Mask.size() == (unsigned)VF * ReplicationFactor && "Bad mask size.");
+
+    APInt DemandedSrcElts = APInt::getNullValue(VF);
+
+    ArrayRef<int> RemainingMask = Mask;
+    for (int i = 0; i < VF; i++) {
+      ArrayRef<int> CurrSubMask = RemainingMask.take_front(ReplicationFactor);
+      RemainingMask = RemainingMask.drop_front(CurrSubMask.size());
+
+      assert(all_of(CurrSubMask,
+                    [i](int MaskElt) {
+                      return MaskElt == UndefMaskElem || MaskElt == i;
+                    }) &&
+             "Not a replication mask.");
+
+      if (any_of(CurrSubMask,
+                 [](int MaskElt) { return MaskElt != UndefMaskElem; }))
+        DemandedSrcElts.setBit(i);
+    }
+    assert(RemainingMask.empty() && "Did not consume the entire mask?");
+
+    APInt DemandedReplicatedElts = APInt::getNullValue(Mask.size());
+    for (auto I : enumerate(Mask)) {
+      if (I.value() != UndefMaskElem)
+        DemandedReplicatedElts.setBit(I.index());
+    }
+
+    return thisT()->getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
+                                              DemandedSrcElts,
+                                              DemandedReplicatedElts, CostKind);
+  }
+
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                   MaybeAlign Alignment, unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
