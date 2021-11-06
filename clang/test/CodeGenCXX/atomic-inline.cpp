@@ -61,7 +61,7 @@ void store16() {
 bool cmpxchg16() {
   AM16 am;
   // CHECK-LABEL: @_Z9cmpxchg16v
-  // CHECK: call zeroext i1 @__atomic_compare_exchange
+  // CHECK: call noundef zeroext i1 @__atomic_compare_exchange
   // CORE2-LABEL: @_Z9cmpxchg16v
   // CORE2: cmpxchg i128* {{.*}} monotonic monotonic, align 16
   return __atomic_compare_exchange(&m16, &s16, &am, 0, 0, 0);

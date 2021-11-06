@@ -32,7 +32,7 @@ struct CGRect {
 @synthesize frame;
 
 // CHECK: define internal void @"\01-[I setPosition:]"
-// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %class.S* @_ZN1SaSERKS_
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %class.S* @_ZN1SaSERKS_
 // CHECK-NEXT: ret void
 
 // Don't attach debug locations to the prologue instructions. These were
@@ -60,8 +60,8 @@ struct CGRect {
 @end
 
 // CHECK-LABEL: define{{.*}} i32 @main
-// CHECK: call void @_ZN1SC1ERKS_(%class.S* {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], %class.S* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %class.S*)*)(i8* {{%[a-zA-Z0-9\.]+}}, i8* {{%[a-zA-Z0-9\.]+}}, %class.S* [[AGGTMP]])
+// CHECK: call void @_ZN1SC1ERKS_(%class.S* {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], %class.S* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %class.S*)*)(i8* noundef {{%[a-zA-Z0-9\.]+}}, i8* noundef {{%[a-zA-Z0-9\.]+}}, %class.S* noundef [[AGGTMP]])
 // CHECK-NEXT: ret i32 0
 int main() {
   I *i;
@@ -73,8 +73,8 @@ int main() {
 // rdar://8379892
 // CHECK-LABEL: define{{.*}} void @_Z1fP1A
 // CHECK: call void @_ZN1XC1Ev(%struct.X* {{[^,]*}} [[LVTEMP:%[a-zA-Z0-9\.]+]])
-// CHECK: call void @_ZN1XC1ERKS_(%struct.X* {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], %struct.X* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[LVTEMP]])
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %struct.X*)*)({{.*}} %struct.X* [[AGGTMP]])
+// CHECK: call void @_ZN1XC1ERKS_(%struct.X* {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], %struct.X* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[LVTEMP]])
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %struct.X*)*)({{.*}} %struct.X* noundef [[AGGTMP]])
 struct X {
   X();
   X(const X&);
@@ -120,7 +120,7 @@ void testB1(B *b) {
 // CHECK:      [[BVAR:%.*]] = alloca [[B]]*, align 8
 // CHECK:      [[TEMP:%.*]] = alloca [[B0:%.*]], align 8
 // CHECK:      [[X:%.*]] = getelementptr inbounds [[B0]], [[B0]]* [[TEMP]], i32 0, i32 0
-// CHECK-NEXT: [[T0:%.*]] = call i32 @_Z9b_makeIntv()
+// CHECK-NEXT: [[T0:%.*]] = call noundef i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
 // CHECK-NEXT: store i64 [[T1]], i64* [[X]], align 8
 // CHECK:      load [[B]]*, [[B]]** [[BVAR]]
@@ -139,7 +139,7 @@ void testB1(B *b) {
 // CHECK-NOT:  call
 // CHECK:      store i64 [[T0]],
 // CHECK-NOT:  call
-// CHECK:      [[T0:%.*]] = call i32 @_Z9b_makeIntv()
+// CHECK:      [[T0:%.*]] = call noundef i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
 // CHECK-NEXT: store i64 [[T1]], i64* {{.*}}, align 8
 // CHECK-NOT:  call

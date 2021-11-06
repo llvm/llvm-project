@@ -137,21 +137,21 @@ void test5(void) {
 // CHECK-NEXT:  store [2 x i8*]* [[A0]],
 // CHECK-NEXT:  [[A00:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[A0]], i64 0, i64 0
 // CHECK-NEXT:  store i8** [[A00]],
-// CHECK-NEXT:  [[T0:%.*]] = invoke i8* @_Z12test5_helperj(i32 0)
+// CHECK-NEXT:  [[T0:%.*]] = invoke noundef i8* @_Z12test5_helperj(i32 noundef 0)
 // CHECK:       store i8* [[T0]], i8** [[A00]], align
 // CHECK-NEXT:  [[A01:%.*]] = getelementptr inbounds i8*, i8** [[A00]], i64 1
 // CHECK-NEXT:  store i8** [[A01]],
-// CHECK-NEXT:  [[T0:%.*]] = invoke i8* @_Z12test5_helperj(i32 1)
+// CHECK-NEXT:  [[T0:%.*]] = invoke noundef i8* @_Z12test5_helperj(i32 noundef 1)
 // CHECK:       store i8* [[T0]], i8** [[A01]], align
 // CHECK-NEXT:  [[A1:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[A0]], i64 1
 // CHECK-NEXT:  store [2 x i8*]* [[A1]],
 // CHECK-NEXT:  [[A10:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[A1]], i64 0, i64 0
 // CHECK-NEXT:  store i8** [[A10]],
-// CHECK-NEXT:  [[T0:%.*]] = invoke i8* @_Z12test5_helperj(i32 2)
+// CHECK-NEXT:  [[T0:%.*]] = invoke noundef i8* @_Z12test5_helperj(i32 noundef 2)
 // CHECK:       store i8* [[T0]], i8** [[A10]], align
 // CHECK-NEXT:  [[A11:%.*]] = getelementptr inbounds i8*, i8** [[A10]], i64 1
 // CHECK-NEXT:  store i8** [[A11]],
-// CHECK-NEXT:  [[T0:%.*]] = invoke i8* @_Z12test5_helperj(i32 3)
+// CHECK-NEXT:  [[T0:%.*]] = invoke noundef i8* @_Z12test5_helperj(i32 noundef 3)
 // CHECK:       store i8* [[T0]], i8** [[A11]], align
 
 // CHECK: attributes [[NUW]] = { nounwind }

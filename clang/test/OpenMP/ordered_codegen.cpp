@@ -123,7 +123,7 @@ void foo_simd(int low, int up) {
 #endif // HEADER
 
 // CHECK1-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -215,7 +215,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z8dynamic1PfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -303,7 +303,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z9test_autoPfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -441,7 +441,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z7runtimePfS_S_S_
-// CHECK1-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -546,7 +546,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK1-SAME: (i32 [[LOW:%.*]], i32 [[UP:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -729,7 +729,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -742,7 +742,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -755,7 +755,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -847,7 +847,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z8dynamic1PfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -935,7 +935,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z9test_autoPfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1073,7 +1073,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z7runtimePfS_S_S_
-// CHECK2-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1178,7 +1178,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK2-SAME: (i32 [[LOW:%.*]], i32 [[UP:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -1361,7 +1361,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -1374,7 +1374,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -1387,7 +1387,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1479,7 +1479,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z8dynamic1PfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1567,7 +1567,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z9test_autoPfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1705,7 +1705,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z7runtimePfS_S_S_
-// CHECK3-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -1810,7 +1810,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK3-SAME: (i32 [[LOW:%.*]], i32 [[UP:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -1993,7 +1993,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -2006,7 +2006,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
+// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -2019,7 +2019,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2111,7 +2111,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z8dynamic1PfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2199,7 +2199,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z9test_autoPfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2337,7 +2337,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z7runtimePfS_S_S_
-// CHECK4-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2442,7 +2442,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK4-SAME: (i32 [[LOW:%.*]], i32 [[UP:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -2625,7 +2625,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -2638,7 +2638,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR3]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[I_ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    store i32* [[I]], i32** [[I_ADDR]], align 8
@@ -2651,7 +2651,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2702,7 +2702,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z8dynamic1PfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2749,7 +2749,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z9test_autoPfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2821,7 +2821,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z7runtimePfS_S_S_
-// CHECK5-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK5-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -2889,7 +2889,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK5-SAME: (i32 [[LOW:%.*]], i32 [[UP:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4
@@ -3043,7 +3043,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z18static_not_chunkedPfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3094,7 +3094,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z8dynamic1PfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3141,7 +3141,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z9test_autoPfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3213,7 +3213,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z7runtimePfS_S_S_
-// CHECK6-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK6-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -3281,7 +3281,7 @@ void foo_simd(int low, int up) {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z8foo_simdii
-// CHECK6-SAME: (i32 [[LOW:%.*]], i32 [[UP:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32 noundef [[LOW:%.*]], i32 noundef [[UP:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[LOW_ADDR:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[UP_ADDR:%.*]] = alloca i32, align 4

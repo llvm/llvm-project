@@ -55,31 +55,31 @@ id NSUserName();
 
 // CHECK: define{{.*}} i32 @main() [[NUW:#[0-9]+]]
 int main() {
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 signext 97
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 97
   NSNumber *aNumber = @'a';
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 42
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 noundef 42
   NSNumber *fortyTwo = @42;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 -42
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 noundef -42
   NSNumber *negativeFortyTwo = @-42;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 42
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 noundef 42
   NSNumber *positiveFortyTwo = @+42;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 42
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i32 noundef 42
   NSNumber *fortyTwoUnsigned = @42u;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i64 42
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i64 noundef 42
   NSNumber *fortyTwoLong = @42l;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i64 42
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i64 noundef 42
   NSNumber *fortyTwoLongLong = @42ll;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}float 0x400921FB60000000
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}float noundef 0x400921FB60000000
   NSNumber *piFloat = @3.141592654f;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}double 0x400921FB54411744
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}double noundef 0x400921FB54411744
   NSNumber *piDouble = @3.1415926535;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 signext 1
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 1
   NSNumber *yesNumber = @__objc_yes;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 signext 0
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 0
   NSNumber *noNumber = @__objc_no;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 signext 1
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 1
   NSNumber *yesNumber1 = @YES;
-  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 signext 0
+  // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 noundef signext 0
   NSNumber *noNumber1 = @NO;
 NSDictionary *dictionary = @{@"name" : NSUserName(), 
                              @"date" : [NSDate date] }; 

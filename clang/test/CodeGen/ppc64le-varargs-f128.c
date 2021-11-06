@@ -26,7 +26,7 @@ void foo_fq(__float128);
 // OMP-TARGET: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8**
 // OMP-TARGET: %[[V2:[0-9a-zA-Z_.]+]] = bitcast i8* %[[CUR]] to ppc_fp128*
 // OMP-TARGET: %[[V3:[0-9a-zA-Z_.]+]] = load ppc_fp128, ppc_fp128* %[[V2]], align 8
-// OMP-TARGET: call void @foo_ld(ppc_fp128 %[[V3]])
+// OMP-TARGET: call void @foo_ld(ppc_fp128 noundef %[[V3]])
 
 // OMP-HOST-LABEL: define{{.*}} void @omp(
 // OMP-HOST: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
@@ -38,7 +38,7 @@ void foo_fq(__float128);
 // OMP-HOST: %[[ALIGN:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[V2]] to i8*
 // OMP-HOST: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[ALIGN]] to fp128*
 // OMP-HOST: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, fp128* %[[V3]], align 16
-// OMP-HOST: call void @foo_ld(fp128 %[[V4]])
+// OMP-HOST: call void @foo_ld(fp128 noundef %[[V4]])
 void omp(int n, ...) {
   va_list ap;
   va_start(ap, n);
@@ -60,7 +60,7 @@ void omp(int n, ...) {
 // IEEE: %[[ALIGN:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[V2]] to i8*
 // IEEE: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[ALIGN]] to fp128*
 // IEEE: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, fp128* %[[V3]], align 16
-// IEEE: call void @foo_fq(fp128 %[[V4]])
+// IEEE: call void @foo_fq(fp128 noundef %[[V4]])
 // IEEE: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
 // IEEE: call void @llvm.va_end(i8* %[[AP2]])
 void f128(int n, ...) {
@@ -80,17 +80,17 @@ void f128(int n, ...) {
 // IEEE: %[[ALIGN:[0-9a-zA-Z_.]+]] = inttoptr i64 %[[V2]] to i8*
 // IEEE: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[ALIGN]] to fp128*
 // IEEE: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, fp128* %[[V3]], align 16
-// IEEE: call void @foo_ld(fp128 %[[V4]])
+// IEEE: call void @foo_ld(fp128 noundef %[[V4]])
 // IEEE: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
 // IEEE: call void @llvm.va_end(i8* %[[AP2]])
 
 // IBM-LABEL: define{{.*}} void @long_double
 // IBM: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
-// IBM: call void @llvm.va_start(i8* %[[AP1]])
+// IBM: call void @llvm.va_start(i8*  %[[AP1]])
 // IBM: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]
 // IBM: %[[V3:[0-9a-zA-Z_.]+]] = bitcast i8* %[[CUR]] to ppc_fp128*
 // IBM: %[[V4:[0-9a-zA-Z_.]+]] = load ppc_fp128, ppc_fp128* %[[V3]], align 8
-// IBM: call void @foo_ld(ppc_fp128 %[[V4]])
+// IBM: call void @foo_ld(ppc_fp128 noundef %[[V4]])
 // IBM: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
 // IBM: call void @llvm.va_end(i8* %[[AP2]])
 void long_double(int n, ...) {

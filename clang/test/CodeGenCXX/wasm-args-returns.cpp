@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -O1 -triple wasm32-unknown-unknown -emit-llvm -o - %s \
+// RUN: %clang_cc1 -disable-noundef-analysis -O1 -triple wasm32-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
-// RUN: %clang_cc1 -O1 -triple wasm64-unknown-unknown -emit-llvm -o - %s \
+// RUN: %clang_cc1 -disable-noundef-analysis -O1 -triple wasm64-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
 
 #define concat_(x, y) x##y

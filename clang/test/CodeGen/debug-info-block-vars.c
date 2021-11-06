@@ -4,7 +4,7 @@
 // RUN:   -triple x86_64-apple-darwin -o - %s \
 // RUN:   | FileCheck --check-prefix=CHECK-OPT %s
 
-// CHECK: define internal void @__f_block_invoke(i8* %.block_descriptor)
+// CHECK: define internal void @__f_block_invoke(i8* noundef %.block_descriptor)
 // CHECK: %.block_descriptor.addr = alloca i8*, align 8
 // CHECK: %block.addr = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>*, align 8
 // CHECK: store i8* %.block_descriptor, i8** %.block_descriptor.addr, align 8

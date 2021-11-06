@@ -19,8 +19,8 @@ void testva (int n, ...) {
   __builtin_va_end(ap);
 }
 
-// AIX32: define void @testva(i32 %n, ...)
-// AIX64: define void @testva(i32 signext %n, ...)
+// AIX32: define void @testva(i32 noundef %n, ...)
+// AIX64: define void @testva(i32 noundef signext %n, ...)
 
 // CHECK-NEXT: entry:
 // CHECK-NEXT:  %n.addr = alloca i32, align 4

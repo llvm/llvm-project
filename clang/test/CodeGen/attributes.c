@@ -97,7 +97,7 @@ void t21(void) {
   fptr(10);
 }
 // CHECK: [[FPTRVAR:%[a-z0-9]+]] = load void (i32)*, void (i32)** @fptr
-// CHECK-NEXT: call x86_fastcallcc void [[FPTRVAR]](i32 inreg 10)
+// CHECK-NEXT: call x86_fastcallcc void [[FPTRVAR]](i32 inreg noundef 10)
 
 
 // PR9356: We might want to err on this, but for now at least make sure we

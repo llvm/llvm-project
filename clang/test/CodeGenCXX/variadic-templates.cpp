@@ -5,7 +5,7 @@ int get_num_types(Types...) {
   return sizeof...(Types);
 }
 
-// CHECK-LABEL: define weak_odr i32 @_Z13get_num_typesIJifdEEiDpT_
+// CHECK-LABEL: define weak_odr noundef i32 @_Z13get_num_typesIJifdEEiDpT_
 // CHECK: ret i32 3
 template int get_num_types(int, float, double);
 

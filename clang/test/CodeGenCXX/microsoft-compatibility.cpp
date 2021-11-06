@@ -24,7 +24,7 @@ extern "C" void f() {
 // CHECK: call void @"??$destroy@X@@YAXPAX@Z"
 // CHECK: ret void
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"??$destroy@X@@YAXPAX@Z"(i8* %p)
+// CHECK-LABEL: define linkonce_odr dso_local void @"??$destroy@X@@YAXPAX@Z"(i8* noundef %p)
 //    The pseudo-dtor expr should not generate calls to anything.
 // CHECK-NOT: call
 // CHECK-NOT: invoke
