@@ -1960,11 +1960,6 @@ static void mergeDivision(FlatAffineConstraints &fac, unsigned pos1,
   fac.removeId(pos2);
 }
 
-/// Merge and align local ids of `this` and `other`. Any local identifiers
-/// which can be represented as divisions in terms of dimension and symbol
-/// ids with constant denominator are extracted and local ids with same
-/// division representation are merged. Number of dimension and symbol ids
-/// should match in `this` and `other`.
 void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   assert(getNumDimIds() == other.getNumDimIds() &&
          "Number of dimension ids should match");

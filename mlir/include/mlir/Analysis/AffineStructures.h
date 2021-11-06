@@ -441,11 +441,9 @@ public:
   /// variables.
   void convertDimToLocal(unsigned dimStart, unsigned dimLimit);
 
-  /// Merge and align local ids of `this` and `other`. Any local identifiers
-  /// which can be represented as divisions in terms of dimension and symbol
-  /// ids with constant denominator are extracted and local ids with same
-  /// division representation are merged. Number of dimension and symbol ids
-  /// should match in `this` and `other`.
+  /// Merges and aligns local ids of `this` and `other`. Local ids with
+  /// identical division representations are merged. The number of dimensions
+  /// and symbol ids should match in `this` and `other`.
   void mergeLocalIds(FlatAffineConstraints &other);
 
   /// Removes all equalities and inequalities.
@@ -531,7 +529,7 @@ protected:
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
 
-  /// Get division representation for each local identifier. If no local
+  /// Get division representations for each local identifier. If no local
   /// representation exists for the `i^th` local identifier, denominator[i] is
   /// set to 0.
   void getLocalIdsReprs(std::vector<SmallVector<int64_t, 8>> &reprs,
