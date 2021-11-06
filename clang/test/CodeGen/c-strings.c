@@ -40,7 +40,7 @@ void f1() {
   static char *x = "hello";
   bar(x);
   // CHECK: [[T1:%.*]] = load i8*, i8** @f1.x
-  // CHECK: call {{.*}}void @bar(i8* noundef [[T1:%.*]])
+  // CHECK: call {{.*}}void @bar(i8* [[T1:%.*]])
 }
 
 // CHECK-LABEL: define {{.*}}void @f2()

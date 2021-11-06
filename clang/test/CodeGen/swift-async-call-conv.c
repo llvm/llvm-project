@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -disable-noundef-analysis -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -disable-noundef-analysis -x c++ -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
-// RUN: %clang_cc1 -disable-noundef-analysis -x c++ -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
-// RUN: %clang_cc1 -disable-noundef-analysis -x c++ -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
-// RUN: %clang_cc1 -disable-noundef-analysis -x c++ -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
-// RUN: %clang_cc1 -disable-noundef-analysis -x c++ -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
 
 // Test tail call behavior when a swiftasynccall function is called
 // from another swiftasynccall function.

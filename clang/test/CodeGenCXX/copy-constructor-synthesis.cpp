@@ -21,7 +21,7 @@ struct P {
 };
 
 
-// CHECK-LABEL: define linkonce_odr void @_ZN1XC1ERKS_(%struct.X* {{[^,]*}} %this, %struct.X* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN1XC1ERKS_(%struct.X* {{[^,]*}} %this, %struct.X* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 struct X  : M, N, P { // ...
   X() : f1(1.0), d1(2.0), i1(3), name("HELLO"), bf1(0xff), bf2(0xabcd),
         au_i1(1234), au1_4("MASKED") {}
@@ -136,7 +136,7 @@ void f(B b1) {
   B b2 = b1;
 }
 
-// CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A:%.*]]* @_ZN12rdar138169401AaSERKS0_(
+// CHECK:    define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A:%.*]]* @_ZN12rdar138169401AaSERKS0_(
 // CHECK:      [[THIS:%.*]] = load [[A]]*, [[A]]**
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A]], [[A]]* [[THIS]], i32 0, i32 1
 // CHECK-NEXT: [[OTHER:%.*]] = load [[A]]*, [[A]]**
@@ -146,7 +146,7 @@ void f(B b1) {
 // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[T4]], i8* align 8 [[T5]], i64 8, i1 false)
 // CHECK-NEXT: ret [[A]]* [[THIS]]
 
-// CHECK-LABEL: define linkonce_odr void @_ZN6PR66281BC2ERKS0_(%"struct.PR6628::B"* {{[^,]*}} %this, %"struct.PR6628::B"* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN6PR66281BC2ERKS0_(%"struct.PR6628::B"* {{[^,]*}} %this, %"struct.PR6628::B"* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 // CHECK: call void @_ZN6PR66281TC1Ev
 // CHECK: call void @_ZN6PR66281TC1Ev
 // CHECK: call void @_ZN6PR66281AC2ERKS0_RKNS_1TES5_

@@ -124,6 +124,6 @@ EightChars f_s8() {
 int main() {
   __asm xor eax, eax
 }
-// CHECK-LABEL: define dso_local noundef i32 @main()
+// CHECK-LABEL: define dso_local i32 @main()
 // CHECK: %[[r:[^ ]*]] = call i32 asm sideeffect inteldialect "xor eax, eax", "=&{eax},{{.*}}"
 // CHECK: ret i32 %[[r]]

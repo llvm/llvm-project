@@ -26,7 +26,7 @@ bool foo() {
   return __builtin_is_constant_evaluated();
 }
 
-// CHECK-FN-CG-LABEL: define linkonce_odr noundef i32 @_Z1fv()
+// CHECK-FN-CG-LABEL: define linkonce_odr i32 @_Z1fv()
 constexpr int f() {
   // CHECK-FN-CG: store i32 13, i32* %n, align 4
   // CHECK-FN-CG: store i32 17, i32* %m, align 4
@@ -46,7 +46,7 @@ int p2 = f(); // same result without CONSTINIT
 
 // CHECK-DYN-LABEL: define internal void @__cxx_global_var_init()
 // CHECK-DYN: %0 = load i32, i32* @p, align 4
-// CHECK-DYN-NEXT: %call = call noundef i32 @_Z1fv()
+// CHECK-DYN-NEXT: %call = call i32 @_Z1fv()
 // CHECK-DYN-NEXT: %add = add nsw i32 %0, %call
 // CHECK-DYN-NEXT: store i32 %add, i32* @q, align 4
 // CHECK-DYN-NEXT: ret void
@@ -85,7 +85,7 @@ void test_arr_expr() {
 
 // CHECK-ARR-LABEL: define{{.*}} void @_Z17test_new_arr_exprv
 void test_new_arr_expr() {
-  // CHECK-ARR: call noalias noundef nonnull i8* @_Znam(i64 noundef 17)
+  // CHECK-ARR: call noalias nonnull i8* @_Znam(i64 17)
   new char[std::is_constant_evaluated() || __builtin_is_constant_evaluated() ? 1 : 17];
 }
 
@@ -169,7 +169,7 @@ void test_dtor_bce_1() {
   // true during destruction. It would be OK if we replaced the constructor
   // call with a direct store, but we should emit the destructor call.
 
-  // CHECK-DTOR: call {{.*}} @_ZN13DestructorBCEC1Ei({{.*}}, i32 noundef 201)
+  // CHECK-DTOR: call {{.*}} @_ZN13DestructorBCEC1Ei({{.*}}, i32 201)
   DestructorBCE local(201);
   // CHECK-DTOR: call {{.*}} @_ZN13DestructorBCED
   // CHECK-DTOR: }

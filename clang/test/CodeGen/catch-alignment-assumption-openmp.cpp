@@ -7,7 +7,7 @@
 // CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_ALIGNMENT_ASSUMPTION:.*]] = {{.*}}, i32 100, i32 30 }, {{.*}}* @[[CHAR]] }
 
 void func(char *data) {
-  // CHECK: define{{.*}} void @{{.*}}(i8* noundef %[[DATA:.*]])
+  // CHECK: define{{.*}} void @{{.*}}(i8* %[[DATA:.*]])
   // CHECK-NEXT: [[ENTRY:.*]]:
   // CHECK-NEXT:   %[[DATA_ADDR:.*]] = alloca i8*, align 8
   // CHECK:   store i8* %[[DATA]], i8** %[[DATA_ADDR]], align 8

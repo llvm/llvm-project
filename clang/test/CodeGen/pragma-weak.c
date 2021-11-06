@@ -140,7 +140,7 @@ __attribute((pure,noinline,const)) void __xxx(void) { }
 void SHA512Pad(void *context) {}
 #pragma weak SHA384Pad = SHA512Pad
 void PR10878() { SHA384Pad(0); }
-// CHECK: call void @SHA384Pad(i8* noundef null)
+// CHECK: call void @SHA384Pad(i8* null)
 
 
 // PR14046: Parse #pragma weak in function-local context

@@ -5,14 +5,14 @@ int t(void);
 
 // CHECK: define{{.*}} i32 @_Z1fv() [[TF:#[0-9]+]] {
 int f(void) {
-  // CHECK: call noundef i32 @_Z1cv() [[NUW_RN_CALL:#[0-9]+]]
-  // CHECK: call noundef i32 @_Z1pv() [[NUW_RO_CALL:#[0-9]+]]
+  // CHECK: call i32 @_Z1cv() [[NUW_RN_CALL:#[0-9]+]]
+  // CHECK: call i32 @_Z1pv() [[NUW_RO_CALL:#[0-9]+]]
   return c() + p() + t();
 }
 
-// CHECK: declare noundef i32 @_Z1cv() [[NUW_RN:#[0-9]+]]
-// CHECK: declare noundef i32 @_Z1pv() [[NUW_RO:#[0-9]+]]
-// CHECK: declare noundef i32 @_Z1tv() [[TF2:#[0-9]+]]
+// CHECK: declare i32 @_Z1cv() [[NUW_RN:#[0-9]+]]
+// CHECK: declare i32 @_Z1pv() [[NUW_RO:#[0-9]+]]
+// CHECK: declare i32 @_Z1tv() [[TF2:#[0-9]+]]
 
 // CHECK: attributes [[TF]] = { {{.*}} }
 // CHECK: attributes [[NUW_RN]] = { nounwind readnone willreturn{{.*}} }

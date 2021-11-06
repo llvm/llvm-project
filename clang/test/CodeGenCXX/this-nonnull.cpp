@@ -11,10 +11,10 @@ struct Struct {
 void TestReturnsVoid(Struct &s) {
   s.ReturnsVoid();
 
-  // CHECK-YES: call void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* noundef %0)
+  // CHECK-YES: call void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* nonnull align 4 dereferenceable(12) %0)
   /// FIXME Use dereferenceable after dereferenceable respects NullPointerIsValid.
-  // CHECK-NO: call void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* noundef %0)
+  // CHECK-NO: call void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* align 4 dereferenceable_or_null(12) %0)
 }
 
-// CHECK-YES: declare void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* noundef)
-// CHECK-NO: declare void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* noundef)
+// CHECK-YES: declare void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* nonnull align 4 dereferenceable(12))
+// CHECK-NO: declare void @_ZN6Struct11ReturnsVoidEv(%struct.Struct* align 4 dereferenceable_or_null(12))

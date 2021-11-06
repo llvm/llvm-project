@@ -21,6 +21,6 @@ void bar(void) {
 // Verify that debug info for BlockPointerDbgLoc is emitted for the
 // innermost block.
 //
-// CHECK: define {{.*}}void @__bar_block_invoke_3(i8* noundef %.block_descriptor)
+// CHECK: define {{.*}}void @__bar_block_invoke_3(i8* %.block_descriptor)
 // CHECK: %[[BLOCKADDR:.*]] = alloca <{{.*}}>*, align
 // CHECK: call void @llvm.dbg.declare(metadata {{.*}}%[[BLOCKADDR]]

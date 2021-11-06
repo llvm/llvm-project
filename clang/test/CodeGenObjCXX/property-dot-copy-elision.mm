@@ -23,8 +23,8 @@ struct S1 {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_S1:.*]], align
 // CHECK: %[[AGG_TMP_1:.*]] = alloca %[[STRUCT_S0:.*]], align
 // CHECK: call void @_ZN2S0C1Ev(%[[STRUCT_S0]]* {{[^,]*}} %[[AGG_TMP_1]])
-// CHECK: call void @_ZN2S1C1E2S0(%[[STRUCT_S1]]* {{[^,]*}} %[[AGG_TMP]], %[[STRUCT_S0]]* noundef %[[AGG_TMP_1]])
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_S1]]*)*)(i8* noundef %{{.*}}, i8* noundef %{{.*}}, %[[STRUCT_S1]]* noundef %[[AGG_TMP]])
+// CHECK: call void @_ZN2S1C1E2S0(%[[STRUCT_S1]]* {{[^,]*}} %[[AGG_TMP]], %[[STRUCT_S0]]* %[[AGG_TMP_1]])
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_S1]]*)*)(i8* %{{.*}}, i8* %{{.*}}, %[[STRUCT_S1]]* %[[AGG_TMP]])
 
 void test0(C *c) {
   c.f = S0();
@@ -34,7 +34,7 @@ void test0(C *c) {
 // CHECK: %{{.*}} = alloca %
 // CHECK: %[[TEMP_LVALUE:.*]] = alloca %[[STRUCT_S1:.*]], align
 // CHECK: call void @_ZN2S1C1Ev(%[[STRUCT_S1]]* {{[^,]*}} %[[TEMP_LVALUE]])
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_S1]]*)*)(i8* noundef %{{.*}}, i8* noundef %{{.*}}, %[[STRUCT_S1]]* noundef %[[TEMP_LVALUE]])
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_S1]]*)*)(i8* %{{.*}}, i8* %{{.*}}, %[[STRUCT_S1]]* %[[TEMP_LVALUE]])
 
 void test1(C *c) {
   c.f = S1();

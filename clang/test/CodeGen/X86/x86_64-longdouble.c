@@ -20,16 +20,16 @@ long double _Complex dataLDC = {1.0L, 1.0L};
 
 long double TestLD(long double x) {
   return x * x;
-// ANDROID: define{{.*}} fp128 @TestLD(fp128 noundef %x)
-// GNU: define{{.*}} x86_fp80 @TestLD(x86_fp80 noundef %x)
-// NACL: define{{.*}} double @TestLD(double noundef %x)
+// ANDROID: define{{.*}} fp128 @TestLD(fp128 %x)
+// GNU: define{{.*}} x86_fp80 @TestLD(x86_fp80 %x)
+// NACL: define{{.*}} double @TestLD(double %x)
 }
 
 long double _Complex TestLDC(long double _Complex x) {
   return x * x;
 // ANDROID: define{{.*}} void @TestLDC({ fp128, fp128 }* {{.*}}, { fp128, fp128 }* {{.*}} %x)
 // GNU: define{{.*}} { x86_fp80, x86_fp80 } @TestLDC({ x86_fp80, x86_fp80 }* {{.*}} %x)
-// NACL: define{{.*}} { double, double } @TestLDC(double noundef %x{{.*}}, double noundef %x{{.*}})
+// NACL: define{{.*}} { double, double } @TestLDC(double %x{{.*}}, double %x{{.*}})
 }
 
 typedef __builtin_va_list va_list;
@@ -94,30 +94,30 @@ void TestVarArg(const char *s, ...);
 
 void TestPassVarInt(int x) {
   TestVarArg("A", x);
-// CHECK: define{{.*}} void @TestPassVarInt(i32 noundef %x)
-// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, i32 noundef %x)
+// CHECK: define{{.*}} void @TestPassVarInt(i32 %x)
+// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, i32 %x)
 }
 
 void TestPassVarFloat(float x) {
   TestVarArg("A", x);
-// CHECK: define{{.*}} void @TestPassVarFloat(float noundef %x)
-// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %
+// CHECK: define{{.*}} void @TestPassVarFloat(float %x)
+// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double %
 }
 
 void TestPassVarDouble(double x) {
   TestVarArg("A", x);
-// CHECK: define{{.*}} void @TestPassVarDouble(double noundef %x)
-// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %x
+// CHECK: define{{.*}} void @TestPassVarDouble(double %x)
+// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double %x
 }
 
 void TestPassVarLD(long double x) {
   TestVarArg("A", x);
-// ANDROID: define{{.*}} void @TestPassVarLD(fp128 noundef %x)
-// ANDROID: call {{.*}} @TestVarArg(i8* {{.*}}, fp128 noundef %x
-// GNU: define{{.*}} void @TestPassVarLD(x86_fp80 noundef %x)
-// GNU: call {{.*}} @TestVarArg(i8* {{.*}}, x86_fp80 noundef %x
-// NACL: define{{.*}} void @TestPassVarLD(double noundef %x)
-// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %x
+// ANDROID: define{{.*}} void @TestPassVarLD(fp128 %x)
+// ANDROID: call {{.*}} @TestVarArg(i8* {{.*}}, fp128 %x
+// GNU: define{{.*}} void @TestPassVarLD(x86_fp80 %x)
+// GNU: call {{.*}} @TestVarArg(i8* {{.*}}, x86_fp80 %x
+// NACL: define{{.*}} void @TestPassVarLD(double %x)
+// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double %x
 }
 
 void TestPassVarLDC(long double _Complex x) {
@@ -130,6 +130,6 @@ void TestPassVarLDC(long double _Complex x) {
 // GNU:          store x86_fp80 %{{.*}}, x86_fp80* %
 // GNU-NEXT:     store x86_fp80 %{{.*}}, x86_fp80* %
 // GNU-NEXT:   call {{.*}} @TestVarArg(i8* {{.*}}, { x86_fp80, x86_fp80 }* {{.*}} %
-// NACL:      define{{.*}} void @TestPassVarLDC(double noundef %x{{.*}}, double noundef %x{{.*}})
-// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %x{{.*}}, double noundef %x{{.*}})
+// NACL:      define{{.*}} void @TestPassVarLDC(double %x{{.*}}, double %x{{.*}})
+// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double %x{{.*}}, double %x{{.*}})
 }
