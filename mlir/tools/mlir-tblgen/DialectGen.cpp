@@ -210,7 +210,7 @@ static void emitDialectDecl(Dialect &dialect,
     // add the hooks for parsing/printing.
     if (!dialectAttrs.empty() || dialect.useDefaultAttributePrinterParser())
       os << attrParserDecl;
-    if (!dialectTypes.empty())
+    if (!dialectTypes.empty() || dialect.useDefaultTypePrinterParser())
       os << typeParserDecl;
 
     // Add the decls for the various features of the dialect.

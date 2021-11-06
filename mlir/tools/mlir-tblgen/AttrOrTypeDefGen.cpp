@@ -528,6 +528,32 @@ void {0}::printAttribute(::mlir::Attribute attr,
 }
 )";
 
+/// The code block for default type parser/printer dispatch boilerplate.
+/// {0}: the dialect fully qualified class name.
+static const char *const dialectDefaultTypePrinterParserDispatch = R"(
+/// Parse a type registered to this dialect.
+::mlir::Type {0}::parseType(::mlir::DialectAsmParser &parser) const {{
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  StringRef mnemonic;
+  if (parser.parseKeyword(&mnemonic))
+    return Type();
+  Type genType;
+  OptionalParseResult parseResult =
+      generatedTypeParser(parser, mnemonic, genType);
+  if (parseResult.hasValue())
+    return genType;
+  parser.emitError(typeLoc) << "unknown  type `"
+      << mnemonic << "` in dialect `" << getNamespace() << "`";
+  return {{};
+}
+/// Print a type registered to this dialect.
+void {0}::printType(::mlir::Type type,
+                    ::mlir::DialectAsmPrinter &printer) const {{
+  if (succeeded(generatedTypePrinter(type, printer)))
+    return;
+}
+)";
+
 /// The code block used to start the auto-generated printer function.
 ///
 /// {0}: The name of the base value type, e.g. Attribute or Type.
@@ -1018,6 +1044,12 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   if (valueType == "Attribute" &&
       defs.front().getDialect().useDefaultAttributePrinterParser())
     os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
+                        defs.front().getDialect().getCppClassName());
+
+  // Emit the default parser/printer for Types if the dialect asked for it.
+  if (valueType == "Type" &&
+      defs.front().getDialect().useDefaultTypePrinterParser())
+    os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
                         defs.front().getDialect().getCppClassName());
 
   return false;

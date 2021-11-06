@@ -29,6 +29,7 @@ def EmitC_Dialect : Dialect {
   }];
 
   let hasConstantMaterializer = 1;
+  let useDefaultTypePrinterParser = 1;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCBASE
