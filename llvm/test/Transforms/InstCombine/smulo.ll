@@ -46,8 +46,8 @@ define i1 @test_constant2(i8 %a) {
 
 define i1 @test_constant3(i8 %a) {
 ; CHECK-LABEL: @test_constant3(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], 42
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ugt i8 [[TMP1]], 84
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], -43
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ult i8 [[TMP1]], -85
 ; CHECK-NEXT:    ret i1 [[OVERFLOW]]
 ;
   %res = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 3)
@@ -57,8 +57,8 @@ define i1 @test_constant3(i8 %a) {
 
 define i1 @test_constant4(i8 %a) {
 ; CHECK-LABEL: @test_constant4(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], 32
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ugt i8 [[TMP1]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], -32
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ult i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i1 [[OVERFLOW]]
 ;
   %res = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 4)
@@ -69,8 +69,8 @@ define i1 @test_constant4(i8 %a) {
 
 define i1 @test_constant127(i8 %a) {
 ; CHECK-LABEL: @test_constant127(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ugt i8 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], -2
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ult i8 [[TMP1]], -3
 ; CHECK-NEXT:    ret i1 [[OVERFLOW]]
 ;
   %res = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 127)

@@ -145,8 +145,8 @@ define i1 @test6(i32 %X) {
 
 define i1 @test7(i32 %X) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -4
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[TMP1]], -3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr inbounds [6 x double], [6 x double]* @GD, i32 0, i32 %X

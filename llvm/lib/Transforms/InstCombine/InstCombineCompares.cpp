@@ -2748,6 +2748,14 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     return new ICmpInst(ICmpInst::ICMP_NE, Builder.CreateAnd(X, ~C),
                         ConstantExpr::getNeg(cast<Constant>(Y)));
 
+  // The range test idiom can use either ult or ugt. Arbitrarily canonicalize
+  // to the ult form.
+  // X+C2 >u C -> X+(C2-C-1) <u ~C
+  if (Pred == ICmpInst::ICMP_UGT)
+    return new ICmpInst(ICmpInst::ICMP_ULT,
+                        Builder.CreateAdd(X, ConstantInt::get(Ty, *C2 - C - 1)),
+                        ConstantInt::get(Ty, ~C));
+
   return nullptr;
 }
 

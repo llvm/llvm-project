@@ -57,8 +57,8 @@ define i1 @test_negative_nuw_and_signed_pred(i64 %x) {
 
 define i1 @test_negative_nsw_and_unsigned_pred(i64 %x) {
 ; CHECK-LABEL: @test_negative_nsw_and_unsigned_pred(
-; CHECK-NEXT:    [[NOTSUB:%.*]] = add nsw i64 [[X:%.*]], -11
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[NOTSUB]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X:%.*]], -8
+; CHECK-NEXT:    [[Z:%.*]] = icmp ult i64 [[TMP1]], 3
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nsw i64 10, %x
