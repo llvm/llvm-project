@@ -550,6 +550,11 @@ public:
                                      TTI::TargetCostKind CostKind) {
     return 1;
   }
+  unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                                     ArrayRef<int> Mask,
+                                     TTI::TargetCostKind CostKind) {
+    return 1;
+  }
 
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
@@ -1105,6 +1110,12 @@ public:
               TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(),
               SubIndex,
               FixedVectorType::get(VecTy->getScalarType(), NumSubElts));
+
+        int ReplicationFactor, VF;
+        if (Shuffle->isReplicationMask(ReplicationFactor, VF))
+          return TargetTTI->getReplicationShuffleCost(
+              VecSrcTy->getElementType(), ReplicationFactor, VF,
+              Shuffle->getShuffleMask(), CostKind);
 
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
       }
