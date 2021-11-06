@@ -253,6 +253,13 @@ test.format_optional_else then
 test.format_optional_else else
 
 //===----------------------------------------------------------------------===//
+// Format a custom attribute
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_compound_attr #test.cmpnd_a<1, !test.smpla, [5, 6]>
+test.format_compound_attr #test.cmpnd_a<1, !test.smpla, [5, 6]>
+
+//===----------------------------------------------------------------------===//
 // Format custom directives
 //===----------------------------------------------------------------------===//
 
