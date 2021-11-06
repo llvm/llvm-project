@@ -13,7 +13,7 @@
 
 // CHECK: @_ZTV1C ={{.*}} unnamed_addr alias { [4 x i32], [3 x i32] }, { [4 x i32], [3 x i32] }* @_ZTV1C.local
 
-// CHECK:      define{{.*}} void @_Z8C_foobarP1C(%class.C* %c) local_unnamed_addr
+// CHECK:      define{{.*}} void @_Z8C_foobarP1C(%class.C* noundef %c) local_unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[c:%[0-9]+]] = bitcast %class.C* %c to i8**
 // CHECK-NEXT:   [[vtable:%[a-z0-9]+]] = load i8*, i8** [[c]], align 8

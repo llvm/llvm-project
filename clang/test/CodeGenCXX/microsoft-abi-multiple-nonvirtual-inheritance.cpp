@@ -44,7 +44,7 @@ void ChildOverride::left() {
   foo(this);
 // CHECK: %[[THIS:.*]] = load %struct.ChildOverride*, %struct.ChildOverride** %[[THIS_ADDR]]
 // CHECK: %[[THIS_i8:.*]] = bitcast %struct.ChildOverride* %[[THIS]] to i8*
-// CHECK: call void @foo(i8* %[[THIS_i8]])
+// CHECK: call void @foo(i8* noundef %[[THIS_i8]])
 // CHECK: ret
 }
 
@@ -101,7 +101,7 @@ void ChildOverride::right() {
 
   foo(this);
 // CHECK: %[[THIS_PARAM:.*]] = bitcast %struct.ChildOverride* %[[THIS]] to i8*
-// CHECK: call void @foo(i8* %[[THIS_PARAM]])
+// CHECK: call void @foo(i8* noundef %[[THIS_PARAM]])
 // CHECK: ret
 }
 
@@ -123,7 +123,7 @@ void call_right_override(ChildOverride *child) {
 // CHECK: %[[VFUN:.*]] = getelementptr inbounds void (i8*)*, void (i8*)** %[[VFTABLE]], i64 0
 // CHECK: %[[VFUN_VALUE:.*]] = load void (i8*)*, void (i8*)** %[[VFUN]]
 //
-// CHECK: call x86_thiscallcc void %[[VFUN_VALUE]](i8* %[[RIGHT]])
+// CHECK: call x86_thiscallcc void %[[VFUN_VALUE]](i8* noundef %[[RIGHT]])
 // CHECK: ret
 }
 
@@ -147,7 +147,7 @@ void GrandchildOverride::right() {
 
   foo(this);
 // CHECK: %[[THIS_PARAM:.*]] = bitcast %struct.GrandchildOverride* %[[THIS]] to i8*
-// CHECK: call void @foo(i8* %[[THIS_PARAM]])
+// CHECK: call void @foo(i8* noundef %[[THIS_PARAM]])
 // CHECK: ret
 }
 
@@ -204,7 +204,7 @@ struct AsymmetricChild : LeftWithNonVirtualDtor, Right {
 void call_asymmetric_child_complete_dtor() {
   // CHECK-LABEL: define dso_local void @"?call_asymmetric_child_complete_dtor@@YAXXZ"
   AsymmetricChild obj;
-  // CHECK: call x86_thiscallcc %struct.AsymmetricChild* @"??0AsymmetricChild@@QAE@XZ"(%struct.AsymmetricChild* {{[^,]*}} %[[OBJ:.*]])
+  // CHECK: call x86_thiscallcc noundef %struct.AsymmetricChild* @"??0AsymmetricChild@@QAE@XZ"(%struct.AsymmetricChild* {{[^,]*}} %[[OBJ:.*]])
   // CHECK-NOT: getelementptr
   // CHECK: call x86_thiscallcc void @"??1AsymmetricChild@@UAE@XZ"(%struct.AsymmetricChild* {{[^,]*}} %[[OBJ]])
   // CHECK: ret

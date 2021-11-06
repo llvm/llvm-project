@@ -22,10 +22,10 @@ namespace test0 {
   // Initialize.
   // CHECK-NEXT: [[E_BEGIN:%.*]] = getelementptr inbounds [10 x [[A]]], [10 x [[A]]]* [[AS]], i64 0, i64 0
   // CHECK-NEXT: store [[A]]* [[E_BEGIN]], [[A]]** [[ENDVAR]]
-  // CHECK-NEXT: invoke void @_ZN5test01AC1Ei([[A]]* {{[^,]*}} [[E_BEGIN]], i32 5)
+  // CHECK-NEXT: invoke void @_ZN5test01AC1Ei([[A]]* {{[^,]*}} [[E_BEGIN]], i32 noundef 5)
   // CHECK:      [[E1:%.*]] = getelementptr inbounds [[A]], [[A]]* [[E_BEGIN]], i64 1
   // CHECK-NEXT: store [[A]]* [[E1]], [[A]]** [[ENDVAR]]
-  // CHECK-NEXT: invoke void @_ZN5test01AC1Ei([[A]]* {{[^,]*}} [[E1]], i32 7)
+  // CHECK-NEXT: invoke void @_ZN5test01AC1Ei([[A]]* {{[^,]*}} [[E1]], i32 noundef 7)
   // CHECK:      [[E2:%.*]] = getelementptr inbounds [[A]], [[A]]* [[E1]], i64 1
   // CHECK-NEXT: store [[A]]* [[E2]], [[A]]** [[ENDVAR]]
   // CHECK-NEXT: [[E_END:%.*]] = getelementptr inbounds [[A]], [[A]]* [[E_BEGIN]], i64 10
@@ -109,11 +109,11 @@ namespace test1 {
   // CHECK-NEXT: alloca i8*
   // CHECK-NEXT: alloca i32
   // CHECK-NEXT: [[X:%.*]] = getelementptr inbounds [[B]], [[B]]* [[V]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN5test11AC1Ei([[A:%.*]]* {{[^,]*}} [[X]], i32 5)
+  // CHECK-NEXT: call void @_ZN5test11AC1Ei([[A:%.*]]* {{[^,]*}} [[X]], i32 noundef 5)
   // CHECK-NEXT: [[Y:%.*]] = getelementptr inbounds [[B]], [[B]]* [[V]], i32 0, i32 1
-  // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[Y]], i32 6)
+  // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[Y]], i32 noundef 6)
   // CHECK:      [[Z:%.*]] = getelementptr inbounds [[B]], [[B]]* [[V]], i32 0, i32 2
-  // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[Z]], i32 7)
+  // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[Z]], i32 noundef 7)
   // CHECK:      [[W:%.*]] = getelementptr inbounds [[B]], [[B]]* [[V]], i32 0, i32 3
   // CHECK-NEXT: store i32 8, i32* [[W]], align 4
   // CHECK-NEXT: call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[V]])
@@ -193,21 +193,21 @@ namespace test4 {
 // CHECK-NEXT:  store [3 x [[A]]]* [[A0]],
 // CHECK-NEXT:  [[A00:%.*]] = getelementptr inbounds [3 x [[A]]], [3 x [[A]]]* [[A0]], i64 0, i64 0
 // CHECK-NEXT:  store [[A]]* [[A00]],
-// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A00]], i32 0)
+// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A00]], i32 noundef 0)
 // CHECK:       [[A01:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A00]], i64 1
 // CHECK-NEXT:  store [[A]]* [[A01]],
-// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A01]], i32 1)
+// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A01]], i32 noundef 1)
 // CHECK:       [[A02:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A01]], i64 1
 // CHECK-NEXT:  store [[A]]* [[A02]],
-// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A02]], i32 2)
+// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A02]], i32 noundef 2)
 // CHECK:       [[A1:%.*]] = getelementptr inbounds [3 x [[A]]], [3 x [[A]]]* [[A0]], i64 1
 // CHECK-NEXT:  store [3 x [[A]]]* [[A1]],
 // CHECK-NEXT:  [[A10:%.*]] = getelementptr inbounds [3 x [[A]]], [3 x [[A]]]* [[A1]], i64 0, i64 0
 // CHECK-NEXT:  store [[A]]* [[A10]],
-// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A10]], i32 3)
+// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A10]], i32 noundef 3)
 // CHECK:       [[A11:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A10]], i64 1
 // CHECK-NEXT:  store [[A]]* [[A11]],
-// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A11]], i32 4)
+// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A11]], i32 noundef 4)
 // CHECK:       [[A12:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A11]], i64 1
 // CHECK-NEXT:  store [[A]]* [[A12]],
-// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A12]], i32 5)
+// CHECK-NEXT:  invoke void @_ZN5test41AC1Ej([[A]]* {{[^,]*}} [[A12]], i32 noundef 5)
