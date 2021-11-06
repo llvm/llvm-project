@@ -2132,9 +2132,8 @@ define <3 x i8> @umax_vector_splat_undef(<3 x i8> %x) {
 
 define <3 x i8> @umax_sub_vec(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @umax_sub_vec(
-; CHECK-NEXT:    [[U:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = sub <3 x i8> [[U]], [[Y]]
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.usub.sat.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    ret <3 x i8> [[TMP1]]
 ;
   %u = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %x, <3 x i8> %y)
   %r = sub <3 x i8> %u, %y
