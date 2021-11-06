@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=m88k -global-isel -stop-after=irtranslator -verify-machineinstrs -o - %s | FileCheck %s
 
+; irtranslator, legalizer,regbankselect,instruction-select
+
 ; CHECK-LABLE: name: f1
 ; CHECK:       body:
 ; CHECK:         liveins: $r1

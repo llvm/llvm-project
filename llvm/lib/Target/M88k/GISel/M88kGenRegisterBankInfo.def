@@ -17,9 +17,9 @@ RegisterBankInfo::PartialMapping M88kGenRegisterBankInfo::PartMappings[]{
     {0, 32, M88k::GRRegBank},
     // 1: FPR 64-bit value.
     {0, 32, M88k::GRRegBank},
-    // 3: FPR 80-bit value.
-    {0, 32, M88k::GRRegBank},
-    // 4: GPR 32-bit value.
+    // 2: FPR 80-bit value.
+    {0, 32, M88k::XRRegBank},
+    // 3: GPR 32-bit value.
     {0, 32, M88k::GRRegBank},
 };
 
@@ -59,8 +59,9 @@ const RegisterBankInfo::ValueMapping *
 M88kGenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx) {
   assert(RBIdx != PartialMappingIdx::PMI_None && "No mapping needed for that");
 
-  unsigned ValMappingIdx = RBIdx;
-  return &ValMappings[3*ValMappingIdx];
+  unsigned ValMappingIdx = RBIdx - PMI_Min;
+
+  return &ValMappings[1 + 3*ValMappingIdx];
 }
 
 M88kGenRegisterBankInfo::PartialMappingIdx
