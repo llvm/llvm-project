@@ -1204,8 +1204,9 @@ TEST(InstructionsTest, ShuffleMaskIsReplicationMask_Exhaustive_Correctness) {
         int Elt = std::get<0>(I);
         int ActualElt = std::get<0>(I);
 
-        if (Elt != -1)
+        if (Elt != -1) {
           EXPECT_EQ(Elt, ActualElt);
+        }
       }
 
       return /*Abort=*/false;
