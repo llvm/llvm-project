@@ -190,7 +190,7 @@ void BranchProbabilityInfo::SccInfo::getSccExitBlocks(
     if (isSCCExitingBlock(BB, SccNum))
       for (const auto *Succ : successors(BB))
         if (getSCCNum(Succ) != SccNum)
-          Exits.push_back(const_cast<BasicBlock *>(BB));
+          Exits.push_back(const_cast<BasicBlock *>(Succ));
   }
 }
 
