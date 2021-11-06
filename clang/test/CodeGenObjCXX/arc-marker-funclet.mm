@@ -10,7 +10,7 @@ void g() {
   }
 }
 
-// CHECK: call noundef i8* @"?f@@YAPAUobjc_object@@XZ"() [ "funclet"(token %1) ]
+// CHECK: call i8* @"?f@@YAPAUobjc_object@@XZ"() [ "funclet"(token %1) ]
 // CHECK-NEXT: call void asm sideeffect "movl{{.*}}%ebp, %ebp{{.*}}", ""() [ "funclet"(token %1) ]
 
 // The corresponding f() call was invoked from the entry basic block.

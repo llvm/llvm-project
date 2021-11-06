@@ -69,7 +69,7 @@ void implicit_maps_templated_function (int a){
   // CK16: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
   i = foo<543>(i);
 }
-// CK16: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK16: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
 // CK16: [[ADDR:%.+]] = alloca i[[sz]],
 // CK16: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK16-64: [[CADDR:%.+]] = bitcast i64* [[ADDR]] to i32*

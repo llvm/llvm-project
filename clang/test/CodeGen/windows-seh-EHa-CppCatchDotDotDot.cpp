@@ -11,7 +11,7 @@
 
 // CHECK: invoke void @llvm.seh.try.begin()
 // CHECK: %[[src:[0-9-]+]] = load volatile i32, i32* %i
-// CHECK-NEXT: invoke void @"?crash@@YAXH@Z"(i32 noundef %[[src]])
+// CHECK-NEXT: invoke void @"?crash@@YAXH@Z"(i32 %[[src]])
 // CHECK: invoke void @llvm.seh.try.end()
 
 // *****************************************************************************

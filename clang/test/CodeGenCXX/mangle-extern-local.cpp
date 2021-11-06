@@ -6,10 +6,10 @@
 // CHECK: @_ZN1N4var3E = external global i32
 // CHECK: @_ZN1N4var4E = external global i32
 
-// CHECK: declare noundef i32 @_Z5func1v()
-// CHECK: declare noundef i32 @_ZN1N5func2Ev()
+// CHECK: declare i32 @_Z5func1v()
+// CHECK: declare i32 @_ZN1N5func2Ev()
 // CHECK: declare i32 @func4()
-// CHECK: declare noundef i32 @_ZN1N5func3Ev()
+// CHECK: declare i32 @_ZN1N5func3Ev()
 
 int f1() {
   extern int var1, func1();

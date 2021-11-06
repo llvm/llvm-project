@@ -57,20 +57,20 @@ void function(short width, int data[][width]) {} // expected-note {{passing argu
 
 void test() {
      int bork[4][13];
-     // CHECK: call void @function(i16 noundef signext 1, i32* noundef null)
+     // CHECK: call void @function(i16 signext 1, i32* null)
      function(1, 0);
-     // CHECK: call void @function(i16 noundef signext 1, i32* noundef inttoptr
+     // CHECK: call void @function(i16 signext 1, i32* inttoptr
      function(1, 0xbadbeef); // expected-warning {{incompatible integer to pointer conversion passing}}
-     // CHECK: call void @function(i16 noundef  signext 1, i32* noundef {{.*}})
+     // CHECK: call void @function(i16 signext 1, i32* {{.*}})
      function(1, bork);
 }
 
 void function1(short width, int data[][width][width]) {}
 void test1() {
      int bork[4][13][15];
-     // CHECK: call void @function1(i16 noundef signext 1, i32* noundef {{.*}})
+     // CHECK: call void @function1(i16 signext 1, i32* {{.*}})
      function1(1, bork);
-     // CHECK: call void @function(i16 noundef signext 1, i32* noundef {{.*}}) 
+     // CHECK: call void @function(i16 signext 1, i32* {{.*}}) 
      function(1, bork[2]);
 }
 
@@ -194,22 +194,22 @@ void test6(void)
 // Follow gcc's behavior for VLAs in parameter lists.  PR9559.
 void test7(int a[b(0)]) {
   // CHECK-LABEL: define{{.*}} void @test7(
-  // CHECK: call i32 @b(i8* noundef null)
+  // CHECK: call i32 @b(i8* null)
 }
 
 // Make sure we emit dereferenceable or nonnull when the static keyword is
 // provided.
 void test8(int a[static 3]) { }
-// CHECK: define{{.*}} void @test8(i32* noundef align 4 dereferenceable(12) %a)
+// CHECK: define{{.*}} void @test8(i32* align 4 dereferenceable(12) %a)
 
 void test9(int n, int a[static n]) { }
-// NULL-INVALID: define{{.*}} void @test9(i32 noundef %n, i32* noundef nonnull align 4 %a)
-// NULL-VALID: define{{.*}} void @test9(i32 noundef %n, i32* noundef align 4 %a)
+// NULL-INVALID: define{{.*}} void @test9(i32 %n, i32* nonnull align 4 %a)
+// NULL-VALID: define{{.*}} void @test9(i32 %n, i32* align 4 %a)
 
 // Make sure a zero-sized static array extent is still required to be nonnull.
 void test10(int a[static 0]) {}
-// NULL-INVALID: define{{.*}} void @test10(i32* noundef nonnull align 4 %a)
-// NULL-VALID: define{{.*}} void @test10(i32* noundef align 4 %a)
+// NULL-INVALID: define{{.*}} void @test10(i32* nonnull align 4 %a)
+// NULL-VALID: define{{.*}} void @test10(i32* align 4 %a)
 
 const int constant = 32;
 // CHECK: define {{.*}}pr44406(

@@ -12,24 +12,24 @@
 /*****************************************************************************/
 
 SWIFTCALL void indirect_result_1(OUT int *arg0, OUT float *arg1) {}
-// CHECK-LABEL: define {{.*}} void @indirect_result_1(i32* noalias noundef sret(i32*) align 4 dereferenceable(4){{.*}}, float* noalias noundef align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} void @indirect_result_1(i32* noalias sret(i32*) align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
 
 // TODO: maybe this shouldn't suppress sret.
 SWIFTCALL int indirect_result_2(OUT int *arg0, OUT float *arg1) {  __builtin_unreachable(); }
-// CHECK-LABEL: define {{.*}} i32 @indirect_result_2(i32* noalias noundef align 4 dereferenceable(4){{.*}}, float* noalias noundef align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} i32 @indirect_result_2(i32* noalias align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
 
 typedef struct { char array[1024]; } struct_reallybig;
 SWIFTCALL struct_reallybig indirect_result_3(OUT int *arg0, OUT float *arg1) { __builtin_unreachable(); }
-// CHECK-LABEL: define {{.*}} void @indirect_result_3({{.*}}* noalias sret({{.*}}) {{.*}}, i32* noalias noundef align 4 dereferenceable(4){{.*}}, float* noalias noundef align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} void @indirect_result_3({{.*}}* noalias sret({{.*}}) {{.*}}, i32* noalias align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
 
 SWIFTCALL void context_1(CONTEXT void *self) {}
-// CHECK-LABEL: define {{.*}} void @context_1(i8* noundef swiftself
+// CHECK-LABEL: define {{.*}} void @context_1(i8* swiftself
 
 SWIFTCALL void context_2(void *arg0, CONTEXT void *self) {}
-// CHECK-LABEL: define {{.*}} void @context_2(i8*{{.*}}, i8* noundef swiftself
+// CHECK-LABEL: define {{.*}} void @context_2(i8*{{.*}}, i8* swiftself
 
 SWIFTCALL void context_error_1(CONTEXT int *self, ERROR float **error) {}
-// CHECK-LABEL: define {{.*}} void @context_error_1(i32* noundef swiftself{{.*}}, float** noundef swifterror %0)
+// CHECK-LABEL: define {{.*}} void @context_error_1(i32* swiftself{{.*}}, float** swifterror %0)
 // CHECK:       [[TEMP:%.*]] = alloca float*, align 8
 // CHECK:       [[T0:%.*]] = load float*, float** [[ERRORARG:%.*]], align 8
 // CHECK:       store float* [[T0]], float** [[TEMP]], align 8
@@ -46,12 +46,12 @@ void test_context_error_1() {
 // CHECK:       [[TEMP:%.*]] = alloca swifterror float*, align 8
 // CHECK:       [[T0:%.*]] = load float*, float** [[ERROR]], align 8
 // CHECK:       store float* [[T0]], float** [[TEMP]], align 8
-// CHECK:       call [[SWIFTCC:swiftcc]] void @context_error_1(i32* noundef swiftself [[X]], float** noundef swifterror [[TEMP]])
+// CHECK:       call [[SWIFTCC:swiftcc]] void @context_error_1(i32* swiftself [[X]], float** swifterror [[TEMP]])
 // CHECK:       [[T0:%.*]] = load float*, float** [[TEMP]], align 8
 // CHECK:       store float* [[T0]], float** [[ERROR]], align 8
 
 SWIFTCALL void context_error_2(short s, CONTEXT int *self, ERROR float **error) {}
-// CHECK-LABEL: define {{.*}} void @context_error_2(i16{{.*}}, i32* noundef swiftself{{.*}}, float** noundef swifterror %0)
+// CHECK-LABEL: define {{.*}} void @context_error_2(i16{{.*}}, i32* swiftself{{.*}}, float** swifterror %0)
 
 /*****************************************************************************/
 /********************************** LOWERING *********************************/
@@ -235,7 +235,7 @@ TEST(struct_big_1)
 // CHECK-LABEL: define {{.*}} void @return_struct_big_1({{.*}} noalias sret
 
 // Should not be byval.
-// CHECK-LABEL: define {{.*}} void @take_struct_big_1({{.*}}* noundef{{( %.*)?}})
+// CHECK-LABEL: define {{.*}} void @take_struct_big_1({{.*}}*{{( %.*)?}})
 
 /*****************************************************************************/
 /********************************* TYPE MERGING ******************************/
@@ -378,7 +378,7 @@ TEST(int8)
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, <4 x i32> }]] undef, <4 x i32> [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], <4 x i32> [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
-// CHECK-LABEL: define {{.*}} @take_int8(<4 x i32> noundef %0, <4 x i32> noundef %1)
+// CHECK-LABEL: define {{.*}} @take_int8(<4 x i32> %0, <4 x i32> %1)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align
 // CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[V]] to [[AGG]]*
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
@@ -404,7 +404,7 @@ TEST(int8)
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, <4 x i32>* [[T0]], align
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load <4 x i32>, <4 x i32>* [[T0]], align
-// CHECK:   call [[SWIFTCC]] void @take_int8(<4 x i32> noundef [[FIRST]], <4 x i32> noundef [[SECOND]])
+// CHECK:   call [[SWIFTCC]] void @take_int8(<4 x i32> [[FIRST]], <4 x i32> [[SECOND]])
 // CHECK:   ret void
 
 TEST(int5)

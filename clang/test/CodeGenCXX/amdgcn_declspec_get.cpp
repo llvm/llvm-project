@@ -17,7 +17,7 @@ extern const A a;
 // CHECK:  %[[ii:.*]] = addrspacecast i32 addrspace(5)* %i to i32*
 // CHECK:  %[[cast:.*]] = bitcast i32 addrspace(5)* %i to i8 addrspace(5)*
 // CHECK:  call void @llvm.lifetime.start.p5i8(i64 4, i8 addrspace(5)* %[[cast]])
-// CHECK:  %call = call noundef i32 @_ZN1A6_get_xEv()
+// CHECK:  %call = call i32 @_ZN1A6_get_xEv()
 // CHECK:  store i32 %call, i32* %[[ii]]
 // CHECK:  %[[cast2:.*]] = bitcast i32 addrspace(5)* %i to i8 addrspace(5)*
 // CHECK:  call void @llvm.lifetime.end.p5i8(i64 4, i8 addrspace(5)* %[[cast2]])

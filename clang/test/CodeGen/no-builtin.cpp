@@ -29,15 +29,15 @@ struct B : public A {
   virtual ~B();
 };
 
-// CHECK-LABEL: define{{.*}} void @call_a_foo(%struct.A* noundef %a) #3
+// CHECK-LABEL: define{{.*}} void @call_a_foo(%struct.A* %a) #3
 extern "C" void call_a_foo(A *a) {
-  // CHECK: %call = call noundef i32 %2(%struct.A* {{[^,]*}} %0)
+  // CHECK: %call = call i32 %2(%struct.A* {{[^,]*}} %0)
   a->foo(); // virtual call is not annotated
 }
 
-// CHECK-LABEL: define{{.*}} void @call_b_foo(%struct.B* noundef %b) #3
+// CHECK-LABEL: define{{.*}} void @call_b_foo(%struct.B* %b) #3
 extern "C" void call_b_foo(B *b) {
-  // CHECK: %call = call noundef i32 %2(%struct.B* {{[^,]*}} %0)
+  // CHECK: %call = call i32 %2(%struct.B* {{[^,]*}} %0)
   b->foo(); // virtual call is not annotated
 }
 
@@ -50,8 +50,8 @@ extern "C" void call_foo_no_mempcy() {
 A::~A() {} // Anchoring A so A::foo() gets generated
 B::~B() {} // Anchoring B so B::foo() gets generated
 
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK1A3fooEv(%struct.A* noundef{{[^,]*}} %this) unnamed_addr #0 comdat align 2
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZNK1B3fooEv(%struct.B* noundef{{[^,]*}} %this) unnamed_addr #6 comdat align 2
+// CHECK-LABEL: define linkonce_odr i32 @_ZNK1A3fooEv(%struct.A* {{[^,]*}} %this) unnamed_addr #0 comdat align 2
+// CHECK-LABEL: define linkonce_odr i32 @_ZNK1B3fooEv(%struct.B* {{[^,]*}} %this) unnamed_addr #6 comdat align 2
 
 // CHECK:     attributes #0 = {{{.*}}"no-builtin-memcpy"{{.*}}}
 // CHECK-NOT: attributes #0 = {{{.*}}"no-builtin-memmove"{{.*}}}

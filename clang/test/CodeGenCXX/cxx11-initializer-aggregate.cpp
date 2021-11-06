@@ -55,7 +55,7 @@ int fn1(int x) {
   // CHECK: store i32 %{{.*}}, i32* %[[A]], align 4
   // CHECK: %[[B:.*]] = getelementptr inbounds %struct.A, %struct.A* %[[INITLIST]], i32 0, i32 1
   // CHECK: store i32 5, i32* %[[B]], align 4
-  // CHECK: call noundef i32 @_ZN1A1fEv(%struct.A* {{[^,]*}} %[[INITLIST]])
+  // CHECK: call i32 @_ZN1A1fEv(%struct.A* {{[^,]*}} %[[INITLIST]])
   return A{x, 5}.f();
 }
 
@@ -66,7 +66,7 @@ int &fn2(int &v) {
   // CHECK: %[[INITLIST2:.*]] = alloca %struct.B, align 8
   // CHECK: %[[R:.*]] = getelementptr inbounds %struct.B, %struct.B* %[[INITLIST2:.*]], i32 0, i32 0
   // CHECK: store i32* %{{.*}}, i32** %[[R]], align 8
-  // CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_ZN1B1fEv(%struct.B* {{[^,]*}} %[[INITLIST2:.*]])
+  // CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_ZN1B1fEv(%struct.B* {{[^,]*}} %[[INITLIST2:.*]])
   return B{v}.f();
 }
 
