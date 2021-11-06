@@ -7,7 +7,7 @@
 # CHECK: DW_TAG_variable
 
 # array_type
-# CHECK:   DW_AT_type{{.*}}"int{{ }}
+# CHECK:   DW_AT_type{{.*}}"int
 # Testing with a default lower bound of 0 and the following explicit bounds:
 #   lower_bound(1)
 # CHECK-NOT: {{.}}
@@ -34,7 +34,7 @@
 # array_type with a language with a default lower bound of 1 instead of 0 and
 # an upper bound of 2. This describes an array with 2 elements (whereas with a
 # default lower bound of 0 it would be an array of 3 elements)
-# CHECK: DW_AT_type{{.*}}"int [2]"
+# CHECK: DW_AT_type{{.*}}"int[2]"
 
 	.section	.debug_str,"MS",@progbits,1
 .Lint_name:

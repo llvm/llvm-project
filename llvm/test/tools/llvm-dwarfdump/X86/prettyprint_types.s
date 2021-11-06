@@ -112,7 +112,7 @@
 # CHECK:   DW_AT_type{{.*}}"int *const (&)[1]")
 # CHECK:   DW_AT_type{{.*}}"int *const[1]")
 # CHECK:   DW_AT_type{{.*}}"const int (&)[1]")
-# CHECK:   DW_AT_type{{.*}}"const int [1]")
+# CHECK:   DW_AT_type{{.*}}"const int[1]")
 
 # subroutine types
 # CHECK:   DW_AT_type{{.*}}"int ()"
@@ -129,7 +129,7 @@
 # qualified types
 # CHECK:   DW_AT_type{{.*}}"ns::inner"
 # CHECK:   DW_AT_type{{.*}}"ns::inner ()"
-# CHECK:   DW_AT_type{{.*}}"ns::inner [1]"
+# CHECK:   DW_AT_type{{.*}}"ns::inner[1]"
 # CHECK:   DW_AT_type{{.*}}"ns::inner *"
 # CHECK:   DW_AT_type{{.*}}"ns::inner (ns::inner::*)(ns::inner)"
 # CHECK:   DW_AT_type{{.*}}"const ns::inner"

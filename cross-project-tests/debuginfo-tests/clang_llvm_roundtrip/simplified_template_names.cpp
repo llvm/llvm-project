@@ -185,7 +185,7 @@ int main() {
   f1<int &>();
   f1<int &&>();
   f1<const int>();
-  // f1<int[3]>();
+  f1<int[3]>();
   f1<void>();
   f1<outer_class::inner_class>();
   f1<unsigned long>();
@@ -291,7 +291,7 @@ int main() {
   f1<int *const(&)[1]>();
   f1<void (::udt::* const&)()>();
   f1<void (*(int))(float)>();
-  // f1<t1<int>[1]>();
+  f1<t1<int>[1]>();
   f1<void (*)() noexcept>();
   f1<void (decltype(A))>();
   struct t8 { decltype(A) m; };
