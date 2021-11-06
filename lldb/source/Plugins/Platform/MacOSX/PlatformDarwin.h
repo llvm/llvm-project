@@ -103,6 +103,9 @@ public:
   static lldb_private::FileSpec GetCurrentCommandLineToolsDirectory();
 
 protected:
+  static const char *GetCompatibleArch(lldb_private::ArchSpec::Core core,
+                                       size_t idx);
+
   struct CrashInfoAnnotations {
     uint64_t version;          // unsigned long
     uint64_t message;          // char *
