@@ -523,9 +523,6 @@ public:
   /// scAddRecExpr. The result will be cached in HasRecMap.
   bool containsAddRecurrence(const SCEV *S);
 
-  /// Erase Value from ValueExprMap and ExprValueMap.
-  void eraseValueFromMap(Value *V);
-
   /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
   /// a signed/unsigned overflow (\p Signed)?
   bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
@@ -1903,6 +1900,9 @@ private:
 
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   const SCEV *getExistingSCEV(Value *V);
+
+  /// Erase Value from ValueExprMap and ExprValueMap.
+  void eraseValueFromMap(Value *V);
 
   /// Return false iff given SCEV contains a SCEVUnknown with NULL value-
   /// pointer.
