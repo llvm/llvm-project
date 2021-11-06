@@ -121,8 +121,6 @@ constantDimLevelTypeEncoding(ConversionPatternRewriter &rewriter, Location loc,
   case SparseTensorEncodingAttr::DimLevelType::Singleton:
     dlt2 = DimLevelType::kSingleton;
     break;
-  default:
-    llvm_unreachable("Unknown SparseTensorEncodingAttr::DimLevelType");
   }
   return constantI8(rewriter, loc, static_cast<uint8_t>(dlt2));
 }
