@@ -281,11 +281,10 @@ static unsigned getMaxCalleeSavedReg(ArrayRef<CalleeSavedInfo> CSI,
 /// frame to be already in place.
 static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
                             const HexagonRegisterInfo &HRI) {
-    for (auto &I : MBB) {
-      const MachineInstr *MI = &I;
-      if (MI->isCall())
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isCall())
         return true;
-      unsigned Opc = MI->getOpcode();
+      unsigned Opc = MI.getOpcode();
       switch (Opc) {
         case Hexagon::PS_alloca:
         case Hexagon::PS_aligna:
@@ -294,7 +293,7 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
           break;
       }
       // Check individual operands.
-      for (const MachineOperand &MO : MI->operands()) {
+      for (const MachineOperand &MO : MI.operands()) {
         // While the presence of a frame index does not prove that a stack
         // frame will be required, all frame indexes should be within alloc-
         // frame/deallocframe. Otherwise, the code that translates a frame

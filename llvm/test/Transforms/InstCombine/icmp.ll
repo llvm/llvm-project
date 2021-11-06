@@ -1129,9 +1129,13 @@ define void @test58() {
 }
 declare i32 @test58_d(i64)
 
+; Negative test: GEP inbounds may cross sign boundary.
 define i1 @test62(i8* %a) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8* [[ARRAYIDX1]], [[ARRAYIDX2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %arrayidx1 = getelementptr inbounds i8, i8* %a, i64 1
   %arrayidx2 = getelementptr inbounds i8, i8* %a, i64 10
@@ -1141,7 +1145,10 @@ define i1 @test62(i8* %a) {
 
 define i1 @test62_as1(i8 addrspace(1)* %a) {
 ; CHECK-LABEL: @test62_as1(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[A:%.*]], i16 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[A]], i16 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 addrspace(1)* [[ARRAYIDX1]], [[ARRAYIDX2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %arrayidx1 = getelementptr inbounds i8, i8 addrspace(1)* %a, i64 1
   %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %a, i64 10
