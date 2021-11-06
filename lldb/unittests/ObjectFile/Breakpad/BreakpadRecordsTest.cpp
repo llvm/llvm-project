@@ -18,6 +18,8 @@ TEST(Record, classify) {
   EXPECT_EQ(Record::Info, Record::classify("INFO"));
   EXPECT_EQ(Record::File, Record::classify("FILE"));
   EXPECT_EQ(Record::Func, Record::classify("FUNC"));
+  EXPECT_EQ(Record::Inline, Record::classify("INLINE"));
+  EXPECT_EQ(Record::InlineOrigin, Record::classify("INLINE_ORIGIN"));
   EXPECT_EQ(Record::Public, Record::classify("PUBLIC"));
   EXPECT_EQ(Record::StackCFI, Record::classify("STACK CFI"));
   EXPECT_EQ(Record::StackWin, Record::classify("STACK WIN"));
@@ -74,6 +76,27 @@ TEST(FuncRecord, parse) {
   EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47"));
   EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC m"));
   EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC"));
+}
+
+TEST(InlineOriginRecord, parse) {
+  EXPECT_EQ(InlineOriginRecord(47, "foo"),
+            InlineOriginRecord::parse("INLINE_ORIGIN 47 foo"));
+  EXPECT_EQ(llvm::None, InlineOriginRecord::parse("INLINE_ORIGIN 47"));
+  EXPECT_EQ(llvm::None, InlineOriginRecord::parse("INLINE_ORIGIN"));
+  EXPECT_EQ(llvm::None, InlineOriginRecord::parse(""));
+}
+
+TEST(InlineRecord, parse) {
+  InlineRecord record1 = InlineRecord(0, 1, 2, 3);
+  record1.Ranges.emplace_back(4, 5);
+  EXPECT_EQ(record1, InlineRecord::parse("INLINE 0 1 2 3 4 5"));
+  record1.Ranges.emplace_back(6, 7);
+  EXPECT_EQ(record1, InlineRecord::parse("INLINE 0 1 2 3 4 5 6 7"));
+  EXPECT_EQ(llvm::None, InlineRecord::parse("INLINE 0 1 2 3"));
+  EXPECT_EQ(llvm::None, InlineRecord::parse("INLINE 0 1 2 3 4 5 6"));
+  EXPECT_EQ(llvm::None, InlineRecord::parse("INLNIE 0"));
+  EXPECT_EQ(llvm::None, InlineRecord::parse(""));
+  EXPECT_EQ(llvm::None, InlineRecord::parse("FUNC"));
 }
 
 TEST(LineRecord, parse) {
