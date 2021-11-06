@@ -3665,30 +3665,6 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
                                          CRHS->getPointerOperand(), Q))
           return C;
 
-  if (GetElementPtrInst *GLHS = dyn_cast<GetElementPtrInst>(LHS)) {
-    if (GEPOperator *GRHS = dyn_cast<GEPOperator>(RHS)) {
-      if (GLHS->getPointerOperand() == GRHS->getPointerOperand() &&
-          GLHS->hasAllConstantIndices() && GRHS->hasAllConstantIndices() &&
-          (ICmpInst::isEquality(Pred) ||
-           (GLHS->isInBounds() && GRHS->isInBounds() &&
-            Pred == ICmpInst::getSignedPredicate(Pred)))) {
-        // The bases are equal and the indices are constant.  Build a constant
-        // expression GEP with the same indices and a null base pointer to see
-        // what constant folding can make out of it.
-        Constant *Null = Constant::getNullValue(GLHS->getPointerOperandType());
-        SmallVector<Value *, 4> IndicesLHS(GLHS->indices());
-        Constant *NewLHS = ConstantExpr::getGetElementPtr(
-            GLHS->getSourceElementType(), Null, IndicesLHS);
-
-        SmallVector<Value *, 4> IndicesRHS(GRHS->indices());
-        Constant *NewRHS = ConstantExpr::getGetElementPtr(
-            GLHS->getSourceElementType(), Null, IndicesRHS);
-        Constant *NewICmp = ConstantExpr::getICmp(Pred, NewLHS, NewRHS);
-        return ConstantFoldConstant(NewICmp, Q.DL);
-      }
-    }
-  }
-
   // If the comparison is with the result of a select instruction, check whether
   // comparing with either branch of the select always yields the same value.
   if (isa<SelectInst>(LHS) || isa<SelectInst>(RHS))

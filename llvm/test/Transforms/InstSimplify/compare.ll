@@ -108,7 +108,7 @@ define i1 @gep6(%gept* %x) {
 define i1 @gep7(%gept* %x) {
 ; CHECK-LABEL: @gep7(
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [[GEPT:%.*]], %gept* [[X:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[EQUAL:%.*]] = icmp eq i32* [[A]], getelementptr (%gept, %gept* @gepz, i32 0, i32 0)
+; CHECK-NEXT:    [[EQUAL:%.*]] = icmp eq i32* [[A]], getelementptr ([[GEPT]], %gept* @gepz, i32 0, i32 0)
 ; CHECK-NEXT:    ret i1 [[EQUAL]]
 ;
   %a = getelementptr %gept, %gept* %x, i64 0, i32 0
@@ -294,9 +294,13 @@ define i1 @gep17() {
   ret i1 %cmp
 }
 
+; Negative test: GEP inbounds may cross sign boundary.
 define i1 @gep_same_base_constant_indices(i8* %a) {
 ; CHECK-LABEL: @gep_same_base_constant_indices(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8* [[ARRAYIDX1]], [[ARRAYIDX2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %arrayidx1 = getelementptr inbounds i8, i8* %a, i64 1
   %arrayidx2 = getelementptr inbounds i8, i8* %a, i64 10
