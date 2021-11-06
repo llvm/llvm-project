@@ -559,6 +559,15 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
   switch (core) {
   default:
     LLVM_FALLTHROUGH;
+  case ArchSpec::eCore_arm_arm64e: {
+    static const char *g_arm64e_compatible_archs[] = {
+        "arm64e",    "arm64",    "armv7",    "armv7f",   "armv7k",   "armv7s",
+        "armv7m",    "armv7em",  "armv6m",   "armv6",    "armv5",    "armv4",
+        "arm",       "thumbv7",  "thumbv7f", "thumbv7k", "thumbv7s", "thumbv7m",
+        "thumbv7em", "thumbv6m", "thumbv6",  "thumbv5",  "thumbv4t", "thumb",
+    };
+    return {g_arm64e_compatible_archs};
+  }
   case ArchSpec::eCore_arm_arm64: {
     static const char *g_arm64_compatible_archs[] = {
         "arm64",    "armv7",    "armv7f",   "armv7k",   "armv7s",   "armv7m",
@@ -583,52 +592,59 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
     };
     return {g_armv7f_compatible_archs};
   }
-  case ArchSpec::eCore_arm_armv7k:
+  case ArchSpec::eCore_arm_armv7k: {
     static const char *g_armv7k_compatible_archs[] = {
         "armv7k",  "armv7",   "armv6m",   "armv6",   "armv5",
         "armv4",   "arm",     "thumbv7k", "thumbv7", "thumbv6m",
         "thumbv6", "thumbv5", "thumbv4t", "thumb",
     };
     return {g_armv7k_compatible_archs};
-  case ArchSpec::eCore_arm_armv7s:
+  }
+  case ArchSpec::eCore_arm_armv7s: {
     static const char *g_armv7s_compatible_archs[] = {
         "armv7s",  "armv7",   "armv6m",   "armv6",   "armv5",
         "armv4",   "arm",     "thumbv7s", "thumbv7", "thumbv6m",
         "thumbv6", "thumbv5", "thumbv4t", "thumb",
     };
     return {g_armv7s_compatible_archs};
-  case ArchSpec::eCore_arm_armv7m:
+  }
+  case ArchSpec::eCore_arm_armv7m: {
     static const char *g_armv7m_compatible_archs[] = {
         "armv7m",  "armv7",   "armv6m",   "armv6",   "armv5",
         "armv4",   "arm",     "thumbv7m", "thumbv7", "thumbv6m",
         "thumbv6", "thumbv5", "thumbv4t", "thumb",
     };
     return {g_armv7m_compatible_archs};
-  case ArchSpec::eCore_arm_armv7em:
+  }
+  case ArchSpec::eCore_arm_armv7em: {
     static const char *g_armv7em_compatible_archs[] = {
         "armv7em", "armv7",   "armv6m",    "armv6",   "armv5",
         "armv4",   "arm",     "thumbv7em", "thumbv7", "thumbv6m",
         "thumbv6", "thumbv5", "thumbv4t",  "thumb",
     };
     return {g_armv7em_compatible_archs};
-  case ArchSpec::eCore_arm_armv6m:
+  }
+  case ArchSpec::eCore_arm_armv6m: {
     static const char *g_armv6m_compatible_archs[] = {
         "armv6m",   "armv6",   "armv5",   "armv4",    "arm",
         "thumbv6m", "thumbv6", "thumbv5", "thumbv4t", "thumb",
     };
     return {g_armv6m_compatible_archs};
-  case ArchSpec::eCore_arm_armv6:
+  }
+  case ArchSpec::eCore_arm_armv6: {
     static const char *g_armv6_compatible_archs[] = {
         "armv6",   "armv5",   "armv4",    "arm",
         "thumbv6", "thumbv5", "thumbv4t", "thumb",
     };
     return {g_armv6_compatible_archs};
-  case ArchSpec::eCore_arm_armv5:
+  }
+  case ArchSpec::eCore_arm_armv5: {
     static const char *g_armv5_compatible_archs[] = {
         "armv5", "armv4", "arm", "thumbv5", "thumbv4t", "thumb",
     };
     return {g_armv5_compatible_archs};
-  case ArchSpec::eCore_arm_armv4:
+  }
+  case ArchSpec::eCore_arm_armv4: {
     static const char *g_armv4_compatible_archs[] = {
         "armv4",
         "arm",
@@ -636,6 +652,7 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
         "thumb",
     };
     return {g_armv4_compatible_archs};
+  }
   }
   return {};
 }
@@ -654,38 +671,15 @@ const char *PlatformDarwin::GetCompatibleArch(ArchSpec::Core core, size_t idx) {
 /// processor.
 bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
                                                         ArchSpec &arch) {
-#if TARGET_OS_OSX
-  if (IsHost()) {
-    if (idx == 0) {
-      arch.SetTriple("arm64e-apple-macosx");
-      return true;
-    } else if (idx == 1) {
-      arch.SetTriple("arm64-apple-macosx");
-      return true;
-    }
-    arch.Clear();
-    return false;
-  }
-#endif
-
-#if defined(TARGET_OS_TV) && TARGET_OS_TV == 1
-#define OSNAME "tvos"
-#elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
-#define OSNAME "watchos"
-#elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
-#define OSNAME "bridgeos"
-#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
-#define OSNAME "macosx"
-#else
-#define OSNAME "ios"
-#endif
-
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
+
   if (const char *compatible_arch = GetCompatibleArch(system_core, idx)) {
-    std::string triple =
-        llvm::formatv("{0}-apple-" OSNAME, compatible_arch).str();
+    llvm::Triple triple;
+    triple.setArchName(compatible_arch);
+    triple.setVendor(llvm::Triple::VendorType::Apple);
     arch.SetTriple(triple);
+    return true;
   }
 
   arch.Clear();

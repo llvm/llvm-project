@@ -226,9 +226,6 @@ struct DWARFTypePrinter {
     }
     case DW_TAG_array_type: {
       appendQualifiedNameBefore(Inner);
-      if (Word)
-        OS << ' ';
-      Word = false;
       break;
     }
     case DW_TAG_reference_type:
