@@ -341,9 +341,8 @@ void InlineSpiller::collectRegsToSpill() {
   if (Original == Reg)
     return;
 
-  for (MachineRegisterInfo::reg_instr_iterator
-       RI = MRI.reg_instr_begin(Reg), E = MRI.reg_instr_end(); RI != E; ) {
-    MachineInstr &MI = *RI++;
+  for (MachineInstr &MI :
+       llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
     Register SnipReg = isFullCopyOf(MI, Reg);
     if (!isSibling(SnipReg))
       continue;
