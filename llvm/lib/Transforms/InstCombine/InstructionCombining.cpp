@@ -3138,26 +3138,21 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       // checking for overflow.
       const APInt *C;
       if (match(WO->getRHS(), m_APInt(C))) {
-        // Compute the no-wrap range [X,Y) for LHS given RHS=C, then
-        // check for the inverted range using range offset trick (i.e.
-        // use a subtract to shift the range to bottom of either the
-        // signed or unsigned domain and then use a single compare to
-        // check range membership).
+        // Compute the no-wrap range for LHS given RHS=C, then construct an
+        // equivalent icmp, potentially using an offset.
         ConstantRange NWR =
           ConstantRange::makeExactNoWrapRegion(WO->getBinaryOp(), *C,
                                                WO->getNoWrapKind());
-        APInt Min = WO->isSigned() ? NWR.getSignedMin() : NWR.getUnsignedMin();
-        NWR = NWR.subtract(Min);
 
         CmpInst::Predicate Pred;
-        APInt NewRHSC;
-        if (NWR.getEquivalentICmp(Pred, NewRHSC)) {
-          auto *OpTy = WO->getRHS()->getType();
-          auto *NewLHS = Builder.CreateSub(WO->getLHS(),
-                                           ConstantInt::get(OpTy, Min));
-          return new ICmpInst(ICmpInst::getInversePredicate(Pred), NewLHS,
-                              ConstantInt::get(OpTy, NewRHSC));
-        }
+        APInt NewRHSC, Offset;
+        NWR.getEquivalentICmp(Pred, NewRHSC, Offset);
+        auto *OpTy = WO->getRHS()->getType();
+        auto *NewLHS = WO->getLHS();
+        if (Offset != 0)
+          NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(OpTy, Offset));
+        return new ICmpInst(ICmpInst::getInversePredicate(Pred), NewLHS,
+                            ConstantInt::get(OpTy, NewRHSC));
       }
     }
   }

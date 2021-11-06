@@ -1972,6 +1972,23 @@ TEST(ConstantRange, GetEquivalentICmp) {
       ConstantRange(APInt(32, -1)).inverse().getEquivalentICmp(Pred, RHS));
   EXPECT_EQ(Pred, CmpInst::ICMP_NE);
   EXPECT_EQ(RHS, APInt(32, -1));
+
+  EnumerateConstantRanges(4, [](const ConstantRange &CR) {
+    CmpInst::Predicate Pred;
+    APInt RHS, Offset;
+    CR.getEquivalentICmp(Pred, RHS, Offset);
+    ForeachNumInConstantRange(ConstantRange::getFull(4), [&](const APInt &N) {
+      bool Result = ICmpInst::compare(N + Offset, RHS, Pred);
+      EXPECT_EQ(CR.contains(N), Result);
+    });
+
+    if (CR.getEquivalentICmp(Pred, RHS)) {
+      ForeachNumInConstantRange(ConstantRange::getFull(4), [&](const APInt &N) {
+        bool Result = ICmpInst::compare(N, RHS, Pred);
+        EXPECT_EQ(CR.contains(N), Result);
+      });
+    }
+  });
 }
 
 #define EXPECT_MAY_OVERFLOW(op) \
