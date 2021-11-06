@@ -177,6 +177,7 @@ CreateFrontendAction(CompilerInstance &CI) {
 #endif
 
   if (!FEOpts.IndexStorePath.empty()) {
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
     CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
   }
