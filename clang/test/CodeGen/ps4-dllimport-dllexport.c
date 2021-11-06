@@ -24,4 +24,4 @@ void call_imported_function() {
 // CHECK-DAG: @import_int = external dllimport
 // CHECK-DAG: @export_int ={{.*}} dllexport global i32 0
 // CHECK-DAG: define{{.*}} dllexport void @export_implemented_function()
-// CHECK-DAG: declare dllimport void @import_function(i32)
+// CHECK-DAG: declare dllimport void @import_function(i32 noundef)

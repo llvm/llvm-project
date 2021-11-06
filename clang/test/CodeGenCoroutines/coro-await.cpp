@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
+=======
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 \
+>>>>>>> 8ca4b3ef19fe ([Clang/Test]: Rename enable_noundef_analysis to disable-noundef-analysis and turn it off by default (2))
 // RUN:   -emit-llvm %s -o - -disable-llvm-passes -Wno-coroutine -Wno-unused | FileCheck %s
 
 namespace std {

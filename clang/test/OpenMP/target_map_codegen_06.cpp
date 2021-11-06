@@ -75,7 +75,7 @@ void implicit_maps_double (int a){
   }
 }
 
-// CK7-64: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK7-64: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK7-64: [[ADDR:%.+]] = alloca i[[sz]],
 // CK7-64: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK7-64: [[CADDR:%.+]] = bitcast i64* [[ADDR]] to double*

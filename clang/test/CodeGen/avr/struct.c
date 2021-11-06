@@ -22,5 +22,5 @@ struct s06 foo06(int a, int b, int c) {
 
 // CHECK: %struct.s10 = type { i16, i16, i16, i16, i16 }
 // CHECK: %struct.s06 = type { i16, i16, i16 }
-// CHECK: define{{.*}} void @foo10(%struct.s10* {{.*}}, i16 %a, i16 %b, i16 %c)
-// CHECK: define{{.*}} %struct.s06 @foo06(i16 %a, i16 %b, i16 %c)
+// CHECK: define{{.*}} void @foo10(%struct.s10* {{.*}}, i16 noundef %a, i16 noundef %b, i16 noundef %c)
+// CHECK: define{{.*}} %struct.s06 @foo06(i16 noundef %a, i16 noundef %b, i16 noundef %c)

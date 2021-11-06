@@ -29,5 +29,5 @@ Foo global;
 // WASM: define internal void @__cxx_global_var_init()
 // WASM: call i32 @__cxa_atexit(void (i8*)* @__cxx_global_array_dtor, i8* null, i8* @__dso_handle)
 
-// WASM: define internal void @__cxx_global_array_dtor(i8* %0)
-// WASM: %call = call %class.Foo* @_ZN3FooD1Ev(%class.Foo* {{[^,]*}} @global)
+// WASM: define internal void @__cxx_global_array_dtor(i8* noundef %0)
+// WASM: %call = call noundef %class.Foo* @_ZN3FooD1Ev(%class.Foo* {{[^,]*}} @global)

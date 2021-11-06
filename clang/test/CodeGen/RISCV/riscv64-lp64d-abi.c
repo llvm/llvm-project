@@ -9,7 +9,7 @@
 // Doubles are passed in FPRs, so argument 'i' will be passed zero-extended
 // because it will be passed in a GPR.
 
-// CHECK: define{{.*}} void @f_fpr_tracking(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, i8 zeroext %i)
+// CHECK: define{{.*}} void @f_fpr_tracking(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, i8 noundef zeroext %i)
 void f_fpr_tracking(double a, double b, double c, double d, double e, double f,
                     double g, double h, uint8_t i) {}
 
@@ -77,7 +77,7 @@ struct double_float_s f_ret_double_float_s() {
   return (struct double_float_s){1.0, 2.0};
 }
 
-// CHECK: define{{.*}} void @f_double_double_s_arg_insufficient_fprs(float %a, double %b, double %c, double %d, double %e, double %f, double %g, [2 x i64] %h.coerce)
+// CHECK: define{{.*}} void @f_double_double_s_arg_insufficient_fprs(float noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, [2 x i64] %h.coerce)
 void f_double_double_s_arg_insufficient_fprs(float a, double b, double c, double d,
     double e, double f, double g, struct double_double_s h) {}
 
@@ -143,18 +143,18 @@ struct double_int8_zbf_s f_ret_double_int8_zbf_s() {
   return (struct double_int8_zbf_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_double_int8_s_arg_insufficient_gprs(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e, i32 signext %f, i32 signext %g, i32 signext %h, [2 x i64] %i.coerce)
+// CHECK: define{{.*}} void @f_double_int8_s_arg_insufficient_gprs(i32 noundef signext %a, i32 noundef signext %b, i32 noundef signext %c, i32 noundef signext %d, i32 noundef signext %e, i32 noundef signext %f, i32 noundef signext %g, i32 noundef signext %h, [2 x i64] %i.coerce)
 void f_double_int8_s_arg_insufficient_gprs(int a, int b, int c, int d, int e,
                                           int f, int g, int h, struct double_int8_s i) {}
 
-// CHECK: define{{.*}} void @f_struct_double_int8_insufficient_fprs(float %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, [2 x i64] %i.coerce)
+// CHECK: define{{.*}} void @f_struct_double_int8_insufficient_fprs(float noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, [2 x i64] %i.coerce)
 void f_struct_double_int8_insufficient_fprs(float a, double b, double c, double d,
                                            double e, double f, double g, double h, struct double_int8_s i) {}
 
 // Complex floating-point values or structs containing a single complex
 // floating-point value should be passed as if it were an fp+fp struct.
 
-// CHECK: define{{.*}} void @f_doublecomplex(double %a.coerce0, double %a.coerce1)
+// CHECK: define{{.*}} void @f_doublecomplex(double noundef %a.coerce0, double noundef %a.coerce1)
 void f_doublecomplex(double __complex__ a) {}
 
 // CHECK: define{{.*}} { double, double } @f_ret_doublecomplex()
@@ -240,7 +240,7 @@ struct doublearr2_tricky4_s f_ret_doublearr2_tricky4_s() {
 
 struct int_double_int_s { int a; double b; int c; };
 
-// CHECK: define{{.*}} void @f_int_double_int_s_arg(%struct.int_double_int_s* %a)
+// CHECK: define{{.*}} void @f_int_double_int_s_arg(%struct.int_double_int_s* noundef %a)
 void f_int_double_int_s_arg(struct int_double_int_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret(%struct.int_double_int_s) align 8 %agg.result)

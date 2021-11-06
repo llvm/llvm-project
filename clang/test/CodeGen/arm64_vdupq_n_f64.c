@@ -4,7 +4,7 @@
 
 // vdupq_n_f64 -> dup.2d v0, v0[0]
 //
-// CHECK-LABEL: define{{.*}} <2 x double> @test_vdupq_n_f64(double %w) #0 {
+// CHECK-LABEL: define{{.*}} <2 x double> @test_vdupq_n_f64(double noundef %w) #0 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %w, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %w, i32 1
 // CHECK:   ret <2 x double> [[VECINIT1_I]]
@@ -14,7 +14,7 @@ float64x2_t test_vdupq_n_f64(float64_t w) {
 
 // might as well test this while we're here
 // vdupq_n_f32 -> dup.4s v0, v0[0]
-// CHECK-LABEL: define{{.*}} <4 x float> @test_vdupq_n_f32(float %w) #0 {
+// CHECK-LABEL: define{{.*}} <4 x float> @test_vdupq_n_f32(float noundef %w) #0 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %w, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %w, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %w, i32 2
@@ -27,7 +27,7 @@ float32x4_t test_vdupq_n_f32(float32_t w) {
 // vdupq_lane_f64 -> dup.2d v0, v0[0]
 // this was in <rdar://problem/11778405>, but had already been implemented,
 // test anyway
-// CHECK-LABEL: define{{.*}} <2 x double> @test_vdupq_lane_f64(<1 x double> %V) #0 {
+// CHECK-LABEL: define{{.*}} <2 x double> @test_vdupq_lane_f64(<1 x double> noundef %V) #0 {
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %V to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
 // CHECK:   [[SHUFFLE:%.*]] = shufflevector <1 x double> [[TMP1]], <1 x double> [[TMP1]], <2 x i32> zeroinitializer
@@ -38,7 +38,7 @@ float64x2_t test_vdupq_lane_f64(float64x1_t V) {
 
 // vmovq_n_f64 -> dup Vd.2d,X0
 // this wasn't in <rdar://problem/11778405>, but it was between the vdups
-// CHECK-LABEL: define{{.*}} <2 x double> @test_vmovq_n_f64(double %w) #0 {
+// CHECK-LABEL: define{{.*}} <2 x double> @test_vmovq_n_f64(double noundef %w) #0 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %w, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %w, i32 1
 // CHECK:   ret <2 x double> [[VECINIT1_I]]
@@ -46,7 +46,7 @@ float64x2_t test_vmovq_n_f64(float64_t w) {
   return vmovq_n_f64(w);
 }
 
-// CHECK-LABEL: define{{.*}} <4 x half> @test_vmov_n_f16(half* %a1) #1 {
+// CHECK-LABEL: define{{.*}} <4 x half> @test_vmov_n_f16(half* noundef %a1) #1 {
 // CHECK:   [[TMP0:%.*]] = load half, half* %a1, align 2
 // CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[TMP0]], i32 1
@@ -63,7 +63,7 @@ float64x1_t test_vmov_n_f64(float64_t a1) {
 }
 */
 
-// CHECK-LABEL: define{{.*}} <8 x half> @test_vmovq_n_f16(half* %a1) #0 {
+// CHECK-LABEL: define{{.*}} <8 x half> @test_vmovq_n_f16(half* noundef %a1) #0 {
 // CHECK:   [[TMP0:%.*]] = load half, half* %a1, align 2
 // CHECK:   [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[TMP0]], i32 1
