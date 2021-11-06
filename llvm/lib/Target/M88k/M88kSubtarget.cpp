@@ -17,8 +17,8 @@
 #include "M88k.h"
 #include "M88kTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
