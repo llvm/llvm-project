@@ -1707,7 +1707,10 @@ cc_library(
 cc_library(
     name = "SparseTensorTransforms",
     srcs = glob(["lib/Dialect/SparseTensor/Transforms/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/SparseTensor/Transforms/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
+        "include/mlir/ExecutionEngine/SparseTensorUtils.h",
+    ],
     includes = ["include"],
     deps = [
         ":Affine",
@@ -5391,7 +5394,10 @@ cc_library(
         "lib/ExecutionEngine/CRunnerUtils.cpp",
         "lib/ExecutionEngine/SparseTensorUtils.cpp",
     ],
-    hdrs = ["include/mlir/ExecutionEngine/CRunnerUtils.h"],
+    hdrs = [
+        "include/mlir/ExecutionEngine/CRunnerUtils.h",
+        "include/mlir/ExecutionEngine/SparseTensorUtils.h",
+    ],
     includes = ["include"],
 )
 
