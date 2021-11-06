@@ -408,6 +408,19 @@ void BTFTypeDeclTag::emitType(MCStreamer &OS) {
   OS.emitInt32(Info);
 }
 
+BTFTypeTypeTag::BTFTypeTypeTag(uint32_t BaseTypeId, StringRef Tag) : Tag(Tag) {
+  Kind = BTF::BTF_KIND_TYPE_TAG;
+  BTFType.Info = Kind << 24;
+  BTFType.Type = BaseTypeId;
+}
+
+void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
+  if (IsCompleted)
+    return;
+  IsCompleted = true;
+  BTFType.NameOff = BDebug.addString(Tag);
+}
+
 uint32_t BTFStringTable::addString(StringRef S) {
   // Check whether the string already exists.
   for (auto &OffsetM : OffsetToIdMap) {
@@ -658,9 +671,41 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     }
   }
 
-  if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef ||
-      Tag == dwarf::DW_TAG_const_type || Tag == dwarf::DW_TAG_volatile_type ||
-      Tag == dwarf::DW_TAG_restrict_type) {
+  if (Tag == dwarf::DW_TAG_pointer_type) {
+    SmallVector<const MDString *, 4> MDStrs;
+    DINodeArray Annots = DTy->getAnnotations();
+    if (Annots) {
+      for (const Metadata *Annotations : Annots->operands()) {
+        const MDNode *MD = cast<MDNode>(Annotations);
+        const MDString *Name = cast<MDString>(MD->getOperand(0));
+        if (!Name->getString().equals("btf_type_tag"))
+          continue;
+        MDStrs.push_back(cast<MDString>(MD->getOperand(1)));
+      }
+    }
+
+    if (MDStrs.size() > 0) {
+      auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
+      unsigned TmpTypeId = addType(std::move(TypeEntry));
+      for (unsigned I = MDStrs.size(); I > 0; I--) {
+        const MDString *Value = MDStrs[I - 1];
+        if (I != 1) {
+          auto TypeEntry =
+              std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
+          TmpTypeId = addType(std::move(TypeEntry));
+        } else {
+          auto TypeEntry =
+              std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
+          TypeId = addType(std::move(TypeEntry), DTy);
+        }
+      }
+    } else {
+      auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
+      TypeId = addType(std::move(TypeEntry), DTy);
+    }
+  } else if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+             Tag == dwarf::DW_TAG_volatile_type ||
+             Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
     if (Tag == dwarf::DW_TAG_typedef)
