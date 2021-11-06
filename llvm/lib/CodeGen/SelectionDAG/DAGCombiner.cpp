@@ -9575,6 +9575,23 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
     return DAG.getNode(ISD::OR, DL, VT, Sra, N2);
   }
 
+  // If the comparison is testing for a positive value, we have to invert
+  // the sign bit mask, so only do that transform if the target has a bitwise
+  // 'and not' instruction (the invert is free).
+  // (Cond0 s> -1) ? N1 : 0 --> ~(Cond0 s>> BW-1) & N1
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (CC == ISD::SETGT && isAllOnesOrAllOnesSplat(Cond1) &&
+      isNullOrNullSplat(N2) && TLI.hasAndNot(N2)) {
+    SDLoc DL(N);
+    SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
+    SDValue Not = DAG.getNOT(DL, Sra, VT);
+    return DAG.getNode(ISD::AND, DL, VT, Not, N1);
+  }
+  // (X >  0) ? X : 0 <-- This is canonical signed max.
+//    if (!(isAllOnesConstant(N1) || (isNullConstant(N1) && N0 == N2)))
+//      return SDValue();
+
   return SDValue();
 }
 
