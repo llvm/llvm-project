@@ -4,7 +4,7 @@
 // CHECK-NEXT: %cleanup.dest = load i32, i32* %cleanup.dest.slot, align 4
 // CHECK-NEXT: %[[src2:[0-9-]+]] = icmp ne i32 %cleanup.dest, 0
 // CHECK-NEXT: %[[src3:[0-9-]+]] = zext i1 %[[src2]] to i8
-// CHECK-NEXT: call void @"?fin$0@0@seh_abnormal_exits@@"(i8 %[[src3]], i8* %[[src]])
+// CHECK-NEXT: call void @"?fin$0@0@seh_abnormal_exits@@"(i8 noundef %[[src3]], i8* noundef %[[src]])
 
 void seh_abnormal_exits(int *Counter) {
   for (int i = 0; i < 5; i++) {

@@ -50,12 +50,12 @@
 // RUN: %clang_cc1 -x c++ %s -triple i386-unknown-unknown -O1 -disable-llvm-passes -emit-llvm -o - -std=c++98 | FileCheck %s --check-prefix=CHECK3
 // RUN: %clang_cc1 -x c++ %s -triple i386-unknown-unknown -fexperimental-new-pass-manager -O1 -disable-llvm-passes -emit-llvm -o - -std=c++98 | FileCheck %s --check-prefix=CHECK3
 // CHECK3-LABEL: define{{.*}} i32 @_Z3barv()
-// CHECK3-LABEL: define linkonce_odr i32 @_Z3foov()
+// CHECK3-LABEL: define linkonce_odr noundef i32 @_Z3foov()
 // CHECK3-NOT: unreferenced
 // CHECK3-LABEL: define available_externally void @_Z10gnu_inlinev()
 // CHECK3-LABEL: define available_externally void @_Z13gnu_ei_inlinev()
 // CHECK3-NOT: @_Z5testCv
-// CHECK3-LABEL: define linkonce_odr i32 @_Z2eiv()
+// CHECK3-LABEL: define linkonce_odr noundef i32 @_Z2eiv()
 
 // RUN: echo "MS C Mode tests:"
 // RUN: %clang_cc1 %s -triple i386-pc-win32 -O1 -disable-llvm-passes -emit-llvm -o - -std=c99 | FileCheck %s --check-prefix=CHECK4

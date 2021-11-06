@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -std=gnu++98 -o - -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -std=gnu++11 -o - -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -disable-noundef-analysis %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -std=gnu++98 -o - -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -disable-noundef-analysis %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -std=gnu++11 -o - -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // CHECK: @_ZZN5test74testEvE1x = internal global i32 0, align 4
 // CHECK: @_ZGVZN5test74testEvE1x = internal global i32 0

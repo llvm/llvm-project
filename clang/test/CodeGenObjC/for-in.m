@@ -30,7 +30,7 @@ void t0() {
     // CHECK:      [[expectedCls:%.*]] = load %struct._class_t*, {{.*}}, !nosanitize
     // CHECK-NEXT: [[kindOfClassSel:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES{{.*}}, !nosanitize
     // CHECK-NEXT: [[expectedClsI8:%.*]] = bitcast %struct._class_t* [[expectedCls]] to i8*, !nosanitize
-    // CHECK-NEXT: [[isCls:%.*]] = call zeroext i1 bitcast {{.*}}@objc_msgSend to i1 (i8*, i8*, {{.*}})(i8* [[theItem:%.*]], i8* [[kindOfClassSel]], i8* [[expectedClsI8]]), !nosanitize
+    // CHECK-NEXT: [[isCls:%.*]] = call zeroext i1 bitcast {{.*}}@objc_msgSend to i1 (i8*, i8*, {{.*}})(i8* noundef [[theItem:%.*]], i8* noundef [[kindOfClassSel]], i8* noundef [[expectedClsI8]]), !nosanitize
     // CHECK: br i1 [[isCls]]
 
     // CHECK: ptrtoint i8* [[theItem]] to i64, !nosanitize

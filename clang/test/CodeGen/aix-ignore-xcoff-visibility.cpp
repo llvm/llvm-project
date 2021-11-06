@@ -56,18 +56,18 @@ void prambar() {}
 
 // VISIBILITY-IR:    @b = protected global i32 0
 // VISIBILITY-IR:    @pramb = hidden global i32 0
-// VISIBILITY-IR:    define hidden void @_Z5foo_hPi(i32* %p)
+// VISIBILITY-IR:    define hidden void @_Z5foo_hPi(i32* noundef %p)
 // VISIBILITY-IR:    declare hidden void @_Z12zoo_extern_hv()
 // VISIBILITY-IR:    define protected void @_Z3barv()
-// VISIBILITY-IR:    define linkonce_odr hidden i32 @_ZNK9TestClass5valueEv(%class.TestClass* {{[^,]*}} %this)
-// VISIBILITY-IR:    define weak_odr protected i32 @_ZN5basicIiE7getdataEv(%class.basic* {{[^,]*}} %this)
+// VISIBILITY-IR:    define linkonce_odr hidden noundef i32 @_ZNK9TestClass5valueEv(%class.TestClass* {{[^,]*}} %this)
+// VISIBILITY-IR:    define weak_odr protected noundef i32 @_ZN5basicIiE7getdataEv(%class.basic* {{[^,]*}} %this)
 // VISIBILITY-IR:    define hidden void @_Z7prambarv()
 
 // NOVISIBILITY-IR:    @b = global i32 0
 // NOVISIBILITY-IR:    @pramb = global i32 0
-// NOVISIBILITY-IR:    define void @_Z5foo_hPi(i32* %p)
+// NOVISIBILITY-IR:    define void @_Z5foo_hPi(i32* noundef %p)
 // NOVISIBILITY-IR:    declare void @_Z12zoo_extern_hv()
 // NOVISIBILITY-IR:    define void @_Z3barv()
-// NOVISIBILITY-IR:    define linkonce_odr i32 @_ZNK9TestClass5valueEv(%class.TestClass* {{[^,]*}} %this)
-// NOVISIBILITY-IR:    define weak_odr i32 @_ZN5basicIiE7getdataEv(%class.basic* {{[^,]*}} %this)
+// NOVISIBILITY-IR:    define linkonce_odr noundef i32 @_ZNK9TestClass5valueEv(%class.TestClass* {{[^,]*}} %this)
+// NOVISIBILITY-IR:    define weak_odr noundef i32 @_ZN5basicIiE7getdataEv(%class.basic* {{[^,]*}} %this)
 // NOVISIBILITY-IR:    define void @_Z7prambarv()

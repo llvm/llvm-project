@@ -81,10 +81,10 @@ namespace reference {
   {
     // Ensure lifetime extension.
 
-    // CHECK: call %"struct.reference::B"* @_ZN9reference1BC1Ev
+    // CHECK: call noundef %"struct.reference::B"* @_ZN9reference1BC1Ev
     // CHECK-NEXT: store %{{.*}}* %{{.*}}, %{{.*}}** %
     const B &rb{ B() };
-    // CHECK: call %"struct.reference::B"* @_ZN9reference1BD1Ev
+    // CHECK: call noundef %"struct.reference::B"* @_ZN9reference1BD1Ev
   }
 
 }

@@ -95,7 +95,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -114,7 +114,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -213,12 +213,12 @@ int main() {
 // CHECK1-NEXT:    br label [[OMP_IF_END7]]
 // CHECK1:       omp_if.end7:
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i32, i32* @Arg, align 4
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP27]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiEiT_(i32 noundef [[TMP27]])
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..3
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -254,7 +254,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..5
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -290,7 +290,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -326,7 +326,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..9
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -362,7 +362,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK1-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+// CHECK1-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_8:%.*]], align 1
@@ -489,7 +489,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..11
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -525,7 +525,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..13
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -561,7 +561,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..15
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -597,7 +597,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..17
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -633,7 +633,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..19
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -669,7 +669,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..21
-// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -712,7 +712,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -731,7 +731,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -830,12 +830,12 @@ int main() {
 // CHECK2-NEXT:    br label [[OMP_IF_END7]]
 // CHECK2:       omp_if.end7:
 // CHECK2-NEXT:    [[TMP27:%.*]] = load i32, i32* @Arg, align 4
-// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP27]])
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiEiT_(i32 noundef [[TMP27]])
 // CHECK2-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..3
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -871,7 +871,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..5
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -907,7 +907,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -943,7 +943,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..9
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -979,7 +979,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK2-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_8:%.*]], align 1
@@ -1106,7 +1106,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..11
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1142,7 +1142,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..13
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1178,7 +1178,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..15
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1214,7 +1214,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..17
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1250,7 +1250,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..19
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1286,7 +1286,7 @@ int main() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..21
-// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1329,7 +1329,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1348,7 +1348,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1447,12 +1447,12 @@ int main() {
 // CHECK5-NEXT:    br label [[OMP_IF_END7]]
 // CHECK5:       omp_if.end7:
 // CHECK5-NEXT:    [[TMP27:%.*]] = load i32, i32* @Arg, align 4
-// CHECK5-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP27]])
+// CHECK5-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiEiT_(i32 noundef [[TMP27]])
 // CHECK5-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..3
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1488,7 +1488,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..5
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1524,7 +1524,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1560,7 +1560,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..9
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1596,7 +1596,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK5-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_8:%.*]], align 1
@@ -1723,7 +1723,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..11
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1759,7 +1759,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..13
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1795,7 +1795,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..15
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1831,7 +1831,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..17
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1867,7 +1867,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..19
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1903,7 +1903,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_task_entry..21
-// CHECK5-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1946,7 +1946,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1965,7 +1965,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2064,12 +2064,12 @@ int main() {
 // CHECK6-NEXT:    br label [[OMP_IF_END7]]
 // CHECK6:       omp_if.end7:
 // CHECK6-NEXT:    [[TMP27:%.*]] = load i32, i32* @Arg, align 4
-// CHECK6-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP27]])
+// CHECK6-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiEiT_(i32 noundef [[TMP27]])
 // CHECK6-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..3
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2105,7 +2105,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..5
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2141,7 +2141,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2177,7 +2177,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..9
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.7* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2213,7 +2213,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK6-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32 noundef [[ARG:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_8:%.*]], align 1
@@ -2340,7 +2340,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..11
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.9* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2376,7 +2376,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..13
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.11* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2412,7 +2412,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..15
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.13* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2448,7 +2448,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..17
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.15* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2484,7 +2484,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..19
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.17* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2520,7 +2520,7 @@ int main() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_task_entry..21
-// CHECK6-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.19* noalias noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8

@@ -72,19 +72,19 @@ int lifetime_nontriv(bool cond) {
   // CHECK-NOOPT: call void @llvm.lifetime.start
   // CHECK-NOOPT: store i1 true,
   // CHECK-NOOPT: store i1 true,
-  // CHECK-NOOPT: call i32 @_ZN1X1fEv(
+  // CHECK-NOOPT: call noundef i32 @_ZN1X1fEv(
   // CHECK-NOOPT: call void @llvm.lifetime.start
   // CHECK-NOOPT: store i1 true,
   // CHECK-NOOPT: store i1 true,
-  // CHECK-NOOPT: call i32 @_ZN1X1fEv(
+  // CHECK-NOOPT: call noundef i32 @_ZN1X1fEv(
   // CHECK-NOOPT: call void @llvm.lifetime.start
   // CHECK-NOOPT: store i1 true,
   // CHECK-NOOPT: store i1 true,
-  // CHECK-NOOPT: call i32 @_ZN1X1fEv(
-  // CHECK-NOOPT: call i32 @_Z1giii(
+  // CHECK-NOOPT: call noundef i32 @_ZN1X1fEv(
+  // CHECK-NOOPT: call noundef i32 @_Z1giii(
   // CHECK-NOOPT: br label
   //
-  // CHECK-NOOPT: call i32 @_Z1giii(i32 1, i32 2, i32 3)
+  // CHECK-NOOPT: call noundef i32 @_Z1giii(i32 noundef 1, i32 noundef 2, i32 noundef 3)
   // CHECK-NOOPT: br label
   //
   // CHECK-NOOPT: load i1,
@@ -122,12 +122,12 @@ int lifetime_nontriv(bool cond) {
   // CHECK-OPT: br i1
   //
   // CHECK-OPT: call void @llvm.lifetime.start
-  // CHECK-OPT: call i32 @_ZN1X1fEv(
+  // CHECK-OPT: call noundef i32 @_ZN1X1fEv(
   // CHECK-OPT: call void @llvm.lifetime.start
-  // CHECK-OPT: call i32 @_ZN1X1fEv(
+  // CHECK-OPT: call noundef i32 @_ZN1X1fEv(
   // CHECK-OPT: call void @llvm.lifetime.start
-  // CHECK-OPT: call i32 @_ZN1X1fEv(
-  // CHECK-OPT: call i32 @_Z1giii(
+  // CHECK-OPT: call noundef i32 @_ZN1X1fEv(
+  // CHECK-OPT: call noundef i32 @_Z1giii(
   // CHECK-OPT: call void @_ZN1XD1Ev(
   // CHECK-OPT: call void @llvm.lifetime.end
   // CHECK-OPT: call void @_ZN1XD1Ev(
@@ -147,13 +147,13 @@ int lifetime_triv(bool cond) {
   // CHECK-NOOPT: call void @llvm.lifetime.start
   // CHECK-NOOPT: br i1
   //
-  // CHECK-NOOPT: call i32 @_ZN1Y1fEv(
-  // CHECK-NOOPT: call i32 @_ZN1Y1fEv(
-  // CHECK-NOOPT: call i32 @_ZN1Y1fEv(
-  // CHECK-NOOPT: call i32 @_Z1giii(
+  // CHECK-NOOPT: call noundef i32 @_ZN1Y1fEv(
+  // CHECK-NOOPT: call noundef i32 @_ZN1Y1fEv(
+  // CHECK-NOOPT: call noundef i32 @_ZN1Y1fEv(
+  // CHECK-NOOPT: call noundef i32 @_Z1giii(
   // CHECK-NOOPT: br label
   //
-  // CHECK-NOOPT: call i32 @_Z1giii(i32 1, i32 2, i32 3)
+  // CHECK-NOOPT: call noundef i32 @_Z1giii(i32 noundef 1, i32 noundef 2, i32 noundef 3)
   // CHECK-NOOPT: br label
   //
   // CHECK-NOOPT: call void @llvm.lifetime.end
@@ -172,10 +172,10 @@ int lifetime_triv(bool cond) {
   // CHECK-OPT: call void @llvm.lifetime.start
   // CHECK-OPT: br i1
   //
-  // CHECK-OPT: call i32 @_ZN1Y1fEv(
-  // CHECK-OPT: call i32 @_ZN1Y1fEv(
-  // CHECK-OPT: call i32 @_ZN1Y1fEv(
-  // CHECK-OPT: call i32 @_Z1giii(
+  // CHECK-OPT: call noundef i32 @_ZN1Y1fEv(
+  // CHECK-OPT: call noundef i32 @_ZN1Y1fEv(
+  // CHECK-OPT: call noundef i32 @_ZN1Y1fEv(
+  // CHECK-OPT: call noundef i32 @_Z1giii(
   // CHECK-OPT: br label
   //
   // CHECK-OPT: call void @llvm.lifetime.end
@@ -191,12 +191,12 @@ int lifetime_nontriv_empty(bool cond) {
   // CHECK-OPT: br i1
   //
   // CHECK-OPT: call void @llvm.lifetime.start
-  // CHECK-OPT: call i32 @_ZN1Z1fEv(
+  // CHECK-OPT: call noundef i32 @_ZN1Z1fEv(
   // CHECK-OPT: call void @llvm.lifetime.start
-  // CHECK-OPT: call i32 @_ZN1Z1fEv(
+  // CHECK-OPT: call noundef i32 @_ZN1Z1fEv(
   // CHECK-OPT: call void @llvm.lifetime.start
-  // CHECK-OPT: call i32 @_ZN1Z1fEv(
-  // CHECK-OPT: call i32 @_Z1giii(
+  // CHECK-OPT: call noundef i32 @_ZN1Z1fEv(
+  // CHECK-OPT: call noundef i32 @_Z1giii(
   // CHECK-OPT: call void @llvm.lifetime.end
   // CHECK-OPT: call void @llvm.lifetime.end
   // CHECK-OPT: call void @llvm.lifetime.end
