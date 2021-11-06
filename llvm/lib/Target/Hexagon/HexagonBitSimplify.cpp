@@ -1723,8 +1723,8 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
 
 bool CopyPropagation::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   std::vector<MachineInstr*> Instrs;
-  for (auto I = B.rbegin(), E = B.rend(); I != E; ++I)
-    Instrs.push_back(&*I);
+  for (MachineInstr &MI : llvm::reverse(B))
+    Instrs.push_back(&MI);
 
   bool Changed = false;
   for (auto I : Instrs) {

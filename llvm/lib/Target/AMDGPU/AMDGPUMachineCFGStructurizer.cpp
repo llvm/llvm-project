@@ -2588,11 +2588,9 @@ static bool containsNewBackedge(MRT *Tree,
     }
   } else {
     RegionMRT *Region = Tree->getRegionMRT();
-    SetVector<MRT *> *Children = Region->getChildren();
-    for (auto CI = Children->rbegin(), CE = Children->rend(); CI != CE; ++CI) {
-      if (containsNewBackedge(*CI, MBBs))
+    for (MRT *C : llvm::reverse(*Region->getChildren()))
+      if (containsNewBackedge(C, MBBs))
         return true;
-    }
   }
   return false;
 }
