@@ -797,8 +797,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
         MOp.setIsKill(false);
       }
     }
-    MBB->erase(MachineBasicBlock::iterator(MI),
-               std::next(MachineBasicBlock::iterator(MI)));
+    MBB->erase(&MI);
 
     // Add this PHI to the rewrite table.
     FalseBBRegRewriteTable[NewCMOV->getOperand(0).getReg()] = TmpReg;
