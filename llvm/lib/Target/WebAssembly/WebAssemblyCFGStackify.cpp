@@ -1670,8 +1670,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   SmallVector<EndMarkerInfo, 8> Stack;
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   for (auto &MBB : reverse(MF)) {
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::reverse(MBB)) {
       switch (MI.getOpcode()) {
       case WebAssembly::BLOCK:
       case WebAssembly::TRY:

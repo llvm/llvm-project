@@ -1733,16 +1733,14 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
   LPR.addLiveOuts(MBB);
 
-  for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
-       I != E; ++I) {
-    if (I->isDebugInstr())
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
+    if (MI.isDebugInstr())
       continue;
 
     std::bitset<8> Defs;
     SmallVector<MachineOperand *, 2> Uses;
-    MachineInstr &MI = *I;
 
-    for (auto &MO : I->operands()) {
+    for (auto &MO : MI.operands()) {
       if (!MO.isReg())
         continue;
 

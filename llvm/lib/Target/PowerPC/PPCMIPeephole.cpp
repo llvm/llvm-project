@@ -322,8 +322,7 @@ static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
                                    SmallVectorImpl<MachineInstr *> &PHIs,
                                    Register Dst) {
   DenseMap<MachineInstr *, MachineInstr *> ChangedPHIMap;
-  for (auto It = PHIs.rbegin(), End = PHIs.rend(); It != End; ++It) {
-    MachineInstr *PHI = *It;
+  for (MachineInstr *PHI : llvm::reverse(PHIs)) {
     SmallVector<std::pair<MachineOperand, MachineOperand>, 4> PHIOps;
     // We check if the current PHI node can be changed by looking at its
     // operands. If all the operands are either copies from primed
