@@ -523,3 +523,124 @@ func @omp_atomic_write(%addr : memref<i32>, %val : i32) {
   omp.atomic.write %addr, %val hint(speculative, uncontended) : memref<i32>, i32
   return
 }
+
+// CHECK-LABEL: omp_sectionsop
+func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
+                     %data_var3 : memref<i32>, %redn_var : !llvm.ptr<f32>) {
+
+  // CHECK: omp.sections private(%{{.*}} : memref<i32>) {
+  "omp.sections" (%data_var1) ({
+    // CHECK: omp.terminator
+    omp.terminator
+  }) {operand_segment_sizes = dense<[1,0,0,0,0,0]> : vector<6xi32>} : (memref<i32>) -> ()
+
+  // CHECK: omp.sections firstprivate(%{{.*}} : memref<i32>) {
+  "omp.sections" (%data_var1) ({
+    // CHECK: omp.terminator
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,1,0,0,0,0]> : vector<6xi32>} : (memref<i32>) -> ()
+
+  // CHECK: omp.sections lastprivate(%{{.*}} : memref<i32>) {
+  "omp.sections" (%data_var1) ({
+    // CHECK: omp.terminator
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,1,0,0,0]> : vector<6xi32>} : (memref<i32>) -> ()
+
+  // CHECK: omp.sections private(%{{.*}} : memref<i32>) firstprivate(%{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) {
+  "omp.sections" (%data_var1, %data_var2, %data_var3) ({
+    // CHECK: omp.terminator
+    omp.terminator
+  }) {operand_segment_sizes = dense<[1,1,1,0,0,0]> : vector<6xi32>} : (memref<i32>, memref<i32>, memref<i32>) -> ()
+
+  // CHECK: omp.sections allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
+  "omp.sections" (%data_var1, %data_var1) ({
+    // CHECK: omp.terminator
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,0,0,1,1]> : vector<6xi32>} : (memref<i32>, memref<i32>) -> ()
+
+    // CHECK: omp.sections reduction(@add_f32 -> %{{.*}} : !llvm.ptr<f32>)
+  "omp.sections" (%redn_var) ({
+    // CHECK: omp.terminator
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,0,1,0,0]> : vector<6xi32>, reductions=[@add_f32]} : (!llvm.ptr<f32>) -> ()
+
+  // CHECK: omp.sections private(%{{.*}} : memref<i32>) {
+  omp.sections private(%data_var1 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections firstprivate(%{{.*}} : memref<i32>)
+  omp.sections firstprivate(%data_var1 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections lastprivate(%{{.*}} : memref<i32>)
+  omp.sections lastprivate(%data_var1 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections private(%{{.*}} : memref<i32>) firstprivate(%{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) {
+  omp.sections private(%data_var1 : memref<i32>) firstprivate(%data_var2 : memref<i32>) lastprivate(%data_var3 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections private(%{{.*}} : memref<i32>) firstprivate(%{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) {
+  omp.sections lastprivate(%data_var1 : memref<i32>) firstprivate(%data_var2 : memref<i32>) private(%data_var3 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections private(%{{.*}} : memref<i32>) nowait {
+  omp.sections nowait private(%data_var1 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections firstprivate(%{{.*}} : memref<i32>, %{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) {
+  omp.sections firstprivate(%data_var1 : memref<i32>, %data_var2 : memref<i32>) lastprivate(%data_var1 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections reduction(@add_f32 -> %{{.*}} : !llvm.ptr<f32>) {
+  omp.sections reduction(@add_f32 -> %redn_var : !llvm.ptr<f32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
+  omp.sections allocate(%data_var1 : memref<i32> -> %data_var1 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.sections nowait
+  omp.sections nowait {
+    // CHECK: omp.section
+    omp.section {
+      // CHECK: %{{.*}} = "test.payload"() : () -> i32
+      %1 = "test.payload"() : () -> i32
+      // CHECK: %{{.*}} = "test.payload"() : () -> i32
+      %2 = "test.payload"() : () -> i32
+      // CHECK: %{{.*}} = "test.payload"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+      %3 = "test.payload"(%1, %2) : (i32, i32) -> i32
+    }
+    // CHECK: omp.section
+    omp.section {
+      // CHECK: %{{.*}} = "test.payload"(%{{.*}}) : (!llvm.ptr<f32>) -> i32
+      %1 = "test.payload"(%redn_var) : (!llvm.ptr<f32>) -> i32
+    }
+    // CHECK: omp.section
+    omp.section {
+      // CHECK: "test.payload"(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+      "test.payload"(%redn_var) : (!llvm.ptr<f32>) -> ()
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}

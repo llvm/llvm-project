@@ -152,9 +152,6 @@ static ParseResult parseAllocateAndAllocator(
 static void printAllocateAndAllocator(OpAsmPrinter &p,
                                       OperandRange varsAllocate,
                                       OperandRange varsAllocator) {
-  if (varsAllocate.empty())
-    return;
-
   p << "allocate(";
   for (unsigned i = 0; i < varsAllocate.size(); ++i) {
     std::string separator = i == varsAllocate.size() - 1 ? ") " : ", ";
@@ -182,7 +179,9 @@ static void printParallelOp(OpAsmPrinter &p, ParallelOp op) {
   printDataVars(p, op.firstprivate_vars(), "firstprivate");
   printDataVars(p, op.shared_vars(), "shared");
   printDataVars(p, op.copyin_vars(), "copyin");
-  printAllocateAndAllocator(p, op.allocate_vars(), op.allocators_vars());
+
+  if (!op.allocate_vars().empty())
+    printAllocateAndAllocator(p, op.allocate_vars(), op.allocators_vars());
 
   if (auto def = op.default_val())
     p << "default(" << def->drop_front(3) << ") ";
@@ -231,7 +230,7 @@ parseLinearClause(OpAsmParser &parser,
 static void printLinearClause(OpAsmPrinter &p, OperandRange linearVars,
                               OperandRange linearStepVars) {
   size_t linearVarsSize = linearVars.size();
-  p << "(";
+  p << "linear(";
   for (unsigned i = 0; i < linearVarsSize; ++i) {
     std::string separator = i == linearVarsSize - 1 ? ") " : ", ";
     p << linearVars[i];
@@ -296,7 +295,7 @@ static void printScheduleClause(OpAsmPrinter &p, StringRef &sched,
                                 llvm::Optional<StringRef> modifier,
                                 Value scheduleChunkVar) {
   std::string schedLower = sched.lower();
-  p << "(" << schedLower;
+  p << "schedule(" << schedLower;
   if (scheduleChunkVar)
     p << " = " << scheduleChunkVar;
   if (modifier && modifier.getValue() != "none")
@@ -333,6 +332,7 @@ parseReductionVarList(OpAsmParser &parser,
 static void printReductionVarList(OpAsmPrinter &p,
                                   Optional<ArrayAttr> reductions,
                                   OperandRange reduction_vars) {
+  p << "reduction(";
   for (unsigned i = 0, e = reductions->size(); i < e; ++i) {
     if (i != 0)
       p << ", ";
@@ -864,6 +864,83 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Parser, printer and verifier for SectionsOp
+//===----------------------------------------------------------------------===//
+
+/// Parses an OpenMP Sections operation
+///
+/// sections ::= `omp.sections` clause-list
+/// clause-list ::= clause clause-list | empty
+/// clause ::= private | firstprivate | lastprivate | reduction | allocate |
+///            nowait
+static ParseResult parseSectionsOp(OpAsmParser &parser,
+                                   OperationState &result) {
+
+  SmallVector<ClauseType> clauses = {privateClause,     firstprivateClause,
+                                     lastprivateClause, reductionClause,
+                                     allocateClause,    nowaitClause};
+
+  SmallVector<int> segments;
+
+  if (failed(parseClauses(parser, result, clauses, segments)))
+    return failure();
+
+  result.addAttribute("operand_segment_sizes",
+                      parser.getBuilder().getI32VectorAttr(segments));
+
+  // Now parse the body.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body))
+    return failure();
+  return success();
+}
+
+static void printSectionsOp(OpAsmPrinter &p, SectionsOp op) {
+  p << " ";
+  printDataVars(p, op.private_vars(), "private");
+  printDataVars(p, op.firstprivate_vars(), "firstprivate");
+  printDataVars(p, op.lastprivate_vars(), "lastprivate");
+
+  if (!op.reduction_vars().empty())
+    printReductionVarList(p, op.reductions(), op.reduction_vars());
+
+  if (!op.allocate_vars().empty())
+    printAllocateAndAllocator(p, op.allocate_vars(), op.allocators_vars());
+
+  if (op.nowait())
+    p << "nowait ";
+
+  p.printRegion(op.region());
+}
+
+static LogicalResult verifySectionsOp(SectionsOp op) {
+
+  // A list item may not appear in more than one clause on the same directive,
+  // except that it may be specified in both firstprivate and lastprivate
+  // clauses.
+  for (auto var : op.private_vars()) {
+    if (llvm::is_contained(op.firstprivate_vars(), var))
+      return op.emitOpError()
+             << "operand used in both private and firstprivate clauses";
+    if (llvm::is_contained(op.lastprivate_vars(), var))
+      return op.emitOpError()
+             << "operand used in both private and lastprivate clauses";
+  }
+
+  if (op.allocate_vars().size() != op.allocators_vars().size())
+    return op.emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  for (auto &inst : *op.region().begin()) {
+    if (!(isa<SectionOp>(inst) || isa<TerminatorOp>(inst)))
+      op.emitOpError()
+          << "expected omp.section op or terminator op inside region";
+  }
+
+  return verifyReductionVarList(op, op.reductions(), op.reduction_vars());
+}
+
 /// Parses an OpenMP Workshare Loop operation
 ///
 /// wsloop ::= `omp.wsloop` loop-control clause-list
@@ -944,16 +1021,12 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
   printDataVars(p, op.firstprivate_vars(), "firstprivate");
   printDataVars(p, op.lastprivate_vars(), "lastprivate");
 
-  if (op.linear_vars().size()) {
-    p << "linear";
+  if (op.linear_vars().size())
     printLinearClause(p, op.linear_vars(), op.linear_step_vars());
-  }
 
-  if (auto sched = op.schedule_val()) {
-    p << "schedule";
+  if (auto sched = op.schedule_val())
     printScheduleClause(p, sched.getValue(), op.schedule_modifier(),
                         op.schedule_chunk_var());
-  }
 
   if (auto collapse = op.collapse_val())
     p << "collapse(" << collapse << ") ";
@@ -967,10 +1040,8 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
   if (auto order = op.order_val())
     p << "order(" << order << ") ";
 
-  if (!op.reduction_vars().empty()) {
-    p << "reduction(";
+  if (!op.reduction_vars().empty())
     printReductionVarList(p, op.reductions(), op.reduction_vars());
-  }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
 }
