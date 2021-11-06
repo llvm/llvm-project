@@ -189,6 +189,11 @@ public:
   /// successful.
   bool getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS) const;
 
+  /// Set up \p Pred, \p RHS and \p Offset such that (V + Offset) Pred RHS
+  /// is true iff V is in the range. Prefers using Offset == 0 if possible.
+  void
+  getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS, APInt &Offset) const;
+
   /// Return the lower value for this range.
   const APInt &getLower() const { return Lower; }
 

@@ -183,38 +183,41 @@ CmpInst::Predicate ConstantRange::getEquivalentPredWithFlippedSignedness(
   return CmpInst::Predicate::BAD_ICMP_PREDICATE;
 }
 
-bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
-                                      APInt &RHS) const {
-  bool Success = false;
-
+void ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS, APInt &Offset) const {
+  Offset = APInt(getBitWidth(), 0);
   if (isFullSet() || isEmptySet()) {
     Pred = isEmptySet() ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     RHS = APInt(getBitWidth(), 0);
-    Success = true;
   } else if (auto *OnlyElt = getSingleElement()) {
     Pred = CmpInst::ICMP_EQ;
     RHS = *OnlyElt;
-    Success = true;
   } else if (auto *OnlyMissingElt = getSingleMissingElement()) {
     Pred = CmpInst::ICMP_NE;
     RHS = *OnlyMissingElt;
-    Success = true;
   } else if (getLower().isMinSignedValue() || getLower().isMinValue()) {
     Pred =
         getLower().isMinSignedValue() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
     RHS = getUpper();
-    Success = true;
   } else if (getUpper().isMinSignedValue() || getUpper().isMinValue()) {
     Pred =
         getUpper().isMinSignedValue() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
     RHS = getLower();
-    Success = true;
+  } else {
+    Pred = CmpInst::ICMP_ULT;
+    RHS = getUpper() - getLower();
+    Offset = -getLower();
   }
 
-  assert((!Success || ConstantRange::makeExactICmpRegion(Pred, RHS) == *this) &&
+  assert(ConstantRange::makeExactICmpRegion(Pred, RHS) == add(Offset) &&
          "Bad result!");
+}
 
-  return Success;
+bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS) const {
+  APInt Offset;
+  getEquivalentICmp(Pred, RHS, Offset);
+  return Offset.isZero();
 }
 
 bool ConstantRange::icmp(CmpInst::Predicate Pred,
