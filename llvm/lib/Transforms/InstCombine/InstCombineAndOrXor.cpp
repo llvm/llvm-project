@@ -1322,107 +1322,23 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (LHS0 != RHS0)
     return nullptr;
 
-  // ICMP_[US][GL]E X, C is folded to ICMP_[US][GL]T elsewhere.
-  if (PredL == ICmpInst::ICMP_UGE || PredL == ICmpInst::ICMP_ULE ||
-      PredR == ICmpInst::ICMP_UGE || PredR == ICmpInst::ICMP_ULE ||
-      PredL == ICmpInst::ICMP_SGE || PredL == ICmpInst::ICMP_SLE ||
-      PredR == ICmpInst::ICMP_SGE || PredR == ICmpInst::ICMP_SLE)
+  ConstantRange CR1 =
+      ConstantRange::makeExactICmpRegion(PredL, LHSC->getValue());
+  ConstantRange CR2 =
+      ConstantRange::makeExactICmpRegion(PredR, RHSC->getValue());
+  Optional<ConstantRange> CR = CR1.exactIntersectWith(CR2);
+  if (!CR)
     return nullptr;
 
-  // We can't fold (ugt x, C) & (sgt x, C2).
-  if (!predicatesFoldable(PredL, PredR))
-    return nullptr;
+  CmpInst::Predicate Pred;
+  APInt NewRHS, Offset;
+  CR->getEquivalentICmp(Pred, NewRHS, Offset);
 
-  // Ensure that the larger constant is on the RHS.
-  bool ShouldSwap;
-  if (CmpInst::isSigned(PredL) ||
-      (ICmpInst::isEquality(PredL) && CmpInst::isSigned(PredR)))
-    ShouldSwap = LHSC->getValue().sgt(RHSC->getValue());
-  else
-    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
-
-  if (ShouldSwap) {
-    std::swap(LHS, RHS);
-    std::swap(LHSC, RHSC);
-    std::swap(PredL, PredR);
-  }
-
-  // At this point, we know we have two icmp instructions
-  // comparing a value against two constants and and'ing the result
-  // together.  Because of the above check, we know that we only have
-  // icmp eq, icmp ne, icmp [su]lt, and icmp [SU]gt here. We also know
-  // (from the icmp folding check above), that the two constants
-  // are not equal and that the larger constant is on the RHS
-  assert(LHSC != RHSC && "Compares not folded above?");
-
-  switch (PredL) {
-  default:
-    llvm_unreachable("Unknown integer condition code!");
-  case ICmpInst::ICMP_NE:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_ULT:
-      // (X != 13 & X u< 14) -> X < 13
-      if (LHSC->getValue() == (RHSC->getValue() - 1))
-        return Builder.CreateICmpULT(LHS0, LHSC);
-      if (LHSC->isZero()) // (X != 0 & X u< C) -> X-1 u< C-1
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               false, true);
-      break; // (X != 13 & X u< 15) -> no change
-    case ICmpInst::ICMP_SLT:
-      // (X != 13 & X s< 14) -> X < 13
-      if (LHSC->getValue() == (RHSC->getValue() - 1))
-        return Builder.CreateICmpSLT(LHS0, LHSC);
-      // (X != INT_MIN & X s< C) -> X-(INT_MIN+1) u< (C-(INT_MIN+1))
-      if (LHSC->isMinValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               true, true);
-      break; // (X != 13 & X s< 15) -> no change
-    case ICmpInst::ICMP_NE:
-      // Potential folds for this case should already be handled.
-      break;
-    }
-    break;
-  case ICmpInst::ICMP_UGT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_NE:
-      // (X u> 13 & X != 14) -> X u> 14
-      if (RHSC->getValue() == (LHSC->getValue() + 1))
-        return Builder.CreateICmp(PredL, LHS0, RHSC);
-      // X u> C & X != UINT_MAX -> (X-(C+1)) u< UINT_MAX-(C+1)
-      if (RHSC->isMaxValue(false))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               false, true);
-      break;                 // (X u> 13 & X != 15) -> no change
-    case ICmpInst::ICMP_ULT: // (X u> 13 & X u< 15) -> (X-14) u< 1
-      return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                             false, true);
-    }
-    break;
-  case ICmpInst::ICMP_SGT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_NE:
-      // (X s> 13 & X != 14) -> X s> 14
-      if (RHSC->getValue() == (LHSC->getValue() + 1))
-        return Builder.CreateICmp(PredL, LHS0, RHSC);
-      // X s> C & X != INT_MAX -> (X-(C+1)) u< INT_MAX-(C+1)
-      if (RHSC->isMaxValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               true, true);
-      break;                 // (X s> 13 & X != 15) -> no change
-    case ICmpInst::ICMP_SLT: // (X s> 13 & X s< 15) -> (X-14) u< 1
-      return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(), true,
-                             true);
-    }
-    break;
-  }
-
-  return nullptr;
+  Type *Ty = LHS0->getType();
+  Value *NewLHS = LHS0;
+  if (Offset != 0)
+    NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(Ty, Offset));
+  return Builder.CreateICmp(Pred, NewLHS, ConstantInt::get(Ty, NewRHS));
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -2551,100 +2467,23 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (LHS0 != RHS0)
     return nullptr;
 
-  // ICMP_[US][GL]E X, C is folded to ICMP_[US][GL]T elsewhere.
-  if (PredL == ICmpInst::ICMP_UGE || PredL == ICmpInst::ICMP_ULE ||
-      PredR == ICmpInst::ICMP_UGE || PredR == ICmpInst::ICMP_ULE ||
-      PredL == ICmpInst::ICMP_SGE || PredL == ICmpInst::ICMP_SLE ||
-      PredR == ICmpInst::ICMP_SGE || PredR == ICmpInst::ICMP_SLE)
+  ConstantRange CR1 =
+      ConstantRange::makeExactICmpRegion(PredL, LHSC->getValue());
+  ConstantRange CR2 =
+      ConstantRange::makeExactICmpRegion(PredR, RHSC->getValue());
+  Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
+  if (!CR)
     return nullptr;
 
-  // We can't fold (ugt x, C) | (sgt x, C2).
-  if (!predicatesFoldable(PredL, PredR))
-    return nullptr;
+  CmpInst::Predicate Pred;
+  APInt NewRHS, Offset;
+  CR->getEquivalentICmp(Pred, NewRHS, Offset);
 
-  // Ensure that the larger constant is on the RHS.
-  bool ShouldSwap;
-  if (CmpInst::isSigned(PredL) ||
-      (ICmpInst::isEquality(PredL) && CmpInst::isSigned(PredR)))
-    ShouldSwap = LHSC->getValue().sgt(RHSC->getValue());
-  else
-    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
-
-  if (ShouldSwap) {
-    std::swap(LHS, RHS);
-    std::swap(LHSC, RHSC);
-    std::swap(PredL, PredR);
-  }
-
-  // At this point, we know we have two icmp instructions
-  // comparing a value against two constants and or'ing the result
-  // together.  Because of the above check, we know that we only have
-  // ICMP_EQ, ICMP_NE, ICMP_LT, and ICMP_GT here. We also know (from the
-  // icmp folding check above), that the two constants are not
-  // equal.
-  assert(LHSC != RHSC && "Compares not folded above?");
-
-  switch (PredL) {
-  default:
-    llvm_unreachable("Unknown integer condition code!");
-  case ICmpInst::ICMP_EQ:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:
-      // Potential folds for this case should already be handled.
-      break;
-    case ICmpInst::ICMP_UGT:
-      // (X == 0 || X u> C) -> (X-1) u>= C
-      if (LHSC->isMinValue(false))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue() + 1,
-                               false, false);
-      // (X == 13 | X u> 14) -> no change
-      break;
-    case ICmpInst::ICMP_SGT:
-      // (X == INT_MIN || X s> C) -> (X-(INT_MIN+1)) u>= C-INT_MIN
-      if (LHSC->isMinValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue() + 1,
-                               true, false);
-      // (X == 13 | X s> 14) -> no change
-      break;
-    }
-    break;
-  case ICmpInst::ICMP_ULT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ: // (X u< 13 | X == 14) -> no change
-      // (X u< C || X == UINT_MAX) => (X-C) u>= UINT_MAX-C
-      if (RHSC->isMaxValue(false))
-        return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue(),
-                               false, false);
-      break;
-    case ICmpInst::ICMP_UGT: // (X u< 13 | X u> 15) -> (X-13) u> 2
-      assert(!RHSC->isMaxValue(false) && "Missed icmp simplification");
-      return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue() + 1,
-                             false, false);
-    }
-    break;
-  case ICmpInst::ICMP_SLT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:
-      // (X s< C || X == INT_MAX) => (X-C) u>= INT_MAX-C
-      if (RHSC->isMaxValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue(),
-                               true, false);
-      // (X s< 13 | X == 14) -> no change
-      break;
-    case ICmpInst::ICMP_SGT: // (X s< 13 | X s> 15) -> (X-13) u> 2
-      assert(!RHSC->isMaxValue(true) && "Missed icmp simplification");
-      return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue() + 1, true,
-                             false);
-    }
-    break;
-  }
-  return nullptr;
+  Type *Ty = LHS0->getType();
+  Value *NewLHS = LHS0;
+  if (Offset != 0)
+    NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(Ty, Offset));
+  return Builder.CreateICmp(Pred, NewLHS, ConstantInt::get(Ty, NewRHS));
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
