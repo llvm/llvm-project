@@ -1135,11 +1135,7 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
     if (auto DefsList = MSSA->getWritableBlockDefs(BlockWithDefsToReplace)) {
       for (auto &DefToReplaceUses : *DefsList) {
         BasicBlock *DominatingBlock = DefToReplaceUses.getBlock();
-        Value::use_iterator UI = DefToReplaceUses.use_begin(),
-                            E = DefToReplaceUses.use_end();
-        for (; UI != E;) {
-          Use &U = *UI;
-          ++UI;
+        for (Use &U : llvm::make_early_inc_range(DefToReplaceUses.uses())) {
           MemoryAccess *Usr = cast<MemoryAccess>(U.getUser());
           if (MemoryPhi *UsrPhi = dyn_cast<MemoryPhi>(Usr)) {
             BasicBlock *DominatedBlock = UsrPhi->getIncomingBlock(U);

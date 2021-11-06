@@ -546,9 +546,7 @@ void Value::replaceUsesWithIf(Value *New,
   SmallVector<TrackingVH<Constant>, 8> Consts;
   SmallPtrSet<Constant *, 8> Visited;
 
-  for (use_iterator UI = use_begin(), E = use_end(); UI != E;) {
-    Use &U = *UI;
-    ++UI;
+  for (Use &U : llvm::make_early_inc_range(uses())) {
     if (!ShouldReplace(U))
       continue;
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
