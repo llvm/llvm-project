@@ -339,9 +339,8 @@ class F_SFU1D<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
 }
 
 // Format: Dyadic register, for flt.
-class F_SFU1FLT<bits<4> func, bits<2> td, bits<2> t1, bits<2> t2,
-                dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                InstrItinClass itin = NoItinerary>
+class F_SFU1FLT<bits<2> td, dag outs, dag ins, string asmstr,
+                list<dag> pattern = [], InstrItinClass itin = NoItinerary>
    : F_SFU<outs, ins, asmstr, "$rd, $rs2", pattern, itin> {
   bits<1>  regfile;
 

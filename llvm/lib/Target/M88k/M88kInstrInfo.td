@@ -378,7 +378,7 @@ def ADDRri : ComplexPattern<i32, 2, "selectAddrRi", [], []>;
 def ADDRrs : ComplexPattern<i32, 1, "selectAddrRs", [], []>;
 
 // Multiclass for load and store instructions.
-multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+multiclass LoadIndexImm<bits<4> Func, string OpcStr,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
@@ -402,7 +402,7 @@ multiclass LoadIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
                   itin>;
 }
 
-multiclass StoreIndexImm<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+multiclass StoreIndexImm<bits<4> Func, string OpcStr,
                  InstrItinClass itin = NoItinerary> {
   def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs), (ins GPR:$rd, GPR:$rs1, imm32zx16:$si16),
@@ -443,7 +443,7 @@ class LoadXR<bits<6> Func, string OpcStr, ValueType VT, InstrItinClass itin = No
           [(set (VT XR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))],
           itin>;
 
-multiclass LoadUnscaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
+multiclass LoadUnscaled<bits<4> Func, string OpcStr,
                  InstrItinClass itin = NoItinerary> {
   let regfile = 1 in {
     def rrud  : F_LSINDUSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
@@ -521,8 +521,8 @@ multiclass LoadUnscaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
   }
 }
 
-multiclass LoadScaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
-                 InstrItinClass itin = NoItinerary> {
+multiclass LoadScaled<bits<4> Func, string OpcStr,
+                      InstrItinClass itin = NoItinerary> {
   let regfile = 1 in {
     def rrsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
                     (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
@@ -599,13 +599,13 @@ multiclass LoadScaled<bits<4> Func, string OpcStr, SDPatternOperator OpNode,
   }
 }
 
-defm LD : LoadIndexImm<0b0001, "ld", load>;
-defm ST : StoreIndexImm<0b0010, "st", store>;
+defm LD : LoadIndexImm<0b0001, "ld">;
+defm ST : StoreIndexImm<0b0010, "st">;
 
 defm LD : LoadUnsigned<>;
 
-defm LD : LoadUnscaled<0b0001, "ld", load>;
-defm LD : LoadScaled<0b0001, "ld", load>;
+defm LD : LoadUnscaled<0b0001, "ld">;
+defm LD : LoadScaled<0b0001, "ld">;
 
 let Predicates = [IsMC881100] in {
   def LDxri : LoadXR<0b000001, "ld", f32>;
@@ -792,20 +792,54 @@ multiclass FArith<bits<4> Func, string OpcStr,
                   InstrItinClass itin = NoItinerary>
                   : FArithG<Func, OpcStr, itin>, FArithX<Func, OpcStr, itin>;
 
-// Multiclass for dyadic register floating point instructions.
+// Multiclass for dyadic register floating point instructions, single prec.
+multiclass FArith2G<bits<4> Func, string OpcStr,
+                    InstrItinClass itin = NoItinerary> {
+  foreach S2 = 0-1 in {
+    let regfile = 0 in {
+      defvar S2Prec = getFT<S2>.ret.prec;
+      defvar S2Opnd = getFT<S2>.ret.opnd;
+      def gs # S2Prec :
+              F_SFU1D<Func, /*td=*/ 0b00, /*t1=*/ 0b00, /*t2=*/ S2,
+                      (outs GPR:$rd), (ins S2Opnd:$rs2),
+                      !strconcat(OpcStr, ".s", S2Prec),
+                      [], itin>;
+    }
+  }
+}
+
+multiclass FArith2X<bits<4> Func, string OpcStr,
+                    InstrItinClass itin = NoItinerary> {
+  foreach S2 = 0-2 in {
+    let regfile = 1, Predicates = [IsMC881100] in {
+      defvar S2Prec = getFT<S2>.ret.prec;
+      def xs # S2Prec :
+              F_SFU1D<Func, /*td=*/ 0b00, /*t1=*/ 0b00, /*t2=*/ S2,
+                      (outs GPR:$rd), (ins XR:$rs2),
+                      !strconcat(OpcStr, ".s", S2Prec),
+                      [], itin>;
+    }
+  }
+}
+
 multiclass FArith2<bits<4> Func, string OpcStr,
-                   InstrItinClass itin = NoItinerary> {
+                   InstrItinClass itin = NoItinerary>
+                  : FArith2G<Func, OpcStr, itin>, FArith2X<Func, OpcStr, itin>;
+
+// Multiclass for dyadic register floating point instructions, unary.
+multiclass FUnaryG<bits<4> Func, string OpcStr, bit eq,
+                    InstrItinClass itin = NoItinerary> {
   foreach D = 0-1 in {
     foreach S2 = 0-1 in {
-      defvar IsFPR = !and(!ne(D, 2), !ne(S2, 2));
-      if IsFPR then {
+      defvar IsLegal = !or(eq, !ne(D, S2));
+      if IsLegal then {
         let regfile = 0 in {
           defvar DPrec = getFT<D>.ret.prec;
           defvar DOpnd = getFT<D>.ret.opnd;
           defvar S2Prec = getFT<S2>.ret.prec;
           defvar S2Opnd = getFT<S2>.ret.opnd;
-          def DPrec # S2Prec :
-              F_SFU1D<Func, D, 0b00, S2,
+          def g # DPrec # S2Prec :
+              F_SFU1D<Func, D, /*t1=*/ 0b00, S2,
                       (outs DOpnd:$rd), (ins S2Opnd:$rs2),
                       !strconcat(OpcStr, ".", DPrec, S2Prec),
                       [], itin>;
@@ -814,6 +848,31 @@ multiclass FArith2<bits<4> Func, string OpcStr,
     }
   }
 }
+
+multiclass FUnaryX<bits<4> Func, string OpcStr, bit eq,
+                    InstrItinClass itin = NoItinerary> {
+  foreach D = 0-2 in {
+    foreach S2 = 0-2 in {
+      defvar IsLegal = !or(eq, !ne(D, S2));
+      if IsLegal then {
+        let regfile = 1, Predicates = [IsMC881100] in {
+          defvar DPrec = getFT<D>.ret.prec;
+          defvar S2Prec = getFT<S2>.ret.prec;
+          def x # DPrec # S2Prec :
+              F_SFU1D<Func, D, /*t1=*/ 0b00, S2,
+                      (outs XR:$rd), (ins XR:$rs2),
+                      !strconcat(OpcStr, ".", DPrec, S2Prec),
+                      [], itin>;
+        }
+      }
+    }
+  }
+}
+
+multiclass FUnary<bits<4> Func, string OpcStr, bit eq,
+                  InstrItinClass itin = NoItinerary>
+                  : FUnaryG<Func, OpcStr, eq, itin>,
+                    FUnaryX<Func, OpcStr, eq, itin>;
 
 // TODO Why does ftrunc not work?
 multiclass FloatBinPat<string Inst, SDPatternOperator OpNode> {
@@ -855,8 +914,35 @@ defm NINT : FArith2<0b1010, "nint">;
 defm TRNC : FArith2<0b1011, "trnc">;
 
 let Predicates = [IsMC881100] in {
-defm FCVT : FArith2<0b0001, "fcvt">;
-defm FSQRT : FArith2<0b1111, "fsqrt">;
+defm FCVT : FUnary<0b0001, "fcvt", false>;
+defm FSQRT : FUnary<0b1111, "fsqrt", true>;
+}
+
+// Missing: fcmp, fcmpu
+
+let regfile = 0 in {
+def FLTgss : F_SFU1FLT</*td=*/ 0b00,
+                       (outs GPR:$rd), (ins GPR:$rs2),
+                       "flt.ss",
+                       [(set (f32 GPR:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
+def FLTgds : F_SFU1FLT</*td=*/ 0b01,
+                       (outs GPR64:$rd), (ins GPR:$rs2),
+                       "flt.ds",
+                       [(set (f64 GPR64:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
+}
+let regfile = 1, Predicates = [IsMC881100] in {
+def FLTxss : F_SFU1FLT</*td=*/ 0b00,
+                       (outs XR:$rd), (ins GPR:$rs2),
+                       "flt.ss",
+                       [(set (f32 XR:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
+def FLTxds : F_SFU1FLT</*td=*/ 0b01,
+                       (outs XR:$rd), (ins GPR:$rs2),
+                       "flt.ds",
+                       [(set (f64 XR:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
+def FLTxxs : F_SFU1FLT</*td=*/ 0b10,
+                       (outs XR:$rd), (ins GPR:$rs2),
+                       "flt.xs",
+                       [(set (f80 XR:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
 }
 
 let regfile = 1, Predicates = [IsMC881100] in {
