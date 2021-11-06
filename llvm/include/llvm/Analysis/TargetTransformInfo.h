@@ -1113,6 +1113,17 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index = -1) const;
 
+  /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
+  /// \p ReplicationFactor times.
+  ///
+  /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
+  ///   <0,0,0,1,1,1,2,2,2,3,3,3>
+  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                            int VF,
+                                            const APInt &DemandedSrcElts,
+                                            const APInt &DemandedReplicatedElts,
+                                            TTI::TargetCostKind CostKind);
+
   /// \return The cost of Load and Store instructions.
   InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
@@ -1636,6 +1647,11 @@ public:
                                              const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              unsigned Index) = 0;
+
+  virtual InstructionCost getReplicationShuffleCost(
+      Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedSrcElts,
+      const APInt &DemandedReplicatedElts, TTI::TargetCostKind CostKind) = 0;
+
   virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                           Align Alignment,
                                           unsigned AddressSpace,
@@ -2136,6 +2152,15 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
+  }
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedSrcElts,
+                            const APInt &DemandedReplicatedElts,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
+                                          DemandedSrcElts,
+                                          DemandedReplicatedElts, CostKind);
   }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,

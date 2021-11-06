@@ -544,6 +544,13 @@ public:
     return 1;
   }
 
+  unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                                     const APInt &DemandedSrcElts,
+                                     const APInt &DemandedReplicatedElts,
+                                     TTI::TargetCostKind CostKind) {
+    return 1;
+  }
+
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
