@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -O0 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
-// RUN: %clang -fcoroutines-ts -std=c++14 -O0 -emit-llvm -c  %s -o %t -Xclang -disable-llvm-passes && %clang -c %t
+// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -O0 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang -disable-noundef-analysis -fcoroutines-ts -std=c++14 -O0 -emit-llvm -c  %s -o %t -Xclang -disable-llvm-passes && %clang -c %t
 
 #include "Inputs/coroutine-exp-namespace.h"
 
