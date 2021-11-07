@@ -2825,8 +2825,8 @@ void MicrosoftCXXNameMangler::mangleArtificialTagType(
   // Always start with the unqualified name.
   mangleSourceName(UnqualifiedName);
 
-  for (auto I = NestedNames.rbegin(), E = NestedNames.rend(); I != E; ++I)
-    mangleSourceName(*I);
+  for (StringRef N : llvm::reverse(NestedNames))
+    mangleSourceName(N);
 
   // Terminate the whole name with an '@'.
   Out << '@';

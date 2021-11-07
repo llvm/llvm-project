@@ -1418,8 +1418,7 @@ FindNearestOverriddenMethod(const CXXMethodDecl *MD,
   OverriddenMethodsSetTy OverriddenMethods;
   ComputeAllOverriddenMethods(MD, OverriddenMethods);
 
-  for (const CXXRecordDecl *PrimaryBase :
-       llvm::make_range(Bases.rbegin(), Bases.rend())) {
+  for (const CXXRecordDecl *PrimaryBase : llvm::reverse(Bases)) {
     // Now check the overridden methods.
     for (const CXXMethodDecl *OverriddenMD : OverriddenMethods) {
       // We found our overridden method.
@@ -3098,8 +3097,7 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
 }
 
 static void PrintBasePath(const VPtrInfo::BasePath &Path, raw_ostream &Out) {
-  for (const CXXRecordDecl *Elem :
-       llvm::make_range(Path.rbegin(), Path.rend())) {
+  for (const CXXRecordDecl *Elem : llvm::reverse(Path)) {
     Out << "'";
     Elem->printQualifiedName(Out);
     Out << "' in ";
