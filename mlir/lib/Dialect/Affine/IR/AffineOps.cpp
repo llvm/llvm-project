@@ -2384,11 +2384,11 @@ static void print(OpAsmPrinter &p, AffineStoreOp op) {
 }
 
 LogicalResult verify(AffineStoreOp op) {
-  // First operand must have same type as memref element type.
+  // The value to store must have the same type as memref element type.
   auto memrefType = op.getMemRefType();
   if (op.getValueToStore().getType() != memrefType.getElementType())
     return op.emitOpError(
-        "first operand must have same type memref element type");
+        "value to store must have the same type as memref element type");
 
   if (failed(verifyMemoryOpIndexing(
           op.getOperation(),
