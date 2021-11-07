@@ -1773,7 +1773,7 @@ struct __sanitizer_esr_context {
 
 static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
   static const u32 kEsrMagic = 0x45535201;
-  u8 *aux = ucontext->uc_mcontext.__reserved;
+  u8 *aux = reinterpret_cast<u8 *>(ucontext->uc_mcontext.__reserved);
   while (true) {
     _aarch64_ctx *ctx = (_aarch64_ctx *)aux;
     if (ctx->size == 0) break;
