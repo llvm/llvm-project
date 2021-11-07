@@ -167,8 +167,8 @@ static void appendSubframeworkPaths(Module *Mod,
     return;
 
   // Add Frameworks/Name.framework for each subframework.
-  for (unsigned I = Paths.size() - 1; I != 0; --I)
-    llvm::sys::path::append(Path, "Frameworks", Paths[I-1] + ".framework");
+  for (StringRef Framework : llvm::drop_begin(llvm::reverse(Paths)))
+    llvm::sys::path::append(Path, "Frameworks", Framework + ".framework");
 }
 
 Optional<FileEntryRef> ModuleMap::findHeader(
@@ -618,18 +618,18 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(const FileEntry *File) {
       // the actual header is located.
       bool Explicit = UmbrellaModule->InferExplicitSubmodules;
 
-      for (unsigned I = SkippedDirs.size(); I != 0; --I) {
+      for (const DirectoryEntry *SkippedDir : llvm::reverse(SkippedDirs)) {
         // Find or create the module that corresponds to this directory name.
         SmallString<32> NameBuf;
         StringRef Name = sanitizeFilenameAsIdentifier(
-            llvm::sys::path::stem(SkippedDirs[I-1]->getName()), NameBuf);
+            llvm::sys::path::stem(SkippedDir->getName()), NameBuf);
         Result = findOrCreateModule(Name, Result, /*IsFramework=*/false,
                                     Explicit).first;
         InferredModuleAllowedBy[Result] = UmbrellaModuleMap;
         Result->IsInferred = true;
 
         // Associate the module and the directory.
-        UmbrellaDirs[SkippedDirs[I-1]] = Result;
+        UmbrellaDirs[SkippedDir] = Result;
 
         // If inferred submodules export everything they import, add a
         // wildcard to the set of exports.
@@ -745,12 +745,11 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
         UmbrellaModule = UmbrellaModule->Parent;
 
       if (UmbrellaModule->InferSubmodules) {
-        for (unsigned I = SkippedDirs.size(); I != 0; --I) {
+        for (const DirectoryEntry *SkippedDir : llvm::reverse(SkippedDirs)) {
           // Find or create the module that corresponds to this directory name.
           SmallString<32> NameBuf;
           StringRef Name = sanitizeFilenameAsIdentifier(
-                             llvm::sys::path::stem(SkippedDirs[I-1]->getName()),
-                             NameBuf);
+              llvm::sys::path::stem(SkippedDir->getName()), NameBuf);
           Found = lookupModuleQualified(Name, Found);
           if (!Found)
             return false;
