@@ -43,6 +43,7 @@ static const auto I386 = llvm::COFF::IMAGE_FILE_MACHINE_I386;
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
   StringRef extName;    // E in /export:E=N
+  StringRef aliasTarget; // GNU specific: N in "alias == N"
   Symbol *sym = nullptr;
   uint16_t ordinal = 0;
   bool noname = false;
@@ -63,6 +64,7 @@ struct Export {
 
   bool operator==(const Export &e) {
     return (name == e.name && extName == e.extName &&
+            aliasTarget == e.aliasTarget &&
             ordinal == e.ordinal && noname == e.noname &&
             data == e.data && isPrivate == e.isPrivate);
   }

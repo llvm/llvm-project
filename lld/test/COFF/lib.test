@@ -1,6 +1,16 @@
 # RUN: lld-link /machine:x64 /def:%S/Inputs/library.def /out:%t.lib
 # RUN: llvm-nm %t.lib | FileCheck %s
 
+CHECK: 00000000 a @comp.id
+CHECK: 00000000 a @feat.00
+CHECK: 00000000 W alias
+CHECK:          U function
+
+CHECK: 00000000 a @comp.id
+CHECK: 00000000 a @feat.00
+CHECK: 00000000 W __imp_alias
+CHECK:          U __imp_function
+
 CHECK: 00000000 R __imp_constant
 CHECK: 00000000 R constant
 
