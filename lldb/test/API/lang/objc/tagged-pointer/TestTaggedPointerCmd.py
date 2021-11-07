@@ -18,6 +18,3 @@ class TestTaggedPointerCommand(TestBase):
 
         self.expect("lang objc tagged-pointer info 0x0", error=True,
                     patterns=["could not convert '0x0' to a valid address"])
-
-        self.expect("lang objc tagged-pointer info 0x00000001",
-                    patterns=["0x0000000000000001 is not tagged"])
