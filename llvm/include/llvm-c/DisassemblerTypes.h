@@ -18,6 +18,12 @@
 #endif
 
 /**
+ * @addtogroup LLVMCDisassembler
+ *
+ * @{
+ */
+
+/**
  * An opaque reference to a disassembler context.
  */
 typedef void *LLVMDisasmContextRef;
@@ -156,5 +162,9 @@ typedef const char *(*LLVMSymbolLookupCallback)(void *DisInfo,
 
 /* The output reference is to a C++ symbol name. */
 #define LLVMDisassembler_ReferenceType_DeMangled_Name 9
+
+/**
+ * @}
+ */
 
 #endif
