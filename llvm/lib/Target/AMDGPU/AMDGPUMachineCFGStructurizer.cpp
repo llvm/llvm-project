@@ -748,10 +748,8 @@ void LinearizedRegion::storeLiveOuts(MachineBasicBlock *MBB,
 
   // If we have a successor with a PHI, source coming from this MBB we have to
   // add the register as live out
-  for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
-                                        E = MBB->succ_end();
-       SI != E; ++SI) {
-    for (auto &II : *(*SI)) {
+  for (MachineBasicBlock *Succ : MBB->successors()) {
+    for (auto &II : *Succ) {
       if (II.isPHI()) {
         MachineInstr &PHI = II;
         int numPreds = getPHINumInputs(PHI);
@@ -760,7 +758,7 @@ void LinearizedRegion::storeLiveOuts(MachineBasicBlock *MBB,
             unsigned PHIReg = getPHISourceReg(PHI, i);
             LLVM_DEBUG(dbgs()
                        << "Add LiveOut (PhiSource " << printMBBReference(*MBB)
-                       << " -> " << printMBBReference(*(*SI))
+                       << " -> " << printMBBReference(*Succ)
                        << "): " << printReg(PHIReg, TRI) << "\n");
             addLiveOut(PHIReg);
           }
@@ -1235,11 +1233,7 @@ bool AMDGPUMachineCFGStructurizer::regionIsSimpleIf(RegionMRT *Region) {
     return false;
   }
 
-  for (MachineBasicBlock::const_succ_iterator SI = Entry->succ_begin(),
-                                              E = Entry->succ_end();
-       SI != E; ++SI) {
-    MachineBasicBlock *Current = *SI;
-
+  for (MachineBasicBlock *Current : Entry->successors()) {
     if (Current == Succ) {
       FoundBypass = true;
     } else if ((Current->succ_size() == 1) &&
@@ -1277,10 +1271,7 @@ static void fixRegionTerminator(RegionMRT *Region) {
   auto Exit = LRegion->getExit();
 
   SmallPtrSet<MachineBasicBlock *, 2> Successors;
-  for (MachineBasicBlock::const_succ_iterator SI = Exit->succ_begin(),
-                                              SE = Exit->succ_end();
-       SI != SE; ++SI) {
-    MachineBasicBlock *Succ = *SI;
+  for (MachineBasicBlock *Succ : Exit->successors()) {
     if (LRegion->contains(Succ)) {
       // Do not allow re-assign
       assert(InternalSucc == nullptr);
@@ -1774,27 +1765,20 @@ static void removeExternalCFGEdges(MachineBasicBlock *StartMBB,
   unsigned SuccSize = StartMBB->succ_size();
   if (SuccSize > 0) {
     MachineBasicBlock *StartMBBSucc = *(StartMBB->succ_begin());
-    for (MachineBasicBlock::succ_iterator PI = EndMBB->succ_begin(),
-                                          E = EndMBB->succ_end();
-         PI != E; ++PI) {
+    for (MachineBasicBlock *Succ : EndMBB->successors()) {
       // Either we have a back-edge to the entry block, or a back-edge to the
       // successor of the entry block since the block may be split.
-      if ((*PI) != StartMBB &&
-          !((*PI) == StartMBBSucc && StartMBB != EndMBB && SuccSize == 1)) {
+      if (Succ != StartMBB &&
+          !(Succ == StartMBBSucc && StartMBB != EndMBB && SuccSize == 1)) {
         Succs.insert(
-            std::pair<MachineBasicBlock *, MachineBasicBlock *>(EndMBB, *PI));
+            std::pair<MachineBasicBlock *, MachineBasicBlock *>(EndMBB, Succ));
       }
     }
   }
 
-  for (MachineBasicBlock::pred_iterator PI = StartMBB->pred_begin(),
-                                        E = StartMBB->pred_end();
-       PI != E; ++PI) {
-    if ((*PI) != EndMBB) {
-      Succs.insert(
-          std::pair<MachineBasicBlock *, MachineBasicBlock *>(*PI, StartMBB));
-    }
-  }
+  for (MachineBasicBlock *Pred : StartMBB->predecessors())
+    if (Pred != EndMBB)
+      Succs.insert(std::make_pair(Pred, StartMBB));
 
   for (auto SI : Succs) {
     std::pair<MachineBasicBlock *, MachineBasicBlock *> Edge = SI;
@@ -1812,14 +1796,9 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfBlock(
   MachineBasicBlock *IfBB = MF->CreateMachineBasicBlock();
 
   if (InheritPreds) {
-    for (MachineBasicBlock::pred_iterator PI = CodeBBStart->pred_begin(),
-                                          E = CodeBBStart->pred_end();
-         PI != E; ++PI) {
-      if ((*PI) != CodeBBEnd) {
-        MachineBasicBlock *Pred = (*PI);
+    for (MachineBasicBlock *Pred : CodeBBStart->predecessors())
+      if (Pred != CodeBBEnd)
         Pred->addSuccessor(IfBB);
-      }
-    }
   }
 
   removeExternalCFGEdges(CodeBBStart, CodeBBEnd);
@@ -2566,11 +2545,9 @@ static void removeOldExitPreds(RegionMRT *Region) {
 
 static bool mbbHasBackEdge(MachineBasicBlock *MBB,
                            SmallPtrSet<MachineBasicBlock *, 8> &MBBs) {
-  for (auto SI = MBB->succ_begin(), SE = MBB->succ_end(); SI != SE; ++SI) {
-    if (MBBs.contains(*SI)) {
+  for (MachineBasicBlock *Succ : MBB->successors())
+    if (MBBs.contains(Succ))
       return true;
-    }
-  }
   return false;
 }
 

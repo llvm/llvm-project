@@ -965,7 +965,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
     // Write the section relocation entries, in reverse order to match 'as'
     // (approximately, the exact algorithm is more complicated than this).
     std::vector<RelAndSymbol> &Relocs = Relocations[&Sec];
-    for (const RelAndSymbol &Rel : make_range(Relocs.rbegin(), Relocs.rend())) {
+    for (const RelAndSymbol &Rel : llvm::reverse(Relocs)) {
       W.write<uint32_t>(Rel.MRE.r_word0);
       W.write<uint32_t>(Rel.MRE.r_word1);
     }
