@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx    | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2   | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512DQBW
 
 ; PR28925
 
@@ -20,6 +22,21 @@ define <4 x i32> @test1(<4 x i1> %cond, <4 x i32> %x) {
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: test1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; AVX512F-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: test1:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    vpmovd2m %xmm0, %k0
+; AVX512DQBW-NEXT:    knotw %k0, %k1
+; AVX512DQBW-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
+; AVX512DQBW-NEXT:    retq
   %r = select <4 x i1> %cond, <4 x i32> zeroinitializer, <4 x i32> %x
   ret <4 x i32> %r
 }
@@ -36,6 +53,12 @@ define <4 x i32> @test2(<4 x float> %a, <4 x float> %b, <4 x i32> %x) {
 ; AVX-NEXT:    vcmpneqps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpneqps %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
   %cond = fcmp oeq <4 x float> %a, %b
   %r = select <4 x i1> %cond, <4 x i32> zeroinitializer, <4 x i32> %x
   ret <4 x i32> %r
@@ -53,6 +76,12 @@ define float @fsel_zero_false_val(float %a, float %b, float %x) {
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fsel_zero_false_val:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vmovss %xmm2, %xmm2, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
   %cond = fcmp oeq float %a, %b
   %r = select i1 %cond, float %x, float 0.0
   ret float %r
@@ -70,6 +99,14 @@ define float @fsel_zero_true_val(float %a, float %b, float %x) {
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandnps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fsel_zero_true_val:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpeqss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %cond = fcmp oeq float %a, %b
   %r = select i1 %cond, float 0.0, float %x
   ret float %r
@@ -91,6 +128,13 @@ define double @fsel_nonzero_false_val(double %x, double %y, double %z) {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fsel_nonzero_false_val:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %cond = fcmp oeq double %x, %y
   %r = select i1 %cond, double %z, double 42.0
   ret double %r
@@ -112,6 +156,13 @@ define double @fsel_nonzero_true_val(double %x, double %y, double %z) {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fsel_nonzero_true_val:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vmovsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 {%k1}
+; AVX512-NEXT:    vmovapd %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %cond = fcmp oeq double %x, %y
   %r = select i1 %cond, double 42.0, double %z
   ret double %r
@@ -133,6 +184,13 @@ define double @fsel_nonzero_constants(double %x, double %y) {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: fsel_nonzero_constants:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %cond = fcmp oeq double %x, %y
   %r = select i1 %cond, double 12.0, double 42.0
   ret double %r
@@ -164,6 +222,13 @@ define <2 x double> @vsel_nonzero_constants(<2 x double> %x, <2 x double> %y) {
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: vsel_nonzero_constants:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcmplepd %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovapd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %cond = fcmp oge <2 x double> %x, %y
   %r = select <2 x i1> %cond, <2 x double> <double 12.0, double -1.0>, <2 x double> <double 42.0, double 0.0>
   ret <2 x double> %r
@@ -184,6 +249,13 @@ define <16 x i8> @signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <16 x i8> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i8> %b, <16 x i8> zeroinitializer
   ret <16 x i8> %r
@@ -201,6 +273,12 @@ define <8 x i16> @signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v8i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> zeroinitializer
   ret <8 x i16> %r
@@ -218,6 +296,12 @@ define <4 x i32> @signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <4 x i32> %a, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i32> %b, <4 x i32> zeroinitializer
   ret <4 x i32> %r
@@ -245,6 +329,12 @@ define <2 x i64> @signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; AVX-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraq $63, %xmm0, %xmm0
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <2 x i64> %a, zeroinitializer
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
   ret <2 x i64> %r
@@ -279,6 +369,13 @@ define <32 x i8> @signbit_mask_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX2-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v32i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
+; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <32 x i8> %a, zeroinitializer
   %r = select <32 x i1> %cond, <32 x i8> %b, <32 x i8> zeroinitializer
   ret <32 x i8> %r
@@ -307,6 +404,12 @@ define <16 x i16> @signbit_mask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v16i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <16 x i16> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i16> %b, <16 x i16> zeroinitializer
   ret <16 x i16> %r
@@ -335,6 +438,12 @@ define <8 x i32> @signbit_mask_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %ymm0, %ymm0
+; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <8 x i32> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i32> %b, <8 x i32> zeroinitializer
   ret <8 x i32> %r
@@ -379,6 +488,12 @@ define <4 x i64> @signbit_mask_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_mask_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraq $63, %ymm0, %ymm0
+; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <4 x i64> %a, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i64> %b, <4 x i64> zeroinitializer
   ret <4 x i64> %r
@@ -399,6 +514,13 @@ define <16 x i8> @signbit_setmask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
+; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <16 x i8> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %b
   ret <16 x i8> %r
@@ -416,6 +538,12 @@ define <8 x i16> @signbit_setmask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v8i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %b
   ret <8 x i16> %r
@@ -433,6 +561,12 @@ define <4 x i32> @signbit_setmask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <4 x i32> %a, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %b
   ret <4 x i32> %r
@@ -460,6 +594,12 @@ define <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; AVX-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraq $63, %xmm0, %xmm0
+; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <2 x i64> %a, zeroinitializer
   %r = select <2 x i1> %cond, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %b
   ret <2 x i64> %r
@@ -494,6 +634,13 @@ define <32 x i8> @signbit_setmask_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX2-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v32i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <32 x i8> %a, zeroinitializer
   %r = select <32 x i1> %cond, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %b
   ret <32 x i8> %r
@@ -522,6 +669,12 @@ define <16 x i16> @signbit_setmask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v16i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <16 x i16> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %b
   ret <16 x i16> %r
@@ -550,6 +703,12 @@ define <8 x i32> @signbit_setmask_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrad $31, %ymm0, %ymm0
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <8 x i32> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <8 x i32> %b
   ret <8 x i32> %r
@@ -594,6 +753,12 @@ define <4 x i64> @signbit_setmask_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: signbit_setmask_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraq $63, %ymm0, %ymm0
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %cond = icmp slt <4 x i64> %a, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>, <4 x i64> %b
   ret <4 x i64> %r
