@@ -93,19 +93,15 @@ void DIEHash::addParentContext(const DIE &Parent) {
 
   // Reverse iterate over our list to go from the outermost construct to the
   // innermost.
-  for (SmallVectorImpl<const DIE *>::reverse_iterator I = Parents.rbegin(),
-                                                      E = Parents.rend();
-       I != E; ++I) {
-    const DIE &Die = **I;
-
+  for (const DIE *Die : llvm::reverse(Parents)) {
     // ... Append the letter "C" to the sequence...
     addULEB128('C');
 
     // ... Followed by the DWARF tag of the construct...
-    addULEB128(Die.getTag());
+    addULEB128(Die->getTag());
 
     // ... Then the name, taken from the DW_AT_name attribute.
-    StringRef Name = getDIEStringAttr(Die, dwarf::DW_AT_name);
+    StringRef Name = getDIEStringAttr(*Die, dwarf::DW_AT_name);
     LLVM_DEBUG(dbgs() << "... adding context: " << Name << "\n");
     if (!Name.empty())
       addString(Name);

@@ -12696,7 +12696,7 @@ ScalarEvolution::getLoopDisposition(const SCEV *S, const Loop *L) {
   Values.emplace_back(L, LoopVariant);
   LoopDisposition D = computeLoopDisposition(S, L);
   auto &Values2 = LoopDispositions[S];
-  for (auto &V : make_range(Values2.rbegin(), Values2.rend())) {
+  for (auto &V : llvm::reverse(Values2)) {
     if (V.getPointer() == L) {
       V.setInt(D);
       break;
@@ -12804,7 +12804,7 @@ ScalarEvolution::getBlockDisposition(const SCEV *S, const BasicBlock *BB) {
   Values.emplace_back(BB, DoesNotDominateBlock);
   BlockDisposition D = computeBlockDisposition(S, BB);
   auto &Values2 = BlockDispositions[S];
-  for (auto &V : make_range(Values2.rbegin(), Values2.rend())) {
+  for (auto &V : llvm::reverse(Values2)) {
     if (V.getPointer() == BB) {
       V.setInt(D);
       break;

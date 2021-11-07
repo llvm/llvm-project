@@ -244,7 +244,7 @@ void BreakFalseDeps::processUndefReads(MachineBasicBlock *MBB) {
   MachineInstr *UndefMI = UndefReads.back().first;
   unsigned OpIdx = UndefReads.back().second;
 
-  for (MachineInstr &I : make_range(MBB->rbegin(), MBB->rend())) {
+  for (MachineInstr &I : llvm::reverse(*MBB)) {
     // Update liveness, including the current instruction's defs.
     LiveRegSet.stepBackward(I);
 
