@@ -73,7 +73,7 @@ body:             |
     renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
     DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 18446744073709551614, DW_OP_minus), debug-location !14
 
-    RETQ debug-location !14
+    RET64 debug-location !14
 
 
   bb.1: ;-------------------------- DW_OP_plus -------------------------------
@@ -106,7 +106,7 @@ body:             |
     renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
     DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 18446744073709551614, DW_OP_plus), debug-location !14
 
-    RETQ debug-location !14
+    RET64 debug-location !14
 
 
   bb.2: ;-------------------------- DW_OP_plus_uconst -------------------------------
@@ -139,7 +139,7 @@ body:             |
     renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
     DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 18446744073709551614), debug-location !14
 
-    RETQ debug-location !14
+    RET64 debug-location !14
 
 ...
 

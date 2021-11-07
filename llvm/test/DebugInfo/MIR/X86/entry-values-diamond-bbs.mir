@@ -178,6 +178,6 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16, debug-location !34
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !34
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !34
-    RETQ killed $eax, debug-location !34
+    RET64 killed $eax, debug-location !34
 
 ...

@@ -21,8 +21,8 @@ body:            |
   bb.0:
     liveins: $edi
     ; CHECK: PATCHABLE_FUNCTION_ENTER
-    RETQ
+    RET64
     ; CHECK-NEXT: PATCHABLE_RET
-    RETQ
+    RET64
     ; CHECK-NEXT: PATCHABLE_RET
 ...

@@ -25,5 +25,5 @@ body: |
     ; CHECK: [[@LINE+1]]:13: use of undefined stack object '%stack.2'
     MOV32mr %stack.2, 1, _, 0, _, %0
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...

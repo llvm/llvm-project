@@ -341,6 +341,6 @@ body:             |
     $rsp = MOV64rr $rbp, debug-location !12
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !12
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !12
-    RETQ implicit killed $eax, debug-location !12
+    RET64 implicit killed $eax, debug-location !12
 
 ...

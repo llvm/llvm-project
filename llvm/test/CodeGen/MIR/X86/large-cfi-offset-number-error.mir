@@ -22,6 +22,6 @@ body: |
     ; CHECK: [[@LINE+1]]:36: expected a 32 bit integer (the cfi offset is too large)
     CFI_INSTRUCTION def_cfa_offset 123456789123456
     $rsp = ADD64ri32 $rsp, 4040, implicit-def dead $eflags
-    RETQ
+    RET64
 ...
 

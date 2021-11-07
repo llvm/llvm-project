@@ -540,7 +540,7 @@ def : InstRW<[AtomWrite0_1_1], (instrs POP32r, POP64r,
                                        PUSH16rmr, PUSH32rmr, PUSH64rmr,
                                        PUSH16i8, PUSH32i8, PUSH64i8, PUSH64i32,
                                        XCH_F)>;
-def : InstRW<[AtomWrite0_1_1], (instregex "RETI(L|Q|W)$",
+def : InstRW<[AtomWrite0_1_1], (instregex "RETI(16|32|64)$",
                                           "IRET(16|32|64)?")>;
 
 def AtomWrite0_1_5 : SchedWriteRes<[AtomPort0, AtomPort1]> {
@@ -819,8 +819,8 @@ def AtomWrite01_79 : SchedWriteRes<[AtomPort01]> {
   let Latency = 79;
   let ResourceCycles = [79];
 }
-def : InstRW<[AtomWrite01_79], (instregex "RET(L|Q|W)?$",
-                                          "LRETI?(L|Q|W)")>;
+def : InstRW<[AtomWrite01_79], (instregex "RET(16|32|64)?$",
+                                          "LRETI?(16|32|64)")>;
 
 def AtomWrite01_92 : SchedWriteRes<[AtomPort01]> {
   let Latency = 92;

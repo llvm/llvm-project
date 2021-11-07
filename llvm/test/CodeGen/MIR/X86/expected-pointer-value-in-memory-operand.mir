@@ -19,6 +19,6 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:64: expected a pointer IR value
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load (s32) from %ir.b)
-    RETQ $eax
+    RET64 $eax
 ...
 

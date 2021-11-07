@@ -914,7 +914,7 @@ body: |
   ; CHECK: $ymm0 = VPERM2I128rr                $ymm0, $ymm1, 32
   $ymm0 = VSHUFI64X2Z256rri                    $ymm0, $ymm1, 228
 
-  RETQ
+  RET64
 ...
 ---
   # CHECK-LABEL: name: evex_z128_to_vex_test
@@ -1800,7 +1800,7 @@ body: |
   ; CHECK: $xmm0 = VROUNDPSr                   $xmm0, 15, implicit $mxcsr
   $xmm0 = VRNDSCALEPSZ128rri                   $xmm0, 15, implicit $mxcsr
 
-  RETQ
+  RET64
 ...
 ---
   # CHECK-LABEL: name: evex_scalar_to_vex_test
@@ -2371,7 +2371,7 @@ body: |
   ; CHECK: $xmm0 = VROUNDSSr_Int               $xmm0, $xmm1, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESSZr_Int                    $xmm0, $xmm1, 15, implicit $mxcsr
 
-  RETQ
+  RET64
 ...
 ---
   # CHECK-LABEL: name: evex_z256_to_evex_test
@@ -3285,7 +3285,7 @@ body: |
   ; CHECK: $ymm16 = VSHUFI64X2Z256rri          $ymm16, $ymm1, 228
   $ymm16 = VSHUFI64X2Z256rri                   $ymm16, $ymm1, 228
 
-  RETQ
+  RET64
 ...                                            
 ---                                            
   # CHECK-LABEL: name: evex_z128_to_evex_test
@@ -4179,7 +4179,7 @@ body: |
   ; CHECK: $xmm0 = VRNDSCALEPSZ128rri          $xmm0, 31, implicit $mxcsr
   $xmm0 = VRNDSCALEPSZ128rri                   $xmm0, 31, implicit $mxcsr
     
-  RETQ
+  RET64
 ...
 ---
   # CHECK-LABEL: name: evex_scalar_to_evex_test
@@ -4761,5 +4761,5 @@ body: |
   ; CHECK: $xmm0 = VRNDSCALESSZr_Int           $xmm0, $xmm1, 31, implicit $mxcsr
   $xmm0 = VRNDSCALESSZr_Int                    $xmm0, $xmm1, 31, implicit $mxcsr
   
-  RETQ
+  RET64
 ...

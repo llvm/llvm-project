@@ -31,11 +31,11 @@ body: |
 
   bb.1.less:
     $eax = MOV32r0 implicit-def dead $eflags
-    RETQ killed $eax
+    RET64 killed $eax
 
   bb.2.exit:
     liveins: $edi
 
     $eax = COPY killed $edi
-    RETQ killed $eax
+    RET64 killed $eax
 ...

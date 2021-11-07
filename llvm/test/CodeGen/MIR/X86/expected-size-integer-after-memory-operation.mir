@@ -19,6 +19,6 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:53: expected an atomic scope, ordering or a size specification
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load from %ir.a)
-    RETQ $eax
+    RET64 $eax
 ...
 

@@ -24,7 +24,7 @@ body:             |
     ; CHECK: $cl = IMPLICIT_DEF
     ; CHECK: renamable $eax = COPY renamable $edx
     ; CHECK: dead renamable $eax = SHRD32rrCL renamable $eax, killed renamable $edx, implicit-def dead $eflags, implicit killed $cl
-    ; CHECK: RETL
+    ; CHECK: RET32
     %0:gr32 = IMPLICIT_DEF
     %1:gr32 = MOVZX32rm8 %0, 1, $noreg, 0, $noreg :: (load (s8) from `i168* undef` + 20, align 4, basealign 16)
     %2:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from `i168* undef` + 12, basealign 16)
@@ -40,6 +40,6 @@ body:             |
     $cl = IMPLICIT_DEF
     %8:gr32 = COPY %1
     %8:gr32 = SHRD32rrCL %8, %1, implicit-def dead $eflags, implicit $cl
-    RETL
+    RET32
 
 ...

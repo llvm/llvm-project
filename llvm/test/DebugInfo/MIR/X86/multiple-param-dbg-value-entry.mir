@@ -80,6 +80,6 @@ body:             |
     MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !18 :: (store (s32) into @global)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $edi, 12, implicit-def dead early-clobber $esi, 12, implicit-def dead early-clobber $edx, 12, implicit-def dead early-clobber $df, 12, implicit-def dead early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !19, debug-location !18
     $eax = MOV32ri 123, debug-location !18
-    RETQ killed $eax, debug-location !18
+    RET64 killed $eax, debug-location !18
 
 ...

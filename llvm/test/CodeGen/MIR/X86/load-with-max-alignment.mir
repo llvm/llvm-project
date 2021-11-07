@@ -21,7 +21,7 @@ body:             |
     liveins: $rdi
 
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 0, $noreg :: (load (s32) from unknown-address, align 4294967296)
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -39,6 +39,6 @@ body:             |
     liveins: $rdi
 
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 0, $noreg :: (load (s32) from unknown-address + 4, basealign 4294967296)
-    RETQ $eax
+    RET64 $eax
 
 ...

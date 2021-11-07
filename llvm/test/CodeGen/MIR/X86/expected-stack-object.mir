@@ -63,5 +63,5 @@ body: |
     CMP64rm killed $rbx, $rsp, 1, _, 24, _, implicit-def $eflags
     $rsp = ADD64ri8 $rsp, 32, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 ...

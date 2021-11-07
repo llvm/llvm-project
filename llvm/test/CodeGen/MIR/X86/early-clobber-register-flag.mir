@@ -40,5 +40,5 @@ body: |
     $edi = COPY killed $ecx
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp
     $rax = POP64r implicit-def $rsp, implicit $rsp
-    RETQ
+    RET64
 ...

@@ -212,7 +212,7 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   MF.push_back(CallTarget);
 
   const unsigned CallOpc = Is64Bit ? X86::CALL64pcrel32 : X86::CALLpcrel32;
-  const unsigned RetOpc = Is64Bit ? X86::RETQ : X86::RETL;
+  const unsigned RetOpc = Is64Bit ? X86::RET64 : X86::RET32;
 
   Entry->addLiveIn(ThunkReg);
   BuildMI(Entry, DebugLoc(), TII->get(CallOpc)).addSym(TargetSym);

@@ -1436,7 +1436,7 @@ def SKXWriteResGroup104 : SchedWriteRes<[SKXPort6,SKXPort23,SKXPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKXWriteResGroup104], (instrs LRETQ, RETQ)>;
+def: InstRW<[SKXWriteResGroup104], (instrs LRET64, RET64)>;
 
 def SKXWriteResGroup106 : SchedWriteRes<[SKXPort4,SKXPort5,SKXPort237]> {
   let Latency = 7;

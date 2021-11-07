@@ -20,6 +20,6 @@ constants:
 body: |
   bb.0.entry:
     %xmm0 = ADDSDrm killed %xmm0, %rip, 1, _, %const.0, _
-    RETQ %xmm0
+    RET64 %xmm0
 ...
 

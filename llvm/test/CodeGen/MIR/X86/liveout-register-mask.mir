@@ -38,5 +38,5 @@ body: |
   ; CHECK: PATCHPOINT 5, 5, 0, 2, 0, $rdi, $rsi, csr_64, liveout($esp, $rsp, $sp, $spl),
     PATCHPOINT 5, 5, 0, 2, 0, $rdi, $rsi, csr_64, liveout($esp, $rsp, $sp, $spl), implicit-def dead early-clobber $r11, implicit-def $rsp, implicit-def dead $rax
     $rbp = POP64r implicit-def $rsp, implicit $rsp
-    RETQ
+    RET64
 ...

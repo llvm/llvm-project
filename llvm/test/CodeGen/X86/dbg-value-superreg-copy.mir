@@ -44,7 +44,7 @@ body:             |
   bb.2:
     $ax = COPY %1
     $dx = COPY %2
-    RETQ killed $ax, killed $dx
+    RET64 killed $ax, killed $dx
 ...
 
 # This test case was created as a reproducer for a bug when we got incorrect

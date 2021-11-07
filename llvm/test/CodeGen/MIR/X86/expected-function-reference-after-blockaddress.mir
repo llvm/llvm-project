@@ -26,5 +26,5 @@ body: |
     JMP64m $rip, 1, _, @addr, _
 
   bb.1.block (address-taken):
-    RETQ
+    RET64
 ...

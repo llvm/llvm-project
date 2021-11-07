@@ -47,7 +47,7 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
     $al = MOV8rr killed $dil
-    RETQ killed $al
+    RET64 killed $al
 
 ...
 
@@ -62,7 +62,7 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
     $al = MOV8rr $dil, implicit $edi
-    RETQ killed $al
+    RET64 killed $al
 
 ...
 
@@ -77,7 +77,7 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $dil, implicit-def $rax
     $al = MOV8rr $dil, implicit-def $rax
-    RETQ killed $al
+    RET64 killed $al
 
 ...
 
@@ -92,7 +92,7 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
     $al = MOV8rr $dil, implicit-def $eax
-    RETQ killed $al
+    RET64 killed $al
 
 ...
 
@@ -107,7 +107,7 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $dil
     $al = MOV8rr $dil, implicit-def $ax
-    RETQ killed $al
+    RET64 killed $al
 
 ...
 
@@ -122,7 +122,7 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $di
     $ax = MOV16rr $di, implicit-def $eax
-    RETQ killed $ax
+    RET64 killed $ax
 
 ...
 
@@ -137,6 +137,6 @@ body:             |
 
     ; CHECK: $eax = MOV32rr undef $edi, implicit $di, implicit-def $rax
     $ax = MOV16rr $di, implicit-def $rax
-    RETQ killed $ax
+    RET64 killed $ax
 
 ...

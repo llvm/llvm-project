@@ -219,6 +219,6 @@ body:             |
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags, debug-location !53
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !53
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !53
-    RETQ debug-location !53
+    RET64 debug-location !53
 
 ...

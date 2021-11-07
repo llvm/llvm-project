@@ -109,5 +109,5 @@ body:             |
 
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit %3, implicit %5
 
-    RETQ
+    RET64
 ...

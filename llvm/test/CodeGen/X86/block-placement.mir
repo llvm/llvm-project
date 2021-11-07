@@ -73,7 +73,7 @@ body:             |
     liveins: $rdi, $eax
   
     $rcx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
   bb.2.null:
     liveins: $rdi

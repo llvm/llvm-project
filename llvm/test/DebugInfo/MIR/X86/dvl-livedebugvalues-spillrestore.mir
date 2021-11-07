@@ -72,6 +72,6 @@ body:             |
     $rax = COPY killed $rdi
     $rdi = MOV64ri 0
     $rdi = MOV64rm $rsp, 1, $noreg, -16, $noreg, debug-location !15 :: (load (s64) from %stack.0)
-    RETQ
+    RET64
 ...
 

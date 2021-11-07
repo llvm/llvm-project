@@ -697,7 +697,7 @@ def : InstRW<[WriteMicrocoded], (instregex "CALL(16|32)m")>;
 def Zn2WriteRET : SchedWriteRes<[Zn2ALU03]> {
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn2WriteRET], (instregex "RET(L|Q|W)", "LRET(L|Q|W)",
+def : InstRW<[Zn2WriteRET], (instregex "RET(16|32|64)", "LRET(16|32|64)",
                             "IRET(16|32|64)")>;
 
 //-- Logic instructions --//

@@ -154,7 +154,7 @@ body:             |
   bb.10:
     liveins: $rdi, $rsi
     ; Should _not_ be a live-in loc here.
-    RETQ
+    RET64
 
 ...
 

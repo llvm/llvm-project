@@ -58,7 +58,7 @@ body:             |
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !15
     DBG_VALUE $eax, $noreg, !12, !DIExpression(), debug-location !15
     renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $esi, implicit-def dead $eflags, debug-location !16
-    RETQ $eax, debug-location !17
+    RET64 $eax, debug-location !17
 
 ...
 

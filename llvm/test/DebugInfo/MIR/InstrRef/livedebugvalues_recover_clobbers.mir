@@ -96,5 +96,5 @@ body:  |
     ; CHECK-NEXT: CALL64pcrel32
     ; CHECK-NEXT: DBG_VALUE $ebx
 
-    RETQ $eax, debug-location !17
+    RET64 $eax, debug-location !17
 ...

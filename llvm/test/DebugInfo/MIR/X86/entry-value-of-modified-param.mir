@@ -114,6 +114,6 @@ body:             |
     renamable $al = SETCCr 12, implicit killed $eflags, implicit killed $eax, implicit-def $eax, debug-location !23
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !26
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !26
-    RETQ $eax, debug-location !26
+    RET64 $eax, debug-location !26
 
 ...

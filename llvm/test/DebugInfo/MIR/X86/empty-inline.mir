@@ -109,13 +109,13 @@ body:             |
     $rax = MOV64rm $rdi, 1, _, 0, _ :: (load (s64) from %ir.6, align 4)
     $al = MOV8rm killed $rax, 1, _, 0, _ :: (load (s8) from %ir.8)
     MOV8mr killed $rdi, 1, _, 8, _, killed $al, debug-location !14 :: (store (s8) into %ir.12)
-    RETQ undef $eax
+    RET64 undef $eax
 
   bb.1:
     liveins: $rdi
 
     $al = IMPLICIT_DEF debug-location !10
     MOV8mr killed $rdi, 1, _, 8, _, killed $al, debug-location !14 :: (store (s8) into %ir.12)
-    RETQ undef $eax
+    RET64 undef $eax
 
 ...

@@ -36,7 +36,7 @@ body: |
     ; CHECK: NOOP implicit killed [[REG1]]
     NOOP implicit %2
     NOOP implicit %1
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 # CHECK-LABEL: name: func3

@@ -30,5 +30,5 @@ body: |
     %2 = COPY $edi
     %2 = IMUL32rr %2, %1, implicit-def dead $eflags
     $eax = COPY %2
-    RETQ killed $eax
+    RET64 killed $eax
 ...
