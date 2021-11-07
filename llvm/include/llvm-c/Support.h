@@ -21,6 +21,12 @@
 LLVM_C_EXTERN_C_BEGIN
 
 /**
+ * @addtogroup LLVMCCore
+ *
+ * @{
+ */
+
+/**
  * This function permanently loads the dynamic library at the given path.
  * It is safe to call this function multiple times for the same library.
  *
@@ -56,6 +62,10 @@ void *LLVMSearchForAddressOfSymbol(const char *symbolName);
  * @see sys::DynamicLibrary::AddSymbol()
  */
 void LLVMAddSymbol(const char *symbolName, void *symbolValue);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

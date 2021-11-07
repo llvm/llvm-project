@@ -22,6 +22,13 @@
 LLVM_C_EXTERN_C_BEGIN
 
 /**
+ * @defgroup LLVMCCoreDebugInfo Debug Information
+ * @ingroup LLVMCCore
+ *
+ * @{
+ */
+
+/**
  * Debug info flags.
  */
 typedef enum {
@@ -1366,6 +1373,10 @@ void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
  * @see llvm::Metadata::getMetadataID()
  */
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 
