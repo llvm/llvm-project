@@ -558,8 +558,8 @@ TEST_F(ConstantRangeTest, IntersectWith) {
   EXPECT_EQ(LHS.intersectWith(RHS), ConstantRange(APInt(32, 15), APInt(32, 0)));
 }
 
-template<typename Fn1, typename Fn2>
-void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 InResultFn) {
+template<typename Fn1, typename Fn2, typename Fn3>
+void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 ExactOpFn, Fn3 InResultFn) {
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(Bits,
       [=](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -577,6 +577,13 @@ void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 InResultFn) {
 
         ConstantRange SignedCR = OpFn(CR1, CR2, ConstantRange::Signed);
         TestRange(SignedCR, Elems, PreferSmallestNonFullSigned, {CR1, CR2});
+
+        Optional<ConstantRange> ExactCR = ExactOpFn(CR1, CR2);
+        if (SmallestCR.isSizeLargerThan(Elems.count())) {
+          EXPECT_TRUE(!ExactCR.hasValue());
+        } else {
+          EXPECT_EQ(SmallestCR, *ExactCR);
+        }
       });
 }
 
@@ -585,6 +592,9 @@ TEST_F(ConstantRangeTest, IntersectWithExhaustive) {
       [](const ConstantRange &CR1, const ConstantRange &CR2,
          ConstantRange::PreferredRangeType Type) {
         return CR1.intersectWith(CR2, Type);
+      },
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.exactIntersectWith(CR2);
       },
       [](const ConstantRange &CR1, const ConstantRange &CR2, const APInt &N) {
         return CR1.contains(N) && CR2.contains(N);
@@ -596,6 +606,9 @@ TEST_F(ConstantRangeTest, UnionWithExhaustive) {
       [](const ConstantRange &CR1, const ConstantRange &CR2,
          ConstantRange::PreferredRangeType Type) {
         return CR1.unionWith(CR2, Type);
+      },
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.exactUnionWith(CR2);
       },
       [](const ConstantRange &CR1, const ConstantRange &CR2, const APInt &N) {
         return CR1.contains(N) || CR2.contains(N);

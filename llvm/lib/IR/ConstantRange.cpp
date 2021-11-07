@@ -681,6 +681,24 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   return ConstantRange(std::move(L), std::move(U));
 }
 
+Optional<ConstantRange>
+ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = intersectWith(CR);
+  if (Result == inverse().unionWith(CR.inverse()).inverse())
+    return Result;
+  return None;
+}
+
+Optional<ConstantRange>
+ConstantRange::exactUnionWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = unionWith(CR);
+  if (Result == inverse().intersectWith(CR.inverse()).inverse())
+    return Result;
+  return None;
+}
+
 ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
                                     uint32_t ResultBitWidth) const {
   switch (CastOp) {
