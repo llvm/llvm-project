@@ -2594,4 +2594,15 @@ TEST_F(ConstantRangeTest, getEquivalentPredWithFlippedSignedness) {
   }
 }
 
+TEST_F(ConstantRangeTest, isSizeLargerThan) {
+  EXPECT_FALSE(Empty.isSizeLargerThan(0));
+
+  EXPECT_TRUE(Full.isSizeLargerThan(0));
+  EXPECT_TRUE(Full.isSizeLargerThan(65535));
+  EXPECT_FALSE(Full.isSizeLargerThan(65536));
+
+  EXPECT_TRUE(One.isSizeLargerThan(0));
+  EXPECT_FALSE(One.isSizeLargerThan(1));
+}
+
 } // anonymous namespace
