@@ -13,6 +13,9 @@
 #ifndef FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 #define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 
+#include "DescriptorModel.h"
+#include "flang/Lower/Todo.h" // remove when TODO's are done
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
@@ -27,9 +30,34 @@ public:
 
     // Each conversion should return a value of type mlir::Type.
     addConversion(
+        [&](fir::RecordType derived) { return convertRecordType(derived); });
+    addConversion(
         [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
     addConversion(
         [&](SequenceType sequence) { return convertSequenceType(sequence); });
+    addConversion([&](mlir::TupleType tuple) {
+      LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
+      llvm::SmallVector<mlir::Type> inMembers;
+      tuple.getFlattenedTypes(inMembers);
+      llvm::SmallVector<mlir::Type> members;
+      for (auto mem : inMembers)
+        members.push_back(convertType(mem).cast<mlir::Type>());
+      return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                    /*isPacked=*/false);
+    });
+  }
+
+  // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
+  mlir::Type convertRecordType(fir::RecordType derived) {
+    auto name = derived.getName();
+    auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
+    llvm::SmallVector<mlir::Type> members;
+    for (auto mem : derived.getTypeList()) {
+      members.push_back(convertType(mem.second).cast<mlir::Type>());
+    }
+    if (mlir::succeeded(st.setBody(members, /*isPacked=*/false)))
+      return st;
+    return mlir::Type();
   }
 
   template <typename A>
