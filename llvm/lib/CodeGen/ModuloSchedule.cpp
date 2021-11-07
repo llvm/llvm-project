@@ -700,11 +700,9 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
                                                     MBBVectorTy &EpilogBBs) {
   // For each epilog block, check that the value defined by each instruction
   // is used.  If not, delete it.
-  for (MBBVectorTy::reverse_iterator MBB = EpilogBBs.rbegin(),
-                                     MBE = EpilogBBs.rend();
-       MBB != MBE; ++MBB)
-    for (MachineBasicBlock::reverse_instr_iterator MI = (*MBB)->instr_rbegin(),
-                                                   ME = (*MBB)->instr_rend();
+  for (MachineBasicBlock *MBB : llvm::reverse(EpilogBBs))
+    for (MachineBasicBlock::reverse_instr_iterator MI = MBB->instr_rbegin(),
+                                                   ME = MBB->instr_rend();
          MI != ME;) {
       // From DeadMachineInstructionElem. Don't delete inline assembly.
       if (MI->isInlineAsm()) {

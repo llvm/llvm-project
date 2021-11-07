@@ -476,14 +476,13 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
       // of a def-use chain, if there is any.
       // TODO: Sort the candidates using a cost-model.
       unsigned i = 0;
-      for (auto It = Candidates.rbegin(); It != Candidates.rend(); ++It) {
+      for (MachineInstr *I : llvm::reverse(Candidates)) {
         if (i++ == SinkIntoLoopLimit) {
           LLVM_DEBUG(dbgs() << "LoopSink:   Limit reached of instructions to "
                                "be analysed.");
           break;
         }
 
-        MachineInstr *I = *It;
         if (!SinkIntoLoop(L, *I))
           break;
         EverMadeChange = true;

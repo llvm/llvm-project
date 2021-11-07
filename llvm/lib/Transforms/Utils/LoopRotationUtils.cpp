@@ -404,9 +404,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
               D->getExpression()};
     };
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
-    for (auto I = std::next(OrigPreheader->rbegin()), E = OrigPreheader->rend();
-         I != E; ++I) {
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&*I))
+    for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I))
         DbgIntrinsics.insert(makeHash(DII));
       else
         break;

@@ -1112,7 +1112,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
   LiveRegs.addLiveOuts(MBB);
 
   // Examine block from end to start...
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (MI.isDebugOrPseudoInstr())
       continue;
 

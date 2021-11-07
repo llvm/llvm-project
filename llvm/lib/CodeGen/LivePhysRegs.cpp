@@ -252,7 +252,7 @@ void llvm::computeLiveIns(LivePhysRegs &LiveRegs,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   LiveRegs.init(TRI);
   LiveRegs.addLiveOutsNoPristines(MBB);
-  for (const MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend()))
+  for (const MachineInstr &MI : llvm::reverse(MBB))
     LiveRegs.stepBackward(MI);
 }
 
@@ -289,7 +289,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
   LiveRegs.init(TRI);
   LiveRegs.addLiveOutsNoPristines(MBB);
 
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     // Recompute dead flags.
     for (MIBundleOperands MO(MI); MO.isValid(); ++MO) {
       if (!MO->isReg() || !MO->isDef() || MO->isDebug())
