@@ -130,11 +130,14 @@ macro(set_output_name output name arch)
       else()
         set(triple "${TARGET_TRIPLE}")
       endif()
-      # When using arch-suffixed runtime library names, clang only looks for
-      # libraries named "arm" or "armhf", see getArchNameForCompilerRTLib in
-      # clang. Therefore, try to inspect both the arch name and the triple
-      # if it seems like we're building an armhf target.
-      if ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
+      # Except for baremetal, when using arch-suffixed runtime library names,
+      # clang only looks for libraries named "arm" or "armhf", see
+      # getArchNameForCompilerRTLib in clang. Therefore, try to inspect both
+      # the arch name and the triple if it seems like we're building an armhf
+      # target.
+      if (COMPILER_RT_BAREMETAL_BUILD)
+        set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
+      elseif ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
         set(${output} "${name}-armhf${COMPILER_RT_OS_SUFFIX}")
       else()
         set(${output} "${name}-arm${COMPILER_RT_OS_SUFFIX}")
