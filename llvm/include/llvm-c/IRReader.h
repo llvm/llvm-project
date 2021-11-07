@@ -20,6 +20,13 @@
 LLVM_C_EXTERN_C_BEGIN
 
 /**
+ * @defgroup LLVMCCoreIRReader IR Reader
+ * @ingroup LLVMCCore
+ *
+ * @{
+ */
+
+/**
  * Read LLVM IR from a memory buffer and convert it into an in-memory Module
  * object. Returns 0 on success.
  * Optionally returns a human-readable description of any errors that
@@ -31,6 +38,10 @@ LLVM_C_EXTERN_C_BEGIN
 LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
                               LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 
