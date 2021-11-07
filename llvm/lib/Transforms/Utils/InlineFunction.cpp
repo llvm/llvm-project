@@ -828,6 +828,7 @@ static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
   }
 }
 
+namespace {
 /// Utility for cloning !noalias and !alias.scope metadata. When a code region
 /// using scoped alias metadata is inlined, the aliasing relationships may not
 /// hold between the two version. It is necessary to create a deep clone of the
@@ -849,6 +850,7 @@ public:
   /// metadata.
   void remap(Function::iterator FStart, Function::iterator FEnd);
 };
+} // namespace
 
 ScopedAliasMetadataDeepCloner::ScopedAliasMetadataDeepCloner(
     const Function *F) {

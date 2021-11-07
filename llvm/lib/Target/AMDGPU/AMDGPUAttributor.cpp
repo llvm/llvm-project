@@ -112,6 +112,7 @@ static bool isDSAddress(const Constant *C) {
   return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS;
 }
 
+namespace {
 class AMDGPUInformationCache : public InformationCache {
 public:
   AMDGPUInformationCache(const Module &M, AnalysisGetter &AG,
@@ -643,6 +644,7 @@ public:
   TargetMachine *TM;
   static char ID;
 };
+} // namespace
 
 char AMDGPUAttributor::ID = 0;
 
