@@ -7630,6 +7630,10 @@ let Predicates = [HasAVX1Only] in {
             (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), sub_xmm),
               (v4f32 (VPERMILPSri (v4f32 (COPY_TO_REGCLASS FR32:$src, VR128)), 0)), 1)>;
+  def : Pat<(v8f32 (X86VBroadcast v4f32:$src)),
+            (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
+              (v4f32 (VPERMILPSri VR128:$src, 0)), sub_xmm),
+              (v4f32 (VPERMILPSri VR128:$src, 0)), 1)>;
   def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
             (VINSERTF128rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
               (v2f64 (VMOVDDUPrr (v2f64 (COPY_TO_REGCLASS FR64:$src, VR128)))), sub_xmm),
