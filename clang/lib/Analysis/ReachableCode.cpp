@@ -87,10 +87,8 @@ static bool isDeadReturn(const CFGBlock *B, const Stmt *S) {
   // block, or may be in a subsequent block because of destructors.
   const CFGBlock *Current = B;
   while (true) {
-    for (CFGBlock::const_reverse_iterator I = Current->rbegin(),
-                                          E = Current->rend();
-         I != E; ++I) {
-      if (Optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+    for (const CFGElement &CE : llvm::reverse(*Current)) {
+      if (Optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
         if (const ReturnStmt *RS = dyn_cast<ReturnStmt>(CS->getStmt())) {
           if (RS == S)
             return true;
