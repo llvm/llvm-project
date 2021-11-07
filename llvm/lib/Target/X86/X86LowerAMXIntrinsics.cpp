@@ -630,6 +630,7 @@ bool X86LowerAMXIntrinsics::visit() {
   return C;
 }
 
+namespace {
 class X86LowerAMXIntrinsicsLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -664,6 +665,7 @@ public:
     AU.addRequired<TargetPassConfig>();
   }
 };
+} // namespace
 
 static const char PassName[] = "Lower AMX intrinsics";
 char X86LowerAMXIntrinsicsLegacyPass::ID = 0;
