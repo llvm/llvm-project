@@ -942,6 +942,7 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 
 } // namespace llvm
 
+namespace {
 //===----------------------------------------------------------------------===//
 // Widen Induction Variables - Extend the width of an IV to cover its
 // widest uses.
@@ -1072,7 +1073,7 @@ protected:
 private:
   SmallVector<NarrowIVDefUse, 8> NarrowIVUsers;
 };
-
+} // namespace
 
 /// Determine the insertion point for this user. By default, insert immediately
 /// before the user. SCEVExpander or LICM will hoist loop invariants out of the
