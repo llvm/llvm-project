@@ -373,12 +373,8 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     BlockInfo[ThisBlock]->Exit = TmpStatus;
     // Add the successors to the work list so we can propagate the changed exit
     // status.
-    for (MachineBasicBlock::succ_iterator S = MBB.succ_begin(),
-                                          E = MBB.succ_end();
-         S != E; S = std::next(S)) {
-      MachineBasicBlock &B = *(*S);
-      Phase2List.push(&B);
-    }
+    for (MachineBasicBlock *Succ : MBB.successors())
+      Phase2List.push(Succ);
   }
   BlockInfo[ThisBlock]->ExitSet = ExitSet;
   if (RevisitRequired)
