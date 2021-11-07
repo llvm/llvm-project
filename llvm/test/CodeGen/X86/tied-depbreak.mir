@@ -59,6 +59,6 @@ body:             |
     ; Verify that XOR is untouched by the dependency breaker
     ; CHECK: $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags, implicit-def $rsi
     $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags, implicit-def $rsi
-    RETQ killed $eax
+    RET64 killed $eax
 
 ...

@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=MAYTRAP
 
 _Bool QuietEqual(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietEqual(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietEqual(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp oeq double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"oeq", metadata !"fpexcept.ignore")
@@ -18,7 +18,7 @@ _Bool QuietEqual(double f1, double f2) {
 }
 
 _Bool QuietNotEqual(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietNotEqual(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietNotEqual(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp une double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"une", metadata !"fpexcept.ignore")
@@ -30,7 +30,7 @@ _Bool QuietNotEqual(double f1, double f2) {
 }
 
 _Bool SignalingLess(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @SignalingLess(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @SignalingLess(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp olt double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"olt", metadata !"fpexcept.ignore")
@@ -42,7 +42,7 @@ _Bool SignalingLess(double f1, double f2) {
 }
 
 _Bool SignalingLessEqual(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @SignalingLessEqual(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @SignalingLessEqual(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp ole double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"ole", metadata !"fpexcept.ignore")
@@ -54,7 +54,7 @@ _Bool SignalingLessEqual(double f1, double f2) {
 }
 
 _Bool SignalingGreater(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @SignalingGreater(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @SignalingGreater(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp ogt double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"ogt", metadata !"fpexcept.ignore")
@@ -66,7 +66,7 @@ _Bool SignalingGreater(double f1, double f2) {
 }
 
 _Bool SignalingGreaterEqual(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @SignalingGreaterEqual(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @SignalingGreaterEqual(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp oge double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"oge", metadata !"fpexcept.ignore")
@@ -78,7 +78,7 @@ _Bool SignalingGreaterEqual(double f1, double f2) {
 }
 
 _Bool QuietLess(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietLess(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietLess(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp olt double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"olt", metadata !"fpexcept.ignore")
@@ -90,7 +90,7 @@ _Bool QuietLess(double f1, double f2) {
 }
 
 _Bool QuietLessEqual(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietLessEqual(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietLessEqual(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp ole double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"ole", metadata !"fpexcept.ignore")
@@ -102,7 +102,7 @@ _Bool QuietLessEqual(double f1, double f2) {
 }
 
 _Bool QuietGreater(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietGreater(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietGreater(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp ogt double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"ogt", metadata !"fpexcept.ignore")
@@ -114,7 +114,7 @@ _Bool QuietGreater(double f1, double f2) {
 }
 
 _Bool QuietGreaterEqual(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietGreaterEqual(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietGreaterEqual(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp oge double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"oge", metadata !"fpexcept.ignore")
@@ -126,7 +126,7 @@ _Bool QuietGreaterEqual(double f1, double f2) {
 }
 
 _Bool QuietLessGreater(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietLessGreater(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietLessGreater(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp one double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"one", metadata !"fpexcept.ignore")
@@ -138,7 +138,7 @@ _Bool QuietLessGreater(double f1, double f2) {
 }
 
 _Bool QuietUnordered(double f1, double f2) {
-  // CHECK-LABEL: define {{.*}}i1 @QuietUnordered(double %f1, double %f2)
+  // CHECK-LABEL: define {{.*}}i1 @QuietUnordered(double noundef %f1, double noundef %f2)
 
   // FCMP: fcmp uno double %{{.*}}, %{{.*}}
   // IGNORE: call i1 @llvm.experimental.constrained.fcmp.f64(double %{{.*}}, double %{{.*}}, metadata !"uno", metadata !"fpexcept.ignore")

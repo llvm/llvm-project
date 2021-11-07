@@ -74,17 +74,18 @@ void test_basic() {
 
 
 void duplicate_keys_test() {
+  test_allocator_statistics alloc_stats;
   typedef std::map<int, int, std::less<int>, test_allocator<std::pair<const int, int> > > Map;
   {
-    LIBCPP_ASSERT(test_alloc_base::alloc_count == 0);
-    Map s = {{1, 0}, {2, 0}, {3, 0}};
-    LIBCPP_ASSERT(test_alloc_base::alloc_count == 3);
+    LIBCPP_ASSERT(alloc_stats.alloc_count == 0);
+    Map s({{1, 0}, {2, 0}, {3, 0}}, std::less<int>(), test_allocator<std::pair<const int, int> >(&alloc_stats));
+    LIBCPP_ASSERT(alloc_stats.alloc_count == 3);
     s = {{4, 0}, {4, 0}, {4, 0}, {4, 0}};
-    LIBCPP_ASSERT(test_alloc_base::alloc_count == 1);
+    LIBCPP_ASSERT(alloc_stats.alloc_count == 1);
     assert(s.size() == 1);
     assert(s.begin()->first == 4);
   }
-  LIBCPP_ASSERT(test_alloc_base::alloc_count == 0);
+  LIBCPP_ASSERT(alloc_stats.alloc_count == 0);
 }
 
 int main(int, char**)

@@ -151,28 +151,28 @@ void medium_arg(Medium s) {}
 // WOA: define dso_local arm_aapcs_vfpcc void @"?medium_arg@@YAXUMedium@@@Z"([2 x i32] %s.coerce)
 
 void base_no_byval_arg(BaseNoByval s) {}
-// LINUX-LABEL: define{{.*}} void @_Z17base_no_byval_arg11BaseNoByval(%struct.BaseNoByval* byval(%struct.BaseNoByval) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z17base_no_byval_arg11BaseNoByval(%struct.BaseNoByval* noundef byval(%struct.BaseNoByval) align 4 %s)
 // WIN32: define dso_local void @"?base_no_byval_arg@@YAXUBaseNoByval@@@Z"(i32 %s.0, i32 %s.1)
 // WIN64: define dso_local void @"?base_no_byval_arg@@YAXUBaseNoByval@@@Z"(i64 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?base_no_byval_arg@@YAXUBaseNoByval@@@Z"([2 x i32] %s.coerce)
 
 void small_arg_with_ctor(SmallWithCtor s) {}
-// LINUX-LABEL: define{{.*}} void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* byval(%struct.SmallWithCtor) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* noundef byval(%struct.SmallWithCtor) align 4 %s)
 // WIN32: define dso_local void @"?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.0)
 // WIN64: define dso_local void @"?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"([1 x i32] %s.coerce)
 
 // FIXME: We could coerce to a series of i32s here if we wanted to.
 void multibyte_arg(Multibyte s) {}
-// LINUX-LABEL: define{{.*}} void @_Z13multibyte_arg9Multibyte(%struct.Multibyte* byval(%struct.Multibyte) align 4 %s)
-// WIN32: define dso_local void @"?multibyte_arg@@YAXUMultibyte@@@Z"(%struct.Multibyte* byval(%struct.Multibyte) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z13multibyte_arg9Multibyte(%struct.Multibyte* noundef byval(%struct.Multibyte) align 4 %s)
+// WIN32: define dso_local void @"?multibyte_arg@@YAXUMultibyte@@@Z"(%struct.Multibyte* noundef byval(%struct.Multibyte) align 4 %s)
 // WIN64: define dso_local void @"?multibyte_arg@@YAXUMultibyte@@@Z"(i32 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?multibyte_arg@@YAXUMultibyte@@@Z"([1 x i32] %s.coerce)
 
 void packed_arg(Packed s) {}
-// LINUX-LABEL: define{{.*}} void @_Z10packed_arg6Packed(%struct.Packed* byval(%struct.Packed) align 4 %s)
-// WIN32: define dso_local void @"?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* byval(%struct.Packed) align 4 %s)
-// WIN64: define dso_local void @"?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* %s)
+// LINUX-LABEL: define{{.*}} void @_Z10packed_arg6Packed(%struct.Packed* noundef byval(%struct.Packed) align 4 %s)
+// WIN32: define dso_local void @"?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* noundef byval(%struct.Packed) align 4 %s)
+// WIN64: define dso_local void @"?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* noundef %s)
 
 // Test that dtors are invoked in the callee.
 void small_arg_with_dtor(SmallWithDtor s) {}
@@ -187,7 +187,7 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 // WOA64: }
 
 // FIXME: MSVC incompatible!
-// WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(%struct.SmallWithDtor* %s) {{.*}} {
+// WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(%struct.SmallWithDtor* noundef %s) {{.*}} {
 // WOA:   call arm_aapcs_vfpcc void @"??1SmallWithDtor@@QAA@XZ"(%struct.SmallWithDtor* {{[^,]*}} %s)
 // WOA: }
 
@@ -201,19 +201,19 @@ void call_small_arg_with_dtor() {
   small_arg_with_dtor(SmallWithDtor());
 }
 // WIN64-LABEL: define dso_local void @"?call_small_arg_with_dtor@@YAXXZ"()
-// WIN64:   call %struct.SmallWithDtor* @"??0SmallWithDtor@@QEAA@XZ"
+// WIN64:   call noundef %struct.SmallWithDtor* @"??0SmallWithDtor@@QEAA@XZ"
 // WIN64:   call void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i32 %{{.*}})
 // WIN64:   ret void
 
 // Test that references aren't destroyed in the callee.
 void ref_small_arg_with_dtor(const SmallWithDtor &s) { }
-// WIN32: define dso_local void @"?ref_small_arg_with_dtor@@YAXABUSmallWithDtor@@@Z"(%struct.SmallWithDtor* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %s) {{.*}} {
+// WIN32: define dso_local void @"?ref_small_arg_with_dtor@@YAXABUSmallWithDtor@@@Z"(%struct.SmallWithDtor* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %s) {{.*}} {
 // WIN32-NOT:   call x86_thiscallcc void @"??1SmallWithDtor@@QAE@XZ"
 // WIN32: }
-// WIN64-LABEL: define dso_local void @"?ref_small_arg_with_dtor@@YAXAEBUSmallWithDtor@@@Z"(%struct.SmallWithDtor* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %s)
+// WIN64-LABEL: define dso_local void @"?ref_small_arg_with_dtor@@YAXAEBUSmallWithDtor@@@Z"(%struct.SmallWithDtor* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %s)
 
 void big_arg_with_dtor(BigWithDtor s) {}
-// WIN64-LABEL: define dso_local void @"?big_arg_with_dtor@@YAXUBigWithDtor@@@Z"(%struct.BigWithDtor* %s)
+// WIN64-LABEL: define dso_local void @"?big_arg_with_dtor@@YAXUBigWithDtor@@@Z"(%struct.BigWithDtor* noundef %s)
 // WIN64:   call void @"??1BigWithDtor@@QEAA@XZ"
 // WIN64: }
 
@@ -223,8 +223,8 @@ void call_big_arg_with_dtor() {
 // We can elide the copy of the temporary in the caller, because this object is
 // larger than 8 bytes and is passed indirectly.
 // WIN64-LABEL: define dso_local void @"?call_big_arg_with_dtor@@YAXXZ"()
-// WIN64:   call %struct.BigWithDtor* @"??0BigWithDtor@@QEAA@XZ"
-// WIN64:   call void @"?big_arg_with_dtor@@YAXUBigWithDtor@@@Z"(%struct.BigWithDtor* %{{.*}})
+// WIN64:   call noundef %struct.BigWithDtor* @"??0BigWithDtor@@QEAA@XZ"
+// WIN64:   call void @"?big_arg_with_dtor@@YAXUBigWithDtor@@@Z"(%struct.BigWithDtor* noundef %{{.*}})
 // WIN64-NOT: call void @"??1BigWithDtor@@QEAA@XZ"
 // WIN64:   ret void
 
@@ -233,7 +233,7 @@ void temporary_ref_with_dtor() {
   ref_small_arg_with_dtor(SmallWithDtor());
 }
 // WIN32: define dso_local void @"?temporary_ref_with_dtor@@YAXXZ"() {{.*}} {
-// WIN32:   call x86_thiscallcc %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
+// WIN32:   call x86_thiscallcc noundef %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
 // WIN32:   call void @"?ref_small_arg_with_dtor@@YAXABUSmallWithDtor@@@Z"
 // WIN32:   call x86_thiscallcc void @"??1SmallWithDtor@@QAE@XZ"
 // WIN32: }
@@ -245,29 +245,29 @@ void eh_cleanup_arg_with_dtor() {
 //   When exceptions are off, we don't have any cleanups.  See
 //   microsoft-abi-exceptions.cpp for these cleanups.
 // WIN32: define dso_local void @"?eh_cleanup_arg_with_dtor@@YAXXZ"() {{.*}} {
-// WIN32:   call x86_thiscallcc %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
-// WIN32:   call x86_thiscallcc %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
+// WIN32:   call x86_thiscallcc noundef %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
+// WIN32:   call x86_thiscallcc noundef %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
 // WIN32:   call void @"?takes_two_by_val_with_dtor@@YAXUSmallWithDtor@@0@Z"
 // WIN32-NOT: call x86_thiscallcc void @"??1SmallWithDtor@@QAE@XZ"
 // WIN32: }
 
 void small_arg_with_vftable(SmallWithVftable s) {}
-// LINUX-LABEL: define{{.*}} void @_Z22small_arg_with_vftable16SmallWithVftable(%struct.SmallWithVftable* %s)
+// LINUX-LABEL: define{{.*}} void @_Z22small_arg_with_vftable16SmallWithVftable(%struct.SmallWithVftable* noundef %s)
 // WIN32: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(<{ %struct.SmallWithVftable }>* inalloca(<{ %struct.SmallWithVftable }>) %0)
-// WIN64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* %s)
-// WOA64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* %s)
+// WIN64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* noundef %s)
+// WOA64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* noundef %s)
 
 void medium_arg_with_copy_ctor(MediumWithCopyCtor s) {}
-// LINUX-LABEL: define{{.*}} void @_Z25medium_arg_with_copy_ctor18MediumWithCopyCtor(%struct.MediumWithCopyCtor* %s)
+// LINUX-LABEL: define{{.*}} void @_Z25medium_arg_with_copy_ctor18MediumWithCopyCtor(%struct.MediumWithCopyCtor* noundef %s)
 // WIN32: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(<{ %struct.MediumWithCopyCtor }>* inalloca(<{ %struct.MediumWithCopyCtor }>) %0)
-// WIN64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
-// WOA: define dso_local arm_aapcs_vfpcc void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
-// WOA64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
+// WIN64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* noundef %s)
+// WOA: define dso_local arm_aapcs_vfpcc void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* noundef %s)
+// WOA64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* noundef %s)
 
 void big_arg(Big s) {}
-// LINUX-LABEL: define{{.*}} void @_Z7big_arg3Big(%struct.Big* byval(%struct.Big) align 4 %s)
-// WIN32: define dso_local void @"?big_arg@@YAXUBig@@@Z"(%struct.Big* byval(%struct.Big) align 4 %s)
-// WIN64: define dso_local void @"?big_arg@@YAXUBig@@@Z"(%struct.Big* %s)
+// LINUX-LABEL: define{{.*}} void @_Z7big_arg3Big(%struct.Big* noundef byval(%struct.Big) align 4 %s)
+// WIN32: define dso_local void @"?big_arg@@YAXUBig@@@Z"(%struct.Big* noundef byval(%struct.Big) align 4 %s)
+// WIN64: define dso_local void @"?big_arg@@YAXUBig@@@Z"(%struct.Big* noundef %s)
 
 // PR27607: We would attempt to load i32 value out of the reference instead of
 // just loading the pointer from the struct during argument expansion.
@@ -276,7 +276,7 @@ struct RefField {
   int &x;
 };
 void takes_ref_field(RefField s) {}
-// LINUX-LABEL: define{{.*}} void @_Z15takes_ref_field8RefField(%struct.RefField* byval(%struct.RefField) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z15takes_ref_field8RefField(%struct.RefField* noundef byval(%struct.RefField) align 4 %s)
 // WIN32: define dso_local void @"?takes_ref_field@@YAXURefField@@@Z"(i32* %s.0)
 // WIN64: define dso_local void @"?takes_ref_field@@YAXURefField@@@Z"(i64 %s.coerce)
 
@@ -285,7 +285,7 @@ void pass_ref_field() {
   takes_ref_field(RefField(x));
 }
 // LINUX-LABEL: define{{.*}} void @_Z14pass_ref_fieldv()
-// LINUX: call void @_Z15takes_ref_field8RefField(%struct.RefField* byval(%struct.RefField) align 4 %{{.*}})
+// LINUX: call void @_Z15takes_ref_field8RefField(%struct.RefField* noundef byval(%struct.RefField) align 4 %{{.*}})
 // WIN32-LABEL: define dso_local void @"?pass_ref_field@@YAXXZ"()
 // WIN32: call void @"?takes_ref_field@@YAXURefField@@@Z"(i32* %{{.*}})
 // WIN64-LABEL: define dso_local void @"?pass_ref_field@@YAXXZ"()
@@ -318,12 +318,12 @@ class Class {
 
   void thiscall_method_arg(Empty s) {}
   // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Empty(%class.Class* {{[^,]*}} %this)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmpty@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Empty* byval(%struct.Empty) align 4 %s)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmpty@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Empty* noundef byval(%struct.Empty) align 4 %s)
   // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUEmpty@@@Z"(%class.Class* {{[^,]*}} %this, i8 %s.coerce)
 
   void thiscall_method_arg(EmptyWithCtor s) {}
   // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13EmptyWithCtor(%class.Class* {{[^,]*}} %this)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmptyWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, %struct.EmptyWithCtor* byval(%struct.EmptyWithCtor) align 4 %s)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUEmptyWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, %struct.EmptyWithCtor* noundef byval(%struct.EmptyWithCtor) align 4 %s)
   // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUEmptyWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, i8 %s.coerce)
 
   void thiscall_method_arg(Small s) {}
@@ -332,14 +332,14 @@ class Class {
   // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUSmall@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.coerce)
 
   void thiscall_method_arg(SmallWithCtor s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13SmallWithCtor(%class.Class* {{[^,]*}} %this, %struct.SmallWithCtor* byval(%struct.SmallWithCtor) align 4 %s)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13SmallWithCtor(%class.Class* {{[^,]*}} %this, %struct.SmallWithCtor* noundef byval(%struct.SmallWithCtor) align 4 %s)
   // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUSmallWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.0)
   // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUSmallWithCtor@@@Z"(%class.Class* {{[^,]*}} %this, i32 %s.coerce)
 
   void thiscall_method_arg(Big s) {}
-  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE3Big(%class.Class* {{[^,]*}} %this, %struct.Big* byval(%struct.Big) align 4 %s)
-  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUBig@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Big* byval(%struct.Big) align 4 %s)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUBig@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Big* %s)
+  // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE3Big(%class.Class* {{[^,]*}} %this, %struct.Big* noundef byval(%struct.Big) align 4 %s)
+  // WIN32: define {{.*}} void @"?thiscall_method_arg@Class@@QAEXUBig@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Big* noundef byval(%struct.Big) align 4 %s)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_arg@Class@@QEAAXUBig@@@Z"(%class.Class* {{[^,]*}} %this, %struct.Big* noundef %s)
 };
 
 void use_class() {
@@ -397,8 +397,8 @@ void bar() {
 // WIN32:   getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 1
 // WIN32:   call void @llvm.memcpy
 // WIN32:   getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 0
-// WIN32:   call x86_thiscallcc %"struct.test2::NonTrivial"* @"??0NonTrivial@test2@@QAE@XZ"
-// WIN32:   call i32 @"?foo@test2@@YAHUNonTrivial@1@UPOD@1@@Z"([[argmem_ty]]* inalloca([[argmem_ty]]) %argmem)
+// WIN32:   call x86_thiscallcc noundef %"struct.test2::NonTrivial"* @"??0NonTrivial@test2@@QAE@XZ"
+// WIN32:   call noundef i32 @"?foo@test2@@YAHUNonTrivial@1@UPOD@1@@Z"([[argmem_ty]]* inalloca([[argmem_ty]]) %argmem)
 // WIN32:   ret void
 // WIN32: }
 
@@ -461,10 +461,10 @@ struct C final : A, B {
 void C::g() { return h(SmallWithDtor()); }
 
 // WIN32-LABEL: define dso_local x86_thiscallcc void @"?g@C@pr30293@@QAEXXZ"(%"struct.pr30293::C"* {{[^,]*}} %this)
-// WIN32: call x86_thiscallcc %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
+// WIN32: call x86_thiscallcc noundef %struct.SmallWithDtor* @"??0SmallWithDtor@@QAE@XZ"
 // WIN32: call void @"?h@C@pr30293@@UAAXUSmallWithDtor@@@Z"(<{ i8*, %struct.SmallWithDtor }>* inalloca(<{ i8*, %struct.SmallWithDtor }>) %{{[^,)]*}})
 // WIN32: declare dso_local void @"?h@C@pr30293@@UAAXUSmallWithDtor@@@Z"(<{ i8*, %struct.SmallWithDtor }>* inalloca(<{ i8*, %struct.SmallWithDtor }>))
 
 // WIN64-LABEL: define dso_local void @"?g@C@pr30293@@QEAAXXZ"(%"struct.pr30293::C"* {{[^,]*}} %this)
-// WIN64: declare dso_local void @"?h@C@pr30293@@UEAAXUSmallWithDtor@@@Z"(i8*, i32)
+// WIN64: declare dso_local void @"?h@C@pr30293@@UEAAXUSmallWithDtor@@@Z"(i8* noundef, i32)
 }

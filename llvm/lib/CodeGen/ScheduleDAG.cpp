@@ -577,8 +577,7 @@ void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
     SU = WorkList.back();
     WorkList.pop_back();
     Visited.set(SU->NodeNum);
-    for (const SDep &SuccDep
-         : make_range(SU->Succs.rbegin(), SU->Succs.rend())) {
+    for (const SDep &SuccDep : llvm::reverse(SU->Succs)) {
       unsigned s = SuccDep.getSUnit()->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
       if (s >= Node2Index.size())

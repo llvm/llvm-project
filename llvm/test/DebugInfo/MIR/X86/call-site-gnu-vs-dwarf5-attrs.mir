@@ -191,7 +191,7 @@ body:             |
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !33
     DBG_VALUE $rdi, $noreg, !23, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !25
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !33
-    RETQ $eax, debug-location !33
+    RET64 $eax, debug-location !33
   
   bb.2.if.then:
     CFI_INSTRUCTION def_cfa_offset 16, debug-location !32

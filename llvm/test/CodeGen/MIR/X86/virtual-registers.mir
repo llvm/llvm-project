@@ -56,11 +56,11 @@ body: |
     ; CHECK-NEXT: $eax = COPY %2
     %2 = MOV32r0 implicit-def $eflags
     $eax = COPY %2
-    RETQ $eax
+    RET64 $eax
 
   bb.2.exit:
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 name:            foo
@@ -90,10 +90,10 @@ body: |
     ; CHECK-NEXT: $eax = COPY %2
     %10 = MOV32r0 implicit-def $eflags
     $eax = COPY %10
-    RETQ $eax
+    RET64 $eax
 
   bb.2.exit:
     ; CHECK: $eax = COPY %0
     $eax = COPY %2
-    RETQ $eax
+    RET64 $eax
 ...

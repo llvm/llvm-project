@@ -273,8 +273,8 @@ def main():
 
   # Load the database and extract all files.
   database = json.load(open(os.path.join(build_path, db_path)))
-  files = [make_absolute(entry['file'], entry['directory'])
-           for entry in database]
+  files = set([make_absolute(entry['file'], entry['directory'])
+           for entry in database])
 
   max_task = args.j
   if max_task == 0:

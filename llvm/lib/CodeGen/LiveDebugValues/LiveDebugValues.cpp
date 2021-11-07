@@ -52,6 +52,7 @@ static cl::opt<unsigned> InputDbgValueLimit(
         "Maximum input DBG_VALUE insts supported by debug range extension"),
     cl::init(50000), cl::Hidden);
 
+namespace {
 /// Generic LiveDebugValues pass. Calls through to VarLocBasedLDV or
 /// InstrRefBasedLDV to perform location propagation, via the LDVImpl
 /// base class.
@@ -81,6 +82,7 @@ private:
   TargetPassConfig *TPC;
   MachineDominatorTree MDT;
 };
+} // namespace
 
 char LiveDebugValues::ID = 0;
 

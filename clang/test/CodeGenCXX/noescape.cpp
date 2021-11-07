@@ -8,26 +8,26 @@ struct S {
   virtual void vm1(int *, int * __attribute__((noescape)));
 };
 
-// CHECK: define{{.*}} void @_ZN1SC2EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{%.*}})
-// CHECK: define{{.*}} void @_ZN1SC1EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{%.*}}) {{.*}} {
+// CHECK: define{{.*}} void @_ZN1SC2EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}})
+// CHECK: define{{.*}} void @_ZN1SC1EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}}) {{.*}} {
 // CHECK: call void @_ZN1SC2EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
 
 S::S(int *, int * __attribute__((noescape))) {}
 
-// CHECK: define {{.*}} %struct.S* @_ZN1SaSEPi(%struct.S* {{.*}}, {{.*}} nocapture {{%.*}})
+// CHECK: define {{.*}} %struct.S* @_ZN1SaSEPi(%struct.S* {{.*}}, {{.*}} nocapture noundef {{%.*}})
 S &S::operator=(int * __attribute__((noescape))) { return *this; }
 
-// CHECK: define{{.*}} void @_ZN1S2m0EPiS0_(%struct.S* {{.*}}, {{.*}} nocapture {{%.*}})
+// CHECK: define{{.*}} void @_ZN1S2m0EPiS0_(%struct.S* {{.*}}, {{.*}} nocapture noundef {{%.*}})
 void S::m0(int *, int * __attribute__((noescape))) {}
 
-// CHECK: define{{.*}} void @_ZN1S3vm1EPiS0_(%struct.S* {{.*}}, {{.*}} nocapture {{%.*}})
+// CHECK: define{{.*}} void @_ZN1S3vm1EPiS0_(%struct.S* {{.*}}, {{.*}} nocapture noundef {{%.*}})
 void S::vm1(int *, int * __attribute__((noescape))) {}
 
 // CHECK-LABEL: define{{.*}} void @_Z5test0P1SPiS1_(
-// CHECK: call void @_ZN1SC1EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
-// CHECK: call {{.*}} %struct.S* @_ZN1SaSEPi(%struct.S* {{.*}}, {{.*}} nocapture {{.*}})
-// CHECK: call void @_ZN1S2m0EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
-// CHECK: call void {{.*}}(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
+// CHECK: call void @_ZN1SC1EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call {{.*}} %struct.S* @_ZN1SaSEPi(%struct.S* {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call void @_ZN1S2m0EPiS0_(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
+// CHECK: call void {{.*}}(%struct.S* {{.*}}, {{.*}}, {{.*}} nocapture noundef {{.*}})
 void test0(S *s, int *p0, int *p1) {
   S t(p0, p1);
   t = p1;
@@ -52,14 +52,14 @@ void *test1(void *p0) {
 
 // CHECK-LABEL: define{{.*}} void @_Z5test2PiS_(
 // CHECK: call void @"_ZZ5test2PiS_ENK3$_0clES_S_"({{.*}}, {{.*}}, {{.*}} nocapture {{.*}})
-// CHECK: define internal void @"_ZZ5test2PiS_ENK3$_0clES_S_"({{.*}}, {{.*}}, {{.*}} nocapture {{%.*}})
+// CHECK: define internal void @"_ZZ5test2PiS_ENK3$_0clES_S_"({{.*}}, {{.*}}, {{.*}} nocapture noundef {{%.*}})
 void test2(int *p0, int *p1) {
   auto t = [](int *, int * __attribute__((noescape))){};
   t(p0, p1);
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z5test3PFvU8noescapePiES_(
-// CHECK: call void {{.*}}(i32* nocapture {{.*}})
+// CHECK: call void {{.*}}(i32* nocapture noundef {{.*}})
 typedef void (*NoEscapeFunc)(__attribute__((noescape)) int *);
 
 void test3(NoEscapeFunc f, int *p) {

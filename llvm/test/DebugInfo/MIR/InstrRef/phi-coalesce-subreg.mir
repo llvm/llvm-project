@@ -156,6 +156,6 @@ body:             |
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %23:gr32 = MOVSX32rr16 %26, debug-location !13
     $eax = COPY %23, debug-location !13
-    RETQ implicit $eax, debug-location !13
+    RET64 implicit $eax, debug-location !13
 
 ...

@@ -10,7 +10,7 @@
 
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[STD_D:%.+]]*)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*), [[STD_D]]* %{{.+}})
 
-// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, [[STD_D]]* {{.+}})
+// CHECK: define internal void [[OUTLINED]](i32* noalias noundef %{{.+}}, i32* noalias noundef %{{.+}}, [[STD_D]]* {{.+}})
 // CHECK: call i32 @__kmpc_reduce_nowait(%struct.ident_t*
 
 #ifndef HEADER

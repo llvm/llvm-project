@@ -19,5 +19,5 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:48: expected 'load' or 'store' memory operation
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (4 from %ir.a)
-    RETQ $eax
+    RET64 $eax
 ...

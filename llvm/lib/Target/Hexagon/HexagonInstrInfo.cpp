@@ -169,13 +169,13 @@ MachineInstr *HexagonInstrInfo::findLoopInstr(MachineBasicBlock *BB,
       continue;
     if (PB == BB)
       continue;
-    for (auto I = PB->instr_rbegin(), E = PB->instr_rend(); I != E; ++I) {
-      unsigned Opc = I->getOpcode();
+    for (MachineInstr &I : llvm::reverse(PB->instrs())) {
+      unsigned Opc = I.getOpcode();
       if (Opc == LOOPi || Opc == LOOPr)
-        return &*I;
+        return &I;
       // We've reached a different loop, which means the loop01 has been
       // removed.
-      if (Opc == EndLoopOp && I->getOperand(0).getMBB() != TargetBB)
+      if (Opc == EndLoopOp && I.getOperand(0).getMBB() != TargetBB)
         return nullptr;
     }
     // Check the predecessors for the LOOP instruction.

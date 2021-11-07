@@ -252,8 +252,8 @@ void DbgValueHistoryMap::trimLocationRanges(
 
     // Now actually remove the entries. Iterate backwards so that our remaining
     // ToRemove indices are valid after each erase.
-    for (auto Itr = ToRemove.rbegin(), End = ToRemove.rend(); Itr != End; ++Itr)
-      HistoryMapEntries.erase(HistoryMapEntries.begin() + *Itr);
+    for (EntryIndex Idx : llvm::reverse(ToRemove))
+      HistoryMapEntries.erase(HistoryMapEntries.begin() + Idx);
   }
 }
 

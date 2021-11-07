@@ -79,7 +79,7 @@ namespace test4 {
 
   // This needs an initialization function and guard variables.
   // CHECK: load i8, i8* bitcast (i64* @_ZGVN5test41xE to i8*)
-  // CHECK: [[CALL:%.*]] = call i32 @_ZN5test43fooEv
+  // CHECK: [[CALL:%.*]] = call noundef i32 @_ZN5test43fooEv
   // CHECK-NEXT: store i32 [[CALL]], i32* @_ZN5test41xE
   // CHECK-NEXT: store i8 1, i8* bitcast (i64* @_ZGVN5test41xE to i8*)
   __attribute__((weak)) int x = foo();

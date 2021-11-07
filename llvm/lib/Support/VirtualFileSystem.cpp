@@ -1117,6 +1117,7 @@ public:
   }
 };
 
+namespace {
 /// Directory iterator implementation for \c RedirectingFileSystem's
 /// directory remap entries that maps the paths reported by the external
 /// file system's directory iterator back to the virtual directory's path.
@@ -1155,6 +1156,7 @@ public:
     return EC;
   }
 };
+} // namespace
 
 llvm::ErrorOr<std::string>
 RedirectingFileSystem::getCurrentWorkingDirectory() const {

@@ -1763,6 +1763,7 @@ bool LoopInterchangeTransform::adjustLoopLinks() {
   return Changed;
 }
 
+namespace {
 /// Main LoopInterchange Pass.
 struct LoopInterchangeLegacyPass : public LoopPass {
   static char ID;
@@ -1791,6 +1792,7 @@ struct LoopInterchangeLegacyPass : public LoopPass {
     return LoopInterchange(SE, LI, DI, DT, ORE).run(L);
   }
 };
+} // namespace
 
 char LoopInterchangeLegacyPass::ID = 0;
 

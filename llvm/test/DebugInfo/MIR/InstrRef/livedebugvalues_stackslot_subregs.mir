@@ -52,5 +52,5 @@ body:  |
     DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
     ; CHECK:      DBG_INSTR_REF
     ; CHECK-NEXT: DBG_VALUE $esi
-    RETQ $rsi, debug-location !12
+    RET64 $rsi, debug-location !12
 ...

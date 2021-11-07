@@ -39,20 +39,19 @@ bool TTYState::GetTTYState(int fd, bool saveProcessGroup) {
 }
 
 bool TTYState::SetTTYState() const {
-  int result = 0;
   if (IsValid()) {
     if (TFlagsValid())
-      result = fcntl(m_fd, F_SETFL, m_tflags);
+      fcntl(m_fd, F_SETFL, m_tflags);
 
     if (TTYStateValid())
-      result = tcsetattr(m_fd, TCSANOW, &m_ttystate);
+      tcsetattr(m_fd, TCSANOW, &m_ttystate);
 
     if (ProcessGroupValid()) {
       // Save the original signal handler.
       void (*saved_sigttou_callback)(int) = NULL;
       saved_sigttou_callback = (void (*)(int))signal(SIGTTOU, SIG_IGN);
       // Set the process group
-      result = tcsetpgrp(m_fd, m_processGroup);
+      tcsetpgrp(m_fd, m_processGroup);
       // Restore the original signal handler.
       signal(SIGTTOU, saved_sigttou_callback);
     }

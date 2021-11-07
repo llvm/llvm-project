@@ -46,7 +46,7 @@ body: |
     liveins: $eax
 
     $rsp = ADD64ri32 $rsp, 520, implicit-def $eflags
-    RETQ $eax
+    RET64 $eax
 
   bb.2.entry:
     ; CHECK:      CALL64pcrel32 &__stack_chk_fail,

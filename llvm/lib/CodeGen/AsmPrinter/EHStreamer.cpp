@@ -812,8 +812,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
     Entry = TypeInfos.size();
   }
 
-  for (const GlobalValue *GV : make_range(TypeInfos.rbegin(),
-                                          TypeInfos.rend())) {
+  for (const GlobalValue *GV : llvm::reverse(TypeInfos)) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
     Asm->emitTTypeReference(GV, TTypeEncoding);

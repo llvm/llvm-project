@@ -7,13 +7,13 @@
 // CHECK-SAME:   i8* bitcast (i8* (%struct.Foo*, i32)* @"??_G?$Foo@H@@UEAAPEAXI@Z" to i8*)
 // CHECK-SAME: ] }, comdat
 
-// CHECK-LABEL: define dso_local %struct.Foo* @"?f@@YAPEAU?$Foo@H@@XZ"()
-// CHECK: call %struct.Foo* @"??0?$Foo@H@@QEAA@XZ"(%struct.Foo* {{[^,]*}} %{{.*}})
+// CHECK-LABEL: define dso_local noundef %struct.Foo* @"?f@@YAPEAU?$Foo@H@@XZ"()
+// CHECK: call noundef %struct.Foo* @"??0?$Foo@H@@QEAA@XZ"(%struct.Foo* {{[^,]*}} %{{.*}})
 
-// CHECK: define available_externally dso_local %struct.Foo* @"??0?$Foo@H@@QEAA@XZ"(%struct.Foo* {{[^,]*}} returned {{[^,]*}} %this)
+// CHECK: define available_externally dso_local noundef %struct.Foo* @"??0?$Foo@H@@QEAA@XZ"(%struct.Foo* {{[^,]*}} returned %this)
 // CHECK:   store {{.*}} @"??_7?$Foo@H@@6B@"
 
-// CHECK: define linkonce_odr dso_local i8* @"??_G?$Foo@H@@UEAAPEAXI@Z"(%struct.Foo* {{[^,]*}} %this, i32 %should_call_delete)
+// CHECK: define linkonce_odr dso_local noundef i8* @"??_G?$Foo@H@@UEAAPEAXI@Z"(%struct.Foo* {{[^,]*}} %this, i32 noundef %should_call_delete)
 
 struct Base {
   virtual ~Base();
