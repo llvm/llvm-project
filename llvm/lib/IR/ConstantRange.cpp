@@ -381,11 +381,10 @@ ConstantRange::isSizeStrictlySmallerThan(const ConstantRange &Other) const {
 
 bool
 ConstantRange::isSizeLargerThan(uint64_t MaxSize) const {
-  assert(MaxSize && "MaxSize can't be 0.");
   // If this a full set, we need special handling to avoid needing an extra bit
   // to represent the size.
   if (isFullSet())
-    return APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
+    return MaxSize == 0 || APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
 
   return (Upper - Lower).ugt(MaxSize);
 }
@@ -680,6 +679,24 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   APInt U = CR.Upper.ugt(Upper) ? CR.Upper : Upper;
 
   return ConstantRange(std::move(L), std::move(U));
+}
+
+Optional<ConstantRange>
+ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = intersectWith(CR);
+  if (Result == inverse().unionWith(CR.inverse()).inverse())
+    return Result;
+  return None;
+}
+
+Optional<ConstantRange>
+ConstantRange::exactUnionWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = unionWith(CR);
+  if (Result == inverse().intersectWith(CR.inverse()).inverse())
+    return Result;
+  return None;
 }
 
 ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
