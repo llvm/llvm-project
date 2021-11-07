@@ -24,7 +24,7 @@ body:             |
   ; CHECK: bb.4:
   ; CHECK:   $ebp = XOR32rr undef $ebp, undef $ebp, implicit-def dead $eflags
   ; CHECK:   dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
-  ; CHECK:   RETQ $eax
+  ; CHECK:   RET64 $eax
   ; CHECK: bb.6:
   ; CHECK:   successors: %bb.1(0x30000000), %bb.7(0x50000000)
   ; CHECK:   $rax = MOV64rm $r14, 1, $noreg, 0, $noreg :: (load (s64))
@@ -41,7 +41,7 @@ body:             |
   ; CHECK:   JCC_1 %bb.7, 5, implicit $eflags
   ; CHECK: bb.1:
   ; CHECK:   $ebp = XOR32rr undef $ebp, undef $ebp, implicit-def dead $eflags
-  ; CHECK:   RETQ $eax
+  ; CHECK:   RET64 $eax
   bb.0:
     successors: %bb.1(0x40000000), %bb.7(0x40000000)
 
@@ -113,6 +113,6 @@ body:             |
 
   bb.16:
 
-    RETQ $eax
+    RET64 $eax
 
 ...

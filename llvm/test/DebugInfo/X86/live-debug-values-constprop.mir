@@ -153,7 +153,7 @@ body:             |
 
   bb.3.bb3:
     liveins: $rax
-    RETQ $eax, debug-location !9
+    RET64 $eax, debug-location !9
 
 ...
 ---
@@ -217,7 +217,7 @@ body:             |
 
   bb.3.bb3:
     liveins: $rax
-    RETQ $eax, debug-location !42
+    RET64 $eax, debug-location !42
 
 ...
 ---
@@ -281,7 +281,7 @@ body:             |
 
   bb.3.bb3:
     liveins: $rax
-    RETQ $eax, debug-location !82
+    RET64 $eax, debug-location !82
 
 ...
 ---
@@ -342,6 +342,6 @@ body:             |
 
   bb.3.bb3:
     liveins: $rax
-    RETQ $eax, debug-location !122
+    RET64 $eax, debug-location !122
 
 ...

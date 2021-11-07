@@ -118,6 +118,6 @@ body:             |
     $eax = MOV32rr killed $ebx
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 8
-    RETQ $eax
+    RET64 $eax
 
 ...

@@ -25,7 +25,6 @@
 #include "count_new.h"
 #include "../function_types.h"
 
-
 #if TEST_STD_VER >= 11
 struct RValueCallable {
     template <class ...Args>
@@ -36,6 +35,8 @@ struct LValueCallable {
     void operator()(Args&&...) & {}
 };
 #endif
+
+test_allocator_statistics alloc_stats;
 
 class DummyClass {};
 
@@ -69,7 +70,7 @@ void test_FreeFunction(AllocType& alloc)
     std::function<FuncType> f2(std::allocator_arg, alloc, target);
     // The allocator may not fit in the small object buffer, if we allocated
     // check it was done via the allocator.
-    assert(globalMemCounter.checkOutstandingNewEq(test_alloc_base::alloc_count));
+    assert(globalMemCounter.checkOutstandingNewEq(alloc_stats.alloc_count));
     assert(f2.template target<FuncType*>());
     assert(*f2.template target<FuncType*>() == target);
     assert(f2.template target<FuncType>() == 0);
@@ -86,7 +87,7 @@ void test_MemFunClass(AllocType& alloc)
     TargetType target = &MemFunClass::foo;
     assert(globalMemCounter.checkOutstandingNewEq(0));
     std::function<FuncType> f2(std::allocator_arg, alloc, target);
-    assert(globalMemCounter.checkOutstandingNewEq(test_alloc_base::alloc_count));
+    assert(globalMemCounter.checkOutstandingNewEq(alloc_stats.alloc_count));
     assert(f2.template target<TargetType>());
     assert(*f2.template target<TargetType>() == target);
     assert(f2.template target<FuncType*>() == 0);
@@ -111,15 +112,14 @@ void test_for_alloc(Alloc& alloc) {
     test_MemFunClass<int(MemFunClass::*)(int, int) const, int(MemFunClass&, int, int)>(alloc);
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   globalMemCounter.reset();
   {
     bare_allocator<DummyClass> bare_alloc;
     test_for_alloc(bare_alloc);
   }
     {
-        non_default_test_allocator<DummyClass> non_default_alloc(42);
+        non_default_test_allocator<DummyClass> non_default_alloc(42, &alloc_stats);
         test_for_alloc(non_default_alloc);
     }
 #if TEST_STD_VER >= 11

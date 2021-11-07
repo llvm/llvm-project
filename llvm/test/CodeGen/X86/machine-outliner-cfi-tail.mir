@@ -30,7 +30,7 @@ body:             |
     $edx = MOV32ri 2
     $edi = MOV32ri 3
     $eax = MOV32ri 4
-    RETQ
+    RET64
 ...
 ---
 name:            bar
@@ -52,7 +52,7 @@ body:             |
     $edx = MOV32ri 2
     $edi = MOV32ri 3
     $eax = MOV32ri 4
-    RETQ
+    RET64
 ...
 ---
 name:            baz
@@ -74,4 +74,4 @@ body:             |
     $edx = MOV32ri 2
     $edi = MOV32ri 3
     $eax = MOV32ri 4
-    RETQ
+    RET64

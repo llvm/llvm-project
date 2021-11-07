@@ -100,7 +100,7 @@ body:             |
 
   bb.4:
     liveins: $rbx, $rsi
-    RETQ $rbx, debug-location !17
+    RET64 $rbx, debug-location !17
 
 ...
 

@@ -22,5 +22,5 @@ body: |
 
     MOV32mr $rsp, 1, _, -4, _, $edi :: (store (s32) into %ir.xa)
     $eax = COPY killed $edi
-    RETQ killed $eax
+    RET64 killed $eax
 ...

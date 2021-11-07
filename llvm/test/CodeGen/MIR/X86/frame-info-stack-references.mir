@@ -72,7 +72,7 @@ body: |
 
     $rsp = ADD64ri8 $rsp, 32, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
   bb.2.entry:
     CALL64pcrel32 &__stack_chk_fail, csr_64, implicit $rsp, implicit-def $rsp

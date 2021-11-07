@@ -105,10 +105,10 @@ body:             |
   bb.2.return:
     liveins: $eax
 
-    RETQ $eax, debug-location !36
+    RET64 $eax, debug-location !36
 
   bb.1.if.end:
     renamable $eax = MOV32ri 1
-    RETQ $eax, debug-location !36
+    RET64 $eax, debug-location !36
 
 ...

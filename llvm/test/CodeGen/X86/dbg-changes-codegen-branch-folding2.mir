@@ -109,7 +109,7 @@ body:             |
   
   bb.3.for.cond.cleanup:
     liveins: $rdi, $xmm3, $xmm4, $xmm5, $xmm6, $xmm7, $xmm9, $xmm13, $xmm14
-    RETQ
+    RET64
   
   bb.4.for.body:
     successors: %bb.1, %bb.5

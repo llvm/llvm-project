@@ -67,7 +67,7 @@ body: |
     $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.1, _, implicit $mxcsr
     $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
     $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
-    RETQ $xmm0
+    RET64 $xmm0
 ...
 ---
 # Verify that alignment can be inferred:
@@ -93,7 +93,7 @@ body: |
     $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.1, _, implicit $mxcsr
     $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
     $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
-    RETQ $xmm0
+    RET64 $xmm0
 ...
 ---
 # Verify that the non-standard alignments are respected:
@@ -123,7 +123,7 @@ body: |
     $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.1, _, implicit $mxcsr
     $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
     $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
-    RETQ $xmm0
+    RET64 $xmm0
 ...
 ---
 # CHECK:  name:  test4
@@ -141,5 +141,5 @@ body: |
     $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.0 + 8, _, implicit $mxcsr
     $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
     $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
-    RETQ $xmm0
+    RET64 $xmm0
 ...

@@ -18,5 +18,5 @@ body: |
 
     ; CHECK: Tied physical registers must match.
     $rbx = AND64rm killed $rdx, killed $rdi, 1, _, 0, _, implicit-def dead $eflags
-    RETQ $rbx
+    RET64 $rbx
 ...

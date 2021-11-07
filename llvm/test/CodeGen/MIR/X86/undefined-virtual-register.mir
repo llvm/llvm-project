@@ -20,6 +20,6 @@ body: |
     %0 = COPY $edi
     ; CHECK: Cannot determine class/bank of virtual register 1 in function 'test'
     $eax = COPY %1
-    RETQ $eax
+    RET64 $eax
 ...
 

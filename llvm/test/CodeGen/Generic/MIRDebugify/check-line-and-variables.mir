@@ -62,7 +62,7 @@ body:             |
     MOV32mr $noreg, 1, $noreg, @ga, $noreg, killed %8 :: (store (s32) into @ga)
     %5:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c)
     $eax = COPY %5
-    RETQ implicit $eax
+    RET64 implicit $eax
 
     ;CHECK:      WARNING: Missing line 9
     ;CHECK-NEXT: Machine IR debug info check: FAIL

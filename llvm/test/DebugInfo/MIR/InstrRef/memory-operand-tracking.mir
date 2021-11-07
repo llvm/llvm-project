@@ -81,5 +81,5 @@ body:  |
     ; CHECK-NEXT: DBG_VALUE $noreg
 
     $rax = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
-    RETQ $rax, debug-location !12
+    RET64 $rax, debug-location !12
 ...

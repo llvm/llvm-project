@@ -1110,7 +1110,7 @@ def BWWriteResGroup84 : SchedWriteRes<[BWPort6,BWPort23,BWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[BWWriteResGroup84], (instrs LRETQ, RETQ)>;
+def: InstRW<[BWWriteResGroup84], (instrs LRET64, RET64)>;
 
 def BWWriteResGroup87 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06]> {
   let Latency = 7;

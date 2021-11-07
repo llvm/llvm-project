@@ -24,5 +24,5 @@ body: |
   bb.0.entry:
     $eax = MOV32rm $esp, 1, _, 4, _
     $eax = ADD32rm killed $eax, $esp, 1, _, 8, _, implicit-def dead $eflags
-    RETL $eax
+    RET32 $eax
 ...

@@ -69,5 +69,5 @@ body: |
   bb.3.false:
     liveins: $eax
 
-    RETQ $eax
+    RET64 $eax
 ...
