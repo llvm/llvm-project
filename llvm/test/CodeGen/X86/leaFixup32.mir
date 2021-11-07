@@ -110,9 +110,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
     ; CHECK: $eax = ADD32ri8 $eax, -5, implicit-def $eflags
-    ; CHECK: RETQ $eax
+    ; CHECK: RET64 $eax
     $eax = LEA32r killed $eax, 1, killed $ebp, -5, $noreg
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -148,9 +148,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags
     ; CHECK: $ebp = ADD32ri8 $ebp, -5, implicit-def $eflags
-    ; CHECK: RETQ $ebp
+    ; CHECK: RET64 $ebp
     $ebp = LEA32r killed $ebp, 1, killed $eax, -5, $noreg
-    RETQ $ebp
+    RET64 $ebp
 
 ...
 ---
@@ -185,9 +185,9 @@ body:             |
     ; CHECK-LABEL: name: test1add_ebp_32
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags
-    ; CHECK: RETQ $ebp
+    ; CHECK: RET64 $ebp
     $ebp = LEA32r killed $ebp, 1, killed $eax, 0, $noreg
-    RETQ $ebp
+    RET64 $ebp
 
 ...
 ---
@@ -224,9 +224,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp, $esi
     ; CHECK: $ebx = LEA32r killed $eax, 1, killed $ebp, 0, $noreg
     ; CHECK: $ebx = ADD32ri8 $ebx, -5, implicit-def $eflags
-    ; CHECK: RETQ $ebx
+    ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $eax, 1, killed $ebp, -5, $noreg
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -263,9 +263,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $ebx = LEA32r killed $eax, 1, killed $ebp, 0, $noreg
     ; CHECK: $ebx = ADD32ri8 $ebx, -5, implicit-def $eflags
-    ; CHECK: RETQ $ebx
+    ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $ebp, 1, killed $eax, -5, $noreg
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -301,9 +301,9 @@ body:             |
     ; CHECK-LABEL: name: test1lea_ebp_32
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $ebx = LEA32r killed $eax, 1, killed $ebp, 0, $noreg
-    ; CHECK: RETQ $ebx
+    ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $ebp, 1, killed $eax, 0, $noreg
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -339,9 +339,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp
     ; CHECK: $eax = ADD32rr $eax, $ebp, implicit-def $eflags
     ; CHECK: $eax = ADD32ri $eax, 129, implicit-def $eflags
-    ; CHECK: RETQ $eax
+    ; CHECK: RET64 $eax
     $eax = LEA32r killed $eax, 1, killed $ebp, 129, $noreg
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -378,9 +378,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp, $ebx
     ; CHECK: $ebx = MOV32rr $ebp
     ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
-    ; CHECK: RETQ $ebx
+    ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -416,9 +416,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp, $ebx
     ; CHECK: $ebx = LEA32r $noreg, 1, $ebp, 5, $noreg
     ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
-    ; CHECK: RETQ $ebx
+    ; CHECK: RET64 $ebx
     $ebx = LEA32r $ebp, 1, $ebp, 5, $noreg
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -454,9 +454,9 @@ body:             |
     ; CHECK: liveins: $eax, $ebp, $ebx
     ; CHECK: $ebx = LEA32r $noreg, 4, $ebp, 5, $noreg
     ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
-    ; CHECK: RETQ $ebx
+    ; CHECK: RET64 $ebx
     $ebx = LEA32r $ebp, 4, $ebp, 5, $noreg
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -491,9 +491,9 @@ body:             |
     ; CHECK-LABEL: name: test_skip_opt_32
     ; CHECK: liveins: $eax, $ebp, $ebx
     ; CHECK: $ebp = LEA32r killed $ebp, 4, killed $ebp, 0, $noreg
-    ; CHECK: RETQ $ebp
+    ; CHECK: RET64 $ebp
     $ebp = LEA32r killed $ebp, 4, killed $ebp, 0, $noreg
-    RETQ $ebp
+    RET64 $ebp
 
 ...
 ---
@@ -529,23 +529,23 @@ body:             |
   ; CHECK:   CMP32rr $eax, killed $ebx, implicit-def $eflags
   ; CHECK:   $ebx = LEA32r killed $eax, 4, killed $eax, 5, $noreg
   ; CHECK:   JCC_1 %bb.1, 4, implicit $eflags
-  ; CHECK:   RETQ $ebx
+  ; CHECK:   RET64 $ebx
   ; CHECK: bb.1:
   ; CHECK:   liveins: $eax, $ebp, $ebx
   ; CHECK:   $ebp = LEA32r killed $ebx, 4, killed $ebx, 0, $noreg
   ; CHECK:   $ebp = ADD32ri8 $ebp, 5, implicit-def $eflags
-  ; CHECK:   RETQ $ebp
+  ; CHECK:   RET64 $ebp
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp, $ebx
 
     CMP32rr   $eax, killed $ebx, implicit-def $eflags
     $ebx = LEA32r killed $eax, 4, killed $eax, 5, $noreg
     JCC_1 %bb.1, 4, implicit $eflags
-    RETQ $ebx
+    RET64 $ebx
   bb.1:
     liveins: $eax, $ebp, $ebx
     $ebp = LEA32r killed $ebx, 4, killed $ebx, 5, $noreg
-    RETQ $ebp
+    RET64 $ebp
 
 ...
 

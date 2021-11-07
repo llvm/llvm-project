@@ -154,5 +154,5 @@ body:  |
     ; This is instruction 10 referred to in bb.10. However, as the variable
     ; location/value has been modified in the meantime, no DBG_VALUE should be
     ; generated here.
-    RETQ $eax, debug-location !17
+    RET64 $eax, debug-location !17
 ...

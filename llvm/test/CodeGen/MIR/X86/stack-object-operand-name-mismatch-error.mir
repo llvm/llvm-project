@@ -28,5 +28,5 @@ body: |
     ; CHECK: [[@LINE+1]]:13: the name of the stack object '%stack.0' isn't 'x'
     MOV32mr %stack.0.x, 1, _, 0, _, %0
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...

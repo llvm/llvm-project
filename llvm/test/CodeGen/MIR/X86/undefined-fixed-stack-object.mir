@@ -33,5 +33,5 @@ body: |
     MOV32mi %stack.1, 1, _, 0, _, 2
     %1 = MOV32rm %stack.0, 1, _, 0, _
     $eax = COPY %1
-    RETL $eax
+    RET32 $eax
 ...

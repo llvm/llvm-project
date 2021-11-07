@@ -74,6 +74,6 @@ body:             |
     $edi = MOV32rr $eax, debug-location !24
     $eax = MOV32rr $eax, debug-location !24
     $edi = MOV32rr $eax, debug-location !24
-    RETQ killed $eax, debug-location !24
+    RET64 killed $eax, debug-location !24
 
 ...

@@ -19,5 +19,5 @@ body: |
    ; CHECK: instruction: COPY
    ; CHECK: 2 operands expected, but 0 given.
     COPY
-    RETQ
+    RET64
 ...

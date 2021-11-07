@@ -27,11 +27,11 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; CHECK: [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[COPY1]], 1, implicit-def $eflags
     ; CHECK: $al = COPY [[AND8ri]]
-    ; CHECK: RETQ $al
+    ; CHECK: RET64 $al
     %0 = COPY $edi
     %1 = COPY %0.sub_8bit
     %2 = AND8ri %1, 1, implicit-def $eflags
     $al = COPY %2
-    RETQ $al
+    RET64 $al
 ...
 

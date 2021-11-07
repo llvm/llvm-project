@@ -619,7 +619,7 @@ body: |
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   RETQ
+  ; CHECK-NEXT:   RET64
   bb.0:
     %0:gr32 = COPY $eax
     CMP32ri %0, 20, implicit-def $eflags
@@ -636,7 +636,7 @@ body: |
     JMP_1 %bb.3
 
   bb.3:
-    RETQ
+    RET64
 ...
 ---
 name: opt_adjusted_imm_multiple_blocks_noopt
@@ -663,7 +663,7 @@ body: |
   ; CHECK-NEXT:   $al = SETCCr 4, implicit $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   RETQ
+  ; CHECK-NEXT:   RET64
   bb.0:
     %0:gr32 = COPY $eax
     CMP32ri %0, 20, implicit-def $eflags
@@ -681,5 +681,5 @@ body: |
     $al = SETCCr 4, implicit $eflags
 
   bb.3:
-    RETQ
+    RET64
 ...

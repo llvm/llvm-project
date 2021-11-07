@@ -69,6 +69,6 @@ body:             |
     ; This clobber of $rax might cause LDV to re-issue a DBG_VALUE stating the
     ; variable location as $rbx. However, the preceeding DBG_VALUE_LIST should
     ; terminate the earlier location.
-    RETQ implicit $rbx, debug-location !13
+    RET64 implicit $rbx, debug-location !13
 
 ...

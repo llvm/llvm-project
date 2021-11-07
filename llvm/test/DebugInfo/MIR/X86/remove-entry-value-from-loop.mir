@@ -154,7 +154,7 @@ body:             |
     liveins: $eax
   
     DBG_VALUE $eax, $noreg, !15, !DIExpression(), debug-location !17
-    RETQ $eax, debug-location !32
+    RET64 $eax, debug-location !32
   
   bb.3.if.then:
     liveins: $eax, $edi
@@ -162,6 +162,6 @@ body:             |
     renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $edi, implicit-def dead $eflags, debug-location !28
     DBG_VALUE $eax, $noreg, !15, !DIExpression(), debug-location !17
     DBG_VALUE $eax, $noreg, !15, !DIExpression(), debug-location !17
-    RETQ $eax, debug-location !32
+    RET64 $eax, debug-location !32
 
 ...

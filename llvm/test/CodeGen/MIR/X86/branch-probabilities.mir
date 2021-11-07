@@ -14,5 +14,5 @@ body: |
     NOOP
 
   bb.2:
-    RETQ undef $eax
+    RET64 undef $eax
 ...

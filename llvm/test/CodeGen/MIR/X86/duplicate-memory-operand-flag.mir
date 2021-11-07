@@ -23,5 +23,5 @@ body: |
     $eax = MOV32rm $rdi, 1, _, 0, _ :: (volatile volatile load (s32) from %ir.x)
     $eax = INC32r killed $eax, implicit-def dead $eflags
     MOV32mr killed $rdi, 1, _, 0, _, $eax :: (volatile store (s32) into %ir.x)
-    RETQ $eax
+    RET64 $eax
 ...

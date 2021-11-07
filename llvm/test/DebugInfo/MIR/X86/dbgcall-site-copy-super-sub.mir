@@ -106,7 +106,7 @@ body:             |
     $eax = MOV32rr killed $ebx, debug-location !32
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !32
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !32
-    RETQ killed $eax, debug-location !32
+    RET64 killed $eax, debug-location !32
 
 ...
 

@@ -71,7 +71,7 @@ TEST_F(X86SnippetRepetitorTest, Duplicate) {
   ASSERT_EQ(MF->getNumBlockIDs(), 1u);
   EXPECT_THAT(MF->getBlockNumbered(0)->instrs(),
               ElementsAre(HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
-                          HasOpcode(X86::NOOP), HasOpcode(X86::RETQ)));
+                          HasOpcode(X86::NOOP), HasOpcode(X86::RET64)));
 }
 
 TEST_F(X86SnippetRepetitorTest, Loop) {
@@ -90,7 +90,7 @@ TEST_F(X86SnippetRepetitorTest, Loop) {
                   LiveReg(State.getExegesisTarget().getLoopCounterRegister(
                       State.getTargetMachine().getTargetTriple()))));
   EXPECT_THAT(MF->getBlockNumbered(2)->instrs(),
-              ElementsAre(HasOpcode(X86::RETQ)));
+              ElementsAre(HasOpcode(X86::RET64)));
 }
 
 } // namespace

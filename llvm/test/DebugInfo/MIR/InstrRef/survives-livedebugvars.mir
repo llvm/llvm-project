@@ -41,7 +41,7 @@
 # FASTREG-NEXT:  JMP_1
 # FASTREG-LABEL: bb.4:
 # FASTREG:       DBG_INSTR_REF 5, 0
-# FASTREG-NEXT:  RETQ
+# FASTREG-NEXT:  RET64
 
 --- |
   ; ModuleID = 'tmp.ll'
@@ -137,6 +137,6 @@ body:             |
   bb.4:
     $eax = COPY %5, debug-location !18
     DBG_INSTR_REF 5, 0, !9, !DIExpression(), debug-location !16
-    RETQ implicit $eax, debug-location !18
+    RET64 implicit $eax, debug-location !18
 
 ...

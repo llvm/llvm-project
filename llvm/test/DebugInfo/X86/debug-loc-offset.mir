@@ -207,7 +207,7 @@ body:             |
     $esp = frame-destroy ADD32ri8 $esp, 4, implicit-def dead $eflags, debug-location !16
     $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !16
     CFI_INSTRUCTION def_cfa $esp, 4, debug-location !16
-    RETL implicit killed $eax, debug-location !16
+    RET32 implicit killed $eax, debug-location !16
 
 ...
 ---
@@ -271,6 +271,6 @@ body:             |
     $esp = frame-destroy ADD32ri8 $esp, 24, implicit-def dead $eflags, debug-location !30
     $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !30
     CFI_INSTRUCTION def_cfa $esp, 4, debug-location !30
-    RETL debug-location !30
+    RET32 debug-location !30
 
 ...
