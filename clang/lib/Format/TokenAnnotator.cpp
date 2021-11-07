@@ -3247,8 +3247,12 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Right.is(tok::l_paren)) {
     if (Left.is(TT_TemplateCloser) && Right.isNot(TT_FunctionTypeLParen))
       return spaceRequiredBeforeParens(Right);
-    if (Left.is(tok::kw_requires))
-      return spaceRequiredBeforeParens(Right);
+    if (Left.isOneOf(TT_RequiresClause, TT_RequiresClauseInARequiresExpression))
+      return Style.SpaceBeforeParensOptions.AfterRequiresInClause ||
+             spaceRequiredBeforeParens(Right);
+    if (Left.is(TT_RequiresExpression))
+      return Style.SpaceBeforeParensOptions.AfterRequiresInExpression ||
+             spaceRequiredBeforeParens(Right);
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
       return true;

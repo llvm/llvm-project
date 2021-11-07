@@ -3594,6 +3594,25 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
+    /// If ``true``, put space between requires keyword in a requires clause and
+    /// opening parentheses, if there is one.
+    /// \code
+    ///    true:                                  false:
+    ///    template<typename T>            vs.    template<typename T>
+    ///    requires (A<T> && B<T>)                requires(A<T> && B<T>)
+    ///    ...                                    ...
+    /// \endcode
+    bool AfterRequiresInClause;
+    /// If ``true``, put space between requires keyword in a requires expression
+    /// and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    template<typename T>            vs.    template<typename T>
+    ///    concept C = requires (T t) {           concept C = requires(T t) {
+    ///                  ...                                    ...
+    ///                }                                      }
+    /// \endcode
+    bool AfterRequiresInExpression;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -3607,7 +3626,8 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), BeforeNonEmptyParentheses(false) {}
+          AfterOverloadedOperator(false), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -3617,6 +3637,8 @@ struct FormatStyle {
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
+             AfterRequiresInClause == Other.AfterRequiresInClause &&
+             AfterRequiresInExpression == Other.AfterRequiresInExpression &&
              BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
     }
   };
