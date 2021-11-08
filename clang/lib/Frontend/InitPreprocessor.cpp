@@ -1182,7 +1182,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.OpenCL) {
     InitializeOpenCLFeatureTestMacros(TI, LangOpts, Builder);
 
-    if (TI.getTriple().isSPIR())
+    if (TI.getTriple().isSPIR() || TI.getTriple().isSPIRV())
       Builder.defineMacro("__IMAGE_SUPPORT__");
   }
 
