@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-hsa_status_t impl_memcpy_no_signal(void *dest, const void *src, size_t size,
+hsa_status_t impl_memcpy_no_signal(void *dest, void *src, size_t size,
                                    int host2Device);
 hsa_status_t host_malloc(void **mem, size_t size);
 
