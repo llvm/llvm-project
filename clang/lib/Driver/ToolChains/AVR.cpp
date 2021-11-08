@@ -28,9 +28,9 @@ using namespace llvm::opt;
 
 namespace {
 
-const struct {
+constexpr struct {
   StringRef Name;
-  std::string SubPath;
+  StringRef SubPath;
   StringRef Family;
   unsigned DataAddr;
 } MCUInfo[] = {

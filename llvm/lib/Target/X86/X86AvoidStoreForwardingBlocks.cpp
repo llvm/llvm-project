@@ -360,10 +360,7 @@ findPotentialBlockers(MachineInstr *LoadInst) {
   if (BlockCount < InspectionLimit) {
     MachineBasicBlock *MBB = LoadInst->getParent();
     int LimitLeft = InspectionLimit - BlockCount;
-    for (MachineBasicBlock::pred_iterator PB = MBB->pred_begin(),
-                                          PE = MBB->pred_end();
-         PB != PE; ++PB) {
-      MachineBasicBlock *PMBB = *PB;
+    for (MachineBasicBlock *PMBB : MBB->predecessors()) {
       int PredCount = 0;
       for (MachineInstr &PBInst : llvm::reverse(*PMBB)) {
         if (PBInst.isMetaInstruction())

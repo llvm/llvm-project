@@ -134,15 +134,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
     SSA.AddAvailableValue(OrigPreheader, OrigPreHeaderVal);
 
     // Visit each use of the OrigHeader instruction.
-    for (Value::use_iterator UI = OrigHeaderVal->use_begin(),
-                             UE = OrigHeaderVal->use_end();
-         UI != UE;) {
-      // Grab the use before incrementing the iterator.
-      Use &U = *UI;
-
-      // Increment the iterator before removing the use from the list.
-      ++UI;
-
+    for (Use &U : llvm::make_early_inc_range(OrigHeaderVal->uses())) {
       // SSAUpdater can't handle a non-PHI use in the same block as an
       // earlier def. We can easily handle those cases manually.
       Instruction *UserInst = cast<Instruction>(U.getUser());
