@@ -947,3 +947,5 @@ def PseudoTLSLA32 : CSKYPseudo<(outs GPR:$dst1, GPR:$dst2),
 let hasSideEffects = 0, isNotDuplicable = 1 in
 def CONSTPOOL_ENTRY : CSKYPseudo<(outs),
   (ins i32imm:$instid, i32imm:$cpidx, i32imm:$size), "", []>;
+
+include "CSKYInstrInfo16Instr.td"

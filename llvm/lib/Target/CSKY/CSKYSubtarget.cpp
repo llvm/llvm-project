@@ -36,6 +36,8 @@ CSKYSubtarget &CSKYSubtarget::initializeSubtargetDependencies(
   HasFPUv3SingleFloat = false;
   HasFPUv3DoubleFloat = false;
 
+  HasBTST16 = false;
+  HasJAVA = false;
   HasExtendLrw = false;
   HasDoloop = false;
   HasHighRegisters = false;
@@ -70,4 +72,3 @@ bool CSKYSubtarget::useHardFloatABI() const {
   else
     return FloatABI == FloatABI::Hard;
 }
-

@@ -43,6 +43,8 @@ class CSKYSubtarget : public CSKYGenSubtargetInfo {
   bool HasFPUv3SingleFloat;
   bool HasFPUv3DoubleFloat;
 
+  bool HasBTST16;
+  bool HasJAVA;
   bool HasExtendLrw;
   bool HasDoloop;
   bool HasHighRegisters;
@@ -95,6 +97,8 @@ public:
   bool hasFPUv3() const { return HasFPUv3SingleFloat || HasFPUv3DoubleFloat; }
   bool hasAnyFloatExt() const { return hasFPUv2() || hasFPUv3(); };
 
+  bool hasBTST16() const { return HasBTST16; }
+  bool hasJAVA() const { return HasJAVA; }
   bool hasExtendLrw() const { return HasExtendLrw; }
   bool hasDoloop() const { return HasDoloop; }
   bool hasHighRegisters() const { return HasHighRegisters; }
