@@ -16,22 +16,22 @@ module m
   logical, parameter :: test_bit_size_16 = bs16 == 128
 
   real(2), parameter :: &
-    eps2 = epsilon(0._2), zeps2 = real(z'1000', kind=2), deps2 = 4.8828125e-4_2
+    eps2 = epsilon(0._2), zeps2 = real(z'1400', kind=2), deps2 = 9.765625e-4_2
   real(3), parameter :: &
-    eps3 = epsilon(0._3), zeps3 = real(z'3b80', kind=3), deps3 = 3.90625e-3_3
+    eps3 = epsilon(0._3), zeps3 = real(z'3c00', kind=3), deps3 = 7.8135e-3_3
   real(4), parameter :: &
-    eps4 = epsilon(0._4), zeps4 = real(z'33800000', kind=4), &
-    deps4 = 5.9604644775390625e-8_4
+    eps4 = epsilon(0._4), zeps4 = real(z'34000000', kind=4), &
+    deps4 = 1.1920928955078125e-07_4
   real(8), parameter :: &
-    eps8 = epsilon(0._8), zeps8 = real(z'3ca0000000000000', kind=8), &
-    deps8 = 1.1102230246251565404236316680908203125e-16_8
+    eps8 = epsilon(0._8), zeps8 = real(z'3cb0000000000000', kind=8), &
+    deps8 = 2.2204460492503130808472633361816406250e-16_8
   real(10), parameter :: &
-    eps10 = epsilon(0._10), zeps10 = real(z'3fbf8000000000000000', kind=10), &
-    deps10 = 5.42101086242752217003726400434970855712890625e-20_10
+    eps10 = epsilon(0._10), zeps10 = real(z'3fc08000000000000000', kind=10), &
+    deps10 = 1.08420217248550443400745280086994171142578125e-19_10
   real(16), parameter :: &
     eps16 = epsilon(0._16), &
-    zeps16 = real(z'3f8e0000000000000000000000000000', kind=16), &
-    deps16 = 9.629649721936179265279889712924636592690508241076940976199693977832794189453125e-35_16
+    zeps16 = real(z'3f8f0000000000000000000000000000', kind=16), &
+    deps16 = 1.9259299443872358530559779425849273185381016482153881952399387955665588378906250e-34_16
   logical, parameter :: test_eps2 = eps2 == zeps2 .and. eps2 == deps2
   logical, parameter :: test_eps3 = eps3 == zeps3 .and. eps3 == deps3
   logical, parameter :: test_eps4 = eps4 == zeps4 .and. eps4 == deps4
