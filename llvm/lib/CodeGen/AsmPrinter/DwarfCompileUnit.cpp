@@ -490,7 +490,6 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
         addSInt(*Loc, dwarf::DW_FORM_sdata, TI_GLOBAL_RELOC);
         if (!isDwoUnit()) {
           addLabel(*Loc, dwarf::DW_FORM_data4, SPSym);
-          DD->addArangeLabel(SymbolCU(this, SPSym));
         } else {
           // FIXME: when writing dwo, we need to avoid relocations. Probably
           // the "right" solution is to treat globals the way func and data
