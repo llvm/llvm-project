@@ -242,25 +242,42 @@ def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
 //===----------------------------------------------------------------------===//
 
 // Constrained shift PatFrags.
+
+def csh_mask_16 : PatFrag<(ops node:$src0), (and node:$src0, imm),
+  [{ return isUnneededShiftMask(N, 4); }]> {
+    let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 4); }];
+  }
+
+def csh_mask_32 : PatFrag<(ops node:$src0), (and node:$src0, imm),
+  [{ return isUnneededShiftMask(N, 5); }]> {
+    let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 5); }];
+  }
+
+def csh_mask_64 : PatFrag<(ops node:$src0), (and node:$src0, imm),
+  [{ return isUnneededShiftMask(N, 6); }]> {
+    let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 6); }];
+  }
+
 foreach width = [16, 32, 64] in {
 defvar mask = !sub(width, 1);
+defvar csh_mask = !cast<SDPatternOperator>("csh_mask_"#width);
 
 def cshl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(shl node:$src0, node:$src1), (shl node:$src0, (and node:$src1, mask))]>;
+  [(shl node:$src0, node:$src1), (shl node:$src0, (csh_mask node:$src1))]>;
 defvar cshl = !cast<SDPatternOperator>("cshl_"#width);
 def cshl_#width#_oneuse : HasOneUseBinOp<cshl>;
 def clshl_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (cshl $src1, $src0)>;
 
 def csrl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(srl node:$src0, node:$src1), (srl node:$src0, (and node:$src1, mask))]>;
+  [(srl node:$src0, node:$src1), (srl node:$src0, (csh_mask node:$src1))]>;
 defvar csrl = !cast<SDPatternOperator>("csrl_"#width);
 def csrl_#width#_oneuse : HasOneUseBinOp<csrl>;
 def clshr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (csrl $src1, $src0)>;
 
 def csra_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(sra node:$src0, node:$src1), (sra node:$src0, (and node:$src1, mask))]>;
+  [(sra node:$src0, node:$src1), (sra node:$src0, (csh_mask node:$src1))]>;
 defvar csra = !cast<SDPatternOperator>("csra_"#width);
 def csra_#width#_oneuse : HasOneUseBinOp<csra>;
 def cashr_rev_#width : PatFrag <(ops node:$src0, node:$src1),

@@ -719,6 +719,18 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
          Term->getMetadata("structurizecfg.uniform");
 }
 
+bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
+                                             unsigned ShAmtBits) const {
+  assert(N->getOpcode() == ISD::AND);
+
+  const APInt &RHS = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+  if (RHS.countTrailingOnes() >= ShAmtBits)
+    return true;
+
+  const APInt &LHSKnownZeros = CurDAG->computeKnownBits(N->getOperand(0)).Zero;
+  return (LHSKnownZeros | RHS).countTrailingOnes() >= ShAmtBits;
+}
+
 static bool getBaseWithOffsetUsingSplitOR(SelectionDAG &DAG, SDValue Addr,
                                           SDValue &N0, SDValue &N1) {
   if (Addr.getValueType() == MVT::i64 && Addr.getOpcode() == ISD::BITCAST &&
