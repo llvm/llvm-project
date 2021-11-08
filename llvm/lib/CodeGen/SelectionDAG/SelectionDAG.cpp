@@ -4286,6 +4286,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   return std::max(FirstAnswer, Mask.countLeadingOnes());
 }
 
+unsigned SelectionDAG::ComputeMinSignedBits(SDValue Op, unsigned Depth) const {
+  unsigned SignBits = ComputeNumSignBits(Op, Depth);
+  return Op.getScalarValueSizeInBits() - SignBits + 1;
+}
+
+unsigned SelectionDAG::ComputeMinSignedBits(SDValue Op,
+                                            const APInt &DemandedElts,
+                                            unsigned Depth) const {
+  unsigned SignBits = ComputeNumSignBits(Op, DemandedElts, Depth);
+  return Op.getScalarValueSizeInBits() - SignBits + 1;
+}
+
 bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly,
                                                     unsigned Depth) const {
   // Early out for FREEZE.
