@@ -276,7 +276,23 @@ template <class Duration>
 using sys_seconds = sys_time<seconds>;                  // C++20
 using sys_days    = sys_time<days>;                     // C++20
 
-class file_clock;                                       // C++20
+class file_clock                                        // C++20
+{
+public:
+    typedef see-below                      rep;
+    typedef nano                           period;
+    typedef chrono::duration<rep, period>  duration;
+    typedef chrono::time_point<file_clock> time_point;
+    static constexpr bool is_steady =      false;
+
+    static time_point now() noexcept;
+
+    template<class Duration>
+    static sys_time<see-below> to_sys(const file_time<Duration>&);
+
+    template<class Duration>
+    static file_time<see-below> from_sys(const sys_time<Duration>&);
+};
 
 template<class Duration>
   using file_time = time_point<file_clock, Duration>;   // C++20
@@ -2798,6 +2814,20 @@ struct _FilesystemClock {
   static _LIBCPP_CONSTEXPR_AFTER_CXX11 const bool is_steady = false;
 
   _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_FUNC_VIS static time_point now() noexcept;
+
+#if _LIBCPP_STD_VER > 17
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI
+  static chrono::sys_time<_Duration> to_sys(const chrono::file_time<_Duration>& __t) {
+    return chrono::sys_time<_Duration>(__t.time_since_epoch());
+  }
+
+  template <class _Duration>
+  _LIBCPP_HIDE_FROM_ABI
+  static chrono::file_time<_Duration> from_sys(const chrono::sys_time<_Duration>& __t) {
+    return chrono::file_time<_Duration>(__t.time_since_epoch());
+  }
+#endif // _LIBCPP_STD_VER > 17
 };
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 #endif // !_LIBCPP_CXX03_LANG
