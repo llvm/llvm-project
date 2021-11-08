@@ -1066,6 +1066,14 @@ let hasSideEffects = 0 in {
                        [(set v2i64:$XT, (PPCxxpermdi v2i64:$XA, v2i64:$XB,
                          imm32SExt16:$DM))]>;
   let isCodeGenOnly = 1 in
+  // Note that the input register class for `$XA` of XXPERMDIs is `vsfrc` which
+  // is not the same with the input register class(`vsrc`) of XXPERMDI instruction.
+  // We did this on purpose because:
+  // 1: The input is primarily for loads that load a partial vector(LFIWZX,
+  //    etc.), no need for SUBREG_TO_REG.
+  // 2: With `vsfrc` register class, in the final assembly, float registers
+  //    like `f0` are used instead of vector scalar register like `vs0`. This
+  //    helps readability.
   def XXPERMDIs : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vsfrc:$XA, u2imm:$DM),
                              "xxpermdi $XT, $XA, $XA, $DM", IIC_VecPerm, []>;
   def XXSEL : XX4Form<60, 3,
