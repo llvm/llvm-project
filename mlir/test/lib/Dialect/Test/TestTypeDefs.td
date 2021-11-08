@@ -15,6 +15,7 @@
 
 // To get the test dialect def.
 include "TestOps.td"
+include "TestAttrDefs.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
@@ -187,6 +188,46 @@ def TestTypeTrait : NativeTypeTrait<"TestTypeTrait">;
 // The definition of a singleton type that has a trait.
 def TestTypeWithTrait : Test_Type<"TestTypeWithTrait", [TestTypeTrait]> {
   let mnemonic = "test_type_with_trait";
+}
+
+// Type with assembly format.
+def TestTypeWithFormat : Test_Type<"TestTypeWithFormat"> {
+  let parameters = (
+    ins
+    TestParamOne:$one,
+    TestParamTwo:$two,
+    "::mlir::Attribute":$three
+  );
+
+  let mnemonic = "type_with_format";
+  let assemblyFormat = "`<` $one `,` struct($three, $two) `>`";
+}
+
+// Test dispatch to parseField
+def TestTypeNoParser : Test_Type<"TestTypeNoParser"> {
+  let parameters = (
+    ins
+    "uint32_t":$one,
+    ArrayRefParameter<"int64_t">:$two,
+    StringRefParameter<>:$three,
+    "::test::CustomParam":$four
+  );
+
+  let mnemonic = "no_parser";
+  let assemblyFormat = "`<` $one `,` `[` $two `]` `,` $three `,` $four `>`";
+}
+
+def TestTypeStructCaptureAll : Test_Type<"TestStructTypeCaptureAll"> {
+  let parameters = (
+    ins
+    "int":$v0,
+    "int":$v1,
+    "int":$v2,
+    "int":$v3
+  );
+
+  let mnemonic = "struct_capture_all";
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 #endif // TEST_TYPEDEFS
