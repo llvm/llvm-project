@@ -139,4 +139,21 @@ define i1 @opt_setcc_expanded_shl_wrong_shifts(i64 %a, i64 %b) nounwind {
   ret i1 %cmp
 }
 
+define i1 @opt_setcc_shl_ne_zero_i256(i256 %a) nounwind {
+; CHECK-LABEL: opt_setcc_shl_ne_zero_i256:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    extr x8, x3, x2, #47
+; CHECK-NEXT:    extr x9, x2, x1, #47
+; CHECK-NEXT:    extr x10, x1, x0, #47
+; CHECK-NEXT:    orr x9, x9, x0, lsl #17
+; CHECK-NEXT:    orr x8, x10, x8
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %shl = shl i256 %a, 17
+  %cmp = icmp ne i256 %shl, 0
+  ret i1 %cmp
+}
+
 declare void @use(i128 %a)
