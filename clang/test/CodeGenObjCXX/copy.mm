@@ -11,7 +11,7 @@ namespace test0 {
   // CHECK:      alloca
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
-  // CHECK-NEXT: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm(
+  // CHECK-NEXT: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: bitcast

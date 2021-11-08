@@ -12,7 +12,7 @@ struct {
   const a &d;
 } e[]{nullptr, {}};
 
-// CHECK: define internal void @__cxx_global_array_dtor(i8* %0)
+// CHECK: define internal void @__cxx_global_array_dtor(i8* noundef %0)
 // CHECK-SAME: !dbg ![[SUBPROGRAM:[0-9]+]] {
 // CHECK: arraydestroy.body
 // CHECK: %arraydestroy.elementPast =

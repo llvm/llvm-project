@@ -50,7 +50,7 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
+// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
 // DEVICE: [[C_REF:%.+]] = load i32*, i32** @c_decl_tgt_ref_ptr,
 // DEVICE: [[C:%.+]] = load i32, i32* [[C_REF]],
 // DEVICE: store i32 [[C]], i32* %
@@ -81,7 +81,7 @@ int maini1() {
 // HOST: call void @__omp_offloading_{{.*}}_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* %{{[^,]+}})
 // HOST: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.__omp_offloading_{{.+}}_l47.region_id, i32 2, {{.+}})
 
-// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
+// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* noundef nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // HOST: [[C:%.*]] = load i32, i32* @c,
 // HOST: store i32 [[C]], i32* %
 

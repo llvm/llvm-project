@@ -8,6 +8,7 @@ class TestTaggedPointerCommand(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @no_debug_info_test
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.m"))
@@ -17,6 +18,3 @@ class TestTaggedPointerCommand(TestBase):
 
         self.expect("lang objc tagged-pointer info 0x0", error=True,
                     patterns=["could not convert '0x0' to a valid address"])
-
-        self.expect("lang objc tagged-pointer info 0xffffffff", error=True,
-                    patterns=["could not get class descriptor for 0xffffffff"])

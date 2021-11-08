@@ -11,7 +11,7 @@
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_member
 ; CHECK-NEXT:       DW_AT_name    ("x")
-; CHECK-NEXT:       DW_AT_type    ({{.*}} "int [1]"
+; CHECK-NEXT:       DW_AT_type    ({{.*}} "int[1]"
 
 ; But make sure we still use a type unit for an anonymous type that still has a
 ; name for linkage purposes (due to being defined in a typedef).

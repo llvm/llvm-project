@@ -632,7 +632,7 @@ static void createSyntheticSymbols() {
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
     // See:
-    // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+    // https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
     auto *globalType = is64 ? &globalTypeI64 : &globalTypeI32;
     WasmSym::memoryBase = createUndefinedGlobal("__memory_base", globalType);
     WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);

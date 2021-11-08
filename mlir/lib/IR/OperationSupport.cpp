@@ -81,42 +81,24 @@ void NamedAttrList::push_back(NamedAttribute newAttribute) {
   attrs.push_back(newAttribute);
 }
 
-/// Helper function to find attribute in possible sorted vector of
-/// NamedAttributes.
-template <typename T>
-static auto *findAttr(SmallVectorImpl<NamedAttribute> &attrs, T name,
-                      bool sorted) {
-  if (!sorted) {
-    return llvm::find_if(
-        attrs, [name](NamedAttribute attr) { return attr.first == name; });
-  }
-
-  auto *it = llvm::lower_bound(attrs, name);
-  if (it == attrs.end() || it->first != name)
-    return attrs.end();
-  return it;
-}
-
 /// Return the specified attribute if present, null otherwise.
 Attribute NamedAttrList::get(StringRef name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? it->second : nullptr;
+  auto it = findAttr(*this, name);
+  return it.second ? it.first->second : Attribute();
 }
-
-/// Return the specified attribute if present, null otherwise.
 Attribute NamedAttrList::get(Identifier name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? it->second : nullptr;
+  auto it = findAttr(*this, name);
+  return it.second ? it.first->second : Attribute();
 }
 
 /// Return the specified named attribute if present, None otherwise.
 Optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? *it : Optional<NamedAttribute>();
+  auto it = findAttr(*this, name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
 }
 Optional<NamedAttribute> NamedAttrList::getNamed(Identifier name) const {
-  auto *it = findAttr(attrs, name, isSorted());
-  return it != attrs.end() ? *it : Optional<NamedAttribute>();
+  auto it = findAttr(*this, name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
 }
 
 /// If the an attribute exists with the specified name, change it to the new
@@ -124,34 +106,36 @@ Optional<NamedAttribute> NamedAttrList::getNamed(Identifier name) const {
 Attribute NamedAttrList::set(Identifier name, Attribute value) {
   assert(value && "attributes may never be null");
 
-  // Look for an existing value for the given name, and set it in-place.
-  auto *it = findAttr(attrs, name, isSorted());
-  if (it != attrs.end()) {
-    // Only update if the value is different from the existing.
-    Attribute oldValue = it->second;
-    if (oldValue != value) {
+  // Look for an existing attribute with the given name, and set its value
+  // in-place. Return the previous value of the attribute, if there was one.
+  auto it = findAttr(*this, name);
+  if (it.second) {
+    // Update the existing attribute by swapping out the old value for the new
+    // value. Return the old value.
+    if (it.first->second != value) {
+      std::swap(it.first->second, value);
+      // If the attributes have changed, the dictionary is invalidated.
       dictionarySorted.setPointer(nullptr);
-      it->second = value;
     }
-    return oldValue;
+    return value;
   }
-
-  // Otherwise, insert the new attribute into its sorted position.
-  it = llvm::lower_bound(attrs, name);
+  // Perform a string lookup to insert the new attribute into its sorted
+  // position.
+  if (isSorted())
+    it = findAttr(*this, name.strref());
+  attrs.insert(it.first, {name, value});
+  // Invalidate the dictionary. Return null as there was no previous value.
   dictionarySorted.setPointer(nullptr);
-  attrs.insert(it, {name, value});
   return Attribute();
 }
+
 Attribute NamedAttrList::set(StringRef name, Attribute value) {
-  assert(value && "setting null attribute not supported");
+  assert(value && "attributes may never be null");
   return set(mlir::Identifier::get(name, value.getContext()), value);
 }
 
 Attribute
 NamedAttrList::eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it) {
-  if (it == attrs.end())
-    return nullptr;
-
   // Erasing does not affect the sorted property.
   Attribute attr = it->second;
   attrs.erase(it);
@@ -160,11 +144,13 @@ NamedAttrList::eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it) {
 }
 
 Attribute NamedAttrList::erase(Identifier name) {
-  return eraseImpl(findAttr(attrs, name, isSorted()));
+  auto it = findAttr(*this, name);
+  return it.second ? eraseImpl(it.first) : Attribute();
 }
 
 Attribute NamedAttrList::erase(StringRef name) {
-  return eraseImpl(findAttr(attrs, name, isSorted()));
+  auto it = findAttr(*this, name);
+  return it.second ? eraseImpl(it.first) : Attribute();
 }
 
 NamedAttrList &

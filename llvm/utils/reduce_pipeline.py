@@ -57,7 +57,6 @@ print('The following extra args will be passed to opt: {}'.format(
     extra_opt_args))
 
 lst = pipeline.fromStr(args.passes)
-passes = '-passes={}'.format(pipeline.toStr(lst))
 ll_input = args.input
 
 # Step #-1
@@ -67,7 +66,8 @@ ll_input = args.input
 if not args.dont_expand_passes:
     run_args = [
         args.opt_binary, '-disable-symbolication', '-disable-output',
-        '-print-pipeline-passes', passes, ll_input
+        '-print-pipeline-passes', '-passes={}'.format(pipeline.toStr(lst)),
+        ll_input
     ]
     run_args.extend(extra_opt_args)
     opt = subprocess.run(run_args,
@@ -81,15 +81,15 @@ if not args.dont_expand_passes:
         exit(1)
     stdout = opt.stdout.decode()
     stdout = stdout[:stdout.rfind('\n')]
-    print('Expanded pass sequence: {}'.format(stdout))
-    passes = '-passes={}'.format(stdout)
+    lst = pipeline.fromStr(stdout)
+    print('Expanded pass sequence: {}'.format(pipeline.toStr(lst)))
 
 # Step #0
 # Confirm that the given input, passes and options result in failure.
 print('---Starting step #0---')
 run_args = [
-    args.opt_binary, '-disable-symbolication', '-disable-output', passes,
-    ll_input
+    args.opt_binary, '-disable-symbolication', '-disable-output',
+    '-passes={}'.format(pipeline.toStr(lst)), ll_input
 ]
 run_args.extend(extra_opt_args)
 opt = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -121,22 +121,20 @@ for idx in range(pipeline.count(lst)):
     if not args.dont_remove_empty_pm:
         lstA = pipeline.prune(lstA)
         lstB = pipeline.prune(lstB)
-    passesA = '-passes=' + pipeline.toStr(lstA)
-    passesB = '-passes=' + pipeline.toStr(lstB)
 
     intermediate = 'intermediate-0.ll' if idx % 2 else 'intermediate-1.ll'
     intermediate = tmpd.name + '/' + intermediate
     run_args = [
         args.opt_binary, '-disable-symbolication', '-S', '-o', intermediate,
-        passesA, ll_input
+        '-passes={}'.format(pipeline.toStr(lstA)), ll_input
     ]
     run_args.extend(extra_opt_args)
     optA = subprocess.run(run_args,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
     run_args = [
-        args.opt_binary, '-disable-symbolication', '-disable-output', passesB,
-        intermediate
+        args.opt_binary, '-disable-symbolication', '-disable-output',
+        '-passes={}'.format(pipeline.toStr(lstB)), intermediate
     ]
     run_args.extend(extra_opt_args)
     optB = subprocess.run(run_args,
@@ -161,10 +159,9 @@ for idx in reversed(range(pipeline.count(lst))):
     [lstA, lstB] = pipeline.split(lst, idx)
     if not args.dont_remove_empty_pm:
         lstA = pipeline.prune(lstA)
-    passesA = '-passes=' + pipeline.toStr(lstA)
     run_args = [
-        args.opt_binary, '-disable-symbolication', '-disable-output', passesA,
-        ll_input
+        args.opt_binary, '-disable-symbolication', '-disable-output',
+        '-passes={}'.format(pipeline.toStr(lstA)), ll_input
     ]
     run_args.extend(extra_opt_args)
     optA = subprocess.run(run_args,
@@ -188,10 +185,9 @@ while True:
         candLst = pipeline.remove(lst, idx)
         if not args.dont_remove_empty_pm:
             candLst = pipeline.prune(candLst)
-        passes = '-passes=' + pipeline.toStr(candLst)
         run_args = [
             args.opt_binary, '-disable-symbolication', '-disable-output',
-            passes, ll_input
+            '-passes={}'.format(pipeline.toStr(candLst)), ll_input
         ]
         run_args.extend(extra_opt_args)
         opt = subprocess.run(run_args,

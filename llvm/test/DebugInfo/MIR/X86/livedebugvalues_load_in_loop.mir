@@ -109,5 +109,5 @@ body:  |
   liveins: $rax, $rbp
   bb.6:
   liveins: $rax, $rbp
-    RETQ $rax, debug-location !17
+    RET64 $rax, debug-location !17
 ...

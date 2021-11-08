@@ -1,0 +1,8 @@
+# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t %S/Inputs/x86-64_self_relocation.s
+# RUN: llvm-jitlink -show-graph %t
+# RUN: llvm-jitlink -show-graph -add-self-relocations %t
+
+# Ensure that the added relocation does not create an incorrect pointer.
+
+# Execution test
+# REQUIRES: system-darwin && native && target-x86_64

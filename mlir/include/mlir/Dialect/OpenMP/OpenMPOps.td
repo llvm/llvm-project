@@ -149,6 +149,68 @@ def ScheduleModifier : StrEnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier
 }
 
 //===----------------------------------------------------------------------===//
+// 2.8.1 Sections Construct
+//===----------------------------------------------------------------------===//
+
+def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">]> {
+  let summary = "section directive";
+  let description = [{
+    A section operation encloses a region which represents one section in a
+    sections construct. A section op should always be surrounded by an
+    `omp.sections` operation.
+  }];
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "$region attr-dict";
+}
+
+def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
+  let summary = "sections construct";
+  let description = [{
+    The sections construct is a non-iterative worksharing construct that
+    contains `omp.section` operations. The `omp.section` operations are to be
+    distributed among and executed by the threads in a team. Each `omp.section`
+    is executed once by one of the threads in the team in the context of its
+    implicit task.
+
+    `private_vars`, `firstprivate_vars` and`lastprivate_vars` arguments are
+    variadic list of operands that specify the data sharing attributes of the
+    list of values. They are optional.
+
+    Reductions can be performed in a sections construct by specifying reduction
+    accumulator variables in `reduction_vars` and symbols referring to reduction
+    declarations in the `reductions` attribute. Each reduction is identified
+    by the accumulator it uses and accumulators must not be repeated in the same
+    reduction. The `omp.reduction` operation accepts the accumulator and a
+    partial value which is considered to be produced by the section for the
+    given reduction. If multiple values are produced for the same accumulator,
+    i.e. there are multiple `omp.reduction`s, the last value is taken. The
+    reduction declaration specifies how to combine the values from each section
+    into the final value, which is available in the accumulator after all the
+    sections complete.
+
+    The $allocators_vars and $allocate_vars parameters are a variadic list of values
+    that specify the memory allocator to be used to obtain storage for private values.
+
+    The `nowait` attribute, when present, signifies that there should be no
+    implicit barrier at the end of the construct.
+  }];
+  let arguments = (ins Variadic<AnyType>:$private_vars,
+                       Variadic<AnyType>:$firstprivate_vars,
+                       Variadic<AnyType>:$lastprivate_vars,
+                       Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductions,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars,
+                       UnitAttr:$nowait);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let parser = [{ return parseSectionsOp(parser, result); }];
+  let printer = [{ return printSectionsOp(p, *this); }];
+  let verifier = [{ return verifySectionsOp(*this); }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
 

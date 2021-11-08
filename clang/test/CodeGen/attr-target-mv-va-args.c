@@ -10,36 +10,36 @@ int bar() {
 }
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (i32, ...), i32 (i32, ...)* ()* @foo.resolver
-// LINUX: define{{.*}} i32 @foo.sse4.2(i32 %i, ...)
+// LINUX: define{{.*}} i32 @foo.sse4.2(i32 noundef %i, ...)
 // LINUX: ret i32 0
-// LINUX: define{{.*}} i32 @foo.arch_ivybridge(i32 %i, ...)
+// LINUX: define{{.*}} i32 @foo.arch_ivybridge(i32 noundef %i, ...)
 // LINUX: ret i32 1
-// LINUX: define{{.*}} i32 @foo(i32 %i, ...)
+// LINUX: define{{.*}} i32 @foo(i32 noundef %i, ...)
 // LINUX: ret i32 2
 // LINUX: define{{.*}} i32 @bar()
-// LINUX: call i32 (i32, ...) @foo.ifunc(i32 1, i32 97, double
-// LINUX: call i32 (i32, ...) @foo.ifunc(i32 2, double 2.2{{[0-9Ee+]+}}, i8* getelementptr inbounds
+// LINUX: call i32 (i32, ...) @foo.ifunc(i32 noundef 1, i32 noundef 97, double
+// LINUX: call i32 (i32, ...) @foo.ifunc(i32 noundef 2, double noundef 2.2{{[0-9Ee+]+}}, i8* noundef getelementptr inbounds
 
 // LINUX: define weak_odr i32 (i32, ...)* @foo.resolver() comdat
 // LINUX: ret i32 (i32, ...)* @foo.arch_sandybridge
 // LINUX: ret i32 (i32, ...)* @foo.arch_ivybridge
 // LINUX: ret i32 (i32, ...)* @foo.sse4.2
 // LINUX: ret i32 (i32, ...)* @foo
-// LINUX: declare i32 @foo.arch_sandybridge(i32, ...)
+// LINUX: declare i32 @foo.arch_sandybridge(i32 noundef, ...)
 
-// WINDOWS: define dso_local i32 @foo.sse4.2(i32 %i, ...)
+// WINDOWS: define dso_local i32 @foo.sse4.2(i32 noundef %i, ...)
 // WINDOWS: ret i32 0
-// WINDOWS: define dso_local i32 @foo.arch_ivybridge(i32 %i, ...)
+// WINDOWS: define dso_local i32 @foo.arch_ivybridge(i32 noundef %i, ...)
 // WINDOWS: ret i32 1
-// WINDOWS: define dso_local i32 @foo(i32 %i, ...)
+// WINDOWS: define dso_local i32 @foo(i32 noundef %i, ...)
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
-// WINDOWS: call i32 (i32, ...) @foo.resolver(i32 1, i32 97, double
-// WINDOWS: call i32 (i32, ...) @foo.resolver(i32 2, double 2.2{{[0-9Ee+]+}}, i8* getelementptr inbounds
+// WINDOWS: call i32 (i32, ...) @foo.resolver(i32 noundef 1, i32 noundef 97, double
+// WINDOWS: call i32 (i32, ...) @foo.resolver(i32 noundef 2, double noundef 2.2{{[0-9Ee+]+}}, i8* noundef getelementptr inbounds
 
 // WINDOWS: define weak_odr dso_local i32 @foo.resolver(i32 %0, ...) comdat
 // WINDOWS: musttail call i32 (i32, ...) @foo.arch_sandybridge
 // WINDOWS: musttail call i32 (i32, ...) @foo.arch_ivybridge
 // WINDOWS: musttail call i32 (i32, ...) @foo.sse4.2
 // WINDOWS: musttail call i32 (i32, ...) @foo
-// WINDOWS: declare dso_local i32 @foo.arch_sandybridge(i32, ...)
+// WINDOWS: declare dso_local i32 @foo.arch_sandybridge(i32 noundef, ...)

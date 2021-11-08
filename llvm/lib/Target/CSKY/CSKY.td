@@ -12,12 +12,24 @@ include "llvm/Target/Target.td"
 // CSKY subtarget features and instruction predicates.
 //===----------------------------------------------------------------------===//
 
+def FeatureBTST16 : SubtargetFeature<"btst16", "HasBTST16", "true",
+                                     "Use the 16-bit btsti instruction">;
+def HasBTST16 : Predicate<"Subtarget->hasBTST16()">,
+                   AssemblerPredicate<(all_of FeatureBTST16),
+                   "Use the 16-bit btsti instruction">;
+
 // Atomic Support
 def FeatureExtendLrw : SubtargetFeature<"elrw", "HasExtendLrw", "true",
                                         "Use the extend LRW instruction">;
 def HasExtendLrw : Predicate<"Subtarget->hasExtendLrw()">,
                    AssemblerPredicate<(all_of FeatureExtendLrw),
                    "Use the extend LRW instruction">;
+
+def FeatureJAVA
+    : SubtargetFeature<"java", "HasJAVA", "true", "Enable java instructions">;
+def HasJAVA : Predicate<"Subtarget->hasJAVA()">,
+              AssemblerPredicate<(all_of FeatureJAVA),
+              "Enable java instructions">;
 
 def FeatureDoloop : SubtargetFeature<"doloop", "HasDoloop", "true",
                                      "Enable doloop instructions">;

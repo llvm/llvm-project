@@ -3277,7 +3277,8 @@ def warn_assume_aligned_too_great
       InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
 def warn_not_xl_compatible
     : Warning<"requesting an alignment of 16 bytes or greater for struct"
-              " members is not binary compatible with AIX XL 16.1 and older">,
+              " members is not binary compatible with IBM XL C/C++ for AIX"
+              " 16.1.0 and older">,
       InGroup<AIXCompat>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,

@@ -48,6 +48,7 @@ private:
   void printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
   void printSymbol(const SymbolRef &);
+  template <typename RelTy> void printRelocation(RelTy Reloc);
   template <typename Shdr, typename RelTy>
   void printRelocations(ArrayRef<Shdr> Sections);
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader32 *AuxHeader);
@@ -136,11 +137,33 @@ const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #undef ECase
 };
 
+template <typename RelTy> void XCOFFDumper::printRelocation(RelTy Reloc) {
+  Expected<StringRef> ErrOrSymbolName =
+      Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
+  if (Error E = ErrOrSymbolName.takeError()) {
+    reportUniqueWarning(std::move(E));
+    return;
+  }
+  StringRef SymbolName = *ErrOrSymbolName;
+  StringRef RelocName = XCOFF::getRelocationTypeString(Reloc.Type);
+  if (opts::ExpandRelocs) {
+    DictScope Group(W, "Relocation");
+    W.printHex("Virtual Address", Reloc.VirtualAddress);
+    W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
+    W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
+    W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
+    W.printNumber("Length", Reloc.getRelocatedLength());
+    W.printEnum("Type", (uint8_t)Reloc.Type,
+                makeArrayRef(RelocationTypeNameclass));
+  } else {
+    raw_ostream &OS = W.startLine();
+    OS << W.hex(Reloc.VirtualAddress) << " " << RelocName << " " << SymbolName
+       << "(" << Reloc.SymbolIndex << ") " << W.hex(Reloc.Info) << "\n";
+  }
+}
+
 template <typename Shdr, typename RelTy>
 void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
-  if (!opts::ExpandRelocs)
-    report_fatal_error("Unexpanded relocation output not implemented.");
-
   ListScope LS(W, "Relocations");
   uint16_t Index = 0;
   for (const Shdr &Sec : Sections) {
@@ -161,24 +184,11 @@ void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
 
     W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
                   << " {\n";
-    for (const RelTy Reloc : Relocations) {
-      Expected<StringRef> ErrOrSymbolName =
-          Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
-      if (Error E = ErrOrSymbolName.takeError()) {
-        reportUniqueWarning(std::move(E));
-        continue;
-      }
+    W.indent();
 
-      StringRef SymbolName = *ErrOrSymbolName;
-      DictScope RelocScope(W, "Relocation");
-      W.printHex("Virtual Address", Reloc.VirtualAddress);
-      W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
-      W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
-      W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
-      W.printNumber("Length", Reloc.getRelocatedLength());
-      W.printEnum("Type", (uint8_t)Reloc.Type,
-                  makeArrayRef(RelocationTypeNameclass));
-    }
+    for (const RelTy Reloc : Relocations)
+      printRelocation(Reloc);
+
     W.unindent();
     W.startLine() << "}\n";
   }

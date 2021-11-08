@@ -1444,7 +1444,7 @@ def ICXWriteResGroup104 : SchedWriteRes<[ICXPort6,ICXPort23,ICXPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[ICXWriteResGroup104], (instrs LRETQ, RETQ)>;
+def: InstRW<[ICXWriteResGroup104], (instrs LRET64, RET64)>;
 
 def ICXWriteResGroup106 : SchedWriteRes<[ICXPort4,ICXPort5,ICXPort237]> {
   let Latency = 7;

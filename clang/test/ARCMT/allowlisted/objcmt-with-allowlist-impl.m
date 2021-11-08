@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -objcmt-migrate-readwrite-property -objcmt-migrate-instancetype -objcmt-white-list-dir-path=%S/Inputs %s -triple x86_64-apple-darwin11 -migrate -o %t.remap
+// RUN: %clang_cc1 -objcmt-migrate-readwrite-property -objcmt-migrate-instancetype -objcmt-allowlist-dir-path=%S/Inputs %s -triple x86_64-apple-darwin11 -migrate -o %t.remap
 // RUN: c-arcmt-test %t.remap | arcmt-test -verify-transformed-files %S/header1.h.result %s.result
 
 @interface NSObject
@@ -14,5 +14,5 @@
 @end
 
 @implementation I1
-+(instancetype)i1 {}
++(id)i1 {}
 @end

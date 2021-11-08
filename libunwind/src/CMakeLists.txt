@@ -83,6 +83,7 @@ if (LIBUNWIND_ENABLE_THREADS)
 endif()
 
 # Setup flags.
+add_link_flags_if(LIBUNWIND_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none)
 if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
   add_link_flags_if_supported(-nostdlib++)
 else()

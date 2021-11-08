@@ -66,6 +66,6 @@ body:             |
     DBG_INSTR_REF 2, 0, !12, !DIExpression(), debug-location !13
     renamable $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @someglobal, $noreg, debug-location !13 :: (load (s64) from got)
     MOV8mr killed renamable $rax, 1, $noreg, 0, $noreg, renamable $dil, debug-location !13 :: (store (s8) into @someglobal)
-    RETQ debug-location !13
+    RET64 debug-location !13
 
 ...

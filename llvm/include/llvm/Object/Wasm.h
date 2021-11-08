@@ -9,7 +9,7 @@
 // This file declares the WasmObjectFile class, which implements the ObjectFile
 // interface for Wasm files.
 //
-// See: https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
+// See: https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md
 //
 //===----------------------------------------------------------------------===//
 

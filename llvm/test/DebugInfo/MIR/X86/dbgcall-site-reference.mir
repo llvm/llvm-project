@@ -112,6 +112,6 @@ body:             |
     CALL64pcrel32 @_ZN1CC2E1B, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, debug-location !36
     $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !36
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !36
-    RETQ debug-location !36
+    RET64 debug-location !36
 
 ...

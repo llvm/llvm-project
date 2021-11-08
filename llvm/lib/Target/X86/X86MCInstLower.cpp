@@ -421,7 +421,7 @@ static void SimplifyShortMoveForm(X86AsmPrinter &Printer, MCInst &Inst,
 }
 
 static unsigned getRetOpcode(const X86Subtarget &Subtarget) {
-  return Subtarget.is64Bit() ? X86::RETQ : X86::RETL;
+  return Subtarget.is64Bit() ? X86::RET64 : X86::RET32;
 }
 
 Optional<MCOperand>

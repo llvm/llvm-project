@@ -18,7 +18,7 @@ body:             |
 
     ; CHECK: $eax = ADD32ri8 {{.*}} debug-instr-number 2
     $eax = LEA32r killed $eax, 1, killed $ebp, -5, $noreg, debug-instr-number 1
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -38,7 +38,7 @@ body:             |
 
     ; CHECK: $ebx = ADD32rr {{.*}} debug-instr-number 2
     $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg, debug-instr-number 1
-    RETQ $ebx
+    RET64 $ebx
 
 ...
 ---
@@ -57,6 +57,6 @@ body:             |
 
     ; CHECK: $ebx = ADD32rr {{.*}} debug-instr-number 2
     $ebx = LEA32r $ebp, 1, $ebp, 5, $noreg, debug-instr-number 1
-    RETQ $ebx
+    RET64 $ebx
 
 ...

@@ -291,11 +291,6 @@ static void optimizeModuleNewPM(Module &TheModule, TargetMachine &TM,
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
-  AAManager AA = PB.buildDefaultAAPipeline();
-
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return std::move(AA); });
-
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);

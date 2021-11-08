@@ -54,10 +54,11 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
                              : MmapOrDie(size, "FakeStack"));
   res->stack_size_log_ = stack_size_log;
   u8 *p = reinterpret_cast<u8 *>(res);
-  VReport(1, "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
+  VReport(1,
+          "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
           "mmapped %zdK, noreserve=%d \n",
-          GetCurrentTidOrInvalid(), p,
-          p + FakeStack::RequiredSize(stack_size_log), stack_size_log,
+          GetCurrentTidOrInvalid(), (void *)p,
+          (void *)(p + FakeStack::RequiredSize(stack_size_log)), stack_size_log,
           size >> 10, flags()->uar_noreserve);
   return res;
 }

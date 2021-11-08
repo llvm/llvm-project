@@ -82,7 +82,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                       (STI.isTarget64BitLP64() ? X86::ADJCALLSTACKUP64
                                                : X86::ADJCALLSTACKUP32),
                       X86::CATCHRET,
-                      (STI.is64Bit() ? X86::RETQ : X86::RETL)),
+                      (STI.is64Bit() ? X86::RET64 : X86::RET32)),
       Subtarget(STI), RI(STI.getTargetTriple()) {
 }
 
@@ -3047,13 +3047,13 @@ static MachineBasicBlock *getFallThroughMBB(MachineBasicBlock *MBB,
   // and fallthrough MBB. If we find more than one, we cannot identify the
   // fallthrough MBB and should return nullptr.
   MachineBasicBlock *FallthroughBB = nullptr;
-  for (auto SI = MBB->succ_begin(), SE = MBB->succ_end(); SI != SE; ++SI) {
-    if ((*SI)->isEHPad() || (*SI == TBB && FallthroughBB))
+  for (MachineBasicBlock *Succ : MBB->successors()) {
+    if (Succ->isEHPad() || (Succ == TBB && FallthroughBB))
       continue;
     // Return a nullptr if we found more than one fallthrough successor.
     if (FallthroughBB && FallthroughBB != TBB)
       return nullptr;
-    FallthroughBB = *SI;
+    FallthroughBB = Succ;
   }
   return FallthroughBB;
 }
@@ -3257,13 +3257,13 @@ bool X86InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
   MachineInstr *ConditionDef = nullptr;
   bool SingleUseCondition = true;
 
-  for (auto I = std::next(MBB.rbegin()), E = MBB.rend(); I != E; ++I) {
-    if (I->modifiesRegister(X86::EFLAGS, TRI)) {
-      ConditionDef = &*I;
+  for (MachineInstr &MI : llvm::drop_begin(llvm::reverse(MBB))) {
+    if (MI.modifiesRegister(X86::EFLAGS, TRI)) {
+      ConditionDef = &MI;
       break;
     }
 
-    if (I->readsRegister(X86::EFLAGS, TRI))
+    if (MI.readsRegister(X86::EFLAGS, TRI))
       SingleUseCondition = false;
   }
 
@@ -9363,7 +9363,7 @@ void X86InstrInfo::buildOutlinedFrame(MachineBasicBlock &MBB,
 
   // We're a normal call, so our sequence doesn't have a return instruction.
   // Add it in.
-  MachineInstr *retq = BuildMI(MF, DebugLoc(), get(X86::RETQ));
+  MachineInstr *retq = BuildMI(MF, DebugLoc(), get(X86::RET64));
   MBB.insert(MBB.end(), retq);
 }
 

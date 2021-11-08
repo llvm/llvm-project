@@ -41,8 +41,8 @@ struct D5 : I1, I2, I3 {}; // homogeneous aggregate
 
 // PPC: define{{.*}} void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM64: define{{.*}} void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, %struct.D1* %x)
-// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, %struct.D1* %x)
+// ARM64: define{{.*}} void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, %struct.D1* noundef %x)
+// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, %struct.D1* noundef %x)
 D1 CC func_D1(D1 x) { return x; }
 
 // PPC: define{{.*}} [3 x double] @_Z7func_D22D2([3 x double] %x.coerce)
@@ -53,7 +53,7 @@ D2 CC func_D2(D2 x) { return x; }
 
 // PPC: define{{.*}} void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM64: define{{.*}} void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, %struct.D3* %x)
+// ARM64: define{{.*}} void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, %struct.D3* noundef %x)
 D3 CC func_D3(D3 x) { return x; }
 
 // PPC: define{{.*}} [4 x double] @_Z7func_D42D4([4 x double] %x.coerce)
@@ -78,7 +78,7 @@ void call_D5(D5 *p) {
 
 // Check the call site.
 //
-// ARM64-LABEL: define{{.*}} void @_Z7call_D5P2D5(%struct.D5* %p)
+// ARM64-LABEL: define{{.*}} void @_Z7call_D5P2D5(%struct.D5* noundef %p)
 // ARM64: load [3 x double], [3 x double]*
 // ARM64: call %struct.D5 @_Z7func_D52D5([3 x double] %{{.*}})
 
@@ -132,44 +132,44 @@ struct HasEmptyBase : public Empty {
   double b[2];
 };
 struct HasPodBase : public Pod {};
-// WOA64-LABEL: define dso_local %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(%"struct.pr47611::Pod"* %x)
+// WOA64-LABEL: define dso_local %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(%"struct.pr47611::Pod"* noundef %x)
 Pod copy(Pod *x) { return *x; } // MSVC: ldp d0,d1,[x0], Clang: ldp d0,d1,[x0]
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(%"struct.pr47611::NotCXX14Aggregate"* inreg noalias sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, %"struct.pr47611::NotCXX14Aggregate"* %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(%"struct.pr47611::NotCXX14Aggregate"* inreg noalias sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, %"struct.pr47611::NotCXX14Aggregate"* noundef %x)
 NotCXX14Aggregate copy(NotCXX14Aggregate *x) { return *x; } // MSVC: stp x8,x9,[x0], Clang: str q0,[x0]
-// WOA64-LABEL: define dso_local [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(%"struct.pr47611::NotPod"* %x)
+// WOA64-LABEL: define dso_local [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(%"struct.pr47611::NotPod"* noundef %x)
 NotPod copy(NotPod *x) { return *x; }
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(%"struct.pr47611::HasEmptyBase"* inreg noalias sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, %"struct.pr47611::HasEmptyBase"* %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(%"struct.pr47611::HasEmptyBase"* inreg noalias sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, %"struct.pr47611::HasEmptyBase"* noundef %x)
 HasEmptyBase copy(HasEmptyBase *x) { return *x; }
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg noalias sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, %"struct.pr47611::HasPodBase"* %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg noalias sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, %"struct.pr47611::HasPodBase"* noundef %x)
 HasPodBase copy(HasPodBase *x) { return *x; }
 
 void call_copy_pod(Pod *pod) {
   *pod = copy(pod);
   // WOA64-LABEL: define dso_local void @"?call_copy_pod@pr47611@@YAXPEAUPod@1@@Z"
-  // WOA64: %{{.*}} = call %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(%"struct.pr47611::Pod"* %{{.*}})
+  // WOA64: %{{.*}} = call %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(%"struct.pr47611::Pod"* noundef %{{.*}})
 }
 
 void call_copy_notcxx14aggregate(NotCXX14Aggregate *notcxx14aggregate) {
   *notcxx14aggregate = copy(notcxx14aggregate);
   // WOA64-LABEL: define dso_local void @"?call_copy_notcxx14aggregate@pr47611@@YAXPEAUNotCXX14Aggregate@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(%"struct.pr47611::NotCXX14Aggregate"* inreg sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, %"struct.pr47611::NotCXX14Aggregate"* %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(%"struct.pr47611::NotCXX14Aggregate"* inreg sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, %"struct.pr47611::NotCXX14Aggregate"* noundef %{{.*}})
 }
 
 void call_copy_notpod(NotPod *notPod) {
   *notPod = copy(notPod);
   // WOA64-LABEL: define dso_local void @"?call_copy_notpod@pr47611@@YAXPEAUNotPod@1@@Z"
-  // WOA64: %{{.*}} = call [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(%"struct.pr47611::NotPod"* %{{.*}})
+  // WOA64: %{{.*}} = call [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(%"struct.pr47611::NotPod"* noundef %{{.*}})
 }
 
 void call_copy_hasemptybase(HasEmptyBase *hasEmptyBase) {
   *hasEmptyBase = copy(hasEmptyBase);
   // WOA64-LABEL: define dso_local void @"?call_copy_hasemptybase@pr47611@@YAXPEAUHasEmptyBase@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(%"struct.pr47611::HasEmptyBase"* inreg sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, %"struct.pr47611::HasEmptyBase"* %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(%"struct.pr47611::HasEmptyBase"* inreg sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, %"struct.pr47611::HasEmptyBase"* noundef %{{.*}})
 }
 
 void call_copy_haspodbase(HasPodBase *hasPodBase) {
   *hasPodBase = copy(hasPodBase);
   // WOA64-LABEL: define dso_local void @"?call_copy_haspodbase@pr47611@@YAXPEAUHasPodBase@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, %"struct.pr47611::HasPodBase"* %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(%"struct.pr47611::HasPodBase"* inreg sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, %"struct.pr47611::HasPodBase"* noundef %{{.*}})
 }
 }; // namespace pr47611

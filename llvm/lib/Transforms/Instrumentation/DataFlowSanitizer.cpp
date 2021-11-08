@@ -1363,28 +1363,25 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
   // Give function aliases prefixes when necessary, and build wrappers where the
   // instrumentedness is inconsistent.
-  for (Module::alias_iterator AI = M.alias_begin(), AE = M.alias_end();
-       AI != AE;) {
-    GlobalAlias *GA = &*AI;
-    ++AI;
+  for (GlobalAlias &GA : llvm::make_early_inc_range(M.aliases())) {
     // Don't stop on weak.  We assume people aren't playing games with the
     // instrumentedness of overridden weak aliases.
-    auto *F = dyn_cast<Function>(GA->getAliaseeObject());
+    auto *F = dyn_cast<Function>(GA.getAliaseeObject());
     if (!F)
       continue;
 
-    bool GAInst = isInstrumented(GA), FInst = isInstrumented(F);
+    bool GAInst = isInstrumented(&GA), FInst = isInstrumented(F);
     if (GAInst && FInst) {
-      addGlobalNameSuffix(GA);
+      addGlobalNameSuffix(&GA);
     } else if (GAInst != FInst) {
       // Non-instrumented alias of an instrumented function, or vice versa.
       // Replace the alias with a native-ABI wrapper of the aliasee.  The pass
       // below will take care of instrumenting it.
       Function *NewF =
-          buildWrapperFunction(F, "", GA->getLinkage(), F->getFunctionType());
-      GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewF, GA->getType()));
-      NewF->takeName(GA);
-      GA->eraseFromParent();
+          buildWrapperFunction(F, "", GA.getLinkage(), F->getFunctionType());
+      GA.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, GA.getType()));
+      NewF->takeName(&GA);
+      GA.eraseFromParent();
       FnsToInstrument.push_back(NewF);
     }
   }

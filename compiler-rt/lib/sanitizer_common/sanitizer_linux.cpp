@@ -1360,7 +1360,7 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 #elif defined(__aarch64__)
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr) {
-  long long res;
+  register long long res __asm__("x0");
   if (!fn || !child_stack)
     return -EINVAL;
   CHECK_EQ(0, (uptr)child_stack % 16);
@@ -1773,7 +1773,7 @@ struct __sanitizer_esr_context {
 
 static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
   static const u32 kEsrMagic = 0x45535201;
-  u8 *aux = ucontext->uc_mcontext.__reserved;
+  u8 *aux = reinterpret_cast<u8 *>(ucontext->uc_mcontext.__reserved);
   while (true) {
     _aarch64_ctx *ctx = (_aarch64_ctx *)aux;
     if (ctx->size == 0) break;

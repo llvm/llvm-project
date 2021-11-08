@@ -950,6 +950,34 @@ struct TestSignatureConversionUndo
   }
 };
 
+/// Call signature conversion without providing a type converter to handle
+/// materializations.
+struct TestTestSignatureConversionNoConverter
+    : public OpConversionPattern<TestSignatureConversionNoConverterOp> {
+  TestTestSignatureConversionNoConverter(TypeConverter &converter,
+                                         MLIRContext *context)
+      : OpConversionPattern<TestSignatureConversionNoConverterOp>(context),
+        converter(converter) {}
+
+  LogicalResult
+  matchAndRewrite(TestSignatureConversionNoConverterOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Region &region = op->getRegion(0);
+    Block *entry = &region.front();
+
+    // Convert the original entry arguments.
+    TypeConverter::SignatureConversion result(entry->getNumArguments());
+    if (failed(
+            converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
+      return failure();
+    rewriter.updateRootInPlace(
+        op, [&] { rewriter.applySignatureConversion(&region, result); });
+    return success();
+  }
+
+  TypeConverter &converter;
+};
+
 /// Just forward the operands to the root op. This is essentially a no-op
 /// pattern that is used to trigger target materialization.
 struct TestTypeConsumerForward
@@ -1041,11 +1069,17 @@ struct TestTypeConversionDriver
       // Allow casts from F64 to F32.
       return (*op.operand_type_begin()).isF64() && op.getType().isF32();
     });
+    target.addDynamicallyLegalOp<TestSignatureConversionNoConverterOp>(
+        [&](TestSignatureConversionNoConverterOp op) {
+          return converter.isLegal(op.getRegion().front().getArgumentTypes());
+        });
 
     // Initialize the set of rewrite patterns.
     RewritePatternSet patterns(&getContext());
     patterns.add<TestTypeConsumerForward, TestTypeConversionProducer,
-                 TestSignatureConversionUndo>(converter, &getContext());
+                 TestSignatureConversionUndo,
+                 TestTestSignatureConversionNoConverter>(converter,
+                                                         &getContext());
     patterns.add<TestTypeConversionAnotherProducer>(&getContext());
     mlir::populateFuncOpTypeConversionPattern(patterns, converter);
 

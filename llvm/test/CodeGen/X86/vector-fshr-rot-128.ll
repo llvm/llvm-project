@@ -1548,24 +1548,20 @@ define <2 x i64> @constant_funnnel_v2i64(<2 x i64> %x) nounwind {
 ;
 ; X86-SSE2-LABEL: constant_funnnel_v2i64:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [63,0,63,0]
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = <4,u,14,u>
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE2-NEXT:    psubq %xmm2, %xmm3
-; X86-SSE2-NEXT:    pand %xmm1, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm4
-; X86-SSE2-NEXT:    psrlq %xmm2, %xmm4
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm5
-; X86-SSE2-NEXT:    psrlq %xmm2, %xmm5
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm5 = xmm4[0],xmm5[1]
-; X86-SSE2-NEXT:    pand %xmm1, %xmm3
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    psubq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    psllq %xmm1, %xmm2
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; X86-SSE2-NEXT:    psllq %xmm1, %xmm3
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm3 = xmm2[0],xmm3[1]
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    psllq %xmm3, %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[2,3,2,3]
-; X86-SSE2-NEXT:    psllq %xmm2, %xmm0
+; X86-SSE2-NEXT:    psrlq $4, %xmm1
+; X86-SSE2-NEXT:    psrlq $14, %xmm0
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-SSE2-NEXT:    orpd %xmm5, %xmm0
+; X86-SSE2-NEXT:    orpd %xmm3, %xmm0
 ; X86-SSE2-NEXT:    retl
   %res = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %x, <2 x i64> %x, <2 x i64> <i64 4, i64 14>)
   ret <2 x i64> %res
@@ -2020,9 +2016,8 @@ define <2 x i64> @splatconstant_funnnel_v2i64(<2 x i64> %x) nounwind {
 ; X86-SSE2-LABEL: splatconstant_funnnel_v2i64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    psllq $50, %xmm1
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm1[0,1]
-; X86-SSE2-NEXT:    psrlq $14, %xmm0
+; X86-SSE2-NEXT:    psrlq $14, %xmm1
+; X86-SSE2-NEXT:    psllq $50, %xmm0
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm0[0,1]
 ; X86-SSE2-NEXT:    orpd %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl

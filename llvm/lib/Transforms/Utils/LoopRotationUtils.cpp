@@ -134,15 +134,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
     SSA.AddAvailableValue(OrigPreheader, OrigPreHeaderVal);
 
     // Visit each use of the OrigHeader instruction.
-    for (Value::use_iterator UI = OrigHeaderVal->use_begin(),
-                             UE = OrigHeaderVal->use_end();
-         UI != UE;) {
-      // Grab the use before incrementing the iterator.
-      Use &U = *UI;
-
-      // Increment the iterator before removing the use from the list.
-      ++UI;
-
+    for (Use &U : llvm::make_early_inc_range(OrigHeaderVal->uses())) {
       // SSAUpdater can't handle a non-PHI use in the same block as an
       // earlier def. We can easily handle those cases manually.
       Instruction *UserInst = cast<Instruction>(U.getUser());
@@ -404,9 +396,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
               D->getExpression()};
     };
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
-    for (auto I = std::next(OrigPreheader->rbegin()), E = OrigPreheader->rend();
-         I != E; ++I) {
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&*I))
+    for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I))
         DbgIntrinsics.insert(makeHash(DII));
       else
         break;

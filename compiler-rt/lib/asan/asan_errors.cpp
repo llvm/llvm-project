@@ -538,7 +538,8 @@ static void PrintLegend(InternalScopedString *str) {
 static void PrintShadowBytes(InternalScopedString *str, const char *before,
                              u8 *bytes, u8 *guilty, uptr n) {
   Decorator d;
-  if (before) str->append("%s%p:", before, bytes);
+  if (before)
+    str->append("%s%p:", before, (void *)bytes);
   for (uptr i = 0; i < n; i++) {
     u8 *p = bytes + i;
     const char *before =

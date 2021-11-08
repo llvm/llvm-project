@@ -14,5 +14,5 @@ body: |
   bb.0.entry:
   ; CHECK: [[@LINE+1]]:20: integer literal is too large to be an immediate operand
     $eax = MOV32ri 12346127502983478823754212949184914
-    RETQ $eax
+    RET64 $eax
 ...

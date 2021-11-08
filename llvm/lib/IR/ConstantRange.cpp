@@ -183,38 +183,41 @@ CmpInst::Predicate ConstantRange::getEquivalentPredWithFlippedSignedness(
   return CmpInst::Predicate::BAD_ICMP_PREDICATE;
 }
 
-bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
-                                      APInt &RHS) const {
-  bool Success = false;
-
+void ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS, APInt &Offset) const {
+  Offset = APInt(getBitWidth(), 0);
   if (isFullSet() || isEmptySet()) {
     Pred = isEmptySet() ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     RHS = APInt(getBitWidth(), 0);
-    Success = true;
   } else if (auto *OnlyElt = getSingleElement()) {
     Pred = CmpInst::ICMP_EQ;
     RHS = *OnlyElt;
-    Success = true;
   } else if (auto *OnlyMissingElt = getSingleMissingElement()) {
     Pred = CmpInst::ICMP_NE;
     RHS = *OnlyMissingElt;
-    Success = true;
   } else if (getLower().isMinSignedValue() || getLower().isMinValue()) {
     Pred =
         getLower().isMinSignedValue() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
     RHS = getUpper();
-    Success = true;
   } else if (getUpper().isMinSignedValue() || getUpper().isMinValue()) {
     Pred =
         getUpper().isMinSignedValue() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
     RHS = getLower();
-    Success = true;
+  } else {
+    Pred = CmpInst::ICMP_ULT;
+    RHS = getUpper() - getLower();
+    Offset = -getLower();
   }
 
-  assert((!Success || ConstantRange::makeExactICmpRegion(Pred, RHS) == *this) &&
+  assert(ConstantRange::makeExactICmpRegion(Pred, RHS) == add(Offset) &&
          "Bad result!");
+}
 
-  return Success;
+bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS) const {
+  APInt Offset;
+  getEquivalentICmp(Pred, RHS, Offset);
+  return Offset.isZero();
 }
 
 bool ConstantRange::icmp(CmpInst::Predicate Pred,
@@ -378,11 +381,10 @@ ConstantRange::isSizeStrictlySmallerThan(const ConstantRange &Other) const {
 
 bool
 ConstantRange::isSizeLargerThan(uint64_t MaxSize) const {
-  assert(MaxSize && "MaxSize can't be 0.");
   // If this a full set, we need special handling to avoid needing an extra bit
   // to represent the size.
   if (isFullSet())
-    return APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
+    return MaxSize == 0 || APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
 
   return (Upper - Lower).ugt(MaxSize);
 }
@@ -677,6 +679,24 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   APInt U = CR.Upper.ugt(Upper) ? CR.Upper : Upper;
 
   return ConstantRange(std::move(L), std::move(U));
+}
+
+Optional<ConstantRange>
+ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = intersectWith(CR);
+  if (Result == inverse().unionWith(CR.inverse()).inverse())
+    return Result;
+  return None;
+}
+
+Optional<ConstantRange>
+ConstantRange::exactUnionWith(const ConstantRange &CR) const {
+  // TODO: This can be implemented more efficiently.
+  ConstantRange Result = unionWith(CR);
+  if (Result == inverse().intersectWith(CR.inverse()).inverse())
+    return Result;
+  return None;
 }
 
 ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,

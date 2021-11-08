@@ -18,6 +18,13 @@
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
 
+/**
+ * @defgroup LLVMCCoreNewPM New Pass Manager
+ * @ingroup LLVMCCore
+ *
+ * @{
+ */
+
 LLVM_C_EXTERN_C_BEGIN
 
 /**
@@ -96,6 +103,10 @@ void LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
  * Dispose of a heap-allocated PassBuilderOptions instance
  */
 void LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

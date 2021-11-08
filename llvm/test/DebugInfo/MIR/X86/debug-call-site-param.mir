@@ -190,6 +190,6 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16, debug-location !24
     $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !24
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !24
-    RETQ debug-location !24
+    RET64 debug-location !24
 
 ...

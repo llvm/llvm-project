@@ -373,7 +373,7 @@ public:
                          ObjCMT_MigrateDecls | ObjCMT_PropertyDotSyntax)
   };
   unsigned ObjCMTAction = ObjCMT_None;
-  std::string ObjCMTWhiteListPath;
+  std::string ObjCMTAllowListPath;
 
   std::string MTMigrateDir;
   std::string ARCMTMigrateReportOut;
