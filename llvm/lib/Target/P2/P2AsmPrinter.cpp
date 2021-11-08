@@ -17,7 +17,9 @@
 #include "MCTargetDesc/P2InstPrinter.h"
 #include "P2.h"
 #include "P2InstrInfo.h"
+#include "P2MachineFunctionInfo.h"
 #include "TargetInfo/P2TargetInfo.h"
+#include "MCTargetDesc/P2MCAsmInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -33,6 +35,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -109,8 +112,15 @@ bool P2AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     }
 
     const MachineOperand &MO = MI->getOperand(OpNum);
-    assert(MO.isReg() && "unexpected inline asm memory operand");
-    O << P2InstPrinter::getRegisterName(MO.getReg());
+
+    auto reg = MO.getReg();
+    auto reg_val = MF->getContext().getRegisterInfo()->getEncodingValue(reg.asMCReg());
+
+    if (reg_val < 0x1d0) {
+        O << "$" << format_hex(reg_val, 5);
+    } else {
+        O << P2InstPrinter::getRegisterName(reg);
+    }
 
     return false;
 }
@@ -127,11 +137,16 @@ void P2AsmPrinter::emitFunctionEntryLabel() {
 void P2AsmPrinter::emitFunctionBodyStart() {
     MCInstLowering.Initialize(&MF->getContext());
 }
-void P2AsmPrinter::emitFunctionBodyEnd() {
 
+void P2AsmPrinter::emitFunctionBodyEnd() {}
+void P2AsmPrinter::emitStartOfAsmFile(Module &M) {}
+
+void P2AsmPrinter::emitInlineAsmStart() const {
+    LLVM_DEBUG(errs() << "*** EMIT INLINE ASM START\n");
 }
-void P2AsmPrinter::emitStartOfAsmFile(Module &M) {
-    //OutStreamer->emitRawText("\t\t\torg 0x200"); // all this code should start at the hub
+
+void P2AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo, const MCSubtargetInfo *EndInfo) const {
+    LLVM_DEBUG(errs() << "*** EMIT INLINE ASM END\n");
 }
 
 // Force static initialization.

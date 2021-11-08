@@ -65,12 +65,14 @@ static const uint16_t GPRDecoderTable[] = {
 
 static uint16_t getRegForField(uint16_t r) {
     int reg_start = 0x1d0;
-    if (r < reg_start || r > 0x1ff) {
+    if (r > 0x1ff) {
         LLVM_DEBUG(errs() << "register address: " << r << "\n");
         llvm_unreachable("bad register address!");
+    } else if (r >= reg_start) {
+        return GPRDecoderTable[r-reg_start];
+    } else {
+        return P2::C0 + r; // slightly fragile-- as this assumes tablegen put all the Cx registers in order
     }
-
-    return GPRDecoderTable[r-reg_start];
 }
 
 static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address, const void *Decoder);
@@ -82,7 +84,7 @@ static DecodeStatus DecodeCordicInstruction(MCInst &Inst, unsigned Insn, uint64_
 static DecodeStatus DecodeGetQInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCallInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 
-static DecodeStatus decodeCogJumpTarget(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
+static DecodeStatus decodeJump9Target(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 
 #include "P2GenDisassemblerTables.inc"
 
@@ -92,12 +94,16 @@ static MCOperand getConditionOperand(unsigned inst) {
 }
 
 static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address, const void *Decoder) {
-	unsigned Register = getRegForField(RegNo);
+    auto disasm = static_cast<const MCDisassembler *>(Decoder);
+    if (!disasm) return MCDisassembler::Fail;
+
+    unsigned Register = *(disasm->getContext().getRegisterInfo()->getRegClass(P2::P2GPRRegClassID).begin() + RegNo);
 	Inst.addOperand(MCOperand::createReg(Register));
+    
 	return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeCogJumpTarget(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
+static DecodeStatus decodeJump9Target(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
     int32_t s_field = fieldFromInstruction(Insn, 0, 9);
     if (s_field > 0xff) {
         s_field = -((~s_field & 0x1ff) + 1);
@@ -111,7 +117,7 @@ static DecodeStatus DecodeCallInstruction(MCInst &Inst, unsigned Insn, uint64_t 
     int32_t d_field = fieldFromInstruction(Insn, 9, 9);
 
     unsigned opc = Inst.getOpcode();
-    if (opc == P2::CALLa || opc == P2::CALLAa) {
+    if (opc == P2::CALL || opc == P2::CALLa || opc == P2::CALLAa) {
         // FIXME: make this work.
         const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
         if (!Dis->tryAddingSymbolicOperand(Inst, a_field, Address, false, 0, 32)) {
@@ -155,7 +161,7 @@ static DecodeStatus DecodeTJInstruction(MCInst &Inst, unsigned Insn, uint64_t Ad
     unsigned s_field = fieldFromInstruction(Insn, 0, 9);
     unsigned is_imm = fieldFromInstruction(Insn, 18, 1);
     
-    Inst.addOperand(MCOperand::createImm(getRegForField(d_field))); // turn this into a symbol instead of immediate. make a decoder for calls and do the same
+    Inst.addOperand(MCOperand::createReg(getRegForField(d_field))); // turn this into a symbol instead of immediate. make a decoder for calls and do the same
     
     if (is_imm) {
         Inst.addOperand(MCOperand::createImm(s_field));
@@ -187,7 +193,7 @@ static DecodeStatus DecodeIOInstruction(MCInst &Inst, unsigned Insn, uint64_t Ad
         // FIXME: we don't actually care what that is, so for now, always write to OUTA. this could eventually be a problem, but TBD how
         // (probably when optimization becomes involved.) Should actually look at the opcode and set the register to an implicit 64-bit
         // "register" that is the combination of A and B portions of OUT, DIR, and IN.
-        Inst.addOperand(MCOperand::createReg(P2::OUTA));
+        // Inst.addOperand(MCOperand::createReg(P2::OUTA)); // don't do this for now, since we changed how instructions are set up. 
     }
 
     if (is_imm) {
@@ -217,6 +223,7 @@ static DecodeStatus DecodeCmpInstruction(MCInst &Inst, unsigned Insn, uint64_t A
     Inst.addOperand(MCOperand::createReg(getRegForField(d_field)));
 
     if (is_imm) {
+        
         Inst.addOperand(MCOperand::createImm(s_field));
     } else {
         Inst.addOperand(MCOperand::createReg(getRegForField(s_field)));

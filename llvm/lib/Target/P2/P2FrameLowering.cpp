@@ -372,7 +372,7 @@ MachineBasicBlock::iterator P2FrameLowering::eliminateCallFramePseudoInstr(Machi
             LLVM_DEBUG(I->dump());
 
             auto op = I->getOpcode();
-            while (op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
+            while (op != P2::CALL && op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
                 I--; // skip back to the call instruction.
 
                 LLVM_DEBUG(errs() << "instruction to check: \n");
@@ -392,7 +392,7 @@ MachineBasicBlock::iterator P2FrameLowering::eliminateCallFramePseudoInstr(Machi
             LLVM_DEBUG(I->dump());
 
             auto op = I->getOpcode();
-            while (op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
+            while (op != P2::CALL && op != P2::CALLa && op != P2::CALLAa && op != P2::CALLAr && op != P2::CALLr) {
                 I++; // skip ahead to the call instruction.
 
                 LLVM_DEBUG(errs() << "instruction to check: \n");

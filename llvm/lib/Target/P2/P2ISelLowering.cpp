@@ -663,7 +663,7 @@ void P2TargetLowering::getOpndList(SmallVectorImpl<SDValue> &Ops,
 //                           P2 Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
-Register P2TargetLowering::getRegisterByName(const char *RegName, LLT VT, const MachineFunction &MF) const {
+Register P2TargetLowering::getRegisterByName(StringRef RegName) const {
     Register Reg  = StringSwitch<unsigned>(RegName)
             .Case("r0",     P2::R0)
             .Case("r1",     P2::R1)
@@ -713,9 +713,13 @@ Register P2TargetLowering::getRegisterByName(const char *RegName, LLT VT, const 
             .Case("outb",   P2::OUTB)
             .Case("ina",    P2::INA)
             .Case("inb",    P2::INB)
-            .Default(0);
+            .Default(-1);
 
-    if (Reg) return Reg;
+    return Reg;
+}
+
+Register P2TargetLowering::getRegisterByName(const char *RegName, LLT VT, const MachineFunction &MF) const {
+    return getRegisterByName(RegName);
 
     report_fatal_error("Invalid register name global variable");
 }
@@ -755,7 +759,7 @@ static std::pair<bool, bool> parsePhysicalReg(const StringRef &C, std::string &P
   return std::make_pair(!getAsUnsignedInteger(StringRef(I, E - I), 10, Reg), true);
 }
 
-std::pair<unsigned, const TargetRegisterClass *> P2TargetLowering::parseRegForInlineAsmConstraint(const StringRef &C, MVT VT) const {
+std::pair<unsigned, const TargetRegisterClass *> P2TargetLowering::parseRegForInlineAsmConstraint(const TargetRegisterInfo *TRI, const StringRef &C) const {
     const TargetRegisterClass *RC;
     std::string Prefix;
     unsigned long long Reg;
@@ -771,11 +775,11 @@ std::pair<unsigned, const TargetRegisterClass *> P2TargetLowering::parseRegForIn
     if (!R.second)
         return std::make_pair(0U, nullptr);
 
-    assert(Prefix == "$");
-    RC = getRegClassFor((VT == MVT::Other) ? MVT::i32 : VT);
+    assert(Prefix == "r");
+    RC = TRI->getRegClass(P2::P2GPRRegClassID);
 
     assert(Reg < RC->getNumRegs());
-    return std::make_pair(*(RC->begin() + Reg), RC);
+    return std::make_pair(*(RC->begin() + P2::R0 + Reg), RC); // hack--we want to find the start of R0.
 }
 
 /// Given a register class constraint, like 'r', if this corresponds directly
@@ -796,11 +800,14 @@ std::pair<unsigned, const TargetRegisterClass *> P2TargetLowering::getRegForInli
         }
     }
 
-    std::pair<unsigned, const TargetRegisterClass *> R;
-    R = parseRegForInlineAsmConstraint(Constraint, VT);
+    // std::pair<unsigned, const TargetRegisterClass *> R;
+    // R = parseRegForInlineAsmConstraint(TRI, Constraint);
 
-    if (R.second)
-        return R;
+    // if (R.second)
+    //     return R;
+
+    unsigned R = getRegisterByName(Constraint.substr(1, Constraint.size()-1));
+    if (R != -1) return std::make_pair(R, TRI->getRegClass(P2::P2GPRRegClassID));
 
     return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }

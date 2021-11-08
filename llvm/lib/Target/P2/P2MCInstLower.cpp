@@ -127,8 +127,16 @@ MCOperand P2MCInstLower::lowerOperand(const MachineOperand& MO, unsigned offset)
 }
 
 void P2MCInstLower::lowerInstruction(const MachineInstr &MI, MCInst &OutMI) const {
+    LLVM_DEBUG(errs() << "Lower instruction from MachineInstr to MCInst\n");
+    LLVM_DEBUG(errs() << "\tOpcode: " << MI.getOpcode() << ", flags: " << MI.getDesc().TSFlags << "\n");
     OutMI.setOpcode(MI.getOpcode());
-    OutMI.setFlags(MI.getDesc().TSFlags);
+    
+    auto flags = MI.getDesc().TSFlags;
+
+    // mark that this MCInst will exist in a cogex function
+    if (MI.getMF()->getFunction().hasFnAttribute(Attribute::Cogmain) | MI.getMF()->getFunction().hasFnAttribute(Attribute::Cogtext)) flags |= 1;
+
+    OutMI.setFlags(flags);
 
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         const MachineOperand &MO = MI.getOperand(i);

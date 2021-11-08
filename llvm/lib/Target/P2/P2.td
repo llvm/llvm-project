@@ -23,6 +23,7 @@ def P2InstrInfo : InstrInfo;
 def P2AsmParser : AsmParser {
     let ShouldEmitMatchRegisterName = 0;
     let HasMnemonicFirst = 0;
+    // let AsmParserInstCleanup  = "cleanupInst";
 }
 
 def P2AsmParserVariant : AsmParserVariant {

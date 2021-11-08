@@ -23,12 +23,17 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "asm-printer"
+#define DEBUG_TYPE "p2-asm-printer"
 
 #include "P2GenAsmWriter.inc"
 
 void P2InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-    OS << StringRef(getRegisterName(RegNo)).lower();
+    auto reg_val = MRI.getEncodingValue(RegNo);
+    if (reg_val < 0x1d0) {
+        OS << "$" << format_hex(reg_val, 5);
+    } else {
+        OS << StringRef(getRegisterName(RegNo)).lower();
+    }
 }
 
 void P2InstPrinter::printCondition(const MCInst *MI, int OpNum, raw_ostream &O) {
@@ -43,7 +48,6 @@ void P2InstPrinter::printEffect(const MCInst *MI, int OpNum, raw_ostream &O) {
 void P2InstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                 StringRef Annot, const MCSubtargetInfo &STI,
                                 raw_ostream &O) {
-    LLVM_DEBUG(MI->dump());
     printInstruction(MI, Address, O);
     printAnnotation(O, Annot);
 }
@@ -74,6 +78,7 @@ static void printExpr(const MCExpr *Expr, const MCAsmInfo *MAI, raw_ostream &OS)
 
 void P2InstPrinter::printOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O) {
     const MCOperand &Op = MI->getOperand(OpNum);
+
     if (Op.isReg()) {
         printRegName(O, Op.getReg());
         return;

@@ -39,6 +39,9 @@ using namespace llvm;
 #define DEBUG_TYPE "p2-asm-parser"
 
 namespace {
+    /**
+     * TODO: I don't think I need this
+     */
     class P2AssemblerOptions {
     public:
         P2AssemblerOptions():
@@ -226,8 +229,7 @@ namespace {
     #define GET_ASSEMBLER_HEADER
     #include "P2GenAsmMatcher.inc"
 
-        bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, OperandVector &Operands, MCStreamer &Out,
-                                        uint64_t &ErrorInfo, bool MatchingInlineAsm) override;
+        bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, OperandVector &Operands, MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) override;
         bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
         bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name, SMLoc NameLoc, OperandVector &Operands) override;
         bool ParseDirective(AsmToken DirectiveID) override;
@@ -268,107 +270,6 @@ void printP2Operands(OperandVector &Operands) {
     LLVM_DEBUG(dbgs() << "\n");
 }
 
-/**
- * helper function to determine if a preceding AUGD is required. 
- * 
- * in augs and augd the requried size is returned. if no aug is required, 0 is returned
- */
-// void getAugRequirements(MCInst inst, int &augd, int &augs) {
-//     augs = 0;
-//     augd = 0;
-
-//     int i_type = (inst.getFlags() >> 4) & 0x1f;
-
-//     LLVM_DEBUG(errs() << "Get aug requirements for isntruction of type " << i_type << "\n");
-
-//     switch (i_type) {
-//         case P2InstrInfo::P2InstNOP: 
-//             // no D register in this instruction
-//         break;
-
-//         case P2InstrInfo::P2InstCZIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2Inst3NIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2Inst2NIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2Inst1NIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstZIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstCIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstLIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstIS: 
-//             // no D register in this instruction
-//         break;
-
-//         case P2InstrInfo::P2InstCLIDS: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstLD: 
-//             for (auto op : inst) {
-//                 LLVM_DEBUG(op.dump());
-//             }
-//         break;
-
-//         case P2InstrInfo::P2InstCLD: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstCZD: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstCZ: 
-//             // no D register in this instruction
-//         break;
-
-//         case P2InstrInfo::P2InstCZLD: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstD: 
-
-//         break;
-
-//         case P2InstrInfo::P2InstRA: 
-//             // no D register in this instruction
-//         break;
-
-//         case P2InstrInfo::P2InstWRA: 
-//             // no D register in this instruction
-//         break;
-
-//         case P2InstrInfo::P2InstN: 
-//             // no D register in this instruction
-//         break;
-
-//     default:
-//         break;
-//     }
-// }
-
 /*
 implement virtual functions
 */
@@ -386,10 +287,6 @@ bool P2AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, Operand
         case Match_Success: {
             Inst.setLoc(IDLoc);
             LLVM_DEBUG(Inst.dump());
-
-            // int augd_size; 
-            // int augs_size;
-            // getAugRequirements(Inst, augd_size, augs_size);
 
             Out.emitInstruction(Inst, getSTI());
             return false;
@@ -472,9 +369,13 @@ bool P2AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name, S
     }
 
     // append the condition code first
-    SMLoc e = SMLoc::getFromPointer(cond_loc.getPointer() - 1);
-    const MCConstantExpr *cond_expr = MCConstantExpr::create(P2::cond_string_map[condition], getContext());
-    Operands.push_back(P2Operand::CreateImm(cond_expr, cond_loc, e));
+    SMLoc e; 
+
+    if (Name != "nop") {
+        e = SMLoc::getFromPointer(cond_loc.getPointer() - 1);
+        const MCConstantExpr *cond_expr = MCConstantExpr::create(P2::cond_string_map[condition], getContext());
+        Operands.push_back(P2Operand::CreateImm(cond_expr, cond_loc, e));
+    }
 
     Operands.push_back(P2Operand::CreateToken(Name, NameLoc));
 
@@ -545,7 +446,7 @@ bool P2AsmParser::ParseDirective(llvm::AsmToken DirectiveID) {
 /*
 support functions
 */
-unsigned P2AsmParser::getReg(int RC,int RegNo) {
+unsigned P2AsmParser::getReg(int RC, int RegNo) {
     return *(getContext().getRegisterInfo()->getRegClass(RC).begin() + RegNo);
 }
 
@@ -566,12 +467,14 @@ int P2AsmParser::parseRegister(StringRef Mnemonic) {
 }
 
 int P2AsmParser::matchRegisterByNumber(unsigned RegNum, StringRef Mnemonic) {
-    // we only match cog RAM registers by number
+    // we can match any of the registers by number, which is just the cogram address
+    // the hack here is that we assume RegNum correctly corresponds to the address, which is very fragile
+    // so need a better way to set this up for converting number to register
     LLVM_DEBUG(dbgs() << "Matching register by number: " << RegNum << "\n");
-    if (RegNum > 464)
+    if (RegNum > 512)
         return -1;
 
-    return getReg(P2::P2CogRAMRegClassID, RegNum);
+    return getReg(P2::P2GPRRegClassID, RegNum);
 }
 
 int P2AsmParser::matchRegisterName(StringRef Name) {
@@ -683,6 +586,30 @@ bool P2AsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
             return false;
         }
 
+        case AsmToken::Slash: {
+            LLVM_DEBUG(errs() << "operand token is a /\n");
+            // is an absolute address (should be followed by an immediate). 
+            SMLoc S = Parser.getTok().getLoc();
+            Parser.Lex(); // eat the slash
+
+            if (Parser.getTok().getKind() != AsmToken::Hash) {
+                LLVM_DEBUG(errs() << "expected a # for an absolute address\n");
+                return false;
+            }
+
+            Parser.Lex(); // eat the #
+            
+            Operands.push_back(P2Operand::CreateToken("/#", S));
+
+            const MCExpr *IdVal;
+            S = Parser.getTok().getLoc();
+            if (getParser().parseExpression(IdVal))
+                return true;
+
+            SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+            Operands.push_back(P2Operand::CreateImm(IdVal, S, E));
+            return false;
+        }
         case AsmToken::Hash: {
             LLVM_DEBUG(errs() << "operand token is a #\n");
             // is an immediate expression, so first create the token for the #

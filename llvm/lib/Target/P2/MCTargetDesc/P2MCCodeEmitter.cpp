@@ -83,21 +83,21 @@ unsigned P2MCCodeEmitter::getJumpTargetOpValue(const MCInst &MI, unsigned OpNo, 
     // If the destination is an immediate, we have nothing to do.
 
     if (MO.isImm()) {
-        LLVM_DEBUG(errs() << "jump offset = " << MO.getImm() << "\n");
+        LLVM_DEBUG(errs() << "jump target = " << MO.getImm() << "\n");
         return MO.getImm();
     }
 
     assert(MO.isExpr() && "getJumpTargetOpValue expects only expressions");
-
     LLVM_DEBUG(errs() << "--- creating fixup for jump operand\n");
 
     const MCExpr *Expr = MO.getExpr();
     LLVM_DEBUG(Expr->dump());
     Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(P2::fixup_P2_PC20)));
+
     return 0;
 }
 
-unsigned P2MCCodeEmitter::getCogJumpTargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+unsigned P2MCCodeEmitter::getJump9TargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
                                                 const MCSubtargetInfo &STI) const {
     const MCOperand &MO = MI.getOperand(OpNo);
     // If the destination is an immediate, we have nothing to do.
@@ -109,7 +109,7 @@ unsigned P2MCCodeEmitter::getCogJumpTargetOpValue(const MCInst &MI, unsigned OpN
 
     assert(MO.isExpr() && "getCogJumpTargetOpValue expects only expressions");
 
-    LLVM_DEBUG(errs() << "--- creating fixup for cog jump operand\n");
+    LLVM_DEBUG(errs() << "--- creating fixup for 9-bit jump operand\n");
 
     const MCExpr *Expr = MO.getExpr();
     LLVM_DEBUG(Expr->dump());
@@ -136,7 +136,7 @@ unsigned P2MCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo, Smal
             LLVM_DEBUG(errs() << "creating libcall (cog9) fixup fixup\n");
             FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_COG9);
         } else {
-            if (MI.getOpcode() == P2::CALLa) {
+            if (MI.getOpcode() == P2::CALL) {
                 LLVM_DEBUG(errs() << "creating relative call fixup\n");
                 FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_PC20);
             } else {

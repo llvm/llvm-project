@@ -69,6 +69,12 @@ BitVector P2RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
     Reserved.set(P2::R30); // reserve R30 since it's used for returns
     Reserved.set(P2::R31); // reserve R31 since it's used for returns
+
+    // reserve all "cogram" regsisters
+    for (int i = P2::C0; i <= P2::C463; i++) {
+        Reserved.set(i);
+    }
+    
     return Reserved;
 }
 

@@ -51,13 +51,14 @@ namespace llvm {
         bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum, const char *ExtraCode, raw_ostream &O) override;
 
         void emitInstruction(const MachineInstr *MI) override;
-        //void printSavedRegsBitmask(raw_ostream &O);
-        //void printHex32(unsigned int Value, raw_ostream &O);
 
         void emitFunctionEntryLabel() override;
         void emitFunctionBodyStart() override;
         void emitFunctionBodyEnd() override;
         void emitStartOfAsmFile(Module &M) override;
+
+        void emitInlineAsmStart() const override;
+        void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo, const MCSubtargetInfo *EndInfo) const override;
     };
 }
 

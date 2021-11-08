@@ -20,6 +20,7 @@ namespace llvm {
     class Triple;
 
     class P2MCAsmInfo : public MCAsmInfoELF {
+
         void anchor() override;
     public:
         explicit P2MCAsmInfo(const Triple &TheTriple, const MCTargetOptions &Options);

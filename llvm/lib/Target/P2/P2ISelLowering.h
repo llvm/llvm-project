@@ -78,7 +78,7 @@ namespace llvm {
 
         /// This function parses registers that appear in inline-asm constraints.
         /// It returns pair (0, 0) on failure.
-        std::pair<unsigned, const TargetRegisterClass*> parseRegForInlineAsmConstraint(const StringRef &C, MVT VT) const;
+        std::pair<unsigned, const TargetRegisterClass*> parseRegForInlineAsmConstraint(const TargetRegisterInfo *TRI, const StringRef &C) const;
 
         std::pair<unsigned, const TargetRegisterClass*> getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                                                         StringRef Constraint, MVT VT) const override;
@@ -89,6 +89,7 @@ namespace llvm {
         /// being processed is 'm'.
         void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops, SelectionDAG &DAG) const override;
 
+        Register getRegisterByName(StringRef RegName) const;
         Register getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const override;
 
         void getOpndList(SmallVectorImpl<SDValue> &Ops,

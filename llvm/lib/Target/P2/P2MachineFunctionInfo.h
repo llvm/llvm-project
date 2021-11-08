@@ -52,6 +52,9 @@ class P2FunctionInfo : public MachineFunctionInfo {
     /// Size of the callee-saved register portion of the stack frame in bytes.
     unsigned CalleeSavedFrameSize;
 
+    /// this function is a cogex function
+    bool cogex;
+
     mutable int DynAllocFI; // Frame index of dynamically allocated stack area.
     bool EmitNOAT;
     unsigned MaxCallFrameSize;
@@ -66,7 +69,9 @@ public:
         CalleeSavedFrameSize(0),
         EmitNOAT(false),
         MaxCallFrameSize(0)
-        {}
+        {
+            cogex = MF.getFunction().hasFnAttribute(Attribute::Cogmain) || MF.getFunction().hasFnAttribute(Attribute::Cogtext);
+        }
 
     ~P2FunctionInfo();
 
@@ -96,6 +101,10 @@ public:
 
     bool getEmitNOAT() const { return EmitNOAT; }
     void setEmitNOAT() { EmitNOAT = true; }
+
+    bool isCogex() {
+        return cogex;
+    }
 
     unsigned getIncomingArgSize() const { return IncomingArgSize; }
 };

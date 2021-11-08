@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: create multiclasses to reduce the number of repetitions when definition immediate versions of instructions
-
 include "P2InstrFormats.td"
 
 /*--------------------------------*/
@@ -29,12 +27,11 @@ def jmptarget    : Operand<OtherVT> {
     let OperandType = "OPERAND_PCREL";
 }
 
-def cogjmptarget  : Operand<OtherVT> {
-    let EncoderMethod = "getCogJumpTargetOpValue";
-    let DecoderMethod = "decodeCogJumpTarget";
+def jmp9target    : Operand<OtherVT> {
+    let EncoderMethod = "getJump9TargetOpValue";
+    let DecoderMethod = "decodeJump9Target";
     let OperandType = "OPERAND_PCREL";
 }
-
 
 def calltarget : Operand<iPTR> {
     let EncoderMethod = "encodeCallTarget";
@@ -199,22 +196,23 @@ let DecoderMethod = "DecodeCmpInstruction" in {
 def JMPr        : P2InstCZD<0b1101011, 0b000101100, (outs), (ins P2GPR:$d), "jmp $d">;
 
 let DecoderMethod = "DecodeJumpInstruction", isBarrier = 1, isBranch = 1, isTerminator = 1 in {
-    def JMP     : P2InstRA<0b1101100, 0b1, (outs), (ins jmptarget:$d, P2Implicit:$cmp), "jmp #$d">;
+    def JMP     : P2InstRA<0b1101100, 0b1, (outs), (ins jmptarget:$d, P2Implicit:$cmp), "jmp #$d">; // relative address jump
+    def JMPa    : P2InstRA<0b1101100, 0b0, (outs), (ins jmptarget:$d, P2Implicit:$cmp), "jmp /#$d">; // absolute address jump (llvm doesn't support using \ so use /)
 }
 
 let DecoderMethod = "DecodeTJInstruction", isBranch = 1, isBarrier = 1, isTerminator = 1 in {
     // don't use multiclass here because we don't want to use the s9imm operand type
     def TJZrr   : P2InstIDS<0b101110010, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjz $d, $s">;
-    def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjz $d, #$s">;
+    def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, jmp9target:$s), "tjz $d, #$s">;
 
     def TJNZrr  : P2InstIDS<0b101110011, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjnz $d, $s">;
-    def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjnz $d, #$s">;
+    def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, jmp9target:$s), "tjnz $d, #$s">;
 }
 
 let Constraints = "$s1 = $d" in {
     // don't use multiclass here because we don't want to use the s9imm operand type
     def DJNZrr  : P2InstIDS<0b101101101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s1, P2GPR:$s), "djnz $d, $s">;
-    def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, cogjmptarget:$s), "djnz $d, #$s">;
+    def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, jmp9target:$s), "djnz $d, #$s">;
 }
 
 defm REP    : P2InstLIDSm<0b11001101, "rep">;
@@ -375,6 +373,14 @@ def : Pat<(sextloadi8 addr:$s), (SIGNXri (RDBYTErr P2GPR:$s, always, noeff), 7, 
 def : Pat<(sextloadi16 addr:$s), (SIGNXri (RDWORDrr P2GPR:$s, always, noeff), 15, always, noeff)>;
 
 /*--------------------------------*/
+/* Register indirection           */
+/*--------------------------------*/
+
+let hasSideEffects = 1 in {
+    defm ALTS   : P2InstIDSm<0b100110010, "alts">;
+}
+
+/*--------------------------------*/
 /* function calling and globals   */
 /*--------------------------------*/
 
@@ -384,7 +390,8 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
 }
 
 let isCall = 1, Uses = [PTRA], DecoderMethod = "DecodeCallInstruction" in {
-    def CALLa    : P2InstRA<0b1101101, 0b1, (outs), (ins calltarget:$a), "call #$a">; // use this for relative function calls in cog mode.
+    def CALL    : P2InstRA<0b1101101, 0b1, (outs), (ins calltarget:$a), "call #$a">; // use this for relative function calls in cog mode.
+    def CALLa   : P2InstRA<0b1101101, 0b0, (outs), (ins calltarget:$a), "call /#$a">; // use this for absolute function calls in cog mode.
     def CALLAa   : P2InstRA<0b1101110, 0b0, (outs), (ins calltarget:$a), "calla #$a">; // mainly use this for direct function calls
     def CALLr    : P2InstCZD<0b1101011, 0b000101101, (outs), (ins P2GPR:$d), "call $d">;
     def CALLAr   : P2InstCZD<0b1101011, 0b000101110, (outs), (ins P2GPR:$d), "calla $d">; // mainly use this for function calls with register input
