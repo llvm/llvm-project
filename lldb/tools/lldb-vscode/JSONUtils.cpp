@@ -175,6 +175,13 @@ void FillResponse(const llvm::json::Object &request,
 //       "type": "string",
 //       "description": "Name of the scope such as 'Arguments', 'Locals'."
 //     },
+//     "presentationHint": {
+//       "type": "string",
+//       "description": "An optional hint for how to present this scope in the
+//                       UI. If this attribute is missing, the scope is shown
+//                       with a generic UI.",
+//       "_enum": [ "arguments", "locals", "registers" ],
+//     },
 //     "variablesReference": {
 //       "type": "integer",
 //       "description": "The variables of this scope can be retrieved by
@@ -229,6 +236,15 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
                               int64_t namedVariables, bool expensive) {
   llvm::json::Object object;
   EmplaceSafeString(object, "name", name.str());
+
+  // TODO: Support "arguments" scope. At the moment lldb-vscode includes the
+  // arguments into the "locals" scope.
+  if (variablesReference == VARREF_LOCALS) {
+    object.try_emplace("presentationHint", "locals");
+  } else if (variablesReference == VARREF_REGS) {
+    object.try_emplace("presentationHint", "registers");
+  }
+
   object.try_emplace("variablesReference", variablesReference);
   object.try_emplace("expensive", expensive);
   object.try_emplace("namedVariables", namedVariables);
