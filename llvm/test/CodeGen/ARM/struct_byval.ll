@@ -31,7 +31,7 @@ entry:
 ; NACL-LABEL: g:
 ; Ensure that use movw instead of constpool for the loop trip count. But don't
 ; match the __stack_chk_guard movw
-; NACL: movw r{{[1-9]}}, #
+; NACL: movw {{r[0-9]+|lr}}, #
 ; NACL: ldr
 ; NACL: sub
 ; NACL: str
@@ -49,7 +49,7 @@ entry:
 ; CHECK: sub
 ; CHECK: vst1
 ; CHECK: bne
-; NACL: movw r{{[1-9]}}, #
+; NACL: movw {{r[0-9]+|lr}}, #
 ; NACL: vld1
 ; NACL: sub
 ; NACL: vst1
