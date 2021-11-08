@@ -731,12 +731,16 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
 
   // If the mask is all zeros this is a splat, no need to go through all
   // elements.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; }) &&
-      !MaskEltCount.isScalable()) {
+  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
     Type *Ty = IntegerType::get(V1->getContext(), 32);
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
-    return ConstantVector::getSplat(MaskEltCount, Elt);
+
+    if (Elt->isNullValue()) {
+      auto *VTy = VectorType::get(EltTy, MaskEltCount);
+      return ConstantAggregateZero::get(VTy);
+    } else if (!MaskEltCount.isScalable())
+      return ConstantVector::getSplat(MaskEltCount, Elt);
   }
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.

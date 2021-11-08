@@ -143,7 +143,7 @@ define void @add_unique_indf32(float* noalias nocapture %a, i64 %n) {
 ; CHECK:      %[[STEPVEC:.*]] = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 ; CHECK-NEXT: %[[TMP1:.*]] = uitofp <vscale x 4 x i32> %[[STEPVEC]] to <vscale x 4 x float>
 ; CHECK-NEXT: %[[TMP2:.*]] = fmul <vscale x 4 x float> %[[TMP1]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT: %[[INDINIT:.*]] = fadd <vscale x 4 x float> %[[TMP2]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT: %[[INDINIT:.*]] = fadd <vscale x 4 x float> %[[TMP2]], zeroinitializer
 ; CHECK-NEXT: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT: %[[TMP3:.*]] = shl i32 %8, 2
 ; CHECK-NEXT: %[[TMP4:.*]] = uitofp i32 %[[TMP3]] to float

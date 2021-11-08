@@ -57,7 +57,7 @@ define void @cond_inv_store_i32(i32* noalias %dst, i32* noalias readonly %src, i
 ; CHECK-NEXT:    %[[SPLAT_PTRS:.*]] = shufflevector <vscale x 4 x i32*> %[[TMP1]], <vscale x 4 x i32*> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK:       vector.body:
 ; CHECK:         %[[VECLOAD:.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* %{{.*}}, align 4
-; CHECK-NEXT:    %[[MASK:.*]] = icmp sgt <vscale x 4 x i32> %[[VECLOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 0, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    %[[MASK:.*]] = icmp sgt <vscale x 4 x i32> %[[VECLOAD]], zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32> %[[VECLOAD]], <vscale x 4 x i32*> %[[SPLAT_PTRS]], i32 4, <vscale x 4 x i1> %[[MASK]])
 entry:
   br label %for.body
@@ -104,7 +104,7 @@ define void @uniform_store_i1(i1* noalias %dst, i64* noalias %start, i64 %N) #0 
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 0, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 2 x i64> [[DOTSPLAT]], [[TMP6]]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i64, i64* [[START]], <vscale x 2 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
