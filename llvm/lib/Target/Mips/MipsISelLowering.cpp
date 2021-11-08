@@ -507,6 +507,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::CTLZ,       MVT::i32, Legal);
     setOperationAction(ISD::CTTZ,       MVT::i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+    setOperationAction(ISD::BSWAP,      MVT::i32, Legal);
   }
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
