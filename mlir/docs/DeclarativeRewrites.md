@@ -774,6 +774,23 @@ Explicitly-specified return types will take precedence over return types
 inferred from op traits or user-defined builders. The return types of values
 replacing root op results cannot be overridden.
 
+### `either`
+
+The `either` directive is used to specify the operands may be matched in either
+order.
+
+```tablegen
+def : Pat<(TwoArgOp (either $firstArg, (AnOp $secondArg))),
+          (...)>;
+```
+
+The above pattern will accept either `"test.TwoArgOp"(%I32Arg, %AnOpArg)` and
+`"test.TwoArgOp"(%AnOpArg, %I32Arg)`.
+
+Only operand is supported with `either` and note that an operation with
+`Commutative` trait doesn't imply that it'll have the same behavior than
+`either` while pattern matching.
+
 ## Debugging Tips
 
 ### Run `mlir-tblgen` to see the generated content
