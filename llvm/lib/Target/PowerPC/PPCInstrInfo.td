@@ -316,6 +316,24 @@ def PPCbctrl_load_toc : SDNode<"PPCISD::BCTRL_LOAD_TOC",
                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                 SDNPVariadic]>;
 
+// Call nodes for strictfp calls (that define RM).
+def PPCcall_rm  : SDNode<"PPCISD::CALL_RM", SDT_PPCCall,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                          SDNPVariadic]>;
+def PPCcall_nop_rm  : SDNode<"PPCISD::CALL_NOP_RM", SDT_PPCCall,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+def PPCcall_notoc_rm : SDNode<"PPCISD::CALL_NOTOC_RM", SDT_PPCCall,
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                               SDNPVariadic]>;
+def PPCbctrl_rm : SDNode<"PPCISD::BCTRL_RM", SDTNone,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                          SDNPVariadic]>;
+def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
+                                  SDTypeProfile<0, 1, []>,
+                                  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                   SDNPVariadic]>;
+
 def retflag       : SDNode<"PPCISD::RET_FLAG", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
@@ -1892,6 +1910,26 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
   }
 }
 
+let isCall = 1, PPC970_Unit = 7, Defs = [LR, RM], isCodeGenOnly = 1 in {
+  // Convenient aliases for call instructions
+  let Uses = [RM] in {
+    def BL_RM  : IForm<18, 0, 1, (outs), (ins calltarget:$func),
+                       "bl $func", IIC_BrB, []>;  // See Pat patterns below.
+    def BLA_RM : IForm<18, 1, 1, (outs), (ins abscalltarget:$func),
+                       "bla $func", IIC_BrB, [(PPCcall_rm (i32 imm:$func))]>;
+
+    def BL_NOP_RM  : IForm_and_DForm_4_zero<18, 0, 1, 24,
+                                            (outs), (ins calltarget:$func),
+                                            "bl $func\n\tnop", IIC_BrB, []>;
+  }
+  let Uses = [CTR, RM] in {
+    let isPredicable = 1 in
+      def BCTRL_RM : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
+                                  "bctrl", IIC_BrB, [(PPCbctrl_rm)]>,
+                  Requires<[In32BitMode]>;
+  }
+}
+
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
 def TCRETURNdi :PPCEmitTimePseudo< (outs),
                         (ins calltarget:$dst, i32imm:$offset),
@@ -1918,6 +1956,14 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
 
 }
 
+let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+    Defs = [LR, R2, RM], Uses = [CTR, RM], RST = 2 in {
+  def BCTRL_LWZinto_toc_RM:
+    XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
+     (ins memri:$src), "bctrl\n\tlwz 2, $src", IIC_BrB,
+     [(PPCbctrl_load_toc_rm iaddr:$src)]>, Requires<[In32BitMode]>;
+
+}
 
 let isCodeGenOnly = 1, hasSideEffects = 0 in {
 
@@ -3435,6 +3481,12 @@ def : Pat<(PPCcall (i32 tglobaladdr:$dst)),
 def : Pat<(PPCcall (i32 texternalsym:$dst)),
           (BL texternalsym:$dst)>;
 
+def : Pat<(PPCcall_rm (i32 tglobaladdr:$dst)),
+          (BL_RM tglobaladdr:$dst)>;
+
+def : Pat<(PPCcall_rm (i32 texternalsym:$dst)),
+          (BL_RM texternalsym:$dst)>;
+
 // Calls for AIX only
 def : Pat<(PPCcall (i32 mcsym:$dst)),
           (BL mcsym:$dst)>;
@@ -3444,6 +3496,15 @@ def : Pat<(PPCcall_nop (i32 mcsym:$dst)),
 
 def : Pat<(PPCcall_nop (i32 texternalsym:$dst)),
           (BL_NOP texternalsym:$dst)>;
+
+def : Pat<(PPCcall_rm (i32 mcsym:$dst)),
+          (BL_RM mcsym:$dst)>;
+
+def : Pat<(PPCcall_nop_rm (i32 mcsym:$dst)),
+          (BL_NOP_RM mcsym:$dst)>;
+
+def : Pat<(PPCcall_nop_rm (i32 texternalsym:$dst)),
+          (BL_NOP_RM texternalsym:$dst)>;
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;

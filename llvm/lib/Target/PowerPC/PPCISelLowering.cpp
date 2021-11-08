@@ -1630,9 +1630,19 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::CALL:            return "PPCISD::CALL";
   case PPCISD::CALL_NOP:        return "PPCISD::CALL_NOP";
   case PPCISD::CALL_NOTOC:      return "PPCISD::CALL_NOTOC";
+  case PPCISD::CALL_RM:
+    return "PPCISD::CALL_RM";
+  case PPCISD::CALL_NOP_RM:
+    return "PPCISD::CALL_NOP_RM";
+  case PPCISD::CALL_NOTOC_RM:
+    return "PPCISD::CALL_NOTOC_RM";
   case PPCISD::MTCTR:           return "PPCISD::MTCTR";
   case PPCISD::BCTRL:           return "PPCISD::BCTRL";
   case PPCISD::BCTRL_LOAD_TOC:  return "PPCISD::BCTRL_LOAD_TOC";
+  case PPCISD::BCTRL_RM:
+    return "PPCISD::BCTRL_RM";
+  case PPCISD::BCTRL_LOAD_TOC_RM:
+    return "PPCISD::BCTRL_LOAD_TOC_RM";
   case PPCISD::RET_FLAG:        return "PPCISD::RET_FLAG";
   case PPCISD::READ_TIME_BASE:  return "PPCISD::READ_TIME_BASE";
   case PPCISD::EH_SJLJ_SETJMP:  return "PPCISD::EH_SJLJ_SETJMP";
@@ -5172,13 +5182,14 @@ static inline bool isTOCSaveRestoreRequired(const PPCSubtarget &Subtarget) {
 }
 
 static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
-                              const Function &Caller,
-                              const SDValue &Callee,
+                              const Function &Caller, const SDValue &Callee,
                               const PPCSubtarget &Subtarget,
-                              const TargetMachine &TM) {
+                              const TargetMachine &TM,
+                              bool IsStrictFPCall = false) {
   if (CFlags.IsTailCall)
     return PPCISD::TC_RETURN;
 
+  unsigned RetOpc = 0;
   // This is a call through a function pointer.
   if (CFlags.IsIndirect) {
     // AIX and the 64-bit ELF ABIs need to maintain the TOC pointer accross
@@ -5189,28 +5200,46 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
     // immediately followed by a load of the TOC pointer from the the stack save
     // slot into gpr2. For 64-bit ELFv2 ABI with PCRel, do not restore the TOC
     // as it is not saved or used.
-    return isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
-                                               : PPCISD::BCTRL;
-  }
-
-  if (Subtarget.isUsingPCRelativeCalls()) {
+    RetOpc = isTOCSaveRestoreRequired(Subtarget) ? PPCISD::BCTRL_LOAD_TOC
+                                                 : PPCISD::BCTRL;
+  } else if (Subtarget.isUsingPCRelativeCalls()) {
     assert(Subtarget.is64BitELFABI() && "PC Relative is only on ELF ABI.");
-    return PPCISD::CALL_NOTOC;
+    RetOpc = PPCISD::CALL_NOTOC;
+  } else if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI())
+    // The ABIs that maintain a TOC pointer accross calls need to have a nop
+    // immediately following the call instruction if the caller and callee may
+    // have different TOC bases. At link time if the linker determines the calls
+    // may not share a TOC base, the call is redirected to a trampoline inserted
+    // by the linker. The trampoline will (among other things) save the callers
+    // TOC pointer at an ABI designated offset in the linkage area and the
+    // linker will rewrite the nop to be a load of the TOC pointer from the
+    // linkage area into gpr2.
+    RetOpc = callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
+                                                    : PPCISD::CALL_NOP;
+  else
+    RetOpc = PPCISD::CALL;
+  if (IsStrictFPCall) {
+    switch (RetOpc) {
+    default:
+      llvm_unreachable("Unknown call opcode");
+    case PPCISD::BCTRL_LOAD_TOC:
+      RetOpc = PPCISD::BCTRL_LOAD_TOC_RM;
+      break;
+    case PPCISD::BCTRL:
+      RetOpc = PPCISD::BCTRL_RM;
+      break;
+    case PPCISD::CALL_NOTOC:
+      RetOpc = PPCISD::CALL_NOTOC_RM;
+      break;
+    case PPCISD::CALL:
+      RetOpc = PPCISD::CALL_RM;
+      break;
+    case PPCISD::CALL_NOP:
+      RetOpc = PPCISD::CALL_NOP_RM;
+      break;
+    }
   }
-
-  // The ABIs that maintain a TOC pointer accross calls need to have a nop
-  // immediately following the call instruction if the caller and callee may
-  // have different TOC bases. At link time if the linker determines the calls
-  // may not share a TOC base, the call is redirected to a trampoline inserted
-  // by the linker. The trampoline will (among other things) save the callers
-  // TOC pointer at an ABI designated offset in the linkage area and the linker
-  // will rewrite the nop to be a load of the TOC pointer from the linkage area
-  // into gpr2.
-  if (Subtarget.isAIXABI() || Subtarget.is64BitELFABI())
-    return callsShareTOCBase(&Caller, Callee, TM) ? PPCISD::CALL
-                                                  : PPCISD::CALL_NOP;
-
-  return PPCISD::CALL;
+  return RetOpc;
 }
 
 static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
@@ -5506,7 +5535,7 @@ SDValue PPCTargetLowering::FinishCall(
 
   unsigned CallOpc =
       getCallOpcode(CFlags, DAG.getMachineFunction().getFunction(), Callee,
-                    Subtarget, DAG.getTarget());
+                    Subtarget, DAG.getTarget(), CB ? CB->isStrictFP() : false);
 
   if (!CFlags.IsIndirect)
     Callee = transformCallee(Callee, DAG, dl, Subtarget);
