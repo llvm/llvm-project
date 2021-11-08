@@ -43,7 +43,7 @@ void BTFTypeBase::emitType(MCStreamer &OS) {
 
 BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
                                bool NeedsFixup)
-    : DTy(DTy), NeedsFixup(NeedsFixup) {
+    : DTy(DTy), NeedsFixup(NeedsFixup), Name(DTy->getName()) {
   switch (Tag) {
   case dwarf::DW_TAG_pointer_type:
     Kind = BTF::BTF_KIND_PTR;
@@ -66,14 +66,23 @@ BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
   BTFType.Info = Kind << 24;
 }
 
+/// Used by DW_TAG_pointer_type only.
+BTFTypeDerived::BTFTypeDerived(unsigned NextTypeId, unsigned Tag,
+                               StringRef Name)
+    : DTy(nullptr), NeedsFixup(false), Name(Name) {
+  Kind = BTF::BTF_KIND_PTR;
+  BTFType.Info = Kind << 24;
+  BTFType.Type = NextTypeId;
+}
+
 void BTFTypeDerived::completeType(BTFDebug &BDebug) {
   if (IsCompleted)
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(DTy->getName());
+  BTFType.NameOff = BDebug.addString(Name);
 
-  if (NeedsFixup)
+  if (NeedsFixup || !DTy)
     return;
 
   // The base type for PTR/CONST/VOLATILE could be void.
@@ -408,10 +417,17 @@ void BTFTypeDeclTag::emitType(MCStreamer &OS) {
   OS.emitInt32(Info);
 }
 
-BTFTypeTypeTag::BTFTypeTypeTag(uint32_t BaseTypeId, StringRef Tag) : Tag(Tag) {
+BTFTypeTypeTag::BTFTypeTypeTag(uint32_t NextTypeId, StringRef Tag)
+    : DTy(nullptr), Tag(Tag) {
   Kind = BTF::BTF_KIND_TYPE_TAG;
   BTFType.Info = Kind << 24;
-  BTFType.Type = BaseTypeId;
+  BTFType.Type = NextTypeId;
+}
+
+BTFTypeTypeTag::BTFTypeTypeTag(const DIDerivedType *DTy, StringRef Tag)
+    : DTy(DTy), Tag(Tag) {
+  Kind = BTF::BTF_KIND_TYPE_TAG;
+  BTFType.Info = Kind << 24;
 }
 
 void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
@@ -419,6 +435,13 @@ void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
   BTFType.NameOff = BDebug.addString(Tag);
+  if (DTy) {
+    const DIType *ResolvedType = DTy->getBaseType();
+    if (!ResolvedType)
+      BTFType.Type = 0;
+    else
+      BTFType.Type = BDebug.getTypeId(ResolvedType);
+  }
 }
 
 uint32_t BTFStringTable::addString(StringRef S) {
@@ -675,6 +698,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     SmallVector<const MDString *, 4> MDStrs;
     DINodeArray Annots = DTy->getAnnotations();
     if (Annots) {
+      // For type with "int __tag1 __tag2 *p", the MDStrs will have
+      // content: [__tag1, __tag2].
       for (const Metadata *Annotations : Annots->operands()) {
         const MDNode *MD = cast<MDNode>(Annotations);
         const MDString *Name = cast<MDString>(MD->getOperand(0));
@@ -685,20 +710,22 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     }
 
     if (MDStrs.size() > 0) {
-      auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
+      // With MDStrs [__tag1, __tag2], the output type chain looks like
+      //   PTR -> __tag2 -> __tag1 -> BaseType
+      // In the below, we construct BTF types with the order of __tag1, __tag2
+      // and PTR.
+      auto TypeEntry =
+          std::make_unique<BTFTypeTypeTag>(DTy, MDStrs[0]->getString());
       unsigned TmpTypeId = addType(std::move(TypeEntry));
-      for (unsigned I = MDStrs.size(); I > 0; I--) {
-        const MDString *Value = MDStrs[I - 1];
-        if (I != 1) {
-          auto TypeEntry =
-              std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
-          TmpTypeId = addType(std::move(TypeEntry));
-        } else {
-          auto TypeEntry =
-              std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
-          TypeId = addType(std::move(TypeEntry), DTy);
-        }
+      for (unsigned I = 1; I < MDStrs.size(); I++) {
+        const MDString *Value = MDStrs[I];
+        TypeEntry =
+            std::make_unique<BTFTypeTypeTag>(TmpTypeId, Value->getString());
+        TmpTypeId = addType(std::move(TypeEntry));
       }
+      auto TypeDEntry =
+          std::make_unique<BTFTypeDerived>(TmpTypeId, Tag, DTy->getName());
+      TypeId = addType(std::move(TypeDEntry), DTy);
     } else {
       auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
       TypeId = addType(std::move(TypeEntry), DTy);

@@ -27,20 +27,20 @@
 !10 = !{!9, !11}
 !11 = !{!"btf_type_tag", !"tag2"}
 
-; CHECK:             .long   0                               # BTF_KIND_PTR(id = 1)
-; CHECK-NEXT:        .long   33554432                        # 0x2000000
+; CHECK:             .long   1                               # BTF_KIND_TYPE_TAG(id = 1)
+; CHECK-NEXT:        .long   301989888                       # 0x12000000
 ; CHECK-NEXT:        .long   5
-; CHECK-NEXT:        .long   1                               # BTF_KIND_TYPE_TAG(id = 2)
+; CHECK-NEXT:        .long   6                               # BTF_KIND_TYPE_TAG(id = 2)
 ; CHECK-NEXT:        .long   301989888                       # 0x12000000
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   6                               # BTF_KIND_TYPE_TAG(id = 3)
-; CHECK-NEXT:        .long   301989888                       # 0x12000000
-; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   0                               # BTF_KIND_PTR(id = 4)
+; CHECK-NEXT:        .long   0                               # BTF_KIND_PTR(id = 3)
 ; CHECK-NEXT:        .long   33554432                        # 0x2000000
-; CHECK-NEXT:        .long   6
-; CHECK-NEXT:        .long   6                               # BTF_KIND_TYPE_TAG(id = 5)
+; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   1                               # BTF_KIND_TYPE_TAG(id = 4)
 ; CHECK-NEXT:        .long   301989888                       # 0x12000000
+; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   0                               # BTF_KIND_PTR(id = 5)
+; CHECK-NEXT:        .long   33554432                        # 0x2000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   11                              # BTF_KIND_INT(id = 6)
 ; CHECK-NEXT:        .long   16777216                        # 0x1000000
@@ -51,8 +51,8 @@
 ; CHECK-NEXT:        .long   3
 ; CHECK-NEXT:        .long   1
 
-; CHECK:             .ascii  "tag2"                          # string offset=1
-; CHECK:             .ascii  "tag1"                          # string offset=6
+; CHECK:             .ascii  "tag1"                          # string offset=1
+; CHECK:             .ascii  "tag2"                          # string offset=6
 ; CHECK:             .ascii  "int"                           # string offset=11
 ; CHECK:             .byte   103                             # string offset=15
 
