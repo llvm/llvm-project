@@ -1,7 +1,8 @@
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
 
-// Wrong results on amdgpu
-// XFAIL: amdgcn-amd-amdhsa
+// Wrong results on amdgcn
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 
 #include <iostream>
 

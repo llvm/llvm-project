@@ -34,15 +34,23 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 ///}
 
 /// Print
-/// printf() calls are rewritten by CGGPUBuiltin to __llvm_omp_vprintf
+/// TODO: For now we have to use macros to guard the code because Clang lowers
+/// `printf` to different function calls on NVPTX and AMDGCN platforms, and it
+/// doesn't work for AMDGCN. After it can work on AMDGCN, we will remove the
+/// macro.
 /// {
 
+#ifndef __AMDGCN__
 extern "C" {
 int printf(const char *format, ...);
 }
 
-#define PRINTF(fmt, ...) (void)printf(fmt, ##__VA_ARGS__);
+#define PRINTF(fmt, ...) (void)printf(fmt, __VA_ARGS__);
 #define PRINT(str) PRINTF("%s", str)
+#else
+#define PRINTF(fmt, ...)
+#define PRINT(str)
+#endif
 
 ///}
 

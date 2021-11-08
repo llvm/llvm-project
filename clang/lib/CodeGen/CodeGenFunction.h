@@ -4070,9 +4070,10 @@ public:
   RValue EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                 ReturnValueSlot ReturnValue);
 
-  RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E);
-  RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
-  RValue EmitOpenMPDevicePrintfCallExpr(const CallExpr *E);
+  RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
+                                       ReturnValueSlot ReturnValue);
+  RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
+                                        ReturnValueSlot ReturnValue);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);

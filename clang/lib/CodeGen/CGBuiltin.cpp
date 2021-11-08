@@ -5106,16 +5106,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateFPExt(HalfVal, Builder.getFloatTy()));
   }
   case Builtin::BIprintf:
-    if (getTarget().getTriple().isNVPTX() ||
-        getTarget().getTriple().isAMDGCN()) {
-      if (getLangOpts().OpenMPIsDevice)
-        return EmitOpenMPDevicePrintfCallExpr(E);
-      if (getTarget().getTriple().isNVPTX())
-        return EmitNVPTXDevicePrintfCallExpr(E);
-      if (getTarget().getTriple().isAMDGCN() && getLangOpts().HIP)
-        return EmitAMDGPUDevicePrintfCallExpr(E);
-    }
-
+    if (getTarget().getTriple().isNVPTX())
+      return EmitNVPTXDevicePrintfCallExpr(E, ReturnValue);
+    if (getTarget().getTriple().getArch() == Triple::amdgcn &&
+        getLangOpts().HIP)
+      return EmitAMDGPUDevicePrintfCallExpr(E, ReturnValue);
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:
