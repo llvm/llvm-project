@@ -813,15 +813,15 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsSimple) {
   {
     // (x) : (exists z, y  = [x / 2] : x = 3y and x + z + 1 >= 0).
     FlatAffineConstraints fac1(1, 0, 1);
-    fac1.addLocalFloorDiv({1, 0, 0}, 2);
-    fac1.addEquality({1, 0, -3, 0});
-    fac1.addInequality({1, 1, 0, 1});
+    fac1.addLocalFloorDiv({1, 0, 0}, 2); // y = [x / 2].
+    fac1.addEquality({1, 0, -3, 0});     // x = 3y.
+    fac1.addInequality({1, 1, 0, 1});    // x + z + 1 >= 0.
 
     // (x) : (exists y = [x / 2], z : x = 5y).
     FlatAffineConstraints fac2(1);
-    fac2.addLocalFloorDiv({1, 0}, 2);
-    fac2.addEquality({1, -5, 0});
-    fac2.appendLocalId();
+    fac2.addLocalFloorDiv({1, 0}, 2); // y = [x / 2].
+    fac2.addEquality({1, -5, 0});     // x = 5y.
+    fac2.appendLocalId();             // Add local id z.
 
     fac1.mergeLocalIds(fac2);
 
@@ -834,54 +834,102 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsSimple) {
   }
 
   {
-    // (x) : (exists z = [x / 5], y  = [x / 2] : x = 3y).
+    // (x) : (exists z = [x / 5], y = [x / 2] : x = 3y).
     FlatAffineConstraints fac1(1);
-    fac1.addLocalFloorDiv({1, 0}, 5);
-    fac1.addLocalFloorDiv({1, 0, 0}, 2);
-    fac1.addEquality({1, 0, -3, 0});
+    fac1.addLocalFloorDiv({1, 0}, 5);    // z = [x / 5].
+    fac1.addLocalFloorDiv({1, 0, 0}, 2); // y = [x / 2].
+    fac1.addEquality({1, 0, -3, 0});     // x = 3y.
 
     // (x) : (exists y = [x / 2], z = [x / 5]: x = 5z).
     FlatAffineConstraints fac2(1);
-    fac2.addLocalFloorDiv({1, 0}, 2);
-    fac2.addLocalFloorDiv({1, 0, 0}, 5);
-    fac2.addEquality({1, 0, -5, 0});
+    fac2.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2].
+    fac2.addLocalFloorDiv({1, 0, 0}, 5); // z = [x / 5].
+    fac2.addEquality({1, 0, -5, 0});     // x = 5z.
 
     fac1.mergeLocalIds(fac2);
 
     // Local space should be same.
     EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-    // 2 division matched.
+    // 2 divisions matched.
     EXPECT_EQ(fac1.getNumLocalIds(), 2u);
     EXPECT_EQ(fac2.getNumLocalIds(), 2u);
   }
 }
 
-TEST(FlatAffineConstraintsTest, mergeDivisionsUnsupported) {
-  // Division merging for divisions depending on other local variables
-  // not yet supported.
+TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
+  {
+    // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2]
+    fac1.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3]
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x
 
-  // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z >= x).
-  FlatAffineConstraints fac1(1);
-  fac1.addLocalFloorDiv({1, 0}, 2);
-  fac1.addLocalFloorDiv({1, 1, 0}, 3);
-  fac1.addInequality({-1, 1, 1, 0});
+    // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2);    // y = [x / 2]
+    fac2.addLocalFloorDiv({1, 1, 0}, 3); // z = [x + y / 3]
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x
 
-  // (x) : (exists y = [x / 2], z = [x + y / 3]: y + z <= x).
-  FlatAffineConstraints fac2(1);
-  fac2.addLocalFloorDiv({1, 0}, 2);
-  fac2.addLocalFloorDiv({1, 1, 0}, 3);
-  fac2.addInequality({1, -1, -1, 0});
+    fac1.mergeLocalIds(fac2);
 
-  fac1.mergeLocalIds(fac2);
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
 
-  // Local space should be same.
-  EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+    // 2 divisions matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
 
-  // 1 division matched + 2 unmerged division due to division depending on
-  // other local variables.
-  EXPECT_EQ(fac1.getNumLocalIds(), 3u);
-  EXPECT_EQ(fac2.getNumLocalIds(), 3u);
+  {
+    // (x) : (exists y = [x / 2], z = [x + y / 3], z = [z + 1 / 5]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 0}, 2);       // y = [x / 2].
+    fac1.addLocalFloorDiv({1, 1, 0}, 3);    // z = [x + y / 3].
+    fac1.addLocalFloorDiv({0, 0, 1, 1}, 5); // z = [z + 1 / 5].
+    fac1.addInequality({-1, 1, 1, 0, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x / 2], z = [x + y / 3], w = [z + 1 / 5]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 0}, 2);       // y = [x / 2].
+    fac2.addLocalFloorDiv({1, 1, 0}, 3);    // z = [x + y / 3].
+    fac2.addLocalFloorDiv({0, 0, 1, 1}, 5); // w = [z + 1 / 5].
+    fac2.addInequality({1, -1, -1, 0, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 3 divisions matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 3u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 3u);
+  }
+}
+
+TEST(FlatAffineConstraintsTest, mergeDivisionsConstants) {
+  {
+    // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z >= x).
+    FlatAffineConstraints fac1(1);
+    fac1.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 3].
+    fac1.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
+    fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
+
+    // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
+    FlatAffineConstraints fac2(1);
+    fac2.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 3].
+    fac2.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
+    fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
+
+    fac1.mergeLocalIds(fac2);
+
+    // Local space should be same.
+    EXPECT_EQ(fac1.getNumLocalIds(), fac2.getNumLocalIds());
+
+    // 2 divisions matched.
+    EXPECT_EQ(fac1.getNumLocalIds(), 2u);
+    EXPECT_EQ(fac2.getNumLocalIds(), 2u);
+  }
 }
 
 } // namespace mlir
