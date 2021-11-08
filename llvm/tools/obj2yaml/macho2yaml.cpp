@@ -29,7 +29,7 @@ class MachODumper {
 
   const object::MachOObjectFile &Obj;
   std::unique_ptr<DWARFContext> DWARFCtx;
-  unsigned RawSegments;
+  unsigned RawSegment;
   void dumpHeader(std::unique_ptr<MachOYAML::Object> &Y);
   Error dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y);
@@ -54,7 +54,7 @@ class MachODumper {
 public:
   MachODumper(const object::MachOObjectFile &O,
               std::unique_ptr<DWARFContext> DCtx, unsigned RawSegments)
-      : Obj(O), DWARFCtx(std::move(DCtx)), RawSegments(RawSegments) {}
+      : Obj(O), DWARFCtx(std::move(DCtx)), RawSegment(RawSegments) {}
   Expected<std::unique_ptr<MachOYAML::Object>> dump();
 };
 
@@ -179,7 +179,7 @@ Expected<const char *> MachODumper::extractSections(
       StringRef SecName(S->sectname);
 
       // Copy data sections if requested.
-      if ((RawSegments & RawSegments::data) &&
+      if ((RawSegment & ::RawSegments::data) &&
           StringRef(S->segname).startswith("__DATA"))
         S->content =
             yaml::BinaryRef(Obj.getSectionContents(Sec.offset, Sec.size));
@@ -290,7 +290,7 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   dumpHeader(Y);
   if (Error Err = dumpLoadCommands(Y))
     return std::move(Err);
-  if (RawSegments & RawSegments::linkedit)
+  if (RawSegment & ::RawSegments::linkedit)
     Y->RawLinkEditSegment =
         yaml::BinaryRef(Obj.getSegmentContents("__LINKEDIT"));
   else
