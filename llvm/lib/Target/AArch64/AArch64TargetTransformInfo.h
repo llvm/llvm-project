@@ -125,6 +125,9 @@ public:
     return ST->getMinVectorRegisterBitWidth();
   }
 
+  Optional<unsigned> getVScaleForTuning() const {
+    return ST->getVScaleForTuning();
+  }
 
   /// Try to return an estimate cost factor that can be used as a multiplier
   /// when scalarizing an operation for a vector with ElementCount \p VF.
