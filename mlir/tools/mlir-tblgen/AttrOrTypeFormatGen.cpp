@@ -420,8 +420,9 @@ void AttrOrTypeFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
                                        raw_ostream &os) {
   os << "  // Parse parameter list\n";
   llvm::interleave(
-      el->getParams(), [&](auto param) { genVariableParser(param, ctx, os); },
-      [&]() { genLiteralParser(",", ctx, os); });
+      el->getParams(),
+      [&](auto param) { this->genVariableParser(param, ctx, os); },
+      [&]() { this->genLiteralParser(",", ctx, os); });
 }
 
 void AttrOrTypeFormat::genStructParser(StructDirective *el, FmtContext &ctx,
@@ -522,8 +523,9 @@ void AttrOrTypeFormat::genVariablePrinter(const AttrOrTypeParameter &param,
 void AttrOrTypeFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,
                                         raw_ostream &os) {
   llvm::interleave(
-      el->getParams(), [&](auto param) { genVariablePrinter(param, ctx, os); },
-      [&]() { genLiteralPrinter(",", ctx, os); });
+      el->getParams(),
+      [&](auto param) { this->genVariablePrinter(param, ctx, os); },
+      [&]() { this->genLiteralPrinter(",", ctx, os); });
 }
 
 void AttrOrTypeFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
@@ -531,12 +533,12 @@ void AttrOrTypeFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
   llvm::interleave(
       el->getParams(),
       [&](auto param) {
-        genLiteralPrinter(param.getName(), ctx, os);
-        genLiteralPrinter("=", ctx, os);
+        this->genLiteralPrinter(param.getName(), ctx, os);
+        this->genLiteralPrinter("=", ctx, os);
         os << tgfmt("  $_printer << ' ';\n", &ctx);
-        genVariablePrinter(param, ctx, os);
+        this->genVariablePrinter(param, ctx, os);
       },
-      [&]() { genLiteralPrinter(",", ctx, os); });
+      [&]() { this->genLiteralPrinter(",", ctx, os); });
 }
 
 //===----------------------------------------------------------------------===//
