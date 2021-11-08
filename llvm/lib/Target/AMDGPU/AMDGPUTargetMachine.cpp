@@ -36,8 +36,10 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -778,6 +780,33 @@ unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
   // host side. As implied by the offload programming model, only global
   // pointers could be referenced on the host side.
   return AMDGPUAS::GLOBAL_ADDRESS;
+}
+
+std::pair<const Value *, unsigned>
+AMDGPUTargetMachine::getPredicatedAddrSpace(const Value *V) const {
+  if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_is_shared:
+      return std::make_pair(II->getArgOperand(0), AMDGPUAS::LOCAL_ADDRESS);
+    case Intrinsic::amdgcn_is_private:
+      return std::make_pair(II->getArgOperand(0), AMDGPUAS::PRIVATE_ADDRESS);
+    default:
+      break;
+    }
+    return std::make_pair(nullptr, -1);
+  }
+  // Check the global pointer predication based on
+  // (!is_share(p) && !is_private(p)). Note that logic 'and' is commutative and
+  // the order of 'is_shared' and 'is_private' is not significant.
+  Value *Ptr;
+  if (match(
+          const_cast<Value *>(V),
+          m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
+                  m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(
+                      m_Deferred(Ptr))))))
+    return std::make_pair(Ptr, AMDGPUAS::GLOBAL_ADDRESS);
+
+  return std::make_pair(nullptr, -1);
 }
 
 //===----------------------------------------------------------------------===//

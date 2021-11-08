@@ -104,20 +104,16 @@
 ; CHECK-O-NEXT: Running analysis: AAManager
 ; CHECK-O-NEXT: Running analysis: BasicAA
 ; CHECK-O-NEXT: Running analysis: AssumptionAnalysis
+; CHECK-O-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA
 ; CHECK-O-NEXT: Running analysis: TypeBasedAA
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
-; CHECK-O3-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O2-NEXT: Running pass: OpenMPOptCGSCCPass
 ; CHECK-O3-NEXT: Running pass: OpenMPOptCGSCCPass
 ; CHECK-O-NEXT: Running pass: SROA
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
-; CHECK-O1-NEXT: Running analysis: TargetIRAnalysis on foo
-; CHECK-O2-NEXT: Running analysis: TargetIRAnalysis on foo
-; CHECK-Os-NEXT: Running analysis: TargetIRAnalysis on foo
-; CHECK-Oz-NEXT: Running analysis: TargetIRAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: MemorySSAAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: SpeculativeExecutionPass
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
