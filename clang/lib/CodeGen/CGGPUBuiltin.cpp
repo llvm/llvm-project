@@ -66,15 +66,47 @@ static llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
 //
 // Note that by the time this function runs, E's args have already undergone the
 // standard C vararg promotion (short -> int, float -> double, etc.).
+
+namespace {
+llvm::Value *packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF,
+                                           const CallArgList &Args) {
+  const llvm::DataLayout &DL = CGF->CGM.getDataLayout();
+  llvm::LLVMContext &Ctx = CGF->CGM.getLLVMContext();
+  CGBuilderTy &Builder = CGF->Builder;
+
+  // Construct and fill the args buffer that we'll pass to vprintf.
+  if (Args.size() <= 1) {
+    // If there are no args, pass a null pointer to vprintf.
+    return llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(Ctx));
+  } else {
+    llvm::SmallVector<llvm::Type *, 8> ArgTypes;
+    for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I)
+      ArgTypes.push_back(Args[I].getRValue(*CGF).getScalarVal()->getType());
+
+    // Using llvm::StructType is correct only because printf doesn't accept
+    // aggregates.  If we had to handle aggregates here, we'd have to manually
+    // compute the offsets within the alloca -- we wouldn't be able to assume
+    // that the alignment of the llvm type was the same as the alignment of the
+    // clang type.
+    llvm::Type *AllocaTy = llvm::StructType::create(ArgTypes, "printf_args");
+    llvm::Value *Alloca = CGF->CreateTempAlloca(AllocaTy);
+
+    for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
+      llvm::Value *P = Builder.CreateStructGEP(AllocaTy, Alloca, I - 1);
+      llvm::Value *Arg = Args[I].getRValue(*CGF).getScalarVal();
+      Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlign(Arg->getType()));
+    }
+    return Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
+  }
+}
+} // namespace
+
 RValue
 CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
                                                ReturnValueSlot ReturnValue) {
   assert(getTarget().getTriple().isNVPTX());
   assert(E->getBuiltinCallee() == Builtin::BIprintf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
-
-  const llvm::DataLayout &DL = CGM.getDataLayout();
-  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
   CallArgList Args;
   EmitCallArgs(Args,
@@ -90,31 +122,7 @@ CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
     return RValue::get(llvm::ConstantInt::get(IntTy, 0));
   }
 
-  // Construct and fill the args buffer that we'll pass to vprintf.
-  llvm::Value *BufferPtr;
-  if (Args.size() <= 1) {
-    // If there are no args, pass a null pointer to vprintf.
-    BufferPtr = llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(Ctx));
-  } else {
-    llvm::SmallVector<llvm::Type *, 8> ArgTypes;
-    for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I)
-      ArgTypes.push_back(Args[I].getRValue(*this).getScalarVal()->getType());
-
-    // Using llvm::StructType is correct only because printf doesn't accept
-    // aggregates.  If we had to handle aggregates here, we'd have to manually
-    // compute the offsets within the alloca -- we wouldn't be able to assume
-    // that the alignment of the llvm type was the same as the alignment of the
-    // clang type.
-    llvm::Type *AllocaTy = llvm::StructType::create(ArgTypes, "printf_args");
-    llvm::Value *Alloca = CreateTempAlloca(AllocaTy);
-
-    for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
-      llvm::Value *P = Builder.CreateStructGEP(AllocaTy, Alloca, I - 1);
-      llvm::Value *Arg = Args[I].getRValue(*this).getScalarVal();
-      Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlign(Arg->getType()));
-    }
-    BufferPtr = Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
-  }
+  llvm::Value *BufferPtr = packArgsIntoNVPTXFormatBuffer(this, Args);
 
   // Invoke vprintf and return.
   llvm::Function* VprintfFunc = GetVprintfDeclaration(CGM.getModule());

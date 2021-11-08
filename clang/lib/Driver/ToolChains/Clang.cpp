@@ -2673,9 +2673,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   llvm::DenormalMode DenormalFPMath = DefaultDenormalFPMath;
   llvm::DenormalMode DenormalFP32Math = DefaultDenormalFP32Math;
-  StringRef FPContract = "";
+  // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
+  // If one wasn't given by the user, don't pass it here.
+  StringRef FPContract;
+  if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+      !JA.isOffloading(Action::OFK_HIP))
+    FPContract = "on";
   bool StrictFPModel = false;
-
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2698,7 +2702,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       // -fno_fast_math restores default denormal and fpcontract handling
-      FPContract = "";
+      FPContract = "on";
       DenormalFPMath = llvm::DenormalMode::getIEEE();
 
       // FIXME: The target may have picked a non-IEEE default mode here based on
@@ -2718,12 +2722,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // ffp-model= is a Driver option, it is entirely rewritten into more
       // granular options before being passed into cc1.
       // Use the gcc option in the switch below.
-      if (!FPModel.empty() && !FPModel.equals(Val)) {
+      if (!FPModel.empty() && !FPModel.equals(Val))
         D.Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Args.MakeArgString("-ffp-model=" + FPModel)
-          << Args.MakeArgString("-ffp-model=" + Val);
-        FPContract = "";
-      }
+            << Args.MakeArgString("-ffp-model=" + FPModel)
+            << Args.MakeArgString("-ffp-model=" + Val);
       if (Val.equals("fast")) {
         optID = options::OPT_ffast_math;
         FPModel = Val;
@@ -2731,7 +2733,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       } else if (Val.equals("precise")) {
         optID = options::OPT_ffp_contract;
         FPModel = Val;
-        FPContract = "fast";
+        FPContract = "on";
         PreciseFPModel = true;
       } else if (Val.equals("strict")) {
         StrictFPModel = true;
@@ -2819,9 +2821,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_ffp_contract: {
       StringRef Val = A->getValue();
       if (PreciseFPModel) {
-        // -ffp-model=precise enables ffp-contract=fast as a side effect
-        // the FPContract value has already been set to a string literal
-        // and the Val string isn't a pertinent value.
+        // -ffp-model=precise enables ffp-contract=on.
+        // -ffp-model=precise sets PreciseFPModel to on and Val to
+        // "precise". FPContract is set.
         ;
       } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off"))
         FPContract = Val;
@@ -2919,23 +2921,27 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
-      TrappingMath = false;
-      RoundingFPMath = false;
       // -fno_fast_math restores default denormal and fpcontract handling
       DenormalFPMath = DefaultDenormalFPMath;
       DenormalFP32Math = llvm::DenormalMode::getIEEE();
-      FPContract = "";
+      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+          !JA.isOffloading(Action::OFK_HIP))
+        if (FPContract == "fast") {
+          FPContract = "on";
+          D.Diag(clang::diag::warn_drv_overriding_flag_option)
+              << "-ffp-contract=fast"
+              << "-ffp-contract=on";
+        }
       break;
     }
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
-      if (HonorINFs && HonorNaNs &&
-        !AssociativeMath && !ReciprocalMath &&
-        SignedZeros && TrappingMath && RoundingFPMath &&
-        (FPContract.equals("off") || FPContract.empty()) &&
-        DenormalFPMath == llvm::DenormalMode::getIEEE() &&
-        DenormalFP32Math == llvm::DenormalMode::getIEEE())
+      if (HonorINFs && HonorNaNs && !AssociativeMath && !ReciprocalMath &&
+          SignedZeros && TrappingMath && RoundingFPMath &&
+          DenormalFPMath == llvm::DenormalMode::getIEEE() &&
+          DenormalFP32Math == llvm::DenormalMode::getIEEE() &&
+          FPContract.equals("off"))
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -4430,7 +4436,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   TC.addClangWarningOptions(CmdArgs);
 
   // FIXME: Subclass ToolChain for SPIR and move this to addClangWarningOptions.
-  if (Triple.isSPIR())
+  if (Triple.isSPIR() || Triple.isSPIRV())
     CmdArgs.push_back("-Wspir-compat");
 
   // Select the appropriate action.

@@ -8,6 +8,9 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads, c++03, c++11, c++14
 
+// Fails for 32-bit builds.
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
 // <atomic>
 
 // static constexpr bool is_always_lock_free;

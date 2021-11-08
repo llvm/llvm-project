@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <filesystem>
 
 // void resize_file(const path& p, uintmax_t new_size);

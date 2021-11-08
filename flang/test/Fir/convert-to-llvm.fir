@@ -323,3 +323,56 @@ func @insert_tuple(%a : tuple<i32, f32>) {
 // CHECK-SAME:                     %[[TUPLE:.*]]: !llvm.struct<(i32, f32)>
 // CHECK:         %{{.*}} = llvm.insertvalue %{{.*}}, %[[TUPLE]][1 : index] : !llvm.struct<(i32, f32)>
 // CHECK:         llvm.return
+
+// -----
+// Test `fir.call` -> `llvm.call` conversion for functions that take no arguments
+// and return nothing
+
+func @dummy_basic() {
+  return
+}
+
+func @test_call_basic() {
+  fir.call @dummy_basic() : () -> ()
+  return
+}
+
+// CHECK-LABEL: func @test_call_basic() {
+// CHECK-NEXT:  llvm.call @dummy_basic() : () -> ()
+// CHECK-NEXT:  return
+// CHECK-NEXT: }
+
+// Test `fir.call` -> `llvm.call` conversion for functions that take one
+// argument and return nothing
+
+func @dummy_with_arg(%arg0 : i32) {
+  return
+}
+
+func @test_call_with_arg(%arg0 : i32) {
+  fir.call @dummy_with_arg(%arg0) : (i32) -> ()
+  return
+}
+
+// CHECK-LABEL:  llvm.func @test_call_with_arg(%arg0: i32) {
+// CHECK-NEXT:    llvm.call @dummy_with_arg(%arg0) : (i32) -> ()
+// CHECK-NEXT:    llvm.return
+// CHECK-NEXT:  }
+
+// Test `fir.call` -> `llvm.call` conversion for functions that take no
+// arguments, but return a value
+
+func @dummy_return_val() -> i32 {
+  %1 = arith.constant 123 : i32
+  return %1 : i32
+}
+
+func @test_call_return_val() -> i32 {
+  %1 = fir.call @dummy_return_val() : () -> (i32)
+  return %1 : i32
+}
+
+// CHECK-LABEL:  llvm.func @test_call_return_val() -> i32 {
+// CHECK-NEXT:    %0 = llvm.call @dummy_return_val() : () -> i32
+// CHECK-NEXT:    llvm.return %0 : i32
+// CHECK-NEXT:  }

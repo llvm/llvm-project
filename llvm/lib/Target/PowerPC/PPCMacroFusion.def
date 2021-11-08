@@ -41,5 +41,42 @@ FUSION_FEATURE(AddisLoad, hasAddisLoadFusion, 2, \
                FUSION_OP_SET(ADDIS, ADDIS8, ADDIStocHA8), \
                FUSION_OP_SET(LD, LBZ, LBZ8, LHZ, LHZ8, LWZ, LWZ8))
 
+// Power10 User Manual Section 19.1.5.4, Fusion
+// {add, mulld} - add
+FUSION_FEATURE(ArithAdd, hasArithAddFusion, -1,
+               FUSION_OP_SET(ADD4, ADD8, MULLD), FUSION_OP_SET(ADD4, ADD8))
+
+// {add, subf} - {and, nand, nor, or}
+FUSION_FEATURE(ArithLogical, hasAddLogicalFusion, -1,
+               FUSION_OP_SET(ADD4, ADD8, SUBF, SUBF8),
+               FUSION_OP_SET(AND, AND8, OR, OR8, NAND, NAND8, NOR, NOR8))
+
+// {and, andc, eqv, nand, nor, or, orc, xor} - {add, subf}
+FUSION_FEATURE(LogicalArith, hasLogicalAddFusion, -1,
+               FUSION_OP_SET(AND, ANDC, EQV, NAND, NOR, OR, ORC, XOR, AND8,
+                             ANDC8, EQV8, NAND8, NOR8, OR8, ORC8, XOR8),
+               FUSION_OP_SET(ADD4, ADD8, SUBF, SUBF8))
+
+// Either of {and, andc, eqv, nand, nor, or, orc, xor}
+FUSION_FEATURE(Logical, hasLogicalFusion, -1,
+               FUSION_OP_SET(AND, ANDC, EQV, NAND, NOR, OR, ORC, XOR, AND8,
+                             ANDC8, EQV8, NAND8, NOR8, OR8, ORC8, XOR8),
+               FUSION_OP_SET(AND, ANDC, EQV, NAND, NOR, OR, ORC, XOR, AND8,
+                             ANDC8, EQV8, NAND8, NOR8, OR8, ORC8, XOR8))
+
+// vaddudm - vaddudm
+FUSION_FEATURE(VecAdd, hasArithAddFusion, -1, FUSION_OP_SET(VADDUDM),
+               FUSION_OP_SET(VADDUDM))
+
+// Either of {vand, vandc, veqv, vnand, vnor, vor, vorc, vxor}
+FUSION_FEATURE(VecLogical, hasLogicalFusion, -1,
+               FUSION_OP_SET(VAND, VANDC, VEQV, VNAND, VNOR, VOR, VORC, VXOR),
+               FUSION_OP_SET(VAND, VANDC, VEQV, VNAND, VNOR, VOR, VORC, VXOR))
+
+// sldi rx, ra, {3, 6} - {add, subf}
+// sldi rx, ra n is alias of rldicr rx, ra, n, 63-n
+FUSION_FEATURE(SldiAdd, hasArithAddFusion, -1, FUSION_OP_SET(RLDICR, RLDICR_32),
+               FUSION_OP_SET(ADD4, ADD8, SUBF, SUBF8))
+
 #undef FUSION_FEATURE
 #undef FUSION_OP_SET

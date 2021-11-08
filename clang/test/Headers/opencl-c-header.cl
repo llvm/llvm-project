@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++ | FileCheck %s --check-prefix=CHECK20
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL3.0 | FileCheck %s
 
+// RUN: %clang_cc1 -O0 -triple spirv32-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
+
+
 // Test including the default header as a module.
 // The module should be compiled only once and loaded from cache afterwards.
 // Change the directory mode to read only to make sure no new modules are created.
@@ -90,7 +93,7 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 // Check that extension macros are defined correctly.
 
 // For SPIR all extensions are supported.
-#if defined(__SPIR__)
+#if defined(__SPIR__) || defined(__SPIRV__)
 
 // Verify that cl_intel_planar_yuv extension is defined from OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
