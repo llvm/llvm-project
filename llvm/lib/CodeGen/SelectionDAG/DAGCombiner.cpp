@@ -13039,68 +13039,30 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
     return ConstantFoldBITCASTofBUILD_VECTOR(Tmp, DstEltVT);
   }
 
-  SDLoc DL(BV);
-
   // Okay, we know the src/dst types are both integers of differing types.
-  // Handling growing first.
   assert(SrcEltVT.isInteger() && DstEltVT.isInteger());
-  if (SrcBitSize < DstBitSize) {
-    unsigned NumInputsPerOutput = DstBitSize/SrcBitSize;
 
-    SmallVector<SDValue, 8> Ops;
-    for (unsigned i = 0, e = BV->getNumOperands(); i != e;
-         i += NumInputsPerOutput) {
-      bool isLE = DAG.getDataLayout().isLittleEndian();
-      APInt NewBits = APInt(DstBitSize, 0);
-      bool EltIsUndef = true;
-      for (unsigned j = 0; j != NumInputsPerOutput; ++j) {
-        // Shift the previously computed bits over.
-        NewBits <<= SrcBitSize;
-        SDValue Op = BV->getOperand(i+ (isLE ? (NumInputsPerOutput-j-1) : j));
-        if (Op.isUndef()) continue;
-        EltIsUndef = false;
+  // TODO: Should ConstantFoldBITCASTofBUILD_VECTOR always take a
+  // BuildVectorSDNode?
+  auto *BVN = cast<BuildVectorSDNode>(BV);
 
-        NewBits |= cast<ConstantSDNode>(Op)->getAPIntValue().
-                   zextOrTrunc(SrcBitSize).zext(DstBitSize);
-      }
+  // Extract the constant raw bit data.
+  BitVector UndefElements;
+  SmallVector<APInt> RawBits;
+  bool IsLE = DAG.getDataLayout().isLittleEndian();
+  if (!BVN->getConstantRawBits(IsLE, DstBitSize, RawBits, UndefElements))
+    return SDValue();
 
-      if (EltIsUndef)
-        Ops.push_back(DAG.getUNDEF(DstEltVT));
-      else
-        Ops.push_back(DAG.getConstant(NewBits, DL, DstEltVT));
-    }
-
-    EVT VT = EVT::getVectorVT(*DAG.getContext(), DstEltVT, Ops.size());
-    return DAG.getBuildVector(VT, DL, Ops);
-  }
-
-  // Finally, this must be the case where we are shrinking elements: each input
-  // turns into multiple outputs.
-  unsigned NumOutputsPerInput = SrcBitSize/DstBitSize;
-  EVT VT = EVT::getVectorVT(*DAG.getContext(), DstEltVT,
-                            NumOutputsPerInput*BV->getNumOperands());
+  SDLoc DL(BV);
   SmallVector<SDValue, 8> Ops;
-
-  for (const SDValue &Op : BV->op_values()) {
-    if (Op.isUndef()) {
-      Ops.append(NumOutputsPerInput, DAG.getUNDEF(DstEltVT));
-      continue;
-    }
-
-    APInt OpVal = cast<ConstantSDNode>(Op)->
-                  getAPIntValue().zextOrTrunc(SrcBitSize);
-
-    for (unsigned j = 0; j != NumOutputsPerInput; ++j) {
-      APInt ThisVal = OpVal.trunc(DstBitSize);
-      Ops.push_back(DAG.getConstant(ThisVal, DL, DstEltVT));
-      OpVal.lshrInPlace(DstBitSize);
-    }
-
-    // For big endian targets, swap the order of the pieces of each element.
-    if (DAG.getDataLayout().isBigEndian())
-      std::reverse(Ops.end()-NumOutputsPerInput, Ops.end());
+  for (unsigned I = 0, E = RawBits.size(); I != E; ++I) {
+    if (UndefElements[I])
+      Ops.push_back(DAG.getUNDEF(DstEltVT));
+    else
+      Ops.push_back(DAG.getConstant(RawBits[I], DL, DstEltVT));
   }
 
+  EVT VT = EVT::getVectorVT(*DAG.getContext(), DstEltVT, Ops.size());
   return DAG.getBuildVector(VT, DL, Ops);
 }
 
