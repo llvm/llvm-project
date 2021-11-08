@@ -6439,7 +6439,19 @@ static SDValue combineSelectAndUseCommutative(SDNode *N, SelectionDAG &DAG,
 
 // Transform (add (mul x, c0), c1) ->
 //           (add (mul (add x, c1/c0), c0), c1%c0).
-// if c1/c0 and c1%c0 are simm12, while c1 is not.
+// if c1/c0 and c1%c0 are simm12, while c1 is not. A special corner case
+// that should be excluded is when c0*(c1/c0) is simm12, which will lead
+// to an infinite loop in DAGCombine if transformed.
+// Or transform (add (mul x, c0), c1) ->
+//              (add (mul (add x, c1/c0+1), c0), c1%c0-c0),
+// if c1/c0+1 and c1%c0-c0 are simm12, while c1 is not. A special corner
+// case that should be excluded is when c0*(c1/c0+1) is simm12, which will
+// lead to an infinite loop in DAGCombine if transformed.
+// Or transform (add (mul x, c0), c1) ->
+//              (add (mul (add x, c1/c0-1), c0), c1%c0+c0),
+// if c1/c0-1 and c1%c0+c0 are simm12, while c1 is not. A special corner
+// case that should be excluded is when c0*(c1/c0-1) is simm12, which will
+// lead to an infinite loop in DAGCombine if transformed.
 // Or transform (add (mul x, c0), c1) ->
 //              (mul (add x, c1/c0), c0).
 // if c1%c0 is zero, and c1/c0 is simm12 while c1 is not.
@@ -6460,35 +6472,37 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   int64_t C0 = N0C->getSExtValue();
   int64_t C1 = N1C->getSExtValue();
-  if (C0 == -1 || C0 == 0 || C0 == 1 || (C1 / C0) == 0 || isInt<12>(C1) ||
-      !isInt<12>(C1 % C0) || !isInt<12>(C1 / C0))
+  int64_t CA, CB;
+  if (C0 == -1 || C0 == 0 || C0 == 1 || isInt<12>(C1))
     return SDValue();
-  // If C0 * (C1 / C0) is a 12-bit integer, this transform will be reversed.
-  if (isInt<12>(C0 * (C1 / C0)))
+  // Search for proper CA (non-zero) and CB that both are simm12.
+  if ((C1 / C0) != 0 && isInt<12>(C1 / C0) && isInt<12>(C1 % C0) &&
+      !isInt<12>(C0 * (C1 / C0))) {
+    CA = C1 / C0;
+    CB = C1 % C0;
+  } else if ((C1 / C0 + 1) != 0 && isInt<12>(C1 / C0 + 1) &&
+             isInt<12>(C1 % C0 - C0) && !isInt<12>(C0 * (C1 / C0 + 1))) {
+    CA = C1 / C0 + 1;
+    CB = C1 % C0 - C0;
+  } else if ((C1 / C0 - 1) != 0 && isInt<12>(C1 / C0 - 1) &&
+             isInt<12>(C1 % C0 + C0) && !isInt<12>(C0 * (C1 / C0 - 1))) {
+    CA = C1 / C0 - 1;
+    CB = C1 % C0 + C0;
+  } else
     return SDValue();
   // Build new nodes (add (mul (add x, c1/c0), c0), c1%c0).
   SDLoc DL(N);
   SDValue New0 = DAG.getNode(ISD::ADD, DL, VT, N0->getOperand(0),
-                             DAG.getConstant(C1 / C0, DL, VT));
+                             DAG.getConstant(CA, DL, VT));
   SDValue New1 =
       DAG.getNode(ISD::MUL, DL, VT, New0, DAG.getConstant(C0, DL, VT));
-  if ((C1 % C0) == 0)
-    return New1;
-  return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getConstant(C1 % C0, DL, VT));
+  return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getConstant(CB, DL, VT));
 }
 
 static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
-  // Transform (add (mul x, c0), c1) ->
-  //           (add (mul (add x, c1/c0), c0), c1%c0).
-  // if c1/c0 and c1%c0 are simm12, while c1 is not.
-  // Or transform (add (mul x, c0), c1) ->
-  //              (mul (add x, c1/c0), c0).
-  // if c1%c0 is zero, and c1/c0 is simm12 while c1 is not.
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;
-  // Fold (add (shl x, c0), (shl y, c1)) ->
-  //      (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
   if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
     return V;
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
