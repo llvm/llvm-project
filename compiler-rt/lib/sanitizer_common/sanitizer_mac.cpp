@@ -543,6 +543,9 @@ uptr TlsBaseAddr() {
   asm("movq %%gs:0,%0" : "=r"(segbase));
 #elif defined(__i386__)
   asm("movl %%gs:0,%0" : "=r"(segbase));
+#elif defined(__aarch64__)
+  asm("mrs %x0, tpidrro_el0" : "=r"(segbase));
+  segbase &= 0x07ul;  // clearing lower bits, cpu id stored there
 #endif
   return segbase;
 }
