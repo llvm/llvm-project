@@ -609,11 +609,25 @@ static void buildUnaryOpWithQuantInfo(OpBuilder &builder,
 
 /// This builder is called on TOSA pad operator that needs to create its own
 /// OptionalAttr quantization_attr parameter to scale the padding values
-/// correctly.
+/// correctly. No pad_const is interpreted as zero-padding.
 static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                                     Type outputType, Value input,
                                     Value paddings) {
   result.addOperands({input, paddings});
+  auto quantAttr = buildPadOpQuantizationAttr(builder, input);
+  if (quantAttr)
+    result.addAttribute("quantization_info", quantAttr);
+  result.types.push_back(outputType);
+}
+
+/// This builder is called on TOSA pad operator when an explicit pad_const
+/// value is passed in. It also optionally constructs quantization_attr.
+static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
+                                                 OperationState &result,
+                                                 Type outputType, Value input,
+                                                 Value paddings,
+                                                 Value pad_const) {
+  result.addOperands({input, paddings, pad_const});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);
