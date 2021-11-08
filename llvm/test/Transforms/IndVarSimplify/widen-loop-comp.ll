@@ -103,17 +103,17 @@ define void @test2([8 x i8]* %a, i8* %b, i8 %limit) {
 ; CHECK:       for.cond1.preheader.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.us:
-; CHECK-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ], [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC13_US:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[FOR_INC13_US:%.*]] ]
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY4_LR_PH_US:%.*]], label [[FOR_INC13_US]]
 ; CHECK:       for.inc13.us.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC13_US]]
 ; CHECK:       for.inc13.us:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nuw nsw i64 [[INDVARS_IV3]], 1
-; CHECK-NEXT:    [[EXITCOND6:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT4]], 4
-; CHECK-NEXT:    br i1 [[EXITCOND6]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_END_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
+; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], 4
+; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_END_LOOPEXIT1:%.*]]
 ; CHECK:       for.body4.us:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY4_LR_PH_US]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY4_US:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds [8 x i8], [8 x i8]* [[A:%.*]], i64 [[INDVARS_IV3]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds [8 x i8], [8 x i8]* [[A:%.*]], i64 [[INDVARS_IV2]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[ARRAYIDX6_US]], align 1
 ; CHECK-NEXT:    [[IDXPROM7_US:%.*]] = zext i8 [[TMP0]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr inbounds i8, i8* [[B:%.*]], i64 [[IDXPROM7_US]]
@@ -549,7 +549,6 @@ define i32 @test11(i32 %start, i32* %p, i32* %q) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
@@ -557,6 +556,7 @@ define i32 @test11(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
 ; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -599,11 +599,11 @@ define i32 @test12(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
 ; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -862,8 +862,8 @@ define i32 @test16_unsigned_pos1(i32 %start, i32* %p, i32* %q, i32 %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[GUARDED:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[ICMP_USER_WIDE5:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[ICMP_USER_WIDE5]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[ICMP_USER_WIDE4:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[ICMP_USER_WIDE4]], label [[BACKEDGE]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
@@ -1266,13 +1266,13 @@ define i32 @test17(i32* %p, i32 %len) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[ADDR]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], 0
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 -1 to i32
@@ -1312,9 +1312,10 @@ define void @test18() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[INDVARS2:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    call void @bar(i32 [[INDVARS2]])
+; CHECK-NEXT:    call void @bar(i32 [[IV_NEXT]])
 ; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
@@ -1411,10 +1412,11 @@ define void @test21(i32* %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[INDVARS:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    store i32 [[INDVARS]], i32* [[PTR]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ [[VAL_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[VAL_INC]] = add nuw nsw i32 [[VAL]], 1
+; CHECK-NEXT:    store i32 [[VAL_INC]], i32* [[PTR]], align 4
 ; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
