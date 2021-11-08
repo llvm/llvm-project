@@ -992,7 +992,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
                                std::shared_ptr<const PreambleData> Preamble,
                                std::vector<Diag> CIDiags,
                                WantDiagnostics WantDiags) {
-  std::string TaskName = llvm::formatv("Build AST for ({0})", PI.Version);
+  llvm::StringLiteral TaskName = "Build AST";
   // Store preamble and build diagnostics with new preamble if requested.
   auto Task = [this, Preamble = std::move(Preamble), CI = std::move(CI),
                PI = std::move(PI), CIDiags = std::move(CIDiags),
@@ -1032,7 +1032,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
   }
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-    PreambleRequests.push_back({std::move(Task), std::move(TaskName),
+    PreambleRequests.push_back({std::move(Task), std::string(TaskName),
                                 steady_clock::now(), Context::current().clone(),
                                 llvm::None, llvm::None,
                                 TUScheduler::NoInvalidation, nullptr});
