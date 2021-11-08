@@ -231,4 +231,57 @@ define arm_aapcs_vfpcc <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> 
   %r = select <2 x i1> %cond, <2 x i64> <i64 -1, i64 -1>, <2 x i64> %b
   ret <2 x i64> %r
 }
+define arm_aapcs_vfpcc <16 x i8> @not_signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: not_signbit_mask_v16i8:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.s8 gt, q0, q2
+; CHECK-NEXT:    vpsel q0, q1, q3
+; CHECK-NEXT:    bx lr
+  %cond = icmp sgt <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %r = select <16 x i1> %cond, <16 x i8> %b, <16 x i8> zeroinitializer
+  ret <16 x i8> %r
+}
 
+define arm_aapcs_vfpcc <8 x i16> @not_signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: not_signbit_mask_v8i16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.s16 gt, q0, q2
+; CHECK-NEXT:    vpsel q0, q1, q3
+; CHECK-NEXT:    bx lr
+  %cond = icmp sgt <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> zeroinitializer
+  ret <8 x i16> %r
+}
+
+define arm_aapcs_vfpcc <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: not_signbit_mask_v4i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i8 q2, #0xff
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.s32 gt, q0, q2
+; CHECK-NEXT:    vpsel q0, q1, q3
+; CHECK-NEXT:    bx lr
+  %cond = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %r = select <4 x i1> %cond, <4 x i32> %b, <4 x i32> zeroinitializer
+  ret <4 x i32> %r
+}
+
+define arm_aapcs_vfpcc <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: not_signbit_mask_v2i64:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    mvn.w r0, r0, asr #31
+; CHECK-NEXT:    mvn.w r1, r1, asr #31
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    vand q0, q1, q0
+; CHECK-NEXT:    bx lr
+  %cond = icmp sgt <2 x i64> %a, <i64 -1, i64 -1>
+  %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
+  ret <2 x i64> %r
+}
