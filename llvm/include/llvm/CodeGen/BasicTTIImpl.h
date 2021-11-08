@@ -283,6 +283,11 @@ public:
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }
 
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const {
+    return getTLI()->getTargetMachine().getPredicatedAddrSpace(V);
+  }
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const {
     return nullptr;

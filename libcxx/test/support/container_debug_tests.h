@@ -33,11 +33,6 @@
 #error This header may only be used in C++17 and greater
 #endif
 
-#ifndef __cpp_if_constexpr
-#error These tests require if constexpr
-#endif
-
-
 namespace IteratorDebugChecks {
 
 enum ContainerType {

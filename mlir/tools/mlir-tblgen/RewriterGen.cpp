@@ -20,6 +20,7 @@
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -40,6 +41,23 @@ using llvm::Record;
 using llvm::RecordKeeper;
 
 #define DEBUG_TYPE "mlir-tblgen-rewritergen"
+
+// The signature of static type verification function
+static const char *typeVerifierSignature =
+    "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+    "::mlir::Operation *op, ::mlir::Type typeOrAttr, "
+    "::llvm::StringRef failureStr)";
+
+// The signature of static attribute verification function
+static const char *attrVerifierSignature =
+    "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+    "::mlir::Operation *op, ::mlir::Attribute typeOrAttr, "
+    "::llvm::StringRef failureStr)";
+
+// The template of error handler in static type/attribute verification function
+static const char *verifierErrorHandler =
+    "rewriter.notifyMatchFailure(op, [&](::mlir::Diagnostic &diag) {\n  diag "
+    "<< failureStr <<  \": {0}\";\n});";
 
 namespace llvm {
 template <>
@@ -86,6 +104,10 @@ private:
 
   // Emit C++ function call to static DAG matcher.
   void emitStaticMatchCall(DagNode tree, StringRef name);
+
+  // Emit C++ function call to static type/attribute constraint function.
+  void emitStaticVerifierCall(StringRef funcName, StringRef opName,
+                              StringRef arg, StringRef failureStr);
 
   // Emits C++ statements for matching using a native code call.
   void emitNativeCodeMatch(DagNode tree, StringRef name, int depth);
@@ -244,7 +266,8 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(RecordOperatorMap &mapper);
+  StaticMatcherHelper(const RecordKeeper &recordKeeper,
+                      RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
   // function.
@@ -258,12 +281,18 @@ public:
     return matcherNames[node];
   }
 
+  // Get the name of static type/attribute verification function.
+  StringRef getVerifierName(Constraint constraint);
+
   // Collect the `Record`s, i.e., the DRR, so that we can get the information of
   // the duplicated DAGs.
   void addPattern(Record *record);
 
   // Emit all static functions of DAG Matcher.
   void populateStaticMatchers(raw_ostream &os);
+
+  // Emit all static functions for Constraints.
+  void populateStaticConstraintFunctions(raw_ostream &os);
 
 private:
   static constexpr unsigned kStaticMatcherThreshold = 1;
@@ -301,6 +330,12 @@ private:
   // Number of static matcher generated. This is used to generate a unique name
   // for each DagNode.
   int staticMatcherCounter = 0;
+
+  // The DagLeaf which contains type or attr constraint.
+  DenseSet<DagLeaf> constraints;
+
+  // Static type/attribute verification function emitter.
+  StaticVerifierFunctionEmitter staticVerifierEmitter;
 };
 
 } // end anonymous namespace
@@ -391,6 +426,15 @@ void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
   }
 
   os << "))) {\n";
+  os.scope().os << "return ::mlir::failure();\n";
+  os << "}\n";
+}
+
+void PatternEmitter::emitStaticVerifierCall(StringRef funcName,
+                                            StringRef opName, StringRef arg,
+                                            StringRef failureStr) {
+  os << formatv("if(failed({0}(rewriter, {1}, {2}, {3}))) {{\n", funcName,
+                opName, arg, failureStr);
   os.scope().os << "return ::mlir::failure();\n";
   os << "}\n";
 }
@@ -487,14 +531,15 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       self = argName;
     else
       self = formatv("{0}.getType()", argName);
-    emitMatchCheck(
-        opName,
-        tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
+    StringRef verifier = staticMatcherHelper.getVerifierName(constraint);
+    emitStaticVerifierCall(
+        verifier, opName, self,
         formatv("\"operand {0} of native code call '{1}' failed to satisfy "
                 "constraint: "
                 "'{2}'\"",
                 i, tree.getNativeCodeTemplate(),
-                escapeString(constraint.getSummary())));
+                escapeString(constraint.getSummary()))
+            .str());
   }
 
   LLVM_DEBUG(llvm::dbgs() << "done emitting match for native code call\n");
@@ -626,13 +671,14 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
       }
       auto self = formatv("(*{0}.getODSOperands({1}).begin()).getType()",
                           opName, operandIndex);
-      emitMatchCheck(
-          opName,
-          tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
-          formatv("\"operand {0} of op '{1}' failed to satisfy constraint: "
-                  "'{2}'\"",
-                  operand - op.operand_begin(), op.getOperationName(),
-                  escapeString(constraint.getSummary())));
+      StringRef verifier = staticMatcherHelper.getVerifierName(constraint);
+      emitStaticVerifierCall(
+          verifier, opName, self.str(),
+          formatv(
+              "\"operand {0} of op '{1}' failed to satisfy constraint: '{2}'\"",
+              operandIndex, op.getOperationName(),
+              escapeString(constraint.getSummary()))
+              .str());
     }
   }
 
@@ -690,15 +736,17 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
                        op.getOperationName(), argIndex + 1));
     }
 
-    // If a constraint is specified, we need to generate C++ statements to
-    // check the constraint.
-    emitMatchCheck(
-        opName,
-        tgfmt(matcher.getConditionTemplate(), &fmtCtx.withSelf("tblgen_attr")),
+    // If a constraint is specified, we need to generate function call to its
+    // static verifier.
+    StringRef verifier =
+        staticMatcherHelper.getVerifierName(matcher.getAsConstraint());
+    emitStaticVerifierCall(
+        verifier, opName, "tblgen_attr",
         formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
                 "'{2}'\"",
                 op.getOperationName(), namedAttr->name,
-                escapeString(matcher.getAsConstraint().getSummary())));
+                escapeString(matcher.getAsConstraint().getSummary()))
+            .str());
   }
 
   // Capture the value
@@ -1571,8 +1619,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   }
 }
 
-StaticMatcherHelper::StaticMatcherHelper(RecordOperatorMap &mapper)
-    : opMap(mapper) {}
+StaticMatcherHelper::StaticMatcherHelper(const RecordKeeper &recordKeeper,
+                                         RecordOperatorMap &mapper)
+    : opMap(mapper), staticVerifierEmitter(recordKeeper) {}
 
 void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   // PatternEmitter will use the static matcher if there's one generated. To
@@ -1592,6 +1641,31 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   }
 }
 
+void StaticMatcherHelper::populateStaticConstraintFunctions(raw_ostream &os) {
+  llvm::SetVector<const void *> typeConstraints;
+  llvm::SetVector<const void *> attrConstraints;
+  for (DagLeaf leaf : constraints) {
+    if (leaf.isOperandMatcher()) {
+      typeConstraints.insert(leaf.getAsConstraint().getAsOpaquePointer());
+    } else {
+      assert(leaf.isAttrMatcher());
+      attrConstraints.insert(leaf.getAsConstraint().getAsOpaquePointer());
+    }
+  }
+
+  staticVerifierEmitter.setBuilder("rewriter").setSelf("typeOrAttr");
+
+  staticVerifierEmitter.emitConstraintMethods(typeVerifierSignature,
+                                              verifierErrorHandler,
+                                              typeConstraints.getArrayRef(), os,
+                                              /*emitDecl=*/false);
+
+  staticVerifierEmitter.emitConstraintMethods(attrVerifierSignature,
+                                              verifierErrorHandler,
+                                              attrConstraints.getArrayRef(), os,
+                                              /*emitDecl=*/false);
+}
+
 void StaticMatcherHelper::addPattern(Record *record) {
   Pattern pat(record, &opMap);
 
@@ -1608,11 +1682,20 @@ void StaticMatcherHelper::addPattern(Record *record) {
     for (unsigned i = 0, e = node.getNumArgs(); i < e; ++i)
       if (DagNode sibling = node.getArgAsNestedDag(i))
         dfs(sibling);
+      else {
+        DagLeaf leaf = node.getArgAsLeaf(i);
+        if (!leaf.isUnspecified())
+          constraints.insert(leaf);
+      }
 
     topologicalOrder.push_back(std::make_pair(node, record));
   };
 
   dfs(pat.getSourcePattern());
+}
+
+StringRef StaticMatcherHelper::getVerifierName(Constraint constraint) {
+  return staticVerifierEmitter.getConstraintFn(constraint);
 }
 
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
@@ -1625,9 +1708,10 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
-  StaticMatcherHelper staticMatcher(recordOpMap);
+  StaticMatcherHelper staticMatcher(recordKeeper, recordOpMap);
   for (Record *p : patterns)
     staticMatcher.addPattern(p);
+  staticMatcher.populateStaticConstraintFunctions(os);
   staticMatcher.populateStaticMatchers(os);
 
   std::vector<std::string> rewriterNames;

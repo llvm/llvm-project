@@ -5,7 +5,7 @@ target triple = "armv6kz-unknown-unknown-gnueabihf"
 ; Unfortunately, this test is sort of fragile... the original issue only
 ; shows up if scheduling happens in a very specific order. But including
 ; it anyway just to demonstrate the issue.
-; CHECK: pop {r4, lr}
+; CHECK: pop {r{{[0-9]+}}, lr}
 
 @e = external local_unnamed_addr constant [0 x i32 (i32, i32)*], align 4
 

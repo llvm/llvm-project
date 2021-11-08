@@ -15,6 +15,7 @@
 
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/Dialect.h"
+#include "mlir/TableGen/Format.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -91,8 +92,7 @@ private:
 ///
 class StaticVerifierFunctionEmitter {
 public:
-  StaticVerifierFunctionEmitter(const llvm::RecordKeeper &records,
-                                raw_ostream &os);
+  StaticVerifierFunctionEmitter(const llvm::RecordKeeper &records);
 
   /// Emit the static verifier functions for `llvm::Record`s. The
   /// `signatureFormat` describes the required arguments and it must have a
@@ -112,30 +112,40 @@ public:
   ///
   /// `typeArgName` is used to identify the argument that needs to check its
   /// type. The constraint template will replace `$_self` with it.
-  void emitFunctionsFor(StringRef signatureFormat, StringRef errorHandlerFormat,
-                        StringRef typeArgName, ArrayRef<llvm::Record *> opDefs,
-                        bool emitDecl);
+
+  /// This is the helper to generate the constraint functions from op
+  /// definitions.
+  void emitConstraintMethodsInNamespace(StringRef signatureFormat,
+                                        StringRef errorHandlerFormat,
+                                        StringRef cppNamespace,
+                                        ArrayRef<const void *> constraints,
+                                        raw_ostream &rawOs, bool emitDecl);
+
+  /// Emit the static functions for the giving type constraints.
+  void emitConstraintMethods(StringRef signatureFormat,
+                             StringRef errorHandlerFormat,
+                             ArrayRef<const void *> constraints,
+                             raw_ostream &rawOs, bool emitDecl);
 
   /// Get the name of the local function used for the given type constraint.
   /// These functions are used for operand and result constraints and have the
   /// form:
   ///   LogicalResult(Operation *op, Type type, StringRef valueKind,
   ///                 unsigned valueGroupStartIndex);
-  StringRef getTypeConstraintFn(const Constraint &constraint) const;
+  StringRef getConstraintFn(const Constraint &constraint) const;
+
+  /// The setter to set `self` in format context.
+  StaticVerifierFunctionEmitter &setSelf(StringRef str);
+
+  /// The setter to set `builder` in format context.
+  StaticVerifierFunctionEmitter &setBuilder(StringRef str);
 
 private:
   /// Returns a unique name to use when generating local methods.
   static std::string getUniqueName(const llvm::RecordKeeper &records);
 
-  /// Emit local methods for the type constraints used within the provided op
-  /// definitions.
-  void emitTypeConstraintMethods(StringRef signatureFormat,
-                                 StringRef errorHandlerFormat,
-                                 StringRef typeArgName,
-                                 ArrayRef<llvm::Record *> opDefs,
-                                 bool emitDecl);
-
-  raw_indented_ostream os;
+  /// The format context used for building the verifier function.
+  FmtContext fctx;
 
   /// A unique label for the file currently being generated. This is used to
   /// ensure that the local functions have a unique name.
