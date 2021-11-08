@@ -35,8 +35,7 @@ define i1 @bar(i32 %t4, i32 %t10) {
 ; CHECK-NEXT:    [[T14:%.*]] = zext i1 [[T12]] to i8
 ; CHECK-NEXT:    [[T15:%.*]] = shl i8 [[T11]], [[T14]]
 ; CHECK-NEXT:    [[T17:%.*]] = zext i8 [[T15]] to i32
-; CHECK-NEXT:    [[T18:%.*]] = icmp eq i32 [[T011]], [[T17]]
-; CHECK-NEXT:    ret i1 [[T18]]
+; CHECK-NEXT:    ret i1 false
 ;
   %t09 = shl i32 %t10, 24
   %t010 = ashr exact i32 %t09, 24
@@ -62,8 +61,7 @@ define i1 @foobar(i32 %t4, i32 %t10) {
 ; CHECK-NEXT:    [[T15:%.*]] = shl nuw nsw i32 [[T13]], [[T14]]
 ; CHECK-NEXT:    [[T16:%.*]] = trunc i32 [[T15]] to i8
 ; CHECK-NEXT:    [[T17:%.*]] = zext i8 [[T16]] to i32
-; CHECK-NEXT:    [[T18:%.*]] = icmp eq i32 [[T011]], [[T17]]
-; CHECK-NEXT:    ret i1 [[T18]]
+; CHECK-NEXT:    ret i1 false
 ;
   %t09 = shl i32 %t10, 24
   %t010 = ashr exact i32 %t09, 24

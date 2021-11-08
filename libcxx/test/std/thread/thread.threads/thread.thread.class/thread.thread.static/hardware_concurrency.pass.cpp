@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <thread>
 

@@ -318,8 +318,8 @@ entry:
 
 define internal i64 @f.sext_to_zext(i32 %t) {
 ; CHECK-LABEL: @f.sext_to_zext(
-; CHECK-NEXT:    [[A:%.*]] = sext i32 [[T:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[T:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %a = sext i32 %t to i64
   ret i64 %a

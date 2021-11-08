@@ -12066,6 +12066,18 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 }
 
 static ScalableVectorType *getSVEContainerIRType(FixedVectorType *VTy) {
+  if (VTy->getElementType() == Type::getDoubleTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 2);
+
+  if (VTy->getElementType() == Type::getFloatTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 4);
+
+  if (VTy->getElementType() == Type::getBFloatTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 8);
+
+  if (VTy->getElementType() == Type::getHalfTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 8);
+
   if (VTy->getElementType() == Type::getInt64Ty(VTy->getContext()))
     return ScalableVectorType::get(VTy->getElementType(), 2);
 

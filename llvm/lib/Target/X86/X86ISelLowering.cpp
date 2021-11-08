@@ -44466,8 +44466,8 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
        N1.getOperand(0).getScalarValueSizeInBits() <= 8))
     return SDValue();
 
-  // Sign bits must extend through the upper 17 bits.
-  if (DAG.ComputeNumSignBits(N1) < 17 || DAG.ComputeNumSignBits(N0) < 17)
+  // Sign bits must extend down to the lowest i16.
+  if (DAG.ComputeMinSignedBits(N1) > 16 || DAG.ComputeMinSignedBits(N0) > 16)
     return SDValue();
 
   // At least one of the elements must be zero in the upper 17 bits, or can be
