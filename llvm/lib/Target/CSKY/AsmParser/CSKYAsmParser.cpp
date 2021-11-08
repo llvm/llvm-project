@@ -755,6 +755,10 @@ bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = ((CSKYOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "register is out of range");
   }
+  case Match_InvalidSPOperand: {
+    SMLoc ErrorLoc = ((CSKYOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be sp register");
+  }
   case Match_RequiresSameSrcAndDst: {
     SMLoc ErrorLoc = ((CSKYOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "src and dst operand must be same");
