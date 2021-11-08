@@ -34,4 +34,4 @@ translating the following operations:
     *   `scf.if`
     *   `scf.yield`
 *   'arith' Dialect
-    *   'arith.constant'
+    *   `arith.constant`
