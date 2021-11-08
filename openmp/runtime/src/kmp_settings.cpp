@@ -1753,17 +1753,9 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
       }
     }
   }
-  if ((dist_req == 0) && (non_dist_req != 0)) {
-    // Something was set to a barrier other than dist; set all others to hyper
-    for (int i = bs_plain_barrier; i < bs_last_barrier; i++) {
-      if (__kmp_barrier_release_pattern[i] == bp_dist_bar)
-        __kmp_barrier_release_pattern[i] = bp_hyper_bar;
-      if (__kmp_barrier_gather_pattern[i] == bp_dist_bar)
-        __kmp_barrier_gather_pattern[i] = bp_hyper_bar;
-    }
-  } else if (non_dist_req != 0) {
-    // some requests for dist, plus requests for others; set all to dist
-    if (non_dist_req > 0 && dist_req > 0 && warn) {
+  if (dist_req != 0) {
+    // set all barriers to dist
+    if ((non_dist_req != 0) && warn) {
       KMP_INFORM(BarrierPatternOverride, name,
                  __kmp_barrier_pattern_name[bp_dist_bar]);
       warn = 0;
