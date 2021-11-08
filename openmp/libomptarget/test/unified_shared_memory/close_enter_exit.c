@@ -3,7 +3,7 @@
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 
-// Fails on amdgcn with error: GPU Memory Error
+// Fails on amdgpu with error: GPU Memory Error
 // XFAIL: amdgcn-amd-amdhsa
 // XFAIL: amdgcn-amd-amdhsa-newRTL
 
