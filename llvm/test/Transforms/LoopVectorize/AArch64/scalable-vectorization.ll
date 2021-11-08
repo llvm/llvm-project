@@ -10,7 +10,7 @@
 define void @test0(i32* %a, i8* %b, i32* %c) #0 {
 ; CHECK: LV: Checking a loop in "test0"
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
-; CHECK_SCALABLE_ON: LV: Selecting VF: 4
+; CHECK_SCALABLE_ON: LV: Selecting VF: vscale x 4
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: vscale x 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
@@ -43,7 +43,7 @@ exit:
 define void @test1(i32* %a, i8* %b) #0 {
 ; CHECK: LV: Checking a loop in "test1"
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
-; CHECK_SCALABLE_ON: LV: Selecting VF: 4
+; CHECK_SCALABLE_ON: LV: Selecting VF: vscale x 4
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: vscale x 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
@@ -79,7 +79,7 @@ define void @test2(i32* %a, i8* %b) #0 {
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 2
 ; CHECK_SCALABLE_ON: LV: Selecting VF: 4
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 2
-; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: 4
+; CHECK_SCALABLE_PREFERRED: LV: Selecting VF: vscale x 2
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 4
 ; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 2
