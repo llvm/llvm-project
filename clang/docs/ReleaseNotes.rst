@@ -220,6 +220,13 @@ AST Matchers
   matcher or the ``hasReturnTypeLoc`` matcher. The addition of these matchers
   was made possible by changes to the handling of ``TypeLoc`` nodes that
   allows them to enjoy the same static type checking as other AST node kinds.
+- ``LambdaCapture`` AST Matchers are now available. These matchers allow for
+  the binding of ``LambdaCapture`` nodes. The ``LambdaCapture`` matchers added
+  include the ``lambdaCapture`` node matcher, the ``capturesVar`` traversal
+  matcher, and ``capturesThis`` narrowing matcher.
+- The ``hasAnyCapture`` matcher now only accepts an inner matcher of type
+  ``Matcher<LambdaCapture>``. The matcher originally accepted an inner matcher
+  of type ``Matcher<CXXThisExpr>`` or ``Matcher<VarDecl>``.
 
 clang-format
 ------------

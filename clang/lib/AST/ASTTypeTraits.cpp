@@ -26,6 +26,7 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "<None>"},
     {NKI_None, "TemplateArgument"},
     {NKI_None, "TemplateArgumentLoc"},
+    {NKI_None, "LambdaCapture"},
     {NKI_None, "TemplateName"},
     {NKI_None, "NestedNameSpecifierLoc"},
     {NKI_None, "QualType"},

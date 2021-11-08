@@ -563,26 +563,6 @@ TEST(Matcher, HasReceiver) {
       objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))));
 }
 
-TEST(Matcher, HasAnyCapture) {
-  auto HasCaptureX = lambdaExpr(hasAnyCapture(varDecl(hasName("x"))));
-  EXPECT_TRUE(matches("void f() { int x = 3; [x](){}; }", HasCaptureX));
-  EXPECT_TRUE(matches("void f() { int x = 3; [&x](){}; }", HasCaptureX));
-  EXPECT_TRUE(notMatches("void f() { [](){}; }", HasCaptureX));
-  EXPECT_TRUE(notMatches("void f() { int z = 3; [&z](){}; }", HasCaptureX));
-  EXPECT_TRUE(
-      notMatches("struct a { void f() { [this](){}; }; };", HasCaptureX));
-}
-
-TEST(Matcher, CapturesThis) {
-  auto HasCaptureThis = lambdaExpr(hasAnyCapture(cxxThisExpr()));
-  EXPECT_TRUE(
-      matches("struct a { void f() { [this](){}; }; };", HasCaptureThis));
-  EXPECT_TRUE(notMatches("void f() { [](){}; }", HasCaptureThis));
-  EXPECT_TRUE(notMatches("void f() { int x = 3; [x](){}; }", HasCaptureThis));
-  EXPECT_TRUE(notMatches("void f() { int x = 3; [&x](){}; }", HasCaptureThis));
-  EXPECT_TRUE(notMatches("void f() { int z = 3; [&z](){}; }", HasCaptureThis));
-}
-
 TEST(Matcher, MatchesMethodsOnLambda) {
   StringRef Code = R"cpp(
 struct A {
