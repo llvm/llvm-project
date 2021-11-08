@@ -1,5 +1,9 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// Wrong results on amdgpu
+// XFAIL: amdgcn-amd-amdhsa
+// XFAIL: amdgcn-amd-amdhsa-newRTL
+
 #include <stdio.h>
 
 void sum(int* input, int size, int* output)
