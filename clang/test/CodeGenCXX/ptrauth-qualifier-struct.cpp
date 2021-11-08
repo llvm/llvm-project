@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -std=c++11 -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -disable-noundef-analysis -std=c++11 -emit-llvm %s  -o - | FileCheck %s
 
 #define AQ __ptrauth(1,1,50)
 #define IQ __ptrauth(1,0,50)
