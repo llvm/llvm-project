@@ -396,6 +396,14 @@ func @test_pad(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3x2xi32>) -> tensor<13x
 }
 
 // -----
+// CHECK-LABEL: pad_explicit_value
+func @test_pad_explicit_value(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3x2xi32>) -> tensor<13x21x3xf32> {
+  %0 = "tosa.const"() {value = dense<3.14> : tensor<f32>} : () -> tensor<f32>
+  %1 = "tosa.pad"(%arg0, %arg1, %0) : (tensor<13x21x3xf32>, tensor<3x2xi32>, tensor<f32>) -> tensor<13x21x3xf32>
+  return %1 : tensor<13x21x3xf32>
+}
+
+// -----
 // CHECK-LABEL: reshape
 func @test_reshape(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
   %0 = "tosa.reshape"(%arg0) {new_shape = [1, 819]} : (tensor<13x21x3xf32>) -> tensor<1x819xf32>
