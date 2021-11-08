@@ -233,7 +233,7 @@ func @double_tiling(%arg0: tensor<24x12xf32>,
       %4 = tensor.extract_slice %arg6[%arg3, %arg5] [%2, %3] [1, 1] : tensor<24x25xf32> to tensor<?x?xf32>
 
       // Packing the second input operand.
-      //    CHECK-DOUBLE:  = linalg.init_tensor [%{{.*}}, 12, 6]
+      //    CHECK-DOUBLE:  = linalg.init_tensor [3, 12, 6]
       //    CHECK-DOUBLE:  %[[PT1:.*]] = scf.for %[[PIV1:[0-9a-z]+]] =
       //      CHECK-DOUBLE:   %[[PIDX1:.*]] = affine.apply #[[DIV6]](%[[PIV1]])
       //      CHECK-DOUBLE:   %[[T3:.*]] = tensor.extract_slice %[[ARG1]]
