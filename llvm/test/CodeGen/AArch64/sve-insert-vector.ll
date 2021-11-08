@@ -424,14 +424,7 @@ define <vscale x 3 x i32> @insert_nxv3i32_nxv2i32_2(<vscale x 3 x i32> %sv0, <vs
 define <vscale x 3 x float> @insert_nxv3f32_nxv2f32(<vscale x 2 x float> %sv0) nounwind {
 ; CHECK-LABEL: insert_nxv3f32_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [sp]
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 3 x float> @llvm.experimental.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float> undef, <vscale x 2 x float> %sv0, i64 0)
  ret <vscale x 3 x float> %v0
