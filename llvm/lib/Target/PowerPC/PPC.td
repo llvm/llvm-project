@@ -187,6 +187,22 @@ def FeatureAddisLoadFusion : SubtargetFeature<"fuse-addis-load",
 def FeatureStoreFusion : SubtargetFeature<"fuse-store", "HasStoreFusion", "true",
                                           "Target supports store clustering",
                                           [FeatureFusion]>;
+def FeatureArithAddFusion :
+  SubtargetFeature<"fuse-arith-add", "HasArithAddFusion", "true",
+                   "Target supports Arithmetic Operations with Add fusion",
+                   [FeatureFusion]>;
+def FeatureAddLogicalFusion :
+  SubtargetFeature<"fuse-add-logical", "HasAddLogicalFusion", "true",
+                   "Target supports Add with Logical Operations fusion",
+                   [FeatureFusion]>;
+def FeatureLogicalAddFusion :
+  SubtargetFeature<"fuse-logical-add", "HasLogicalAddFusion", "true",
+                   "Target supports Logical with Add Operations fusion",
+                   [FeatureFusion]>;
+def FeatureLogicalFusion :
+  SubtargetFeature<"fuse-logical", "HasLogicalFusion", "true",
+                   "Target supports Logical Operations fusion",
+                   [FeatureFusion]>;
 def FeatureUnalignedFloats :
   SubtargetFeature<"allow-unaligned-fp-access", "AllowsUnalignedFPAccess",
                    "true", "CPU does not trap on unaligned FP access">;
@@ -375,7 +391,10 @@ def ProcessorFeatures {
   // Power10
   // For P10 CPU we assume that all of the existing features from Power9
   // still exist with the exception of those we know are Power9 specific.
-  list<SubtargetFeature> FusionFeatures = [FeatureStoreFusion];
+  list<SubtargetFeature> FusionFeatures = [
+    FeatureStoreFusion, FeatureAddLogicalFusion, FeatureLogicalAddFusion,
+    FeatureLogicalFusion, FeatureArithAddFusion
+  ];
   list<SubtargetFeature> P10AdditionalFeatures =
     !listconcat(FusionFeatures, [
        DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
