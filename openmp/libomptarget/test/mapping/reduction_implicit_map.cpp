@@ -1,8 +1,8 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-// Wrong results on amdgpu
-// XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-newRTL
+// amdgcn does not have printf definition
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
 
 #include <stdio.h>
 
