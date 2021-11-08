@@ -206,6 +206,34 @@ public:
             mlir::ConversionPatternRewriter &rewriter) const = 0;
 };
 
+/// Create value signaling an absent optional argument in a call, e.g.
+/// `fir.absent !fir.ref<i64>` -->  `llvm.mlir.null : !llvm.ptr<i64>`
+struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::AbsentOp absent, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type ty = convertType(absent.getType());
+    mlir::Location loc = absent.getLoc();
+
+    if (absent.getType().isa<fir::BoxCharType>()) {
+      auto structTy = ty.cast<mlir::LLVM::LLVMStructType>();
+      assert(!structTy.isOpaque() && !structTy.getBody().empty());
+      auto undefStruct = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+      auto nullField =
+          rewriter.create<mlir::LLVM::NullOp>(loc, structTy.getBody()[0]);
+      mlir::MLIRContext *ctx = absent.getContext();
+      auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+          absent, ty, undefStruct, nullField, c0);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(absent, ty);
+    }
+    return success();
+  }
+};
+
 // Lower `fir.address_of` operation to `llvm.address_of` operation.
 struct AddrOfOpConversion : public FIROpConversion<fir::AddrOfOp> {
   using FIROpConversion::FIROpConversion;
@@ -1326,6 +1354,40 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
   }
 };
 
+/// `fir.is_present` -->
+/// ```
+///  %0 = llvm.mlir.constant(0 : i64)
+///  %1 = llvm.ptrtoint %0
+///  %2 = llvm.icmp "ne" %1, %0 : i64
+/// ```
+struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IsPresentOp isPresent, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Type idxTy = lowerTy().indexType();
+    mlir::Location loc = isPresent.getLoc();
+    auto ptr = adaptor.getOperands()[0];
+
+    if (isPresent.val().getType().isa<fir::BoxCharType>()) {
+      auto structTy = ptr.getType().cast<mlir::LLVM::LLVMStructType>();
+      assert(!structTy.isOpaque() && !structTy.getBody().empty());
+
+      mlir::Type ty = structTy.getBody()[0];
+      mlir::MLIRContext *ctx = isPresent.getContext();
+      auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+      ptr = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, ptr, c0);
+    }
+    mlir::LLVM::ConstantOp c0 =
+        genConstantIndex(isPresent.getLoc(), idxTy, rewriter, 0);
+    auto addr = rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, ptr);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        isPresent, mlir::LLVM::ICmpPredicate::ne, addr, c0);
+
+    return success();
+  }
+};
 } // namespace
 
 namespace {
@@ -1349,17 +1411,18 @@ public:
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<
-        AddcOpConversion, AddrOfOpConversion, AllocaOpConversion,
-        BoxAddrOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
-        BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-        BoxRankOpConversion, CallOpConversion, ConvertOpConversion,
-        DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
-        DivcOpConversion, ExtractValueOpConversion, HasValueOpConversion,
-        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
-        LoadOpConversion, NegcOpConversion, MulcOpConversion,
-        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-        StoreOpConversion, SubcOpConversion, UndefOpConversion,
-        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+        AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
+        AllocaOpConversion, BoxAddrOpConversion, BoxDimsOpConversion,
+        BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
+        BoxIsPtrOpConversion, BoxRankOpConversion, CallOpConversion,
+        ConvertOpConversion, DispatchOpConversion, DispatchTableOpConversion,
+        DTEntryOpConversion, DivcOpConversion, ExtractValueOpConversion,
+        HasValueOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
+        InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
+        NegcOpConversion, MulcOpConversion, SelectCaseOpConversion,
+        SelectOpConversion, SelectRankOpConversion, StoreOpConversion,
+        SubcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
