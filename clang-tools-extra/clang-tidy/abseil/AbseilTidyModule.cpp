@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "CleanupCtadCheck.h"
 #include "DurationAdditionCheck.h"
 #include "DurationComparisonCheck.h"
 #include "DurationConversionCastCheck.h"
@@ -35,6 +36,7 @@ namespace abseil {
 class AbseilModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<CleanupCtadCheck>("abseil-cleanup-ctad");
     CheckFactories.registerCheck<DurationAdditionCheck>(
         "abseil-duration-addition");
     CheckFactories.registerCheck<DurationComparisonCheck>(
