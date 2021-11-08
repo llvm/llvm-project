@@ -164,18 +164,16 @@ func @dot(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<f32>)
   //      CHECK: scf.for %[[I:[0-9a-z]+]] =
   //
   //      CHECK:   %[[MR8:.*]] = affine.min #[[$MIN_REST8]](%[[I]])
-  //      CHECK:   %[[D0:.*]] = affine.apply #[[$DIV4]](%[[MR8]])
   // Init tensor and pack.
-  //      CHECK:   %[[INIT_PACKED_A:.*]] = linalg.init_tensor [%[[D0]], 2, 2] : tensor<?x2x2xf32>
-  //      CHECK:   %[[CAST_INIT_PACKED_A:.*]] = tensor.cast %[[INIT_PACKED_A]] : tensor<?x2x2xf32> to tensor<?x?x2xf32>
+  //      CHECK:   %[[INIT_PACKED_A:.*]] = linalg.init_tensor [2, 2, 2] : tensor<2x2x2xf32>
+  //      CHECK:   %[[CAST_INIT_PACKED_A:.*]] = tensor.cast %[[INIT_PACKED_A]] : tensor<2x2x2xf32> to tensor<?x?x2xf32>
   //      CHECK:   %[[PACKED_A:.*]] = scf.for %[[II:[0-9a-z]+]] = {{.*}} iter_args(%{{.*}} = %[[CAST_INIT_PACKED_A]]) -> (tensor<?x?x2xf32>) {
   //      CHECK:     scf.for %[[III:[0-9a-z]+]] =
   //      CHECK:       tensor.insert_slice %{{.*}} into %{{.*}}[%{{.*}}, %{{.*}}, 0] [1, 1, 2] [1, 1, 1] : tensor<2xf32> into tensor<?x?x2xf32>
   //
-  //      CHECK:   %[[D0_2:.*]] = affine.apply #[[$DIV4]](%[[MR8]])
   // Init tensor and pack.
-  //      CHECK:   %[[INIT_PACKED_B:.*]] = linalg.init_tensor [%[[D0_2]], 2, 2] : tensor<?x2x2xf32>
-  //      CHECK:   %[[CAST_INIT_PACKED_B:.*]] = tensor.cast %[[INIT_PACKED_B]] : tensor<?x2x2xf32> to tensor<?x?x2xf32>
+  //      CHECK:   %[[INIT_PACKED_B:.*]] = linalg.init_tensor [2, 2, 2] : tensor<2x2x2xf32>
+  //      CHECK:   %[[CAST_INIT_PACKED_B:.*]] = tensor.cast %[[INIT_PACKED_B]] : tensor<2x2x2xf32> to tensor<?x?x2xf32>
   //      CHECK:   %[[PACKED_B:.*]] = scf.for %[[II_2:[0-9a-z]+]] = {{.*}} iter_args(%{{.*}} = %[[CAST_INIT_PACKED_B]]) -> (tensor<?x?x2xf32>) {
   //      CHECK:     scf.for %[[III_2:[0-9a-z]+]] =
   //      CHECK:       tensor.insert_slice %{{.*}} into %{{.*}}[%{{.*}}, %{{.*}}, 0] [1, 1, 2] [1, 1, 1] : tensor<2xf32> into tensor<?x?x2xf32>
