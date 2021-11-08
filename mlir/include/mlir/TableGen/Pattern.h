@@ -186,6 +186,9 @@ public:
   // Returns true if this DAG node is wrapping native code call.
   bool isNativeCodeCall() const;
 
+  // Returns whether this DAG is an `either` specifier.
+  bool isEither() const;
+
   // Returns true if this DAG node is an operation.
   bool isOperation() const;
 
