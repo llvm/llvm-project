@@ -8,6 +8,7 @@
 
 // XFAIL: suse-linux-enterprise-server-11
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <system_error>
 
