@@ -30,17 +30,17 @@ int foo(int x, int y, int z) {
   int a = bar(x, y) +
           baz(x, z) +
           qux(y, z);
-  // NONEST: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[LOC:[0-9]+]]
-  // NONEST: call noundef i32 @{{.*}}baz{{.*}}, !dbg ![[LOC]]
-  // NONEST: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[LOC]]
+  // NONEST: call i32 @{{.*}}bar{{.*}}, !dbg ![[LOC:[0-9]+]]
+  // NONEST: call i32 @{{.*}}baz{{.*}}, !dbg ![[LOC]]
+  // NONEST: call i32 @{{.*}}qux{{.*}}, !dbg ![[LOC]]
   // NONEST: store i32 {{.*}}, i32* %a,{{.*}} !dbg ![[LOC]]
-  // NESTED: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[BAR:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}baz{{.*}}, !dbg ![[BAZ:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[QUX:[0-9]+]]
+  // NESTED: call i32 @{{.*}}bar{{.*}}, !dbg ![[BAR:[0-9]+]]
+  // NESTED: call i32 @{{.*}}baz{{.*}}, !dbg ![[BAZ:[0-9]+]]
+  // NESTED: call i32 @{{.*}}qux{{.*}}, !dbg ![[QUX:[0-9]+]]
   // NESTED: store i32 {{.*}}, i32* %a,{{.*}} !dbg ![[BAR]]
-  // COLUMNS: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[BAR:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}baz{{.*}}, !dbg ![[BAZ:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[QUX:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}bar{{.*}}, !dbg ![[BAR:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}baz{{.*}}, !dbg ![[BAZ:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}qux{{.*}}, !dbg ![[QUX:[0-9]+]]
   // COLUMNS: store i32 {{.*}}, i32* %a,{{.*}} !dbg ![[DECLA:[0-9]+]]
 
   int i = 1, b = 0, c = 0;
@@ -58,23 +58,23 @@ int foo(int x, int y, int z) {
     b = bar(a, b);
     --i;
   }
-  // NONEST: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
+  // NONEST: call i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
   // NONEST: store i32 %{{[^,]+}}, i32* %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
+  // NESTED: call i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
   // NESTED: store i32 %{{[^,]+}}, i32* %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
   // COLUMNS: store i32 %{{[^,]+}}, i32* %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
 
   for (i = 0; i < 1; i++) {
     b = bar(a, b);
     c = qux(a, c);
   }
-  // NONEST: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[FOR1:[0-9]+]]
-  // NONEST: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[FOR2:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[FOR1:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[FOR2:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[FOR1:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[FOR2:[0-9]+]]
+  // NONEST: call i32 @{{.*}}bar{{.*}}, !dbg ![[FOR1:[0-9]+]]
+  // NONEST: call i32 @{{.*}}qux{{.*}}, !dbg ![[FOR2:[0-9]+]]
+  // NESTED: call i32 @{{.*}}bar{{.*}}, !dbg ![[FOR1:[0-9]+]]
+  // NESTED: call i32 @{{.*}}qux{{.*}}, !dbg ![[FOR2:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}bar{{.*}}, !dbg ![[FOR1:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}qux{{.*}}, !dbg ![[FOR2:[0-9]+]]
 
   if (a < b) {
     int t = a;
@@ -93,51 +93,51 @@ int foo(int x, int y, int z) {
 
   int d = onearg(
       noargs());
-  // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DECLD:[0-9]+]]
-  // NONEST: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DECLD]]
+  // NONEST: call i32 @{{.*}}noargs{{.*}}, !dbg ![[DECLD:[0-9]+]]
+  // NONEST: call i32 @{{.*}}onearg{{.*}}, !dbg ![[DECLD]]
   // NONEST: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[DECLD]]
-  // NESTED: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DECLD:[0-9]+]]
+  // NESTED: call i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
+  // NESTED: call i32 @{{.*}}onearg{{.*}}, !dbg ![[DECLD:[0-9]+]]
   // NESTED: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[DECLD]]
-  // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DONEARG:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}onearg{{.*}}, !dbg ![[DONEARG:[0-9]+]]
   // COLUMNS: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[DECLD:[0-9]+]]
   
   d = onearg(noargs());
-  // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
-  // NONEST: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]
+  // NONEST: call i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
+  // NONEST: call i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]
   // NONEST: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[SETD]]
-  // NESTED: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]
+  // NESTED: call i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
+  // NESTED: call i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]
   // NESTED: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[SETD]]
-  // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETDNOARGS:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETDONEARG:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}noargs{{.*}}, !dbg ![[SETDNOARGS:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}onearg{{.*}}, !dbg ![[SETDONEARG:[0-9]+]]
   // COLUMNS: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[SETD:[0-9]+]]
 
   for (const auto x : range(noargs())) noargs1();
-  // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR:[0-9]+]]
+  // NONEST: call i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR:[0-9]+]]
   // NONEST: call {{.+}} @{{.*}}range{{.*}}, !dbg ![[RANGEFOR]]
-  // NONEST: call noundef i32 @{{.*}}noargs1{{.*}}, !dbg ![[RANGEFOR_BODY:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR:[0-9]+]]
+  // NONEST: call i32 @{{.*}}noargs1{{.*}}, !dbg ![[RANGEFOR_BODY:[0-9]+]]
+  // NESTED: call i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR:[0-9]+]]
   // NESTED: call {{.+}} @{{.*}}range{{.*}}, !dbg ![[RANGEFOR]]
-  // NESTED: call noundef i32 @{{.*}}noargs1{{.*}}, !dbg ![[RANGEFOR_BODY:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR_NOARGS:[0-9]+]]
+  // NESTED: call i32 @{{.*}}noargs1{{.*}}, !dbg ![[RANGEFOR_BODY:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR_NOARGS:[0-9]+]]
   // COLUMNS: call {{.+}} @{{.*}}range{{.*}}, !dbg ![[RANGEFOR_RANGE:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}noargs1{{.*}}, !dbg ![[RANGEFOR_BODY:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}noargs1{{.*}}, !dbg ![[RANGEFOR_BODY:[0-9]+]]
 
   if (noargs() && noargs1()) {
     Foo::create().func();
   }
-  // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[AND:[0-9]+]]
-  // NONEST: call noundef i32 @{{.*}}noargs1{{.*}}, !dbg ![[AND]]
+  // NONEST: call i32 @{{.*}}noargs{{.*}}, !dbg ![[AND:[0-9]+]]
+  // NONEST: call i32 @{{.*}}noargs1{{.*}}, !dbg ![[AND]]
   // NONEST: call {{.+}} @{{.*}}create{{.*}}, !dbg ![[AND_BODY:[0-9]+]]
   // NONEST: call void @{{.*}}func{{.*}}, !dbg ![[AND_BODY]]
-  // NESTED: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[AND:[0-9]+]]
-  // NESTED: call noundef i32 @{{.*}}noargs1{{.*}}, !dbg ![[AND]]
+  // NESTED: call i32 @{{.*}}noargs{{.*}}, !dbg ![[AND:[0-9]+]]
+  // NESTED: call i32 @{{.*}}noargs1{{.*}}, !dbg ![[AND]]
   // NESTED: call {{.+}} @{{.*}}create{{.*}}, !dbg ![[AND_BODY:[0-9]+]]
   // NESTED: call void @{{.*}}func{{.*}}, !dbg ![[AND_BODY]]
-  // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[ANDLHS:[0-9]+]]
-  // COLUMNS: call noundef i32 @{{.*}}noargs1{{.*}}, !dbg ![[ANDRHS:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}noargs{{.*}}, !dbg ![[ANDLHS:[0-9]+]]
+  // COLUMNS: call i32 @{{.*}}noargs1{{.*}}, !dbg ![[ANDRHS:[0-9]+]]
   // COLUMNS: call {{.+}} @{{.*}}create{{.*}}, !dbg ![[AND_CREATE:[0-9]+]]
   // COLUMNS: call void @{{.*}}func{{.*}}, !dbg ![[AND_FUNC:[0-9]+]]
 

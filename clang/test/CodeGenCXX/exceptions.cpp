@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -disable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++98 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -disable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -std=c++98 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // CHECK: %[[STRUCT_TEST13_A:.*]] = type { i32, i32 }
 

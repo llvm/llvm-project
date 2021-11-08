@@ -55,7 +55,7 @@ auto x = []() {
 int f() { return x()(); }
 }
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZNK14pr18020_lambda3$_0clEvENKUlvE_clEv"
+// CHECK-LABEL: define internal i32 @"_ZZNK14pr18020_lambda3$_0clEvENKUlvE_clEv"
 // CHECK: load i32, i32* @"_ZZNK14pr18020_lambda3$_0clEvE2l1"
 
 namespace pr18020_constexpr {
@@ -70,7 +70,7 @@ auto x = []() {
 int f() { return x()(); }
 }
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZNK17pr18020_constexpr3$_1clEvENKUlvE_clEv"
+// CHECK-LABEL: define internal i32 @"_ZZNK17pr18020_constexpr3$_1clEvENKUlvE_clEv"
 // CHECK: load i32*, i32** @"_ZZZNK17pr18020_constexpr3$_1clEvENKUlvE_clEvE2l2"
 
 // Lambda-less reduction that references l1 before emitting it.  This didn't
@@ -87,7 +87,7 @@ struct pr18020_class {
 static pr18020_class x;
 int pr18020_f() { return x()(); }
 
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN13pr18020_classclEvEN1UclEv
+// CHECK-LABEL: define linkonce_odr i32 @_ZZN13pr18020_classclEvEN1UclEv
 // CHECK: load i32, i32* @_ZZN13pr18020_classclEvE2l1
 
 // In this test case, the function containing the static local will not be
@@ -103,11 +103,11 @@ extern "C" int call_deduced_return_operator() {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @call_deduced_return_operator()
-// CHECK: call noundef i32* @_ZZL14deduced_returnvEN1SclEv(
+// CHECK: call i32* @_ZZL14deduced_returnvEN1SclEv(
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
 
-// CHECK-LABEL: define internal noundef i32* @_ZZL14deduced_returnvEN1SclEv(%struct.S* {{[^,]*}} %this)
+// CHECK-LABEL: define internal i32* @_ZZL14deduced_returnvEN1SclEv(%struct.S* {{[^,]*}} %this)
 // CHECK: ret i32* @_ZZL14deduced_returnvE1n
 
 static auto block_deduced_return() {
@@ -123,11 +123,11 @@ extern "C" int call_block_deduced_return() {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @call_block_deduced_return()
-// CHECK: call noundef i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(
+// CHECK: call i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
 
-// CHECK-LABEL: define internal noundef i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(%struct.S.6* {{[^,]*}} %this) #1 align 2 {
+// CHECK-LABEL: define internal i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(%struct.S.6* {{[^,]*}} %this) #1 align 2 {
 // CHECK: ret i32* @_ZZZL20block_deduced_returnvEUb_E1n
 
 inline auto static_local_label(void *p) {
@@ -141,7 +141,7 @@ label:
 }
 void *global_label = decltype(static_local_label(0))::get();
 
-// CHECK-LABEL: define linkonce_odr noundef i8* @_ZZ18static_local_labelPvEN1S3getEv()
+// CHECK-LABEL: define linkonce_odr i8* @_ZZ18static_local_labelPvEN1S3getEv()
 // CHECK: %[[lbl:[^ ]*]] = load i8*, i8** @_ZZ18static_local_labelPvE1q
 // CHECK: ret i8* %[[lbl]]
 
@@ -154,7 +154,7 @@ extern "C" int use_global_lambda() {
   return *decltype(global_lambda())::get();
 }
 // CHECK-LABEL: define{{.*}} i32 @use_global_lambda()
-// CHECK: call noundef i32* @"_ZZNK3$_2clEvEN1S3getEv"()
+// CHECK: call i32* @"_ZZNK3$_2clEvEN1S3getEv"()
 
-// CHECK-LABEL: define internal noundef i32* @"_ZZNK3$_2clEvEN1S3getEv"()
+// CHECK-LABEL: define internal i32* @"_ZZNK3$_2clEvEN1S3getEv"()
 // CHECK: ret i32* @"_ZZNK3$_2clEvE1x"

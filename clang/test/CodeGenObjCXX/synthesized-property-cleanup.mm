@@ -10,7 +10,7 @@
 
 // CHECK: define {{.*}}@"\01-[MyData setData:]"
 // CHECK: [[DATA:%.*]] = alloca %struct.Data
-// CHECK: call noundef %struct.Data* @_ZN4DataD1Ev(%struct.Data* {{[^,]*}} [[DATA]]){{.*}}, !dbg [[DATA_PROPERTY_LOC:![0-9]+]]
+// CHECK: call %struct.Data* @_ZN4DataD1Ev(%struct.Data* {{[^,]*}} [[DATA]]){{.*}}, !dbg [[DATA_PROPERTY_LOC:![0-9]+]]
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}}@"\01-[MyData string]"

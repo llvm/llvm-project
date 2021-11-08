@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -fblocks -disable-llvm-passes -triple x86_64-apple-darwin10 -std=c++17 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fblocks -disable-llvm-passes -triple x86_64-apple-darwin10 -std=c++17 -emit-llvm -o - %s | FileCheck %s
 
 typedef void (^blk_t)();
 typedef void (*fnptr_t)();

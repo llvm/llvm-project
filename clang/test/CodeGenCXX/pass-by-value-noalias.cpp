@@ -14,8 +14,8 @@ struct Foo {
 // Make sure noalias is added to indirect arguments with trivially copyable types
 // if -fpass-by-value-is-noalias is provided.
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take3Foo(%struct.Foo* noalias noundef %arg)
-// NO_NOALIAS: define{{.*}} void @_Z4take3Foo(%struct.Foo* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take3Foo(%struct.Foo* noalias %arg)
+// NO_NOALIAS: define{{.*}} void @_Z4take3Foo(%struct.Foo* %arg)
 void take(Foo arg) {}
 
 int G;
@@ -38,8 +38,8 @@ struct NonTrivial {
 // Make sure noalias is not added to indirect arguments that are not trivially
 // copyable even if -fpass-by-value-is-noalias is provided.
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take10NonTrivial(%struct.NonTrivial* noundef %arg)
-// NO_NOALIAS:   define{{.*}} void @_Z4take10NonTrivial(%struct.NonTrivial* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take10NonTrivial(%struct.NonTrivial* %arg)
+// NO_NOALIAS:   define{{.*}} void @_Z4take10NonTrivial(%struct.NonTrivial* %arg)
 void take(NonTrivial arg) {}
 
 // Escape examples. Pointers to the objects passed to take() may escape, depending on whether a temporary copy is created or not (e.g. due to NRVO).
@@ -54,12 +54,12 @@ struct A {
 };
 A *p;
 
-// WITH_NOALIAS: define{{.*}} void @_Z4take1A(%struct.A* noalias noundef %arg)
-// NO_NOALIAS: define{{.*}} void @_Z4take1A(%struct.A* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @_Z4take1A(%struct.A* noalias %arg)
+// NO_NOALIAS: define{{.*}} void @_Z4take1A(%struct.A* %arg)
 void take(A arg) {}
 
-// WITH_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** noundef %where)
-// NO_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** noundef %where)
+// WITH_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** %where)
+// NO_NOALIAS: define{{.*}} void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** %where)
 A CreateA(A **where) {
   A justlikethis;
   *where = &justlikethis; //Escaped pointer 2 (should also be UB, then)

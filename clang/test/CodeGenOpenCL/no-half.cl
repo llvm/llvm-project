@@ -4,7 +4,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 
-// CHECK-LABEL: @test_store_float(float noundef %foo, half addrspace({{.}}){{.*}} %bar)
+// CHECK-LABEL: @test_store_float(float %foo, half addrspace({{.}}){{.*}} %bar)
 __kernel void test_store_float(float foo, __global half* bar)
 {
 	__builtin_store_halff(foo, bar);
@@ -12,7 +12,7 @@ __kernel void test_store_float(float foo, __global half* bar)
 // CHECK: store half [[HALF_VAL]], half addrspace({{.}})* %bar, align 2
 }
 
-// CHECK-LABEL: @test_store_double(double noundef %foo, half addrspace({{.}}){{.*}} %bar)
+// CHECK-LABEL: @test_store_double(double %foo, half addrspace({{.}}){{.*}} %bar)
 __kernel void test_store_double(double foo, __global half* bar)
 {
 	__builtin_store_half(foo, bar);

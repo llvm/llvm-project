@@ -33,7 +33,7 @@ void test_arm(long *base, long idx) {
 }
 #endif
 
-// X64-LABEL: define dso_local void @test32(i32* noundef %base, i32 noundef %idx)
+// X64-LABEL: define dso_local void @test32(i32* %base, i32 %idx)
 // X64: call i8 asm sideeffect "btl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
 // X64: call i8 asm sideeffect "btcl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
 // X64: call i8 asm sideeffect "btrl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
@@ -41,7 +41,7 @@ void test_arm(long *base, long idx) {
 // X64: call i8 asm sideeffect "lock btrl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
 // X64: call i8 asm sideeffect "lock btsl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
 
-// X64-LABEL: define dso_local void @test64(i64* noundef %base, i64 noundef %idx)
+// X64-LABEL: define dso_local void @test64(i64* %base, i64 %idx)
 // X64: call i8 asm sideeffect "btq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
 // X64: call i8 asm sideeffect "btcq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
 // X64: call i8 asm sideeffect "btrq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
@@ -49,7 +49,7 @@ void test_arm(long *base, long idx) {
 // X64: call i8 asm sideeffect "lock btrq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
 // X64: call i8 asm sideeffect "lock btsq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
 
-// ARM-LABEL: define dso_local {{.*}}void @test32(i32* noundef %base, i32 noundef %idx)
+// ARM-LABEL: define dso_local {{.*}}void @test32(i32* %base, i32 %idx)
 // ARM: %[[IDXHI:[^ ]*]] = ashr i32 %{{.*}}, 3
 // ARM: %[[BASE:[^ ]*]] = bitcast i32* %{{.*}} to i8*
 // ARM: %[[BYTEADDR:[^ ]*]] = getelementptr inbounds i8, i8* %[[BASE]], i32 %[[IDXHI]]
@@ -126,7 +126,7 @@ void test_arm(long *base, long idx) {
 
 // Just look for the atomicrmw instructions.
 
-// ARM-LABEL: define dso_local {{.*}}void @test_arm(i32* noundef %base, i32 noundef %idx)
+// ARM-LABEL: define dso_local {{.*}}void @test_arm(i32* %base, i32 %idx)
 // ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} acquire, align 1
 // ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} release, align 1
 // ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} monotonic, align 1

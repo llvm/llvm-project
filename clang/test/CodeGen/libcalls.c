@@ -22,9 +22,9 @@ void test_sqrt(float a0, double a1, long double a2) {
   long double l2 = sqrtl(a2);
 }
 
-// CHECK-YES: declare float @sqrtf(float noundef)
-// CHECK-YES: declare double @sqrt(double noundef)
-// CHECK-YES: declare x86_fp80 @sqrtl(x86_fp80 noundef)
+// CHECK-YES: declare float @sqrtf(float)
+// CHECK-YES: declare double @sqrt(double)
+// CHECK-YES: declare x86_fp80 @sqrtl(x86_fp80)
 // CHECK-NO: declare float @llvm.sqrt.f32(float)
 // CHECK-NO: declare double @llvm.sqrt.f64(double)
 // CHECK-NO: declare x86_fp80 @llvm.sqrt.f80(x86_fp80)
@@ -48,9 +48,9 @@ void test_pow(float a0, double a1, long double a2) {
   long double l2 = powl(a2, a2);
 }
 
-// CHECK-YES: declare float @powf(float noundef, float noundef)
-// CHECK-YES: declare double @pow(double noundef, double noundef)
-// CHECK-YES: declare x86_fp80 @powl(x86_fp80 noundef, x86_fp80 noundef)
+// CHECK-YES: declare float @powf(float, float)
+// CHECK-YES: declare double @pow(double, double)
+// CHECK-YES: declare x86_fp80 @powl(x86_fp80, x86_fp80)
 // CHECK-NO: declare float @llvm.pow.f32(float, float) [[NUW_RNI:#[0-9]+]]
 // CHECK-NO: declare double @llvm.pow.f64(double, double) [[NUW_RNI]]
 // CHECK-NO: declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80) [[NUW_RNI]]
@@ -71,9 +71,9 @@ void test_fma(float a0, double a1, long double a2) {
     long double l2 = fmal(a2, a2, a2);
 }
 
-// CHECK-YES: declare float @fmaf(float noundef, float noundef, float noundef)
-// CHECK-YES: declare double @fma(double noundef, double noundef, double noundef)
-// CHECK-YES: declare x86_fp80 @fmal(x86_fp80 noundef, x86_fp80 noundef, x86_fp80 noundef)
+// CHECK-YES: declare float @fmaf(float, float, float)
+// CHECK-YES: declare double @fma(double, double, double)
+// CHECK-YES: declare x86_fp80 @fmal(x86_fp80, x86_fp80, x86_fp80)
 // CHECK-NO: declare float @llvm.fma.f32(float, float, float) [[NUW_RN2:#[0-9]+]]
 // CHECK-NO: declare double @llvm.fma.f64(double, double, double) [[NUW_RN2]]
 // CHECK-NO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[NUW_RN2]]
@@ -85,22 +85,22 @@ void test_builtins(double d, float f, long double ld) {
   double atan_ = atan(d);
   long double atanl_ = atanl(ld);
   float atanf_ = atanf(f);
-// CHECK-NO: declare double @atan(double noundef) [[NUW_RN:#[0-9]+]]
-// CHECK-NO: declare x86_fp80 @atanl(x86_fp80 noundef) [[NUW_RN]]
-// CHECK-NO: declare float @atanf(float noundef) [[NUW_RN]]
-// CHECK-YES: declare double @atan(double noundef) [[NUW:#[0-9]+]]
-// CHECK-YES: declare x86_fp80 @atanl(x86_fp80 noundef) [[NUW]]
-// CHECK-YES: declare float @atanf(float noundef) [[NUW]]
+// CHECK-NO: declare double @atan(double) [[NUW_RN:#[0-9]+]]
+// CHECK-NO: declare x86_fp80 @atanl(x86_fp80) [[NUW_RN]]
+// CHECK-NO: declare float @atanf(float) [[NUW_RN]]
+// CHECK-YES: declare double @atan(double) [[NUW:#[0-9]+]]
+// CHECK-YES: declare x86_fp80 @atanl(x86_fp80) [[NUW]]
+// CHECK-YES: declare float @atanf(float) [[NUW]]
 
   double atan2_ = atan2(d, 2);
   long double atan2l_ = atan2l(ld, ld);
   float atan2f_ = atan2f(f, f);
-// CHECK-NO: declare double @atan2(double noundef, double noundef) [[NUW_RN]]
-// CHECK-NO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NUW_RN]]
-// CHECK-NO: declare float @atan2f(float noundef, float noundef) [[NUW_RN]]
-// CHECK-YES: declare double @atan2(double noundef, double noundef) [[NUW]]
-// CHECK-YES: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NUW]]
-// CHECK-YES: declare float @atan2f(float noundef, float noundef) [[NUW]]
+// CHECK-NO: declare double @atan2(double, double) [[NUW_RN]]
+// CHECK-NO: declare x86_fp80 @atan2l(x86_fp80, x86_fp80) [[NUW_RN]]
+// CHECK-NO: declare float @atan2f(float, float) [[NUW_RN]]
+// CHECK-YES: declare double @atan2(double, double) [[NUW]]
+// CHECK-YES: declare x86_fp80 @atan2l(x86_fp80, x86_fp80) [[NUW]]
+// CHECK-YES: declare float @atan2f(float, float) [[NUW]]
 
   double exp_ = exp(d);
   long double expl_ = expl(ld);
@@ -108,9 +108,9 @@ void test_builtins(double d, float f, long double ld) {
 // CHECK-NO: declare double @llvm.exp.f64(double) [[NUW_RNI]]
 // CHECK-NO: declare x86_fp80 @llvm.exp.f80(x86_fp80) [[NUW_RNI]]
 // CHECK-NO: declare float @llvm.exp.f32(float) [[NUW_RNI]]
-// CHECK-YES: declare double @exp(double noundef) [[NUW]]
-// CHECK-YES: declare x86_fp80 @expl(x86_fp80 noundef) [[NUW]]
-// CHECK-YES: declare float @expf(float noundef) [[NUW]]
+// CHECK-YES: declare double @exp(double) [[NUW]]
+// CHECK-YES: declare x86_fp80 @expl(x86_fp80) [[NUW]]
+// CHECK-YES: declare float @expf(float) [[NUW]]
 
   double log_ = log(d);
   long double logl_ = logl(ld);
@@ -118,9 +118,9 @@ void test_builtins(double d, float f, long double ld) {
 // CHECK-NO: declare double @llvm.log.f64(double) [[NUW_RNI]]
 // CHECK-NO: declare x86_fp80 @llvm.log.f80(x86_fp80) [[NUW_RNI]]
 // CHECK-NO: declare float @llvm.log.f32(float) [[NUW_RNI]]
-// CHECK-YES: declare double @log(double noundef) [[NUW]]
-// CHECK-YES: declare x86_fp80 @logl(x86_fp80 noundef) [[NUW]]
-// CHECK-YES: declare float @logf(float noundef) [[NUW]]
+// CHECK-YES: declare double @log(double) [[NUW]]
+// CHECK-YES: declare x86_fp80 @logl(x86_fp80) [[NUW]]
+// CHECK-YES: declare float @logf(float) [[NUW]]
 }
 
 // CHECK-YES: attributes [[NUW]] = { nounwind "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }

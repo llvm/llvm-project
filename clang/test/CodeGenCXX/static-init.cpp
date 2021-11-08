@@ -28,7 +28,7 @@ void f() {
 }
 
 void g() {
-  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef 1)
+  // CHECK: call noalias nonnull i8* @_Znwm(i64 1)
   // CHECK: call void @_ZN1AC1Ev(
   static A& a = *new A;
 }
@@ -59,7 +59,7 @@ namespace test0 {
 }
 
 namespace test1 {
-  // CHECK-LABEL: define internal noundef i32 @_ZN5test1L6getvarEi(
+  // CHECK-LABEL: define internal i32 @_ZN5test1L6getvarEi(
   static inline int getvar(int index) {
     static const int var[] = { 1, 0, 2, 4 };
     return var[index];
@@ -74,7 +74,7 @@ unsigned char base_req_uchar[] = { "bar" };
 
 namespace union_static_local {
   // CHECK-LABEL: define internal void @_ZZN18union_static_local4testEvEN1c4mainEv
-  // CHECK: call void @_ZN18union_static_local1fEPNS_1xE(%"union.union_static_local::x"* noundef bitcast ({ [2 x i8*] }* @_ZZN18union_static_local4testEvE3foo to %"union.union_static_local::x"*))
+  // CHECK: call void @_ZN18union_static_local1fEPNS_1xE(%"union.union_static_local::x"* bitcast ({ [2 x i8*] }* @_ZZN18union_static_local4testEvE3foo to %"union.union_static_local::x"*))
   union x { long double y; const char *x[2]; };
   void f(union x*);
   void test() {
@@ -111,14 +111,14 @@ namespace test2 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test21BC2Ev
   // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BC1EvE1x to i8*) acquire, align 8
   // CHECK:   call i32 @__cxa_guard_acquire(i64* @_ZGVZN5test21BC1EvE1x)
-  // CHECK:   [[T0:%.*]] = call noundef i32 @_ZN5test23fooEv()
+  // CHECK:   [[T0:%.*]] = call i32 @_ZN5test23fooEv()
   // CHECK:   store i32 [[T0]], i32* @_ZZN5test21BC1EvE1x,
   // CHECK:   call void @__cxa_guard_release(i64* @_ZGVZN5test21BC1EvE1x)
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test21BC1Ev
   // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BC1EvE1x to i8*) acquire, align 8
   // CHECK:   call i32 @__cxa_guard_acquire(i64* @_ZGVZN5test21BC1EvE1x)
-  // CHECK:   [[T0:%.*]] = call noundef i32 @_ZN5test23fooEv()
+  // CHECK:   [[T0:%.*]] = call i32 @_ZN5test23fooEv()
   // CHECK:   store i32 [[T0]], i32* @_ZZN5test21BC1EvE1x,
   // CHECK:   call void @__cxa_guard_release(i64* @_ZGVZN5test21BC1EvE1x)
 
@@ -130,7 +130,7 @@ namespace test2 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test21BD2Ev(
   // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BD1EvE1y to i8*) acquire, align 8
   // CHECK:   call i32 @__cxa_guard_acquire(i64* @_ZGVZN5test21BD1EvE1y)
-  // CHECK:   [[T0:%.*]] = call noundef i32 @_ZN5test23fooEv()
+  // CHECK:   [[T0:%.*]] = call i32 @_ZN5test23fooEv()
   // CHECK:   store i32 [[T0]], i32* @_ZZN5test21BD1EvE1y,
   // CHECK:   call void @__cxa_guard_release(i64* @_ZGVZN5test21BD1EvE1y)
 
@@ -170,6 +170,6 @@ inline HasVTable &useStaticLocal() {
 void useit() {
   useStaticLocal();
 }
-// CHECK: define linkonce_odr noundef nonnull align 8 dereferenceable(8) %"struct.test4::HasVTable"* @_ZN5test414useStaticLocalEv()
+// CHECK: define linkonce_odr nonnull align 8 dereferenceable(8) %"struct.test4::HasVTable"* @_ZN5test414useStaticLocalEv()
 // CHECK: ret %"struct.test4::HasVTable"*{{.*}} @_ZZN5test414useStaticLocalEvE3obj
 }

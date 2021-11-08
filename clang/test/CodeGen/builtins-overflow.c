@@ -302,7 +302,7 @@ unsigned test_uadd_overflow(unsigned x, unsigned y) {
 }
 
 unsigned long test_uaddl_overflow(unsigned long x, unsigned long y) {
-// CHECK: @test_uaddl_overflow([[UL:i32|i64]] noundef %x
+// CHECK: @test_uaddl_overflow([[UL:i32|i64]] %x
 // CHECK: %{{.+}} = call { [[UL]], i1 } @llvm.uadd.with.overflow.[[UL]]([[UL]] %{{.+}}, [[UL]] %{{.+}})
   unsigned long result;
   if (__builtin_uaddl_overflow(x, y, &result))
@@ -329,7 +329,7 @@ unsigned test_usub_overflow(unsigned x, unsigned y) {
 }
 
 unsigned long test_usubl_overflow(unsigned long x, unsigned long y) {
-// CHECK: @test_usubl_overflow([[UL:i32|i64]] noundef %x
+// CHECK: @test_usubl_overflow([[UL:i32|i64]] %x
 // CHECK: %{{.+}} = call { [[UL]], i1 } @llvm.usub.with.overflow.[[UL]]([[UL]] %{{.+}}, [[UL]] %{{.+}})
   unsigned long result;
   if (__builtin_usubl_overflow(x, y, &result))
@@ -356,7 +356,7 @@ unsigned test_umul_overflow(unsigned x, unsigned y) {
 }
 
 unsigned long test_umull_overflow(unsigned long x, unsigned long y) {
-// CHECK: @test_umull_overflow([[UL:i32|i64]] noundef %x
+// CHECK: @test_umull_overflow([[UL:i32|i64]] %x
 // CHECK: %{{.+}} = call { [[UL]], i1 } @llvm.umul.with.overflow.[[UL]]([[UL]] %{{.+}}, [[UL]] %{{.+}})
   unsigned long result;
   if (__builtin_umull_overflow(x, y, &result))
@@ -383,7 +383,7 @@ int test_sadd_overflow(int x, int y) {
 }
 
 long test_saddl_overflow(long x, long y) {
-// CHECK: @test_saddl_overflow([[UL:i32|i64]] noundef %x
+// CHECK: @test_saddl_overflow([[UL:i32|i64]] %x
 // CHECK: %{{.+}} = call { [[UL]], i1 } @llvm.sadd.with.overflow.[[UL]]([[UL]] %{{.+}}, [[UL]] %{{.+}})
   long result;
   if (__builtin_saddl_overflow(x, y, &result))
@@ -410,7 +410,7 @@ int test_ssub_overflow(int x, int y) {
 }
 
 long test_ssubl_overflow(long x, long y) {
-// CHECK: @test_ssubl_overflow([[UL:i32|i64]] noundef %x
+// CHECK: @test_ssubl_overflow([[UL:i32|i64]] %x
 // CHECK: %{{.+}} = call { [[UL]], i1 } @llvm.ssub.with.overflow.[[UL]]([[UL]] %{{.+}}, [[UL]] %{{.+}})
   long result;
   if (__builtin_ssubl_overflow(x, y, &result))
@@ -437,7 +437,7 @@ int test_smul_overflow(int x, int y) {
 }
 
 long test_smull_overflow(long x, long y) {
-// CHECK: @test_smull_overflow([[UL:i32|i64]] noundef %x
+// CHECK: @test_smull_overflow([[UL:i32|i64]] %x
 // CHECK: %{{.+}} = call { [[UL]], i1 } @llvm.smul.with.overflow.[[UL]]([[UL]] %{{.+}}, [[UL]] %{{.+}})
   long result;
   if (__builtin_smull_overflow(x, y, &result))

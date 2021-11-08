@@ -29,21 +29,21 @@ void noescapeFunc3(__attribute__((noescape)) union U);
 
 // CHECK-LABEL: define{{.*}} void @test0(
 // CHECK: call void @noescapeFunc0({{.*}}, {{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc0(i8* noundef, {{.*}} nocapture noundef)
+// CHECK: declare void @noescapeFunc0(i8*, {{.*}} nocapture)
 void test0(BlockTy b) {
   noescapeFunc0(0, b);
 }
 
 // CHECK-LABEL: define{{.*}} void @test1(
 // CHECK: call void @noescapeFunc1({{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc1({{.*}} nocapture noundef)
+// CHECK: declare void @noescapeFunc1({{.*}} nocapture)
 void test1(int *i) {
   noescapeFunc1(i);
 }
 
 // CHECK-LABEL: define{{.*}} void @test2(
 // CHECK: call void @noescapeFunc2({{.*}} nocapture {{.*}})
-// CHECK: declare void @noescapeFunc2({{.*}} nocapture noundef)
+// CHECK: declare void @noescapeFunc2({{.*}} nocapture)
 void test2(id i) {
   noescapeFunc2(i);
 }
@@ -74,7 +74,7 @@ void test4(C0 *c0, int *p) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test5(
-// CHECK: call void {{.*}}(i8* noundef bitcast ({ i8**, i32, i32, i8*, {{.*}} }* @{{.*}} to i8*), i32* nocapture {{.*}})
+// CHECK: call void {{.*}}(i8* bitcast ({ i8**, i32, i32, i8*, {{.*}} }* @{{.*}} to i8*), i32* nocapture {{.*}})
 // CHECK: call void {{.*}}(i8* {{.*}}, i32* nocapture {{.*}})
 // CHECK: define internal void @{{.*}}(i8* {{.*}}, i32* nocapture {{.*}})
 
@@ -88,7 +88,7 @@ void test5(BlockTy2 b, int *p) {
 // If the block is non-escaping, set the BLOCK_IS_NOESCAPE and BLOCK_IS_GLOBAL
 // bits of field 'flags' and set the 'isa' field to 'NSConcreteGlobalBlock'.
 
-// CHECK: define{{.*}} void @test6(i8* noundef %{{.*}}, i8* noundef %[[B:.*]])
+// CHECK: define{{.*}} void @test6(i8* %{{.*}}, i8* %[[B:.*]])
 // CHECK: %{{.*}} = alloca i8*, align 8
 // CHECK: %[[B_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8

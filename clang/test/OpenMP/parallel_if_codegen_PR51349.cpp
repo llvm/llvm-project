@@ -28,7 +28,7 @@ void foo() {
 //
 // CHECK: Function Attrs: noinline norecurse nounwind
 // CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
