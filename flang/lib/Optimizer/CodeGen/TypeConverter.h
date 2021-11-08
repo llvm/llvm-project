@@ -29,6 +29,7 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::Type.
+    addConversion([&](BoxType box) { return convertBoxType(box); });
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
     addConversion(
@@ -58,6 +59,78 @@ public:
     if (mlir::succeeded(st.setBody(members, /*isPacked=*/false)))
       return st;
     return mlir::Type();
+  }
+
+  // Is an extended descriptor needed given the element type of a fir.box type ?
+  // Extended descriptors are required for derived types.
+  bool requiresExtendedDesc(mlir::Type boxElementType) {
+    auto eleTy = fir::unwrapSequenceType(boxElementType);
+    return eleTy.isa<fir::RecordType>();
+  }
+
+  // Magic value to indicate we do not know the rank of an entity, either
+  // because it is assumed rank or because we have not determined it yet.
+  static constexpr int unknownRank() { return -1; }
+
+  // This corresponds to the descriptor as defined in ISO_Fortran_binding.h and
+  // the addendum defined in descriptor.h.
+  mlir::Type convertBoxType(BoxType box, int rank = unknownRank()) {
+    // (base_addr*, elem_len, version, rank, type, attribute, f18Addendum, [dim]
+    SmallVector<mlir::Type> dataDescFields;
+    mlir::Type ele = box.getEleTy();
+    // remove fir.heap/fir.ref/fir.ptr
+    if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
+      ele = removeIndirection;
+    auto eleTy = convertType(ele);
+    // base_addr*
+    if (ele.isa<SequenceType>() && eleTy.isa<mlir::LLVM::LLVMPointerType>())
+      dataDescFields.push_back(eleTy);
+    else
+      dataDescFields.push_back(mlir::LLVM::LLVMPointerType::get(eleTy));
+    // elem_len
+    dataDescFields.push_back(getDescFieldTypeModel<1>()(&getContext()));
+    // version
+    dataDescFields.push_back(getDescFieldTypeModel<2>()(&getContext()));
+    // rank
+    dataDescFields.push_back(getDescFieldTypeModel<3>()(&getContext()));
+    // type
+    dataDescFields.push_back(getDescFieldTypeModel<4>()(&getContext()));
+    // attribute
+    dataDescFields.push_back(getDescFieldTypeModel<5>()(&getContext()));
+    // f18Addendum
+    dataDescFields.push_back(getDescFieldTypeModel<6>()(&getContext()));
+    // [dims]
+    if (rank == unknownRank()) {
+      if (auto seqTy = ele.dyn_cast<SequenceType>())
+        rank = seqTy.getDimension();
+      else
+        rank = 0;
+    }
+    if (rank > 0) {
+      auto rowTy = getDescFieldTypeModel<7>()(&getContext());
+      dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, rank));
+    }
+    // opt-type-ptr: i8* (see fir.tdesc)
+    if (requiresExtendedDesc(ele)) {
+      dataDescFields.push_back(
+          getExtendedDescFieldTypeModel<8>()(&getContext()));
+      auto rowTy = getExtendedDescFieldTypeModel<9>()(&getContext());
+      dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, 1));
+      if (auto recTy = fir::unwrapSequenceType(ele).dyn_cast<fir::RecordType>())
+        if (recTy.getNumLenParams() > 0) {
+          // The descriptor design needs to be clarified regarding the number of
+          // length parameters in the addendum. Since it can change for
+          // polymorphic allocatables, it seems all length parameters cannot
+          // always possibly be placed in the addendum.
+          TODO_NOLOC("extended descriptor derived with length parameters");
+          unsigned numLenParams = recTy.getNumLenParams();
+          dataDescFields.push_back(
+              mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
+        }
+    }
+    return mlir::LLVM::LLVMPointerType::get(
+        mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
+                                               /*isPacked=*/false));
   }
 
   template <typename A>

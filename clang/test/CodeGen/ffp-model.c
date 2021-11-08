@@ -19,7 +19,7 @@
 // RUN: --check-prefixes CHECK,CHECK-FAST1
 
 float mymuladd(float x, float y, float z) {
-  // CHECK: define {{.*}} float @mymuladd(float %x, float %y, float %z)
+  // CHECK: define {{.*}} float @mymuladd(float noundef %x, float noundef %y, float noundef %z)
   return x * y + z;
   // CHECK-FAST: fmul fast float
 

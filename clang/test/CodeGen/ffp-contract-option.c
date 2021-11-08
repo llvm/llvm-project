@@ -63,7 +63,7 @@
 // RUN: --check-prefixes=CHECK,CHECK-FPC-ON
 
 float mymuladd(float x, float y, float z) {
-  // CHECK: define {{.*}} float @mymuladd(float %x, float %y, float %z)
+  // CHECK: define {{.*}} float @mymuladd(float noundef %x, float noundef %y, float noundef %z)
   return x * y + z;
   // expected-warning{{overriding '-ffp-contract=fast' option with '-ffp-contract=on'}}
 
