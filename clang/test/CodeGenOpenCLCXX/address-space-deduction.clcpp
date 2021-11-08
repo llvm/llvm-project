@@ -21,7 +21,7 @@ int PTR glob_p = ADR(glob);
 //COMMON: @loc_ext_p = external addrspace(1) {{global|constant}} i32 addrspace(4)*
 //COMMON: @loc_ext = external addrspace(1) global i32
 
-//COMMON: define{{.*}} spir_func noundef i32 @_Z3fooi{{P|R}}U3AS4i(i32 noundef %par, i32 addrspace(4)*{{.*}} %par_p)
+//COMMON: define{{.*}} spir_func i32 @_Z3fooi{{P|R}}U3AS4i(i32 %par, i32 addrspace(4)*{{.*}} %par_p)
 int foo(int par, int PTR par_p){
   //COMMON: %loc = alloca i32
   int loc;

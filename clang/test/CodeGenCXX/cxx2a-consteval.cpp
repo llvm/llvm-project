@@ -224,19 +224,12 @@ int test_UserConv() {
   return UserConv();
 }
 
-// EVAL-FN-LABEL: @_Z28test_UserConvOverload_helperi(
-// EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// EVAL-FN-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
-// EVAL-FN-NEXT:    ret i32 [[TMP0]]
-//
 int test_UserConvOverload_helper(int a) { return a; }
 
 // EVAL-FN-LABEL: @_Z21test_UserConvOverloadv(
 // EVAL-FN-NEXT:  entry:
-// EVAL-FN-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z28test_UserConvOverload_helperi(i32 noundef 42)
-// EVAL-FN-NEXT:    ret i32 [[CALL]]
+// EVAL-FN-NEXT:    %call = call i32 @_Z28test_UserConvOverload_helperi(i32 42)
+// EVAL-FN-NEXT:    ret i32 %call
 //
 int test_UserConvOverload() {
   return test_UserConvOverload_helper(UserConv());

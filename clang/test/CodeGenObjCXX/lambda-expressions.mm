@@ -9,15 +9,15 @@ fp f() { auto x = []{ return 3; }; return x; }
 // MRC: @OBJC_METH_VAR_NAME{{.*}} = private unnamed_addr constant [5 x i8] c"copy\00"
 // MRC: @OBJC_METH_VAR_NAME{{.*}} = private unnamed_addr constant [12 x i8] c"autorelease\00"
 // MRC-LABEL: define{{.*}} i32 ()* @_Z1fv(
-// MRC-LABEL: define internal noundef i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
+// MRC-LABEL: define internal i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
 // MRC: store i8* bitcast (i8** @_NSConcreteStackBlock to i8*)
 // MRC: store i8* bitcast (i32 (i8*)* @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke" to i8*)
-// MRC: call noundef i32 ()* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 ()* (i8*, i8*)*)
-// MRC: call noundef i32 ()* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 ()* (i8*, i8*)*)
+// MRC: call i32 ()* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 ()* (i8*, i8*)*)
+// MRC: call i32 ()* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 ()* (i8*, i8*)*)
 // MRC: ret i32 ()*
 
 // ARC-LABEL: define{{.*}} i32 ()* @_Z1fv(
-// ARC-LABEL: define internal noundef i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
+// ARC-LABEL: define internal i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
 // ARC: store i8* bitcast (i8** @_NSConcreteStackBlock to i8*)
 // ARC: store i8* bitcast (i32 (i8*)* @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke" to i8*)
 // ARC: call i8* @llvm.objc.retainBlock
@@ -37,8 +37,8 @@ void f2() { global = []{ return 3; }; }
 // ARC: store i8* bitcast (i32 (i8*)* @___Z2f2v_block_invoke to i8*),
 // ARC: call i8* @llvm.objc.retainBlock
 // ARC: call void @llvm.objc.release
-// ARC-LABEL: define internal noundef i32 @___Z2f2v_block_invoke
-// ARC: call noundef i32 @"_ZZ2f2vENK3$_1clEv
+// ARC-LABEL: define internal i32 @___Z2f2v_block_invoke
+// ARC: call i32 @"_ZZ2f2vENK3$_1clEv
 
 template <class T> void take_lambda(T &&lambda) { lambda(); }
 void take_block(void (^block)()) { block(); }
@@ -62,7 +62,7 @@ void take_block(void (^block)()) { block(); }
 }
 @end
 
-// ARC: define{{.*}} void @_ZN13LambdaCapture4foo1ERi(i32* noundef nonnull align 4 dereferenceable(4) %{{.*}})
+// ARC: define{{.*}} void @_ZN13LambdaCapture4foo1ERi(i32* nonnull align 4 dereferenceable(4) %{{.*}})
 // ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds %[[LAMBDACLASS]], %[[LAMBDACLASS]]* %{{.*}}, i32 0, i32 0
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE0]]
 
@@ -79,7 +79,7 @@ void take_block(void (^block)()) { block(); }
 // ARC:   %[[CAPTURE2:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %{{.*}}, i32 0, i32 5
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE2]]
 
-// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_3clEv_block_invoke_2"(i8* noundef %{{.*}})
+// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_3clEv_block_invoke_2"(i8* %{{.*}})
 // ARC:   %[[CAPTURE3:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %{{.*}}, i32 0, i32 5
 // ARC:   %[[V1:.*]] = load i32, i32* %[[CAPTURE3]]
 // ARC:   store i32 %[[V1]], i32* @_ZN13LambdaCapture1iE
@@ -100,10 +100,10 @@ namespace LambdaCapture {
   }
 }
 
-// ARC-LABEL: define linkonce_odr noundef i32 ()* @_ZZNK13StaticMembersIfE1fMUlvE_clEvENKUlvE_cvU13block_pointerFivEEv
+// ARC-LABEL: define linkonce_odr i32 ()* @_ZZNK13StaticMembersIfE1fMUlvE_clEvENKUlvE_cvU13block_pointerFivEEv
 
 // Check lines for BlockInLambda test below
-// ARC-LABEL: define internal noundef i32 @___ZZN13BlockInLambda1X1fEvENKUlvE_clEv_block_invoke
+// ARC-LABEL: define internal i32 @___ZZN13BlockInLambda1X1fEvENKUlvE_clEv_block_invoke
 // ARC: [[Y:%.*]] = getelementptr inbounds %"struct.BlockInLambda::X", %"struct.BlockInLambda::X"* {{.*}}, i32 0, i32 1
 // ARC-NEXT: [[YVAL:%.*]] = load i32, i32* [[Y]], align 4
 // ARC-NEXT: ret i32 [[YVAL]]

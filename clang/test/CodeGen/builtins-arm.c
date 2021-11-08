@@ -102,56 +102,56 @@ void prefetch(int i) {
 }
 
 void ldc(const void *i) {
-  // CHECK: define{{.*}} void @ldc(i8* noundef %i)
+  // CHECK: define{{.*}} void @ldc(i8* %i)
   // CHECK: call void @llvm.arm.ldc(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldc(1, 2, i);
 }
 
 void ldcl(const void *i) {
-  // CHECK: define{{.*}} void @ldcl(i8* noundef %i)
+  // CHECK: define{{.*}} void @ldcl(i8* %i)
   // CHECK: call void @llvm.arm.ldcl(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldcl(1, 2, i);
 }
 
 void ldc2(const void *i) {
-  // CHECK: define{{.*}} void @ldc2(i8* noundef %i)
+  // CHECK: define{{.*}} void @ldc2(i8* %i)
   // CHECK: call void @llvm.arm.ldc2(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldc2(1, 2, i);
 }
 
 void ldc2l(const void *i) {
-  // CHECK: define{{.*}} void @ldc2l(i8* noundef %i)
+  // CHECK: define{{.*}} void @ldc2l(i8* %i)
   // CHECK: call void @llvm.arm.ldc2l(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_ldc2l(1, 2, i);
 }
 
 void stc(void *i) {
-  // CHECK: define{{.*}} void @stc(i8* noundef %i)
+  // CHECK: define{{.*}} void @stc(i8* %i)
   // CHECK: call void @llvm.arm.stc(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stc(1, 2, i);
 }
 
 void stcl(void *i) {
-  // CHECK: define{{.*}} void @stcl(i8* noundef %i)
+  // CHECK: define{{.*}} void @stcl(i8* %i)
   // CHECK: call void @llvm.arm.stcl(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stcl(1, 2, i);
 }
 
 void stc2(void *i) {
-  // CHECK: define{{.*}} void @stc2(i8* noundef %i)
+  // CHECK: define{{.*}} void @stc2(i8* %i)
   // CHECK: call void @llvm.arm.stc2(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stc2(1, 2, i);
 }
 
 void stc2l(void *i) {
-  // CHECK: define{{.*}} void @stc2l(i8* noundef %i)
+  // CHECK: define{{.*}} void @stc2l(i8* %i)
   // CHECK: call void @llvm.arm.stc2l(i32 1, i32 2, i8* %i)
   // CHECK-NEXT: ret void
   __builtin_arm_stc2l(1, 2, i);
@@ -186,25 +186,25 @@ unsigned mrc2() {
 }
 
 void mcr(unsigned a) {
-  // CHECK: define{{.*}} void @mcr(i32 noundef [[A:%.*]])
+  // CHECK: define{{.*}} void @mcr(i32 [[A:%.*]])
   // CHECK: call void @llvm.arm.mcr(i32 15, i32 0, i32 [[A]], i32 13, i32 0, i32 3)
   __builtin_arm_mcr(15, 0, a, 13, 0, 3);
 }
 
 void mcr2(unsigned a) {
-  // CHECK: define{{.*}} void @mcr2(i32 noundef [[A:%.*]])
+  // CHECK: define{{.*}} void @mcr2(i32 [[A:%.*]])
   // CHECK: call void @llvm.arm.mcr2(i32 15, i32 0, i32 [[A]], i32 13, i32 0, i32 3)
   __builtin_arm_mcr2(15, 0, a, 13, 0, 3);
 }
 
 void mcrr(uint64_t a) {
-  // CHECK: define{{.*}} void @mcrr(i64 noundef %{{.*}})
+  // CHECK: define{{.*}} void @mcrr(i64 %{{.*}})
   // CHECK: call void @llvm.arm.mcrr(i32 15, i32 0, i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 0)
   __builtin_arm_mcrr(15, 0, a, 0);
 }
 
 void mcrr2(uint64_t a) {
-  // CHECK: define{{.*}} void @mcrr2(i64 noundef %{{.*}})
+  // CHECK: define{{.*}} void @mcrr2(i64 %{{.*}})
   // CHECK: call void @llvm.arm.mcrr2(i32 15, i32 0, i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 0)
   __builtin_arm_mcrr2(15, 0, a, 0);
 }

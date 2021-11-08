@@ -211,7 +211,7 @@ LONG test_InterlockedAdd(LONG volatile *Addend, LONG Value) {
   return _InterlockedAdd(Addend, Value);
 }
 
-// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedAdd(i32*{{[a-z_ ]*}}%Addend, i32 noundef %Value) {{.*}} {
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedAdd(i32*{{[a-z_ ]*}}%Addend, i32 %Value) {{.*}} {
 // CHECK-ARM-ARM64: %[[OLDVAL:[0-9]+]] = atomicrmw add i32* %Addend, i32 %Value seq_cst, align 4
 // CHECK-ARM-ARM64: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %Value
 // CHECK-ARM-ARM64: ret i32 %[[NEWVAL:[0-9]+]]

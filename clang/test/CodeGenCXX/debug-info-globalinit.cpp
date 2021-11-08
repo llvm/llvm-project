@@ -18,19 +18,19 @@ int main(void) {}
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init()
 // CHECK-NOT: __cxx_global_var_init
-// CHECK: %[[C0:.+]] = call noundef i32 @_Z4testv(), !dbg ![[LINE:.*]]
+// CHECK: %[[C0:.+]] = call i32 @_Z4testv(), !dbg ![[LINE:.*]]
 // CHECK-NOT: __cxx_global_var_init
 // CHECK: store i32 %[[C0]], i32* @_ZL1i, align 4, !dbg
 // 
 // CHECK-LABEL: define internal void @__cxx_global_var_init.1()
 // CHECK-NOT: dbg
-// CHECK: %[[C1:.+]] = call noundef i32 @_Z4testv()
+// CHECK: %[[C1:.+]] = call i32 @_Z4testv()
 // CHECK-NOT: dbg
 // CHECK: store i32 %[[C1]], i32* @_ZL1j, align 4
 //
 // CHECK-LABEL: define internal void @__cxx_global_var_init.2()
 // CHECK-NOT: __cxx_global_var_init
-// CHECK: %[[C2:.+]] = call noundef i32 @_Z4testv(), !dbg ![[LINE2:.*]]
+// CHECK: %[[C2:.+]] = call i32 @_Z4testv(), !dbg ![[LINE2:.*]]
 // CHECK-NOT: __cxx_global_var_init
 // CHECK: store i32 %[[C2]], i32* @_ZL1k, align 4, !dbg
 // 

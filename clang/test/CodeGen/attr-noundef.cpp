@@ -1,5 +1,5 @@
-// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang -cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang -cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -enable-noundef-analysis %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang -cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm -enable-noundef-analysis %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
 
 //************ Passing structs by value
 // TODO: No structs may currently be marked noundef

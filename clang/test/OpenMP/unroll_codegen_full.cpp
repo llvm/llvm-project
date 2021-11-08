@@ -26,7 +26,7 @@ extern "C" void body(...) {}
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_BODY]]:
 // IR-NEXT:    %[[TMP1:.+]] = load i32, i32* %[[I]], align 4
-// IR-NEXT:    call void (...) @body(i32 noundef %[[TMP1]])
+// IR-NEXT:    call void (...) @body(i32 %[[TMP1]])
 // IR-NEXT:    br label %[[FOR_INC:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_INC]]:

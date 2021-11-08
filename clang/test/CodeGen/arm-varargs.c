@@ -312,7 +312,7 @@ overaligned_long_long_struct_member overaligned_long_long_struct_member_test() {
 }
 
 void check_start(int n, ...) {
-// CHECK-LABEL: define{{.*}} void @check_start(i32 noundef %n, ...)
+// CHECK-LABEL: define{{.*}} void @check_start(i32 %n, ...)
 
   va_list the_list;
   va_start(the_list, n);

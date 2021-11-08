@@ -13,7 +13,7 @@ void test_catch() {
 }
 
 // CHECK-LABEL: define dso_local void @"?test_catch@@YAXXZ"(
-// CHECK:   invoke noundef i32 @"?f@@YAHH@Z"(i32 noundef 1)
+// CHECK:   invoke i32 @"?f@@YAHH@Z"(i32 1)
 // CHECK:         to label %[[NORMAL:.*]] unwind label %[[CATCHSWITCH:.*]]
 
 // CHECK: [[CATCHSWITCH]]
@@ -21,7 +21,7 @@ void test_catch() {
 
 // CHECK: [[CATCH_INT]]
 // CHECK:   %[[CATCHPAD_INT:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i8* null]
-// CHECK:   call noundef i32 @"?f@@YAHH@Z"(i32 noundef 2)
+// CHECK:   call i32 @"?f@@YAHH@Z"(i32 2)
 // CHECK:   catchret from %[[CATCHPAD_INT]] to label %[[LEAVE_INT_CATCH:.*]]
 
 // CHECK: [[LEAVE_INT_CATCH]]
@@ -32,7 +32,7 @@ void test_catch() {
 
 // CHECK: [[CATCH_DOUBLE]]
 // CHECK:   %[[CATCHPAD_DOUBLE:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"??_R0N@8", i32 0, i8* null]
-// CHECK:   call noundef i32 @"?f@@YAHH@Z"(i32 noundef 3)
+// CHECK:   call i32 @"?f@@YAHH@Z"(i32 3)
 // CHECK:   catchret from %[[CATCHPAD_DOUBLE]] to label %[[LEAVE_DOUBLE_CATCH:.*]]
 
 // CHECK: [[LEAVE_DOUBLE_CATCH]]
@@ -51,7 +51,7 @@ void test_cleanup() {
 }
 
 // CHECK-LABEL: define dso_local {{.*}} @"?test_cleanup@@YAXXZ"(
-// CHECK:   invoke noundef i32 @"?f@@YAHH@Z"(i32 noundef 1)
+// CHECK:   invoke i32 @"?f@@YAHH@Z"(i32 1)
 // CHECK:           to label %[[LEAVE_FUNC:.*]] unwind label %[[CLEANUP:.*]]
 
 // CHECK: [[LEAVE_FUNC]]
@@ -65,7 +65,7 @@ void test_cleanup() {
 
 
 // CHECK-LABEL: define {{.*}} void @"??1Cleanup@@QAE@XZ"(
-// CHECK:   invoke noundef i32 @"?f@@YAHH@Z"(i32 noundef -1)
+// CHECK:   invoke i32 @"?f@@YAHH@Z"(i32 -1)
 // CHECK:           to label %[[LEAVE_FUNC:.*]] unwind label %[[TERMINATE:.*]]
 
 // CHECK: [[LEAVE_FUNC]]

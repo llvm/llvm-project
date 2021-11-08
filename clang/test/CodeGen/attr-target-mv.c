@@ -193,10 +193,10 @@ void calls_pr50025c() { pr50025c(); }
 // WINDOWS: call void @foo_decls
 
 // LINUX: define{{.*}} void @bar4()
-// LINUX: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// LINUX: call void @foo_multi.ifunc(i32 1, double 5.{{[0+e]*}})
 
 // WINDOWS: define dso_local void @bar4()
-// WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// WINDOWS: call void @foo_multi.resolver(i32 1, double 5.{{[0+e]*}})
 
 // LINUX: define weak_odr void (i32, double)* @foo_multi.resolver() comdat
 // LINUX: and i32 %{{.*}}, 4352
@@ -272,15 +272,15 @@ void calls_pr50025c() { pr50025c(); }
 // WINDOWS: define dso_local i32 @changed_to_mv.avx()
 // WINDOWS: define dso_local i32 @changed_to_mv.fma4()
 
-// LINUX: define linkonce void @foo_used(i32 noundef %{{.*}}, double noundef %{{.*}})
+// LINUX: define linkonce void @foo_used(i32 %{{.*}}, double %{{.*}})
 // LINUX-NOT: @foo_used.avx_sse4.2(
 // LINUX-NOT: @foo_used2(
-// LINUX: define linkonce void @foo_used2.avx_sse4.2(i32 noundef %{{.*}}, double noundef %{{.*}})
+// LINUX: define linkonce void @foo_used2.avx_sse4.2(i32 %{{.*}}, double %{{.*}})
 
-// WINDOWS: define linkonce_odr dso_local void @foo_used(i32 noundef %{{.*}}, double noundef %{{.*}})
+// WINDOWS: define linkonce_odr dso_local void @foo_used(i32 %{{.*}}, double %{{.*}})
 // WINDOWS-NOT: @foo_used.avx_sse4.2(
 // WINDOWS-NOT: @foo_used2(
-// WINDOWS: define linkonce_odr dso_local void @foo_used2.avx_sse4.2(i32 noundef %{{.*}}, double noundef %{{.*}})
+// WINDOWS: define linkonce_odr dso_local void @foo_used2.avx_sse4.2(i32 %{{.*}}, double %{{.*}})
 
 // LINUX: declare i32 @foo.arch_sandybridge()
 // WINDOWS: declare dso_local i32 @foo.arch_sandybridge()
@@ -311,15 +311,15 @@ void calls_pr50025c() { pr50025c(); }
 // WINDOWS: define linkonce_odr dso_local void @foo_decls()
 // WINDOWS: define linkonce_odr dso_local void @foo_decls.sse4.2()
 
-// LINUX: define linkonce void @foo_multi(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// LINUX: define linkonce void @foo_multi.avx_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// LINUX: define linkonce void @foo_multi.fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// LINUX: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
 
-// WINDOWS: define linkonce_odr dso_local void @foo_multi(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// WINDOWS: define linkonce_odr dso_local void @foo_multi.avx_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// WINDOWS: define linkonce_odr dso_local void @foo_multi.fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
-// WINDOWS: define linkonce_odr dso_local void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 noundef %{{[^,]+}}, double noundef %{{[^\)]+}})
+// WINDOWS: define linkonce_odr dso_local void @foo_multi(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// WINDOWS: define linkonce_odr dso_local void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// WINDOWS: define linkonce_odr dso_local void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// WINDOWS: define linkonce_odr dso_local void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
 
 // Ensure that we emit the 'static' function here.
 // LINUX: define linkonce void @pr50025()

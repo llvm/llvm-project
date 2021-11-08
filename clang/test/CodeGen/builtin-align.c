@@ -69,7 +69,7 @@ TYPE get_type(void) {
 }
 
 // CHECK-VOID_PTR-LABEL: define {{[^@]+}}@is_aligned
-// CHECK-VOID_PTR-SAME: (i8* noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-VOID_PTR-SAME: (i8* [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-VOID_PTR-NEXT:  entry:
 // CHECK-VOID_PTR-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-VOID_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -79,7 +79,7 @@ TYPE get_type(void) {
 // CHECK-VOID_PTR-NEXT:    ret i1 [[IS_ALIGNED]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@is_aligned
-// CHECK-FLOAT_PTR-SAME: (float* noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-FLOAT_PTR-SAME: (float* [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-FLOAT_PTR-NEXT:  entry:
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-FLOAT_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -89,7 +89,7 @@ TYPE get_type(void) {
 // CHECK-FLOAT_PTR-NEXT:    ret i1 [[IS_ALIGNED]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@is_aligned
-// CHECK-LONG-SAME: (i64 noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-LONG-SAME: (i64 [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-LONG-NEXT:  entry:
 // CHECK-LONG-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-LONG-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -98,7 +98,7 @@ TYPE get_type(void) {
 // CHECK-LONG-NEXT:    ret i1 [[IS_ALIGNED]]
 //
 // CHECK-USHORT-LABEL: define {{[^@]+}}@is_aligned
-// CHECK-USHORT-SAME: (i16 noundef zeroext [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-USHORT-SAME: (i16 zeroext [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-USHORT-NEXT:  entry:
 // CHECK-USHORT-NEXT:    [[ALIGNMENT:%.*]] = trunc i32 [[ALIGN]] to i16
 // CHECK-USHORT-NEXT:    [[MASK:%.*]] = sub i16 [[ALIGNMENT]], 1
@@ -112,7 +112,7 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 
 // NOTYET-POINTER-NEXT:  [[ALIGNED_RESULT:%.*]] = call [[$TYPE]] @llvm.ptrmask.p0[[$PTRTYPE]].p0i8.i64(i8* [[OVER_BOUNDARY]], [[ALIGN_TYPE]] [[INVERTED_MASK]])
 // CHECK-VOID_PTR-LABEL: define {{[^@]+}}@align_up
-// CHECK-VOID_PTR-SAME: (i8* noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-VOID_PTR-SAME: (i8* [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-VOID_PTR-NEXT:  entry:
 // CHECK-VOID_PTR-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-VOID_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -126,7 +126,7 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-VOID_PTR-NEXT:    ret i8* [[ALIGNED_RESULT]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@align_up
-// CHECK-FLOAT_PTR-SAME: (float* noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-FLOAT_PTR-SAME: (float* [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-FLOAT_PTR-NEXT:  entry:
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-FLOAT_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -142,7 +142,7 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-FLOAT_PTR-NEXT:    ret float* [[TMP1]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@align_up
-// CHECK-LONG-SAME: (i64 noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-LONG-SAME: (i64 [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-LONG-NEXT:  entry:
 // CHECK-LONG-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-LONG-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -152,7 +152,7 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-LONG-NEXT:    ret i64 [[ALIGNED_RESULT]]
 //
 // CHECK-USHORT-LABEL: define {{[^@]+}}@align_up
-// CHECK-USHORT-SAME: (i16 noundef zeroext [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-USHORT-SAME: (i16 zeroext [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-USHORT-NEXT:  entry:
 // CHECK-USHORT-NEXT:    [[ALIGNMENT:%.*]] = trunc i32 [[ALIGN]] to i16
 // CHECK-USHORT-NEXT:    [[MASK:%.*]] = sub i16 [[ALIGNMENT]], 1
@@ -167,7 +167,7 @@ TYPE align_up(TYPE ptr, unsigned align) {
 
 // NOTYET-POINTER-NEXT:  [[ALIGNED_RESULT:%.*]] = call [[$TYPE]] @llvm.ptrmask.p0[[$PTRTYPE]].p0[[$PTRTYPE]].i64([[$TYPE]] [[PTR]], [[ALIGN_TYPE]] [[INVERTED_MASK]])
 // CHECK-VOID_PTR-LABEL: define {{[^@]+}}@align_down
-// CHECK-VOID_PTR-SAME: (i8* noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-VOID_PTR-SAME: (i8* [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-VOID_PTR-NEXT:  entry:
 // CHECK-VOID_PTR-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-VOID_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -180,7 +180,7 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-VOID_PTR-NEXT:    ret i8* [[ALIGNED_RESULT]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@align_down
-// CHECK-FLOAT_PTR-SAME: (float* noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-FLOAT_PTR-SAME: (float* [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-FLOAT_PTR-NEXT:  entry:
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-FLOAT_PTR-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -195,7 +195,7 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-FLOAT_PTR-NEXT:    ret float* [[TMP1]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@align_down
-// CHECK-LONG-SAME: (i64 noundef [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-LONG-SAME: (i64 [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-LONG-NEXT:  entry:
 // CHECK-LONG-NEXT:    [[ALIGNMENT:%.*]] = zext i32 [[ALIGN]] to i64
 // CHECK-LONG-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENT]], 1
@@ -204,7 +204,7 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-LONG-NEXT:    ret i64 [[ALIGNED_RESULT]]
 //
 // CHECK-USHORT-LABEL: define {{[^@]+}}@align_down
-// CHECK-USHORT-SAME: (i16 noundef zeroext [[PTR:%.*]], i32 noundef [[ALIGN:%.*]]) #0
+// CHECK-USHORT-SAME: (i16 zeroext [[PTR:%.*]], i32 [[ALIGN:%.*]]) #0
 // CHECK-USHORT-NEXT:  entry:
 // CHECK-USHORT-NEXT:    [[ALIGNMENT:%.*]] = trunc i32 [[ALIGN]] to i16
 // CHECK-USHORT-NEXT:    [[MASK:%.*]] = sub i16 [[ALIGNMENT]], 1

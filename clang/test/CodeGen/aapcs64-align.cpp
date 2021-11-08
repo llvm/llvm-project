@@ -18,10 +18,10 @@ void g0() {
   f0m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g0
-// CHECK: call void @f0(i64 noundef 1, [2 x i64] [i64 6, i64 7]
+// CHECK: call void @f0(i64 1, [2 x i64] [i64 6, i64 7]
 // CHECK: call void @f0m{{.*}}[2 x i64] [i64 6, i64 7]
-// CHECK: declare void @f0(i64 noundef, [2 x i64])
-// CHECK: declare void @f0m(i64 noundef, i64 noundef, i64 noundef, i64 noundef, i64 noundef, [2 x i64])
+// CHECK: declare void @f0(i64, [2 x i64])
+// CHECK: declare void @f0m(i64, i64, i64, i64, i64, [2 x i64])
 
 // Aligned struct, passed according to its natural alignment.
 struct __attribute__((aligned(16))) S16 {
@@ -38,8 +38,8 @@ void g1() {
 // CHECK: define{{.*}} void @g1
 // CHECK: call void @f1{{.*}}[2 x i64] [i64 6, i64 7]
 // CHECK: call void @f1m{{.*}}[2 x i64] [i64 6, i64 7]
-// CHECK: declare void @f1(i64 noundef, [2 x i64])
-// CHECK: declare void @f1m(i64 noundef, i64 noundef, i64 noundef, i64 noundef, i64 noundef, [2 x i64])
+// CHECK: declare void @f1(i64, [2 x i64])
+// CHECK: declare void @f1m(i64, i64, i64, i64, i64, [2 x i64])
 
 // Increased natural alignment.
 struct SF16 {
@@ -55,10 +55,10 @@ void g3() {
   f3m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g3
-// CHECK: call void @f3(i64 noundef 1, i128 129127208515966861318)
-// CHECK: call void @f3m(i64 noundef 1, i64 noundef 2, i64 noundef 3, i64 noundef 4, i64 noundef 5, i128 129127208515966861318)
-// CHECK: declare void @f3(i64 noundef, i128)
-// CHECK: declare void @f3m(i64 noundef, i64 noundef, i64 noundef, i64 noundef, i64 noundef, i128)
+// CHECK: call void @f3(i64 1, i128 129127208515966861318)
+// CHECK: call void @f3m(i64 1, i64 2, i64 3, i64 4, i64 5, i128 129127208515966861318)
+// CHECK: declare void @f3(i64, i128)
+// CHECK: declare void @f3m(i64, i64, i64, i64, i64, i128)
 
 
 // Packed structure.
@@ -75,10 +75,10 @@ void g4() {
   f4m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g4()
-// CHECK: call void @f4(i32 noundef 1, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: void @f4m(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: declare void @f4(i32 noundef, [2 x i64])
-// CHECK: declare void @f4m(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64])
+// CHECK: call void @f4(i32 1, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: void @f4m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: declare void @f4(i32, [2 x i64])
+// CHECK: declare void @f4m(i32, i32, i32, i32, i32, [2 x i64])
 
 
 // Packed structure, overaligned, same as above.
@@ -95,9 +95,9 @@ void f5m(int, int, int, int, int, P16);
     f5m(1, 2, 3, 4, 5, s);
 }
 // CHECK: define{{.*}} void @g5()
-// CHECK: call void @f5(i32 noundef 1, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: void @f5m(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, [2 x i64] [i64 30064771078, i64 0])
-// CHECK: declare void @f5(i32 noundef, [2 x i64])
-// CHECK: declare void @f5m(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64])
+// CHECK: call void @f5(i32 1, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: void @f5m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i64] [i64 30064771078, i64 0])
+// CHECK: declare void @f5(i32, [2 x i64])
+// CHECK: declare void @f5m(i32, i32, i32, i32, i32, [2 x i64])
 
 }

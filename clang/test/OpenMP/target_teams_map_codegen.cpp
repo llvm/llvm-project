@@ -120,7 +120,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -168,7 +168,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -191,7 +191,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]], i64 noundef [[Y:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -243,7 +243,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -256,7 +256,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -310,7 +310,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK1-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -371,7 +371,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -386,7 +386,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -426,7 +426,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -441,7 +441,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -481,7 +481,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK1-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -496,7 +496,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..13
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -590,7 +590,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK1-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK1-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -603,7 +603,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..16
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -685,7 +685,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.17
-// CHECK1-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -720,7 +720,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK1-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK1-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -733,7 +733,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..20
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -815,7 +815,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.21
-// CHECK1-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -931,7 +931,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l72
-// CHECK1-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK1-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -944,7 +944,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..24
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -988,7 +988,7 @@ void mapInt128() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK1-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK1-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0)
+// CHECK1-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0)
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -1000,7 +1000,7 @@ void mapInt128() {
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK1-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK1-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0)
+// CHECK1-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0)
 // CHECK1-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK1:       atomic_exit:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -1010,7 +1010,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.25
-// CHECK1-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -1034,7 +1034,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l74
-// CHECK1-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK1-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -1047,7 +1047,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..28
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1091,7 +1091,7 @@ void mapInt128() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK1-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK1-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0)
+// CHECK1-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0)
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -1103,7 +1103,7 @@ void mapInt128() {
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK1-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK1-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0)
+// CHECK1-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0)
 // CHECK1-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK1:       atomic_exit:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -1113,7 +1113,7 @@ void mapInt128() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.29
-// CHECK1-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -1187,7 +1187,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1235,7 +1235,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -1258,7 +1258,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]], i64 noundef [[Y:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1310,7 +1310,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -1323,7 +1323,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1377,7 +1377,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK2-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -1438,7 +1438,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -1453,7 +1453,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1493,7 +1493,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -1508,7 +1508,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1548,7 +1548,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK2-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -1563,7 +1563,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..13
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1657,7 +1657,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK2-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK2-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -1670,7 +1670,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..16
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1752,7 +1752,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.17
-// CHECK2-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -1787,7 +1787,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK2-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK2-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -1800,7 +1800,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..20
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1882,7 +1882,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.21
-// CHECK2-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -1998,7 +1998,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l72
-// CHECK2-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK2-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -2011,7 +2011,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..24
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2055,7 +2055,7 @@ void mapInt128() {
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK2-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK2-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0)
+// CHECK2-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0)
 // CHECK2-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK2:       atomic_cont:
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -2067,7 +2067,7 @@ void mapInt128() {
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK2-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK2-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0)
+// CHECK2-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0)
 // CHECK2-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK2:       atomic_exit:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -2077,7 +2077,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.25
-// CHECK2-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -2101,7 +2101,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l74
-// CHECK2-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK2-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -2114,7 +2114,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..28
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2158,7 +2158,7 @@ void mapInt128() {
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK2-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK2-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0)
+// CHECK2-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0)
 // CHECK2-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK2:       atomic_cont:
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -2170,7 +2170,7 @@ void mapInt128() {
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK2-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK2-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0)
+// CHECK2-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0)
 // CHECK2-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK2:       atomic_exit:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -2180,7 +2180,7 @@ void mapInt128() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.29
-// CHECK2-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -2254,7 +2254,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2302,7 +2302,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -2323,7 +2323,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2373,7 +2373,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -2386,7 +2386,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2440,7 +2440,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK3-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -2501,7 +2501,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -2515,7 +2515,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2554,7 +2554,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -2568,7 +2568,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2607,7 +2607,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK3-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -2621,7 +2621,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..13
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2714,7 +2714,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK3-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK3-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -2727,7 +2727,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..16
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2809,7 +2809,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.17
-// CHECK3-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -2844,7 +2844,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK3-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK3-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -2857,7 +2857,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..20
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2939,7 +2939,7 @@ void mapInt128() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.21
-// CHECK3-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK3-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -3024,7 +3024,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3072,7 +3072,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -3093,7 +3093,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3143,7 +3143,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -3156,7 +3156,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3210,7 +3210,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK4-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK4-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK4-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -3271,7 +3271,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -3285,7 +3285,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..7
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3324,7 +3324,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -3338,7 +3338,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3377,7 +3377,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK4-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -3391,7 +3391,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..13
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3484,7 +3484,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK4-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK4-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -3497,7 +3497,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..16
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3579,7 +3579,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.17
-// CHECK4-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK4-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -3614,7 +3614,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK4-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK4-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -3627,7 +3627,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..20
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -3709,7 +3709,7 @@ void mapInt128() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.21
-// CHECK4-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK4-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -3758,7 +3758,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3770,7 +3770,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK5-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -3793,7 +3793,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]], i64 noundef [[Y:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3809,7 +3809,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK5-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -3822,7 +3822,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3876,7 +3876,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK5-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -3910,7 +3910,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK5-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -3925,7 +3925,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3938,7 +3938,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK5-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -3953,7 +3953,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3966,7 +3966,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK5-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -3981,7 +3981,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3994,7 +3994,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK5-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -4007,7 +4007,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..6
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4089,7 +4089,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.7
-// CHECK5-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4124,7 +4124,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK5-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -4137,7 +4137,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4219,7 +4219,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.9
-// CHECK5-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4254,7 +4254,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l72
-// CHECK5-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -4267,7 +4267,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4311,7 +4311,7 @@ void mapInt128() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK5-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK5-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK5-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0) #[[ATTR6:[0-9]+]]
+// CHECK5-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0) #[[ATTR6:[0-9]+]]
 // CHECK5-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK5:       atomic_cont:
 // CHECK5-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -4323,7 +4323,7 @@ void mapInt128() {
 // CHECK5-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK5-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK5-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK5-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0) #[[ATTR6]]
+// CHECK5-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0) #[[ATTR6]]
 // CHECK5-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK5:       atomic_exit:
 // CHECK5-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -4333,7 +4333,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.11
-// CHECK5-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4357,7 +4357,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l74
-// CHECK5-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -4370,7 +4370,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..12
-// CHECK5-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4414,7 +4414,7 @@ void mapInt128() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK5-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK5-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK5-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0) #[[ATTR6]]
+// CHECK5-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0) #[[ATTR6]]
 // CHECK5-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK5:       atomic_cont:
 // CHECK5-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -4426,7 +4426,7 @@ void mapInt128() {
 // CHECK5-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK5-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK5-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK5-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0) #[[ATTR6]]
+// CHECK5-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0) #[[ATTR6]]
 // CHECK5-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK5:       atomic_exit:
 // CHECK5-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -4436,7 +4436,7 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.13
-// CHECK5-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK5-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4467,7 +4467,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4479,7 +4479,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK6-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -4502,7 +4502,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]], i64 noundef [[Y:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4518,7 +4518,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK6-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 8
@@ -4531,7 +4531,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4585,7 +4585,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK6-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK6-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK6-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4619,7 +4619,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK6-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -4634,7 +4634,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4647,7 +4647,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK6-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -4662,7 +4662,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4675,7 +4675,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK6-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -4690,7 +4690,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4703,7 +4703,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK6-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK6-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -4716,7 +4716,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..6
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4798,7 +4798,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.7
-// CHECK6-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK6-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4833,7 +4833,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK6-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 8
 // CHECK6-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 8
@@ -4846,7 +4846,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4928,7 +4928,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.9
-// CHECK6-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK6-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -4963,7 +4963,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l72
-// CHECK6-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK6-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -4976,7 +4976,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..10
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5020,7 +5020,7 @@ void mapInt128() {
 // CHECK6-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK6-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK6-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK6-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0) #[[ATTR6:[0-9]+]]
+// CHECK6-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0) #[[ATTR6:[0-9]+]]
 // CHECK6-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK6:       atomic_cont:
 // CHECK6-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -5032,7 +5032,7 @@ void mapInt128() {
 // CHECK6-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK6-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK6-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK6-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0) #[[ATTR6]]
+// CHECK6-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0) #[[ATTR6]]
 // CHECK6-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK6:       atomic_exit:
 // CHECK6-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -5042,7 +5042,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.11
-// CHECK6-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK6-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -5066,7 +5066,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l74
-// CHECK6-SAME: (i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[Y_ADDR:%.*]] = alloca i128*, align 8
 // CHECK6-NEXT:    [[Z_ADDR:%.*]] = alloca i128*, align 8
@@ -5079,7 +5079,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp_outlined..12
-// CHECK6-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK6-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i128* nonnull align 16 dereferenceable(16) [[Y:%.*]], i128* nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK6-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5123,7 +5123,7 @@ void mapInt128() {
 // CHECK6-NEXT:    [[TMP11:%.*]] = load i128, i128* [[Z2]], align 16
 // CHECK6-NEXT:    [[TMP12:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK6-NEXT:    [[TMP13:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
-// CHECK6-NEXT:    call void @__atomic_load(i64 noundef 16, i8* noundef [[TMP12]], i8* noundef [[TMP13]], i32 noundef signext 0) #[[ATTR6]]
+// CHECK6-NEXT:    call void @__atomic_load(i64 16, i8* [[TMP12]], i8* [[TMP13]], i32 signext 0) #[[ATTR6]]
 // CHECK6-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK6:       atomic_cont:
 // CHECK6-NEXT:    [[TMP14:%.*]] = load i128, i128* [[ATOMIC_TEMP]], align 16
@@ -5135,7 +5135,7 @@ void mapInt128() {
 // CHECK6-NEXT:    [[TMP17:%.*]] = bitcast i128* [[TMP1]] to i8*
 // CHECK6-NEXT:    [[TMP18:%.*]] = bitcast i128* [[ATOMIC_TEMP]] to i8*
 // CHECK6-NEXT:    [[TMP19:%.*]] = bitcast i128* [[ATOMIC_TEMP3]] to i8*
-// CHECK6-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @__atomic_compare_exchange(i64 noundef 16, i8* noundef [[TMP17]], i8* noundef [[TMP18]], i8* noundef [[TMP19]], i32 noundef signext 0, i32 noundef signext 0) #[[ATTR6]]
+// CHECK6-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP17]], i8* [[TMP18]], i8* [[TMP19]], i32 signext 0, i32 signext 0) #[[ATTR6]]
 // CHECK6-NEXT:    br i1 [[CALL]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK6:       atomic_exit:
 // CHECK6-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]], [8 x i32]* @.gomp_critical_user_.reduction.var)
@@ -5145,7 +5145,7 @@ void mapInt128() {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.13
-// CHECK6-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK6-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
 // CHECK6-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
@@ -5176,7 +5176,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5188,7 +5188,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK7-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -5209,7 +5209,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5223,7 +5223,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK7-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -5236,7 +5236,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5290,7 +5290,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK7-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK7-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK7-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -5324,7 +5324,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK7-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -5338,7 +5338,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5350,7 +5350,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK7-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -5364,7 +5364,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5376,7 +5376,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK7-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -5390,7 +5390,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5402,7 +5402,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK7-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK7-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -5415,7 +5415,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..6
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5497,7 +5497,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.7
-// CHECK7-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK7-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -5532,7 +5532,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK7-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK7-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -5545,7 +5545,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK7-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5627,7 +5627,7 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.9
-// CHECK7-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK7-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -5669,7 +5669,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5681,7 +5681,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK8-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -5702,7 +5702,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5716,7 +5716,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK8-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[Y_ADDR:%.*]] = alloca i32*, align 4
@@ -5729,7 +5729,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[X:%.*]], i32* nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5783,7 +5783,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-// CHECK8-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK8-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK8-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -5817,7 +5817,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK8-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -5831,7 +5831,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5843,7 +5843,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK8-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -5857,7 +5857,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..4
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5869,7 +5869,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK8-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -5883,7 +5883,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5895,7 +5895,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK8-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK8-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -5908,7 +5908,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..6
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -5990,7 +5990,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.7
-// CHECK8-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK8-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK8-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4
@@ -6025,7 +6025,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK8-SAME: ([88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: ([88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[Y_ADDR:%.*]] = alloca [88 x i32]*, align 4
 // CHECK8-NEXT:    [[Z_ADDR:%.*]] = alloca [99 x i32]*, align 4
@@ -6038,7 +6038,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK8-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], [88 x i32]* noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK8-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], [88 x i32]* nonnull align 4 dereferenceable(352) [[Y:%.*]], [99 x i32]* nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK8-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -6120,7 +6120,7 @@ void mapInt128() {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func.9
-// CHECK8-SAME: (i8* noundef [[TMP0:%.*]], i8* noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK8-SAME: (i8* [[TMP0:%.*]], i8* [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
 // CHECK8-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 4

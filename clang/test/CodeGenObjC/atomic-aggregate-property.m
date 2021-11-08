@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -disable-noundef-analysis -triple x86_64-apple-darwin10  -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
-// RUN: %clang_cc1 -disable-noundef-analysis -x objective-c++ -triple x86_64-apple-darwin10  -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10  -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10  -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
 // rdar: // 7849824
 // <rdar://problem/12547611>
 

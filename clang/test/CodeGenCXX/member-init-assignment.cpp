@@ -10,7 +10,7 @@ struct Foo {
 Foo::Foo(unsigned arg) : file_id(arg = 42)
 { }
 
-// CHECK: define {{.*}} @_ZN3FooC2Ej(%struct.Foo* {{[^,]*}} %this, i32 noundef %arg) unnamed_addr
+// CHECK: define {{.*}} @_ZN3FooC2Ej(%struct.Foo* {{[^,]*}} %this, i32 %arg) unnamed_addr
 // CHECK: [[ARG:%.*]] = alloca i32
 // CHECK: store i32 42, i32* [[ARG]]
 // CHECK: store i32 42, i32* %{{.*}}

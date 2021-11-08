@@ -100,7 +100,7 @@ void fun3() {
 
 // CHECK-LABEL: define{{.*}}@_Z4fun4v()
 // CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr
-// CHECK:  call noundef i32 @_Z16hipConfigureCall4dim3S_mP9hipStream
+// CHECK:  call i32 @_Z16hipConfigureCall4dim3S_mP9hipStream
 // CHECK:  %[[HANDLE:.*]] = load void ()*, void ()** @kernel_ptr, align 8
 // CHECK:  %[[CAST:.*]] = bitcast void ()* %[[HANDLE]] to void ()**
 // CHECK:  %[[STUB:.*]] = load void ()*, void ()** %[[CAST]], align 8
@@ -116,7 +116,7 @@ void fun4() {
 // CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr
 // CHECK:  %[[HANDLE:.*]] = load void ()*, void ()** @kernel_ptr, align 8
 // CHECK:  %[[CAST:.*]] = bitcast void ()* %[[HANDLE]] to i8*
-// CHECK:  call void @_Z6launchPv(i8* noundef %[[CAST]])
+// CHECK:  call void @_Z6launchPv(i8* %[[CAST]])
 void fun5() {
   kernel_ptr = ckernel;
   launch((void *)kernel_ptr);

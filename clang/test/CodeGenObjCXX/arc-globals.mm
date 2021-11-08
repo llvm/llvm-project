@@ -6,14 +6,14 @@
 id getObject();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call noundef i8* @_Z9getObjectv
+// CHECK: call i8* @_Z9getObjectv
 // CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
 // CHECK-NEXT: {{store i8*.*@global_obj}}
 // CHECK-NEXT: ret void
 id global_obj = getObject();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call noundef i8* @_Z9getObjectv
+// CHECK: call i8* @_Z9getObjectv
 // CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
 // CHECK-NEXT: {{store i8*.*@global_obj2}}
 // CHECK-NEXT: ret void

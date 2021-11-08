@@ -8,7 +8,7 @@ int test(int val){
  case 4:
    do {
      switch (6) {
-       // CHECK: call noundef i32 (i8*, ...) @_Z6printfPKcz
+       // CHECK: call i32 (i8*, ...) @_Z6printfPKcz
        case 6: do { case 5: printf("bad\n"); } while (0);
      };
    } while (0);

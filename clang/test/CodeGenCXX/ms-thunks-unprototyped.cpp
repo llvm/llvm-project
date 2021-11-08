@@ -39,35 +39,35 @@ S s;
 // CHECK-SAME: i32 (i8*, i32)* @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"
 
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"(%struct.S* noundef %this, ...)
+// CHECK-LABEL: define linkonce_odr dso_local void @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"(%struct.S* %this, ...)
 // CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
 // CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.S*
 // CHECK: musttail call void (%struct.S*, ...) {{.*}}@"?f@S@@UEAA?AU?$DoNotInstantiate@X@@XZ"
-// CHECK-SAME: (%struct.S* noundef %[[THIS_ADJ]], ...)
+// CHECK-SAME: (%struct.S* %[[THIS_ADJ]], ...)
 // CHECK: ret void
 
 // The thunks should have a -8 adjustment.
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"?foo@B@@W7EAAXUIncomplete@@@Z"(%struct.B* noundef %this, ...)
+// CHECK-LABEL: define linkonce_odr dso_local void @"?foo@B@@W7EAAXUIncomplete@@@Z"(%struct.B* %this, ...)
 // CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
 // CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.B*
 // CHECK: musttail call void (%struct.B*, ...) {{.*}}@"?foo@B@@UEAAXUIncomplete@@@Z"
-// CHECK-SAME: (%struct.B* noundef %[[THIS_ADJ]], ...)
+// CHECK-SAME: (%struct.B* %[[THIS_ADJ]], ...)
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"(%struct.B* noundef %this, ...)
+// CHECK-LABEL: define linkonce_odr dso_local void @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"(%struct.B* %this, ...)
 // CHECK: %[[THIS_ADJ_i8:[^ ]*]] = getelementptr i8, i8* {{.*}}, i32 -8
 // CHECK: %[[THIS_ADJ:[^ ]*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.B*
 // CHECK: musttail call void (%struct.B*, ...) {{.*}}@"?bar@B@@UEAAXU?$DoNotInstantiate@H@@@Z"
-// CHECK-SAME: (%struct.B* noundef %[[THIS_ADJ]], ...)
+// CHECK-SAME: (%struct.B* %[[THIS_ADJ]], ...)
 // CHECK-NEXT: ret void
 
 // If we complete the definition later, things work out.
 template <typename T> struct InstantiateLater { T x; };
 inline int B::baz(InstantiateLater<int> p) { return p.x; }
 
-// CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"(i8* noundef %this.coerce, i32 %p.coerce)
+// CHECK-LABEL: define linkonce_odr dso_local i32 @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"(i8* %this.coerce, i32 %p.coerce)
 // CHECK: = getelementptr i8, i8* {{.*}}, i32 -8
-// CHECK: tail call noundef i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(i8* {{[^,]*}}, i32 {{.*}})
+// CHECK: tail call i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(i8* {{[^,]*}}, i32 {{.*}})
 
-// CHECK-LABEL: define linkonce_odr dso_local noundef i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(i8* noundef %this.coerce, i32 %p.coerce)
+// CHECK-LABEL: define linkonce_odr dso_local i32 @"?baz@B@@UEAAHU?$InstantiateLater@H@@@Z"(i8* %this.coerce, i32 %p.coerce)

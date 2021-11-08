@@ -8,7 +8,7 @@ namespace test_int {
   void test() {
     const int x = 100;
     takeABlock(^{ takeItByValue(x); });
-    // CHECK: call void @_Z13takeItByValueIiEvT_(i32 noundef 100)
+    // CHECK: call void @_Z13takeItByValueIiEvT_(i32 100)
   }
 }
 
@@ -19,7 +19,7 @@ namespace test_int_ref {
     takeABlock(^{ takeItByValue(x); });
 
     // TODO: there's no good reason that this isn't foldable.
-    // CHECK: call void @_Z13takeItByValueIiEvT_(i32 noundef {{%.*}})
+    // CHECK: call void @_Z13takeItByValueIiEvT_(i32 {{%.*}})
   }
 }
 
@@ -27,7 +27,7 @@ namespace test_float {
   void test() {
     const float x = 1;
     takeABlock(^{ takeItByValue(x); });
-    // CHECK: call void @_Z13takeItByValueIfEvT_(float noundef 1.0
+    // CHECK: call void @_Z13takeItByValueIfEvT_(float 1.0
   }
 }
 
@@ -38,7 +38,7 @@ namespace test_float_ref {
     takeABlock(^{ takeItByValue(x); });
 
     // TODO: there's no good reason that this isn't foldable.
-    // CHECK: call void @_Z13takeItByValueIfEvT_(float noundef {{%.*}})
+    // CHECK: call void @_Z13takeItByValueIfEvT_(float {{%.*}})
   }
 }
 
@@ -52,7 +52,7 @@ namespace test_complex_int {
     // CHECK-NEXT: store i32 0,
     // CHECK-NEXT: [[COERCE:%.*]] = bitcast
     // CHECK-NEXT: [[CVAL:%.*]] = load i64, i64* [[COERCE]]
-    // CHECK-NEXT: call void @_Z13takeItByValueICiEvT_(i64 noundef [[CVAL]])
+    // CHECK-NEXT: call void @_Z13takeItByValueICiEvT_(i64 [[CVAL]])
   }
 }
 
@@ -78,7 +78,7 @@ namespace test_complex_int_ref_mutable {
     // CHECK-NEXT: store i32 [[I]], i32* [[ISLOT]]
     // CHECK-NEXT: [[COERCE:%.*]] = bitcast { i32, i32 }* [[CSLOT]] to i64*
     // CHECK-NEXT: [[CVAL:%.*]] = load i64, i64* [[COERCE]],
-    // CHECK-NEXT: call void @_Z13takeItByValueICiEvT_(i64 noundef [[CVAL]])
+    // CHECK-NEXT: call void @_Z13takeItByValueICiEvT_(i64 [[CVAL]])
   }
 }
 
@@ -105,9 +105,9 @@ namespace test_block_in_lambda {
   // CHECK:      [[THIS:%.*]] = load [[LAMBDA_T:%.*]]*, [[LAMBDA_T:%.*]]**
   // CHECK:      [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[LAMBDA_T]], [[LAMBDA_T]]* [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]], {{.*}}* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AC1ERKS0_({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]], {{.*}}* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
-  // CHECK-NEXT: call void @_ZN20test_block_in_lambda9takeBlockEU13block_pointerFvvE(void ()* noundef [[T0]])
+  // CHECK-NEXT: call void @_ZN20test_block_in_lambda9takeBlockEU13block_pointerFvvE(void ()* [[T0]])
   // CHECK-NEXT: call void @_ZN20test_block_in_lambda1AD1Ev({{.*}}* {{[^,]*}} [[BLOCK_CAPTURED]])
   // CHECK-NEXT: ret void
 }

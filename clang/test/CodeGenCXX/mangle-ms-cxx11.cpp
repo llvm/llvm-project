@@ -323,13 +323,13 @@ void unaligned_foo8_S::unaligned_foo8() volatile __unaligned {}
 
 namespace PR31197 {
 struct A {
-  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc noundef i32* @"??R<lambda_1>@x@A@PR31197@@QBE@XZ"(
+  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc i32* @"??R<lambda_1>@x@A@PR31197@@QBE@XZ"(
   int *x = []() {
     static int white;
     // CHECK-DAG: @"?white@?1???R<lambda_1>@x@A@PR31197@@QBE@XZ@4HA"
     return &white;
   }();
-  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc noundef i32* @"??R<lambda_1>@y@A@PR31197@@QBE@XZ"(
+  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc i32* @"??R<lambda_1>@y@A@PR31197@@QBE@XZ"(
   int *y = []() {
     static int black;
     // CHECK-DAG: @"?black@?1???R<lambda_1>@y@A@PR31197@@QBE@XZ@4HA"

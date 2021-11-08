@@ -20,10 +20,10 @@ void Lambdas(char *ptr) {
   gi = L2(ptr);
 }
 
-// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
-// CHECK-NOT: call noundef i64 @llvm.objectsize
-// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
-// CHECK-NOT: call noundef i64 @llvm.objectsize
+// CHECK-DAG: define internal i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
+// CHECK-NOT: call i64 @llvm.objectsize
+// CHECK-DAG: define internal i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
+// CHECK-NOT: call i64 @llvm.objectsize
 }
 
 // This is here instead of in Sema/ because we need to check to make sure the

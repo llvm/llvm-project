@@ -12,12 +12,12 @@ typedef __SIZE_TYPE__ size_t;
 void test__cpuid(int *info, int level) {
   __cpuid(info, level);
 }
-// X86-LABEL: define {{.*}} @test__cpuid(i32* noundef %{{.*}}, i32 noundef %{{.*}})
+// X86-LABEL: define {{.*}} @test__cpuid(i32* %{{.*}}, i32 %{{.*}})
 // X86: call { i32, i32, i32, i32 } asm "cpuid",
 // X86-SAME:   "={ax},={bx},={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"
 // X86-SAME:   (i32 %{{.*}}, i32 0)
 
-// X64-LABEL: define {{.*}} @test__cpuid(i32* noundef %{{.*}}, i32 noundef %{{.*}})
+// X64-LABEL: define {{.*}} @test__cpuid(i32* %{{.*}}, i32 %{{.*}})
 // X64: call { i32, i32, i32, i32 } asm "xchgq %rbx{{.*}}cpuid{{.*}}xchgq %rbx{{.*}}",
 // X64-SAME:   "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"
 // X64-SAME:   (i32 %{{.*}}, i32 0)

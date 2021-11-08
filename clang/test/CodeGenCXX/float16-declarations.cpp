@@ -59,12 +59,12 @@ public:
   _Float16 func1c(_Float16 arg ) {
     return f1c + arg;
   }
-// CHECK-DAG: define linkonce_odr dso_local noundef half @_ZN2C16func1cEDF16_(%class.C1*{{.*}}, half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local half @_ZN2C16func1cEDF16_(%class.C1*{{.*}}, half{{.*}})
 
   static _Float16 func2c(_Float16 arg) {
     return arg * C1::f2c;
   }
-// CHECK-DAG: define linkonce_odr dso_local noundef half @_ZN2C16func2cEDF16_(half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local half @_ZN2C16func2cEDF16_(half{{.*}})
 };
 
 /*  Template */
@@ -72,7 +72,7 @@ public:
 template <class C> C func1t(C arg) {
   return arg * 2.f16;
 }
-// CHECK-DAG: define linkonce_odr dso_local noundef half @_Z6func1tIDF16_ET_S0_(half{{.*}})
+// CHECK-DAG: define linkonce_odr dso_local half @_Z6func1tIDF16_ET_S0_(half{{.*}})
 
 template <class C> struct S1 {
   C mem1;
@@ -99,7 +99,7 @@ int main(void) {
 
   C1 c1(f1l);
 // CHECK-DAG:  [[F1L:%[a-z0-9]+]] = load half, half* %{{.*}}, align 2
-// CHECK-DAG:  call void @_ZN2C1C2EDF16_(%class.C1* {{[^,]*}} %{{.*}}, half noundef %{{.*}})
+// CHECK-DAG:  call void @_ZN2C1C2EDF16_(%class.C1* {{[^,]*}} %{{.*}}, half %{{.*}})
 
   S1<_Float16> s1 = { 132.f16 };
 // CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2

@@ -33,7 +33,7 @@ D::D() {}  // Forces vftable emission.
 // CHECK: %[[VTORDISP:.*]] = load i32, i32* %[[VTORDISP_PTR]]
 // CHECK: %[[VTORDISP_NEG:.*]] = sub i32 0, %[[VTORDISP]]
 // CHECK: %[[ADJUSTED_i8:.*]] = getelementptr i8, i8* %[[ECX_i8]], i32 %[[VTORDISP_NEG]]
-// CHECK: call x86_thiscallcc void @"?f@D@@UAEXXZ"(i8* noundef %[[ADJUSTED_i8]])
+// CHECK: call x86_thiscallcc void @"?f@D@@UAEXXZ"(i8* %[[ADJUSTED_i8]])
 // CHECK: ret void
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?f@D@@$4PPPPPPPI@3AEXXZ"
@@ -46,7 +46,7 @@ D::D() {}  // Forces vftable emission.
 // CHECK: %[[VTORDISP_NEG:.*]] = sub i32 0, %[[VTORDISP]]
 // CHECK: %[[VTORDISP_ADJUSTED_i8:.*]] = getelementptr i8, i8* %[[ECX_i8]], i32 %[[VTORDISP_NEG]]
 // CHECK: %[[ADJUSTED_i8:.*]] = getelementptr i8, i8* %[[VTORDISP_ADJUSTED_i8]], i32 -4
-// CHECK: call x86_thiscallcc void @"?f@D@@UAEXXZ"(i8* noundef %[[ADJUSTED_i8]])
+// CHECK: call x86_thiscallcc void @"?f@D@@UAEXXZ"(i8* %[[ADJUSTED_i8]])
 // CHECK: ret void
 
 struct E : virtual A {
@@ -82,5 +82,5 @@ G::G() {}  // Forces vftable emission.
 // CHECK: %[[VBASE_OFFSET:.*]] = load i32, i32* %[[VBOFFSET_PTR]]
 // CHECK: %[[VBASE:.*]] = getelementptr inbounds i8, i8* %[[VBPTR_i8]], i32 %[[VBASE_OFFSET]]
 // CHECK: %[[ARG_i8:.*]] = getelementptr i8, i8* %[[VBASE]], i32 8
-// CHECK: call x86_thiscallcc void @"?f@E@@UAEXXZ"(i8* noundef %[[ARG_i8]])
+// CHECK: call x86_thiscallcc void @"?f@E@@UAEXXZ"(i8* %[[ARG_i8]])
 // CHECK: ret void
