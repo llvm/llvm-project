@@ -37,7 +37,7 @@ struct Y : Z, W, virtual V {};
 
 void f(const Y &y) {
   // CHECK-LABEL: @"?f@@YAXABUY@@@Z"
-  // CHECK: call x86_thiscallcc %struct.Y* @"??0Y@@QAE@ABU0@@Z"(%struct.Y* {{[^,]*}} %[[mem:.*]], %struct.Y*
+  // CHECK: call x86_thiscallcc noundef %struct.Y* @"??0Y@@QAE@ABU0@@Z"(%struct.Y* {{[^,]*}} %[[mem:.*]], %struct.Y*
   // CHECK: %[[cast:.*]] = bitcast %struct.Y* %[[mem]] to i8*
   // CHECK: call void @_CxxThrowException(i8* %[[cast]], %eh.ThrowInfo* @"_TI5?AUY@@")
   throw y;
@@ -66,7 +66,7 @@ struct Default {
 // CHECK: store {{.*}} %this, {{.*}} %[[this_addr]], align 4
 // CHECK: %[[this:.*]] = load {{.*}} %[[this_addr]]
 // CHECK: %[[src:.*]] = load {{.*}} %[[src_addr]]
-// CHECK: call x86_thiscallcc {{.*}} @"??0Default@@QAE@AAU0@H@Z"({{.*}} %[[this]], {{.*}} %[[src]], i32 42)
+// CHECK: call x86_thiscallcc {{.*}} @"??0Default@@QAE@AAU0@H@Z"({{.*}} %[[this]], {{.*}} %[[src]], i32 noundef 42)
 // CHECK: ret void
 
 void h(Default &d) {

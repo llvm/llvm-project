@@ -598,3 +598,188 @@ func @omp_atomic_write6(%addr : memref<i32>, %val : i32) {
   omp.atomic.write  %addr, %val memory_order(xyz) : memref<i32>, i32
   return
 }
+
+// -----
+
+func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
+  // expected-error @below {{operand used in both private and firstprivate clauses}}
+  omp.sections private(%data_var1 : memref<i32>) firstprivate(%data_var1 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
+  // expected-error @below {{operand used in both private and lastprivate clauses}}
+  omp.sections private(%data_var1 : memref<i32>) lastprivate(%data_var1 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
+  // expected-error @below {{operand used in both private and lastprivate clauses}}
+  omp.sections private(%data_var1 : memref<i32>, %data_var2 : memref<i32>) lastprivate(%data_var3 : memref<i32>, %data_var2 : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+  "omp.sections" (%data_var) ({
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,0,0,1,0]> : vector<6xi32>} : (memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected as many reduction symbol references as reduction variables}}
+  "omp.sections" (%data_var) ({
+    omp.terminator
+  }) {operand_segment_sizes = dense<[0,0,0,1,0,0]> : vector<6xi32>} : (memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected omp.section op or terminator op inside region}}
+  omp.sections {
+    "test.payload" () : () -> ()
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%cond : i1) {
+  // expected-error @below {{if is not a valid clause for the omp.sections operation}}
+  omp.sections if(%cond) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{num_threads is not a valid clause for the omp.sections operation}}
+  omp.sections num_threads(10) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%datavar : memref<i32>) {
+  // expected-error @below {{shared is not a valid clause for the omp.sections operation}}
+  omp.sections shared(%datavar : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%datavar : memref<i32>) {
+  // expected-error @below {{copyin is not a valid clause for the omp.sections operation}}
+  omp.sections copyin(%datavar : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{default is not a valid clause for the omp.sections operation}}
+  omp.sections default(private) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{proc_bind is not a valid clause for the omp.sections operation}}
+  omp.sections proc_bind(close) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections(%data_var : memref<i32>, %linear_var : i32) {
+  // expected-error @below {{linear is not a valid clause for the omp.sections operation}}
+  omp.sections linear(%data_var = %linear_var : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{schedule is not a valid clause for the omp.sections operation}}
+  omp.sections schedule(static, none) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{collapse is not a valid clause for the omp.sections operation}}
+  omp.sections collapse(3) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{ordered is not a valid clause for the omp.sections operation}}
+  omp.sections ordered(2) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{order is not a valid clause for the omp.sections operation}}
+  omp.sections order(concurrent) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_sections() {
+  // expected-error @below {{failed to verify constraint: region with 1 blocks}}
+  omp.sections {
+    omp.section {
+      omp.terminator
+    }
+    omp.terminator
+  ^bb2:
+    omp.terminator
+  }
+  return
+}

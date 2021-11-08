@@ -41,9 +41,9 @@ body:             |
     liveins: $rdi, $rsi
     
     $rax = MOV64rm renamable $rdi, 1, $noreg, 4, $noreg
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = MOV32ri 200
-    RETQ $eax
+    RET64 $eax
 ...

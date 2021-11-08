@@ -430,6 +430,15 @@ public:
   static StringRef name() { return "NoOpFunctionAnalysis"; }
 };
 
+/// No-op loop nest pass which does nothing.
+struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
+  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
+                        LoopStandardAnalysisResults &, LPMUpdater &) {
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "NoOpLoopNestPass"; }
+};
+
 /// No-op loop pass which does nothing.
 struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
@@ -488,6 +497,8 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)    \
   PIC->addClassToPassName(CLASS, NAME);
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
+  PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
@@ -1019,6 +1030,28 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 }
 
 template <typename CallbacksT>
+static bool isLoopNestPassName(StringRef Name, CallbacksT &Callbacks,
+                               bool &UseMemorySSA) {
+  UseMemorySSA = false;
+
+  // Explicitly handle custom-parsed pass names.
+  if (parseRepeatPassName(Name))
+    return true;
+
+  if (Name == "lnicm") {
+    UseMemorySSA = true;
+    return true;
+  }
+
+#define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
+  if (Name == NAME)                                                            \
+    return true;
+#include "PassRegistry.def"
+
+  return callbacksAcceptPassName<LoopPassManager>(Name, Callbacks);
+}
+
+template <typename CallbacksT>
 static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
                            bool &UseMemorySSA) {
   UseMemorySSA = false;
@@ -1251,6 +1284,12 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
     MPM.addPass(createModuleToFunctionPassAdaptor(CREATE_PASS(Params.get()))); \
     return Error::success();                                                   \
   }
+#define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
+  if (Name == NAME) {                                                          \
+    MPM.addPass(createModuleToFunctionPassAdaptor(                             \
+        createFunctionToLoopPassAdaptor(CREATE_PASS, false, false)));          \
+    return Error::success();                                                   \
+  }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(                             \
@@ -1367,6 +1406,12 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(CREATE_PASS(Params.get()))); \
     return Error::success();                                                   \
   }
+#define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
+  if (Name == NAME) {                                                          \
+    CGPM.addPass(createCGSCCToFunctionPassAdaptor(                             \
+        createFunctionToLoopPassAdaptor(CREATE_PASS, false, false)));          \
+    return Error::success();                                                   \
+  }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(                             \
@@ -1471,6 +1516,11 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
 //        bool UseMemorySSA = !("canon-freeze" || "loop-predication" ||
 //                              "guard-widening");
 //        The risk is that it may become obsolete if we're not careful.
+#define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
+  if (Name == NAME) {                                                          \
+    FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS, false, false));   \
+    return Error::success();                                                   \
+  }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS, false, false));   \
@@ -1529,6 +1579,11 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
   }
 
 // Now expand the basic registered passes from the .inc file.
+#define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
+  if (Name == NAME) {                                                          \
+    LPM.addPass(CREATE_PASS);                                                  \
+    return Error::success();                                                   \
+  }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     LPM.addPass(CREATE_PASS);                                                  \
@@ -1656,6 +1711,10 @@ Error PassBuilder::parsePassPipeline(ModulePassManager &MPM,
     } else if (isFunctionPassName(FirstName,
                                   FunctionPipelineParsingCallbacks)) {
       Pipeline = {{"function", std::move(*Pipeline)}};
+    } else if (isLoopNestPassName(FirstName, LoopPipelineParsingCallbacks,
+                                  UseMemorySSA)) {
+      Pipeline = {{"function", {{UseMemorySSA ? "loop-mssa" : "loop",
+                                 std::move(*Pipeline)}}}};
     } else if (isLoopPassName(FirstName, LoopPipelineParsingCallbacks,
                               UseMemorySSA)) {
       Pipeline = {{"function", {{UseMemorySSA ? "loop-mssa" : "loop",
@@ -1850,6 +1909,10 @@ void PassBuilder::printPassNames(raw_ostream &OS) {
 
   OS << "Function alias analyses:\n";
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
+#include "PassRegistry.def"
+
+  OS << "LoopNest passes:\n";
+#define LOOPNEST_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
 #include "PassRegistry.def"
 
   OS << "Loop passes:\n";

@@ -3556,12 +3556,10 @@ def : Pat<(v4i32 (build_vector immSExt5NonZero:$A, immSExt5NonZero:$A,
           (v4i32 (VSPLTISW imm:$A))>;
 
 // Splat loads.
-// Note that, we use MTVSRD without checking PPC64 because we only care the
-// lowest 16/8 bits.
 def : Pat<(v8i16 (PPCldsplat ForceXForm:$A)),
-          (v8i16 (VSPLTHs 3, (MTVSRD (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LHZX ForceXForm:$A), sub_32))))>;
+          (v8i16 (VSPLTHs 3, (MTVSRWZ (LHZX ForceXForm:$A))))>;
 def : Pat<(v16i8 (PPCldsplat ForceXForm:$A)),
-          (v16i8 (VSPLTBs 7, (MTVSRD (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LBZX ForceXForm:$A), sub_32))))>;
+          (v16i8 (VSPLTBs 7, (MTVSRWZ (LBZX ForceXForm:$A))))>;
 } // HasVSX, HasDirectMove
 
 // Big endian VSX subtarget with direct moves.

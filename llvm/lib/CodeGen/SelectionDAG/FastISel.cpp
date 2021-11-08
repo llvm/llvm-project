@@ -196,10 +196,8 @@ void FastISel::flushLocalValueMap() {
         EmitStartPt ? MachineBasicBlock::reverse_iterator(EmitStartPt)
                     : FuncInfo.MBB->rend();
     MachineBasicBlock::reverse_iterator RI(LastLocalValue);
-    for (; RI != RE;) {
-      MachineInstr &LocalMI = *RI;
-      // Increment before erasing what it points to.
-      ++RI;
+    for (MachineInstr &LocalMI :
+         llvm::make_early_inc_range(llvm::make_range(RI, RE))) {
       Register DefReg = findLocalRegDef(LocalMI);
       if (!DefReg)
         continue;

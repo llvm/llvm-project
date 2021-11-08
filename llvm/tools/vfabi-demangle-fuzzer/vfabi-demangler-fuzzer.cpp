@@ -34,7 +34,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   const auto Info = VFABI::tryDemangleForVFABI(MangledName, *M);
 
   // Do not optimize away the return value. Inspired by
-  // https://github.com/google/benchmark/blob/master/include/benchmark/benchmark.h#L307-L345
+  // https://github.com/google/benchmark/blob/main/include/benchmark/benchmark.h#L307-L345
   asm volatile("" : : "r,m"(Info) : "memory");
 
   return 0;

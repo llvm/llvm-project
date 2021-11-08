@@ -359,7 +359,7 @@ ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
     return;
   }
   CFICheckFn cfi_check = sv.get_cfi_check();
-  VReport(2, "__cfi_check at %p\n", cfi_check);
+  VReport(2, "__cfi_check at %p\n", (void *)cfi_check);
   cfi_check(CallSiteTypeId, Ptr, DiagData);
 }
 

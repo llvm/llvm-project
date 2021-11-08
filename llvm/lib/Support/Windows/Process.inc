@@ -261,6 +261,7 @@ windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
   EC = GetExecutableName(Filename);
   if (EC)
     return EC;
+  sys::path::make_preferred(Arg0);
   sys::path::append(Arg0, Filename);
   Args[0] = Saver.save(Arg0).data();
   return std::error_code();

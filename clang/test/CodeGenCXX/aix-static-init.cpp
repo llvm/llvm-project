@@ -102,8 +102,8 @@ namespace test4 {
 
 // CHECK: define internal void @__cxx_global_var_init.2() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK32: %call = call i32 @_ZN5test23fooEv()
-// CHECK64: %call = call signext i32 @_ZN5test23fooEv()
+// CHECK32: %call = call noundef i32 @_ZN5test23fooEv()
+// CHECK64: %call = call noundef signext i32 @_ZN5test23fooEv()
 // CHECK:   store i32 %call, i32* @_ZN5test21xE
 // CHECK:   ret void
 // CHECK: }

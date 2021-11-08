@@ -87,7 +87,7 @@ void implicit_maps_reference (int a, int *b){
   }
 }
 
-// CK2: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
+// CK2: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK2: [[ADDR:%.+]] = alloca i[[sz]],
 // CK2: [[REF:%.+]] = alloca i32*,
 // CK2: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
@@ -99,7 +99,7 @@ void implicit_maps_reference (int a, int *b){
 // CK2-32: [[RVAL:%.+]] = load i32*, i32** [[REF]],
 // CK2-32: {{.+}} = load i32, i32* [[RVAL]],
 
-// CK2: define internal void [[KERNEL2]](i32* [[ARG:%.+]])
+// CK2: define internal void [[KERNEL2]](i32* noundef [[ARG:%.+]])
 // CK2: [[ADDR:%.+]] = alloca i32*,
 // CK2: [[REF:%.+]] = alloca i32**,
 // CK2: store i32* [[ARG]], i32** [[ADDR]],

@@ -154,7 +154,7 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define weak void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i32*{{.+}}, i{{[0-9]+}} [[VLA:%.+]], i{{[0-9]+}} [[VLA1:%.+]], i16*{{.+}})
+  // TCHECK: define weak void @__omp_offloading_{{.+}}([[S1]]* noundef [[TH:%.+]], i32*{{.+}}, i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i16*{{.+}})
   // TCHECK: [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK: [[B_ADDR:%.+]] = alloca i{{[0-9]+}}*,
   // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},

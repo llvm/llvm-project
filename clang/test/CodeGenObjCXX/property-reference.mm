@@ -26,7 +26,7 @@ void test0() {
   const MyStruct& currentMyStruct = myClass.foo;   
 }
 
-// CHECK: [[C:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.MyStruct* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
+// CHECK: [[C:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.MyStruct* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
 // CHECK:   store %struct.MyStruct* [[C]], %struct.MyStruct** [[D:%.*]]
 
 namespace test1 {
@@ -40,7 +40,7 @@ namespace test1 {
 @implementation Test1
 @synthesize prop1 = ivar;
 @end
-// CHECK:    define internal nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A:%.*]]* @"\01-[Test1 prop1]"(
+// CHECK:    define internal noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A:%.*]]* @"\01-[Test1 prop1]"(
 // CHECK:      [[SELF:%.*]] = alloca [[TEST1:%.*]]*, align 8
 // CHECK:      [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]** [[SELF]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
@@ -49,7 +49,7 @@ namespace test1 {
 // CHECK-NEXT: ret [[A]]* [[T3]]
 
 // CHECK:    define internal void @"\01-[Test1 setProp1:]"(
-// CHECK:      call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]]* @_ZN5test11AaSERKS0_(
+// CHECK:      call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]]* @_ZN5test11AaSERKS0_(
 // CHECK-NEXT: ret void
 
 // rdar://problem/10497174

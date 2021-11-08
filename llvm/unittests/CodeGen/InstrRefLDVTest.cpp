@@ -487,7 +487,7 @@ body:  |
 TEST_F(InstrRefLDVTest, MTransferDefs) {
   MachineFunction *MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
 
   // We should start with only SP tracked.
@@ -519,7 +519,7 @@ TEST_F(InstrRefLDVTest, MTransferDefs) {
   MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
    "    $al = MOV8ri 0\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -556,7 +556,7 @@ TEST_F(InstrRefLDVTest, MTransferDefs) {
    "    $rdi = MOV64ri 0\n" // instr 4
    "    $rsi = MOV64ri 0\n" // instr 5
    "    CALL64r $rax, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $esp, implicit-def $sp\n\n\n\n" // instr 6
-   "    RETQ $rax\n"); // instr 7
+   "    RET64 $rax\n"); // instr 7
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -590,7 +590,7 @@ TEST_F(InstrRefLDVTest, MTransferDefs) {
   // When we DBG_PHI something, we should track all its subregs.
   MF = readMIRBlock(
    "    DBG_PHI $rdi, 0\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -613,7 +613,7 @@ TEST_F(InstrRefLDVTest, MTransferMeta) {
    "    $rax = MOV64ri 0\n"
    "    $rax = IMPLICIT_DEF\n"
    "    $rax = KILL killed $rax\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -632,7 +632,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   MachineFunction *MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
-   "    RETQ $rax\n");
+   "    RET64 $rax\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -657,7 +657,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
    "    $rax = MOV64ri 0\n"
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -681,7 +681,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
    "    $rax = MOV64ri 0\n"
    "    $rcx = COPY $rax\n"
    "    $rbx = MOV64rr $rcx\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -711,7 +711,7 @@ TEST_F(InstrRefLDVTest, MTransferCopies) {
   MF = readMIRBlock(
    "    $rax = MOV64ri 0\n"
    "    $ecx = COPY $eax\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -741,7 +741,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    $rax = MOV64ri 0\n"
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -788,7 +788,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)\n"
    "    MOV32mr $rsp, 1, $noreg, 16, $noreg, $eax :: (store 4 into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -839,7 +839,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    $xmm0 = IMPLICIT_DEF\n"
    "    MOVUPDmr $rsp, 1, $noreg, 16, $noreg, killed $xmm0 :: (store (s128) into %stack.0)\n"
    "    $rbx = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);
@@ -874,7 +874,7 @@ TEST_F(InstrRefLDVTest, MTransferSubregSpills) {
    "    $rax = MOV64ri 0\n"
    "    MOV8mr $rsp, 1, $noreg, 16, $noreg, $ah :: (store 1 into %stack.0)\n"
    "    $al = MOV8rm $rsp, 1, $noreg, 0, $noreg :: (load 1 from %stack.0)\n"
-   "    RETQ\n");
+   "    RET64\n");
   setupLDVObj(MF);
   TransferMap.clear();
   TransferMap.resize(1);

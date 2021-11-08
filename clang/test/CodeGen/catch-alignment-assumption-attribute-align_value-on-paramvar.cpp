@@ -7,8 +7,8 @@
 // CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_ALIGNMENT_ASSUMPTION:.*]] = {{.*}}, i32 100, i32 10 }, {{.*}}* @[[CHAR]] }
 
 char **passthrough(__attribute__((align_value(0x100000000))) char **x) {
-  // CHECK-NOSANITIZE:                define{{.*}} i8** @{{.*}}(i8** align 4294967296 %[[X:.*]])
-  // CHECK-SANITIZE:                  define{{.*}} i8** @{{.*}}(i8** %[[X:.*]])
+  // CHECK-NOSANITIZE:                define{{.*}} i8** @{{.*}}(i8** noundef align 4294967296 %[[X:.*]])
+  // CHECK-SANITIZE:                  define{{.*}} i8** @{{.*}}(i8** noundef %[[X:.*]])
   // CHECK-NEXT:                      [[entry:.*]]:
   // CHECK-NEXT:                        %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:                        store i8** %[[X]], i8*** %[[X_ADDR]], align 8

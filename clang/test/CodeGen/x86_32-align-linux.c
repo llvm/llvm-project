@@ -50,9 +50,9 @@ void testm512(int argCount, ...) {
 }
 
 // CHECK-LABEL: define dso_local void @testPastArguments
-// CHECK: call void (i32, ...) @testm128(i32 1, <4 x float> %0)
-// CHECK: call void (i32, ...) @testm256(i32 1, <8 x float> %1)
-// CHECK: call void (i32, ...) @testm512(i32 1, <16 x float> %2)
+// CHECK: call void (i32, ...) @testm128(i32 noundef 1, <4 x float> noundef %0)
+// CHECK: call void (i32, ...) @testm256(i32 noundef 1, <8 x float> noundef %1)
+// CHECK: call void (i32, ...) @testm512(i32 noundef 1, <16 x float> noundef %2)
 void testPastArguments(void) {
   __m128 a;
   __m256 b;

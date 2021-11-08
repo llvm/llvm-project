@@ -19,6 +19,6 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:53: expected 64-bit integer (too large)
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load 12345678912345678924218574857 from %ir.a)
-    RETQ $eax
+    RET64 $eax
 ...
 

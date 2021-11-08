@@ -154,11 +154,11 @@ void testalignx(const void *pointer) {
 }
 
 // 64BIT-LABEL: @testbcopy(
-// 64BIT:         call void @bcopy(i8* {{%.*}}, i8* {{%.*}}, i64 {{%.*}})
+// 64BIT:         call void @bcopy(i8* noundef {{%.*}}, i8* noundef {{%.*}}, i64 noundef {{%.*}})
 // 64BIT-NEXT:    ret void
 //
 // 32BIT-LABEL: @testbcopy(
-// 32BIT:         call void @bcopy(i8* {{%.*}}, i8* {{%.*}}, i32 {{%.*}})
+// 32BIT:         call void @bcopy(i8* noundef {{%.*}}, i8* noundef {{%.*}}, i32 noundef {{%.*}})
 // 32BIT-NEXT:    ret void
 //
 void testbcopy(const void *src, void *dest, size_t n) {

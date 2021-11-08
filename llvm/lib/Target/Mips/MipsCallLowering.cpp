@@ -24,6 +24,7 @@ using namespace llvm;
 MipsCallLowering::MipsCallLowering(const MipsTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
+namespace {
 struct MipsOutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
   /// This is the name of the function being called
   /// FIXME: Relying on this is unsound
@@ -80,7 +81,6 @@ struct MipsIncomingValueAssigner : public CallLowering::IncomingValueAssigner {
   }
 };
 
-namespace {
 class MipsIncomingValueHandler : public CallLowering::IncomingValueHandler {
   const MipsSubtarget &STI;
 

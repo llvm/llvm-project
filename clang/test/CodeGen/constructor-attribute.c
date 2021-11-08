@@ -12,7 +12,7 @@
 // CHECK: define internal void @E()
 // CHECK: define internal void @F()
 // CHECK: define internal void @G()
-// CHECK: define{{.*}} i32 @__GLOBAL_init_789(i32 %{{.*}})
+// CHECK: define{{.*}} i32 @__GLOBAL_init_789(i32 noundef %{{.*}})
 // CHECK: define internal void @C()
 // CHECK: define internal void @D()
 // CHECK: define{{.*}} i32 @main()

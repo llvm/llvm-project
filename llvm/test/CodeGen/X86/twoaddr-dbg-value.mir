@@ -13,7 +13,7 @@ body:             |
     %5:gr32 = COPY %4
     PUSH32r killed %1, implicit-def $esp, implicit $esp
     $eax = COPY killed %5
-    RETQ implicit killed $eax
+    RET64 implicit killed $eax
 
 ...
 

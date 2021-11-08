@@ -88,5 +88,5 @@ body:             |
     ;; end scope, end location range
     $esi = MOV32ri 2, debug-location !26
 
-    RETQ debug-location !15
+    RET64 debug-location !15
 ...

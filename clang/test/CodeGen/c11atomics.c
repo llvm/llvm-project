@@ -73,7 +73,7 @@ void testinc(void)
 // CHECK: testdec
 void testdec(void)
 {
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   b--;
   // CHECK: atomicrmw sub i32* @i, i32 1 seq_cst, align 4
   i--;
@@ -81,7 +81,7 @@ void testdec(void)
   l--;
   // CHECK: atomicrmw sub i16* @s, i16 1 seq_cst, align 2
   s--;
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   --b;
   // CHECK: atomicrmw sub i32* @i, i32 1 seq_cst, align 4
   // CHECK: sub i32
@@ -96,7 +96,7 @@ void testdec(void)
 // CHECK: testaddeq
 void testaddeq(void)
 {
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   // CHECK: atomicrmw add i32* @i, i32 42 seq_cst, align 4
   // CHECK: atomicrmw add i64* @l, i64 42 seq_cst, align 8
   // CHECK: atomicrmw add i16* @s, i16 42 seq_cst, align 2
@@ -108,7 +108,7 @@ void testaddeq(void)
 // CHECK: testsubeq
 void testsubeq(void)
 {
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   // CHECK: atomicrmw sub i32* @i, i32 42 seq_cst, align 4
   // CHECK: atomicrmw sub i64* @l, i64 42 seq_cst, align 8
   // CHECK: atomicrmw sub i16* @s, i16 42 seq_cst, align 2
@@ -120,7 +120,7 @@ void testsubeq(void)
 // CHECK: testxoreq
 void testxoreq(void)
 {
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   // CHECK: atomicrmw xor i32* @i, i32 42 seq_cst, align 4
   // CHECK: atomicrmw xor i64* @l, i64 42 seq_cst, align 8
   // CHECK: atomicrmw xor i16* @s, i16 42 seq_cst, align 2
@@ -132,7 +132,7 @@ void testxoreq(void)
 // CHECK: testoreq
 void testoreq(void)
 {
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   // CHECK: atomicrmw or i32* @i, i32 42 seq_cst, align 4
   // CHECK: atomicrmw or i64* @l, i64 42 seq_cst, align 8
   // CHECK: atomicrmw or i16* @s, i16 42 seq_cst, align 2
@@ -144,7 +144,7 @@ void testoreq(void)
 // CHECK: testandeq
 void testandeq(void)
 {
-  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
+  // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 noundef 1, i8* noundef @b
   // CHECK: atomicrmw and i32* @i, i32 42 seq_cst, align 4
   // CHECK: atomicrmw and i64* @l, i64 42 seq_cst, align 8
   // CHECK: atomicrmw and i16* @s, i16 42 seq_cst, align 2
@@ -173,7 +173,7 @@ void testFloat(_Atomic(float) *fp) {
 // CHECK-NEXT: [[T0:%.*]] = load float*, float** [[FP]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast float* [[T0]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast float* [[TMP0]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 4, i8* [[T1]], i8* [[T2]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 noundef 4, i8* noundef [[T1]], i8* noundef [[T2]], i32 noundef 5)
 // CHECK-NEXT: [[T3:%.*]] = load float, float* [[TMP0]], align 4
 // CHECK-NEXT: store float [[T3]], float* [[F]]
   float f = *fp;
@@ -183,7 +183,7 @@ void testFloat(_Atomic(float) *fp) {
 // CHECK-NEXT: store float [[T0]], float* [[TMP1]], align 4
 // CHECK-NEXT: [[T2:%.*]] = bitcast float* [[T1]] to i8*
 // CHECK-NEXT: [[T3:%.*]] = bitcast float* [[TMP1]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 4, i8* [[T2]], i8* [[T3]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 noundef 4, i8* noundef [[T2]], i8* noundef [[T3]], i32 noundef 5)
   *fp = f;
 
 // CHECK-NEXT: ret void
@@ -214,7 +214,7 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
 // CHECK-NEXT: [[T0:%.*]] = load [[CF]]*, [[CF]]** [[FP]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[CF]]* [[T0]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast [[CF]]* [[TMP0]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 8, i8* [[T1]], i8* [[T2]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 noundef 8, i8* noundef [[T1]], i8* noundef [[T2]], i32 noundef 5)
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[CF]], [[CF]]* [[TMP0]], i32 0, i32 0
 // CHECK-NEXT: [[R:%.*]] = load float, float* [[T0]]
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[CF]], [[CF]]* [[TMP0]], i32 0, i32 1
@@ -236,7 +236,7 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
 // CHECK-NEXT: store float [[I]], float* [[T1]]
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[CF]]* [[DEST]] to i8*
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[CF]]* [[TMP1]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 8, i8* [[T0]], i8* [[T1]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 noundef 8, i8* noundef [[T0]], i8* noundef [[T1]], i32 noundef 5)
   *fp = f;
 
 // CHECK-NEXT: ret void
@@ -276,7 +276,7 @@ void testStruct(_Atomic(S) *fp) {
 // CHECK-NEXT: [[T0:%.*]] = load [[S]]*, [[S]]** [[FP]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[S]]* [[T0]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast [[S]]* [[F]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 8, i8* [[T1]], i8* [[T2]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 noundef 8, i8* noundef [[T1]], i8* noundef [[T2]], i32 noundef 5)
   S f = *fp;
 
 // CHECK-NEXT: [[T0:%.*]] = load [[S]]*, [[S]]** [[FP]]
@@ -285,7 +285,7 @@ void testStruct(_Atomic(S) *fp) {
 // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 [[T1]], i8* align 2 [[T2]], i32 8, i1 false)
 // CHECK-NEXT: [[T3:%.*]] = bitcast [[S]]* [[T0]] to i8*
 // CHECK-NEXT: [[T4:%.*]] = bitcast [[S]]* [[TMP0]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 8, i8* [[T3]], i8* [[T4]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 noundef 8, i8* noundef [[T3]], i8* noundef [[T4]], i32 noundef 5)
   *fp = f;
 
 // CHECK-NEXT: ret void
@@ -331,7 +331,7 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 // CHECK-NEXT: [[T0:%.*]] = load [[APS]]*, [[APS]]** [[FP]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[APS]]* [[T0]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast [[APS]]* [[TMP0]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 8, i8* [[T1]], i8* [[T2]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 noundef 8, i8* noundef [[T1]], i8* noundef [[T2]], i32 noundef 5)
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[APS]], [[APS]]* [[TMP0]], i32 0, i32 0
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[PS]]* [[F]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast [[PS]]* [[T0]] to i8*
@@ -347,13 +347,13 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 [[T2]], i8* align 2 [[T3]], i32 6, i1 false)
 // CHECK-NEXT: [[T4:%.*]] = bitcast [[APS]]* [[T0]] to i8*
 // CHECK-NEXT: [[T5:%.*]] = bitcast [[APS]]* [[TMP1]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 8, i8* [[T4]], i8* [[T5]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_store(i32 noundef 8, i8* noundef [[T4]], i8* noundef [[T5]], i32 noundef 5)
   *fp = f;
 
 // CHECK-NEXT: [[T0:%.*]] = load [[APS]]*, [[APS]]** [[FP]], align 4
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[APS]]* [[T0]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast [[APS]]* [[TMP3]] to i8*
-// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 8, i8* [[T1]], i8* [[T2]], i32 5)
+// CHECK-NEXT: call arm_aapcscc void @__atomic_load(i32 noundef 8, i8* noundef [[T1]], i8* noundef [[T2]], i32 noundef 5)
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[APS]], [[APS]]* [[TMP3]], i32 0, i32 0
 // CHECK-NEXT: [[T1:%.*]] = bitcast %struct.PS* [[TMP2]] to i8*
 // CHECK-NEXT: [[T2:%.*]] = bitcast %struct.PS* [[T0]] to i8*
@@ -368,7 +368,7 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 }
 
 PS test_promoted_load(_Atomic(PS) *addr) {
-  // CHECK-LABEL: @test_promoted_load(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr)
+  // CHECK-LABEL: @test_promoted_load(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* noundef %addr)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[ATOMIC_RES:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   store { %struct.PS, [2 x i8] }* %addr, { %struct.PS, [2 x i8] }** [[ADDR_ARG]], align 4
@@ -376,7 +376,7 @@ PS test_promoted_load(_Atomic(PS) *addr) {
   // CHECK:   [[ADDR64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ADDR]] to i64*
   // CHECK:   [[ATOMIC_RES64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_RES]] to i64*
   // CHECK:   [[ADDR8:%.*]] = bitcast i64* [[ADDR64]] to i8*
-  // CHECK:   [[RES:%.*]] = call arm_aapcscc i64 @__atomic_load_8(i8* [[ADDR8]], i32 5)
+  // CHECK:   [[RES:%.*]] = call arm_aapcscc i64 @__atomic_load_8(i8* noundef [[ADDR8]], i32 noundef 5)
   // CHECK:   store i64 [[RES]], i64* [[ATOMIC_RES64]], align 8
   // CHECK:   [[ATOMIC_RES_STRUCT:%.*]] = bitcast i64* [[ATOMIC_RES64]] to %struct.PS*
   // CHECK:   [[AGG_RESULT8:%.*]] = bitcast %struct.PS* %agg.result to i8*
@@ -387,7 +387,7 @@ PS test_promoted_load(_Atomic(PS) *addr) {
 }
 
 void test_promoted_store(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_store({ %struct.PS, [2 x i8] }* %addr, %struct.PS* %val)
+  // CHECK-LABEL: @test_promoted_store({ %struct.PS, [2 x i8] }* noundef %addr, %struct.PS* noundef %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2
@@ -406,12 +406,12 @@ void test_promoted_store(_Atomic(PS) *addr, PS *val) {
   // CHECK:   [[ATOMIC_VAL64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_VAL]] to i64*
   // CHECK:   [[ADDR8:%.*]] = bitcast i64* [[ADDR64]] to i8*
   // CHECK:   [[VAL64:%.*]] = load i64, i64* [[ATOMIC_VAL64]], align 2
-  // CHECK:   call arm_aapcscc void @__atomic_store_8(i8* [[ADDR8]], i64 [[VAL64]], i32 5)
+  // CHECK:   call arm_aapcscc void @__atomic_store_8(i8* noundef [[ADDR8]], i64 noundef [[VAL64]], i32 noundef 5)
   __c11_atomic_store(addr, *val, 5);
 }
 
 PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_exchange(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr, %struct.PS* %val)
+  // CHECK-LABEL: @test_promoted_exchange(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* noundef %addr, %struct.PS* noundef %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2
@@ -432,7 +432,7 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
   // CHECK:   [[ATOMIC_RES64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_RES]] to i64*
   // CHECK:   [[ADDR8:%.*]] = bitcast i64* [[ADDR64]] to i8*
   // CHECK:   [[VAL64:%.*]] = load i64, i64* [[ATOMIC_VAL64]], align 2
-  // CHECK:   [[RES:%.*]] = call arm_aapcscc i64 @__atomic_exchange_8(i8* [[ADDR8]], i64 [[VAL64]], i32 5)
+  // CHECK:   [[RES:%.*]] = call arm_aapcscc i64 @__atomic_exchange_8(i8* noundef [[ADDR8]], i64 noundef [[VAL64]], i32 noundef 5)
   // CHECK:   store i64 [[RES]], i64* [[ATOMIC_RES64]], align 8
   // CHECK:   [[ATOMIC_RES_STRUCT:%.*]] = bitcast i64* [[ATOMIC_RES64]] to %struct.PS*
   // CHECK:   [[AGG_RESULT8:%.*]] = bitcast %struct.PS* %agg.result to i8*
@@ -442,7 +442,7 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
 }
 
 _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
-  // CHECK-LABEL: i1 @test_promoted_cmpxchg({ %struct.PS, [2 x i8] }* %addr, %struct.PS* %desired, %struct.PS* %new) #0 {
+  // CHECK-LABEL: i1 @test_promoted_cmpxchg({ %struct.PS, [2 x i8] }* noundef %addr, %struct.PS* noundef %desired, %struct.PS* noundef %new) #0 {
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[DESIRED_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NEW_ARG:%.*]] = alloca %struct.PS*, align 4
@@ -470,7 +470,7 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   [[ADDR8:%.*]] = bitcast i64* [[ADDR64]] to i8*
   // CHECK:   [[ATOMIC_DESIRED8:%.*]] = bitcast i64* [[ATOMIC_DESIRED64]] to i8*
   // CHECK:   [[NEW64:%.*]] = load i64, i64* [[ATOMIC_NEW64]], align 2
-  // CHECK:   [[RES:%.*]] = call arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(i8* [[ADDR8]], i8* [[ATOMIC_DESIRED8]], i64 [[NEW64]], i32 5, i32 5)
+  // CHECK:   [[RES:%.*]] = call arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(i8* noundef [[ADDR8]], i8* noundef [[ATOMIC_DESIRED8]], i64 noundef [[NEW64]], i32 noundef 5, i32 noundef 5)
   // CHECK:   ret i1 [[RES]]
   return __c11_atomic_compare_exchange_strong(addr, desired, *new, 5, 5);
 }
@@ -479,12 +479,12 @@ struct Empty {};
 
 struct Empty test_empty_struct_load(_Atomic(struct Empty)* empty) {
   // CHECK-LABEL: @test_empty_struct_load(
-  // CHECK: call arm_aapcscc zeroext i8 @__atomic_load_1(i8* %{{.*}}, i32 5)
+  // CHECK: call arm_aapcscc zeroext i8 @__atomic_load_1(i8* noundef %{{.*}}, i32 noundef 5)
   return __c11_atomic_load(empty, 5);
 }
 
 void test_empty_struct_store(_Atomic(struct Empty)* empty, struct Empty value) {
   // CHECK-LABEL: @test_empty_struct_store(
-  // CHECK: call arm_aapcscc void @__atomic_store_1(i8* %{{.*}}, i8 zeroext %{{.*}}, i32 5)
+  // CHECK: call arm_aapcscc void @__atomic_store_1(i8* noundef %{{.*}}, i8 noundef zeroext %{{.*}}, i32 noundef 5)
   __c11_atomic_store(empty, value, 5);
 }

@@ -92,6 +92,6 @@ body:             |
     $edi = SHR32ri killed $edi, 8, implicit-def dead $eflags, debug-location !17
     $eax = MOVSX32rr8 $dil, implicit killed $edi, debug-location !20
     $rbp = POP64r implicit-def $rsp, implicit $rsp, debug-location !20
-    RETQ $eax, debug-location !20
+    RET64 $eax, debug-location !20
 
 ...

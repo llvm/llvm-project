@@ -37,7 +37,7 @@ p SmallString
 # CHECK: "bar"
 p StringRef
 
-# CHECK: "3barbaz"
+# CHECK: "foobarbaz"
 p Twine
 
 # CHECK: llvm::StringMap with 2 elements = {["foo"] = 123, ["bar"] = 456}

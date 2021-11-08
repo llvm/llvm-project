@@ -229,6 +229,7 @@ static void removeSSACopy(Module &M) {
     removeSSACopy(F);
 }
 
+namespace {
 class FunctionSpecializer {
 
   /// The IPSCCP Solver.
@@ -737,6 +738,7 @@ private:
     }
   }
 };
+} // namespace
 
 bool llvm::runFunctionSpecialization(
     Module &M, const DataLayout &DL,

@@ -9544,6 +9544,40 @@ static SDValue foldBoolSelectToLogic(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse())
+    return SDValue();
+
+  SDValue Cond0 = N0.getOperand(0);
+  SDValue Cond1 = N0.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+  if (VT != Cond0.getValueType())
+    return SDValue();
+
+  // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & N1
+  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1) && isNullOrNullSplat(N2)) {
+    SDLoc DL(N);
+    SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
+    return DAG.getNode(ISD::AND, DL, VT, Sra, N1);
+  }
+
+  // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | N2
+  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1) &&
+      isAllOnesOrAllOnesSplat(N1)) {
+    SDLoc DL(N);
+    SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
+    return DAG.getNode(ISD::OR, DL, VT, Sra, N2);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -10233,6 +10267,10 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
 
   if (SDValue V = foldVSelectOfConstants(N))
     return V;
+
+  if (hasOperation(ISD::SRA, VT))
+    if (SDValue V = foldVSelectToSignBitSplatMask(N, DAG))
+      return V;
 
   return SDValue();
 }
@@ -22270,8 +22308,8 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
   SDNodeFlags Flags = N->getFlags();
 
   // See if we can constant fold the vector operation.
-  if (SDValue Fold = DAG.FoldConstantVectorArithmetic(
-          Opcode, SDLoc(LHS), LHS.getValueType(), Ops, N->getFlags()))
+  if (SDValue Fold = DAG.FoldConstantArithmetic(Opcode, SDLoc(LHS),
+                                                LHS.getValueType(), Ops))
     return Fold;
 
   // Move unary shuffles with identical masks after a vector binop:

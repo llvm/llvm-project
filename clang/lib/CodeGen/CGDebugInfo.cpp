@@ -1441,12 +1441,15 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
     if (TL) {
       if (auto FTL = TL.getAs<FunctionTypeLoc>()) {
         DoneWithTL = true;
-        int Idx = 0;
+        unsigned Idx = 0;
+        unsigned FTL_NumParams = FTL.getNumParams();
         for (const QualType &ParamType : FPT->param_types()) {
           TypeLoc ParamTL;
-          if (ParmVarDecl *Param = FTL.getParam(Idx)) {
-            if (const TypeSourceInfo *TSI = Param->getTypeSourceInfo())
-              ParamTL = TSI->getTypeLoc();
+          if (Idx < FTL_NumParams) {
+            if (ParmVarDecl *Param = FTL.getParam(Idx)) {
+              if (const TypeSourceInfo *TSI = Param->getTypeSourceInfo())
+                ParamTL = TSI->getTypeLoc();
+            }
           }
           EltTys.push_back(getOrCreateType(ParamType, Unit, ParamTL));
           Idx++;

@@ -53,5 +53,5 @@ body: |
     DBG_VALUE _, 0, !42, !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...

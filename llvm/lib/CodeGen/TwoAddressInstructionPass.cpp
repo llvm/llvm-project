@@ -1539,15 +1539,23 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     if (LIS) {
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
 
+      SlotIndex endIdx =
+          LIS->getInstructionIndex(*MI).getRegSlot(IsEarlyClobber);
       if (RegA.isVirtual()) {
         LiveInterval &LI = LIS->getInterval(RegA);
         VNInfo *VNI = LI.getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
-        SlotIndex endIdx =
-            LIS->getInstructionIndex(*MI).getRegSlot(IsEarlyClobber);
-        LI.addSegment(LiveInterval::Segment(LastCopyIdx, endIdx, VNI));
+        LI.addSegment(LiveRange::Segment(LastCopyIdx, endIdx, VNI));
         for (auto &S : LI.subranges()) {
           VNI = S.getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
-          S.addSegment(LiveInterval::Segment(LastCopyIdx, endIdx, VNI));
+          S.addSegment(LiveRange::Segment(LastCopyIdx, endIdx, VNI));
+        }
+      } else {
+        for (MCRegUnitIterator Unit(RegA, TRI); Unit.isValid(); ++Unit) {
+          if (LiveRange *LR = LIS->getCachedRegUnit(*Unit)) {
+            VNInfo *VNI =
+                LR->getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
+            LR->addSegment(LiveRange::Segment(LastCopyIdx, endIdx, VNI));
+          }
         }
       }
     }

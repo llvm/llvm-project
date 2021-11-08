@@ -378,10 +378,10 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
     // Also, we want to avoid matching partial patterns.
     // TODO: It would be more efficient if we removed dead instructions
     // iteratively in this loop rather than waiting until the end.
-    for (Instruction &I : make_range(BB.rbegin(), BB.rend())) {
+    for (Instruction &I : llvm::reverse(BB)) {
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
-      MadeChange |= tryToRecognizePopCount(I); 
+      MadeChange |= tryToRecognizePopCount(I);
     }
   }
 

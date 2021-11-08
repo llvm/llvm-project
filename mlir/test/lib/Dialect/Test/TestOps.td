@@ -1520,6 +1520,11 @@ def TestSignatureConversionUndoOp : TEST_Op<"signature_conversion_undo"> {
   let regions = (region AnyRegion);
 }
 
+def TestSignatureConversionNoConverterOp
+  : TEST_Op<"signature_conversion_no_converter"> {
+  let regions = (region AnyRegion);
+}
+
 //===----------------------------------------------------------------------===//
 // Test parser.
 //===----------------------------------------------------------------------===//

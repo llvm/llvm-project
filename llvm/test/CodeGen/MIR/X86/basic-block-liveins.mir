@@ -31,7 +31,7 @@ body: |
     liveins: $edi, $esi
 
     $eax = LEA64_32r killed $rdi, 1, killed $rsi, 0, _
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 name: test2
@@ -47,7 +47,7 @@ body: |
     liveins: $esi
 
     $eax = LEA64_32r killed $rdi, 1, killed $rsi, 0, _
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 name: test3
@@ -61,5 +61,5 @@ body: |
     liveins:
 
     $eax = MOV32r0 implicit-def dead $eflags
-    RETQ killed $eax
+    RET64 killed $eax
 ...

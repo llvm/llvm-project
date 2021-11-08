@@ -37,5 +37,5 @@ body:  |
     $ebp = KILL killed $rbp, debug-instr-number 2, debug-location !12
     dead $rcx = MOV64ri 0
     CMP64ri8 renamable $rax, 1, implicit-def $eflags
-    RETQ $rax
+    RET64 $rax
 ...

@@ -49,7 +49,7 @@ body: |
     $eax = MOV32r0 implicit-def $eflags
 
   bb.2.exit:
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 # CHECK: name: bar
@@ -69,5 +69,5 @@ body: |
     $eax = MOV32r0 implicit-def $eflags
 
   bb.3:
-    RETQ $eax
+    RET64 $eax
 ...

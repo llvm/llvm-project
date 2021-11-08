@@ -483,6 +483,7 @@ static void clampReturnedValueStates(
     S ^= *T;
 }
 
+namespace {
 /// Helper class for generic deduction: return value -> returned position.
 template <typename AAType, typename BaseType,
           typename StateType = typename BaseType::StateType,
@@ -641,6 +642,7 @@ struct AACallSiteReturnedFromReturned : public BaseType {
     return clampStateAndIndicateChange(S, AA.getState());
   }
 };
+} // namespace
 
 /// Helper function to accumulate uses.
 template <class AAType, typename StateType = typename AAType::StateType>
@@ -1031,6 +1033,7 @@ private:
   BooleanState BS;
 };
 
+namespace {
 struct AAPointerInfoImpl
     : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
   using BaseTy = StateWrapper<AA::PointerInfo::State, AAPointerInfo>;
@@ -5070,6 +5073,7 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
     STATS_DECLTRACK_CSRET_ATTR(nocapture)
   }
 };
+} // namespace
 
 /// ------------------ Value Simplify Attribute ----------------------------
 
@@ -5090,6 +5094,7 @@ bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
   return true;
 }
 
+namespace {
 struct AAValueSimplifyImpl : AAValueSimplify {
   AAValueSimplifyImpl(const IRPosition &IRP, Attributor &A)
       : AAValueSimplify(IRP, A) {}
@@ -7369,6 +7374,7 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use &U,
   if (UserI->mayWriteToMemory())
     removeAssumedBits(NO_WRITES);
 }
+} // namespace
 
 /// -------------------- Memory Locations Attributes ---------------------------
 /// Includes read-none, argmemonly, inaccessiblememonly,

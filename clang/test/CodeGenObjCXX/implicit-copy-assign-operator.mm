@@ -43,7 +43,7 @@ void test_D(D d1, D d2) {
   d1 = d2;
 }
 
-// CHECK-OBJ-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.D* @_ZN1DaSERS_
+// CHECK-OBJ-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.D* @_ZN1DaSERS_
 // CHECK-OBJ: {{call.*_ZN1AaSERS_}}
 // CHECK-OBJ: {{call.*_ZN1BaSERS_}}
 // CHECK-OBJ: {{call.*_ZN1CaSERKS_}}

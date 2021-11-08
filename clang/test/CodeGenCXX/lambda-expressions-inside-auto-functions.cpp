@@ -53,12 +53,12 @@ struct A {
   
   template<class T> auto foo() { return [](const T&) { return 42; }; }
 };
-//CHECK_ABIV6: define linkonce_odr i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES5_(%class.anon
-//CHECK_ABI_LATEST: define linkonce_odr i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES4_(%class.anon
+//CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES5_(%class.anon
+//CHECK_ABI_LATEST: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES4_(%class.anon
 int run2 = A<double>{}.func()(3.14);
 
-//CHECK_ABIV6: define linkonce_odr i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES5_(%class.anon
-//CHECK_ABI_LATEST: define linkonce_odr i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES4_(%class.anon
+//CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES5_(%class.anon
+//CHECK_ABI_LATEST: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIcE14default_lambdaIcEEDavENKUlRKcE_clES4_(%class.anon
 int run3 = A<char>{}.func()('a');
 } // end inline_member_function
 

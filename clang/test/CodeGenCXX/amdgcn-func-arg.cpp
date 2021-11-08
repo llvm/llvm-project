@@ -36,15 +36,15 @@ void func_with_indirect_arg(A a) {
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[A]] to %class.A*
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_A]], align 4, addrspace(5)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[AGG_TMP]] to %class.A*
-// CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* noundef [[A_ASCAST]])
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast %class.A* [[AGG_TMP_ASCAST]] to i8*
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast %class.A* [[A_ASCAST]] to i8*
 // CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP0]], i8* align 4 [[TMP1]], i64 4, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast %class.A* [[AGG_TMP_ASCAST]] to [[CLASS_A]] addrspace(5)*
-// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A([[CLASS_A]] addrspace(5)* [[AGG_TMP_ASCAST_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* nonnull align 4 dereferenceable(4) [[AGG_TMP_ASCAST]])
-// CHECK-NEXT:    call void @_Z17func_with_ref_argR1A(%class.A* nonnull align 4 dereferenceable(4) [[A_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A([[CLASS_A]] addrspace(5)* noundef [[AGG_TMP_ASCAST_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* noundef [[AGG_TMP_ASCAST]])
+// CHECK-NEXT:    call void @_Z17func_with_ref_argR1A(%class.A* noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* noundef [[A_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void test_indirect_arg_auto() {
@@ -60,9 +60,9 @@ void test_indirect_arg_auto() {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast %class.A* [[AGG_TMP_ASCAST]] to i8*
 // CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP0]], i8* align 4 addrspacecast (i8 addrspace(1)* bitcast ([[CLASS_A]] addrspace(1)* @g_a to i8 addrspace(1)*) to i8*), i64 4, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast %class.A* [[AGG_TMP_ASCAST]] to [[CLASS_A]] addrspace(5)*
-// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A([[CLASS_A]] addrspace(5)* [[AGG_TMP_ASCAST_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* nonnull align 4 dereferenceable(4) [[AGG_TMP_ASCAST]])
-// CHECK-NEXT:    call void @_Z17func_with_ref_argR1A(%class.A* nonnull align 4 dereferenceable(4) addrspacecast ([[CLASS_A]] addrspace(1)* @g_a to %class.A*))
+// CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A([[CLASS_A]] addrspace(5)* noundef [[AGG_TMP_ASCAST_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* noundef [[AGG_TMP_ASCAST]])
+// CHECK-NEXT:    call void @_Z17func_with_ref_argR1A(%class.A* noundef nonnull align 4 dereferenceable(4) addrspacecast ([[CLASS_A]] addrspace(1)* @g_a to %class.A*))
 // CHECK-NEXT:    ret void
 //
 void test_indirect_arg_global() {
@@ -92,8 +92,8 @@ void func_with_byval_arg(B b) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast %class.B* [[B_ASCAST]] to i8*
 // CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP0]], i8* align 4 [[TMP1]], i64 400, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast %class.B* [[AGG_TMP_ASCAST]] to [[CLASS_B]] addrspace(5)*
-// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B([[CLASS_B]] addrspace(5)* byval([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
-// CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(%class.B* nonnull align 4 dereferenceable(400) [[B_ASCAST]])
+// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B([[CLASS_B]] addrspace(5)* noundef byval([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
+// CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(%class.B* noundef nonnull align 4 dereferenceable(400) [[B_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void test_byval_arg_auto() {
@@ -109,8 +109,8 @@ void test_byval_arg_auto() {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast %class.B* [[AGG_TMP_ASCAST]] to i8*
 // CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP0]], i8* align 4 addrspacecast (i8 addrspace(1)* bitcast ([[CLASS_B]] addrspace(1)* @g_b to i8 addrspace(1)*) to i8*), i64 400, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast %class.B* [[AGG_TMP_ASCAST]] to [[CLASS_B]] addrspace(5)*
-// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B([[CLASS_B]] addrspace(5)* byval([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
-// CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(%class.B* nonnull align 4 dereferenceable(400) addrspacecast ([[CLASS_B]] addrspace(1)* @g_b to %class.B*))
+// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B([[CLASS_B]] addrspace(5)* noundef byval([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
+// CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(%class.B* noundef nonnull align 4 dereferenceable(400) addrspacecast ([[CLASS_B]] addrspace(1)* @g_b to %class.B*))
 // CHECK-NEXT:    ret void
 //
 void test_byval_arg_global() {

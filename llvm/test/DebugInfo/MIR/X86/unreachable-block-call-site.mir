@@ -63,6 +63,6 @@ body:             |
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !18
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !18
-    RETQ killed $eax, debug-location !18
+    RET64 killed $eax, debug-location !18
 
 ...
