@@ -78,14 +78,17 @@ inline const Value *GetUnderlyingObjCPtr(const Value *V) {
 }
 
 /// A wrapper for GetUnderlyingObjCPtr used for results memoization.
-inline const Value *
-GetUnderlyingObjCPtrCached(const Value *V,
-                           DenseMap<const Value *, WeakTrackingVH> &Cache) {
-  if (auto InCache = Cache.lookup(V))
-    return InCache;
+inline const Value *GetUnderlyingObjCPtrCached(
+    const Value *V,
+    DenseMap<const Value *, std::pair<WeakVH, WeakTrackingVH>> &Cache) {
+  // The entry is invalid if either value handle is null.
+  auto InCache = Cache.lookup(V);
+  if (InCache.first && InCache.second)
+    return InCache.second;
 
   const Value *Computed = GetUnderlyingObjCPtr(V);
-  Cache[V] = const_cast<Value *>(Computed);
+  Cache[V] =
+      std::make_pair(const_cast<Value *>(V), const_cast<Value *>(Computed));
   return Computed;
 }
 
