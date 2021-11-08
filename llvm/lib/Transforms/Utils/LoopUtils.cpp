@@ -612,10 +612,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     for (auto *Block : L->blocks())
       for (Instruction &I : *Block) {
         auto *Undef = UndefValue::get(I.getType());
-        for (Value::use_iterator UI = I.use_begin(), E = I.use_end();
-             UI != E;) {
-          Use &U = *UI;
-          ++UI;
+        for (Use &U : llvm::make_early_inc_range(I.uses())) {
           if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
             if (L->contains(Usr->getParent()))
               continue;
