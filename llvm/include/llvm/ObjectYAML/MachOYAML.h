@@ -131,6 +131,7 @@ struct Object {
   std::vector<LoadCommand> LoadCommands;
   std::vector<Section> Sections;
   LinkEditData LinkEdit;
+  Optional<llvm::yaml::BinaryRef> RawLinkEditSegment;
   DWARFYAML::Data DWARF;
 };
 
