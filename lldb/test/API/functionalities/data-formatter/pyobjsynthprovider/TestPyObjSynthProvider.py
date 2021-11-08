@@ -28,8 +28,6 @@ class PyObjectSynthProviderTestCase(TestBase):
 
     def provider_data_formatter_commands(self):
         """Test that the PythonObjectSyntheticChildProvider helper class works"""
-        # rdar://84688015 SILModule::checkForLeaks can assert when used concurrently.
-        self.runCmd("settings set target.experimental.swift-create-module-contexts-in-parallel false")
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
