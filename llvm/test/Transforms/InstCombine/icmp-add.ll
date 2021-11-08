@@ -363,8 +363,8 @@ define i1 @ult_add_nonuw(i8 %in) {
 
 define i1 @uge_add_nonuw(i32 %in) {
 ; CHECK-LABEL: @uge_add_nonuw(
-; CHECK-NEXT:    [[A6:%.*]] = add i32 [[IN:%.*]], 3
-; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 11
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[IN:%.*]], -9
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[TMP1]], -12
 ; CHECK-NEXT:    ret i1 [[A18]]
 ;
   %a6 = add i32 %in, 3
@@ -785,8 +785,8 @@ define <2 x i1> @ugt_offset_splat(<2 x i5> %a) {
 
 define i1 @ugt_wrong_offset(i8 %a) {
 ; CHECK-LABEL: @ugt_wrong_offset(
-; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], 123
-; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 [[T]], -5
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[TMP1]], 4
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
   %t = add i8 %a, 123
