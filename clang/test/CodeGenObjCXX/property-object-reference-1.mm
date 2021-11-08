@@ -28,4 +28,4 @@ struct TCPPObject
 // CHECK: store %struct.TCPPObject* [[cppObject:%.*]], %struct.TCPPObject** [[cppObjectaddr]], align 8
 // CHECK:  [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[cppObjectaddr]], align 8
 // CHECK:  [[FOUR:%.*]] = bitcast %struct.TCPPObject* [[THREE]] to i8*
-// CHECK:  call void @objc_copyStruct(i8* noundef [[TWO:%.*]], i8* noundef [[FOUR]], i64 noundef 256, i1 noundef zeroext true, i1 noundef zeroext false)
+// CHECK:  call void @objc_copyStruct(i8* [[TWO:%.*]], i8* [[FOUR]], i64 256, i1 zeroext true, i1 zeroext false)

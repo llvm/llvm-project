@@ -174,14 +174,22 @@ def Tosa_UnaryOpQuantInfoBuilder : OpBuilder<
     buildUnaryOpWithQuantInfo($_builder, $_state, outputType, input);
   }]>;
 
-// This builder is called on the TOSA pad operator that needs to create its own
-// OptionalAttr quantization_attr parameter to scale the padding values
+// These builders are called on the TOSA pad operator that needs to create its
+// own OptionalAttr quantization_attr parameter to scale the padding values
 // correctly.
 def Tosa_PadOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "Value":$paddings),
   [{
     buildPadOpWithQuantInfo($_builder, $_state, outputType,
                             input, paddings);
+  }]>;
+
+def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
+  (ins "Type":$outputType, "Value":$input, "Value":$paddings,
+       "Value":$pad_value),
+  [{
+    buildExplicitValuePadOpWithQuantInfo($_builder, $_state, outputType,
+                                         input, paddings, pad_value);
   }]>;
 
 //===----------------------------------------------------------------------===//

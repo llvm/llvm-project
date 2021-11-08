@@ -5,9 +5,9 @@ struct A {
 };
 
 void f(A a, A *ap) {
-  // CHECK: call noundef i32 @_ZN1AngEv(%struct.A* {{[^,]*}} %a)
+  // CHECK: call i32 @_ZN1AngEv(%struct.A* {{[^,]*}} %a)
   -a;
 
-  // CHECK: call noundef i32 %
+  // CHECK: call i32 %
   -*ap;
 }

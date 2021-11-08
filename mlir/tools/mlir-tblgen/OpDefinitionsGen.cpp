@@ -2233,7 +2233,7 @@ void OpEmitter::genOperandResultVerifier(OpMethodBody &body,
       continue;
     // Emit a loop to check all the dynamic values in the pack.
     StringRef constraintFn =
-        staticVerifierEmitter.getTypeConstraintFn(value.constraint);
+        staticVerifierEmitter.getConstraintFn(value.constraint);
     body << "    for (::mlir::Value v : valueGroup" << staticValue.index()
          << ") {\n"
          << "      if (::mlir::failed(" << constraintFn
@@ -2639,11 +2639,27 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
     return;
 
   // Generate all of the locally instantiated methods first.
-  StaticVerifierFunctionEmitter staticVerifierEmitter(recordKeeper, os);
+  StaticVerifierFunctionEmitter staticVerifierEmitter(recordKeeper);
   os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
-  staticVerifierEmitter.emitFunctionsFor(
-      typeVerifierSignature, typeVerifierErrorHandler, /*typeArgName=*/"type",
-      defs, emitDecl);
+  staticVerifierEmitter.setSelf("type");
+
+  // Collect a set of all of the used type constraints within the operation
+  // definitions.
+  llvm::SetVector<const void *> typeConstraints;
+  for (Record *def : defs) {
+    Operator op(*def);
+    for (NamedTypeConstraint &operand : op.getOperands())
+      if (operand.hasPredicate())
+        typeConstraints.insert(operand.constraint.getAsOpaquePointer());
+    for (NamedTypeConstraint &result : op.getResults())
+      if (result.hasPredicate())
+        typeConstraints.insert(result.constraint.getAsOpaquePointer());
+  }
+
+  staticVerifierEmitter.emitConstraintMethodsInNamespace(
+      typeVerifierSignature, typeVerifierErrorHandler,
+      Operator(*defs[0]).getCppNamespace(), typeConstraints.getArrayRef(), os,
+      emitDecl);
 
   for (auto *def : defs) {
     Operator op(*def);

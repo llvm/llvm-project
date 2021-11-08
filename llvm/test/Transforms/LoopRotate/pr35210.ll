@@ -11,11 +11,11 @@
 ; CHECK-NEXT: Running analysis: LoopAnalysis on f
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on f
+; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
 ; CHECK-NEXT: Running pass: LCSSAPass on f
 ; CHECK-NEXT: Running analysis: AAManager on f
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on f
-; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
 ; CHECK-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; CHECK-NEXT: Folding loop latch bb4 into bb
@@ -29,12 +29,12 @@
 ; MSSA-NEXT: Running analysis: LoopAnalysis on f
 ; MSSA-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; MSSA-NEXT: Running analysis: AssumptionAnalysis on f
+; MSSA-NEXT: Running analysis: TargetIRAnalysis on f
 ; MSSA-NEXT: Running pass: LCSSAPass on f
 ; MSSA-NEXT: Running analysis: MemorySSAAnalysis on f
 ; MSSA-NEXT: Running analysis: AAManager on f
 ; MSSA-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; MSSA-NEXT: Running analysis: ScalarEvolutionAnalysis on f
-; MSSA-NEXT: Running analysis: TargetIRAnalysis on f
 ; MSSA-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
 ; MSSA-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; MSSA-NEXT: Folding loop latch bb4 into bb

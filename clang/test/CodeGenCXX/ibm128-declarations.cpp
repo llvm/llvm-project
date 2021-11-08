@@ -79,7 +79,7 @@ int main(void) {
 // CHECK: @gf = global ppc_fp128 0xM40080000000000000000000000000000, align 16
 // CHECK: @_ZN5CTest3scfE = external constant ppc_fp128, align 16
 
-// CHECK: define dso_local noundef ppc_fp128 @_Z10func_arithggg(ppc_fp128 noundef %a, ppc_fp128 noundef %b, ppc_fp128 noundef %c)
+// CHECK: define dso_local ppc_fp128 @_Z10func_arithggg(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c)
 // CHECK: entry:
 // CHECK:   store ppc_fp128 %a, ppc_fp128* %a.addr, align 16
 // CHECK:   store ppc_fp128 %b, ppc_fp128* %b.addr, align 16
@@ -104,7 +104,7 @@ int main(void) {
 // CHECK:   ret ppc_fp128 %8
 // CHECK: }
 
-// CHECK: define dso_local noundef ppc_fp128 @_Z10func_vaargiz(i32 noundef signext %n, ...)
+// CHECK: define dso_local ppc_fp128 @_Z10func_vaargiz(i32 signext %n, ...)
 // CHECK: entry:
 // CHECK:   store i32 %n, i32* %n.addr, align 4
 // CHECK:   %ap1 = bitcast i8** %ap to i8*
@@ -121,36 +121,36 @@ int main(void) {
 // CHECK:   ret ppc_fp128 %2
 // CHECK: }
 
-// CHECK: define dso_local noundef ppc_fp128 @_Z11icmode_selfg(ppc_fp128 noundef %x)
-// CHECK: define dso_local noundef { ppc_fp128, ppc_fp128 } @_Z19icmode_self_complexCg(ppc_fp128 noundef %x.coerce0, ppc_fp128 noundef %x.coerce1)
+// CHECK: define dso_local ppc_fp128 @_Z11icmode_selfg(ppc_fp128 %x)
+// CHECK: define dso_local { ppc_fp128, ppc_fp128 } @_Z19icmode_self_complexCg(ppc_fp128 %x.coerce0, ppc_fp128 %x.coerce1)
 
-// CHECK: define dso_local noundef signext i32 @main()
+// CHECK: define dso_local signext i32 @main()
 // CHECK: entry:
 // CHECK:   %0 = load ppc_fp128, ppc_fp128* %lf, align 16
-// CHECK:   call void @_ZN5CTestC1Eg(%class.CTest* noundef %ct, ppc_fp128 noundef %0)
+// CHECK:   call void @_ZN5CTestC1Eg(%class.CTest* nonnull align 16 dereferenceable(32) %ct, ppc_fp128 %0)
 // CHECK:   %mem2 = getelementptr inbounds %struct.T1, %struct.T1* %tf, i32 0, i32 0
 // CHECK:   %1 = load ppc_fp128, ppc_fp128* %mem2, align 16
 // CHECK:   %2 = load ppc_fp128, ppc_fp128* %lf, align 16
-// CHECK:   %call = call noundef ppc_fp128 @_Z5func1g(ppc_fp128 noundef %2)
+// CHECK:   %call = call ppc_fp128 @_Z5func1g(ppc_fp128 %2)
 // CHECK:   %add = fadd ppc_fp128 %1, %call
 // CHECK:   %3 = load ppc_fp128, ppc_fp128* %lf, align 16
-// CHECK:   %call1 = call noundef ppc_fp128 @_ZN5CTest5func3Eg(ppc_fp128 noundef %3)
+// CHECK:   %call1 = call ppc_fp128 @_ZN5CTest5func3Eg(ppc_fp128 %3)
 // CHECK:   %sub = fsub ppc_fp128 %add, %call1
 // CHECK:   store ppc_fp128 %sub, ppc_fp128* %lfi, align 16
 // CHECK:   ret i32 0
 // CHECK: }
 
-// CHECK: define linkonce_odr void @_ZN5CTestC1Eg(%class.CTest* noundef %this, ppc_fp128 noundef %arg)
+// CHECK: define linkonce_odr void @_ZN5CTestC1Eg(%class.CTest* nonnull align 16 dereferenceable(32) %this, ppc_fp128 %arg)
 // CHECK: entry:
 // CHECK:   store %class.CTest* %this, %class.CTest** %this.addr, align 8
 // CHECK:   store ppc_fp128 %arg, ppc_fp128* %arg.addr, align 16
 // CHECK:   %this1 = load %class.CTest*, %class.CTest** %this.addr, align 8
 // CHECK:   %0 = load ppc_fp128, ppc_fp128* %arg.addr, align 16
-// CHECK:   call void @_ZN5CTestC2Eg(%class.CTest* noundef %this1, ppc_fp128 noundef %0)
+// CHECK:   call void @_ZN5CTestC2Eg(%class.CTest* nonnull align 16 dereferenceable(32) %this1, ppc_fp128 %0)
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: define linkonce_odr noundef ppc_fp128 @_ZN5CTest5func3Eg(ppc_fp128 noundef %arg)
+// CHECK: define linkonce_odr ppc_fp128 @_ZN5CTest5func3Eg(ppc_fp128 %arg)
 // CHECK: entry:
 // CHECK:   %arg.addr = alloca ppc_fp128, align 16
 // CHECK:   store ppc_fp128 %arg, ppc_fp128* %arg.addr, align 16
@@ -160,7 +160,7 @@ int main(void) {
 // CHECK:   ret ppc_fp128 %mul
 // CHECK: }
 
-// CHECK: define linkonce_odr void @_ZN5CTestC2Eg(%class.CTest* noundef %this, ppc_fp128 noundef %arg)
+// CHECK: define linkonce_odr void @_ZN5CTestC2Eg(%class.CTest* nonnull align 16 dereferenceable(32) %this, ppc_fp128 %arg)
 // CHECK: entry:
 // CHECK:   store %class.CTest* %this, %class.CTest** %this.addr, align 8
 // CHECK:   store ppc_fp128 %arg, ppc_fp128* %arg.addr, align 16

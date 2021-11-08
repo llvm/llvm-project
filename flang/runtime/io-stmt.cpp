@@ -680,14 +680,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     comma = ';';
   }
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
-    RUNTIME_CHECK(
-        io.GetIoErrorHandler(), connection.resumptionRecordNumber.has_value());
-    while (connection.currentRecordNumber >
-        connection.resumptionRecordNumber.value_or(
-            connection.currentRecordNumber)) {
-      io.BackspaceRecord();
-    }
-    connection.HandleAbsolutePosition(repeatPositionInRecord_);
+    RUNTIME_CHECK(io.GetIoErrorHandler(), repeatPosition_.has_value());
+    repeatPosition_.reset(); // restores the saved position
     if (!imaginaryPart_) {
       edit.repeat = std::min<int>(remaining_, maxRepeat);
       auto ch{io.GetCurrentChar()};
@@ -697,8 +691,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       }
     }
     remaining_ -= edit.repeat;
-    if (remaining_ <= 0) {
-      connection.resumptionRecordNumber.reset();
+    if (remaining_ > 0) {
+      repeatPosition_.emplace(io);
     }
     return edit;
   }
@@ -761,11 +755,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       edit.repeat = std::min<int>(r, maxRepeat);
       remaining_ = r - edit.repeat;
       if (remaining_ > 0) {
-        connection.resumptionRecordNumber = connection.currentRecordNumber;
-      } else {
-        connection.resumptionRecordNumber.reset();
+        repeatPosition_.emplace(io);
       }
-      repeatPositionInRecord_ = connection.positionInRecord;
     } else { // not a repetition count, just an integer value; rewind
       connection.positionInRecord = start;
     }

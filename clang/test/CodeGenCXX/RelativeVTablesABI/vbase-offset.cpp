@@ -13,7 +13,7 @@
 // CHECK-NEXT:   [[vbase_offset:%.+]] = load i32, i32* [[vbase_offset_ptr2]], align 4
 // CHECK-NEXT:   [[adj_this:%.+]] = getelementptr inbounds i8, i8* [[this]], i32 [[vbase_offset]]
 // CHECK-NEXT:   [[adj_this2:%.+]] = bitcast i8* [[adj_this]] to %class.Derived*
-// CHECK:        [[call:%.+]] = tail call noundef i32 @_ZN7Derived1fEi(%class.Derived* noundef{{[^,]*}} [[adj_this2]], i32 noundef {{.*}})
+// CHECK:        [[call:%.+]] = tail call i32 @_ZN7Derived1fEi(%class.Derived* {{[^,]*}} [[adj_this2]], i32 {{.*}})
 // CHECK:        ret i32 [[call]]
 
 class Base {

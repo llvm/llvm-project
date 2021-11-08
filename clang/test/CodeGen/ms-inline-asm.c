@@ -581,7 +581,7 @@ void t40(float a) {
 }
 
 void t41(unsigned short a) {
-// CHECK-LABEL: define{{.*}} void @t41(i16 noundef zeroext %a)
+// CHECK-LABEL: define{{.*}} void @t41(i16 zeroext %a)
   __asm mov cs, a;
 // CHECK: mov cs, $0
   __asm mov ds, a;

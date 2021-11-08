@@ -209,7 +209,7 @@ namespace test6 {
 
   // CHECK-NEXT: [[INNER:%.*]] = getelementptr inbounds [10 x [20 x [[A]]]], [10 x [20 x [[A]]]]* [[ARR]], i64 0, i64 0
   // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [20 x [[A]]], [20 x [[A]]]* [[INNER]], i64 0, i64 0
-  // CHECK-NEXT: call void @_ZN5test61AC1Ei([[A]]* {{[^,]*}} [[T0]], i32 noundef 5)
+  // CHECK-NEXT: call void @_ZN5test61AC1Ei([[A]]* {{[^,]*}} [[T0]], i32 5)
   // CHECK-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [[A]], [[A]]* [[T0]], i64 1
   // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], [[A]]* [[T0]], i64 20
   // CHECK-NEXT: br label
@@ -261,7 +261,7 @@ namespace PR11124 {
 
 // Ensure we produce an i1 here, and don't assert.
 // CHECK-LABEL: define{{.*}} void @_Z9r170806_bv(
-// CHECK: call void @_Z9r170806_ab(i1 noundef zeroext false)
+// CHECK: call void @_Z9r170806_ab(i1 zeroext false)
 void r170806_a(bool b = bool());
 void r170806_b() { r170806_a(); }
 

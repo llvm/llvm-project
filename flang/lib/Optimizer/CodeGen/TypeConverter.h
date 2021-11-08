@@ -15,6 +15,8 @@
 
 #include "DescriptorModel.h"
 #include "flang/Lower/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Support/KindMapping.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 
@@ -25,11 +27,16 @@ namespace fir {
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module)
-      : mlir::LLVMTypeConverter(module.getContext()) {
+      : mlir::LLVMTypeConverter(module.getContext()),
+        kindMapping(getKindMapping(module)) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::Type.
     addConversion([&](BoxType box) { return convertBoxType(box); });
+    addConversion([&](fir::LogicalType boolTy) {
+      return mlir::IntegerType::get(
+          &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
+    });
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
     addConversion(
@@ -179,6 +186,9 @@ public:
     }
     return mlir::LLVM::LLVMPointerType::get(baseTy);
   }
+
+private:
+  KindMapping kindMapping;
 };
 
 } // namespace fir

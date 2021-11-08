@@ -33,6 +33,6 @@ void foo(int a)
 // CHECK-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CONV]], align 8
-// CHECK-NEXT:    call void @use(i32 noundef [[TMP0]])
+// CHECK-NEXT:    call void @use(i32 [[TMP0]])
 // CHECK-NEXT:    ret void
 //

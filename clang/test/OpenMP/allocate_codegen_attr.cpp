@@ -93,7 +93,7 @@ int main () {
 // CHECK-NOT:  call {{.+}} {{__kmpc_alloc|__kmpc_free}}
 extern template int ST<int>::m;
 
-// CHECK: define{{.*}} void @{{.+}}bar{{.+}}(i32 noundef %{{.+}}, float* noundef {{.+}})
+// CHECK: define{{.*}} void @{{.+}}bar{{.+}}(i32 %{{.+}}, float* {{.+}})
 void bar(int a, float &z) {
 // CHECK: [[A_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 4, i8* inttoptr (i64 1 to i8*))
 // CHECK: [[A_ADDR:%.+]] = bitcast i8* [[A_VOID_PTR]] to i32*

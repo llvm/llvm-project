@@ -1190,6 +1190,10 @@ Example matches a
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('lambdaCapture0')"><a name="lambdaCapture0Anchor">lambdaCapture</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="lambdaCapture0"><pre></pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;</td><td class="name" onclick="toggle('nestedNameSpecifierLoc0')"><a name="nestedNameSpecifierLoc0Anchor">nestedNameSpecifierLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="nestedNameSpecifierLoc0"><pre>Same as nestedNameSpecifier but matches NestedNameSpecifierLoc.
 </pre></td></tr>
@@ -4512,6 +4516,42 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Char
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;</td><td class="name" onclick="toggle('equals9')"><a name="equals9Anchor">equals</a></td><td>unsigned Value</td></tr>
 <tr><td colspan="4" class="doc" id="equals9"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('capturesThis0')"><a name="capturesThis0Anchor">capturesThis</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="capturesThis0"><pre>Matches a `LambdaCapture` that refers to 'this'.
+
+Given
+class C {
+  int cc;
+  int f() {
+    auto l = [this]() { return cc; };
+    return l();
+  }
+};
+lambdaExpr(hasAnyCapture(lambdaCapture(capturesThis())))
+  matches `[this]() { return cc; }`.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('isImplicit2')"><a name="isImplicit2Anchor">isImplicit</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isImplicit2"><pre>Matches an entity that has been implicitly added by the compiler (e.g.
+implicit default/copy constructors).
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyCapture0')"><a name="hasAnyCapture0Anchor">hasAnyCapture</a></td><td>LambdaCaptureMatcher InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyCapture0"><pre>Matches any capture in a lambda expression.
+
+Given
+  void foo() {
+    int t = 5;
+    auto f = [=](){ return t; };
+  }
+lambdaExpr(hasAnyCapture(lambdaCapture())) and
+lambdaExpr(hasAnyCapture(lambdaCapture(refersToVarDecl(hasName("t")))))
+  both match `[=](){ return t; }`.
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;</td><td class="name" onclick="toggle('isArrow0')"><a name="isArrow0Anchor">isArrow</a></td><td></td></tr>
@@ -8314,30 +8354,20 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyCapture1')"><a name="hasAnyCapture1Anchor">hasAnyCapture</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXThisExpr.html">CXXThisExpr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyCapture1"><pre>Matches any capture of 'this' in a lambda expression.
-
-Given
-  struct foo {
-    void bar() {
-      auto f = [this](){};
-    }
-  }
-lambdaExpr(hasAnyCapture(cxxThisExpr()))
-  matches [this](){};
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyCapture0')"><a name="hasAnyCapture0Anchor">hasAnyCapture</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyCapture0"><pre>Matches any capture of a lambda expression.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('capturesVar0')"><a name="capturesVar0Anchor">capturesVar</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="capturesVar0"><pre>Matches a `LambdaCapture` that refers to the specified `VarDecl`. The
+`VarDecl` can be a separate variable that is captured by value or
+reference, or a synthesized variable if the capture has an initializer.
 
 Given
   void foo() {
     int x;
     auto f = [x](){};
+    auto g = [x = 1](){};
   }
-lambdaExpr(hasAnyCapture(anything()))
-  matches [x](){};
+In the matcher
+lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
+capturesVar(hasName("x")) matches `x` and `x = 1`.
 </pre></td></tr>
 
 

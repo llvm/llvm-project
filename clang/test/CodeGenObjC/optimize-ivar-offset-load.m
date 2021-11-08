@@ -31,7 +31,7 @@ extern void foo(int);
 // CHECK: [[ADDPTR:%.*]] = getelementptr inbounds i8, i8* [[THREE]], i64 [[IVAR]]
 // CHECK: [[FOUR:%.*]] = bitcast i8* [[ADDPTR]] to i32*
 // CHECK: [[FIVE:%.*]] = load i32, i32* [[FOUR]], align 4
-// CHECK:   call void @foo(i32 noundef [[FIVE]])
+// CHECK:   call void @foo(i32 [[FIVE]])
 
 @implementation SampleClass
 + (SampleClass*) new { return 0; }

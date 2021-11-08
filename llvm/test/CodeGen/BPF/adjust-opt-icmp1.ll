@@ -39,10 +39,11 @@ entry:
 ; CHECK:         if [[REG2]] s> [[REG1]] goto
 ; CHECK:         if [[REG1]] s> 7 goto
 
-; CHECK-DISABLE: [[REG1:r[0-9]+]] += -1
+; CHECK-DISABLE: [[REG1:r[0-9]+]] += -8
 ; CHECK-DISABLE: [[REG1]] <<= 32
 ; CHECK-DISABLE: [[REG1]] >>= 32
-; CHECK-DISABLE: if [[REG1]] > 6 goto
+; CHECK-DISABLE: [[REG2:r[0-9]+]] = 4294967289
+; CHECK-DISABLE: if [[REG2]] > [[REG1]] goto
 
 lor.lhs.false:                                    ; preds = %entry
   %2 = load i32, i32* %ret, align 4, !tbaa !2

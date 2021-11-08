@@ -4,8 +4,6 @@
 ; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
-; XFAIL: *
-
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
 
 @0 = private unnamed_addr constant [1 x i8] c"\00", align 1
