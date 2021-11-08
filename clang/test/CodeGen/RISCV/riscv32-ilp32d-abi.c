@@ -9,7 +9,7 @@
 // Doubles are passed in FPRs, so argument 'i' will be passed zero-extended
 // because it will be passed in a GPR.
 
-// CHECK: define{{.*}} void @f_fpr_tracking(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, i8 noundef zeroext %i)
+// CHECK: define{{.*}} void @f_fpr_tracking(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, i8 zeroext %i)
 void f_fpr_tracking(double a, double b, double c, double d, double e, double f,
                     double g, double h, uint8_t i) {}
 
@@ -77,7 +77,7 @@ struct double_float_s f_ret_double_float_s() {
   return (struct double_float_s){1.0, 2.0};
 }
 
-// CHECK: define{{.*}} void @f_double_double_s_arg_insufficient_fprs(float noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, %struct.double_double_s* noundef %h)
+// CHECK: define{{.*}} void @f_double_double_s_arg_insufficient_fprs(float %a, double %b, double %c, double %d, double %e, double %f, double %g, %struct.double_double_s* %h)
 void f_double_double_s_arg_insufficient_fprs(float a, double b, double c, double d,
     double e, double f, double g, struct double_double_s h) {}
 
@@ -116,7 +116,7 @@ struct double_int32_s f_ret_double_int32_s() {
   return (struct double_int32_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_double_int64_s_arg(%struct.double_int64_s* noundef %a)
+// CHECK: define{{.*}} void @f_double_int64_s_arg(%struct.double_int64_s* %a)
 void f_double_int64_s_arg(struct double_int64_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_double_int64_s(%struct.double_int64_s* noalias sret(%struct.double_int64_s) align 8 %agg.result)
@@ -143,18 +143,18 @@ struct double_int8_zbf_s f_ret_double_int8_zbf_s() {
   return (struct double_int8_zbf_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_double_int8_s_arg_insufficient_gprs(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, i32 noundef %h, %struct.double_int8_s* noundef %i)
+// CHECK: define{{.*}} void @f_double_int8_s_arg_insufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, %struct.double_int8_s* %i)
 void f_double_int8_s_arg_insufficient_gprs(int a, int b, int c, int d, int e,
                                           int f, int g, int h, struct double_int8_s i) {}
 
-// CHECK: define{{.*}} void @f_struct_double_int8_insufficient_fprs(float noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, %struct.double_int8_s* noundef %i)
+// CHECK: define{{.*}} void @f_struct_double_int8_insufficient_fprs(float %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, %struct.double_int8_s* %i)
 void f_struct_double_int8_insufficient_fprs(float a, double b, double c, double d,
                                            double e, double f, double g, double h, struct double_int8_s i) {}
 
 // Complex floating-point values or structs containing a single complex
 // floating-point value should be passed as if it were an fp+fp struct.
 
-// CHECK: define{{.*}} void @f_doublecomplex(double noundef %a.coerce0, double noundef %a.coerce1)
+// CHECK: define{{.*}} void @f_doublecomplex(double %a.coerce0, double %a.coerce1)
 void f_doublecomplex(double __complex__ a) {}
 
 // CHECK: define{{.*}} { double, double } @f_ret_doublecomplex()
@@ -240,7 +240,7 @@ struct doublearr2_tricky4_s f_ret_doublearr2_tricky4_s() {
 
 struct int_double_int_s { int a; double b; int c; };
 
-// CHECK: define{{.*}} void @f_int_double_int_s_arg(%struct.int_double_int_s* noundef %a)
+// CHECK: define{{.*}} void @f_int_double_int_s_arg(%struct.int_double_int_s* %a)
 void f_int_double_int_s_arg(struct int_double_int_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret(%struct.int_double_int_s) align 8 %agg.result)
@@ -250,7 +250,7 @@ struct int_double_int_s f_ret_int_double_int_s() {
 
 struct int64_double_s { int64_t a; double b; };
 
-// CHECK: define{{.*}} void @f_int64_double_s_arg(%struct.int64_double_s* noundef %a)
+// CHECK: define{{.*}} void @f_int64_double_s_arg(%struct.int64_double_s* %a)
 void f_int64_double_s_arg(struct int64_double_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_int64_double_s(%struct.int64_double_s* noalias sret(%struct.int64_double_s) align 8 %agg.result)
@@ -260,7 +260,7 @@ struct int64_double_s f_ret_int64_double_s() {
 
 struct char_char_double_s { char a; char b; double c; };
 
-// CHECK-LABEL: define{{.*}} void @f_char_char_double_s_arg(%struct.char_char_double_s* noundef %a)
+// CHECK-LABEL: define{{.*}} void @f_char_char_double_s_arg(%struct.char_char_double_s* %a)
 void f_char_char_double_s_arg(struct char_char_double_s a) {}
 
 // CHECK: define{{.*}} void @f_ret_char_char_double_s(%struct.char_char_double_s* noalias sret(%struct.char_char_double_s) align 8 %agg.result)
@@ -287,19 +287,19 @@ union double_u f_ret_double_u() {
 // returned in registers). This includes complex doubles, which are treated as
 // double+double structs by the ABI.
 
-// CHECK: define{{.*}} { double, i32 } @f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, double %0, i32 %1)
+// CHECK: define{{.*}} { double, i32 } @f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double %0, i32 %1)
 struct double_int32_s f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(
     int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
   return (struct double_int32_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} { double, double } @f_ret_double_double_s_double_int32_s_just_sufficient_gprs(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, double %0, i32 %1)
+// CHECK: define{{.*}} { double, double } @f_ret_double_double_s_double_int32_s_just_sufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double %0, i32 %1)
 struct double_double_s f_ret_double_double_s_double_int32_s_just_sufficient_gprs(
     int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
   return (struct double_double_s){1.0, 2.0};
 }
 
-// CHECK: define{{.*}} { double, double } @f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, double %0, i32 %1)
+// CHECK: define{{.*}} { double, double } @f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double %0, i32 %1)
 double __complex__ f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(
     int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
   return 1.0;

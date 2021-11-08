@@ -38,12 +38,12 @@ int x = __builtin_abs(-2);
 // CHECK:  store i32 2, i32* @x, align 4
 
 long y = __builtin_abs(-2l);
-// CHECK:  [[Y:%.+]] = call noundef i64 @_Z13__builtin_absl(i64 noundef -2)
+// CHECK:  [[Y:%.+]] = call i64 @_Z13__builtin_absl(i64 -2)
 // CHECK:  store i64 [[Y]], i64* @y, align 8
 
 extern const char char_memchr_arg[32];
 char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
-// CHECK: call i8* @memchr(i8* noundef getelementptr inbounds ([32 x i8], [32 x i8]* @char_memchr_arg, i64 0, i64 0), i32 noundef 123, i64 noundef 32)
+// CHECK: call i8* @memchr(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @char_memchr_arg, i64 0, i64 0), i32 123, i64 32)
 
 int constexpr_overflow_result() {
   constexpr int x = 1;

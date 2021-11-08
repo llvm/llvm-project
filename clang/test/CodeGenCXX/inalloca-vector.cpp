@@ -18,9 +18,9 @@ void receive_vec_128(NonTrivial nt, __m128 x, __m128 y, __m128 z, __m128 w, __m1
   gv128 = x + y + z + w + q;
 }
 // CHECK-LABEL: define dso_local void  @"?receive_vec_128@@YAXUNonTrivial@@T__m128@@1111@Z"
-// CHECK-SAME: (<4 x float> inreg noundef %x,
-// CHECK-SAME: <4 x float> inreg noundef %y,
-// CHECK-SAME: <4 x float> inreg noundef %z,
+// CHECK-SAME: (<4 x float> inreg %x,
+// CHECK-SAME: <4 x float> inreg %y,
+// CHECK-SAME: <4 x float> inreg %z,
 // CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca(<{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>) %0)
 
 void pass_vec_128() {
@@ -29,7 +29,7 @@ void pass_vec_128() {
 }
 // CHECK-LABEL: define dso_local void @"?pass_vec_128@@YAXXZ"()
 // CHECK: getelementptr inbounds <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>, <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* %{{[^,]*}}, i32 0, i32 0
-// CHECK: call x86_thiscallcc noundef %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* {{[^,]*}} %{{.*}})
+// CHECK: call x86_thiscallcc %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* {{[^,]*}} %{{.*}})
 
 // Store q, store temp alloca.
 // CHECK: store <4 x float> %{{[^,]*}}, <4 x float>* %{{[^,]*}}, align 16
@@ -42,9 +42,9 @@ void pass_vec_128() {
 // CHECK: store <4 x float>* %{{[^,]*}}, <4 x float>** %{{[^,]*}}, align 4
 
 // CHECK: call void @"?receive_vec_128@@YAXUNonTrivial@@T__m128@@1111@Z"
-// CHECK-SAME: (<4 x float> inreg noundef %{{[^,]*}},
-// CHECK-SAME: <4 x float> inreg noundef %{{[^,]*}},
-// CHECK-SAME: <4 x float> inreg noundef %{{[^,]*}},
+// CHECK-SAME: (<4 x float> inreg %{{[^,]*}},
+// CHECK-SAME: <4 x float> inreg %{{[^,]*}},
+// CHECK-SAME: <4 x float> inreg %{{[^,]*}},
 // CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca(<{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>) %{{[^,]*}})
 
 // w will be passed indirectly by register, and q will be passed indirectly, but
@@ -53,11 +53,11 @@ void __fastcall fastcall_receive_vec(__m128 x, __m128 y, __m128 z, __m128 w, int
   gv128 = x + y + z + w + q;
 }
 // CHECK-LABEL: define dso_local x86_fastcallcc void @"?fastcall_receive_vec@@Y{{[^"]*}}"
-// CHECK-SAME: (<4 x float> inreg noundef %x,
-// CHECK-SAME: <4 x float> inreg noundef %y,
-// CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: <4 x float>* inreg noundef %0,
-// CHECK-SAME: i32 inreg noundef %edx,
+// CHECK-SAME: (<4 x float> inreg %x,
+// CHECK-SAME: <4 x float> inreg %y,
+// CHECK-SAME: <4 x float> inreg %z,
+// CHECK-SAME: <4 x float>* inreg %0,
+// CHECK-SAME: i32 inreg %edx,
 // CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca(<{ <4 x float>*, %struct.NonTrivial }>) %1)
 
 
@@ -67,12 +67,12 @@ void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
   gv128 = x + y + z + w + q;
 }
 // CHECK-LABEL: define dso_local x86_vectorcallcc void @"?vectorcall_receive_vec@@Y{{[^"]*}}"
-// CHECK-SAME: (double inreg noundef %xmm0,
-// CHECK-SAME: double inreg noundef %xmm1,
-// CHECK-SAME: double inreg noundef %xmm2,
-// CHECK-SAME: <4 x float> inreg noundef %x,
-// CHECK-SAME: <4 x float> inreg noundef %y,
-// CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: <4 x float>* inreg noundef %0,
-// CHECK-SAME: i32 inreg noundef %edx,
+// CHECK-SAME: (double inreg %xmm0,
+// CHECK-SAME: double inreg %xmm1,
+// CHECK-SAME: double inreg %xmm2,
+// CHECK-SAME: <4 x float> inreg %x,
+// CHECK-SAME: <4 x float> inreg %y,
+// CHECK-SAME: <4 x float> inreg %z,
+// CHECK-SAME: <4 x float>* inreg %0,
+// CHECK-SAME: i32 inreg %edx,
 // CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca(<{ <4 x float>*, %struct.NonTrivial }>) %1)

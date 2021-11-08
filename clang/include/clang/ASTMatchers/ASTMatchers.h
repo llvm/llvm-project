@@ -148,6 +148,7 @@ using CXXBaseSpecifierMatcher = internal::Matcher<CXXBaseSpecifier>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
 using TemplateArgumentMatcher = internal::Matcher<TemplateArgument>;
 using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
+using LambdaCaptureMatcher = internal::Matcher<LambdaCapture>;
 using AttrMatcher = internal::Matcher<Attr>;
 /// @}
 
@@ -756,7 +757,8 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 /// Matches an entity that has been implicitly added by the compiler (e.g.
 /// implicit default/copy constructors).
 AST_POLYMORPHIC_MATCHER(isImplicit,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr)) {
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
+                                                        LambdaCapture)) {
   return Node.isImplicit();
 }
 
@@ -4588,49 +4590,67 @@ AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
   return false;
 }
 
-/// Matches any capture of a lambda expression.
+extern const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
+
+/// Matches any capture in a lambda expression.
+///
+/// Given
+/// \code
+///   void foo() {
+///     int t = 5;
+///     auto f = [=](){ return t; };
+///   }
+/// \endcode
+/// lambdaExpr(hasAnyCapture(lambdaCapture())) and
+/// lambdaExpr(hasAnyCapture(lambdaCapture(refersToVarDecl(hasName("t")))))
+///   both match `[=](){ return t; }`.
+AST_MATCHER_P(LambdaExpr, hasAnyCapture, LambdaCaptureMatcher, InnerMatcher) {
+  for (const LambdaCapture &Capture : Node.captures()) {
+    clang::ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+    if (InnerMatcher.matches(Capture, Finder, &Result)) {
+      *Builder = std::move(Result);
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Matches a `LambdaCapture` that refers to the specified `VarDecl`. The
+/// `VarDecl` can be a separate variable that is captured by value or
+/// reference, or a synthesized variable if the capture has an initializer.
 ///
 /// Given
 /// \code
 ///   void foo() {
 ///     int x;
 ///     auto f = [x](){};
+///     auto g = [x = 1](){};
 ///   }
 /// \endcode
-/// lambdaExpr(hasAnyCapture(anything()))
-///   matches [x](){};
-AST_MATCHER_P_OVERLOAD(LambdaExpr, hasAnyCapture, internal::Matcher<VarDecl>,
-                       InnerMatcher, 0) {
-  for (const LambdaCapture &Capture : Node.captures()) {
-    if (Capture.capturesVariable()) {
-      BoundNodesTreeBuilder Result(*Builder);
-      if (InnerMatcher.matches(*Capture.getCapturedVar(), Finder, &Result)) {
-        *Builder = std::move(Result);
-        return true;
-      }
-    }
-  }
-  return false;
+/// In the matcher
+/// lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
+/// capturesVar(hasName("x")) matches `x` and `x = 1`.
+AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<VarDecl>,
+              InnerMatcher) {
+  auto *capturedVar = Node.getCapturedVar();
+  return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);
 }
 
-/// Matches any capture of 'this' in a lambda expression.
+/// Matches a `LambdaCapture` that refers to 'this'.
 ///
 /// Given
 /// \code
-///   struct foo {
-///     void bar() {
-///       auto f = [this](){};
-///     }
+/// class C {
+///   int cc;
+///   int f() {
+///     auto l = [this]() { return cc; };
+///     return l();
 ///   }
+/// };
 /// \endcode
-/// lambdaExpr(hasAnyCapture(cxxThisExpr()))
-///   matches [this](){};
-AST_MATCHER_P_OVERLOAD(LambdaExpr, hasAnyCapture,
-                       internal::Matcher<CXXThisExpr>, InnerMatcher, 1) {
-  return llvm::any_of(Node.captures(), [](const LambdaCapture &LC) {
-    return LC.capturesThis();
-  });
-}
+/// lambdaExpr(hasAnyCapture(lambdaCapture(capturesThis())))
+///   matches `[this]() { return cc; }`.
+AST_MATCHER(LambdaCapture, capturesThis) { return Node.capturesThis(); }
 
 /// Matches a constructor call expression which uses list initialization.
 AST_MATCHER(CXXConstructExpr, isListInitialization) {

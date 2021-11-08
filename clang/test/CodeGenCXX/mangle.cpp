@@ -302,7 +302,7 @@ template<typename T, typename = Policy<P, true> > class Alloc
   T *allocate(int, const void*) { return 0; }
 };
 
-// CHECK-LABEL: define weak_odr noundef i8* @_ZN6PR58615AllocIcNS_6PolicyINS_1PELb1EEEE8allocateEiPKv
+// CHECK-LABEL: define weak_odr i8* @_ZN6PR58615AllocIcNS_6PolicyINS_1PELb1EEEE8allocateEiPKv
 template class Alloc<char>;
 }
 
@@ -392,7 +392,7 @@ namespace test2 {
     return read_member(obj);
   }
 
-  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN5test211read_memberINS_1AEEEDtptcvPT_Li0E6memberERS2_(
+  // CHECK-LABEL: define linkonce_odr i32 @_ZN5test211read_memberINS_1AEEEDtptcvPT_Li0E6memberERS2_(
 }
 
 // rdar://problem/9280586
@@ -402,16 +402,16 @@ namespace test3 {
   struct Path2 : AmbiguousBase { double p; };
   struct Derived : Path1, Path2 { };
 
-  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN5test38get_ab_1INS_7DerivedEEEDtptcvPT_Li0Esr5Path1E2abERS2_(
+  // CHECK-LABEL: define linkonce_odr i32 @_ZN5test38get_ab_1INS_7DerivedEEEDtptcvPT_Li0Esr5Path1E2abERS2_(
   template <class T> decltype(((T*) 0)->Path1::ab) get_ab_1(T &ref) { return ref.Path1::ab; }
 
-  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN5test38get_ab_2INS_7DerivedEEEDtptcvPT_Li0Esr5Path2E2abERS2_(
+  // CHECK-LABEL: define linkonce_odr i32 @_ZN5test38get_ab_2INS_7DerivedEEEDtptcvPT_Li0Esr5Path2E2abERS2_(
   template <class T> decltype(((T*) 0)->Path2::ab) get_ab_2(T &ref) { return ref.Path2::ab; }
 
-  // CHECK-LABEL: define linkonce_odr noundef float @_ZN5test37get_p_1INS_7DerivedEEEDtptcvPT_Li0Esr5Path1E1pERS2_(
+  // CHECK-LABEL: define linkonce_odr float @_ZN5test37get_p_1INS_7DerivedEEEDtptcvPT_Li0Esr5Path1E1pERS2_(
   template <class T> decltype(((T*) 0)->Path1::p) get_p_1(T &ref) { return ref.Path1::p; }
 
-  // CHECK-LABEL: define linkonce_odr noundef double @_ZN5test37get_p_2INS_7DerivedEEEDtptcvPT_Li0Esr5Path2E1pERS2_(
+  // CHECK-LABEL: define linkonce_odr double @_ZN5test37get_p_2INS_7DerivedEEEDtptcvPT_Li0Esr5Path2E1pERS2_(
   template <class T> decltype(((T*) 0)->Path2::p) get_p_2(T &ref) { return ref.Path2::p; }
 
   Derived obj;
@@ -648,13 +648,13 @@ namespace test23 {
 namespace test24 {
   void test0() {
     extern int foo();
-    // CHECK: call noundef i32 @_ZN6test243fooEv()
+    // CHECK: call i32 @_ZN6test243fooEv()
     foo();
   }
 
   static char bar() {}
   void test1() {
-    // CHECK: call noundef signext i8 @_ZN6test24L3barEv()
+    // CHECK: call signext i8 @_ZN6test24L3barEv()
     bar();
   }
 }
@@ -757,9 +757,9 @@ namespace test31 { // instantiation-dependent mangling of decltype
   void g(int);
   template<class T> auto f3(T p)->decltype(g(p)) {}
 
-  // CHECK-LABEL: define weak_odr noundef i32 @_ZN6test312f1IiEEiT_(
+  // CHECK-LABEL: define weak_odr i32 @_ZN6test312f1IiEEiT_(
   template int f1(int);
-  // CHECK-LABEL: define weak_odr noundef i32 @_ZN6test312f2IiEEDtfp_ET_
+  // CHECK-LABEL: define weak_odr i32 @_ZN6test312f2IiEEDtfp_ET_
   template int f2(int);
   // CHECK-LABEL: define weak_odr void @_ZN6test312f3IiEEDTcl1gfp_EET_
   template void f3(int);
@@ -775,7 +775,7 @@ namespace test32 {
   template <class T> typename A<T>::type foo() { return 0; }
   void test() {
     foo<B>();
-    // CHECK: call noundef i32 @_ZN6test323fooINS_1BEEENS_1AIT_XsrS3_5valueEE4typeEv()
+    // CHECK: call i32 @_ZN6test323fooINS_1BEEENS_1AIT_XsrS3_5valueEE4typeEv()
   }
 }
 
@@ -793,7 +793,7 @@ namespace test33 {
 
   void test() {
     foo<B>();
-    // CHECK: call noundef i32 @_ZN6test333fooINS_1BEEENS_1AIT_Xsr1XIS3_EE5valueEE4typeEv()
+    // CHECK: call i32 @_ZN6test333fooINS_1BEEENS_1AIT_Xsr1XIS3_EE5valueEE4typeEv()
   }
 }
 
@@ -960,7 +960,7 @@ namespace test45 {
   template <typename T>
   void f(enum T::e *) {}
   template void f<S>(S::e *);
-  // CHECK-LABEL: define weak_odr void @_ZN6test451fINS_1SEEEvPTeNT_1eE(i32* noundef %0)
+  // CHECK-LABEL: define weak_odr void @_ZN6test451fINS_1SEEEvPTeNT_1eE(i32* %0)
 }
 
 namespace test46 {
@@ -970,7 +970,7 @@ namespace test46 {
   template <typename T>
   void f(struct T::s *) {}
   template void f<S>(S::s *);
-  // CHECK-LABEL: define weak_odr void @_ZN6test461fINS_1SEEEvPTsNT_1sE(%"struct.test46::S::s"* noundef %0)
+  // CHECK-LABEL: define weak_odr void @_ZN6test461fINS_1SEEEvPTsNT_1sE(%"struct.test46::S::s"* %0)
 }
 
 namespace test47 {
@@ -980,7 +980,7 @@ namespace test47 {
   template <typename T>
   void f(class T::c *) {}
   template void f<S>(S::c *);
-  // CHECK-LABEL: define weak_odr void @_ZN6test471fINS_1SEEEvPTsNT_1cE(%"class.test47::S::c"* noundef %0)
+  // CHECK-LABEL: define weak_odr void @_ZN6test471fINS_1SEEEvPTsNT_1cE(%"class.test47::S::c"* %0)
 }
 
 namespace test48 {
@@ -990,7 +990,7 @@ namespace test48 {
   template <typename T>
   void f(union T::u *) {}
   template void f<S>(S::u *);
-  // CHECK-LABEL: define weak_odr void @_ZN6test481fINS_1SEEEvPTuNT_1uE(%"union.test48::S::u"* noundef %0)
+  // CHECK-LABEL: define weak_odr void @_ZN6test481fINS_1SEEEvPTuNT_1uE(%"union.test48::S::u"* %0)
 }
 
 namespace test49 {

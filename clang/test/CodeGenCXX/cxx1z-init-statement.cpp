@@ -22,7 +22,7 @@ void f1() {
 
 int f2() {
   // CHECK:      %[[A:.*]] = alloca i32, align 4
-  // CHECK-NEXT: %[[B:.*]] = call noundef i32 @_Z2f2v()
+  // CHECK-NEXT: %[[B:.*]] = call i32 @_Z2f2v()
   // CHECK-NEXT: store i32 7, i32* %[[A]], align 4
   // CHECK-NEXT: %[[C:.*]] = load i32, i32* %[[A]], align 4
   // CHECK-NEXT: %[[D:.*]] = icmp ne i32 %[[C]], 0
@@ -58,7 +58,7 @@ void g1() {
 
 int g2() {
   // CHECK:      %[[A:.*]] = alloca i32, align 4
-  // CHECK-NEXT: %[[B:.*]] = call noundef i32 @_Z2f2v()
+  // CHECK-NEXT: %[[B:.*]] = call i32 @_Z2f2v()
   // CHECK-NEXT: store i32 7, i32* %[[A]], align 4
   // CHECK-NEXT: %[[C:.*]] = load i32, i32* %[[A]], align 4
   // CHECK-NEXT: switch i32 %[[C]], label %[[E:.*]] [

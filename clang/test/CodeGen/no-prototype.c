@@ -11,7 +11,7 @@ int baz() {
   return foo();
 }
 
-// CHECK: define i32 @bar(i32 noundef %a) [[BAR_ATTR:#[0-9]+]] {
+// CHECK: define i32 @bar(i32 %a) [[BAR_ATTR:#[0-9]+]] {
 // CHECK: declare i32 @foo(...) [[FOO_ATTR:#[0-9]+]]
 // CHECK: define i32 @baz() [[BAZ_ATTR:#[0-9]+]] {
 

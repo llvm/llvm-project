@@ -406,30 +406,30 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     // avoid bogus crashes in END/ERR circumstances
   } else if (access == Access::Sequential) {
     RUNTIME_CHECK(handler, recordLength.has_value());
+    recordOffsetInFrame_ += *recordLength;
     if (isFixedRecordLength && access == Access::Direct) {
-      frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+      frameOffsetInFile_ += recordOffsetInFrame_;
       recordOffsetInFrame_ = 0;
     } else {
       RUNTIME_CHECK(handler, isUnformatted.has_value());
+      recordLength.reset();
       if (isUnformatted.value_or(false)) {
         // Retain footer in frame for more efficient BACKSPACE
-        frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+        frameOffsetInFile_ += recordOffsetInFrame_;
         recordOffsetInFrame_ = sizeof(std::uint32_t);
-        recordLength.reset();
       } else { // formatted
-        if (FrameLength() > recordOffsetInFrame_ + *recordLength &&
-            Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
+        if (FrameLength() > recordOffsetInFrame_ &&
+            Frame()[recordOffsetInFrame_] == '\r') {
           ++recordOffsetInFrame_;
         }
         if (FrameLength() >= recordOffsetInFrame_ &&
-            Frame()[recordOffsetInFrame_ + *recordLength] == '\n') {
+            Frame()[recordOffsetInFrame_] == '\n') {
           ++recordOffsetInFrame_;
         }
-        if (!resumptionRecordNumber || mayPosition()) {
-          frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+        if (!pinnedFrame || mayPosition()) {
+          frameOffsetInFile_ += recordOffsetInFrame_;
           recordOffsetInFrame_ = 0;
         }
-        recordLength.reset();
       }
     }
   }

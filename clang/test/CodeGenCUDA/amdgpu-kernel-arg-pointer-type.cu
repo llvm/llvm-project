@@ -14,7 +14,7 @@
 // HOST-NOT: %struct.S.coerce
 // HOST-NOT: %struct.T.coerce
 
-// HOST: define{{.*}} void @_Z22__device_stub__kernel1Pi(i32* noundef %x)
+// HOST: define{{.*}} void @_Z22__device_stub__kernel1Pi(i32* %x)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel1Pi(i32 addrspace(1)*{{.*}} %x.coerce)
 // CHECK:     ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
@@ -26,7 +26,7 @@ __global__ void kernel1(int *x) {
   x[0]++;
 }
 
-// HOST: define{{.*}} void @_Z22__device_stub__kernel2Ri(i32* noundef nonnull align 4 dereferenceable(4) %x)
+// HOST: define{{.*}} void @_Z22__device_stub__kernel2Ri(i32* nonnull align 4 dereferenceable(4) %x)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel2Ri(i32 addrspace(1)*{{.*}} nonnull align 4 dereferenceable(4) %x.coerce)
 // CHECK:     ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
@@ -38,7 +38,7 @@ __global__ void kernel2(int &x) {
   x++;
 }
 
-// HOST: define{{.*}} void @_Z22__device_stub__kernel3PU3AS2iPU3AS1i(i32 addrspace(2)*  noundef %x, i32 addrspace(1)* noundef %y)
+// HOST: define{{.*}} void @_Z22__device_stub__kernel3PU3AS2iPU3AS1i(i32 addrspace(2)* %x, i32 addrspace(1)* %y)
 // CHECK-LABEL: define{{.*}} amdgpu_kernel void  @_Z7kernel3PU3AS2iPU3AS1i(i32 addrspace(2)*{{.*}} %x, i32 addrspace(1)*{{.*}} %y)
 // CHECK-NOT: ={{.*}} addrspacecast [[TYPE:.*]] addrspace(1)* %{{.*}} to [[TYPE]]*
 __global__ void kernel3(__attribute__((address_space(2))) int *x,
@@ -81,7 +81,7 @@ __global__ void kernel4(struct S s) {
 }
 
 // If a pointer to struct is passed, only the pointer itself is coerced into the global one.
-// HOST: define{{.*}} void @_Z22__device_stub__kernel5P1S(%struct.S* noundef %s)
+// HOST: define{{.*}} void @_Z22__device_stub__kernel5P1S(%struct.S* %s)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel5P1S(%struct.S addrspace(1)*{{.*}} %s.coerce)
 __global__ void kernel5(struct S *s) {
   s->x[0]++;
@@ -116,7 +116,7 @@ __global__ void kernel6(struct T t) {
 }
 
 // Check that coerced pointers retain the noalias attribute when qualified with __restrict.
-// HOST: define{{.*}} void @_Z22__device_stub__kernel7Pi(i32* noalias noundef %x)
+// HOST: define{{.*}} void @_Z22__device_stub__kernel7Pi(i32* noalias %x)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel7Pi(i32 addrspace(1)* noalias{{.*}} %x.coerce)
 __global__ void kernel7(int *__restrict x) {
   x[0]++;

@@ -72,7 +72,7 @@ void test1(int cond) {
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP1]]
   // CHECK-NEXT: br label
   // CHECK:      [[W:%.*]] = phi i8* [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
-  // CHECK-NEXT: call void @test1_sink(i8** noundef [[T1]])
+  // CHECK-NEXT: call void @test1_sink(i8** [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP1]]
@@ -95,7 +95,7 @@ void test1(int cond) {
   // CHECK-NEXT: store i1 true, i1* [[CONDCLEANUP]]
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP2]]
   // CHECK-NEXT: br label
-  // CHECK:      call void @test1_sink(i8** noundef [[T1]])
+  // CHECK:      call void @test1_sink(i8** [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP2]]

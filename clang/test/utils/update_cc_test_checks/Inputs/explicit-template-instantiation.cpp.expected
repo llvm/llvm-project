@@ -44,7 +44,7 @@ public:
 // CHECK-NEXT:    store i8 [[X:%.*]], i8* [[X_ADDR]], align 1
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Foo*, %struct.Foo** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[X_ADDR]], align 1
-// CHECK-NEXT:    call void @_ZN3FooIcEC2Ec(%struct.Foo* noundef [[THIS1]], i8 noundef signext [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3FooIcEC2Ec(%struct.Foo* nonnull align 1 dereferenceable(1) [[THIS1]], i8 signext [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIcED1Ev(
@@ -52,7 +52,7 @@ public:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo*, align 8
 // CHECK-NEXT:    store %struct.Foo* [[THIS:%.*]], %struct.Foo** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Foo*, %struct.Foo** [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3FooIcED2Ev(%struct.Foo* noundef [[THIS1]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @_ZN3FooIcED2Ev(%struct.Foo* nonnull align 1 dereferenceable(1) [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIcE3getEv(
@@ -86,7 +86,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    store i16 [[X:%.*]], i16* [[X_ADDR]], align 2
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Foo.0*, %struct.Foo.0** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[X_ADDR]], align 2
-// CHECK-NEXT:    call void @_ZN3FooIsEC2Es(%struct.Foo.0* noundef [[THIS1]], i16 noundef signext [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3FooIsEC2Es(%struct.Foo.0* nonnull align 2 dereferenceable(2) [[THIS1]], i16 signext [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIsED1Ev(
@@ -94,7 +94,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Foo.0*, align 8
 // CHECK-NEXT:    store %struct.Foo.0* [[THIS:%.*]], %struct.Foo.0** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Foo.0*, %struct.Foo.0** [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3FooIsED2Ev(%struct.Foo.0* noundef [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN3FooIsED2Ev(%struct.Foo.0* nonnull align 2 dereferenceable(2) [[THIS1]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIsE3getEv(
@@ -131,7 +131,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    store i32 [[X:%.*]], i32* [[X_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Bar*, %struct.Bar** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-// CHECK-NEXT:    call void @_ZN3BarIiEC2Ei(%struct.Bar* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3BarIiEC2Ei(%struct.Bar* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3BarIiED1Ev(
@@ -139,7 +139,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Bar*, align 8
 // CHECK-NEXT:    store %struct.Bar* [[THIS:%.*]], %struct.Bar** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Bar*, %struct.Bar** [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BarIiED2Ev(%struct.Bar* noundef [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN3BarIiED2Ev(%struct.Bar* nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3BarIiE3getEv(
@@ -148,7 +148,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    store %struct.Bar* [[THIS:%.*]], %struct.Bar** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Bar*, %struct.Bar** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds [[STRUCT_BAR:%.*]], %struct.Bar* [[THIS1]], i32 0, i32 0
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN3FooIiE3getEv(%struct.Foo.1* noundef [[FOO]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZN3FooIiE3getEv(%struct.Foo.1* nonnull align 4 dereferenceable(4) [[FOO]])
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 // CHECK-LABEL: @_ZN3BarIiE3setEi(
@@ -160,7 +160,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Bar*, %struct.Bar** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[FOO:%.*]] = getelementptr inbounds [[STRUCT_BAR:%.*]], %struct.Bar* [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[_X_ADDR]], align 4
-// CHECK-NEXT:    call void @_ZN3FooIiE3setEi(%struct.Foo.1* noundef [[FOO]], i32 noundef [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3FooIiE3setEi(%struct.Foo.1* nonnull align 4 dereferenceable(4) [[FOO]], i32 [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 template struct Bar<int>;
@@ -176,7 +176,7 @@ template struct Bar<int>;
 // CHECK-NEXT:    store i64 [[X:%.*]], i64* [[X_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Baz*, %struct.Baz** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[X_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BazIlEC2El(%struct.Baz* noundef [[THIS1]], i64 noundef [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3BazIlEC2El(%struct.Baz* nonnull align 8 dereferenceable(8) [[THIS1]], i64 [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3BazIlED1Ev(
@@ -184,7 +184,7 @@ template struct Bar<int>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Baz*, align 8
 // CHECK-NEXT:    store %struct.Baz* [[THIS:%.*]], %struct.Baz** [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load %struct.Baz*, %struct.Baz** [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BazIlED2Ev(%struct.Baz* noundef [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN3BazIlED2Ev(%struct.Baz* nonnull align 8 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 template struct Baz<long>;

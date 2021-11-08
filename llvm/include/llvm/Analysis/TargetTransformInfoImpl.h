@@ -399,6 +399,7 @@ public:
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
   Optional<unsigned> getMaxVScale() const { return None; }
+  Optional<unsigned> getVScaleForTuning() const { return None; }
 
   bool shouldMaximizeVectorBandwidth() const { return false; }
 

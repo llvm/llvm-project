@@ -55,7 +55,7 @@ C n{};
 // CHECK: load i32, i32* getelementptr inbounds ({{.*}} @a, i32 0, i32 0)
 // CHECK: getelementptr inbounds i8, i8* %{{.*}}, {{.*}} %{{.*}}
 // CHECK: store i8 %{{.*}}, i8* getelementptr inbounds ({{.*}} @a, i32 0, i32 2)
-// CHECK: call noundef i32 @_ZN1A1fEv({{.*}} @a)
+// CHECK: call i32 @_ZN1A1fEv({{.*}} @a)
 // CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({{.*}}, {{.*}}* @a, i32 0, i32 3)
 // CHECK: store double 1.000000e+00, double* getelementptr inbounds ({{.*}} @a, i32 0, i32 4, i32 0)
 
@@ -69,12 +69,12 @@ C n{};
 // CHECK: store i8* null, i8** getelementptr inbounds ({{.*}} @c, i32 0, i32 1)
 // CHECK-NOT: load
 // CHECK: store i8 65, i8* getelementptr inbounds ({{.*}} @c, i32 0, i32 2)
-// CHECK: call noundef i32 @_Z1fv()
+// CHECK: call i32 @_Z1fv()
 // CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({{.*}}, {{.*}}* @c, i32 0, i32 3)
 // CHECK-NOT: C1Ev
 // CHECK: store i8 3, i8* {{.*}} @c, i32 0, i32 4)
 
 // CHECK: call void @_ZN1BC1Ev({{.*}} @x)
 
-// CHECK: call noundef i32 @_ZN1B1fEv({{.*}} @y)
+// CHECK: call i32 @_ZN1B1fEv({{.*}} @y)
 // CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({{.*}} @y, i32 0, i32 0)

@@ -12,17 +12,17 @@ void foo(int x)
   // NATIVE: mul nsw i32
   // NATIVE: cmpxchg i32* {{.*}} seq_cst, align 4
   // LIBCALL: mul nsw i32
-  // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 4,
+  // LIBCALL: i1 @__atomic_compare_exchange(i32 4,
   i /= 2;
   // NATIVE: sdiv i32
   // NATIVE: cmpxchg i32* {{.*}} seq_cst, align 4
   // LIBCALL: sdiv i32
-  // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 4,
+  // LIBCALL: i1 @__atomic_compare_exchange(i32 4,
   j /= x;
   // NATIVE: sdiv i32
   // NATIVE: cmpxchg i16* {{.*}} seq_cst, align 2
   // LIBCALL: sdiv i32
-  // LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 2,
+  // LIBCALL: i1 @__atomic_compare_exchange(i32 2,
 
 }
 
@@ -37,7 +37,7 @@ _Bool bar() {
 // NATIVE: %[[tobool:.*]] = trunc i8 %[[load]] to i1
 // NATIVE: ret i1 %[[tobool]]
 // LIBCALL-LABEL: @bar
-// LIBCALL: call void @__atomic_load(i32 noundef 1, i8* noundef @b, i8* noundef %atomic-temp, i32 noundef 5)
+// LIBCALL: call void @__atomic_load(i32 1, i8* @b, i8* %atomic-temp, i32 5)
 // LIBCALL: %[[load:.*]] = load i8, i8* %atomic-temp
 // LIBCALL: %[[tobool:.*]] = trunc i8 %[[load]] to i1
 // LIBCALL: ret i1 %[[tobool]]
@@ -108,7 +108,7 @@ _Atomic(int) compound_mul(_Atomic(int) in) {
 // NATIVE: cmpxchg i32* {{%.*}}, i32 {{%.*}}, i32 [[NEW:%.*]] seq_cst seq_cst, align 4
 // NATIVE: ret i32 [[NEW]]
 // LIBCALL-LABEL: @compound_mul
-// LIBCALL: i1 @__atomic_compare_exchange(i32 noundef 4,
+// LIBCALL: i1 @__atomic_compare_exchange(i32 4,
 
   return (in *= 5);
 }

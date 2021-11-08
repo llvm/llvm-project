@@ -6,7 +6,7 @@ struct A {
 
 int g();
 void f(A *a) {
-  // CHECK: call noundef i32 @_Z1gv()
+  // CHECK: call i32 @_Z1gv()
   // CHECK: call i1 @llvm.type.test
   a->f(g());
 }

@@ -221,7 +221,7 @@ void secondMapNameInClause() {
 // CHECK: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** null, i8** {{.+}})
 
 
-// DEBUG: void @.omp_mapper._ZTS2S3.id(i8* {{.*}}, i8* {{.*}}, i8* {{.*}}, i64 {{.*}}, i64 {{.*}}, i8* noundef [[NAME_ARG:%.+]])
+// DEBUG: void @.omp_mapper._ZTS2S3.id(i8* {{.*}}, i8* {{.*}}, i8* {{.*}}, i64 {{.*}}, i64 {{.*}}, i8* [[NAME_ARG:%.+]])
 // DEBUG: store i8* [[NAME_ARG]], i8** [[NAME_STACK:%.+]]
 // DEBUG: [[MAPPER_NAME:%.+]] = load i8*, i8** [[NAME_STACK]]
 // DEBUG: call void @__tgt_push_mapper_component(i8* %{{.*}}, i8* %{{.*}}, i8* %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i8* [[MAPPER_NAME]])
