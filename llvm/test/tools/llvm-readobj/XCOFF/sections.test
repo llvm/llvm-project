@@ -4,7 +4,7 @@
 # RUN: llvm-readobj --section-headers %t1 | \
 # RUN:   FileCheck --strict-whitespace --match-full-lines --check-prefix=SEC32 %s
 
-# SEC32:Format: aixcoff-rs6000
+#      SEC32:Format: aixcoff-rs6000
 # SEC32-NEXT:Arch: powerpc
 # SEC32-NEXT:AddressSize: 32bit
 # SEC32-NEXT:Sections [
@@ -56,7 +56,7 @@ Sections:
 # RUN: llvm-readobj --section-headers %t2 | \
 # RUN:   FileCheck --strict-whitespace --match-full-lines --check-prefix=SEC64 %s
 
-# SEC64:Format: aix5coff64-rs6000
+#      SEC64:Format: aix5coff64-rs6000
 # SEC64-NEXT:Arch: powerpc64
 # SEC64-NEXT:AddressSize: 64bit
 # SEC64-NEXT:Sections [
