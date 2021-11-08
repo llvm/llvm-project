@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fapple-kext -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fapple-kext -disable-noundef-analysis -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI5TemplIiE to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5TemplIiE1fEv.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5TemplIiE1gEv.ptrauth to i8*), i8* null] }
 
