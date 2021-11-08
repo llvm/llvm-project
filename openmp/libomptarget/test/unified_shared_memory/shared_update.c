@@ -2,8 +2,9 @@
 
 // REQUIRES: unified_shared_memory
 
-// amdgpu runtime crash
-// UNSUPPORTED: amdgcn-amd-amdhsa
+// amdgcn does not have printf definition
+// XFAIL: amdgcn-amd-amdhsa
+// XFAIL: amdgcn-amd-amdhsa-newRTL
 
 #include <stdio.h>
 #include <omp.h>

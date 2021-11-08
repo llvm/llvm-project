@@ -768,6 +768,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
 const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTemplateParmDecl>
     templateTemplateParmDecl;
 
+const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
 const internal::VariadicAllOfMatcher<QualType> qualType;
 const internal::VariadicAllOfMatcher<Type> type;
 const internal::VariadicAllOfMatcher<TypeLoc> typeLoc;

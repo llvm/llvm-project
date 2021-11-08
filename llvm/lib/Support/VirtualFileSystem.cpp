@@ -1041,9 +1041,10 @@ static llvm::sys::path::Style getExistingStyle(llvm::StringRef Path) {
   // Detect the path style in use by checking the first separator.
   llvm::sys::path::Style style = llvm::sys::path::Style::native;
   const size_t n = Path.find_first_of("/\\");
+  // Can't distinguish between posix and windows_slash here.
   if (n != static_cast<size_t>(-1))
     style = (Path[n] == '/') ? llvm::sys::path::Style::posix
-                             : llvm::sys::path::Style::windows;
+                             : llvm::sys::path::Style::windows_backslash;
   return style;
 }
 
@@ -1189,8 +1190,10 @@ std::error_code RedirectingFileSystem::isLocal(const Twine &Path_,
 }
 
 std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
+  // is_absolute(..., Style::windows_*) accepts paths with both slash types.
   if (llvm::sys::path::is_absolute(Path, llvm::sys::path::Style::posix) ||
-      llvm::sys::path::is_absolute(Path, llvm::sys::path::Style::windows))
+      llvm::sys::path::is_absolute(Path,
+                                   llvm::sys::path::Style::windows_backslash))
     return {};
 
   auto WorkingDir = getCurrentWorkingDirectory();
@@ -1201,9 +1204,15 @@ std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path)
   // is native and there is no way to override that.  Since we know WorkingDir
   // is absolute, we can use it to determine which style we actually have and
   // append Path ourselves.
-  sys::path::Style style = sys::path::Style::windows;
+  sys::path::Style style = sys::path::Style::windows_backslash;
   if (sys::path::is_absolute(WorkingDir.get(), sys::path::Style::posix)) {
     style = sys::path::Style::posix;
+  } else {
+    // Distinguish between windows_backslash and windows_slash; getExistingStyle
+    // returns posix for a path with windows_slash.
+    if (getExistingStyle(WorkingDir.get()) !=
+        sys::path::Style::windows_backslash)
+      style = sys::path::Style::windows_slash;
   }
 
   std::string Result = WorkingDir.get();
@@ -1621,8 +1630,9 @@ private:
       // which style we have, and use it consistently.
       if (sys::path::is_absolute(Name, sys::path::Style::posix)) {
         path_style = sys::path::Style::posix;
-      } else if (sys::path::is_absolute(Name, sys::path::Style::windows)) {
-        path_style = sys::path::Style::windows;
+      } else if (sys::path::is_absolute(Name,
+                                        sys::path::Style::windows_backslash)) {
+        path_style = sys::path::Style::windows_backslash;
       } else {
         assert(NameValueNode && "Name presence should be checked earlier");
         error(NameValueNode,

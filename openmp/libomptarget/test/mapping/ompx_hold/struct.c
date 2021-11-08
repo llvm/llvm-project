@@ -1,7 +1,7 @@
 // RUN: %libomptarget-compile-generic -fopenmp-extensions
 // RUN: %libomptarget-run-generic | %fcheck-generic -strict-whitespace
 
-// Wrong results on amdgpu
+// amdgcn does not have printf definition
 // XFAIL: amdgcn-amd-amdhsa
 // XFAIL: amdgcn-amd-amdhsa-newRTL
 

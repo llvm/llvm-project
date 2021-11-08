@@ -184,11 +184,6 @@ __attribute__((weak)) EXTERN void *__kmpc_impl_malloc(size_t) {
 }
 __attribute__((weak)) EXTERN void __kmpc_impl_free(void *) {}
 
-EXTERN
-int32_t __llvm_omp_vprintf(const char *Format, void *Arguments, uint32_t) {
-  return -1;
-}
-
 EXTERN void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
   hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
