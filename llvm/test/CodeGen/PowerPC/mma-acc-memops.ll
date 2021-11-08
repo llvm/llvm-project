@@ -130,37 +130,37 @@ entry:
 define dso_local void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-LABEL: testXLdSt:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    sldi r3, r3, 6
 ; LE-PAIRED-NEXT:    paddi r5, 0, f@PCREL, 1
+; LE-PAIRED-NEXT:    sldi r3, r3, 6
 ; LE-PAIRED-NEXT:    add r6, r5, r3
 ; LE-PAIRED-NEXT:    lxv vs1, 32(r6)
 ; LE-PAIRED-NEXT:    lxv vs0, 48(r6)
 ; LE-PAIRED-NEXT:    lxvx vs3, r5, r3
 ; LE-PAIRED-NEXT:    lxv vs2, 16(r6)
 ; LE-PAIRED-NEXT:    sldi r3, r4, 6
+; LE-PAIRED-NEXT:    add r4, r5, r3
 ; LE-PAIRED-NEXT:    stxvx vs3, r5, r3
-; LE-PAIRED-NEXT:    add r3, r5, r3
-; LE-PAIRED-NEXT:    stxv vs0, 48(r3)
-; LE-PAIRED-NEXT:    stxv vs1, 32(r3)
-; LE-PAIRED-NEXT:    stxv vs2, 16(r3)
+; LE-PAIRED-NEXT:    stxv vs0, 48(r4)
+; LE-PAIRED-NEXT:    stxv vs1, 32(r4)
+; LE-PAIRED-NEXT:    stxv vs2, 16(r4)
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testXLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r5, r2, f@toc@ha
-; BE-PAIRED-NEXT:    sldi r3, r3, 6
 ; BE-PAIRED-NEXT:    addi r5, r5, f@toc@l
+; BE-PAIRED-NEXT:    sldi r3, r3, 6
 ; BE-PAIRED-NEXT:    add r6, r5, r3
 ; BE-PAIRED-NEXT:    lxvx vs0, r5, r3
 ; BE-PAIRED-NEXT:    sldi r3, r4, 6
+; BE-PAIRED-NEXT:    add r4, r5, r3
 ; BE-PAIRED-NEXT:    lxv vs1, 16(r6)
 ; BE-PAIRED-NEXT:    lxv vs3, 48(r6)
 ; BE-PAIRED-NEXT:    lxv vs2, 32(r6)
 ; BE-PAIRED-NEXT:    stxvx vs0, r5, r3
-; BE-PAIRED-NEXT:    add r3, r5, r3
-; BE-PAIRED-NEXT:    stxv vs1, 16(r3)
-; BE-PAIRED-NEXT:    stxv vs3, 48(r3)
-; BE-PAIRED-NEXT:    stxv vs2, 32(r3)
+; BE-PAIRED-NEXT:    stxv vs1, 16(r4)
+; BE-PAIRED-NEXT:    stxv vs3, 48(r4)
+; BE-PAIRED-NEXT:    stxv vs2, 32(r4)
 ; BE-PAIRED-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testXLdSt:

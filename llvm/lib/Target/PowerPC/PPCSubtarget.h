@@ -147,6 +147,10 @@ protected:
   bool HasStoreFusion;
   bool HasAddiLoadFusion;
   bool HasAddisLoadFusion;
+  bool HasArithAddFusion;
+  bool HasAddLogicalFusion;
+  bool HasLogicalAddFusion;
+  bool HasLogicalFusion;
   bool IsISA2_06;
   bool IsISA2_07;
   bool IsISA3_0;
@@ -332,6 +336,10 @@ public:
   bool hasStoreFusion() const { return HasStoreFusion; }
   bool hasAddiLoadFusion() const { return HasAddiLoadFusion; }
   bool hasAddisLoadFusion() const { return HasAddisLoadFusion; }
+  bool hasArithAddFusion() const { return HasArithAddFusion; }
+  bool hasAddLogicalFusion() const { return HasAddLogicalFusion; }
+  bool hasLogicalAddFusion() const { return HasLogicalAddFusion; }
+  bool hasLogicalFusion() const { return HasLogicalFusion; }
   bool needsSwapsForVSXMemOps() const {
     return hasVSX() && isLittleEndian() && !hasP9Vector();
   }
