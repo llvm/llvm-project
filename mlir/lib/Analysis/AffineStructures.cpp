@@ -1947,7 +1947,7 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
   FlatAffineConstraints &fac1 = *this;
   FlatAffineConstraints &fac2 = other;
 
-  // Get divisions representations from each FAC.
+  // Get division representations from each FAC.
   std::vector<SmallVector<int64_t, 8>> divs1, divs2;
   SmallVector<unsigned, 4> denoms1, denoms2;
   fac1.getLocalReprs(divs1, denoms1);
@@ -1970,17 +1970,17 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
                     initLocals, 0);
   fac2.insertLocalId(0, initLocals);
 
-  // Merge division representation extracted from fac1 and fac2.
+  // Merge division representations extracted from fac1 and fac2.
   divs1.insert(divs1.end(), divs2.begin(), divs2.end());
   denoms1.insert(denoms1.end(), denoms2.begin(), denoms2.end());
 
-  // Find duplicate divisions and merge them.
+  // Find and merge duplicate divisions.
   // TODO: Add division normalization to support divisions that differ by
   // a constant.
   // TODO: Add division ordering such that a division representation for local
   // identifier at position `i` only depends on local identifiers at position <
-  // `i`. This makes sure that all divisions depending on local variables that
-  // can be merged, are merged.
+  // `i`. This makes sure that all divisions depending on other local variables
+  // that can be merged, are merged.
   unsigned localOffset = getIdKindOffset(IdKind::Local);
   for (unsigned i = 0; i < divs1.size(); ++i) {
     // Check if division representations exists `i^th` local id.
