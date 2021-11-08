@@ -241,6 +241,13 @@ bool Descriptor::EstablishPointerSection(const Descriptor &source,
     }
   }
   raw_.rank = newRank;
+  if (const auto *sourceAddendum = source.Addendum()) {
+    if (auto *addendum{Addendum()}) {
+      *addendum = *sourceAddendum;
+    } else {
+      return false;
+    }
+  }
   return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
 }
 
