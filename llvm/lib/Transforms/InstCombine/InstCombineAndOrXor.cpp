@@ -2298,22 +2298,30 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
   if (!Ty->isIntOrIntVectorTy() || !B->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  // We need 0 or all-1's bitmasks.
-  if (ComputeNumSignBits(A) != Ty->getScalarSizeInBits())
-    return nullptr;
-
-  // If B is the 'not' value of A, we have our answer.
+  // If A is the 'not' operand of B and has enough signbits, we have our answer.
   if (match(B, m_Not(m_Specific(A)))) {
     // If these are scalars or vectors of i1, A can be used directly.
     if (Ty->isIntOrIntVectorTy(1))
       return A;
-    return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(Ty));
+
+    // If we look through a vector bitcast, the caller will bitcast the operands
+    // to match the condition's number of bits (N x i1).
+    // To make this poison-safe, disallow bitcast from wide element to narrow
+    // element. That could allow poison in lanes where it was not present in the
+    // original code.
+    A = peekThroughBitcast(A);
+    unsigned NumSignBits = ComputeNumSignBits(A);
+    if (NumSignBits == A->getType()->getScalarSizeInBits() &&
+        NumSignBits <= Ty->getScalarSizeInBits())
+      return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(A->getType()));
+    return nullptr;
   }
 
   // If both operands are constants, see if the constants are inverse bitmasks.
   Constant *AConst, *BConst;
   if (match(A, m_Constant(AConst)) && match(B, m_Constant(BConst)))
-    if (AConst == ConstantExpr::getNot(BConst))
+    if (AConst == ConstantExpr::getNot(BConst) &&
+        ComputeNumSignBits(A) == Ty->getScalarSizeInBits())
       return Builder.CreateZExtOrTrunc(A, CmpInst::makeCmpResultType(Ty));
 
   // Look for more complex patterns. The 'not' op may be hidden behind various
@@ -2357,10 +2365,17 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
   B = peekThroughBitcast(B, true);
   if (Value *Cond = getSelectCondition(A, B)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
+    // If this is a vector, we may need to cast to match the condition's length.
     // The bitcasts will either all exist or all not exist. The builder will
     // not create unnecessary casts if the types already match.
-    Value *BitcastC = Builder.CreateBitCast(C, A->getType());
-    Value *BitcastD = Builder.CreateBitCast(D, A->getType());
+    Type *SelTy = A->getType();
+    if (auto *VecTy = dyn_cast<VectorType>(Cond->getType())) {
+      unsigned Elts = VecTy->getElementCount().getKnownMinValue();
+      Type *EltTy = Builder.getIntNTy(SelTy->getPrimitiveSizeInBits() / Elts);
+      SelTy = VectorType::get(EltTy, VecTy->getElementCount());
+    }
+    Value *BitcastC = Builder.CreateBitCast(C, SelTy);
+    Value *BitcastD = Builder.CreateBitCast(D, SelTy);
     Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastD);
     return Builder.CreateBitCast(Select, OrigType);
   }
