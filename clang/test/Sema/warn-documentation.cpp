@@ -1333,6 +1333,7 @@ struct HasFields {
   int (*functionPointerField)(int i);
 };
 
+// expected-warning@+5 {{parameter 'p' not found in the function declaration}}
 // expected-warning@+5 {{'\returns' command used in a comment that is attached to a function returning void}}
 /**
  * functionPointerVariable

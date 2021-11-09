@@ -333,8 +333,7 @@ void DeclInfo::fill() {
     TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
     FunctionTypeLoc FTL;
     if (getFunctionTypeLoc(TL, FTL)) {
-      if (Kind == TypedefKind)
-        Kind = FunctionKind;
+      Kind = FunctionKind;
       ParamVars = FTL.getParams();
       ReturnType = FTL.getReturnLoc().getType();
     }
