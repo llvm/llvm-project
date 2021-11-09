@@ -87,7 +87,7 @@ static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
     DELTA_PASSES
   }
 #undef DELTA_PASS
-  errs() << "unknown pass \"" << PassName << "\"";
+  errs() << "unknown pass \"" << PassName << "\"\n";
   exit(1);
 }
 
