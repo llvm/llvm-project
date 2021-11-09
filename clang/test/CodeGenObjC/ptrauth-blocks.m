@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fptrauth-calls -fobjc-arc -fblocks -disable-noundef-analysis -fobjc-runtime=ios-7 -triple arm64-apple-ios -emit-llvm %s  -o - | FileCheck %s
+// RUN: %clang_cc1 -fptrauth-calls -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -emit-llvm %s  -o - | FileCheck %s
 
 void (^blockptr)(void);
 

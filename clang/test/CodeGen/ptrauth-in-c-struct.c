@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fblocks -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -disable-noundef-analysis -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fblocks -fptrauth-calls -fptrauth-returns -fptrauth-intrinsics -emit-llvm -o - %s | FileCheck %s
 
 #define AQ1_50 __ptrauth(1,1,50)
 #define AQ2_30 __ptrauth(2,1,30)
