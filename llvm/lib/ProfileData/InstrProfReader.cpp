@@ -463,22 +463,21 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   if (CounterOffset < 0)
     return error(
         instrprof_error::malformed,
-        ("counter offset(" + Twine(CounterOffset) + ")" + " is < 0").str());
+        ("counter offset " + Twine(CounterOffset) + " is negative").str());
 
   if (CounterOffset > MaxNumCounters)
     return error(instrprof_error::malformed,
-                 ("counter offset(" + Twine(CounterOffset) + ")" + " > " +
-                  "max number of counters(" + Twine((uint32_t)MaxNumCounters) +
-                  ")")
+                 ("counter offset " + Twine(CounterOffset) +
+                  " is greater than the maximum number of counters " +
+                  Twine((uint32_t)MaxNumCounters))
                      .str());
 
   if (((uint32_t)CounterOffset + NumCounters) > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed,
-                 ("number of counters is out of bounds(counter offset(" +
-                  Twine((uint32_t)CounterOffset) + ") + " +
-                  "number of counters(" + Twine(NumCounters) + ") > " +
-                  "max number of counters(" + Twine((uint32_t)MaxNumCounters) +
-                  "))")
+                 ("number of counters " +
+                  Twine(((uint32_t)CounterOffset + NumCounters)) +
+                  " is greater than the maximum number of counters " +
+                  Twine((uint32_t)MaxNumCounters))
                      .str());
 
   auto RawCounts = makeArrayRef(getCounter(CounterOffset), NumCounters);
