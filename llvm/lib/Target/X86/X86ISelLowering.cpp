@@ -44441,29 +44441,45 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Only support vXi32 vectors.
+  // TODO: Can we support > 32-bit elements?
   if (!VT.isVector() || VT.getVectorElementType() != MVT::i32)
     return SDValue();
 
-  // Make sure the type is legal or will be widened to a legal type.
-  if (VT != MVT::v2i32 && !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+  // Make sure the type is legal or can split/widen to a legal type.
+  // With AVX512 but without BWI, we would need to split v32i16.
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts == 1 || !isPowerOf2_32(NumElts))
     return SDValue();
 
-  MVT WVT = MVT::getVectorVT(MVT::i16, 2 * VT.getVectorNumElements());
+  EVT WVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16, 2 * NumElts);
 
-  // Without BWI, we would need to split v32i16.
-  if (WVT == MVT::v32i16 && !Subtarget.hasBWI())
+  // With AVX512 but without BWI, we would need to split v32i16.
+  if (32 <= (2 * NumElts) && Subtarget.hasAVX512() && !Subtarget.hasBWI())
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  // If we are zero extending two steps without SSE4.1, its better to reduce
+  // If we are zero/sign extending two steps without SSE4.1, its better to
+  // reduce the vmul width instead.
+  if (!Subtarget.hasSSE41() &&
+      (((N0.getOpcode() == ISD::ZERO_EXTEND &&
+         N0.getOperand(0).getScalarValueSizeInBits() <= 8) &&
+        (N1.getOpcode() == ISD::ZERO_EXTEND &&
+         N1.getOperand(0).getScalarValueSizeInBits() <= 8)) ||
+       ((N0.getOpcode() == ISD::SIGN_EXTEND &&
+         N0.getOperand(0).getScalarValueSizeInBits() <= 8) &&
+        (N1.getOpcode() == ISD::SIGN_EXTEND &&
+         N1.getOperand(0).getScalarValueSizeInBits() <= 8))))
+    return SDValue();
+
+  // If we are sign extending a wide vector without SSE4.1, its better to reduce
   // the vmul width instead.
   if (!Subtarget.hasSSE41() &&
-      (N0.getOpcode() == ISD::ZERO_EXTEND &&
-       N0.getOperand(0).getScalarValueSizeInBits() <= 8) &&
-      (N1.getOpcode() == ISD::ZERO_EXTEND &&
-       N1.getOperand(0).getScalarValueSizeInBits() <= 8))
+      (N0.getOpcode() == ISD::SIGN_EXTEND &&
+       N0.getOperand(0).getValueSizeInBits() > 128) &&
+      (N1.getOpcode() == ISD::SIGN_EXTEND &&
+       N1.getOperand(0).getValueSizeInBits() > 128))
     return SDValue();
 
   // Sign bits must extend down to the lowest i16.
@@ -44480,12 +44496,18 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
     if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()))
       return DAG.getNode(ISD::AND, SDLoc(N), VT, Op,
                          DAG.getConstant(0xFFFF, SDLoc(N), VT));
-    // Convert sext(vXi16) to zext(vXi16).
-    if (Op.getOpcode() == ISD::SIGN_EXTEND && VT.getSizeInBits() <= 128 &&
-        N->isOnlyUserOf(Op.getNode())) {
+    if (Op.getOpcode() == ISD::SIGN_EXTEND && N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
-      if (Src.getScalarValueSizeInBits() == 16)
+      // Convert sext(vXi16) to zext(vXi16).
+      if (Src.getScalarValueSizeInBits() == 16 && VT.getSizeInBits() <= 128)
         return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Src);
+      // Convert sext(vXi8) to zext(vXi16 sext(vXi8)) on pre-SSE41 targets
+      // which will expand the extension.
+      if (Src.getScalarValueSizeInBits() < 16 && !Subtarget.hasSSE41()) {
+        EVT ExtVT = VT.changeVectorElementType(MVT::i16);
+        Src = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), ExtVT, Src);
+        return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Src);
+      }
     }
     // Convert SIGN_EXTEND_VECTOR_INREG to ZEXT_EXTEND_VECTOR_INREG.
     if (Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG &&
