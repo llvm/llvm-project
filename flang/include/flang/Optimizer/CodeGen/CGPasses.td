@@ -24,6 +24,10 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
   }];
   let constructor = "::fir::createFIRToLLVMPass()";
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
+  let options = [
+    Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
+           "Override module's target triple.">
+  ];
 }
 
 def CodeGenRewrite : Pass<"cg-rewrite"> {

@@ -72,3 +72,31 @@ func private @foo3(%arg0: !fir.logical<8>)
 func private @foo4(%arg0: !fir.logical<16>)
 // CHECK-LABEL: foo4
 // CHECK-SAME: i128
+
+// -----
+
+// Test `!fir.complex<KIND>` conversion.
+
+func private @foo0(%arg0: !fir.complex<2>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(f16, f16)>)
+
+func private @foo1(%arg0: !fir.complex<3>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.struct<(bf16, bf16)>)
+
+func private @foo2(%arg0: !fir.complex<4>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: !llvm.struct<(f32, f32)>)
+
+func private @foo3(%arg0: !fir.complex<8>)
+// CHECK-LABEL: foo3
+// CHECK-SAME: !llvm.struct<(f64, f64)>)
+
+func private @foo4(%arg0: !fir.complex<10>)
+// CHECK-LABEL: foo4
+// CHECK-SAME: !llvm.struct<(f80, f80)>)
+
+func private @foo5(%arg0: !fir.complex<16>)
+// CHECK-LABEL: foo5
+// CHECK-SAME: !llvm.struct<(f128, f128)>)
