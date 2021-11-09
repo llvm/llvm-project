@@ -755,6 +755,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__dfso_dlopen(
 static void *DFsanThreadStartFunc(void *arg) {
   DFsanThread *t = (DFsanThread *)arg;
   SetCurrentThread(t);
+  t->Init();
   return t->ThreadStart();
 }
 

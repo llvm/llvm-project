@@ -82,3 +82,4 @@ Developer Tools
    llvm-locstats
    llvm-pdbutil
    llvm-profgen
+   llvm-tli-checker

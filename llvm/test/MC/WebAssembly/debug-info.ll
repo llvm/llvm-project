@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj -S -r --symbols - | FileCheck %s
+; RUN: llc -generate-arange-section -filetype=obj %s -o - | llvm-readobj -S -r --symbols - | FileCheck %s
 
 ; CHECK: Format: WASM
 ; CHECK-NEXT:Arch: wasm32
@@ -65,68 +65,80 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
-; CHECK-NEXT:    Size: 121
+; CHECK-NEXT:    Size: 48
 ; CHECK-NEXT:    Offset: 406
+; CHECK-NEXT:    Name: .debug_aranges
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Section {
+; CHECK-NEXT:    Type: CUSTOM (0x0)
+; CHECK-NEXT:    Size: 121
+; CHECK-NEXT:    Offset: 475
 ; CHECK-NEXT:    Name: .debug_str
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 42
-; CHECK-NEXT:    Offset: 544
+; CHECK-NEXT:    Offset: 613
 ; CHECK-NEXT:    Name: .debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 26
-; CHECK-NEXT:    Offset: 608
+; CHECK-NEXT:    Offset: 677
 ; CHECK-NEXT:    Name: .debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 57
-; CHECK-NEXT:    Offset: 656
+; CHECK-NEXT:    Offset: 725
 ; CHECK-NEXT:    Name: .debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 91
-; CHECK-NEXT:    Offset: 731
+; CHECK-NEXT:    Offset: 800
 ; CHECK-NEXT:    Name: linking
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 9
-; CHECK-NEXT:    Offset: 836
+; CHECK-NEXT:    Offset: 905
 ; CHECK-NEXT:    Name: reloc.DATA
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 61
-; CHECK-NEXT:    Offset: 862
+; CHECK-NEXT:    Offset: 931
 ; CHECK-NEXT:    Name: reloc..debug_info
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
+; CHECK-NEXT:    Size: 18
+; CHECK-NEXT:    Offset: 1016
+; CHECK-NEXT:    Name: reloc..debug_aranges
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Section {
+; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 947
+; CHECK-NEXT:    Offset: 1061
 ; CHECK-NEXT:    Name: reloc..debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 981
+; CHECK-NEXT:    Offset: 1095
 ; CHECK-NEXT:    Name: reloc..debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1015
+; CHECK-NEXT:    Offset: 1129
 ; CHECK-NEXT:    Name: reloc..debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 77
-; CHECK-NEXT:    Offset: 1045
+; CHECK-NEXT:    Offset: 1159
 ; CHECK-NEXT:    Name: producers
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
@@ -151,13 +163,19 @@
 ; CHECK-NEXT:    0x66 R_WASM_GLOBAL_INDEX_I32 __stack_pointer
 ; CHECK-NEXT:    0x6B R_WASM_SECTION_OFFSET_I32 .debug_str 118
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (11) .debug_pubnames {
+; CHECK-NEXT:  Section (10) .debug_aranges {
+; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
+; CHECK-NEXT:    0x10 R_WASM_MEMORY_ADDR_I32 foo 0
+; CHECK-NEXT:    0x18 R_WASM_MEMORY_ADDR_I32 ptr2 0
+; CHECK-NEXT:    0x20 R_WASM_FUNCTION_OFFSET_I32 f2 0
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Section (12) .debug_pubnames {
 ; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (12) .debug_pubtypes {
+; CHECK-NEXT:  Section (13) .debug_pubtypes {
 ; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Section (13) .debug_line {
+; CHECK-NEXT:  Section (14) .debug_line {
 ; CHECK-NEXT:    0x2B R_WASM_FUNCTION_OFFSET_I32 f2 0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
@@ -228,7 +246,7 @@
 ; CHECK-NEXT:    Flags [ (0x2)
 ; CHECK-NEXT:      BINDING_LOCAL (0x2)
 ; CHECK-NEXT:    ]
-; CHECK-NEXT:    ElementIndex: 0x9
+; CHECK-NEXT:    ElementIndex: 0xA
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_line
@@ -236,7 +254,7 @@
 ; CHECK-NEXT:    Flags [ (0x2)
 ; CHECK-NEXT:      BINDING_LOCAL (0x2)
 ; CHECK-NEXT:    ]
-; CHECK-NEXT:    ElementIndex: 0xC
+; CHECK-NEXT:    ElementIndex: 0xD
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 

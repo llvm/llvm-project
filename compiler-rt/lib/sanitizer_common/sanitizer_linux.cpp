@@ -1745,7 +1745,8 @@ void *internal_start_thread(void *(*func)(void *arg), void *arg) {
   internal_sigfillset(&set);
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
-  // on any thread, setuid call hangs (see test/tsan/setuid.c).
+  // on any thread, setuid call hangs.
+  // See test/sanitizer_common/TestCases/Linux/setuid.c.
   internal_sigdelset(&set, 33);
 #endif
   internal_sigprocmask(SIG_SETMASK, &set, &old);

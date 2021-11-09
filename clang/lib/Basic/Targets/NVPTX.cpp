@@ -44,6 +44,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
     if (!Feature.startswith("+ptx"))
       continue;
     PTXVersion = llvm::StringSwitch<unsigned>(Feature)
+                     .Case("+ptx75", 75)
                      .Case("+ptx74", 74)
                      .Case("+ptx73", 73)
                      .Case("+ptx72", 72)

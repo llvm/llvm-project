@@ -1304,13 +1304,14 @@ static void printSwitchOpCases(
   if (!caseValues)
     return;
 
-  for (int64_t i = 0, size = caseValues.size(); i < size; ++i) {
+  for (const auto &it : llvm::enumerate(caseValues.getValues<APInt>())) {
     p << ',';
     p.printNewline();
     p << "  ";
-    p << caseValues.getValue<APInt>(i).getLimitedValue();
+    p << it.value().getLimitedValue();
     p << ": ";
-    p.printSuccessorAndUseList(caseDestinations[i], caseOperands[i]);
+    p.printSuccessorAndUseList(caseDestinations[it.index()],
+                               caseOperands[it.index()]);
   }
   p.printNewline();
 }
@@ -1353,9 +1354,9 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 
   SuccessorRange caseDests = getCaseDestinations();
   if (auto value = operands.front().dyn_cast_or_null<IntegerAttr>()) {
-    for (int64_t i = 0, size = getCaseValues()->size(); i < size; ++i)
-      if (value == caseValues->getValue<IntegerAttr>(i))
-        return caseDests[i];
+    for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>()))
+      if (it.value() == value.getValue())
+        return caseDests[it.index()];
     return getDefaultDestination();
   }
   return nullptr;
@@ -1394,15 +1395,15 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
   auto caseValues = op.getCaseValues();
   auto caseDests = op.getCaseDestinations();
 
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    if (caseDests[i] == op.getDefaultDestination() &&
-        op.getCaseOperands(i) == op.getDefaultOperands()) {
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (caseDests[it.index()] == op.getDefaultDestination() &&
+        op.getCaseOperands(it.index()) == op.getDefaultOperands()) {
       requiresChange = true;
       continue;
     }
-    newCaseDestinations.push_back(caseDests[i]);
-    newCaseOperands.push_back(op.getCaseOperands(i));
-    newCaseValues.push_back(caseValues->getValue<APInt>(i));
+    newCaseDestinations.push_back(caseDests[it.index()]);
+    newCaseOperands.push_back(op.getCaseOperands(it.index()));
+    newCaseValues.push_back(it.value());
   }
 
   if (!requiresChange)
@@ -1424,10 +1425,11 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
 static void foldSwitch(SwitchOp op, PatternRewriter &rewriter,
                        APInt caseValue) {
   auto caseValues = op.getCaseValues();
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    if (caseValues->getValue<APInt>(i) == caseValue) {
-      rewriter.replaceOpWithNewOp<BranchOp>(op, op.getCaseDestinations()[i],
-                                            op.getCaseOperands(i));
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (it.value() == caseValue) {
+      rewriter.replaceOpWithNewOp<BranchOp>(
+          op, op.getCaseDestinations()[it.index()],
+          op.getCaseOperands(it.index()));
       return;
     }
   }
@@ -1551,22 +1553,16 @@ simplifySwitchFromSwitchOnSameCondition(SwitchOp op,
     return failure();
 
   // Fold this switch to an unconditional branch.
-  APInt caseValue;
-  bool isDefault = true;
   SuccessorRange predDests = predSwitch.getCaseDestinations();
-  Optional<DenseIntElementsAttr> predCaseValues = predSwitch.getCaseValues();
-  for (int64_t i = 0, size = predCaseValues->size(); i < size; ++i) {
-    if (currentBlock == predDests[i]) {
-      caseValue = predCaseValues->getValue<APInt>(i);
-      isDefault = false;
-      break;
-    }
-  }
-  if (isDefault)
+  auto it = llvm::find(predDests, currentBlock);
+  if (it != predDests.end()) {
+    Optional<DenseIntElementsAttr> predCaseValues = predSwitch.getCaseValues();
+    foldSwitch(op, rewriter,
+               predCaseValues->getValues<APInt>()[it - predDests.begin()]);
+  } else {
     rewriter.replaceOpWithNewOp<BranchOp>(op, op.getDefaultDestination(),
                                           op.getDefaultOperands());
-  else
-    foldSwitch(op, rewriter, caseValue);
+  }
   return success();
 }
 
@@ -1613,7 +1609,7 @@ simplifySwitchFromDefaultSwitchOnSameCondition(SwitchOp op,
   auto predCaseValues = predSwitch.getCaseValues();
   for (int64_t i = 0, size = predCaseValues->size(); i < size; ++i)
     if (currentBlock != predDests[i])
-      caseValuesToRemove.insert(predCaseValues->getValue<APInt>(i));
+      caseValuesToRemove.insert(predCaseValues->getValues<APInt>()[i]);
 
   SmallVector<Block *> newCaseDestinations;
   SmallVector<ValueRange> newCaseOperands;
@@ -1622,14 +1618,14 @@ simplifySwitchFromDefaultSwitchOnSameCondition(SwitchOp op,
 
   auto caseValues = op.getCaseValues();
   auto caseDests = op.getCaseDestinations();
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    if (caseValuesToRemove.contains(caseValues->getValue<APInt>(i))) {
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (caseValuesToRemove.contains(it.value())) {
       requiresChange = true;
       continue;
     }
-    newCaseDestinations.push_back(caseDests[i]);
-    newCaseOperands.push_back(op.getCaseOperands(i));
-    newCaseValues.push_back(caseValues->getValue<APInt>(i));
+    newCaseDestinations.push_back(caseDests[it.index()]);
+    newCaseOperands.push_back(op.getCaseOperands(it.index()));
+    newCaseValues.push_back(it.value());
   }
 
   if (!requiresChange)
