@@ -4056,7 +4056,7 @@ The filename is optional, and if unspecified indicates no change in
 source filename. The header-type is an optional, whitespace-delimited,
 sequence of magic numbers as follows.
 
-* ``1`:` Push the current source file name onto the include stack and
+* ``1:`` Push the current source file name onto the include stack and
   enter a new file.
 
 * ``2``: Pop the include stack and return to the specified file. If
