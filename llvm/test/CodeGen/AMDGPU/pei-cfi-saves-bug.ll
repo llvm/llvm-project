@@ -27,9 +27,9 @@ define fastcc void @callee_no_fp() #0 {
 ; CHECK-LABEL: callee_no_fp:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v1, exec_lo, 2
@@ -37,12 +37,12 @@ define fastcc void @callee_no_fp() #0 {
 ; CHECK-NEXT:    v_writelane_b32 v1, s33, 4
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, tail_callee@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, tail_callee@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, tail_callee@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, tail_callee@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 entry:
   tail call fastcc void @tail_callee() #3
   unreachable
@@ -51,21 +51,26 @@ entry:
 define protected amdgpu_kernel void @kernel() #1 {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s7
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %end
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB2_2: ; %body
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, callee_no_fp@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, callee_no_fp@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_getpc_b64 s[8:9]
+; CHECK-NEXT:    s_add_u32 s8, s8, callee_no_fp@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s9, s9, callee_no_fp@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[8:9], 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    v_or3_b32 v0, v0, v1, v2
+; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 entry:
   br i1 undef, label %end, label %body
 

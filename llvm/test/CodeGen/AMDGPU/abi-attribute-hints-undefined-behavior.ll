@@ -71,9 +71,9 @@ define void @parent_func_missing_inputs() #0 {
 define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 ; VARABI-LABEL: parent_kernel_missing_inputs:
 ; VARABI:       ; %bb.0:
-; VARABI-NEXT:    s_add_i32 s4, s4, s7
+; VARABI-NEXT:    s_add_i32 s4, s4, s9
 ; VARABI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; VARABI-NEXT:    s_add_u32 s0, s0, s7
+; VARABI-NEXT:    s_add_u32 s0, s0, s9
 ; VARABI-NEXT:    s_addc_u32 s1, s1, 0
 ; VARABI-NEXT:    s_mov_b32 s32, 0
 ; VARABI-NEXT:    s_mov_b32 flat_scratch_lo, s5
@@ -300,21 +300,11 @@ define void @marked_func_use_other_sgpr(i64 addrspace(1)* %ptr) #0 {
 ; VARABI-LABEL: marked_func_use_other_sgpr:
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v2, s6
-; VARABI-NEXT:    v_mov_b32_e32 v3, s7
-; VARABI-NEXT:    flat_load_ubyte v2, v[2:3] glc
+; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v2, s8
-; VARABI-NEXT:    v_mov_b32_e32 v3, s9
-; VARABI-NEXT:    flat_load_ubyte v2, v[2:3] glc
+; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v2, s4
-; VARABI-NEXT:    v_mov_b32_e32 v3, s5
-; VARABI-NEXT:    flat_load_ubyte v2, v[2:3] glc
-; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v2, s10
-; VARABI-NEXT:    v_mov_b32_e32 v3, s11
-; VARABI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
 ; VARABI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -352,79 +342,29 @@ define void @marked_func_use_other_sgpr(i64 addrspace(1)* %ptr) #0 {
 define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) #0 {
 ; VARABI-LABEL: marked_kernel_use_other_sgpr:
 ; VARABI:       ; %bb.0:
-; VARABI-NEXT:    v_mov_b32_e32 v0, s6
-; VARABI-NEXT:    v_mov_b32_e32 v1, s7
-; VARABI-NEXT:    s_add_u32 s0, s8, 8
+; VARABI-NEXT:    s_add_u32 s0, s4, 8
 ; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; VARABI-NEXT:    s_addc_u32 s1, s9, 0
+; VARABI-NEXT:    s_addc_u32 s1, s5, 0
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
 ; VARABI-NEXT:    v_mov_b32_e32 v0, s0
 ; VARABI-NEXT:    v_mov_b32_e32 v1, s1
 ; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v0, s4
-; VARABI-NEXT:    v_mov_b32_e32 v1, s5
 ; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; VARABI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VARABI-NEXT:    v_mov_b32_e32 v2, s10
-; VARABI-NEXT:    v_mov_b32_e32 v3, s11
-; VARABI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v0, s0
-; VARABI-NEXT:    v_mov_b32_e32 v1, s1
-; VARABI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; VARABI-NEXT:    s_waitcnt vmcnt(0)
 ; VARABI-NEXT:    s_endpgm
 ;
-; FIXEDABI-SDAG-LABEL: marked_kernel_use_other_sgpr:
-; FIXEDABI-SDAG:       ; %bb.0:
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s6
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s7
-; FIXEDABI-SDAG-NEXT:    s_add_u32 s0, s8, 8
-; FIXEDABI-SDAG-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-SDAG-NEXT:    s_addc_u32 s1, s9, 0
-; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; FIXEDABI-SDAG-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; FIXEDABI-SDAG-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s10
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v3, s11
-; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; FIXEDABI-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-SDAG-NEXT:    s_endpgm
-;
-; FIXEDABI-GISEL-LABEL: marked_kernel_use_other_sgpr:
-; FIXEDABI-GISEL:       ; %bb.0:
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s6
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s7
-; FIXEDABI-GISEL-NEXT:    s_add_u32 s0, s8, 8
-; FIXEDABI-GISEL-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-GISEL-NEXT:    s_addc_u32 s1, s9, 0
-; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; FIXEDABI-GISEL-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; FIXEDABI-GISEL-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s10
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v1, s11
-; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; FIXEDABI-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
-; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-GISEL-NEXT:    s_endpgm
+; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
+; FIXEDABI:       ; %bb.0:
+; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
+; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_addc_u32 s1, s5, 0
+; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-NEXT:    v_mov_b32_e32 v0, s0
+; FIXEDABI-NEXT:    v_mov_b32_e32 v1, s1
+; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_endpgm
   %queue.ptr = call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
   %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
@@ -439,15 +379,15 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) 
 define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; VARABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; VARABI:       ; %bb.0:
-; VARABI-NEXT:    v_mov_b32_e32 v0, s4
-; VARABI-NEXT:    v_mov_b32_e32 v1, s5
+; VARABI-NEXT:    v_mov_b32_e32 v0, 0
+; VARABI-NEXT:    v_mov_b32_e32 v1, 0
 ; VARABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; VARABI-NEXT:    s_endpgm
 ;
 ; FIXEDABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; FIXEDABI:       ; %bb.0:
-; FIXEDABI-NEXT:    v_mov_b32_e32 v0, s4
-; FIXEDABI-NEXT:    v_mov_b32_e32 v1, s5
+; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
+; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_endpgm
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -460,22 +400,17 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; VARABI-LABEL: addrspacecast_requires_queue_ptr:
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    s_load_dword s6, s[4:5], 0x44
-; VARABI-NEXT:    s_load_dword s4, s[4:5], 0x40
 ; VARABI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; VARABI-NEXT:    s_waitcnt lgkmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v2, s6
-; VARABI-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
+; VARABI-NEXT:    v_mov_b32_e32 v3, 0
 ; VARABI-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; VARABI-NEXT:    v_mov_b32_e32 v0, s4
 ; VARABI-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
-; VARABI-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
-; VARABI-NEXT:    v_mov_b32_e32 v0, 1
-; VARABI-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; VARABI-NEXT:    flat_store_dword v[2:3], v0
+; VARABI-NEXT:    v_mov_b32_e32 v4, 1
+; VARABI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; VARABI-NEXT:    v_mov_b32_e32 v1, v3
+; VARABI-NEXT:    flat_store_dword v[2:3], v4
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
-; VARABI-NEXT:    v_mov_b32_e32 v0, 2
-; VARABI-NEXT:    flat_store_dword v[4:5], v0
+; VARABI-NEXT:    v_mov_b32_e32 v2, 2
+; VARABI-NEXT:    flat_store_dword v[0:1], v2
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VARABI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -533,10 +468,7 @@ define void @is_shared_requires_queue_ptr(i8* %ptr) #0 {
 ; VARABI-LABEL: is_shared_requires_queue_ptr:
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    s_load_dword s4, s[4:5], 0x40
-; VARABI-NEXT:    s_waitcnt lgkmcnt(0)
-; VARABI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
-; VARABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; VARABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; VARABI-NEXT:    flat_store_dword v[0:1], v0
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
 ; VARABI-NEXT:    s_setpc_b64 s[30:31]
@@ -561,10 +493,7 @@ define void @is_private_requires_queue_ptr(i8* %ptr) #0 {
 ; VARABI-LABEL: is_private_requires_queue_ptr:
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    s_load_dword s4, s[4:5], 0x44
-; VARABI-NEXT:    s_waitcnt lgkmcnt(0)
-; VARABI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
-; VARABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; VARABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; VARABI-NEXT:    flat_store_dword v[0:1], v0
 ; VARABI-NEXT:    s_waitcnt vmcnt(0)
 ; VARABI-NEXT:    s_setpc_b64 s[30:31]
@@ -589,7 +518,7 @@ define void @trap_requires_queue() #0 {
 ; VARABI-LABEL: trap_requires_queue:
 ; VARABI:       ; %bb.0:
 ; VARABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VARABI-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; VARABI-NEXT:    s_mov_b64 s[0:1], 0
 ; VARABI-NEXT:    s_trap 2
 ;
 ; FIXEDABI-LABEL: trap_requires_queue:

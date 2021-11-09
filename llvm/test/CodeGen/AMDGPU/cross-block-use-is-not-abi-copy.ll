@@ -168,10 +168,10 @@ bb1:
 define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-LABEL: v3i16_registers:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x0
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s4, 0
@@ -213,10 +213,10 @@ if.end:                                           ; preds = %if.else, %if.then
 define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-LABEL: v3f16_registers:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x0
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s4, 0

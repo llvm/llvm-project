@@ -5,7 +5,7 @@
 @gv.fptr0 = external hidden unnamed_addr addrspace(4) constant void()*, align 4
 @gv.fptr1 = external hidden unnamed_addr addrspace(4) constant void(i32)*, align 4
 
-define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
+define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-LABEL: test_indirect_call_sgpr_ptr:
 ; GCN:         .amd_kernel_code_t
 ; GCN-NEXT:     amd_code_version_major = 1
@@ -58,7 +58,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     workitem_private_segment_byte_size = 16384
 ; GCN-NEXT:     workgroup_group_segment_byte_size = 0
 ; GCN-NEXT:     gds_segment_byte_size = 0
-; GCN-NEXT:     kernarg_segment_byte_size = 0
+; GCN-NEXT:     kernarg_segment_byte_size = 4
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
 ; GCN-NEXT:     wavefront_sgpr_count = 37
 ; GCN-NEXT:     workitem_vgpr_count = 32
@@ -87,8 +87,10 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:    s_getpc_b64 s[14:15]
 ; GCN-NEXT:    s_add_u32 s14, s14, gv.fptr0@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr0@rel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
@@ -149,7 +151,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GISEL-NEXT:     workitem_private_segment_byte_size = 16384
 ; GISEL-NEXT:     workgroup_group_segment_byte_size = 0
 ; GISEL-NEXT:     gds_segment_byte_size = 0
-; GISEL-NEXT:     kernarg_segment_byte_size = 0
+; GISEL-NEXT:     kernarg_segment_byte_size = 4
 ; GISEL-NEXT:     workgroup_fbarrier_count = 0
 ; GISEL-NEXT:     wavefront_sgpr_count = 37
 ; GISEL-NEXT:     workitem_vgpr_count = 32
@@ -178,8 +180,10 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GISEL-NEXT:    s_getpc_b64 s[14:15]
 ; GISEL-NEXT:    s_add_u32 s14, s14, gv.fptr0@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s15, s15, gv.fptr0@rel32@hi+12
-; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GISEL-NEXT:    s_add_u32 s8, s8, 8
+; GISEL-NEXT:    s_addc_u32 s9, s9, 0
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 20, v2
 ; GISEL-NEXT:    v_or_b32_e32 v31, v0, v1
@@ -192,7 +196,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
   ret void
 }
 
-define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
+define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-LABEL: test_indirect_call_sgpr_ptr_arg:
 ; GCN:         .amd_kernel_code_t
 ; GCN-NEXT:     amd_code_version_major = 1
@@ -245,7 +249,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     workitem_private_segment_byte_size = 16384
 ; GCN-NEXT:     workgroup_group_segment_byte_size = 0
 ; GCN-NEXT:     gds_segment_byte_size = 0
-; GCN-NEXT:     kernarg_segment_byte_size = 0
+; GCN-NEXT:     kernarg_segment_byte_size = 4
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
 ; GCN-NEXT:     wavefront_sgpr_count = 37
 ; GCN-NEXT:     workitem_vgpr_count = 32
@@ -275,8 +279,10 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:    s_add_u32 s14, s14, gv.fptr1@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr1@rel32@hi+12
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x7b
@@ -337,7 +343,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GISEL-NEXT:     workitem_private_segment_byte_size = 16384
 ; GISEL-NEXT:     workgroup_group_segment_byte_size = 0
 ; GISEL-NEXT:     gds_segment_byte_size = 0
-; GISEL-NEXT:     kernarg_segment_byte_size = 0
+; GISEL-NEXT:     kernarg_segment_byte_size = 4
 ; GISEL-NEXT:     workgroup_fbarrier_count = 0
 ; GISEL-NEXT:     wavefront_sgpr_count = 37
 ; GISEL-NEXT:     workitem_vgpr_count = 32
@@ -368,7 +374,9 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GISEL-NEXT:    s_addc_u32 s15, s15, gv.fptr1@rel32@hi+12
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GISEL-NEXT:    s_add_u32 s8, s8, 8
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GISEL-NEXT:    s_addc_u32 s9, s9, 0
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 20, v2
 ; GISEL-NEXT:    v_or_b32_e32 v31, v0, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7b
