@@ -315,11 +315,18 @@ class DwarfDebug : public DebugHandlerBase {
   /// can refer to them in spite of insertions into this list.
   DebugLocStream DebugLocs;
 
+  using SubprogramSetVector =
+      SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
+                SmallPtrSet<const DISubprogram *, 16>>;
+
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
-            SmallPtrSet<const DISubprogram *, 16>>
-      ProcessedSPNodes;
+  SubprogramSetVector ProcessedSPNodes;
+
+  /// The set of subprograms that have concrete functions.
+  /// This does not include subprograms of machine outlined functions because
+  /// they are created after this set is computed.
+  SubprogramSetVector ConcreteSPs;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
@@ -851,6 +858,14 @@ public:
   /// If the \p File has an MD5 checksum, return it as an MD5Result
   /// allocated in the MCContext.
   Optional<MD5::MD5Result> getMD5AsBytes(const DIFile *File) const;
+
+  /// Returns true if the subprogram has a function that will be emitted.
+  /// Returns false for subprograms of machine outlined functions even when
+  /// they do have concrete instances, but they should never have abstract
+  /// subprograms anyway.
+  bool IsConcrete(const DISubprogram *SP) const {
+    return ConcreteSPs.count(SP);
+  }
 };
 
 } // end namespace llvm
