@@ -6,15 +6,15 @@
 id getObject();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call i8* @_Z9getObjectv
-// CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
+// CHECK: call i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use
 // CHECK-NEXT: {{store i8*.*@global_obj}}
 // CHECK-NEXT: ret void
 id global_obj = getObject();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call i8* @_Z9getObjectv
-// CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
+// CHECK: call i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use
 // CHECK-NEXT: {{store i8*.*@global_obj2}}
 // CHECK-NEXT: ret void
 id global_obj2 = getObject();
