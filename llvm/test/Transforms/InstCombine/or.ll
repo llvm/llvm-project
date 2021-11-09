@@ -537,11 +537,9 @@ define <2 x i1> @test37_undef(<2 x i32> %x) {
 
 define i1 @test38(i32 %x) {
 ; CHECK-LABEL: @test38(
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 23
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD1]], 30
-; CHECK-NEXT:    [[RET1:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %add1 = add i32 %x, 7
   %cmp1 = icmp eq i32 %x, 23
@@ -552,11 +550,9 @@ define i1 @test38(i32 %x) {
 
 define i1 @test38_logical(i32 %x) {
 ; CHECK-LABEL: @test38_logical(
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 23
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD1]], 30
-; CHECK-NEXT:    [[RET1:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %add1 = add i32 %x, 7
   %cmp1 = icmp eq i32 %x, 23

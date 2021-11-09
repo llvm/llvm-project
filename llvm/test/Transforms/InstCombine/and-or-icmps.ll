@@ -1047,11 +1047,8 @@ define i1 @substitute_constant_or_ne_ule_use2_logical(i8 %x, i8 %y) {
 define i1 @or_ranges_overlap(i8 %x) {
 ; CHECK-LABEL: @or_ranges_overlap(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[X]], -10
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 11
-; CHECK-NEXT:    [[C7:%.*]] = or i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[C7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 16
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp uge i8 %x, 5
   %c2 = icmp ule i8 %x, 10
@@ -1066,11 +1063,8 @@ define i1 @or_ranges_overlap(i8 %x) {
 define i1 @or_ranges_adjacent(i8 %x) {
 ; CHECK-LABEL: @or_ranges_adjacent(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[X]], -11
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 10
-; CHECK-NEXT:    [[C7:%.*]] = or i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[C7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 16
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp uge i8 %x, 5
   %c2 = icmp ule i8 %x, 10
@@ -1117,11 +1111,9 @@ define i1 @or_ranges_single_elem_right(i8 %x) {
 
 define i1 @or_ranges_single_elem_left(i8 %x) {
 ; CHECK-LABEL: @or_ranges_single_elem_left(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
-; CHECK-NEXT:    [[C4:%.*]] = icmp eq i8 [[X]], 4
-; CHECK-NEXT:    [[C6:%.*]] = or i1 [[TMP2]], [[C4]]
-; CHECK-NEXT:    ret i1 [[C6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 7
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp uge i8 %x, 5
   %c2 = icmp ule i8 %x, 10
@@ -1133,12 +1125,9 @@ define i1 @or_ranges_single_elem_left(i8 %x) {
 
 define i1 @and_ranges_overlap(i8 %x) {
 ; CHECK-LABEL: @and_ranges_overlap(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[X]], -7
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 14
-; CHECK-NEXT:    [[C7:%.*]] = and i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[C7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 4
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp uge i8 %x, 5
   %c2 = icmp ule i8 %x, 10
@@ -1152,12 +1141,8 @@ define i1 @and_ranges_overlap(i8 %x) {
 
 define i1 @and_ranges_overlap_single(i8 %x) {
 ; CHECK-LABEL: @and_ranges_overlap_single(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[X]], -10
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 11
-; CHECK-NEXT:    [[C7:%.*]] = and i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[C7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 10
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %c1 = icmp uge i8 %x, 5
   %c2 = icmp ule i8 %x, 10
@@ -1171,12 +1156,7 @@ define i1 @and_ranges_overlap_single(i8 %x) {
 
 define i1 @and_ranges_no_overlap(i8 %x) {
 ; CHECK-LABEL: @and_ranges_no_overlap(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[X]], -11
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 10
-; CHECK-NEXT:    [[C7:%.*]] = and i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[C7]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c1 = icmp uge i8 %x, 5
   %c2 = icmp ule i8 %x, 10
@@ -1190,12 +1170,9 @@ define i1 @and_ranges_no_overlap(i8 %x) {
 
 define i1 @and_ranges_signed_pred(i64 %x) {
 ; CHECK-LABEL: @and_ranges_signed_pred(
-; CHECK-NEXT:    [[T1:%.*]] = add i64 [[X:%.*]], 127
-; CHECK-NEXT:    [[T2:%.*]] = icmp slt i64 [[T1]], 1024
-; CHECK-NEXT:    [[T3:%.*]] = add i64 [[X]], 128
-; CHECK-NEXT:    [[T4:%.*]] = icmp slt i64 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
-; CHECK-NEXT:    ret i1 [[T5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X:%.*]], -9223372036854775681
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], -9223372036854775553
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %t1 = add i64 %x, 127
   %t2 = icmp slt i64 %t1, 1024
