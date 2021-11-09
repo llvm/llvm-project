@@ -230,6 +230,7 @@ struct ConstantTransposeOptimization
     // Transpose the input constant. Because we don't know its rank in advance,
     // we need to loop over the range [0, element count) and delinearize the
     // index.
+    auto attrValues = inputValues.getValues<Attribute>();
     for (int srcLinearIndex = 0; srcLinearIndex < numElements;
          ++srcLinearIndex) {
       SmallVector<uint64_t, 6> srcIndices(inputType.getRank(), 0);
@@ -247,7 +248,7 @@ struct ConstantTransposeOptimization
       for (int dim = 1; dim < outputType.getRank(); ++dim)
         dstLinearIndex = dstLinearIndex * outputShape[dim] + dstIndices[dim];
 
-      outputValues[dstLinearIndex] = inputValues.getValue(srcIndices);
+      outputValues[dstLinearIndex] = attrValues[srcIndices];
     }
 
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(
@@ -424,8 +425,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-static LogicalResult verifyConvOp(T op) {
+template <typename T> static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
   auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
   auto weightType = op.weight().getType().template dyn_cast<RankedTensorType>();

@@ -154,9 +154,9 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:  LogicalResult verifyIndexingMapRequiredAttributes();
 
 #       IMPL:  getSymbolBindings(Test2Op self)
-#       IMPL:  cst2 = self.strides().getValue<int64_t>({ 0 });
+#       IMPL:  cst2 = self.strides().getValues<int64_t>()[0];
 #  IMPL-NEXT:  getAffineConstantExpr(cst2, context)
-#       IMPL:  cst3 = self.strides().getValue<int64_t>({ 1 });
+#       IMPL:  cst3 = self.strides().getValues<int64_t>()[1];
 #  IMPL-NEXT:  getAffineConstantExpr(cst3, context)
 
 #       IMPL:  Test2Op::indexing_maps()
