@@ -470,7 +470,7 @@ void __msan_init() {
 
   MsanThread *main_thread = MsanThread::Create(nullptr, nullptr);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart();
+  main_thread->Init();
 
 #if MSAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
