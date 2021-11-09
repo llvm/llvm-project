@@ -278,13 +278,7 @@ struct DWARFTypePrinter {
     default: {
       const char *NamePtr = dwarf::toString(D.find(DW_AT_name), nullptr);
       if (!NamePtr) {
-        StringRef TagStr = TagString(D.getTag());
-        static constexpr StringRef Prefix = "DW_TAG_";
-        static constexpr StringRef Suffix = "_type";
-        if (TagStr.startswith(Prefix) && TagStr.endswith(Suffix))
-          OS << TagStr.substr(Prefix.size(),
-                              TagStr.size() - (Prefix.size() + Suffix.size()))
-             << " ";
+        appendTypeTagName(D.getTag());
         return Inner;
       }
       Word = true;
@@ -672,7 +666,7 @@ struct DWARFTypePrinter {
       return;
     if (D.getTag() == DW_TAG_type_unit)
       return;
-    if (D.getTag() == llvm::dwarf::DW_TAG_skeleton_unit)
+    if (D.getTag() == DW_TAG_skeleton_unit)
       return;
     if (D.getTag() == DW_TAG_subprogram)
       return;
