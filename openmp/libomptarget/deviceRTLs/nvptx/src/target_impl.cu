@@ -102,10 +102,10 @@ EXTERN int __kmpc_get_hardware_num_blocks() {
 EXTERN int __kmpc_get_hardware_num_threads_in_block() {
   return __nvvm_read_ptx_sreg_ntid_x();
 }
+EXTERN unsigned __kmpc_get_warp_size() { return WARPSIZE; }
 EXTERN unsigned GetWarpId() {
   return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE;
 }
-EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() {
   return __kmpc_get_hardware_thread_id_in_block() & (WARPSIZE - 1);
 }
