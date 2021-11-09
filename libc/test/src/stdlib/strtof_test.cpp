@@ -132,6 +132,10 @@ TEST_F(LlvmLibcStrToFTest, HexadecimalNormalRoundingTests) {
   runTest("0x123456700", 11, 0x4f91a2b4);
 }
 
+TEST_F(LlvmLibcStrToFTest, HexadecimalsWithRoundingProblems) {
+  runTest("0xFFFFFFFF", 10, 0x4f800000);
+}
+
 TEST_F(LlvmLibcStrToFTest, HexadecimalOutOfRangeTests) {
   runTest("0x123456789123456789123456789123456789", 38, 0x7f800000, ERANGE);
   runTest("-0x123456789123456789123456789123456789", 39, 0xff800000, ERANGE);
