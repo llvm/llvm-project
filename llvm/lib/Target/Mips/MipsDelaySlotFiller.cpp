@@ -401,10 +401,9 @@ void RegDefsUses::setUnallocatableRegs(const MachineFunction &MF) {
 
 void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
                              const MachineBasicBlock &SuccBB) {
-  for (MachineBasicBlock::const_succ_iterator SI = MBB.succ_begin(),
-       SE = MBB.succ_end(); SI != SE; ++SI)
-    if (*SI != &SuccBB)
-      for (const auto &LI : (*SI)->liveins())
+  for (const MachineBasicBlock *S : MBB.successors())
+    if (S != &SuccBB)
+      for (const auto &LI : S->liveins())
         Uses.set(LI.PhysReg);
 }
 

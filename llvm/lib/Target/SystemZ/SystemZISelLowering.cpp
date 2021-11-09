@@ -7183,8 +7183,8 @@ static bool checkCCKill(MachineInstr &MI, MachineBasicBlock *MBB) {
   // If we hit the end of the block, check whether CC is live into a
   // successor.
   if (miI == MBB->end()) {
-    for (auto SI = MBB->succ_begin(), SE = MBB->succ_end(); SI != SE; ++SI)
-      if ((*SI)->isLiveIn(SystemZ::CC))
+    for (const MachineBasicBlock *Succ : MBB->successors())
+      if (Succ->isLiveIn(SystemZ::CC))
         return false;
   }
 
