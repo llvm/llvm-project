@@ -47,11 +47,10 @@ define void @non_local_load_with_iv_zext(i32* %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ [[VAL_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL_INC]] = add nuw nsw i32 [[VAL]], 1
-; CHECK-NEXT:    store i32 [[VAL_INC]], i32* [[PTR]], align 4
-; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    store i32 [[INDVARS]], i32* [[PTR]], align 4
+; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -85,12 +84,12 @@ define void @two_non_local_loads(i32* %ptr1) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[VAL2:%.*]] = phi i32 [ [[VAL2_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL2_INC]] = add nuw nsw i32 [[VAL2]], 1
-; CHECK-NEXT:    store i32 [[VAL2_INC]], i32* [[PTR1]], align 4
-; CHECK-NEXT:    store i32 [[VAL2_INC]], i32* [[PTR2]], align 4
-; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS4:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    store i32 [[INDVARS4]], i32* [[PTR1]], align 4
+; CHECK-NEXT:    [[INDVARS:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    store i32 [[INDVARS]], i32* [[PTR2]], align 4
+; CHECK-NEXT:    call void @foo(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
