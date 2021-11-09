@@ -56,7 +56,7 @@ static Attribute extractCompositeElement(Attribute composite,
 
   if (auto vector = composite.dyn_cast<ElementsAttr>()) {
     assert(indices.size() == 1 && "must have exactly one index for a vector");
-    return vector.getValue({indices[0]});
+    return vector.getValues<Attribute>()[indices[0]];
   }
 
   if (auto array = composite.dyn_cast<ArrayAttr>()) {

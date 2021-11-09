@@ -706,11 +706,12 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
   if (shapedType.getRank() == dim) {
     if (auto attr = valueAttr.dyn_cast<DenseIntElementsAttr>()) {
       return attr.getType().getElementType().isInteger(1)
-                 ? prepareConstantBool(loc, attr.getValue<BoolAttr>(index))
-                 : prepareConstantInt(loc, attr.getValue<IntegerAttr>(index));
+                 ? prepareConstantBool(loc, attr.getValues<BoolAttr>()[index])
+                 : prepareConstantInt(loc,
+                                      attr.getValues<IntegerAttr>()[index]);
     }
     if (auto attr = valueAttr.dyn_cast<DenseFPElementsAttr>()) {
-      return prepareConstantFp(loc, attr.getValue<FloatAttr>(index));
+      return prepareConstantFp(loc, attr.getValues<FloatAttr>()[index]);
     }
     return 0;
   }

@@ -202,7 +202,7 @@ TEST(DenseScalarTest, ExtractZeroRankElement) {
   RankedTensorType shape = RankedTensorType::get({}, intTy);
 
   auto attr = DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}));
-  EXPECT_TRUE(attr.getValue({0}) == value);
+  EXPECT_TRUE(attr.getValues<Attribute>()[0] == value);
 }
 
 TEST(SparseElementsAttrTest, GetZero) {
@@ -238,15 +238,15 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   // Only index (0, 0) contains an element, others are supposed to return
   // the zero/empty value.
-  auto zeroIntValue = sparseInt.getValue({1, 1});
+  auto zeroIntValue = sparseInt.getValues<Attribute>()[{1, 1}];
   EXPECT_EQ(zeroIntValue.cast<IntegerAttr>().getInt(), 0);
   EXPECT_TRUE(zeroIntValue.getType() == intTy);
 
-  auto zeroFloatValue = sparseFloat.getValue({1, 1});
+  auto zeroFloatValue = sparseFloat.getValues<Attribute>()[{1, 1}];
   EXPECT_EQ(zeroFloatValue.cast<FloatAttr>().getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
 
-  auto zeroStringValue = sparseString.getValue({1, 1});
+  auto zeroStringValue = sparseString.getValues<Attribute>()[{1, 1}];
   EXPECT_TRUE(zeroStringValue.cast<StringAttr>().getValue().empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }

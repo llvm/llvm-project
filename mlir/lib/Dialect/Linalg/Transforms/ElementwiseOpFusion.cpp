@@ -1184,7 +1184,7 @@ public:
           if (matchPattern(def, m_Constant<DenseElementsAttr>(&splatAttr)) &&
               splatAttr.isSplat() &&
               splatAttr.getType().getElementType().isIntOrFloat()) {
-            constantAttr = splatAttr.getSplatValue();
+            constantAttr = splatAttr.getSplatValue<Attribute>();
             return true;
           }
         }
@@ -1455,10 +1455,9 @@ public:
 
     bool isFloat = elementType.isa<FloatType>();
     if (isFloat) {
-      SmallVector<iterator_range<DenseElementsAttr::FloatElementIterator>>
-          inputFpIterators;
+      SmallVector<DenseElementsAttr::iterator_range<APFloat>> inFpRanges;
       for (int i = 0; i < numInputs; ++i)
-        inputFpIterators.push_back(inputValues[i].getValues<APFloat>());
+        inFpRanges.push_back(inputValues[i].getValues<APFloat>());
 
       computeFnInputs.apFloats.resize(numInputs, APFloat(0.f));
 
@@ -1469,22 +1468,17 @@ public:
         computeRemappedLinearIndex(linearIndex);
 
         // Collect constant elements for all inputs at this loop iteration.
-        for (int i = 0; i < numInputs; ++i) {
-          computeFnInputs.apFloats[i] =
-              *(inputFpIterators[i].begin() + srcLinearIndices[i]);
-        }
+        for (int i = 0; i < numInputs; ++i)
+          computeFnInputs.apFloats[i] = inFpRanges[i][srcLinearIndices[i]];
 
         // Invoke the computation to get the corresponding constant output
         // element.
-        APIntOrFloat outputs = computeFn(computeFnInputs);
-
-        fpOutputValues[dstLinearIndex] = outputs.apFloat.getValue();
+        fpOutputValues[dstLinearIndex] = *computeFn(computeFnInputs).apFloat;
       }
     } else {
-      SmallVector<iterator_range<DenseElementsAttr::IntElementIterator>>
-          inputIntIterators;
+      SmallVector<DenseElementsAttr::iterator_range<APInt>> inIntRanges;
       for (int i = 0; i < numInputs; ++i)
-        inputIntIterators.push_back(inputValues[i].getValues<APInt>());
+        inIntRanges.push_back(inputValues[i].getValues<APInt>());
 
       computeFnInputs.apInts.resize(numInputs);
 
@@ -1495,25 +1489,19 @@ public:
         computeRemappedLinearIndex(linearIndex);
 
         // Collect constant elements for all inputs at this loop iteration.
-        for (int i = 0; i < numInputs; ++i) {
-          computeFnInputs.apInts[i] =
-              *(inputIntIterators[i].begin() + srcLinearIndices[i]);
-        }
+        for (int i = 0; i < numInputs; ++i)
+          computeFnInputs.apInts[i] = inIntRanges[i][srcLinearIndices[i]];
 
         // Invoke the computation to get the corresponding constant output
         // element.
-        APIntOrFloat outputs = computeFn(computeFnInputs);
-
-        intOutputValues[dstLinearIndex] = outputs.apInt.getValue();
+        intOutputValues[dstLinearIndex] = *computeFn(computeFnInputs).apInt;
       }
     }
 
-    DenseIntOrFPElementsAttr outputAttr;
-    if (isFloat) {
-      outputAttr = DenseFPElementsAttr::get(outputType, fpOutputValues);
-    } else {
-      outputAttr = DenseIntElementsAttr::get(outputType, intOutputValues);
-    }
+    DenseElementsAttr outputAttr =
+        isFloat ? DenseElementsAttr::get(outputType, fpOutputValues)
+                : DenseElementsAttr::get(outputType, intOutputValues);
+
     rewriter.replaceOpWithNewOp<ConstantOp>(genericOp, outputAttr);
     return success();
   }

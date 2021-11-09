@@ -913,9 +913,9 @@ struct DownscaleSizeOneWindowed2DConvolution final
         loc, newOutputType, output, ioReshapeIndices);
 
     // We need to shrink the strides and dilations too.
-    auto stride = convOp.strides().getFlatValue<int64_t>(removeH ? 1 : 0);
+    auto stride = convOp.strides().getValues<int64_t>()[removeH ? 1 : 0];
     auto stridesAttr = rewriter.getI64VectorAttr(stride);
-    auto dilation = convOp.dilations().getFlatValue<int64_t>(removeH ? 1 : 0);
+    auto dilation = convOp.dilations().getValues<int64_t>()[removeH ? 1 : 0];
     auto dilationsAttr = rewriter.getI64VectorAttr(dilation);
 
     auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(

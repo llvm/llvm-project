@@ -169,7 +169,7 @@ LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     return failure();
 
   auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
-  auto val = workGroupSizeAttr.getValue<int32_t>(index.getValue());
+  auto val = workGroupSizeAttr.getValues<int32_t>()[index.getValue()];
   auto convertedType =
       getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)

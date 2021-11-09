@@ -1138,7 +1138,7 @@ OpFoldResult GetExtentOp::fold(ArrayRef<Attribute> operands) {
     return nullptr;
   if (dim.getValue() >= elements.getNumElements())
     return nullptr;
-  return elements.getValue({(uint64_t)dim.getValue()});
+  return elements.getValues<Attribute>()[(uint64_t)dim.getValue()];
 }
 
 void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
