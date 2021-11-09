@@ -39,6 +39,9 @@
 #include <vector>
 
 namespace llvm {
+namespace detail {
+struct RecordContext;
+} // namespace detail
 
 class ListRecTy;
 struct MultiClass;
@@ -100,7 +103,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecTy &Ty) {
 
 /// 'bit' - Represent a single bit
 class BitRecTy : public RecTy {
-  static BitRecTy Shared;
+  friend detail::RecordContext;
 
   BitRecTy() : RecTy(BitRecTyKind) {}
 
@@ -109,7 +112,7 @@ public:
     return RT->getRecTyKind() == BitRecTyKind;
   }
 
-  static BitRecTy *get() { return &Shared; }
+  static BitRecTy *get();
 
   std::string getAsString() const override { return "bit"; }
 
@@ -140,7 +143,7 @@ public:
 
 /// 'int' - Represent an integer value of no particular size
 class IntRecTy : public RecTy {
-  static IntRecTy Shared;
+  friend detail::RecordContext;
 
   IntRecTy() : RecTy(IntRecTyKind) {}
 
@@ -149,7 +152,7 @@ public:
     return RT->getRecTyKind() == IntRecTyKind;
   }
 
-  static IntRecTy *get() { return &Shared; }
+  static IntRecTy *get();
 
   std::string getAsString() const override { return "int"; }
 
@@ -158,7 +161,7 @@ public:
 
 /// 'string' - Represent an string value
 class StringRecTy : public RecTy {
-  static StringRecTy Shared;
+  friend detail::RecordContext;
 
   StringRecTy() : RecTy(StringRecTyKind) {}
 
@@ -167,7 +170,7 @@ public:
     return RT->getRecTyKind() == StringRecTyKind;
   }
 
-  static StringRecTy *get() { return &Shared; }
+  static StringRecTy *get();
 
   std::string getAsString() const override;
 
@@ -200,7 +203,7 @@ public:
 
 /// 'dag' - Represent a dag fragment
 class DagRecTy : public RecTy {
-  static DagRecTy Shared;
+  friend detail::RecordContext;
 
   DagRecTy() : RecTy(DagRecTyKind) {}
 
@@ -209,7 +212,7 @@ public:
     return RT->getRecTyKind() == DagRecTyKind;
   }
 
-  static DagRecTy *get() { return &Shared; }
+  static DagRecTy *get();
 
   std::string getAsString() const override;
 };
@@ -221,6 +224,7 @@ public:
 class RecordRecTy final : public RecTy, public FoldingSetNode,
                           public TrailingObjects<RecordRecTy, Record *> {
   friend class Record;
+  friend detail::RecordContext;
 
   unsigned NumClasses;
 
@@ -437,6 +441,8 @@ public:
 
 /// '?' - Represents an uninitialized value.
 class UnsetInit : public Init {
+  friend detail::RecordContext;
+
   UnsetInit() : Init(IK_UnsetInit) {}
 
 public:
@@ -468,9 +474,11 @@ public:
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
 class BitInit final : public TypedInit {
+  friend detail::RecordContext;
+
   bool Value;
 
-  explicit BitInit(bool V) : TypedInit(IK_BitInit, BitRecTy::get()), Value(V) {}
+  explicit BitInit(bool V, RecTy *T) : TypedInit(IK_BitInit, T), Value(V) {}
 
 public:
   BitInit(const BitInit &) = delete;
@@ -637,7 +645,7 @@ public:
   }
 
   StringRef getValue() const { return Value; }
-  StringFormat getFormat() const { return Format; }  
+  StringFormat getFormat() const { return Format; }
   bool hasCodeFormat() const { return Format == SF_Code; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
@@ -1489,8 +1497,6 @@ public:
   };
 
 private:
-  static unsigned LastID;
-
   Init *Name;
   // Location where record was instantiated, followed by the location of
   // multiclass prototypes used.
@@ -1521,8 +1527,8 @@ public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
                   bool Anonymous = false, bool Class = false)
-    : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
-      ID(LastID++), IsAnonymous(Anonymous), IsClass(Class) {
+      : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
+        ID(getNewUID()), IsAnonymous(Anonymous), IsClass(Class) {
     checkName();
   }
 
@@ -1534,12 +1540,12 @@ public:
   // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
   // original record. All other fields can be copied normally.
   Record(const Record &O)
-    : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
-      Values(O.Values), Assertions(O.Assertions), SuperClasses(O.SuperClasses),
-      TrackedRecords(O.TrackedRecords), ID(LastID++),
-      IsAnonymous(O.IsAnonymous), IsClass(O.IsClass) { }
+      : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
+        Values(O.Values), Assertions(O.Assertions),
+        SuperClasses(O.SuperClasses), TrackedRecords(O.TrackedRecords),
+        ID(getNewUID()), IsAnonymous(O.IsAnonymous), IsClass(O.IsClass) {}
 
-  static unsigned getNewUID() { return LastID++; }
+  static unsigned getNewUID();
 
   unsigned getID() const { return ID; }
 
