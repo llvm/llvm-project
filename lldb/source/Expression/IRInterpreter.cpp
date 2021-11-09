@@ -285,9 +285,11 @@ public:
             return true; // no offset to apply!
 
           SmallVector<Value *, 8> indices(op_cursor, op_end);
-
           Type *src_elem_ty =
               cast<GEPOperator>(constant_expr)->getSourceElementType();
+
+          // DataLayout::getIndexedOffsetInType assumes the indices are
+          // instances of ConstantInt.
           uint64_t offset =
               m_target_data.getIndexedOffsetInType(src_elem_ty, indices);
 
@@ -466,12 +468,20 @@ static bool CanResolveConstant(llvm::Constant *constant) {
       case Instruction::BitCast:
         return CanResolveConstant(constant_expr->getOperand(0));
       case Instruction::GetElementPtr: {
+        // Check that the base can be constant-resolved.
         ConstantExpr::const_op_iterator op_cursor = constant_expr->op_begin();
         Constant *base = dyn_cast<Constant>(*op_cursor);
-        if (!base)
+        if (!base || !CanResolveConstant(base))
           return false;
 
-        return CanResolveConstant(base);
+        // Check that all other operands are just ConstantInt.
+        for (Value *op : make_range(constant_expr->op_begin() + 1,
+                                    constant_expr->op_end())) {
+          ConstantInt *constant_int = dyn_cast<ConstantInt>(op);
+          if (!constant_int)
+            return false;
+        }
+        return true;
       }
       }
     } else {
