@@ -643,6 +643,30 @@ define double @round_f64(double %a) nounwind {
   ret double %1
 }
 
+declare double @llvm.roundeven.f64(double)
+
+define double @roundeven_f64(double %a) nounwind {
+; RV32IFD-LABEL: roundeven_f64:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    call roundeven@plt
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: roundeven_f64:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    call roundeven@plt
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    ret
+  %1 = call double @llvm.roundeven.f64(double %a)
+  ret double %1
+}
+
 declare iXLen @llvm.lrint.iXLen.f64(float)
 
 define iXLen @lrint_f64(float %a) nounwind {

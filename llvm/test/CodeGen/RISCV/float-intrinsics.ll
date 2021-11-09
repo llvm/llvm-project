@@ -587,6 +587,30 @@ define float @round_f32(float %a) nounwind {
   ret float %1
 }
 
+declare float @llvm.roundeven.f32(float)
+
+define float @roundeven_f32(float %a) nounwind {
+; RV32IF-LABEL: roundeven_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    call roundevenf@plt
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: roundeven_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    call roundevenf@plt
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
+  %1 = call float @llvm.roundeven.f32(float %a)
+  ret float %1
+}
+
 declare iXLen @llvm.lrint.iXLen.f32(float)
 
 define iXLen @lrint_f32(float %a) nounwind {
