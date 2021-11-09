@@ -1199,6 +1199,34 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateBinOp(Logic.getOpcode(), Cmp0, SubstituteCmp);
 }
 
+/// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
+/// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
+/// into a single comparison using range-based reasoning.
+static Value *foldAndOrOfICmpsUsingRanges(
+    ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
+    ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
+    IRBuilderBase &Builder, bool IsAnd) {
+  if (V1 != V2)
+    return nullptr;
+
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  Optional<ConstantRange> CR =
+      IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
+  if (!CR)
+    return nullptr;
+
+  CmpInst::Predicate NewPred;
+  APInt NewC, Offset;
+  CR->getEquivalentICmp(NewPred, NewC, Offset);
+
+  Type *Ty = V1->getType();
+  Value *NewV = V1;
+  if (Offset != 0)
+    NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
+  return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
+}
+
 /// Fold (icmp)&(icmp) if possible.
 Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                         BinaryOperator &And) {
@@ -1317,28 +1345,9 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // From here on, we only handle:
-  //    (icmp1 A, C1) & (icmp2 A, C2) --> something simpler.
-  if (LHS0 != RHS0)
-    return nullptr;
-
-  ConstantRange CR1 =
-      ConstantRange::makeExactICmpRegion(PredL, LHSC->getValue());
-  ConstantRange CR2 =
-      ConstantRange::makeExactICmpRegion(PredR, RHSC->getValue());
-  Optional<ConstantRange> CR = CR1.exactIntersectWith(CR2);
-  if (!CR)
-    return nullptr;
-
-  CmpInst::Predicate Pred;
-  APInt NewRHS, Offset;
-  CR->getEquivalentICmp(Pred, NewRHS, Offset);
-
-  Type *Ty = LHS0->getType();
-  Value *NewLHS = LHS0;
-  if (Offset != 0)
-    NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(Ty, Offset));
-  return Builder.CreateICmp(Pred, NewLHS, ConstantInt::get(Ty, NewRHS));
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
+                                     PredR, RHS0, RHSC->getValue(),
+                                     Builder, /* IsAnd */ true);
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -2462,28 +2471,9 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return Builder.CreateICmpULE(LHS0, LHSC);
   }
 
-  // From here on, we only handle:
-  //    (icmp1 A, C1) | (icmp2 A, C2) --> something simpler.
-  if (LHS0 != RHS0)
-    return nullptr;
-
-  ConstantRange CR1 =
-      ConstantRange::makeExactICmpRegion(PredL, LHSC->getValue());
-  ConstantRange CR2 =
-      ConstantRange::makeExactICmpRegion(PredR, RHSC->getValue());
-  Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
-  if (!CR)
-    return nullptr;
-
-  CmpInst::Predicate Pred;
-  APInt NewRHS, Offset;
-  CR->getEquivalentICmp(Pred, NewRHS, Offset);
-
-  Type *Ty = LHS0->getType();
-  Value *NewLHS = LHS0;
-  if (Offset != 0)
-    NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(Ty, Offset));
-  return Builder.CreateICmp(Pred, NewLHS, ConstantInt::get(Ty, NewRHS));
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
+                                     PredR, RHS0, RHSC->getValue(),
+                                     Builder, /* IsAnd */ false);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
