@@ -27,7 +27,7 @@
 "`P0798R8 <https://wg21.link/P0798R8>`__","LWG","Monadic operations for ``std::optional``","October 2021","",""
 "`P0849R8 <https://wg21.link/P0849R8>`__","LWG","``auto(x)``: ``DECAY_COPY`` in the language","October 2021","",""
 "`P1072R10 <https://wg21.link/P1072R10>`__","LWG","``basic_string::resize_and_overwrite``","October 2021","",""
-"`P1147R1 <https://wg21.link/P1147R1>`__","LWG","Printing ``volatile`` Pointers","October 2021","",""
+"`P1147R1 <https://wg21.link/P1147R1>`__","LWG","Printing ``volatile`` Pointers","October 2021","|Complete|","14.0"
 "`P1272R4 <https://wg21.link/P1272R4>`__","LWG","Byteswapping for fun&&nuf","October 2021","",""
 "`P1675R2 <https://wg21.link/P1675R2>`__","LWG","``rethrow_exception`` must be allowed to copy","October 2021","",""
 "`P2077R3 <https://wg21.link/P2077R3>`__","LWG","Heterogeneous erasure overloads for associative containers","October 2021","",""
