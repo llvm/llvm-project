@@ -374,13 +374,11 @@ static ClangTidyError createNolintError(const ClangTidyContext &Context,
                                         bool IsNolintBegin) {
   ClangTidyError Error("clang-tidy-nolint", ClangTidyError::Error,
                        Context.getCurrentBuildDirectory(), false);
-  StringRef Message =
-      IsNolintBegin
-          ? "unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINTEND' "
-            "comment"
-          : "unmatched 'NOLINTEND' comment without a previous 'NOLINTBEGIN' "
-            "comment";
-  Error.Message = tooling::DiagnosticMessage(Message, SM, Loc);
+  auto Message = Twine("unmatched 'NOLINT") +
+                 (IsNolintBegin ? "BEGIN" : "END") + "' comment without a " +
+                 (IsNolintBegin ? "subsequent" : "previous") + " 'NOLINT" +
+                 (IsNolintBegin ? "END" : "BEGIN") + "' comment";
+  Error.Message = tooling::DiagnosticMessage(Message.str(), SM, Loc);
   return Error;
 }
 
