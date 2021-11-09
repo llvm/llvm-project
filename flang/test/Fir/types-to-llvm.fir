@@ -31,6 +31,18 @@ func private @foo1(%arg0: !fir.ref<!fir.array<10xf32>>)
 
 // -----
 
+// Test pointer types `!fir.ptr`
+
+func private @foo0(%arg0: !fir.ptr<i32>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<i32>
+
+func private @foo1(%arg0: !fir.ptr<!fir.array<10xf32>>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.ptr<array<10 x f32>>
+
+// -----
+
 // Test box types `!fir.box`
 
 func private @foo0(%arg0: !fir.box<!fir.array<?xf32>>)

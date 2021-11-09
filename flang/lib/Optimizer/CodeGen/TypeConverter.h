@@ -42,6 +42,8 @@ public:
           &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
     });
     addConversion(
+        [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
+    addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
     addConversion(
         [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
