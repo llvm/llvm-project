@@ -76,12 +76,6 @@ static cl::opt<unsigned> UnrollForcePeelCount(
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
-// Designates that a Phi is estimated to become invariant after an "infinite"
-// number of loop iterations (i.e. only may become an invariant if the loop is
-// fully unrolled).
-static const unsigned InfiniteIterationsToInvariance =
-    std::numeric_limits<unsigned>::max();
-
 // Check whether we are capable of peeling this loop.
 bool llvm::canPeel(Loop *L) {
   // Make sure the loop is in simplified form
@@ -128,9 +122,9 @@ bool llvm::canPeel(Loop *L) {
 //         %x = phi(0, %a),  <-- becomes invariant starting from 3rd iteration.
 //         %y = phi(0, 5),
 //         %a = %y + 1.
-static unsigned calculateIterationsToInvariance(
+static Optional<unsigned> calculateIterationsToInvariance(
     PHINode *Phi, Loop *L, BasicBlock *BackEdge,
-    SmallDenseMap<PHINode *, unsigned> &IterationsToInvariance) {
+    SmallDenseMap<PHINode *, Optional<unsigned> > &IterationsToInvariance) {
   assert(Phi->getParent() == L->getHeader() &&
          "Non-loop Phi should not be checked for turning into invariant.");
   assert(BackEdge == L->getLoopLatch() && "Wrong latch?");
@@ -143,25 +137,25 @@ static unsigned calculateIterationsToInvariance(
   Value *Input = Phi->getIncomingValueForBlock(BackEdge);
   // Place infinity to map to avoid infinite recursion for cycled Phis. Such
   // cycles can never stop on an invariant.
-  IterationsToInvariance[Phi] = InfiniteIterationsToInvariance;
-  unsigned ToInvariance = InfiniteIterationsToInvariance;
+  IterationsToInvariance[Phi] = None;
+  Optional<unsigned> ToInvariance = None;
 
   if (L->isLoopInvariant(Input))
     ToInvariance = 1u;
   else if (PHINode *IncPhi = dyn_cast<PHINode>(Input)) {
     // Only consider Phis in header block.
     if (IncPhi->getParent() != L->getHeader())
-      return InfiniteIterationsToInvariance;
+      return None;
     // If the input becomes an invariant after X iterations, then our Phi
     // becomes an invariant after X + 1 iterations.
-    unsigned InputToInvariance = calculateIterationsToInvariance(
+    auto InputToInvariance = calculateIterationsToInvariance(
         IncPhi, L, BackEdge, IterationsToInvariance);
-    if (InputToInvariance != InfiniteIterationsToInvariance)
-      ToInvariance = InputToInvariance + 1u;
+    if (InputToInvariance)
+      ToInvariance = *InputToInvariance + 1u;
   }
 
   // If we found that this Phi lies in an invariant chain, update the map.
-  if (ToInvariance != InfiniteIterationsToInvariance)
+  if (ToInvariance)
     IterationsToInvariance[Phi] = ToInvariance;
   return ToInvariance;
 }
@@ -387,7 +381,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // First, check that we can peel at least one iteration.
   if (2 * LoopSize <= Threshold && UnrollPeelMaxCount > 0) {
     // Store the pre-calculated values here.
-    SmallDenseMap<PHINode *, unsigned> IterationsToInvariance;
+    SmallDenseMap<PHINode *, Optional<unsigned> > IterationsToInvariance;
     // Now go through all Phis to calculate their the number of iterations they
     // need to become invariants.
     // Start the max computation with the UP.PeelCount value set by the target
@@ -397,10 +391,10 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     assert(BackEdge && "Loop is not in simplified form?");
     for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
       PHINode *Phi = cast<PHINode>(&*BI);
-      unsigned ToInvariance = calculateIterationsToInvariance(
+      auto ToInvariance = calculateIterationsToInvariance(
           Phi, L, BackEdge, IterationsToInvariance);
-      if (ToInvariance != InfiniteIterationsToInvariance)
-        DesiredPeelCount = std::max(DesiredPeelCount, ToInvariance);
+      if (ToInvariance)
+        DesiredPeelCount = std::max(DesiredPeelCount, *ToInvariance);
     }
 
     // Pay respect to limitations implied by loop size and the max peel count.
