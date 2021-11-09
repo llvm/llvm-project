@@ -366,6 +366,29 @@ struct SelectOpConversion : public FIROpConversion<fir::SelectOp> {
   }
 };
 
+/// `fir.load` --> `llvm.load`
+struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::LoadOp load, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // fir.box is a special case because it is considered as an ssa values in
+    // fir, but it is lowered as a pointer to a descriptor. So fir.ref<fir.box>
+    // and fir.box end up being the same llvm types and loading a
+    // fir.ref<fir.box> is actually a no op in LLVM.
+    if (load.getType().isa<fir::BoxType>()) {
+      rewriter.replaceOp(load, adaptor.getOperands()[0]);
+    } else {
+      mlir::Type ty = convertType(load.getType());
+      ArrayRef<NamedAttribute> at = load->getAttrs();
+      rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+          load, ty, adaptor.getOperands(), at);
+    }
+    return success();
+  }
+};
+
 /// conversion of fir::SelectRankOp to an if-then-else ladder
 struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   using FIROpConversion::FIROpConversion;
@@ -378,7 +401,31 @@ struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   }
 };
 
-// convert to LLVM IR dialect `undef`
+/// `fir.store` --> `llvm.store`
+struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::StoreOp store, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (store.value().getType().isa<fir::BoxType>()) {
+      // fir.box value is actually in memory, load it first before storing it.
+      mlir::Location loc = store.getLoc();
+      mlir::Type boxPtrTy = adaptor.getOperands()[0].getType();
+      auto val = rewriter.create<mlir::LLVM::LoadOp>(
+          loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
+          adaptor.getOperands()[0]);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+          store, val, adaptor.getOperands()[1]);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+          store, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+    }
+    return success();
+  }
+};
+
+/// convert to LLVM IR dialect `undef`
 struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -391,7 +438,7 @@ struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   }
 };
 
-// convert to LLVM IR dialect `unreachable`
+/// `fir.unreachable` --> `llvm.unreachable`
 struct UnreachableOpConversion : public FIROpConversion<fir::UnreachableOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -788,14 +835,14 @@ public:
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
-    pattern
-        .insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
-                ConvertOpConversion, DivcOpConversion, ExtractValueOpConversion,
-                HasValueOpConversion, GlobalOpConversion,
-                InsertOnRangeOpConversion, InsertValueOpConversion,
-                NegcOpConversion, MulcOpConversion, SelectOpConversion,
-                SelectRankOpConversion, SubcOpConversion, UndefOpConversion,
-                UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+    pattern.insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
+                   ConvertOpConversion, DivcOpConversion,
+                   ExtractValueOpConversion, HasValueOpConversion,
+                   GlobalOpConversion, InsertOnRangeOpConversion,
+                   InsertValueOpConversion, LoadOpConversion, NegcOpConversion,
+                   MulcOpConversion, SelectOpConversion, SelectRankOpConversion,
+                   StoreOpConversion, SubcOpConversion, UndefOpConversion,
+                   UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);

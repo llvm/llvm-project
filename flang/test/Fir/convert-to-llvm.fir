@@ -632,3 +632,57 @@ func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
 // CHECK:         %[[STRUCT1:.*]] = llvm.insertvalue %[[CONVERTX]], %[[STRUCT0]][0 : i32] : !llvm.struct<(f16, f16)>
 // CHECK:         %[[STRUCT2:.*]] = llvm.insertvalue %[[CONVERTY]], %[[STRUCT1]][1 : i32] : !llvm.struct<(f16, f16)>
 // CHECK:         llvm.return %[[STRUCT2]] : !llvm.struct<(f16, f16)>
+
+// -----
+
+// Test `fir.store` --> `llvm.store` conversion
+
+func @test_store_index(%val_to_store : index, %addr : !fir.ref<index>) {
+  fir.store %val_to_store to %addr : !fir.ref<index>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @test_store_index
+// CHECK-SAME:    (%[[arg0:.*]]: i64, %[[arg1:.*]]: !llvm.ptr<i64>) {
+// CHECK-NEXT:    llvm.store %[[arg0]], %[[arg1]] : !llvm.ptr<i64>
+// CHECK-NEXT:    llvm.return
+// CHECK-NEXT:  }
+
+func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box : !fir.box<!fir.array<?x?xf32>>) {
+  fir.store %box to %array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
+  return
+}
+
+// CHECK-LABEL:  llvm.func @test_store_box
+// CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>,
+// CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>) {
+// CHECK-NEXT:  %[[box_to_store:.*]] = llvm.load %arg1 : !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>
+// CHECK-NEXT:  llvm.store %[[box_to_store]], %[[arg0]] : !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>
+// CHECK-NEXT:  llvm.return
+// CHECK-NEXT:  }
+
+// -----
+
+// Test `fir.load` --> `llvm.load` conversion
+
+func @test_load_index(%addr : !fir.ref<index>) {
+  %0 = fir.load %addr : !fir.ref<index>
+  return
+}
+
+// CHECK-LABEL: llvm.func @test_load_index(
+// CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr<i64>) {
+// CHECK-NEXT:    %0 = llvm.load %[[arg1]] : !llvm.ptr<i64>
+// CHECK-NEXT:    llvm.return
+// CHECK-NEXT:  }
+
+func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
+  %0 = fir.load %addr : !fir.ref<!fir.box<!fir.array<10xf32>>>
+  return
+}
+
+// Loading a `fir.ref<!fir.box>> is a no-op
+// CHECK-LABEL: llvm.func @test_load_box
+// CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(ptr<array<10 x f{{.*}}>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>)>>) {
+// CHECK-NEXT:  llvm.return
+// CHECK-NEXT:  }
