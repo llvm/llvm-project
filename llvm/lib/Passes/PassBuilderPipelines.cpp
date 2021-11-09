@@ -242,7 +242,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
-  FPM.addPass(SROA());
+  FPM.addPass(SROAPass());
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
@@ -333,7 +333,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                               /*UseBlockFrequencyInfo=*/false));
 
   // Delete small array after loop unroll.
-  FPM.addPass(SROA());
+  FPM.addPass(SROAPass());
 
   // Specially optimize memory movement as it doesn't look like dataflow in SSA.
   FPM.addPass(MemCpyOptPass());
@@ -383,7 +383,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
-  FPM.addPass(SROA());
+  FPM.addPass(SROAPass());
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
@@ -508,7 +508,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                               /*UseBlockFrequencyInfo=*/false));
 
   // Delete small array after loop unroll.
-  FPM.addPass(SROA());
+  FPM.addPass(SROAPass());
 
   // The matrix extension can introduce large vector operations early, which can
   // benefit from running vector-combine early on.
@@ -520,7 +520,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (RunNewGVN)
     FPM.addPass(NewGVNPass());
   else
-    FPM.addPass(GVN());
+    FPM.addPass(GVNPass());
 
   // Sparse conditional constant propagation.
   // FIXME: It isn't clear why we do this *after* loop passes rather than
@@ -600,7 +600,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
     CGSCCPassManager &CGPipeline = MIWP.getPM();
 
     FunctionPassManager FPM;
-    FPM.addPass(SROA());
+    FPM.addPass(SROAPass());
     FPM.addPass(EarlyCSEPass());    // Catch trivial redundancies.
     FPM.addPass(SimplifyCFGPass()); // Merge & remove basic blocks.
     FPM.addPass(InstCombinePass()); // Combine silly sequences.
@@ -813,7 +813,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Compare/branch metadata may alter the behavior of passes like SimplifyCFG.
   EarlyFPM.addPass(LowerExpectIntrinsicPass());
   EarlyFPM.addPass(SimplifyCFGPass());
-  EarlyFPM.addPass(SROA());
+  EarlyFPM.addPass(SROAPass());
   EarlyFPM.addPass(EarlyCSEPass());
   EarlyFPM.addPass(CoroEarlyPass());
   if (Level == OptimizationLevel::O3)
@@ -1556,7 +1556,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   }
 
   // Break up allocas
-  FPM.addPass(SROA());
+  FPM.addPass(SROAPass());
 
   // LTO provides additional opportunities for tailcall elimination due to
   // link-time inlining, and visibility of nocapture attribute.
@@ -1585,7 +1585,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
   else
-    MainFPM.addPass(GVN());
+    MainFPM.addPass(GVNPass());
 
   // Remove dead memcpy()'s.
   MainFPM.addPass(MemCpyOptPass());

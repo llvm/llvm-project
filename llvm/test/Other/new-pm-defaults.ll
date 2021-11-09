@@ -85,7 +85,7 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-O-NEXT: Running pass: SROA
+; CHECK-O-NEXT: Running pass: SROAPass
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
@@ -129,7 +129,7 @@
 ; CHECK-O2-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O3-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-EP-CGSCC-LATE-NEXT: Running pass: NoOpCGSCCPass
-; CHECK-O-NEXT: Running pass: SROA
+; CHECK-O-NEXT: Running pass: SROAPass
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: MemorySSAAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: SpeculativeExecutionPass
@@ -169,10 +169,10 @@
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
 ; CHECK-O-NEXT: Running pass: LoopFullUnrollPass
 ; CHECK-EP-LOOP-END-NEXT: Running pass: NoOpLoopPass
-; CHECK-O-NEXT: Running pass: SROA on foo
+; CHECK-O-NEXT: Running pass: SROAPass on foo
 ; CHECK-MATRIX: Running pass: VectorCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass
-; CHECK-O23SZ-NEXT: Running pass: GVN
+; CHECK-O23SZ-NEXT: Running pass: GVNPass
 ; CHECK-O23SZ-NEXT: Running analysis: MemoryDependenceAnalysis
 ; CHECK-O23SZ-NEXT: Running analysis: PhiValuesAnalysis
 ; CHECK-O1-NEXT: Running pass: MemCpyOptPass
