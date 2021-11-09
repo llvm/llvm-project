@@ -7,11 +7,12 @@
 # CHECK-EMPTY:
 # CHECK-NEXT: <_start>:
 # CHECK-NEXT:    ff e7   b       0x200b6 <_start+0x2> @ imm = #-2
+# CHECK-NEXT:    fe d0   beq     0x200b6 <_start+0x2> @ imm = #-4
 
-# Test the R_ARM_THM_JUMP11 relocation (102) to an undefined weak reference
-# It should resolve to the next instruction, which is an offset of -2 which
-# when added to the Thumb PC-bias of 4 is +2. We can't use llvm-mc to construct
-# the object as it relaxes b.n to b.w (R_ARM_JUMP24).
+# Test the R_ARM_THM_JUMP11 (102) and R_ARM_THM_JUMP8 (103) relocations to an
+# undefined weak reference.  It should resolve to the next instruction, which
+# is an offset of -2 which when added to the Thumb PC-bias of 4 is +2. We can't
+# use llvm-mc to construct the object as it relaxes b.n to b.w (R_ARM_JUMP24).
 
 !ELF
 FileHeader:
@@ -23,7 +24,7 @@ Sections:
   - Type:            SHT_PROGBITS
     Name:            .text
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Content:         "fee7"
+    Content:         "fee7fed0"
   - Type:            SHT_REL
     Name:            .rel.text
     Link:            .symtab
@@ -31,6 +32,8 @@ Sections:
     Relocations:
       - Symbol:          undefined_weak
         Type:            R_ARM_THM_JUMP11
+      - Symbol:          undefined_weak
+        Type:            R_ARM_THM_JUMP8
 
 Symbols:
   - Type:             STT_NOTYPE
