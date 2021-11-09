@@ -294,6 +294,12 @@ void DeclInfo::fill() {
     Kind = ClassKind;
     break;
   case Decl::Var:
+    if (const VarTemplateDecl *VTD =
+            cast<VarDecl>(CommentDecl)->getDescribedVarTemplate()) {
+      TemplateKind = TemplateSpecialization;
+      TemplateParameters = VTD->getTemplateParameters();
+    }
+    LLVM_FALLTHROUGH;
   case Decl::Field:
   case Decl::EnumConstant:
   case Decl::ObjCIvar:
@@ -305,6 +311,15 @@ void DeclInfo::fill() {
       TSI = PD->getTypeSourceInfo();
     Kind = VariableKind;
     break;
+  case Decl::VarTemplate: {
+    const VarTemplateDecl *VTD = cast<VarTemplateDecl>(CommentDecl);
+    Kind = VariableKind;
+    TemplateKind = Template;
+    TemplateParameters = VTD->getTemplateParameters();
+    if (const VarDecl *VD = VTD->getTemplatedDecl())
+      TSI = VD->getTypeSourceInfo();
+    break;
+  }
   case Decl::Namespace:
     Kind = NamespaceKind;
     break;
