@@ -7439,6 +7439,14 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   if (Test == 0 || (Test & fcAllFlags) == fcAllFlags)
     return DAG.getBoolConstant(true, DL, ResultVT, OperandVT);
 
+  // PPC double double is a pair of doubles, of which the higher part determines
+  // the value class.
+  if (OperandVT == MVT::ppcf128) {
+    Op = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::f64, Op,
+                     DAG.getConstant(1, DL, MVT::i32));
+    OperandVT = MVT::f64;
+  }
+
   // Some checks may be represented as inversion of simpler check, for example
   // "inf|normal|subnormal|zero" => !"nan".
   bool IsInverted = false;
