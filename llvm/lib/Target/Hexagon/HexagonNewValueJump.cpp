@@ -535,13 +535,9 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
         // I am doing this only because LLVM does not provide LiveOut
         // at the BB level.
         bool predLive = false;
-        for (MachineBasicBlock::const_succ_iterator SI = MBB->succ_begin(),
-                                                    SIE = MBB->succ_end();
-             SI != SIE; ++SI) {
-          MachineBasicBlock *succMBB = *SI;
-          if (succMBB->isLiveIn(predReg))
+        for (const MachineBasicBlock *SuccMBB : MBB->successors())
+          if (SuccMBB->isLiveIn(predReg))
             predLive = true;
-        }
         if (predLive)
           break;
 

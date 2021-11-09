@@ -424,11 +424,10 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   // city don't do it right now.
   for (auto &I : MF) {
     unsigned BN = RPO[I.getNumber()];
-    for (auto SI = I.succ_begin(), SE = I.succ_end(); SI != SE; ++SI) {
+    for (MachineBasicBlock *Succ : I.successors())
       // If found a back-edge, return.
-      if (RPO[(*SI)->getNumber()] <= BN)
+      if (RPO[Succ->getNumber()] <= BN)
         return;
-    }
   }
 
   // Collect the set of blocks that need a stack frame to execute. Scan
