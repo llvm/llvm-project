@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fptrauth-calls -fptrauth-intrinsics -disable-noundef-analysis -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fptrauth-calls -fptrauth-intrinsics -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_ADDRDISCSTRONG0:.*]] = type { i32*, i8* }
 // CHECK: %[[STRUCT_ADDRDISCSTRONG1:.*]] = type { i32*, i8* }
