@@ -555,3 +555,690 @@ define <4 x i32> @cmpeq_one_mask_bit(<4 x i32> %mask) {
   %mask_bool_ext = sext <4 x i1> %mask_bool to <4 x i32>
   ret <4 x i32> %mask_bool_ext
 }
+
+define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %x, <2 x i64> %y) {
+; SSE2-LABEL: not_signbit_mask_v2i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: not_signbit_mask_v2i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
+; SSE42-NEXT:    pand %xmm1, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: not_signbit_mask_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %sh = ashr <2 x i64> %x, <i64 63, i64 63>
+  %not = xor <2 x i64> %sh, <i64 -1, i64 -1>
+  %and = and <2 x i64> %y, %not
+  ret <2 x i64> %and
+}
+
+define <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; SSE-LABEL: not_signbit_mask_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: not_signbit_mask_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %sh = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+  %not = xor <4 x i32> %sh, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %and = and <4 x i32> %not, %y
+  ret <4 x i32> %and
+}
+
+define <8 x i16> @not_signbit_mask_v8i16(<8 x i16> %x, <8 x i16> %y) {
+; SSE-LABEL: not_signbit_mask_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: not_signbit_mask_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtw %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %sh = ashr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %not = xor <8 x i16> %sh, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %and = and <8 x i16> %y, %not
+  ret <8 x i16> %and
+}
+
+define <16 x i8> @not_signbit_mask_v16i8(<16 x i8> %x, <16 x i8> %y) {
+; SSE-LABEL: not_signbit_mask_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: not_signbit_mask_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %sh = ashr <16 x i8> %x, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  %not = xor <16 x i8> %sh, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %and = and <16 x i8> %not, %y
+  ret <16 x i8> %and
+}
+
+define <4 x i64> @not_signbit_mask_v4i64(<4 x i64> %x, <4 x i64> %y) {
+; SSE2-LABEL: not_signbit_mask_v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: not_signbit_mask_v4i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE42-NEXT:    pcmpgtq %xmm4, %xmm1
+; SSE42-NEXT:    pcmpgtq %xmm4, %xmm0
+; SSE42-NEXT:    pand %xmm2, %xmm0
+; SSE42-NEXT:    pand %xmm3, %xmm1
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: not_signbit_mask_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: not_signbit_mask_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+  %sh = ashr <4 x i64> %x, <i64 63, i64 63, i64 63, i64 63>
+  %not = xor <4 x i64> %sh, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %and = and <4 x i64> %y, %not
+  ret <4 x i64> %and
+}
+
+define <8 x i32> @not_signbit_mask_v8i32(<8 x i32> %x, <8 x i32> %y) {
+; SSE-LABEL: not_signbit_mask_v8i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pcmpgtd %xmm4, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: not_signbit_mask_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: not_signbit_mask_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %sh = ashr <8 x i32> %x, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
+  %not = xor <8 x i32> %sh, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %and = and <8 x i32> %not, %y
+  ret <8 x i32> %and
+}
+
+define <16 x i16> @not_signbit_mask_v16i16(<16 x i16> %x, <16 x i16> %y) {
+; SSE-LABEL: not_signbit_mask_v16i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pcmpgtw %xmm4, %xmm1
+; SSE-NEXT:    pcmpgtw %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: not_signbit_mask_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: not_signbit_mask_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+  %sh = ashr <16 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %not = xor <16 x i16> %sh, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %and = and <16 x i16> %y, %not
+  ret <16 x i16> %and
+}
+
+define <32 x i8> @not_signbit_mask_v32i8(<32 x i8> %x, <32 x i8> %y) {
+; SSE-LABEL: not_signbit_mask_v32i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pcmpgtb %xmm4, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: not_signbit_mask_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: not_signbit_mask_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %sh = ashr <32 x i8> %x, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  %not = xor <32 x i8> %sh, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %and = and <32 x i8> %not, %y
+  ret <32 x i8> %and
+}
+
+define <2 x i64> @ispositive_mask_v2i64(<2 x i64> %x, <2 x i64> %y) {
+; SSE2-LABEL: ispositive_mask_v2i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: ispositive_mask_v2i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
+; SSE42-NEXT:    pand %xmm1, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: ispositive_mask_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <2 x i64> %x, <i64 -1, i64 -1>
+  %mask = sext <2 x i1> %cmp to <2 x i64>
+  %and = and <2 x i64> %mask, %y
+  ret <2 x i64> %and
+}
+
+define <4 x i32> @is_positive_mask_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; SSE-LABEL: is_positive_mask_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: is_positive_mask_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %mask = sext <4 x i1> %cmp to <4 x i32>
+  %and = and <4 x i32> %y, %mask
+  ret <4 x i32> %and
+}
+
+define <8 x i16> @is_positive_mask_v8i16(<8 x i16> %x, <8 x i16> %y) {
+; SSE-LABEL: is_positive_mask_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: is_positive_mask_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtw %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <8 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %mask = sext <8 x i1> %cmp to <8 x i16>
+  %and = and <8 x i16> %mask, %y
+  ret <8 x i16> %and
+}
+
+define <16 x i8> @is_positive_mask_v16i8(<16 x i8> %x, <16 x i8> %y) {
+; SSE-LABEL: is_positive_mask_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: is_positive_mask_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %mask = sext <16 x i1> %cmp to <16 x i8>
+  %and = and <16 x i8> %y, %mask
+  ret <16 x i8> %and
+}
+
+define <4 x i64> @is_positive_mask_v4i64(<4 x i64> %x, <4 x i64> %y) {
+; SSE2-LABEL: is_positive_mask_v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: is_positive_mask_v4i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE42-NEXT:    pcmpgtq %xmm4, %xmm1
+; SSE42-NEXT:    pcmpgtq %xmm4, %xmm0
+; SSE42-NEXT:    pand %xmm2, %xmm0
+; SSE42-NEXT:    pand %xmm3, %xmm1
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <4 x i64> %x, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %mask = sext <4 x i1> %cmp to <4 x i64>
+  %and = and <4 x i64> %mask, %y
+  ret <4 x i64> %and
+}
+
+define <8 x i32> @is_positive_mask_v8i32(<8 x i32> %x, <8 x i32> %y) {
+; SSE-LABEL: is_positive_mask_v8i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pcmpgtd %xmm4, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <8 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %mask = sext <8 x i1> %cmp to <8 x i32>
+  %and = and <8 x i32> %y, %mask
+  ret <8 x i32> %and
+}
+
+define <16 x i16> @is_positive_mask_v16i16(<16 x i16> %x, <16 x i16> %y) {
+; SSE-LABEL: is_positive_mask_v16i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pcmpgtw %xmm4, %xmm1
+; SSE-NEXT:    pcmpgtw %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <16 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %mask = sext <16 x i1> %cmp to <16 x i16>
+  %and = and <16 x i16> %mask, %y
+  ret <16 x i16> %and
+}
+
+define <32 x i8> @is_positive_mask_v32i8(<32 x i8> %x, <32 x i8> %y) {
+; SSE-LABEL: is_positive_mask_v32i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pcmpgtb %xmm4, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <32 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %mask = sext <32 x i1> %cmp to <32 x i8>
+  %and = and <32 x i8> %y, %mask
+  ret <32 x i8> %and
+}
+
+define <2 x i64> @ispositive_mask_load_v2i64(<2 x i64> %x, <2 x i64>* %p) {
+; SSE2-LABEL: ispositive_mask_load_v2i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    pand (%rdi), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: ispositive_mask_load_v2i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
+; SSE42-NEXT:    pand (%rdi), %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: ispositive_mask_load_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <2 x i64> %x, <i64 -1, i64 -1>
+  %mask = sext <2 x i1> %cmp to <2 x i64>
+  %y = load <2 x i64>, <2 x i64>* %p
+  %and = and <2 x i64> %mask, %y
+  ret <2 x i64> %and
+}
+
+define <4 x i32> @is_positive_mask_load_v4i32(<4 x i32> %x, <4 x i32>* %p) {
+; SSE-LABEL: is_positive_mask_load_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE-NEXT:    pand (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: is_positive_mask_load_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %mask = sext <4 x i1> %cmp to <4 x i32>
+  %y = load <4 x i32>, <4 x i32>* %p
+  %and = and <4 x i32> %y, %mask
+  ret <4 x i32> %and
+}
+
+define <8 x i16> @is_positive_mask_load_v8i16(<8 x i16> %x, <8 x i16>* %p) {
+; SSE-LABEL: is_positive_mask_load_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSE-NEXT:    pand (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: is_positive_mask_load_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <8 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %mask = sext <8 x i1> %cmp to <8 x i16>
+  %y = load <8 x i16>, <8 x i16>* %p
+  %and = and <8 x i16> %mask, %y
+  ret <8 x i16> %and
+}
+
+define <16 x i8> @is_positive_mask_load_v16i8(<16 x i8> %x, <16 x i8>* %p) {
+; SSE-LABEL: is_positive_mask_load_v16i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm1, %xmm0
+; SSE-NEXT:    pand (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: is_positive_mask_load_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %cmp = icmp sgt <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %mask = sext <16 x i1> %cmp to <16 x i8>
+  %y = load <16 x i8>, <16 x i8>* %p
+  %and = and <16 x i8> %y, %mask
+  ret <16 x i8> %and
+}
+
+define <4 x i64> @is_positive_mask_load_v4i64(<4 x i64> %x, <4 x i64>* %p) {
+; SSE2-LABEL: is_positive_mask_load_v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE2-NEXT:    pand (%rdi), %xmm0
+; SSE2-NEXT:    pand 16(%rdi), %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: is_positive_mask_load_v4i64:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm1
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm0
+; SSE42-NEXT:    pand (%rdi), %xmm0
+; SSE42-NEXT:    pand 16(%rdi), %xmm1
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_load_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_load_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <4 x i64> %x, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %mask = sext <4 x i1> %cmp to <4 x i64>
+  %y = load <4 x i64>, <4 x i64>* %p
+  %and = and <4 x i64> %mask, %y
+  ret <4 x i64> %and
+}
+
+define <8 x i32> @is_positive_mask_load_v8i32(<8 x i32> %x, <8 x i32>* %p) {
+; SSE-LABEL: is_positive_mask_load_v8i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE-NEXT:    pand (%rdi), %xmm0
+; SSE-NEXT:    pand 16(%rdi), %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_load_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_load_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <8 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %mask = sext <8 x i1> %cmp to <8 x i32>
+  %y = load <8 x i32>, <8 x i32>* %p
+  %and = and <8 x i32> %y, %mask
+  ret <8 x i32> %and
+}
+
+define <16 x i16> @is_positive_mask_load_v16i16(<16 x i16> %x, <16 x i16>* %p) {
+; SSE-LABEL: is_positive_mask_load_v16i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtw %xmm2, %xmm1
+; SSE-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSE-NEXT:    pand (%rdi), %xmm0
+; SSE-NEXT:    pand 16(%rdi), %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_load_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_load_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <16 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %mask = sext <16 x i1> %cmp to <16 x i16>
+  %y = load <16 x i16>, <16 x i16>* %p
+  %and = and <16 x i16> %mask, %y
+  ret <16 x i16> %and
+}
+
+define <32 x i8> @is_positive_mask_load_v32i8(<32 x i8> %x, <32 x i8>* %p) {
+; SSE-LABEL: is_positive_mask_load_v32i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtb %xmm2, %xmm1
+; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
+; SSE-NEXT:    pand (%rdi), %xmm0
+; SSE-NEXT:    pand 16(%rdi), %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: is_positive_mask_load_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: is_positive_mask_load_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %cmp = icmp sgt <32 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %mask = sext <32 x i1> %cmp to <32 x i8>
+  %y = load <32 x i8>, <32 x i8>* %p
+  %and = and <32 x i8> %y, %mask
+  ret <32 x i8> %and
+}
