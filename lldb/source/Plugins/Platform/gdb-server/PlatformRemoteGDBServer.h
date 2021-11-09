@@ -40,10 +40,6 @@ public:
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // lldb_private::Platform functions
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
 

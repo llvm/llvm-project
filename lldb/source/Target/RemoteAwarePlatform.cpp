@@ -72,8 +72,7 @@ Status RemoteAwarePlatform::ResolveExecutable(
   } else {
     if (m_remote_platform_sp) {
       return GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                                 module_search_paths_ptr,
-                                 *m_remote_platform_sp);
+                                 module_search_paths_ptr);
     }
 
     // We may connect to a process and use the provided executable (Don't use
