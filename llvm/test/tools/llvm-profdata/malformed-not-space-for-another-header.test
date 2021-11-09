@@ -1,0 +1,51 @@
+// Header
+//
+// INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
+// INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
+// INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
+// INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
+
+RUN: printf '\201rforpl\377' > %t.profraw
+RUN: printf '\x8\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\xe\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\xf8\xff\xff\xff\xff\xff\xff\xff' >> %t.profraw
+RUN: printf '\x89\x7a\x40\x00\x00\x00\x00\x00' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+
+// Data Section
+//
+// struct ProfData {
+// #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) \
+//    Type Name;
+// #include "llvm/ProfileData/InstrProfData.inc"
+// };
+
+RUN: printf '\xfa\xd5\x8d\xe7\x36\x64\x95\xdb' >> %t.profraw // NameRef
+RUN: printf '\x18\0\0\0\0\0\0\0' >> %t.profraw               // FuncHash
+RUN: printf '\xf8\xff\xff\xff\xff\xff\xff\xff' >> %t.profraw // RelativeCounterPtr
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw                 // FunctionPointer
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw                 // Values
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw                 // NumCounters and NumValueSites
+
+// Counter section
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+
+// Name section (Name section is 14 bytes and 2 bytes padding is added)
+RUN: printf '\x04\x0c\x78\xda\xcb\x4d\xcc\xcc' >> %t.profraw
+RUN: printf '\x03\x00\x04\x1b\x01\xa6\x00\x00' >> %t.profraw
+
+// Write some garbage data at the end so we get "not enough space for another header" message
+RUN: printf '\x03\x00\' >> %t.profraw
+
+RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s
+CHECK: malformed instrumentation profile data: 'not enough space for another header'
