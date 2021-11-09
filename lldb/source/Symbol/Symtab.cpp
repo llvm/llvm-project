@@ -1096,6 +1096,7 @@ void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
           case eSymbolTypeCode:
           case eSymbolTypeResolver:
           case eSymbolTypeReExported:
+          case eSymbolTypeAbsolute:
             symbol_indexes.push_back(temp_symbol_indexes[i]);
             break;
           default:
