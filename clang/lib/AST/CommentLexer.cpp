@@ -392,10 +392,11 @@ void Lexer::lexCommentText(Token &T) {
       unsigned Length = TokenPtr - (BufferPtr + 1);
 
       // Hardcoded support for lexing LaTeX formula commands
-      // \f$ \f[ \f] \f{ \f} as a single command.
+      // \f$ \f( \f) \f[ \f] \f{ \f} as a single command.
       if (Length == 1 && TokenPtr[-1] == 'f' && TokenPtr != CommentEnd) {
         C = *TokenPtr;
-        if (C == '$' || C == '[' || C == ']' || C == '{' || C == '}') {
+        if (C == '$' || C == '(' || C == ')' || C == '[' || C == ']' ||
+            C == '{' || C == '}') {
           TokenPtr++;
           Length++;
         }

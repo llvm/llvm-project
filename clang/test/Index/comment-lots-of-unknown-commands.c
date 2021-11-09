@@ -39,7 +39,7 @@
 @ien
 @fr
 @en
-@tet
+@teq
 @le
 @L
 @os
@@ -77,7 +77,7 @@
 @rU
 @ar
 @eD
-@iE
+@iEx
 @se
 @st1
 @rr
@@ -106,7 +106,7 @@
 @hd
 @be
 @It
-@id
+@idz
 @cm
 @ua
 @fs
@@ -114,7 +114,7 @@
 @axn
 @rt
 @to
-@is
+@isj
 @fo
 @i
 @an
@@ -185,7 +185,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[ien] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[fr] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[en] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[tet] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[teq] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[le] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[L] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[os] RenderNormal HasTrailingNewline)
@@ -223,7 +223,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[rU] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ar] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[eD] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[iE] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[iEx] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[se] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[st1] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[rr] RenderNormal HasTrailingNewline)
@@ -252,7 +252,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[hd] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[be] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[It] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[id] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[idz] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[cm] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ua] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[fs] RenderNormal HasTrailingNewline)
@@ -260,7 +260,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[axn] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[rt] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[to] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[is] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[isj] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[fo] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[i] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[an] RenderNormal HasTrailingNewline)
