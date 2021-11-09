@@ -991,7 +991,7 @@ static void DFsanInit(int argc, char **argv, char **envp) {
 
   DFsanThread *main_thread = DFsanThread::Create(nullptr, nullptr, nullptr);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart();
+  main_thread->Init();
 
   dfsan_init_is_running = false;
   dfsan_inited = true;
