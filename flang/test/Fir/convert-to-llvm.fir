@@ -514,3 +514,121 @@ func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
 // CHECK:         %{{.*}} = llvm.insertvalue %[[NEGX]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[NEGY]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
 // CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test `fir.convert` operation conversion from Float type.
+
+func @convert_from_float(%arg0 : f32) {
+  %0 = fir.convert %arg0 : (f32) -> f16
+  %1 = fir.convert %arg0 : (f32) -> f32
+  %2 = fir.convert %arg0 : (f32) -> f64
+  %3 = fir.convert %arg0 : (f32) -> f80
+  %4 = fir.convert %arg0 : (f32) -> f128
+  %5 = fir.convert %arg0 : (f32) -> i1
+  %6 = fir.convert %arg0 : (f32) -> i8
+  %7 = fir.convert %arg0 : (f32) -> i16
+  %8 = fir.convert %arg0 : (f32) -> i32
+  %9 = fir.convert %arg0 : (f32) -> i64
+  return
+}
+
+// CHECK-LABEL: convert_from_float(
+// CHECK-SAME:                     %[[ARG0:.*]]: f32
+// CHECK:         %{{.*}} = llvm.fptrunc %[[ARG0]] : f32 to f16
+// CHECK-NOT:     f32 to f32
+// CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f64
+// CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f80
+// CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f128
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i1
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i8
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i16
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i32
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i64
+
+// -----
+
+// Test `fir.convert` operation conversion from Integer type.
+
+func @convert_from_int(%arg0 : i32) {
+  %0 = fir.convert %arg0 : (i32) -> f16
+  %1 = fir.convert %arg0 : (i32) -> f32
+  %2 = fir.convert %arg0 : (i32) -> f64
+  %3 = fir.convert %arg0 : (i32) -> f80
+  %4 = fir.convert %arg0 : (i32) -> f128
+  %5 = fir.convert %arg0 : (i32) -> i1
+  %6 = fir.convert %arg0 : (i32) -> i8
+  %7 = fir.convert %arg0 : (i32) -> i16
+  %8 = fir.convert %arg0 : (i32) -> i32
+  %9 = fir.convert %arg0 : (i32) -> i64
+  %10 = fir.convert %arg0 : (i32) -> i64
+  %ptr = fir.convert %10 : (i64) -> !fir.ref<i64>
+  return
+}
+
+// CHECK-LABEL: convert_from_int(
+// CHECK-SAME:                   %[[ARG0:.*]]: i32
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f16
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f32
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f64
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f80
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f128
+// CHECK:         %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i1
+// CHECK:         %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i8
+// CHECK:         %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i16
+// CHECK-NOT:     %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i32
+// CHECK:         %{{.*}} = llvm.sext %[[ARG0]] : i32 to i64
+// CHECK:         %{{.*}} = llvm.inttoptr %{{.*}} : i64 to !llvm.ptr<i64>
+
+// -----
+
+// Test `fir.convert` operation conversion from !fir.ref<> type.
+
+func @convert_from_ref(%arg0 : !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i8>
+  %1 = fir.convert %arg0 : (!fir.ref<i32>) -> i32
+  return
+}
+
+// CHECK-LABEL: convert_from_ref(
+// CHECK-SAME:                   %[[ARG0:.*]]: !llvm.ptr<i32>
+// CHECK:         %{{.*}} = llvm.bitcast %[[ARG0]] : !llvm.ptr<i32> to !llvm.ptr<i8>
+// CHECK:         %{{.*}} = llvm.ptrtoint %[[ARG0]] : !llvm.ptr<i32> to i32
+
+// -----
+
+// Test `fir.convert` operation conversion between fir.complex types.
+
+func @convert_complex4(%arg0 : !fir.complex<4>) -> !fir.complex<8> {
+  %0 = fir.convert %arg0 : (!fir.complex<4>) -> !fir.complex<8>
+  return %0 : !fir.complex<8>
+}
+
+// CHECK-LABEL: func @convert_complex4(
+// CHECK-SAME:                         %[[ARG0:.*]]: !llvm.struct<(f32, f32)>) -> !llvm.struct<(f64, f64)>
+// CHECK:         %[[X:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f32, f32)>
+// CHECK:         %[[Y:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f32, f32)>
+// CHECK:         %[[CONVERTX:.*]] = llvm.fpext %[[X]] : f32 to f64
+// CHECK:         %[[CONVERTY:.*]] = llvm.fpext %[[Y]] : f32 to f64
+// CHECK:         %[[STRUCT0:.*]] = llvm.mlir.undef : !llvm.struct<(f64, f64)>
+// CHECK:         %[[STRUCT1:.*]] = llvm.insertvalue %[[CONVERTX]], %[[STRUCT0]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK:         %[[STRUCT2:.*]] = llvm.insertvalue %[[CONVERTY]], %[[STRUCT1]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK:         llvm.return %[[STRUCT2]] : !llvm.struct<(f64, f64)>
+
+// Test `fir.convert` operation conversion between fir.complex types.
+
+func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
+  %0 = fir.convert %arg0 : (!fir.complex<16>) -> !fir.complex<2>
+  return %0 : !fir.complex<2>
+}
+
+// CHECK-LABEL: func @convert_complex16(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f16, f16)>
+// CHECK:         %[[X:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[CONVERTX:.*]] = llvm.fptrunc %[[X]] : f128 to f16
+// CHECK:         %[[CONVERTY:.*]] = llvm.fptrunc %[[Y]] : f128 to f16
+// CHECK:         %[[STRUCT0:.*]] = llvm.mlir.undef : !llvm.struct<(f16, f16)>
+// CHECK:         %[[STRUCT1:.*]] = llvm.insertvalue %[[CONVERTX]], %[[STRUCT0]][0 : i32] : !llvm.struct<(f16, f16)>
+// CHECK:         %[[STRUCT2:.*]] = llvm.insertvalue %[[CONVERTY]], %[[STRUCT1]][1 : i32] : !llvm.struct<(f16, f16)>
+// CHECK:         llvm.return %[[STRUCT2]] : !llvm.struct<(f16, f16)>
