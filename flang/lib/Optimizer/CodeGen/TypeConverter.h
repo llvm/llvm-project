@@ -14,7 +14,6 @@
 #define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 
 #include "DescriptorModel.h"
-#include "Target.h"
 #include "flang/Lower/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/KindMapping.h"
@@ -29,10 +28,7 @@ class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module)
       : mlir::LLVMTypeConverter(module.getContext()),
-        kindMapping(getKindMapping(module)),
-        specifics(CodeGenSpecifics::get(module.getContext(),
-                                        getTargetTriple(module),
-                                        getKindMapping(module))) {
+        kindMapping(getKindMapping(module)) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::Type.
@@ -43,10 +39,6 @@ public:
     });
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
-    addConversion(
-        [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
-    addConversion(
-        [&](fir::RealType real) { return convertRealType(real.getFKind()); });
     addConversion(
         [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
     addConversion(
@@ -148,24 +140,6 @@ public:
                                                /*isPacked=*/false));
   }
 
-  // Use the target specifics to figure out how to map complex to LLVM IR. The
-  // use of complex values in function signatures is handled before conversion
-  // to LLVM IR dialect here.
-  //
-  // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C>
-  mlir::Type convertComplexType(C cmplx) {
-    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
-    auto eleTy = cmplx.getElementType();
-    return convertType(specifics->complexMemoryType(eleTy));
-  }
-
-  // convert a front-end kind value to either a std or LLVM IR dialect type
-  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-  mlir::Type convertRealType(fir::KindTy kind) {
-    return fromRealTypeID(kindMapping.getRealTypeID(kind), kind);
-  }
-
   template <typename A>
   mlir::Type convertPointerLike(A &ty) {
     mlir::Type eleTy = ty.getEleTy();
@@ -213,33 +187,8 @@ public:
     return mlir::LLVM::LLVMPointerType::get(baseTy);
   }
 
-  /// Convert llvm::Type::TypeID to mlir::Type
-  mlir::Type fromRealTypeID(llvm::Type::TypeID typeID, fir::KindTy kind) {
-    switch (typeID) {
-    case llvm::Type::TypeID::HalfTyID:
-      return mlir::FloatType::getF16(&getContext());
-    case llvm::Type::TypeID::BFloatTyID:
-      return mlir::FloatType::getBF16(&getContext());
-    case llvm::Type::TypeID::FloatTyID:
-      return mlir::FloatType::getF32(&getContext());
-    case llvm::Type::TypeID::DoubleTyID:
-      return mlir::FloatType::getF64(&getContext());
-    case llvm::Type::TypeID::X86_FP80TyID:
-      return mlir::FloatType::getF80(&getContext());
-    case llvm::Type::TypeID::FP128TyID:
-      return mlir::FloatType::getF128(&getContext());
-    default:
-      emitError(UnknownLoc::get(&getContext()))
-          << "unsupported type: !fir.real<" << kind << ">";
-      return {};
-    }
-  }
-
-  KindMapping &getKindMap() { return kindMapping; }
-
 private:
   KindMapping kindMapping;
-  std::unique_ptr<CodeGenSpecifics> specifics;
 };
 
 } // namespace fir
