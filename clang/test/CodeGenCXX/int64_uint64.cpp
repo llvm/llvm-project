@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple arm-linux-guneabi \
 // RUN:   -target-cpu cortex-a8 \
 // RUN:   -emit-llvm -w -O1 -o - %s | FileCheck --check-prefix=CHECK-ARM %s

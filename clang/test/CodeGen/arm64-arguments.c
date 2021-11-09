@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 // RUN: %clang_cc1 -triple aarch64_be-none-linux-gnu -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 

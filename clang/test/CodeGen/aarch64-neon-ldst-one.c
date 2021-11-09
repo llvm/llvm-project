@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -disable-O0-optnone -fallow-half-arguments-and-returns -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s

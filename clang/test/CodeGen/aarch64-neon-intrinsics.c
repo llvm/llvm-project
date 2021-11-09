@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:     -fallow-half-arguments-and-returns -S -disable-O0-optnone \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s \

@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
 // RUN:  -target-feature +sm4 -S -emit-llvm -o - %s \
 // RUN:  | FileCheck %s

@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-feature +sha3 -target-feature +sm4 -verify %s
 
 #include <arm_neon.h>

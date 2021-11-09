@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple aarch64-arm-none-eabi -target-feature +neon -target-feature +bf16 \
 // RUN:  -O2 -fallow-half-arguments-and-returns -verify -fsyntax-only %s
 

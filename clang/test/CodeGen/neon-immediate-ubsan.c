@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple armv7s-linux-gnu -target-abi apcs-gnu -emit-llvm -o - %s \
 // RUN:     -target-feature +neon -target-cpu cortex-a8 \
 // RUN:     -fsanitize=signed-integer-overflow \

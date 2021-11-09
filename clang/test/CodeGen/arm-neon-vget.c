@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple thumbv7-apple-darwin \
 // RUN:   -target-abi apcs-gnu \
 // RUN:   -target-cpu cortex-a8 \

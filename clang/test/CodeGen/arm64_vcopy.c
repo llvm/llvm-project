@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
 
 // Test ARM64 SIMD copy vector element to vector element: vcopyq_lane*

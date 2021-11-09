@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple arm-none-linux-gnueabi -target-feature +neon \
 // RUN:  -target-feature +sha2 -target-feature +aes \
 // RUN:  -target-cpu cortex-a57 -emit-llvm -O1 -o - %s | FileCheck %s
