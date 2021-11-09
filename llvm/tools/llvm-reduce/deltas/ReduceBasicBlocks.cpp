@@ -126,7 +126,15 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
     // Instructions might be referenced in other BBs
     for (auto &I : *BB)
       I.replaceAllUsesWith(UndefValue::get(I.getType()));
-    BB->eraseFromParent();
+    if (BB->getParent()->size() == 1) {
+      // this is the last basic block of the function, thus we must also make
+      // sure to remove comdat and set linkage to external
+      auto F = BB->getParent();
+      F->deleteBody();
+      F->setComdat(nullptr);
+    } else {
+      BB->eraseFromParent();
+    }
   }
 }
 
