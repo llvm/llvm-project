@@ -48,6 +48,8 @@ static cl::list<std::string> DisassembleFunctions(
     cl::desc("List of functions to print disassembly for. Accept demangled "
              "names only. Only work with show-disassembly-only"));
 
+extern cl::opt<bool> ShowDetailedWarning;
+
 namespace llvm {
 namespace sampleprof {
 
@@ -154,6 +156,34 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
   ProbeContext.pop_back();
 }
 
+void ProfiledBinary::warnNoFuncEntry() {
+  uint64_t NoFuncEntryNum = 0;
+  for (auto &F : BinaryFunctions) {
+    if (F.second.Ranges.empty())
+      continue;
+    bool hasFuncEntry = false;
+    for (auto &R : F.second.Ranges) {
+      if (FuncRange *FR = findFuncRangeForStartOffset(R.first)) {
+        if (FR->IsFuncEntry) {
+          hasFuncEntry = true;
+          break;
+        }
+      }
+    }
+
+    if (!hasFuncEntry) {
+      NoFuncEntryNum++;
+      if (ShowDetailedWarning)
+        WithColor::warning()
+            << "Failed to determine function entry for " << F.first
+            << " due to inconsistent name from symbol table and dwarf info.\n";
+    }
+  }
+  emitWarningSummary(NoFuncEntryNum, BinaryFunctions.size(),
+                     "of functions failed to determine function entry due to "
+                     "inconsistent name from symbol table and dwarf info.");
+}
+
 void ProfiledBinary::load() {
   // Attempt to open the binary.
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
@@ -188,6 +218,8 @@ void ProfiledBinary::load() {
   // Use function start and return address to infer prolog and epilog
   ProEpilogTracker.inferPrologOffsets(StartOffset2FuncRangeMap);
   ProEpilogTracker.inferEpilogOffsets(RetOffsets);
+
+  warnNoFuncEntry();
 
   // TODO: decode other sections.
 }
@@ -317,9 +349,10 @@ void ProfiledBinary::setIsFuncEntry(uint64_t Offset, StringRef RangeSymName) {
   if (!FuncRange)
     return;
 
-  // Set IsFuncEntry to ture if the RangeSymName from ELF is equal to its
-  // DWARF-based function name.
-  if (!FuncRange->IsFuncEntry && FuncRange->getFuncName() == RangeSymName)
+  // Set IsFuncEntry to ture if there is only one range in the function or the
+  // RangeSymName from ELF is equal to its DWARF-based function name.
+  if (FuncRange->Func->Ranges.size() == 1 ||
+      (!FuncRange->IsFuncEntry && FuncRange->getFuncName() == RangeSymName))
     FuncRange->IsFuncEntry = true;
 }
 
@@ -333,8 +366,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   uint64_t NextStartOffset =
       (SI + 1 < SE) ? Symbols[SI + 1].Addr - getPreferredBaseAddress()
                     : SectionOffset + SectSize;
-  if (StartOffset > NextStartOffset)
-    return true;
+  setIsFuncEntry(StartOffset,
+                 FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
 
   StringRef SymbolName =
       ShowCanonicalFnName
@@ -419,8 +452,6 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
   if (ShowDisassembly)
     outs() << "\n";
-
-  setIsFuncEntry(StartOffset, Symbols[SI].Name);
 
   return true;
 }

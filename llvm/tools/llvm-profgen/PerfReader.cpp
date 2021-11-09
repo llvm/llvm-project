@@ -31,10 +31,9 @@ static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
-static cl::opt<bool>
-    ShowDetailedWarning("show-detailed-warning", cl::init(false),
-                        cl::ZeroOrMore,
-                        cl::desc("Show detailed warning message."));
+cl::opt<bool> ShowDetailedWarning("show-detailed-warning", cl::init(false),
+                                  cl::ZeroOrMore,
+                                  cl::desc("Show detailed warning message."));
 
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -1025,14 +1024,6 @@ void PerfScriptReader::warnTruncatedStack() {
       InvalidReturnAddresses.size(), AggregatedSamples.size(),
       "of truncated stack samples due to invalid return address, "
       "likely caused by frame pointer omission.");
-}
-
-void PerfScriptReader::emitWarningSummary(uint64_t Num, uint64_t Total,
-                                          StringRef Msg) {
-  if (!Total || !Num)
-    return;
-  WithColor::warning() << format("%.2f", static_cast<double>(Num) * 100 / Total)
-                       << "%(" << Num << "/" << Total << ") " << Msg << "\n";
 }
 
 void PerfScriptReader::warnInvalidRange() {

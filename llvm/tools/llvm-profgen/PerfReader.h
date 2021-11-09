@@ -588,7 +588,6 @@ protected:
   void parseAndAggregateTrace();
   // Parse either an MMAP event or a perf sample
   void parseEventOrSample(TraceStream &TraceIt);
-  void emitWarningSummary(uint64_t Num, uint64_t Total, StringRef Msg);
   // Warn if the relevant mmap event is missing.
   void warnIfMissingMMap();
   // Emit accumulate warnings.
