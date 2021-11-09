@@ -1,15 +1,17 @@
-// RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 //
 // setuid(0) hangs on powerpc64 big endian.  When this is fixed remove
 // the unsupported flag.
 // https://llvm.org/bugs/show_bug.cgi?id=25799
 //
 // UNSUPPORTED: powerpc64-unknown-linux-gnu
-#include "test.h"
+
+#include <pthread.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-// Setuid call used to hang because the background tsan thread did not handle
+// Setuid call used to hang because the new thread did not handle
 // SIGSETXID signal. Note that we don't care whether setuid call succeeds
 // or not.
 
