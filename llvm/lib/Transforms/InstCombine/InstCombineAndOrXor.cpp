@@ -1418,15 +1418,15 @@ static Instruction *reassociateFCmps(BinaryOperator &BO,
     std::swap(Op0, Op1);
 
   // Match inner binop and the predicate for combining 2 NAN checks into 1.
-  BinaryOperator *BO1;
+  Value *BO10, *BO11;
   FCmpInst::Predicate NanPred = Opcode == Instruction::And ? FCmpInst::FCMP_ORD
                                                            : FCmpInst::FCMP_UNO;
   if (!match(Op0, m_FCmp(Pred, m_Value(X), m_AnyZeroFP())) || Pred != NanPred ||
-      !match(Op1, m_BinOp(BO1)) || BO1->getOpcode() != Opcode)
+      !match(Op1, m_BinOp(Opcode, m_Value(BO10), m_Value(BO11))))
     return nullptr;
 
   // The inner logic op must have a matching fcmp operand.
-  Value *BO10 = BO1->getOperand(0), *BO11 = BO1->getOperand(1), *Y;
+  Value *Y;
   if (!match(BO10, m_FCmp(Pred, m_Value(Y), m_AnyZeroFP())) ||
       Pred != NanPred || X->getType() != Y->getType())
     std::swap(BO10, BO11);
@@ -1475,14 +1475,11 @@ static Instruction *matchDeMorgansLaws(BinaryOperator &I,
   // (~B & A) & ~C --> A & ~(B | C)
   // (A | ~B) | ~C --> A | ~(B & C)
   // (~B | A) | ~C --> A | ~(B & C)
-  BinaryOperator *BO;
-  if (match(Op0, m_OneUse(m_BinOp(BO))) && BO->getOpcode() == Opcode) {
-    Value *C;
-    if (match(BO, m_c_BinOp(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1, m_Not(m_Value(C)))) {
-      Value *FlippedBO = Builder.CreateBinOp(FlippedOpcode, B, C);
-      return BinaryOperator::Create(Opcode, A, Builder.CreateNot(FlippedBO));
-    }
+  Value *C;
+  if (match(Op0, m_OneUse(m_c_BinOp(Opcode, m_Value(A), m_Not(m_Value(B))))) &&
+      match(Op1, m_Not(m_Value(C)))) {
+    Value *FlippedBO = Builder.CreateBinOp(FlippedOpcode, B, C);
+    return BinaryOperator::Create(Opcode, A, Builder.CreateNot(FlippedBO));
   }
 
   return nullptr;
