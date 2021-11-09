@@ -4888,7 +4888,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTPOP: {
     SDValue Ops = {Operand};
-    if (SDValue Fold = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops))
+    if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
       return Fold;
   }
   }
@@ -5268,162 +5268,56 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
     return SDValue();
 
-  // TODO: For now, the array Ops should only contain two values.
-  // This enforcement will be removed once this function is merged with
-  // FoldConstantVectorArithmetic
-  if (Ops.size() != 2)
+  unsigned NumOps = Ops.size();
+  if (NumOps == 0)
     return SDValue();
 
   if (isUndef(Opcode, Ops))
     return getUNDEF(VT);
-
-  SDNode *N1 = Ops[0].getNode();
-  SDNode *N2 = Ops[1].getNode();
 
   // Handle the case of two scalars.
-  if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
-    if (auto *C2 = dyn_cast<ConstantSDNode>(N2)) {
-      if (C1->isOpaque() || C2->isOpaque())
-        return SDValue();
+  if (NumOps == 2) {
+    // TODO: Move foldConstantFPMath here?
 
-      Optional<APInt> FoldAttempt =
-          FoldValue(Opcode, C1->getAPIntValue(), C2->getAPIntValue());
-      if (!FoldAttempt)
-        return SDValue();
+    if (auto *C1 = dyn_cast<ConstantSDNode>(Ops[0])) {
+      if (auto *C2 = dyn_cast<ConstantSDNode>(Ops[1])) {
+        if (C1->isOpaque() || C2->isOpaque())
+          return SDValue();
 
-      SDValue Folded = getConstant(FoldAttempt.getValue(), DL, VT);
-      assert((!Folded || !VT.isVector()) &&
-             "Can't fold vectors ops with scalar operands");
-      return Folded;
+        Optional<APInt> FoldAttempt =
+            FoldValue(Opcode, C1->getAPIntValue(), C2->getAPIntValue());
+        if (!FoldAttempt)
+          return SDValue();
+
+        SDValue Folded = getConstant(FoldAttempt.getValue(), DL, VT);
+        assert((!Folded || !VT.isVector()) &&
+               "Can't fold vectors ops with scalar operands");
+        return Folded;
+      }
+    }
+
+    // fold (add Sym, c) -> Sym+c
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ops[0]))
+      return FoldSymbolOffset(Opcode, VT, GA, Ops[1].getNode());
+    if (TLI->isCommutativeBinOp(Opcode))
+      if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ops[1]))
+        return FoldSymbolOffset(Opcode, VT, GA, Ops[0].getNode());
+
+    // If this is a bitwise logic opcode see if we can fold bitcasted ops.
+    // TODO: Can we generalize this and fold any bitcasted constant data?
+    if (ISD::isBitwiseLogicOp(Opcode) && Ops[0].getOpcode() == ISD::BITCAST &&
+        Ops[1].getOpcode() == ISD::BITCAST) {
+      SDValue InnerN1 = peekThroughBitcasts(Ops[0].getOperand(0));
+      SDValue InnerN2 = peekThroughBitcasts(Ops[1].getOperand(0));
+      EVT InnerVT = InnerN1.getValueType();
+      if (InnerVT == InnerN2.getValueType() && InnerVT.isInteger())
+        if (SDValue C =
+                FoldConstantArithmetic(Opcode, DL, InnerVT, {InnerN1, InnerN2}))
+          return getBitcast(VT, C);
     }
   }
 
-  // fold (add Sym, c) -> Sym+c
-  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N1))
-    return FoldSymbolOffset(Opcode, VT, GA, N2);
-  if (TLI->isCommutativeBinOp(Opcode))
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
-      return FoldSymbolOffset(Opcode, VT, GA, N1);
-
-  // If this is a bitwise logic opcode see if we can fold bitcasted ops.
-  // TODO: Can we generalize this and fold any bitcasted constant data?
-  if (ISD::isBitwiseLogicOp(Opcode) && N1->getOpcode() == ISD::BITCAST &&
-      N2->getOpcode() == ISD::BITCAST) {
-    SDValue InnerN1 = peekThroughBitcasts(N1->getOperand(0));
-    SDValue InnerN2 = peekThroughBitcasts(N2->getOperand(0));
-    EVT InnerVT = InnerN1.getValueType();
-    if (InnerVT == InnerN2.getValueType() && InnerVT.isInteger())
-      if (SDValue C =
-              FoldConstantArithmetic(Opcode, DL, InnerVT, {InnerN1, InnerN2}))
-        return getBitcast(VT, C);
-  }
-
-  // For fixed width vectors, extract each constant element and fold them
-  // individually. Either input may be an undef value.
-  bool IsBVOrSV1 = N1->getOpcode() == ISD::BUILD_VECTOR ||
-                   N1->getOpcode() == ISD::SPLAT_VECTOR;
-  if (!IsBVOrSV1 && !N1->isUndef())
-    return SDValue();
-  bool IsBVOrSV2 = N2->getOpcode() == ISD::BUILD_VECTOR ||
-                   N2->getOpcode() == ISD::SPLAT_VECTOR;
-  if (!IsBVOrSV2 && !N2->isUndef())
-    return SDValue();
-  // If both operands are undef, that's handled the same way as scalars.
-  if (!IsBVOrSV1 && !IsBVOrSV2)
-    return SDValue();
-
-  EVT SVT = VT.getScalarType();
-  EVT LegalSVT = SVT;
-  if (NewNodesMustHaveLegalTypes && LegalSVT.isInteger()) {
-    LegalSVT = TLI->getTypeToTransformTo(*getContext(), LegalSVT);
-    if (LegalSVT.bitsLT(SVT))
-      return SDValue();
-  }
-
-  SmallVector<SDValue, 4> Outputs;
-  unsigned NumElts = 0;
-  if (IsBVOrSV1)
-    NumElts = std::max(NumElts, N1->getNumOperands());
-  if (IsBVOrSV2)
-    NumElts = std::max(NumElts, N2->getNumOperands());
-  assert(NumElts != 0 && "Expected non-zero operands");
-  // Scalable vectors should only be SPLAT_VECTOR or UNDEF here. We only need
-  // one iteration for that.
-  assert((!VT.isScalableVector() || NumElts == 1) &&
-         "Scalable vector should only have one scalar");
-
-  for (unsigned I = 0; I != NumElts; ++I) {
-    // We can have a fixed length SPLAT_VECTOR and a BUILD_VECTOR so we need
-    // to use operand 0 of the SPLAT_VECTOR for each fixed element.
-    SDValue V1;
-    if (N1->getOpcode() == ISD::BUILD_VECTOR)
-      V1 = N1->getOperand(I);
-    else if (N1->getOpcode() == ISD::SPLAT_VECTOR)
-      V1 = N1->getOperand(0);
-    else
-      V1 = getUNDEF(SVT);
-
-    SDValue V2;
-    if (N2->getOpcode() == ISD::BUILD_VECTOR)
-      V2 = N2->getOperand(I);
-    else if (N2->getOpcode() == ISD::SPLAT_VECTOR)
-      V2 = N2->getOperand(0);
-    else
-      V2 = getUNDEF(SVT);
-
-    if (SVT.isInteger()) {
-      if (V1.getValueType().bitsGT(SVT))
-        V1 = getNode(ISD::TRUNCATE, DL, SVT, V1);
-      if (V2.getValueType().bitsGT(SVT))
-        V2 = getNode(ISD::TRUNCATE, DL, SVT, V2);
-    }
-
-    if (V1.getValueType() != SVT || V2.getValueType() != SVT)
-      return SDValue();
-
-    // Fold one vector element.
-    SDValue ScalarResult = getNode(Opcode, DL, SVT, V1, V2);
-    if (LegalSVT != SVT)
-      ScalarResult = getNode(ISD::SIGN_EXTEND, DL, LegalSVT, ScalarResult);
-
-    // Scalar folding only succeeded if the result is a constant or UNDEF.
-    if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&
-        ScalarResult.getOpcode() != ISD::ConstantFP)
-      return SDValue();
-    Outputs.push_back(ScalarResult);
-  }
-
-  if (N1->getOpcode() == ISD::BUILD_VECTOR ||
-      N2->getOpcode() == ISD::BUILD_VECTOR) {
-    assert(VT.getVectorNumElements() == Outputs.size() &&
-           "Vector size mismatch!");
-
-    // Build a big vector out of the scalar elements we generated.
-    return getBuildVector(VT, SDLoc(), Outputs);
-  }
-
-  assert((N1->getOpcode() == ISD::SPLAT_VECTOR ||
-          N2->getOpcode() == ISD::SPLAT_VECTOR) &&
-         "One operand should be a splat vector");
-
-  assert(Outputs.size() == 1 && "Vector size mismatch!");
-  return getSplatVector(VT, SDLoc(), Outputs[0]);
-}
-
-// TODO: Merge with FoldConstantArithmetic
-SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
-                                                   const SDLoc &DL, EVT VT,
-                                                   ArrayRef<SDValue> Ops) {
-  // If the opcode is a target-specific ISD node, there's nothing we can
-  // do here and the operand rules may not line up with the below, so
-  // bail early.
-  if (Opcode >= ISD::BUILTIN_OP_END)
-    return SDValue();
-
-  if (isUndef(Opcode, Ops))
-    return getUNDEF(VT);
-
-  // We can only fold vectors - maybe merge with FoldConstantArithmetic someday?
+  // This is for vector folding only from here on.
   if (!VT.isVector())
     return SDValue();
 
@@ -5434,19 +5328,16 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
            Op.getValueType().getVectorElementCount() == NumElts;
   };
 
-  auto IsConstantBuildVectorSplatVectorOrUndef = [](const SDValue &Op) {
-    APInt SplatVal;
-    BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Op);
+  auto IsBuildVectorSplatVectorOrUndef = [](const SDValue &Op) {
     return Op.isUndef() || Op.getOpcode() == ISD::CONDCODE ||
-           (BV && BV->isConstant()) ||
-           (Op.getOpcode() == ISD::SPLAT_VECTOR &&
-            ISD::isConstantSplatVector(Op.getNode(), SplatVal));
+           Op.getOpcode() == ISD::BUILD_VECTOR ||
+           Op.getOpcode() == ISD::SPLAT_VECTOR;
   };
 
   // All operands must be vector types with the same number of elements as
-  // the result type and must be either UNDEF or a build vector of constant
+  // the result type and must be either UNDEF or a build/splat vector
   // or UNDEF scalars.
-  if (!llvm::all_of(Ops, IsConstantBuildVectorSplatVectorOrUndef) ||
+  if (!llvm::all_of(Ops, IsBuildVectorSplatVectorOrUndef) ||
       !llvm::all_of(Ops, IsScalarOrSameVectorSize))
     return SDValue();
 
@@ -5466,17 +5357,16 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   // For scalable vector types we know we're dealing with SPLAT_VECTORs. We
   // only have one operand to check. For fixed-length vector types we may have
   // a combination of BUILD_VECTOR and SPLAT_VECTOR.
-  unsigned NumOperands = NumElts.isScalable() ? 1 : NumElts.getFixedValue();
+  unsigned NumVectorElts = NumElts.isScalable() ? 1 : NumElts.getFixedValue();
 
   // Constant fold each scalar lane separately.
   SmallVector<SDValue, 4> ScalarResults;
-  for (unsigned I = 0; I != NumOperands; I++) {
+  for (unsigned I = 0; I != NumVectorElts; I++) {
     SmallVector<SDValue, 4> ScalarOps;
     for (SDValue Op : Ops) {
       EVT InSVT = Op.getValueType().getScalarType();
       if (Op.getOpcode() != ISD::BUILD_VECTOR &&
           Op.getOpcode() != ISD::SPLAT_VECTOR) {
-        // We've checked that this is UNDEF or a constant of some kind.
         if (Op.isUndef())
           ScalarOps.push_back(getUNDEF(InSVT));
         else
@@ -6160,7 +6050,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return V;
     // Vector constant folding.
     SDValue Ops[] = {N1, N2, N3};
-    if (SDValue V = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops)) {
+    if (SDValue V = FoldConstantArithmetic(Opcode, DL, VT, Ops)) {
       NewSDValueDbgMsg(V, "New node vector constant folding: ", this);
       return V;
     }

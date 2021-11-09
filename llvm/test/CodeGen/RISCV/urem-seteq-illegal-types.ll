@@ -569,27 +569,27 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32MV-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; RV32MV-NEXT:    addi a1, sp, 8
 ; RV32MV-NEXT:    vle16.v v8, (a1)
+; RV32MV-NEXT:    vmv.v.i v9, 10
+; RV32MV-NEXT:    addi a1, zero, 9
+; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
+; RV32MV-NEXT:    vmv.s.x v9, a1
+; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; RV32MV-NEXT:    lui a1, %hi(.LCPI4_0)
 ; RV32MV-NEXT:    addi a1, a1, %lo(.LCPI4_0)
-; RV32MV-NEXT:    vle16.v v9, (a1)
-; RV32MV-NEXT:    vid.v v10
-; RV32MV-NEXT:    vsub.vv v8, v8, v10
-; RV32MV-NEXT:    vmul.vv v8, v8, v9
-; RV32MV-NEXT:    vadd.vv v9, v8, v8
-; RV32MV-NEXT:    addi a1, zero, 9
-; RV32MV-NEXT:    vmv.v.i v10, 10
-; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
-; RV32MV-NEXT:    vmv.s.x v10, a1
-; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; RV32MV-NEXT:    vsll.vv v9, v9, v10
-; RV32MV-NEXT:    addi a1, zero, 2047
-; RV32MV-NEXT:    vand.vx v8, v8, a1
+; RV32MV-NEXT:    vle16.v v10, (a1)
+; RV32MV-NEXT:    vid.v v11
+; RV32MV-NEXT:    vsub.vv v8, v8, v11
+; RV32MV-NEXT:    vmul.vv v8, v8, v10
+; RV32MV-NEXT:    vadd.vv v10, v8, v8
+; RV32MV-NEXT:    vsll.vv v9, v10, v9
 ; RV32MV-NEXT:    vmv.v.i v10, 0
-; RV32MV-NEXT:    addi a2, zero, 1
+; RV32MV-NEXT:    addi a1, zero, 1
 ; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
 ; RV32MV-NEXT:    vmv1r.v v11, v10
-; RV32MV-NEXT:    vmv.s.x v11, a2
+; RV32MV-NEXT:    vmv.s.x v11, a1
+; RV32MV-NEXT:    addi a1, zero, 2047
 ; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; RV32MV-NEXT:    vand.vx v8, v8, a1
 ; RV32MV-NEXT:    lui a2, %hi(.LCPI4_1)
 ; RV32MV-NEXT:    addi a2, a2, %lo(.LCPI4_1)
 ; RV32MV-NEXT:    vle16.v v12, (a2)
@@ -634,27 +634,27 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; RV64MV-NEXT:    addi a1, sp, 8
 ; RV64MV-NEXT:    vle16.v v8, (a1)
+; RV64MV-NEXT:    vmv.v.i v9, 10
+; RV64MV-NEXT:    addi a1, zero, 9
+; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
+; RV64MV-NEXT:    vmv.s.x v9, a1
+; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; RV64MV-NEXT:    lui a1, %hi(.LCPI4_0)
 ; RV64MV-NEXT:    addi a1, a1, %lo(.LCPI4_0)
-; RV64MV-NEXT:    vle16.v v9, (a1)
-; RV64MV-NEXT:    vid.v v10
-; RV64MV-NEXT:    vsub.vv v8, v8, v10
-; RV64MV-NEXT:    vmul.vv v8, v8, v9
-; RV64MV-NEXT:    vadd.vv v9, v8, v8
-; RV64MV-NEXT:    addi a1, zero, 9
-; RV64MV-NEXT:    vmv.v.i v10, 10
-; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
-; RV64MV-NEXT:    vmv.s.x v10, a1
-; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; RV64MV-NEXT:    vsll.vv v9, v9, v10
-; RV64MV-NEXT:    addi a1, zero, 2047
-; RV64MV-NEXT:    vand.vx v8, v8, a1
+; RV64MV-NEXT:    vle16.v v10, (a1)
+; RV64MV-NEXT:    vid.v v11
+; RV64MV-NEXT:    vsub.vv v8, v8, v11
+; RV64MV-NEXT:    vmul.vv v8, v8, v10
+; RV64MV-NEXT:    vadd.vv v10, v8, v8
+; RV64MV-NEXT:    vsll.vv v9, v10, v9
 ; RV64MV-NEXT:    vmv.v.i v10, 0
-; RV64MV-NEXT:    addi a2, zero, 1
+; RV64MV-NEXT:    addi a1, zero, 1
 ; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
 ; RV64MV-NEXT:    vmv1r.v v11, v10
-; RV64MV-NEXT:    vmv.s.x v11, a2
+; RV64MV-NEXT:    vmv.s.x v11, a1
+; RV64MV-NEXT:    addi a1, zero, 2047
 ; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; RV64MV-NEXT:    vand.vx v8, v8, a1
 ; RV64MV-NEXT:    lui a2, %hi(.LCPI4_1)
 ; RV64MV-NEXT:    addi a2, a2, %lo(.LCPI4_1)
 ; RV64MV-NEXT:    vle16.v v12, (a2)
