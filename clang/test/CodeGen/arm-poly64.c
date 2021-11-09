@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple armv8.2a-arm-none-eabi -target-feature +neon \
 // RUN:  -emit-llvm -o - %s | FileCheck %s
 

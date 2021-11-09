@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang -fsyntax-only  -ffreestanding              --target=aarch64-none-eabi -march=armv8.2-a+fp16 -std=c89 -xc %s
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding --target=aarch64-none-eabi -march=armv8.2-a+fp16 -std=c99 -xc %s
 // RUN: %clang -fsyntax-only -Wall -Werror -ffreestanding --target=aarch64-none-eabi -march=armv8.2-a+fp16 -std=c11 -xc %s
