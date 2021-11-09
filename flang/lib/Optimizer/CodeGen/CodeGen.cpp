@@ -96,121 +96,6 @@ struct CallOpConversion : public FIROpConversion<fir::CallOp> {
   }
 };
 
-static mlir::Type getComplexEleTy(mlir::Type complex) {
-  if (auto cc = complex.dyn_cast<mlir::ComplexType>())
-    return cc.getElementType();
-  return complex.cast<fir::ComplexType>().getElementType();
-}
-
-/// convert value of from-type to value of to-type
-struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
-  using FIROpConversion::FIROpConversion;
-
-  static bool isFloatingPointTy(mlir::Type ty) {
-    return ty.isa<mlir::FloatType>();
-  }
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::ConvertOp convert, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto fromTy = convertType(convert.value().getType());
-    auto toTy = convertType(convert.res().getType());
-    mlir::Value op0 = adaptor.getOperands()[0];
-    if (fromTy == toTy) {
-      rewriter.replaceOp(convert, op0);
-      return success();
-    }
-    auto loc = convert.getLoc();
-    auto convertFpToFp = [&](mlir::Value val, unsigned fromBits,
-                             unsigned toBits, mlir::Type toTy) -> mlir::Value {
-      if (fromBits == toBits) {
-        // TODO: Converting between two floating-point representations with the
-        // same bitwidth is not allowed for now.
-        mlir::emitError(loc,
-                        "cannot implicitly convert between two floating-point "
-                        "representations of the same bitwidth");
-        return {};
-      }
-      if (fromBits > toBits)
-        return rewriter.create<mlir::LLVM::FPTruncOp>(loc, toTy, val);
-      return rewriter.create<mlir::LLVM::FPExtOp>(loc, toTy, val);
-    };
-    // Complex to complex conversion.
-    if (fir::isa_complex(convert.value().getType()) &&
-        fir::isa_complex(convert.res().getType())) {
-      // Special case: handle the conversion of a complex such that both the
-      // real and imaginary parts are converted together.
-      auto zero = mlir::ArrayAttr::get(convert.getContext(),
-                                       rewriter.getI32IntegerAttr(0));
-      auto one = mlir::ArrayAttr::get(convert.getContext(),
-                                      rewriter.getI32IntegerAttr(1));
-      auto ty = convertType(getComplexEleTy(convert.value().getType()));
-      auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, zero);
-      auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, one);
-      auto nt = convertType(getComplexEleTy(convert.res().getType()));
-      auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
-      auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(nt);
-      auto rc = convertFpToFp(rp, fromBits, toBits, nt);
-      auto ic = convertFpToFp(ip, fromBits, toBits, nt);
-      auto un = rewriter.create<mlir::LLVM::UndefOp>(loc, toTy);
-      auto i1 =
-          rewriter.create<mlir::LLVM::InsertValueOp>(loc, toTy, un, rc, zero);
-      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(convert, toTy, i1,
-                                                             ic, one);
-      return mlir::success();
-    }
-    // Floating point to floating point conversion.
-    if (isFloatingPointTy(fromTy)) {
-      if (isFloatingPointTy(toTy)) {
-        auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(fromTy);
-        auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(toTy);
-        auto v = convertFpToFp(op0, fromBits, toBits, toTy);
-        rewriter.replaceOp(convert, v);
-        return mlir::success();
-      }
-      if (toTy.isa<mlir::IntegerType>()) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
-        return mlir::success();
-      }
-    } else if (fromTy.isa<mlir::IntegerType>()) {
-      // Integer to integer conversion.
-      if (toTy.isa<mlir::IntegerType>()) {
-        auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(fromTy);
-        auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(toTy);
-        assert(fromBits != toBits);
-        if (fromBits > toBits) {
-          rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
-          return mlir::success();
-        }
-        rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(convert, toTy, op0);
-        return mlir::success();
-      }
-      // Integer to floating point conversion.
-      if (isFloatingPointTy(toTy)) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
-        return mlir::success();
-      }
-      // Integer to pointer conversion.
-      if (toTy.isa<mlir::LLVM::LLVMPointerType>()) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(convert, toTy, op0);
-        return mlir::success();
-      }
-    } else if (fromTy.isa<mlir::LLVM::LLVMPointerType>()) {
-      // Pointer to integer conversion.
-      if (toTy.isa<mlir::IntegerType>()) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(convert, toTy, op0);
-        return mlir::success();
-      }
-      // Pointer to pointer conversion.
-      if (toTy.isa<mlir::LLVM::LLVMPointerType>()) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
-        return mlir::success();
-      }
-    }
-    return emitError(loc) << "cannot convert " << fromTy << " to " << toTy;
-  }
-};
-
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -604,6 +489,12 @@ struct InsertOnRangeOpConversion
   }
 };
 
+static mlir::Type getComplexEleTy(mlir::Type complex) {
+  if (auto cc = complex.dyn_cast<mlir::ComplexType>())
+    return cc.getElementType();
+  return complex.cast<fir::ComplexType>().getElementType();
+}
+
 //
 // Primitive operations on Complex types
 //
@@ -788,14 +679,13 @@ public:
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
-    pattern
-        .insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
-                ConvertOpConversion, DivcOpConversion, ExtractValueOpConversion,
-                HasValueOpConversion, GlobalOpConversion,
-                InsertOnRangeOpConversion, InsertValueOpConversion,
-                NegcOpConversion, MulcOpConversion, SelectOpConversion,
-                SelectRankOpConversion, SubcOpConversion, UndefOpConversion,
-                UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+    pattern.insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
+                   DivcOpConversion, ExtractValueOpConversion,
+                   HasValueOpConversion, GlobalOpConversion,
+                   InsertOnRangeOpConversion, InsertValueOpConversion,
+                   NegcOpConversion, MulcOpConversion, SelectOpConversion,
+                   SelectRankOpConversion, SubcOpConversion, UndefOpConversion,
+                   UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
