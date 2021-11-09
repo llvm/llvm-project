@@ -147,7 +147,7 @@ static std::string getInstrProfErrString(instrprof_error Err,
 
   // If optional error message is not empty, append it to the message.
   if (!ErrMsg.empty())
-    OS << ": '" << ErrMsg << "'";
+    OS << ": " << ErrMsg;
 
   return OS.str();
 }
