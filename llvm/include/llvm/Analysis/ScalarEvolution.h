@@ -537,6 +537,9 @@ public:
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
   void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
 
+  /// Return true if the SCEV expression contains an undef value.
+  bool containsUndefs(const SCEV *S) const;
+
   /// Return a SCEV expression for the full generality of the specified
   /// expression.
   const SCEV *getSCEV(Value *V);
