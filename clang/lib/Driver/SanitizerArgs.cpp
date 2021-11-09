@@ -91,6 +91,8 @@ enum CoverageFeature {
   CoveragePCTable = 1 << 13,
   CoverageStackDepth = 1 << 14,
   CoverageInlineBoolFlag = 1 << 15,
+  CoverageTraceLoads = 1 << 16,
+  CoverageTraceStores = 1 << 17,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -727,8 +729,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   int InsertionPointTypes = CoverageFunc | CoverageBB | CoverageEdge;
   int InstrumentationTypes = CoverageTracePC | CoverageTracePCGuard |
-                             CoverageInline8bitCounters |
-                             CoverageInlineBoolFlag;
+                             CoverageInline8bitCounters | CoverageTraceLoads |
+                             CoverageTraceStores | CoverageInlineBoolFlag;
   if ((CoverageFeatures & InsertionPointTypes) &&
       !(CoverageFeatures & InstrumentationTypes)) {
     D.Diag(clang::diag::warn_drv_deprecated_arg)
@@ -1003,7 +1005,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                      "-fsanitize-coverage-inline-bool-flag"),
       std::make_pair(CoveragePCTable, "-fsanitize-coverage-pc-table"),
       std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune"),
-      std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth")};
+      std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth"),
+      std::make_pair(CoverageTraceLoads, "-fsanitize-coverage-trace-loads"),
+      std::make_pair(CoverageTraceStores, "-fsanitize-coverage-trace-stores")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
       CmdArgs.push_back(F.second);
@@ -1243,6 +1247,8 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A) {
                 .Case("inline-bool-flag", CoverageInlineBoolFlag)
                 .Case("pc-table", CoveragePCTable)
                 .Case("stack-depth", CoverageStackDepth)
+                .Case("trace-loads", CoverageTraceLoads)
+                .Case("trace-stores", CoverageTraceStores)
                 .Default(0);
     if (F == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

@@ -275,6 +275,12 @@ integer division instructions (to capture the right argument of division)
 and with  ``-fsanitize-coverage=trace-gep`` --
 the `LLVM GEP instructions <https://llvm.org/docs/GetElementPtr.html>`_
 (to capture array indices).
+Similarly, with ``-fsanitize-coverage=trace-loads`` and ``-fsanitize-coverage=trace-stores``
+the compiler will instrument loads and stores, respectively.
+
+Currently, these flags do not work by themselves - they require one
+of ``-fsanitize-coverage={trace-pc,inline-8bit-counters,inline-bool}``
+flags to work.
 
 Unless ``no-prune`` option is provided, some of the comparison instructions
 will not be instrumented.
@@ -311,6 +317,19 @@ will not be instrumented.
   // Called before a GetElemementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
+
+  // Called before a load of appropriate size. Addr is the address of the load.
+  void __sanitizer_cov_load1(uint8_t *addr);
+  void __sanitizer_cov_load2(uint16_t *addr);
+  void __sanitizer_cov_load4(uint32_t *addr);
+  void __sanitizer_cov_load8(uint64_t *addr);
+  void __sanitizer_cov_load16(__int128 *addr);
+  // Called before a store of appropriate size. Addr is the address of the store.
+  void __sanitizer_cov_store1(uint8_t *addr);
+  void __sanitizer_cov_store2(uint16_t *addr);
+  void __sanitizer_cov_store4(uint32_t *addr);
+  void __sanitizer_cov_store8(uint64_t *addr);
+  void __sanitizer_cov_store16(__int128 *addr);
 
 Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
 ===========================================================================

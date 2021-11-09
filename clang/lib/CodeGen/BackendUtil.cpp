@@ -247,6 +247,8 @@ getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
   Opts.InlineBoolFlag = CGOpts.SanitizeCoverageInlineBoolFlag;
   Opts.PCTable = CGOpts.SanitizeCoveragePCTable;
   Opts.StackDepth = CGOpts.SanitizeCoverageStackDepth;
+  Opts.TraceLoads = CGOpts.SanitizeCoverageTraceLoads;
+  Opts.TraceStores = CGOpts.SanitizeCoverageTraceStores;
   return Opts;
 }
 
