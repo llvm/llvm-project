@@ -286,6 +286,7 @@ group("test") {
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/llvm-tapi-diff",
+    "//llvm/tools/llvm-tli-checker",
     "//llvm/tools/llvm-undname",
     "//llvm/tools/llvm-xray",
     "//llvm/tools/lto",
