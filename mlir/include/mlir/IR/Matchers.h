@@ -110,7 +110,7 @@ struct constant_int_op_binder {
     if (type.isa<VectorType, RankedTensorType>()) {
       if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
         return attr_value_binder<IntegerAttr>(bind_value)
-            .match(splatAttr.getSplatValue());
+            .match(splatAttr.getSplatValue<Attribute>());
       }
     }
     return false;

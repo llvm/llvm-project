@@ -353,7 +353,6 @@ public:
 
   /// Return the splat value for this attribute. This asserts that the attribute
   /// corresponds to a splat.
-  Attribute getSplatValue() const { return getSplatValue<Attribute>(); }
   template <typename T>
   typename std::enable_if<!std::is_base_of<Attribute, T>::value ||
                               std::is_same<Attribute, T>::value,
