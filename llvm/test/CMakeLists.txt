@@ -120,6 +120,7 @@ set(LLVM_TEST_DEPENDS
           llvm-symbolizer
           llvm-tblgen
           llvm-tapi-diff
+          llvm-tli-checker
           llvm-undname
           llvm-windres
           llvm-xray
