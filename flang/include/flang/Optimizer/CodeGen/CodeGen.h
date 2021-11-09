@@ -25,6 +25,7 @@ std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass();
 // FirTargetRewritePass options.
 struct TargetRewriteOptions {
   bool noCharacterConversion{};
+  bool noComplexConversion{};
 };
 
 /// Prerequiste pass for code gen. Perform intermediate rewrites to tailor the

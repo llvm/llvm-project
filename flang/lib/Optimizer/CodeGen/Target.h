@@ -29,11 +29,20 @@ namespace details {
 /// LLVMContext.
 class Attributes {
 public:
-  Attributes(bool append = false) : append{append} {}
+  Attributes(unsigned short alignment = 0, bool byval = false,
+             bool sret = false, bool append = false)
+      : alignment{alignment}, byval{byval}, sret{sret}, append{append} {}
 
+  unsigned getAlignment() const { return alignment; }
+  bool hasAlignment() const { return alignment != 0; }
+  bool isByVal() const { return byval; }
+  bool isSRet() const { return sret; }
   bool isAppend() const { return append; }
 
 private:
+  unsigned short alignment{};
+  bool byval : 1;
+  bool sret : 1;
   bool append : 1;
 };
 
@@ -55,6 +64,15 @@ public:
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)} {}
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
+
+  /// Type representation of a `complex<eleTy>` type argument when passed by
+  /// value. An argument value may need to be passed as a (safe) reference
+  /// argument.
+  virtual Marshalling complexArgumentType(mlir::Type eleTy) const = 0;
+
+  /// Type representation of a `complex<eleTy>` type return value. Such a return
+  /// value may need to be converted to a hidden reference argument.
+  virtual Marshalling complexReturnType(mlir::Type eleTy) const = 0;
 
   /// Type representation of a `boxchar<n>` type argument when passed by value.
   /// An argument value may need to be passed as a (safe) reference argument.
