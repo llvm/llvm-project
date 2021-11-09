@@ -41,11 +41,9 @@ void test1a_message(void) {
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -75,11 +73,9 @@ void test1a_property(void) {
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -109,11 +105,9 @@ void test1b_message(void) {
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -140,11 +134,9 @@ void test1b_property(void) {
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -171,11 +163,9 @@ void test1c_message(void) {
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PCPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -204,11 +194,9 @@ void test1c_property(void) {
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PCPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -237,11 +225,9 @@ void test1d_message(void) {
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PCPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
@@ -267,11 +253,9 @@ void test1d_property(void) {
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
   // CHECK:      [[PTRPTR1:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
-  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
-  // CHECK-NEXT: store [[TEST1]]* [[T3]]
+  // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST1]]* [[T0]])
+  // CHECK-NEXT: store [[TEST1]]* [[T0]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PCPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**

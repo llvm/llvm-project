@@ -316,16 +316,12 @@ void test10() {
   // CHECK-NEXT: load [[TEST10]]*, [[TEST10]]** [[X]], align
   // CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_{{[0-9]*}}
   // CHECK-NEXT: bitcast
-  // CHECK-NEXT: [[T0:%.*]] = call [[TEST10]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST10]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[V:%.*]] = bitcast i8* [[T2]] to [[TEST10]]*
+  // CHECK-NEXT: [[V:%.*]] = call [[TEST10]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(%3* [[V]])
   // CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_{{[0-9]*}}
   // CHECK-NEXT: bitcast
-  // CHECK-NEXT: [[T0:%.*]] = call [[TEST10]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST10]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-  // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST10]]*
+  // CHECK-NEXT: [[T3:%.*]] = call [[TEST10]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(%3* [[T3]])
   // CHECK-NEXT: [[T4:%.*]] = bitcast [[TEST10]]* [[T3]] to i8*
   // CHECK-NEXT: store i8* [[T4]], i8** [[Y]]
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[TEST10]]* [[V]] to i8*
@@ -370,14 +366,14 @@ void test12(void) {
   __weak id x = test12_helper();
   // CHECK-NEXT: [[XPTR1:%.*]] = bitcast i8** [[X]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @test12_helper()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @test12_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[X]], i8* [[T1]])
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
 
   x = test12_helper();
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @test12_helper()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @test12_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: call i8* @llvm.objc.storeWeak(i8** [[X]], i8* [[T1]])
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
 
@@ -513,8 +509,8 @@ void test19() {
   extern id test19_helper(void);
   x[2] = test19_helper();
 
-  // CHECK-NEXT: [[CALL:%.*]] = call i8* @test19_helper()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[CALL]]) [[NUW]]
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @test19_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[X]], i64 0, i64 2
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[SLOT]]
   // CHECK-NEXT: store i8* [[T1]], i8** [[SLOT]]
@@ -875,8 +871,8 @@ char *helper;
 
 __attribute__((ns_returns_retained)) id test32(void) {
 // CHECK-LABEL:    define{{.*}} i8* @test32()
-// CHECK:      [[CALL:%.*]] = call i8* @test32_helper()
-// CHECK-NEXT: [[T0:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[CALL]])
+// CHECK:      [[T0:%.*]] = call i8* @test32_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T0]])
 // CHECK-NEXT: ret i8* [[T0]]
   extern id test32_helper(void);
   return test32_helper();
@@ -1044,8 +1040,8 @@ void test37(void) {
 - (id) test __attribute__((ns_returns_retained)) {
   extern id test43_produce(void);
   return test43_produce();
-  // CHECK:      call i8* @test43_produce()
-  // CHECK-NEXT: notail call i8* @llvm.objc.retainAutoreleasedReturnValue(
+  // CHECK:      call i8* @test43_produce(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(
   // CHECK-NEXT: ret
 }
 @end
@@ -1066,8 +1062,8 @@ void test46(__weak id *wp, __weak volatile id *wvp) {
 
   // TODO: this is sub-optimal, we should retain at the actual call site.
 
-  // CHECK:      [[T0:%.*]] = call i8* @test46_helper()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call i8* @test46_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: [[T2:%.*]] = load i8**, i8*** {{%.*}}, align 8
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.retain(i8* [[T3]])
@@ -1075,8 +1071,8 @@ void test46(__weak id *wp, __weak volatile id *wvp) {
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
   id x = *wp = test46_helper();
 
-  // CHECK:      [[T0:%.*]] = call i8* @test46_helper()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call i8* @test46_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: [[T2:%.*]] = load i8**, i8*** {{%.*}}, align 8
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.retain(i8* [[T3]])
@@ -1095,8 +1091,8 @@ void test47(void) {
   // CHECK-NEXT: [[XPTR1:%.*]] = bitcast i8** [[X]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
   // CHECK-NEXT: store i8* null, i8** [[X]]
-  // CHECK-NEXT: [[CALL:%.*]] = call i8* @test47_helper()
-  // CHECK-NEXT: [[T0:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[CALL]])
+  // CHECK-NEXT: [[T0:%.*]] = call i8* @test47_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T0]])
   // CHECK-NEXT: [[T1:%.*]] = load i8*, i8** [[X]]
   // CHECK-NEXT: store i8* [[T0]], i8** [[X]]
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
@@ -1119,8 +1115,8 @@ void test48(void) {
   // CHECK-NEXT: [[XPTR1:%.*]] = bitcast i8** [[X]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = call i8* @llvm.objc.initWeak(i8** [[X]], i8* null)
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @test48_helper()
-  // CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @test48_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T2]])
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[X]], i8* [[T2]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[X]], i8* [[T3]])
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])
@@ -1138,10 +1134,10 @@ void test49(void) {
   // CHECK-NEXT: [[XPTR1:%.*]] = bitcast i8** [[X]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
   // CHECK-NEXT: store i8* null, i8** [[X]]
-  // CHECK-NEXT: [[CALL:%.*]] = call i8* @test49_helper()
-  // CHECK-NEXT: [[T0:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[CALL]])
+  // CHECK-NEXT: [[T0:%.*]] = call i8* @test49_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T0]])
   // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.autorelease(i8* [[T0]])
-  // CHECK-NEXT: store i8* [[T2]], i8** [[X]]
+  // CHECK-NEXT: store i8* [[T1]], i8** [[X]]
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.retainAutorelease(i8* [[T1]])
   // CHECK-NEXT: store i8* [[T3]], i8** [[X]]
   // CHECK-NEXT: [[XPTR2:%.*]] = bitcast i8** [[X]] to i8*
@@ -1207,8 +1203,8 @@ void test53(void) {
 // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
 // CHECK-NEXT: [[YPTR1:%.*]] = bitcast i8** [[Y]] to i8*
 // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[YPTR1]])
-// CHECK-NEXT: [[T0:%.*]] = call i8* @test53_helper()
-// CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = call i8* @test53_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
 // CHECK-NEXT: store i8* [[T1]], i8** [[Y]],
 // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[Y]],
 // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]])
@@ -1260,8 +1256,8 @@ void test54(int first, ...) {
 // CHECK: define internal i8* @"\01+[Test56 make]"(
 + (id) make {
   extern id test56_helper(void);
-  // CHECK:      [[T0:%.*]] = call i8* @test56_helper()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call i8* @test56_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: ret i8* [[T1]]
   return test56_helper();
 }
@@ -1327,8 +1323,8 @@ void test59(void) {
   }
 
   // CHECK-LABEL:    define{{.*}} void @test59()
-  // CHECK:      [[T0:%.*]] = call i8* @test59_getlock()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call i8* @test59_getlock(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: call i32 @objc_sync_enter(i8* [[T1]])
   // CHECK-NEXT: call void @test59_body()
   // CHECK-NEXT: call i32 @objc_sync_exit(i8* [[T1]])
@@ -1349,8 +1345,8 @@ void test61(void) {
 
   extern id test61_make(void);
 
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @test61_make()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T0:%.*]] = call i8* @test61_make(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T0]])
   // CHECK-NEXT: [[T2:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T3:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T4:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* [[T1]], i8* [[T3]], i8* [[T2]])
@@ -1359,12 +1355,12 @@ void test61(void) {
 
   // CHECK-NEXT: [[YPTR1:%.*]] = bitcast i8** [[Y]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[YPTR1]])
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @test61_make()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @test61_make(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: [[T2:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T3:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-  // CHECK-NEXT: [[T4:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* [[T1]], i8* [[T3]], i8* [[T2]])
-  // CHECK-NEXT: [[T5:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T4]])
+  // CHECK-NEXT: [[T5:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* [[T1]], i8* [[T3]], i8* [[T2]]){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T5]])
   // CHECK-NEXT: store i8* [[T5]], i8** [[Y]]
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
   id y = [test61_make() performSelector: @selector(test61_id)];
@@ -1399,8 +1395,8 @@ void test62(void) {
     // CHECK-NEXT: [[T1:%.*]] = icmp ne i32 [[T0]], 0
     // CHECK-NEXT: store i1 false, i1* [[CLEANUP_REQUIRED]]
     // CHECK-NEXT: br i1 [[T1]],
-    // CHECK:      [[T0:%.*]] = call i8* @test62_make()
-    // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+    // CHECK:      [[T1:%.*]] = call i8* @test62_make(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+    // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
     // CHECK-NEXT: store i8* [[T1]], i8** [[CLEANUP_VALUE]]
     // CHECK-NEXT: store i1 true, i1* [[CLEANUP_REQUIRED]]
     // CHECK-NEXT: [[T2:%.*]] = icmp ne i8* [[T1]], null
@@ -1453,19 +1449,17 @@ void test66(void) {
   [test66_receiver() consume: test66_arg()];
 }
 // CHECK-LABEL:    define{{.*}} void @test66()
-// CHECK:      [[T0:%.*]] = call [[TEST66:%.*]]* @test66_receiver()
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST66]]* [[T0]] to i8*
-// CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-// CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST66]]*
-// CHECK-NEXT: [[T4:%.*]] = call i8* @test66_arg()
-// CHECK-NEXT: [[T5:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T4]])
+// CHECK:      [[T3:%.*]] = call [[TEST66:%.*]]* @test66_receiver(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[TEST66]]* [[T3]])
+// CHECK-NEXT: [[T4:%.*]] = call i8* @test66_arg(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T4]])
 // CHECK-NEXT: [[T6:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
 // CHECK-NEXT: [[T7:%.*]] = bitcast [[TEST66]]* [[T3]] to i8*
 // CHECK-NEXT: [[SIX:%.*]] = icmp eq i8* [[T7]], null
 // CHECK-NEXT: br i1 [[SIX]], label [[NULINIT:%.*]], label [[CALL:%.*]]
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*)*)(i8* [[T7]], i8* [[T6]], i8* [[T5]])
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*)*)(i8* [[T7]], i8* [[T6]], i8* [[T4]])
 // CHECK-NEXT: br label [[CONT:%.*]]
-// CHECK: call void @llvm.objc.release(i8* [[T5]]) [[NUW]]
+// CHECK: call void @llvm.objc.release(i8* [[T4]]) [[NUW]]
 // CHECK-NEXT: br label [[CONT:%.*]]
 // CHECK: [[T8:%.*]] = bitcast [[TEST66]]* [[T3]] to i8*
 // CHECK-NEXT: call void @llvm.objc.release(i8* [[T8]])
@@ -1494,8 +1488,8 @@ void test68(void) {
 // CHECK:      [[CL:%.*]] = alloca i8*, align 8
 // CHECK-NEXT: [[CLPTR1:%.*]] = bitcast i8** [[CL]] to i8*
 // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CLPTR1]])
-// CHECK-NEXT: [[T0:%.*]] = call i8* @test67_helper()
-// CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = call i8* @test67_helper(){{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
 // CHECK-NEXT: store i8* [[T1]], i8** [[CL]], align 8
 // CHECK-NEXT: [[T2:%.*]] = load i8*, i8** [[CL]]
 // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])

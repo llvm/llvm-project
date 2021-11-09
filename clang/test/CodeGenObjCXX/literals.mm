@@ -28,22 +28,19 @@ void test_array() {
   // CHECK-NEXT: [[TMP_CAST:%.*]] = bitcast {{.*}} [[TMPX]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP_CAST]])
   // CHECK-NEXT: call void @_ZN1XC1Ev({{.*}} [[TMPX]])
-  // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1XcvP11objc_objectEv
-  // CHECK: [[RET0:%[a-zA-Z0-9.]+]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[OBJECT0]])
-  // CHECK: store i8* [[RET0]], i8** [[ELEMENT0]]
+  // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1XcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK: store i8* [[OBJECT0]], i8** [[ELEMENT0]]
   
   // Initializing the second element
   // CHECK: [[ELEMENT1:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OBJECTS]], i64 0, i64 1
   // CHECK-NEXT: [[TMP_CAST:%.*]] = bitcast {{.*}} [[TMPY]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP_CAST]])
   // CHECK-NEXT: invoke void @_ZN1YC1Ev({{.*}} [[TMPY]])
-  // CHECK: [[OBJECT1:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1YcvP11objc_objectEv
-  // CHECK: [[RET1:%[a-zA-Z0-9.]+]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[OBJECT1]])
-  // CHECK: store i8* [[RET1]], i8** [[ELEMENT1]]
+  // CHECK: [[OBJECT1:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1YcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK: store i8* [[OBJECT1]], i8** [[ELEMENT1]]
 
   // Build the array
-  // CHECK: {{invoke.*@objc_msgSend}}
-  // CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue
+  // CHECK: {{invoke.*@objc_msgSend}}{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id arr = @[ X(), Y() ];
 
   // Destroy temporaries
@@ -82,20 +79,17 @@ void test_array_instantiation() {
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTR1]])
   // CHECK: [[ELEMENT0:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OBJECTS]], i64 0, i64 0
   // CHECK: call void @_ZN1XC1Ev
-  // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1XcvP11objc_objectEv
-  // CHECK: [[RET0:%[a-zA-Z0-9.]+]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[OBJECT0]])
-  // CHECK: store i8* [[RET0]], i8** [[ELEMENT0]]
+  // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1XcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK: store i8* [[OBJECT0]], i8** [[ELEMENT0]]
   
   // Initializing the second element
   // CHECK: [[ELEMENT1:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OBJECTS]], i64 0, i64 1
   // CHECK: invoke void @_ZN1YC1Ev
-  // CHECK: [[OBJECT1:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1YcvP11objc_objectEv
-  // CHECK: [[RET1:%[a-zA-Z0-9.]+]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[OBJECT1]])
-  // CHECK: store i8* [[RET1]], i8** [[ELEMENT1]]
+  // CHECK: [[OBJECT1:%[a-zA-Z0-9.]+]] = invoke i8* @_ZNK1YcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK: store i8* [[OBJECT1]], i8** [[ELEMENT1]]
 
   // Build the array
-  // CHECK: {{invoke.*@objc_msgSend}}
-  // CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue
+  // CHECK: {{invoke.*@objc_msgSend}}{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id arr = @[ X(), Y() ];
 
   // Destroy temporaries
