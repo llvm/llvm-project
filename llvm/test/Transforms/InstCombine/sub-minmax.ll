@@ -501,9 +501,8 @@ define i8 @umin_not_sub_intrinsic_uses(i8 %x, i8 %y) {
 
 define i8 @umax_sub_op0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_sub_op0(
-; CHECK-NEXT:    [[U:%.*]] = call i8 @llvm.umax.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[U]], [[Y]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %u = call i8 @llvm.umax.i8(i8 %y, i8 %x)
   %r = sub i8 %u, %y
