@@ -65,6 +65,9 @@ public:
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
 
+  /// Type presentation of a `complex<ele>` type value in memory.
+  virtual mlir::Type complexMemoryType(mlir::Type eleTy) const = 0;
+
   /// Type representation of a `complex<eleTy>` type argument when passed by
   /// value. An argument value may need to be passed as a (safe) reference
   /// argument.
