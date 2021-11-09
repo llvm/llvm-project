@@ -4890,40 +4890,70 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   Register Reg = MI->getOperand(0).getReg();
-  const GlobalValue *GV =
-      cast<GlobalValue>((*MI->memoperands_begin())->getValue());
-  bool IsIndirect = Subtarget.isGVIndirectSymbol(GV);
   MachineInstrBuilder MIB;
+  unsigned int Offset = 0;
 
-  unsigned TargetFlags = ARMII::MO_NO_FLAG;
-  if (Subtarget.isTargetMachO()) {
-    TargetFlags |= ARMII::MO_NONLAZY;
-  } else if (Subtarget.isTargetCOFF()) {
-    if (GV->hasDLLImportStorageClass())
-      TargetFlags |= ARMII::MO_DLLIMPORT;
-    else if (IsIndirect)
-      TargetFlags |= ARMII::MO_COFFSTUB;
-  } else if (Subtarget.isGVInGOT(GV)) {
-    TargetFlags |= ARMII::MO_GOT;
-  }
+  if (LoadImmOpc == ARM::MRC || LoadImmOpc == ARM::t2MRC) {
+    assert(Subtarget.isReadTPHard() &&
+           "TLS stack protector requires hardware TLS register");
 
-  BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
-      .addGlobalAddress(GV, 0, TargetFlags);
+    BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
+        .addImm(15)
+        .addImm(0)
+        .addImm(13)
+        .addImm(0)
+        .addImm(3)
+        .add(predOps(ARMCC::AL));
 
-  if (IsIndirect) {
-    MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
-    MIB.addReg(Reg, RegState::Kill).addImm(0);
-    auto Flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MODereferenceable |
-                 MachineMemOperand::MOInvariant;
-    MachineMemOperand *MMO = MBB.getParent()->getMachineMemOperand(
-        MachinePointerInfo::getGOT(*MBB.getParent()), Flags, 4, Align(4));
-    MIB.addMemOperand(MMO).add(predOps(ARMCC::AL));
+    Module &M = *MBB.getParent()->getFunction().getParent();
+    Offset = M.getStackProtectorGuardOffset();
+    if (Offset & ~0xfffU) {
+      // The offset won't fit in the LDR's 12-bit immediate field, so emit an
+      // extra ADD to cover the delta. This gives us a guaranteed 8 additional
+      // bits, resulting in a range of 0 to +1 MiB for the guard offset.
+      unsigned AddOpc = (LoadImmOpc == ARM::MRC) ? ARM::ADDri : ARM::t2ADDri;
+      BuildMI(MBB, MI, DL, get(AddOpc), Reg)
+          .addReg(Reg, RegState::Kill)
+          .addImm(Offset & ~0xfffU)
+          .add(predOps(ARMCC::AL))
+          .addReg(0);
+      Offset &= 0xfffU;
+    }
+  } else {
+    const GlobalValue *GV =
+        cast<GlobalValue>((*MI->memoperands_begin())->getValue());
+    bool IsIndirect = Subtarget.isGVIndirectSymbol(GV);
+
+    unsigned TargetFlags = ARMII::MO_NO_FLAG;
+    if (Subtarget.isTargetMachO()) {
+      TargetFlags |= ARMII::MO_NONLAZY;
+    } else if (Subtarget.isTargetCOFF()) {
+      if (GV->hasDLLImportStorageClass())
+        TargetFlags |= ARMII::MO_DLLIMPORT;
+      else if (IsIndirect)
+        TargetFlags |= ARMII::MO_COFFSTUB;
+    } else if (Subtarget.isGVInGOT(GV)) {
+      TargetFlags |= ARMII::MO_GOT;
+    }
+
+    BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
+        .addGlobalAddress(GV, 0, TargetFlags);
+
+    if (IsIndirect) {
+      MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
+      MIB.addReg(Reg, RegState::Kill).addImm(0);
+      auto Flags = MachineMemOperand::MOLoad |
+                   MachineMemOperand::MODereferenceable |
+                   MachineMemOperand::MOInvariant;
+      MachineMemOperand *MMO = MBB.getParent()->getMachineMemOperand(
+          MachinePointerInfo::getGOT(*MBB.getParent()), Flags, 4, Align(4));
+      MIB.addMemOperand(MMO).add(predOps(ARMCC::AL));
+    }
   }
 
   MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
   MIB.addReg(Reg, RegState::Kill)
-      .addImm(0)
+      .addImm(Offset)
       .cloneMemRefs(*MI)
       .add(predOps(ARMCC::AL));
 }

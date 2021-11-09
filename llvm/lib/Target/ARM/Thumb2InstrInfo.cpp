@@ -250,6 +250,13 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 void Thumb2InstrInfo::expandLoadStackGuard(
     MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
+  Module &M = *MF.getFunction().getParent();
+
+  if (M.getStackProtectorGuard() == "tls") {
+    expandLoadStackGuardBase(MI, ARM::t2MRC, ARM::t2LDRi12);
+    return;
+  }
+
   const GlobalValue *GV =
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 

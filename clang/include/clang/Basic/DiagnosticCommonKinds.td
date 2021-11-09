@@ -298,6 +298,8 @@ def err_target_unsupported_unaligned : Error<
   "the %0 sub-architecture does not support unaligned accesses">;
 def err_target_unsupported_execute_only : Error<
   "execute only is not supported for the %0 sub-architecture">;
+def err_target_unsupported_tp_hard : Error<
+  "hardware TLS register is not supported for the %0 sub-architecture">;
 def err_target_unsupported_mcmse : Error<
   "-mcmse is not supported for %0">;
 def err_opt_not_valid_with_opt : Error<
