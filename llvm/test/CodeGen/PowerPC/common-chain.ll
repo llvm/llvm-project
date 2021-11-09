@@ -771,9 +771,9 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r31, -8(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r2, -152(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r9, -176(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r8, -168(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r7, -160(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r9, -160(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r8, -176(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r7, -168(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    blt cr0, .LBB7_7
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r6, r6, 2
@@ -789,66 +789,71 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    rldicl r7, r7, 62, 2
 ; CHECK-NEXT:    sldi r10, r12, 2
 ; CHECK-NEXT:    ld r2, -168(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r31, -160(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    rldicl r7, r7, 2, 1
 ; CHECK-NEXT:    std r7, -184(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld r7, -160(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    add r8, r7, r10
+; CHECK-NEXT:    mr r22, r7
 ; CHECK-NEXT:    mr r7, r4
-; CHECK-NEXT:    ld r4, -176(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    add r8, r4, r10
+; CHECK-NEXT:    mr r4, r3
+; CHECK-NEXT:    ld r3, -176(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    sldi r8, r8, 3
 ; CHECK-NEXT:    add r9, r5, r8
-; CHECK-NEXT:    add r8, r2, r10
-; CHECK-NEXT:    add r10, r31, r10
+; CHECK-NEXT:    add r8, r3, r10
+; CHECK-NEXT:    add r10, r2, r10
 ; CHECK-NEXT:    sldi r10, r10, 3
 ; CHECK-NEXT:    sldi r8, r8, 3
 ; CHECK-NEXT:    add r30, r5, r10
 ; CHECK-NEXT:    add r29, r7, r10
-; CHECK-NEXT:    add r28, r3, r10
+; CHECK-NEXT:    add r28, r4, r10
 ; CHECK-NEXT:    sldi r10, r12, 1
 ; CHECK-NEXT:    add r8, r5, r8
 ; CHECK-NEXT:    add r11, r12, r10
-; CHECK-NEXT:    add r0, r4, r11
+; CHECK-NEXT:    add r0, r22, r11
 ; CHECK-NEXT:    sldi r0, r0, 3
 ; CHECK-NEXT:    add r27, r5, r0
-; CHECK-NEXT:    add r0, r2, r11
-; CHECK-NEXT:    add r11, r31, r11
+; CHECK-NEXT:    add r0, r3, r11
+; CHECK-NEXT:    add r11, r2, r11
 ; CHECK-NEXT:    sldi r11, r11, 3
 ; CHECK-NEXT:    sldi r0, r0, 3
 ; CHECK-NEXT:    add r25, r5, r11
 ; CHECK-NEXT:    add r24, r7, r11
-; CHECK-NEXT:    add r23, r3, r11
-; CHECK-NEXT:    add r11, r4, r10
+; CHECK-NEXT:    add r23, r4, r11
+; CHECK-NEXT:    add r11, r22, r10
 ; CHECK-NEXT:    add r26, r5, r0
+; CHECK-NEXT:    mr r0, r22
 ; CHECK-NEXT:    sldi r11, r11, 3
 ; CHECK-NEXT:    add r22, r5, r11
-; CHECK-NEXT:    add r11, r2, r10
-; CHECK-NEXT:    add r10, r31, r10
+; CHECK-NEXT:    add r11, r3, r10
+; CHECK-NEXT:    add r10, r2, r10
 ; CHECK-NEXT:    sldi r10, r10, 3
 ; CHECK-NEXT:    sldi r11, r11, 3
 ; CHECK-NEXT:    add r20, r5, r10
 ; CHECK-NEXT:    add r19, r7, r10
-; CHECK-NEXT:    add r18, r3, r10
-; CHECK-NEXT:    add r10, r12, r4
+; CHECK-NEXT:    add r18, r4, r10
+; CHECK-NEXT:    add r10, r12, r0
 ; CHECK-NEXT:    add r21, r5, r11
 ; CHECK-NEXT:    sldi r11, r2, 3
 ; CHECK-NEXT:    sldi r10, r10, 3
 ; CHECK-NEXT:    add r17, r5, r10
-; CHECK-NEXT:    add r10, r12, r2
+; CHECK-NEXT:    add r10, r12, r3
 ; CHECK-NEXT:    sldi r10, r10, 3
 ; CHECK-NEXT:    add r16, r5, r10
-; CHECK-NEXT:    add r10, r12, r31
-; CHECK-NEXT:    sldi r31, r31, 3
-; CHECK-NEXT:    sub r0, r11, r31
-; CHECK-NEXT:    sldi r11, r4, 3
-; CHECK-NEXT:    mr r4, r7
-; CHECK-NEXT:    ld r7, -184(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    add r10, r12, r2
 ; CHECK-NEXT:    sldi r10, r10, 3
 ; CHECK-NEXT:    add r15, r5, r10
-; CHECK-NEXT:    add r14, r3, r10
-; CHECK-NEXT:    sub r31, r11, r31
-; CHECK-NEXT:    add r2, r4, r10
+; CHECK-NEXT:    add r14, r7, r10
+; CHECK-NEXT:    add r31, r4, r10
+; CHECK-NEXT:    sldi r10, r3, 3
+; CHECK-NEXT:    mr r3, r4
+; CHECK-NEXT:    mr r4, r7
+; CHECK-NEXT:    ld r7, -160(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    sub r0, r10, r11
+; CHECK-NEXT:    sldi r10, r7, 3
+; CHECK-NEXT:    ld r7, -184(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    sub r2, r10, r11
 ; CHECK-NEXT:    li r11, 0
 ; CHECK-NEXT:    mr r10, r12
-; CHECK-NEXT:    rldicl r7, r7, 2, 1
 ; CHECK-NEXT:    addi r7, r7, -4
 ; CHECK-NEXT:    rldicl r7, r7, 62, 2
 ; CHECK-NEXT:    addi r7, r7, 1
@@ -857,8 +862,8 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_3: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lfd f0, 0(r14)
-; CHECK-NEXT:    lfd f1, 0(r2)
+; CHECK-NEXT:    lfd f0, 0(r31)
+; CHECK-NEXT:    lfd f1, 0(r14)
 ; CHECK-NEXT:    add r10, r10, r12
 ; CHECK-NEXT:    add r10, r10, r12
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
@@ -868,16 +873,16 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfd f0, 0(r15)
 ; CHECK-NEXT:    add r15, r15, r7
-; CHECK-NEXT:    lfdx f0, r14, r0
-; CHECK-NEXT:    lfdx f1, r2, r0
+; CHECK-NEXT:    lfdx f0, r31, r0
+; CHECK-NEXT:    lfdx f1, r14, r0
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r16, r11
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r16, r11
-; CHECK-NEXT:    lfdx f0, r14, r31
-; CHECK-NEXT:    lfdx f1, r2, r31
+; CHECK-NEXT:    lfdx f0, r31, r2
+; CHECK-NEXT:    lfdx f1, r14, r2
+; CHECK-NEXT:    add r31, r31, r7
 ; CHECK-NEXT:    add r14, r14, r7
-; CHECK-NEXT:    add r2, r2, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r17, r11
 ; CHECK-NEXT:    xsadddp f0, f1, f0
@@ -894,8 +899,8 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    lfdx f1, r21, r11
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r21, r11
-; CHECK-NEXT:    lfdx f0, r18, r31
-; CHECK-NEXT:    lfdx f1, r19, r31
+; CHECK-NEXT:    lfdx f0, r18, r2
+; CHECK-NEXT:    lfdx f1, r19, r2
 ; CHECK-NEXT:    add r18, r18, r7
 ; CHECK-NEXT:    add r19, r19, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
@@ -914,8 +919,8 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    lfdx f1, r26, r11
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r26, r11
-; CHECK-NEXT:    lfdx f0, r23, r31
-; CHECK-NEXT:    lfdx f1, r24, r31
+; CHECK-NEXT:    lfdx f0, r23, r2
+; CHECK-NEXT:    lfdx f1, r24, r2
 ; CHECK-NEXT:    add r23, r23, r7
 ; CHECK-NEXT:    add r24, r24, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
@@ -934,8 +939,8 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    lfdx f1, r8, r11
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r8, r11
-; CHECK-NEXT:    lfdx f0, r28, r31
-; CHECK-NEXT:    lfdx f1, r29, r31
+; CHECK-NEXT:    lfdx f0, r28, r2
+; CHECK-NEXT:    lfdx f1, r29, r2
 ; CHECK-NEXT:    add r28, r28, r7
 ; CHECK-NEXT:    add r29, r29, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
@@ -948,46 +953,44 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    cmpldi r6, 0
 ; CHECK-NEXT:    beq cr0, .LBB7_7
 ; CHECK-NEXT:  # %bb.5: # %for.body.epil.preheader
-; CHECK-NEXT:    ld r0, -168(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r7, -176(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    sldi r8, r12, 3
-; CHECK-NEXT:    add r0, r10, r0
+; CHECK-NEXT:    ld r12, -176(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r7, -160(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    add r12, r10, r12
 ; CHECK-NEXT:    add r7, r10, r7
-; CHECK-NEXT:    sldi r0, r0, 3
+; CHECK-NEXT:    sldi r0, r12, 3
 ; CHECK-NEXT:    sldi r11, r7, 3
-; CHECK-NEXT:    add r30, r5, r0
-; CHECK-NEXT:    add r29, r4, r0
-; CHECK-NEXT:    add r28, r3, r0
-; CHECK-NEXT:    ld r0, -160(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    add r12, r5, r0
+; CHECK-NEXT:    add r30, r4, r0
+; CHECK-NEXT:    add r29, r3, r0
+; CHECK-NEXT:    ld r0, -168(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    add r7, r5, r11
 ; CHECK-NEXT:    add r9, r4, r11
 ; CHECK-NEXT:    add r11, r3, r11
 ; CHECK-NEXT:    add r10, r10, r0
-; CHECK-NEXT:    sub r12, r10, r12
 ; CHECK-NEXT:    sldi r10, r10, 3
-; CHECK-NEXT:    sldi r12, r12, 3
 ; CHECK-NEXT:    add r5, r5, r10
+; CHECK-NEXT:    add r4, r4, r10
+; CHECK-NEXT:    add r3, r3, r10
 ; CHECK-NEXT:    li r10, 0
-; CHECK-NEXT:    add r3, r3, r12
-; CHECK-NEXT:    add r4, r4, r12
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_6: # %for.body.epil
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lfdux f0, r4, r8
-; CHECK-NEXT:    lfdux f1, r3, r8
+; CHECK-NEXT:    lfdx f0, r3, r10
+; CHECK-NEXT:    lfdx f1, r4, r10
 ; CHECK-NEXT:    addi r6, r6, -1
 ; CHECK-NEXT:    cmpldi r6, 0
-; CHECK-NEXT:    xsmuldp f0, f1, f0
+; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfd f1, 0(r5)
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfd f0, 0(r5)
 ; CHECK-NEXT:    add r5, r5, r8
-; CHECK-NEXT:    lfdx f0, r28, r10
-; CHECK-NEXT:    lfdx f1, r29, r10
-; CHECK-NEXT:    xsmuldp f0, f0, f1
+; CHECK-NEXT:    lfdx f0, r29, r10
 ; CHECK-NEXT:    lfdx f1, r30, r10
+; CHECK-NEXT:    xsmuldp f0, f0, f1
+; CHECK-NEXT:    lfdx f1, r12, r10
 ; CHECK-NEXT:    xsadddp f0, f1, f0
-; CHECK-NEXT:    stfdx f0, r30, r10
+; CHECK-NEXT:    stfdx f0, r12, r10
 ; CHECK-NEXT:    lfdx f0, r11, r10
 ; CHECK-NEXT:    lfdx f1, r9, r10
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
