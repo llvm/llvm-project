@@ -345,7 +345,7 @@ __attribute__((constructor(0))) void __hwasan_init() {
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.
-  GetCurrentThread()->InitRandomState();
+  GetCurrentThread()->EnsureRandomStateInited();
 
   SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
   // This may call libc -> needs initialized shadow.

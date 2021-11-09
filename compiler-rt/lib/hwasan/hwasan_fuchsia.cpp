@@ -130,7 +130,7 @@ static void ThreadCreateHook(void *hook, bool aborted) {
 static void ThreadStartHook(void *hook, thrd_t self) {
   Thread *thread = static_cast<Thread *>(hook);
   FinishThreadInitialization(thread);
-  thread->InitRandomState();
+  thread->EnsureRandomStateInited();
 }
 
 // This is the function that sets up the stack ring buffer and enables us to use
