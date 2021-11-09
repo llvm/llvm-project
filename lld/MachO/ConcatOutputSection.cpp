@@ -329,7 +329,7 @@ void ConcatOutputSection::finalize() {
           thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
           /*size=*/thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
           /*isThumb=*/false, /*isReferencedDynamically=*/false,
-          /*noDeadStrip=*/false);
+          /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
       thunkInfo.sym->used = true;
       target->populateThunk(thunkInfo.isec, funcSym);
       finalizeOne(thunkInfo.isec);

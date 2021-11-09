@@ -119,6 +119,33 @@
 # GLOBBY-DAG: globby_also
 # GLOBBY-NOT: literal_only
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/autohide.s -o %t/autohide.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/autohide-private-extern.s -o %t/autohide-private-extern.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/glob-private-extern.s -o %t/glob-private-extern.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/weak-private-extern.s -o %t/weak-private-extern.o
+## Test that we can export the autohide symbol but not when it's also
+## private-extern
+# RUN: %lld -dylib -exported_symbol "_foo" %t/autohide.o -o %t/exp-autohide.dylib
+# RUN: llvm-nm -g %t/exp-autohide.dylib | FileCheck %s --check-prefix=EXP-AUTOHIDE
+
+# RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide-private-extern.o \
+# RUN: -o /dev/null  2>&1 | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+
+# RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   %t/glob-private-extern.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+
+# RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   %t/weak-private-extern.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+
+# EXP-AUTOHIDE: T _foo        
+# AUTOHIDE-PRIVATE: error: cannot export hidden symbol _foo
+        
 #--- default.s
 
 .globl _keep_globl, _hide_globl
@@ -164,3 +191,29 @@ globby_also:
   l?ter[aeiou]l_*[^y] # comment
 
   *gl?bby_*
+
+#--- autohide.s
+.globl _foo
+.weak_def_can_be_hidden _foo
+_foo:
+  retq
+
+#--- autohide-private-extern.s
+.globl _foo
+.weak_def_can_be_hidden _foo
+.private_extern _foo
+_foo:
+  retq
+
+#--- glob-private-extern.s
+.global _foo
+.private_extern _foo
+_foo:
+  retq
+
+#--- weak-private-extern.s
+.global _foo
+.weak_definition _foo
+.private_extern _foo        
+_foo:
+  retq

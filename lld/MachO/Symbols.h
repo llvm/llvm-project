@@ -113,7 +113,8 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb, bool isReferencedDynamically, bool noDeadStrip);
+          bool isThumb, bool isReferencedDynamically, bool noDeadStrip,
+          bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -159,6 +160,8 @@ public:
   // metadata. This is information only for the static linker and not written
   // to the output.
   bool noDeadStrip : 1;
+
+  bool weakDefCanBeHidden : 1;
 
 private:
   const bool weakDef : 1;
