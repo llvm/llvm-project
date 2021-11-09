@@ -143,9 +143,6 @@ static std::string getInstrProfErrString(instrprof_error Err,
     OS << "profile uses zlib compression but the profile reader was built "
           "without zlib support";
     break;
-  default:
-    llvm_unreachable("A value of instrprof_error has no message.");
-    break;
   }
 
   // If optional error message is not empty, append it to the message.
