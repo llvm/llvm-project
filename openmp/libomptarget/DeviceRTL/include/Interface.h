@@ -206,6 +206,9 @@ uint32_t __kmpc_get_hardware_thread_id_in_block();
 /// External interface to get the number of threads.
 uint32_t __kmpc_get_hardware_num_threads_in_block();
 
+/// External interface to get the warp size.
+uint32_t __kmpc_get_warp_size();
+
 /// Kernel
 ///
 ///{

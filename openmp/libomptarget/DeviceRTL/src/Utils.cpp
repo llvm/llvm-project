@@ -24,6 +24,7 @@ namespace _OMP {
 __attribute__((used, weak, optnone)) void keepAlive() {
   __kmpc_get_hardware_thread_id_in_block();
   __kmpc_get_hardware_num_threads_in_block();
+  __kmpc_get_warp_size();
   __kmpc_barrier_simple_spmd(nullptr, 0);
   __kmpc_barrier_simple_generic(nullptr, 0);
 }

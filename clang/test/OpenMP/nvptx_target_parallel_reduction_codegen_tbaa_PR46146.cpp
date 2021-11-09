@@ -461,7 +461,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = bitcast %"class.std::complex"* [[TMP12]] to i64*
 // CHECK1-NEXT:    [[TMP16:%.*]] = bitcast %"class.std::complex"* [[DOTOMP_REDUCTION_ELEMENT]] to i64*
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP15]], align 4
-// CHECK1-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK1-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 // CHECK1-NEXT:    [[TMP18:%.*]] = trunc i32 [[NVPTX_WARP_SIZE]] to i16
 // CHECK1-NEXT:    [[TMP19:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP17]], i16 [[TMP7]], i16 [[TMP18]])
 // CHECK1-NEXT:    store i64 [[TMP19]], i64* [[TMP16]], align 4
@@ -520,10 +520,10 @@ void test() {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
-// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK1-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK1-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK1-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID2]], 31
-// CHECK1-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK1-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK1-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[NVPTX_TID3]], 5
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to [1 x i8*]*
@@ -553,7 +553,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[NVPTX_TID]], [[TMP13]]
 // CHECK1-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
-// CHECK1:       then4:
+// CHECK1:       then2:
 // CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], [32 x i32] addrspace(3)* @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_TID]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[TMP4]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i8*, i8** [[TMP15]], align 8, !tbaa [[TBAA12]]
@@ -562,9 +562,9 @@ void test() {
 // CHECK1-NEXT:    [[TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[TMP14]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP19]], i32* [[TMP18]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    br label [[IFCONT6:%.*]]
-// CHECK1:       else5:
+// CHECK1:       else3:
 // CHECK1-NEXT:    br label [[IFCONT6]]
-// CHECK1:       ifcont6:
+// CHECK1:       ifcont4:
 // CHECK1-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK1-NEXT:    store i32 [[TMP20]], i32* [[DOTCNT_ADDR]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    br label [[PRECOND]]
@@ -1040,7 +1040,7 @@ void test() {
 // CHECK1-NEXT:    br i1 [[TMP24]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
 // CHECK1:       .shuffle.then:
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i64, i64* [[TMP17]], align 8
-// CHECK1-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK1-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 // CHECK1-NEXT:    [[TMP26:%.*]] = trunc i32 [[NVPTX_WARP_SIZE]] to i16
 // CHECK1-NEXT:    [[TMP27:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP25]], i16 [[TMP7]], i16 [[TMP26]])
 // CHECK1-NEXT:    store i64 [[TMP27]], i64* [[TMP18]], align 8
@@ -1101,10 +1101,10 @@ void test() {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
-// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK1-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK1-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK1-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID2]], 31
-// CHECK1-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK1-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK1-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[NVPTX_TID3]], 5
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to [1 x i8*]*
@@ -1134,7 +1134,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[NVPTX_TID]], [[TMP13]]
 // CHECK1-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
-// CHECK1:       then4:
+// CHECK1:       then2:
 // CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], [32 x i32] addrspace(3)* @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_TID]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[TMP4]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i8*, i8** [[TMP15]], align 8, !tbaa [[TBAA12]]
@@ -1143,9 +1143,9 @@ void test() {
 // CHECK1-NEXT:    [[TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[TMP14]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    store i32 [[TMP19]], i32* [[TMP18]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    br label [[IFCONT6:%.*]]
-// CHECK1:       else5:
+// CHECK1:       else3:
 // CHECK1-NEXT:    br label [[IFCONT6]]
-// CHECK1:       ifcont6:
+// CHECK1:       ifcont4:
 // CHECK1-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK1-NEXT:    store i32 [[TMP20]], i32* [[DOTCNT_ADDR]], align 4, !tbaa [[TBAA8]]
 // CHECK1-NEXT:    br label [[PRECOND]]
@@ -1695,7 +1695,7 @@ void test() {
 // CHECK2-NEXT:    [[TMP15:%.*]] = bitcast %"class.std::complex"* [[TMP12]] to i64*
 // CHECK2-NEXT:    [[TMP16:%.*]] = bitcast %"class.std::complex"* [[DOTOMP_REDUCTION_ELEMENT]] to i64*
 // CHECK2-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP15]], align 4
-// CHECK2-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK2-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 // CHECK2-NEXT:    [[TMP18:%.*]] = trunc i32 [[NVPTX_WARP_SIZE]] to i16
 // CHECK2-NEXT:    [[TMP19:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP17]], i16 [[TMP7]], i16 [[TMP18]])
 // CHECK2-NEXT:    store i64 [[TMP19]], i64* [[TMP16]], align 4
@@ -1754,10 +1754,10 @@ void test() {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
-// CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK2-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK2-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK2-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID2]], 31
-// CHECK2-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK2-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK2-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[NVPTX_TID3]], 5
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to [1 x i8*]*
@@ -1787,7 +1787,7 @@ void test() {
 // CHECK2-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[NVPTX_TID]], [[TMP13]]
 // CHECK2-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
-// CHECK2:       then4:
+// CHECK2:       then2:
 // CHECK2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], [32 x i32] addrspace(3)* @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_TID]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[TMP4]], i64 0, i64 0
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i8*, i8** [[TMP15]], align 8, !tbaa [[TBAA12]]
@@ -1796,9 +1796,9 @@ void test() {
 // CHECK2-NEXT:    [[TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[TMP14]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP19]], i32* [[TMP18]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    br label [[IFCONT6:%.*]]
-// CHECK2:       else5:
+// CHECK2:       else3:
 // CHECK2-NEXT:    br label [[IFCONT6]]
-// CHECK2:       ifcont6:
+// CHECK2:       ifcont4:
 // CHECK2-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK2-NEXT:    store i32 [[TMP20]], i32* [[DOTCNT_ADDR]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    br label [[PRECOND]]
@@ -2274,7 +2274,7 @@ void test() {
 // CHECK2-NEXT:    br i1 [[TMP24]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
 // CHECK2:       .shuffle.then:
 // CHECK2-NEXT:    [[TMP25:%.*]] = load i64, i64* [[TMP17]], align 8
-// CHECK2-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK2-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 // CHECK2-NEXT:    [[TMP26:%.*]] = trunc i32 [[NVPTX_WARP_SIZE]] to i16
 // CHECK2-NEXT:    [[TMP27:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP25]], i16 [[TMP7]], i16 [[TMP26]])
 // CHECK2-NEXT:    store i64 [[TMP27]], i64* [[TMP18]], align 8
@@ -2335,10 +2335,10 @@ void test() {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
-// CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK2-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK2-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK2-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID2]], 31
-// CHECK2-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK2-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK2-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[NVPTX_TID3]], 5
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to [1 x i8*]*
@@ -2368,7 +2368,7 @@ void test() {
 // CHECK2-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[NVPTX_TID]], [[TMP13]]
 // CHECK2-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
-// CHECK2:       then4:
+// CHECK2:       then2:
 // CHECK2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], [32 x i32] addrspace(3)* @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_TID]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[TMP4]], i64 0, i64 0
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i8*, i8** [[TMP15]], align 8, !tbaa [[TBAA12]]
@@ -2377,9 +2377,9 @@ void test() {
 // CHECK2-NEXT:    [[TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[TMP14]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    store i32 [[TMP19]], i32* [[TMP18]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    br label [[IFCONT6:%.*]]
-// CHECK2:       else5:
+// CHECK2:       else3:
 // CHECK2-NEXT:    br label [[IFCONT6]]
-// CHECK2:       ifcont6:
+// CHECK2:       ifcont4:
 // CHECK2-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK2-NEXT:    store i32 [[TMP20]], i32* [[DOTCNT_ADDR]], align 4, !tbaa [[TBAA8]]
 // CHECK2-NEXT:    br label [[PRECOND]]
@@ -2929,7 +2929,7 @@ void test() {
 // CHECK3-NEXT:    [[TMP15:%.*]] = bitcast %"class.std::complex"* [[TMP12]] to i64*
 // CHECK3-NEXT:    [[TMP16:%.*]] = bitcast %"class.std::complex"* [[DOTOMP_REDUCTION_ELEMENT]] to i64*
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i64, i64* [[TMP15]], align 4
-// CHECK3-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK3-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 // CHECK3-NEXT:    [[TMP18:%.*]] = trunc i32 [[NVPTX_WARP_SIZE]] to i16
 // CHECK3-NEXT:    [[TMP19:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP17]], i16 [[TMP7]], i16 [[TMP18]])
 // CHECK3-NEXT:    store i64 [[TMP19]], i64* [[TMP16]], align 4
@@ -2988,10 +2988,10 @@ void test() {
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
-// CHECK3-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK3-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK3-NEXT:    [[NVPTX_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK3-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK3-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID2]], 31
-// CHECK3-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK3-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK3-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[NVPTX_TID3]], 5
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to [1 x i8*]*
@@ -3021,7 +3021,7 @@ void test() {
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[NVPTX_TID]], [[TMP13]]
 // CHECK3-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
-// CHECK3:       then4:
+// CHECK3:       then2:
 // CHECK3-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], [32 x i32] addrspace(3)* @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_TID]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[TMP4]], i64 0, i64 0
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i8*, i8** [[TMP15]], align 8, !tbaa [[TBAA12]]
@@ -3030,9 +3030,9 @@ void test() {
 // CHECK3-NEXT:    [[TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[TMP14]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP19]], i32* [[TMP18]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    br label [[IFCONT6:%.*]]
-// CHECK3:       else5:
+// CHECK3:       else3:
 // CHECK3-NEXT:    br label [[IFCONT6]]
-// CHECK3:       ifcont6:
+// CHECK3:       ifcont4:
 // CHECK3-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK3-NEXT:    store i32 [[TMP20]], i32* [[DOTCNT_ADDR]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    br label [[PRECOND]]
@@ -3508,7 +3508,7 @@ void test() {
 // CHECK3-NEXT:    br i1 [[TMP24]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
 // CHECK3:       .shuffle.then:
 // CHECK3-NEXT:    [[TMP25:%.*]] = load i64, i64* [[TMP17]], align 8
-// CHECK3-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK3-NEXT:    [[NVPTX_WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
 // CHECK3-NEXT:    [[TMP26:%.*]] = trunc i32 [[NVPTX_WARP_SIZE]] to i16
 // CHECK3-NEXT:    [[TMP27:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP25]], i16 [[TMP7]], i16 [[TMP26]])
 // CHECK3-NEXT:    store i64 [[TMP27]], i64* [[TMP18]], align 8
@@ -3569,10 +3569,10 @@ void test() {
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8, !tbaa [[TBAA12]]
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
-// CHECK3-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK3-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK3-NEXT:    [[NVPTX_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK3-NEXT:    [[NVPTX_TID2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK3-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID2]], 31
-// CHECK3-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK3-NEXT:    [[NVPTX_TID3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK3-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[NVPTX_TID3]], 5
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
 // CHECK3-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to [1 x i8*]*
@@ -3602,7 +3602,7 @@ void test() {
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTADDR1]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[NVPTX_TID]], [[TMP13]]
 // CHECK3-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
-// CHECK3:       then4:
+// CHECK3:       then2:
 // CHECK3-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], [32 x i32] addrspace(3)* @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_TID]]
 // CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[TMP4]], i64 0, i64 0
 // CHECK3-NEXT:    [[TMP16:%.*]] = load i8*, i8** [[TMP15]], align 8, !tbaa [[TBAA12]]
@@ -3611,9 +3611,9 @@ void test() {
 // CHECK3-NEXT:    [[TMP19:%.*]] = load volatile i32, i32 addrspace(3)* [[TMP14]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    store i32 [[TMP19]], i32* [[TMP18]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    br label [[IFCONT6:%.*]]
-// CHECK3:       else5:
+// CHECK3:       else3:
 // CHECK3-NEXT:    br label [[IFCONT6]]
-// CHECK3:       ifcont6:
+// CHECK3:       ifcont4:
 // CHECK3-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK3-NEXT:    store i32 [[TMP20]], i32* [[DOTCNT_ADDR]], align 4, !tbaa [[TBAA8]]
 // CHECK3-NEXT:    br label [[PRECOND]]
