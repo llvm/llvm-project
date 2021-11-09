@@ -176,10 +176,10 @@ public:
   /// and NVPTX.
 
   /// Get the GPU warp size.
-  llvm::Value *getGPUWarpSize(CodeGenFunction &CGF);
+  virtual llvm::Value *getGPUWarpSize(CodeGenFunction &CGF) = 0;
 
   /// Get the id of the current thread on the GPU.
-  llvm::Value *getGPUThreadID(CodeGenFunction &CGF);
+  virtual llvm::Value *getGPUThreadID(CodeGenFunction &CGF) = 0;
 
   /// Get the maximum number of threads in a block of the GPU.
   llvm::Value *getGPUNumThreads(CodeGenFunction &CGF);
