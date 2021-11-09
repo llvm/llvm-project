@@ -554,7 +554,7 @@ class MetadataLoader::MetadataLoaderImpl {
   }
 
   /// Upgrade the expression from previous versions.
-  Error upgradeDIExpression(uint64_t FromVersion, bool &IsDistinct,
+  Error upgradeDIExpression(uint64_t FromVersion,
                             MutableArrayRef<uint64_t> &Expr,
                             SmallVectorImpl<uint64_t> &Buffer) {
     auto N = Expr.size();
@@ -628,9 +628,6 @@ class MetadataLoader::MetadataLoaderImpl {
       LLVM_FALLTHROUGH;
     }
     case 3:
-      IsDistinct = false;
-      LLVM_FALLTHROUGH;
-    case 4:
       // Up-to-date!
       break;
     }
@@ -2005,13 +2002,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
-    if (Error Err = upgradeDIExpression(Version, IsDistinct, Elts, Buffer))
+    if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
       return Err;
 
-    if (IsDistinct)
-      return error("Invalid record");
-
-    MetadataList.assignValue(DIExpression::get(Context, Elts), NextMetadataNo);
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIExpression, (Context, Elts)), NextMetadataNo);
     NextMetadataNo++;
     break;
   }

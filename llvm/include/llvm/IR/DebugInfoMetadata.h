@@ -39,39 +39,26 @@
 // Helper macros for defining get() overrides.
 #define DEFINE_MDNODE_GET_UNPACK_IMPL(...) __VA_ARGS__
 #define DEFINE_MDNODE_GET_UNPACK(ARGS) DEFINE_MDNODE_GET_UNPACK_IMPL ARGS
-#define DEFINE_MDNODE_GET(CLASS, FORMAL, ARGS)                                 \
-  static CLASS *get(LLVMContext &Context, DEFINE_MDNODE_GET_UNPACK(FORMAL)) {  \
-    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued);          \
-  }
-#define DEFINE_MDNODE_GET_IF_EXISTS(CLASS, FORMAL, ARGS)                       \
-  static CLASS *getIfExists(LLVMContext &Context,                              \
-                            DEFINE_MDNODE_GET_UNPACK(FORMAL)) {                \
-    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued,           \
-                   /* ShouldCreate */ false);                                  \
-  }
-#define DEFINE_MDNODE_GET_DISTINCT(CLASS, FORMAL, ARGS)                        \
+#define DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(CLASS, FORMAL, ARGS)              \
   static CLASS *getDistinct(LLVMContext &Context,                              \
                             DEFINE_MDNODE_GET_UNPACK(FORMAL)) {                \
     return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Distinct);         \
-  }
-#define DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)                       \
+  }                                                                            \
   static Temp##CLASS getTemporary(LLVMContext &Context,                        \
                                   DEFINE_MDNODE_GET_UNPACK(FORMAL)) {          \
     return Temp##CLASS(                                                        \
         getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Temporary));          \
   }
-#define DEFINE_ALL_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)                     \
-  DEFINE_MDNODE_GET(CLASS, FORMAL, ARGS)                                       \
-  DEFINE_MDNODE_GET_IF_EXISTS(CLASS, FORMAL, ARGS)                             \
-  DEFINE_MDNODE_GET_DISTINCT(CLASS, FORMAL, ARGS)                              \
-  DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)
-#define DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)         \
-  DEFINE_MDNODE_GET_DISTINCT(CLASS, FORMAL, ARGS)                              \
-  DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)
-#define DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS(CLASS, FORMAL, ARGS)          \
-  DEFINE_MDNODE_GET(CLASS, FORMAL, ARGS)                                       \
-  DEFINE_MDNODE_GET_IF_EXISTS(CLASS, FORMAL, ARGS)                             \
-  DEFINE_MDNODE_GET_TEMPORARY(CLASS, FORMAL, ARGS)
+#define DEFINE_MDNODE_GET(CLASS, FORMAL, ARGS)                                 \
+  static CLASS *get(LLVMContext &Context, DEFINE_MDNODE_GET_UNPACK(FORMAL)) {  \
+    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued);          \
+  }                                                                            \
+  static CLASS *getIfExists(LLVMContext &Context,                              \
+                            DEFINE_MDNODE_GET_UNPACK(FORMAL)) {                \
+    return getImpl(Context, DEFINE_MDNODE_GET_UNPACK(ARGS), Uniqued,           \
+                   /* ShouldCreate */ false);                                  \
+  }                                                                            \
+  DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(CLASS, FORMAL, ARGS)
 
 namespace llvm {
 
@@ -269,14 +256,12 @@ class GenericDINode : public DINode {
 public:
   unsigned getHash() const { return SubclassData32; }
 
-  DEFINE_ALL_MDNODE_GET_METHODS(GenericDINode,
-                                (unsigned Tag, StringRef Header,
-                                 ArrayRef<Metadata *> DwarfOps),
-                                (Tag, Header, DwarfOps))
-  DEFINE_ALL_MDNODE_GET_METHODS(GenericDINode,
-                                (unsigned Tag, MDString *Header,
-                                 ArrayRef<Metadata *> DwarfOps),
-                                (Tag, Header, DwarfOps))
+  DEFINE_MDNODE_GET(GenericDINode, (unsigned Tag, StringRef Header,
+                                    ArrayRef<Metadata *> DwarfOps),
+                    (Tag, Header, DwarfOps))
+  DEFINE_MDNODE_GET(GenericDINode, (unsigned Tag, MDString *Header,
+                                    ArrayRef<Metadata *> DwarfOps),
+                    (Tag, Header, DwarfOps))
 
   /// Return a (temporary) clone of this.
   TempGenericDINode clone() const { return cloneImpl(); }
@@ -336,18 +321,16 @@ class DISubrange : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DISubrange,
-                                (int64_t Count, int64_t LowerBound = 0),
-                                (Count, LowerBound))
+  DEFINE_MDNODE_GET(DISubrange, (int64_t Count, int64_t LowerBound = 0),
+                    (Count, LowerBound))
 
-  DEFINE_ALL_MDNODE_GET_METHODS(DISubrange,
-                                (Metadata * CountNode, int64_t LowerBound = 0),
-                                (CountNode, LowerBound))
+  DEFINE_MDNODE_GET(DISubrange, (Metadata *CountNode, int64_t LowerBound = 0),
+                    (CountNode, LowerBound))
 
-  DEFINE_ALL_MDNODE_GET_METHODS(DISubrange,
-                                (Metadata * CountNode, Metadata *LowerBound,
-                                 Metadata *UpperBound, Metadata *Stride),
-                                (CountNode, LowerBound, UpperBound, Stride))
+  DEFINE_MDNODE_GET(DISubrange,
+                    (Metadata * CountNode, Metadata *LowerBound,
+                     Metadata *UpperBound, Metadata *Stride),
+                    (CountNode, LowerBound, UpperBound, Stride))
 
   TempDISubrange clone() const { return cloneImpl(); }
 
@@ -398,10 +381,10 @@ class DIGenericSubrange : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIGenericSubrange,
-                                (Metadata * CountNode, Metadata *LowerBound,
-                                 Metadata *UpperBound, Metadata *Stride),
-                                (CountNode, LowerBound, UpperBound, Stride))
+  DEFINE_MDNODE_GET(DIGenericSubrange,
+                    (Metadata * CountNode, Metadata *LowerBound,
+                     Metadata *UpperBound, Metadata *Stride),
+                    (CountNode, LowerBound, UpperBound, Stride))
 
   TempDIGenericSubrange clone() const { return cloneImpl(); }
 
@@ -458,18 +441,18 @@ class DIEnumerator : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIEnumerator, (int64_t Value, bool IsUnsigned, StringRef Name),
-      (APInt(64, Value, !IsUnsigned), IsUnsigned, Name))
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIEnumerator, (int64_t Value, bool IsUnsigned, MDString *Name),
-      (APInt(64, Value, !IsUnsigned), IsUnsigned, Name))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIEnumerator,
-                                (APInt Value, bool IsUnsigned, StringRef Name),
-                                (Value, IsUnsigned, Name))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIEnumerator,
-                                (APInt Value, bool IsUnsigned, MDString *Name),
-                                (Value, IsUnsigned, Name))
+  DEFINE_MDNODE_GET(DIEnumerator,
+                    (int64_t Value, bool IsUnsigned, StringRef Name),
+                    (APInt(64, Value, !IsUnsigned), IsUnsigned, Name))
+  DEFINE_MDNODE_GET(DIEnumerator,
+                    (int64_t Value, bool IsUnsigned, MDString *Name),
+                    (APInt(64, Value, !IsUnsigned), IsUnsigned, Name))
+  DEFINE_MDNODE_GET(DIEnumerator,
+                    (APInt Value, bool IsUnsigned, StringRef Name),
+                    (Value, IsUnsigned, Name))
+  DEFINE_MDNODE_GET(DIEnumerator,
+                    (APInt Value, bool IsUnsigned, MDString *Name),
+                    (Value, IsUnsigned, Name))
 
   TempDIEnumerator clone() const { return cloneImpl(); }
 
@@ -617,16 +600,14 @@ private:
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIFile,
-                                (StringRef Filename, StringRef Directory,
-                                 Optional<ChecksumInfo<StringRef>> CS = None,
-                                 Optional<StringRef> Source = None),
-                                (Filename, Directory, CS, Source))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIFile,
-                                (MDString * Filename, MDString *Directory,
-                                 Optional<ChecksumInfo<MDString *>> CS = None,
-                                 Optional<MDString *> Source = None),
-                                (Filename, Directory, CS, Source))
+  DEFINE_MDNODE_GET(DIFile, (StringRef Filename, StringRef Directory,
+                             Optional<ChecksumInfo<StringRef>> CS = None,
+                             Optional<StringRef> Source = None),
+                    (Filename, Directory, CS, Source))
+  DEFINE_MDNODE_GET(DIFile, (MDString * Filename, MDString *Directory,
+                             Optional<ChecksumInfo<MDString *>> CS = None,
+                             Optional<MDString *> Source = None),
+                    (Filename, Directory, CS, Source))
 
   TempDIFile clone() const { return cloneImpl(); }
 
@@ -820,28 +801,22 @@ class DIBasicType : public DIType {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIBasicType, (unsigned Tag, StringRef Name),
-                                (Tag, Name, 0, 0, 0, FlagZero))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIBasicType,
-                                (unsigned Tag, StringRef Name,
-                                 uint64_t SizeInBits),
-                                (Tag, Name, SizeInBits, 0, 0, FlagZero))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIBasicType,
-                                (unsigned Tag, MDString *Name,
-                                 uint64_t SizeInBits),
-                                (Tag, Name, SizeInBits, 0, 0, FlagZero))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIBasicType,
-                                (unsigned Tag, StringRef Name,
-                                 uint64_t SizeInBits, uint32_t AlignInBits,
-                                 unsigned Encoding, DIFlags Flags),
-                                (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                                 Flags))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIBasicType,
-                                (unsigned Tag, MDString *Name,
-                                 uint64_t SizeInBits, uint32_t AlignInBits,
-                                 unsigned Encoding, DIFlags Flags),
-                                (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                                 Flags))
+  DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
+                    (Tag, Name, 0, 0, 0, FlagZero))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits),
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, MDString *Name, uint64_t SizeInBits),
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, MDString *Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
@@ -895,25 +870,22 @@ class DIStringType : public DIType {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIStringType,
-                                (unsigned Tag, StringRef Name,
-                                 uint64_t SizeInBits, uint32_t AlignInBits),
-                                (Tag, Name, nullptr, nullptr, SizeInBits,
-                                 AlignInBits, 0))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIStringType,
-                                (unsigned Tag, MDString *Name,
-                                 Metadata *StringLength,
-                                 Metadata *StringLengthExp, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, unsigned Encoding),
-                                (Tag, Name, StringLength, StringLengthExp,
-                                 SizeInBits, AlignInBits, Encoding))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIStringType,
-                                (unsigned Tag, StringRef Name,
-                                 Metadata *StringLength,
-                                 Metadata *StringLengthExp, uint64_t SizeInBits,
-                                 uint32_t AlignInBits, unsigned Encoding),
-                                (Tag, Name, StringLength, StringLengthExp,
-                                 SizeInBits, AlignInBits, Encoding))
+  DEFINE_MDNODE_GET(DIStringType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits),
+                    (Tag, Name, nullptr, nullptr, SizeInBits, AlignInBits, 0))
+  DEFINE_MDNODE_GET(DIStringType,
+                    (unsigned Tag, MDString *Name, Metadata *StringLength,
+                     Metadata *StringLengthExp, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
+                     AlignInBits, Encoding))
+  DEFINE_MDNODE_GET(DIStringType,
+                    (unsigned Tag, StringRef Name, Metadata *StringLength,
+                     Metadata *StringLengthExp, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
+                     AlignInBits, Encoding))
 
   TempDIStringType clone() const { return cloneImpl(); }
 
@@ -987,24 +959,27 @@ class DIDerivedType : public DIType {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIDerivedType,
-      (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
-       Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-       uint32_t AlignInBits, uint64_t OffsetInBits,
-       Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-       Metadata *ExtraData = nullptr, Metadata *Annotations = nullptr),
-      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, DWARFAddressSpace, Flags, ExtraData, Annotations))
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIDerivedType,
-      (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
-       DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
-       uint32_t AlignInBits, uint64_t OffsetInBits,
-       Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-       Metadata *ExtraData = nullptr, DINodeArray Annotations = nullptr),
-      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, DWARFAddressSpace, Flags, ExtraData, Annotations))
+  DEFINE_MDNODE_GET(DIDerivedType,
+                    (unsigned Tag, MDString *Name, Metadata *File,
+                     unsigned Line, Metadata *Scope, Metadata *BaseType,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     uint64_t OffsetInBits,
+                     Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                     Metadata *ExtraData = nullptr,
+                     Metadata *Annotations = nullptr),
+                    (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
+                     ExtraData, Annotations))
+  DEFINE_MDNODE_GET(DIDerivedType,
+                    (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
+                     DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
+                     uint32_t AlignInBits, uint64_t OffsetInBits,
+                     Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                     Metadata *ExtraData = nullptr,
+                     DINodeArray Annotations = nullptr),
+                    (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
+                     ExtraData, Annotations))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
 
@@ -1145,7 +1120,7 @@ class DICompositeType : public DIType {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
        DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
@@ -1160,7 +1135,7 @@ public:
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
        Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
        Annotations))
-  DEFINE_ALL_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
        Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
@@ -1334,14 +1309,12 @@ class DISubroutineType : public DIType {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DISubroutineType,
-                                (DIFlags Flags, uint8_t CC,
-                                 DITypeRefArray TypeArray),
-                                (Flags, CC, TypeArray))
-  DEFINE_ALL_MDNODE_GET_METHODS(DISubroutineType,
-                                (DIFlags Flags, uint8_t CC,
-                                 Metadata *TypeArray),
-                                (Flags, CC, TypeArray))
+  DEFINE_MDNODE_GET(DISubroutineType,
+                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray),
+                    (Flags, CC, TypeArray))
+  DEFINE_MDNODE_GET(DISubroutineType,
+                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray),
+                    (Flags, CC, TypeArray))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
 
@@ -1456,7 +1429,7 @@ public:
   static void get() = delete;
   static void getIfExists() = delete;
 
-  DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, DIFile *File, StringRef Producer,
        bool IsOptimized, StringRef Flags, unsigned RuntimeVersion,
@@ -1472,7 +1445,7 @@ public:
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
        DebugInfoForProfiling, (unsigned)NameTableKind, RangesBaseAddress,
        SysRoot, SDK))
-  DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, Metadata *File, MDString *Producer,
        bool IsOptimized, MDString *Flags, unsigned RuntimeVersion,
@@ -1636,17 +1609,15 @@ public:
   // Disallow replacing operands.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
-  DEFINE_ALL_MDNODE_GET_METHODS(DILocation,
-                                (unsigned Line, unsigned Column,
-                                 Metadata *Scope, Metadata *InlinedAt = nullptr,
-                                 bool ImplicitCode = false),
-                                (Line, Column, Scope, InlinedAt, ImplicitCode))
-  DEFINE_ALL_MDNODE_GET_METHODS(DILocation,
-                                (unsigned Line, unsigned Column,
-                                 DILocalScope *Scope,
-                                 DILocation *InlinedAt = nullptr,
-                                 bool ImplicitCode = false),
-                                (Line, Column, Scope, InlinedAt, ImplicitCode))
+  DEFINE_MDNODE_GET(DILocation,
+                    (unsigned Line, unsigned Column, Metadata *Scope,
+                     Metadata *InlinedAt = nullptr, bool ImplicitCode = false),
+                    (Line, Column, Scope, InlinedAt, ImplicitCode))
+  DEFINE_MDNODE_GET(DILocation,
+                    (unsigned Line, unsigned Column, DILocalScope *Scope,
+                     DILocation *InlinedAt = nullptr,
+                     bool ImplicitCode = false),
+                    (Line, Column, Scope, InlinedAt, ImplicitCode))
 
   /// Return a (temporary) clone of this.
   TempDILocation clone() const { return cloneImpl(); }
@@ -1951,7 +1922,7 @@ private:
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET(
       DISubprogram,
       (DIScope * Scope, StringRef Name, StringRef LinkageName, DIFile *File,
        unsigned Line, DISubroutineType *Type, unsigned ScopeLine,
@@ -1964,7 +1935,7 @@ public:
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
        Declaration, RetainedNodes, ThrownTypes, Annotations))
 
-  DEFINE_ALL_MDNODE_GET_METHODS(
+  DEFINE_MDNODE_GET(
       DISubprogram,
       (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
        unsigned Line, Metadata *Type, unsigned ScopeLine,
@@ -2168,14 +2139,12 @@ class DILexicalBlock : public DILexicalBlockBase {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DILexicalBlock,
-                                (DILocalScope * Scope, DIFile *File,
-                                 unsigned Line, unsigned Column),
-                                (Scope, File, Line, Column))
-  DEFINE_ALL_MDNODE_GET_METHODS(DILexicalBlock,
-                                (Metadata * Scope, Metadata *File,
-                                 unsigned Line, unsigned Column),
-                                (Scope, File, Line, Column))
+  DEFINE_MDNODE_GET(DILexicalBlock, (DILocalScope * Scope, DIFile *File,
+                                     unsigned Line, unsigned Column),
+                    (Scope, File, Line, Column))
+  DEFINE_MDNODE_GET(DILexicalBlock, (Metadata * Scope, Metadata *File,
+                                     unsigned Line, unsigned Column),
+                    (Scope, File, Line, Column))
 
   TempDILexicalBlock clone() const { return cloneImpl(); }
 
@@ -2219,14 +2188,12 @@ class DILexicalBlockFile : public DILexicalBlockBase {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DILexicalBlockFile,
-                                (DILocalScope * Scope, DIFile *File,
-                                 unsigned Discriminator),
-                                (Scope, File, Discriminator))
-  DEFINE_ALL_MDNODE_GET_METHODS(DILexicalBlockFile,
-                                (Metadata * Scope, Metadata *File,
-                                 unsigned Discriminator),
-                                (Scope, File, Discriminator))
+  DEFINE_MDNODE_GET(DILexicalBlockFile, (DILocalScope * Scope, DIFile *File,
+                                         unsigned Discriminator),
+                    (Scope, File, Discriminator))
+  DEFINE_MDNODE_GET(DILexicalBlockFile,
+                    (Metadata * Scope, Metadata *File, unsigned Discriminator),
+                    (Scope, File, Discriminator))
 
   TempDILexicalBlockFile clone() const { return cloneImpl(); }
   unsigned getDiscriminator() const { return Discriminator; }
@@ -2335,14 +2302,12 @@ class DINamespace : public DIScope {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DINamespace,
-                                (DIScope * Scope, StringRef Name,
-                                 bool ExportSymbols),
-                                (Scope, Name, ExportSymbols))
-  DEFINE_ALL_MDNODE_GET_METHODS(DINamespace,
-                                (Metadata * Scope, MDString *Name,
-                                 bool ExportSymbols),
-                                (Scope, Name, ExportSymbols))
+  DEFINE_MDNODE_GET(DINamespace,
+                    (DIScope *Scope, StringRef Name, bool ExportSymbols),
+                    (Scope, Name, ExportSymbols))
+  DEFINE_MDNODE_GET(DINamespace,
+                    (Metadata *Scope, MDString *Name, bool ExportSymbols),
+                    (Scope, Name, ExportSymbols))
 
   TempDINamespace clone() const { return cloneImpl(); }
 
@@ -2396,20 +2361,20 @@ class DIModule : public DIScope {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIModule,
-                                (DIFile * File, DIScope *Scope, StringRef Name,
-                                 StringRef ConfigurationMacros,
-                                 StringRef IncludePath, StringRef APINotesFile,
-                                 unsigned LineNo, bool IsDecl = false),
-                                (File, Scope, Name, ConfigurationMacros,
-                                 IncludePath, APINotesFile, LineNo, IsDecl))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIModule,
-                                (Metadata * File, Metadata *Scope,
-                                 MDString *Name, MDString *ConfigurationMacros,
-                                 MDString *IncludePath, MDString *APINotesFile,
-                                 unsigned LineNo, bool IsDecl = false),
-                                (File, Scope, Name, ConfigurationMacros,
-                                 IncludePath, APINotesFile, LineNo, IsDecl))
+  DEFINE_MDNODE_GET(DIModule,
+                    (DIFile * File, DIScope *Scope, StringRef Name,
+                     StringRef ConfigurationMacros, StringRef IncludePath,
+                     StringRef APINotesFile, unsigned LineNo,
+                     bool IsDecl = false),
+                    (File, Scope, Name, ConfigurationMacros, IncludePath,
+                     APINotesFile, LineNo, IsDecl))
+  DEFINE_MDNODE_GET(DIModule,
+                    (Metadata * File, Metadata *Scope, MDString *Name,
+                     MDString *ConfigurationMacros, MDString *IncludePath,
+                     MDString *APINotesFile, unsigned LineNo,
+                     bool IsDecl = false),
+                    (File, Scope, Name, ConfigurationMacros, IncludePath,
+                     APINotesFile, LineNo, IsDecl))
 
   TempDIModule clone() const { return cloneImpl(); }
 
@@ -2486,13 +2451,12 @@ class DITemplateTypeParameter : public DITemplateParameter {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DITemplateTypeParameter,
-                                (StringRef Name, DIType *Type, bool IsDefault),
-                                (Name, Type, IsDefault))
-  DEFINE_ALL_MDNODE_GET_METHODS(DITemplateTypeParameter,
-                                (MDString * Name, Metadata *Type,
-                                 bool IsDefault),
-                                (Name, Type, IsDefault))
+  DEFINE_MDNODE_GET(DITemplateTypeParameter,
+                    (StringRef Name, DIType *Type, bool IsDefault),
+                    (Name, Type, IsDefault))
+  DEFINE_MDNODE_GET(DITemplateTypeParameter,
+                    (MDString *Name, Metadata *Type, bool IsDefault),
+                    (Name, Type, IsDefault))
 
   TempDITemplateTypeParameter clone() const { return cloneImpl(); }
 
@@ -2532,14 +2496,14 @@ class DITemplateValueParameter : public DITemplateParameter {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DITemplateValueParameter,
-                                (unsigned Tag, StringRef Name, DIType *Type,
-                                 bool IsDefault, Metadata *Value),
-                                (Tag, Name, Type, IsDefault, Value))
-  DEFINE_ALL_MDNODE_GET_METHODS(DITemplateValueParameter,
-                                (unsigned Tag, MDString *Name, Metadata *Type,
-                                 bool IsDefault, Metadata *Value),
-                                (Tag, Name, Type, IsDefault, Value))
+  DEFINE_MDNODE_GET(DITemplateValueParameter,
+                    (unsigned Tag, StringRef Name, DIType *Type, bool IsDefault,
+                     Metadata *Value),
+                    (Tag, Name, Type, IsDefault, Value))
+  DEFINE_MDNODE_GET(DITemplateValueParameter,
+                    (unsigned Tag, MDString *Name, Metadata *Type,
+                     bool IsDefault, Metadata *Value),
+                    (Tag, Name, Type, IsDefault, Value))
 
   TempDITemplateValueParameter clone() const { return cloneImpl(); }
 
@@ -2639,9 +2603,7 @@ class DIExpression : public MDNode {
   }
 
 public:
-  DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS(DIExpression,
-                                           (ArrayRef<uint64_t> Elements),
-                                           (Elements))
+  DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
 
   TempDIExpression clone() const { return cloneImpl(); }
 
@@ -3025,22 +2987,26 @@ class DIGlobalVariable : public DIVariable {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIGlobalVariable,
-      (DIScope * Scope, StringRef Name, StringRef LinkageName, DIFile *File,
-       unsigned Line, DIType *Type, bool IsLocalToUnit, bool IsDefinition,
-       DIDerivedType *StaticDataMemberDeclaration, MDTuple *TemplateParams,
-       uint32_t AlignInBits, DINodeArray Annotations),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations))
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIGlobalVariable,
-      (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
-       unsigned Line, Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
-       Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
-       uint32_t AlignInBits, Metadata *Annotations),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DIGlobalVariable,
+                    (DIScope * Scope, StringRef Name, StringRef LinkageName,
+                     DIFile *File, unsigned Line, DIType *Type,
+                     bool IsLocalToUnit, bool IsDefinition,
+                     DIDerivedType *StaticDataMemberDeclaration,
+                     MDTuple *TemplateParams, uint32_t AlignInBits,
+                     DINodeArray Annotations),
+                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DIGlobalVariable,
+                    (Metadata * Scope, MDString *Name, MDString *LinkageName,
+                     Metadata *File, unsigned Line, Metadata *Type,
+                     bool IsLocalToUnit, bool IsDefinition,
+                     Metadata *StaticDataMemberDeclaration,
+                     Metadata *TemplateParams, uint32_t AlignInBits,
+                     Metadata *Annotations),
+                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     AlignInBits, Annotations))
 
   TempDIGlobalVariable clone() const { return cloneImpl(); }
 
@@ -3096,15 +3062,14 @@ class DICommonBlock : public DIScope {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DICommonBlock,
-                                (DIScope * Scope, DIGlobalVariable *Decl,
-                                 StringRef Name, DIFile *File, unsigned LineNo),
-                                (Scope, Decl, Name, File, LineNo))
-  DEFINE_ALL_MDNODE_GET_METHODS(DICommonBlock,
-                                (Metadata * Scope, Metadata *Decl,
-                                 MDString *Name, Metadata *File,
-                                 unsigned LineNo),
-                                (Scope, Decl, Name, File, LineNo))
+  DEFINE_MDNODE_GET(DICommonBlock,
+                    (DIScope *Scope, DIGlobalVariable *Decl, StringRef Name,
+                     DIFile *File, unsigned LineNo),
+                    (Scope, Decl, Name, File, LineNo))
+  DEFINE_MDNODE_GET(DICommonBlock,
+                    (Metadata *Scope, Metadata *Decl, MDString *Name,
+                     Metadata *File, unsigned LineNo),
+                    (Scope, Decl, Name, File, LineNo))
 
   TempDICommonBlock clone() const { return cloneImpl(); }
 
@@ -3167,20 +3132,18 @@ class DILocalVariable : public DIVariable {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DILocalVariable,
-                                (DILocalScope * Scope, StringRef Name,
-                                 DIFile *File, unsigned Line, DIType *Type,
-                                 unsigned Arg, DIFlags Flags,
-                                 uint32_t AlignInBits, DINodeArray Annotations),
-                                (Scope, Name, File, Line, Type, Arg, Flags,
-                                 AlignInBits, Annotations))
-  DEFINE_ALL_MDNODE_GET_METHODS(DILocalVariable,
-                                (Metadata * Scope, MDString *Name,
-                                 Metadata *File, unsigned Line, Metadata *Type,
-                                 unsigned Arg, DIFlags Flags,
-                                 uint32_t AlignInBits, Metadata *Annotations),
-                                (Scope, Name, File, Line, Type, Arg, Flags,
-                                 AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (DILocalScope * Scope, StringRef Name, DIFile *File,
+                     unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
+                     uint32_t AlignInBits, DINodeArray Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
+                     Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (Metadata * Scope, MDString *Name, Metadata *File,
+                     unsigned Line, Metadata *Type, unsigned Arg,
+                     DIFlags Flags, uint32_t AlignInBits, Metadata *Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
+                     Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }
 
@@ -3248,14 +3211,14 @@ class DILabel : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DILabel,
-                                (DILocalScope * Scope, StringRef Name,
-                                 DIFile *File, unsigned Line),
-                                (Scope, Name, File, Line))
-  DEFINE_ALL_MDNODE_GET_METHODS(DILabel,
-                                (Metadata * Scope, MDString *Name,
-                                 Metadata *File, unsigned Line),
-                                (Scope, Name, File, Line))
+  DEFINE_MDNODE_GET(DILabel,
+                    (DILocalScope * Scope, StringRef Name, DIFile *File,
+                     unsigned Line),
+                    (Scope, Name, File, Line))
+  DEFINE_MDNODE_GET(DILabel,
+                    (Metadata * Scope, MDString *Name, Metadata *File,
+                     unsigned Line),
+                    (Scope, Name, File, Line))
 
   TempDILabel clone() const { return cloneImpl(); }
 
@@ -3323,18 +3286,18 @@ class DIObjCProperty : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIObjCProperty,
-                                (StringRef Name, DIFile *File, unsigned Line,
-                                 StringRef GetterName, StringRef SetterName,
-                                 unsigned Attributes, DIType *Type),
-                                (Name, File, Line, GetterName, SetterName,
-                                 Attributes, Type))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIObjCProperty,
-                                (MDString * Name, Metadata *File, unsigned Line,
-                                 MDString *GetterName, MDString *SetterName,
-                                 unsigned Attributes, Metadata *Type),
-                                (Name, File, Line, GetterName, SetterName,
-                                 Attributes, Type))
+  DEFINE_MDNODE_GET(DIObjCProperty,
+                    (StringRef Name, DIFile *File, unsigned Line,
+                     StringRef GetterName, StringRef SetterName,
+                     unsigned Attributes, DIType *Type),
+                    (Name, File, Line, GetterName, SetterName, Attributes,
+                     Type))
+  DEFINE_MDNODE_GET(DIObjCProperty,
+                    (MDString * Name, Metadata *File, unsigned Line,
+                     MDString *GetterName, MDString *SetterName,
+                     unsigned Attributes, Metadata *Type),
+                    (Name, File, Line, GetterName, SetterName, Attributes,
+                     Type))
 
   TempDIObjCProperty clone() const { return cloneImpl(); }
 
@@ -3401,16 +3364,16 @@ class DIImportedEntity : public DINode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIImportedEntity,
-      (unsigned Tag, DIScope *Scope, DINode *Entity, DIFile *File,
-       unsigned Line, StringRef Name = "", DINodeArray Elements = nullptr),
-      (Tag, Scope, Entity, File, Line, Name, Elements))
-  DEFINE_ALL_MDNODE_GET_METHODS(
-      DIImportedEntity,
-      (unsigned Tag, Metadata *Scope, Metadata *Entity, Metadata *File,
-       unsigned Line, MDString *Name, Metadata *Elements = nullptr),
-      (Tag, Scope, Entity, File, Line, Name, Elements))
+  DEFINE_MDNODE_GET(DIImportedEntity,
+                    (unsigned Tag, DIScope *Scope, DINode *Entity, DIFile *File,
+                     unsigned Line, StringRef Name = "",
+                     DINodeArray Elements = nullptr),
+                    (Tag, Scope, Entity, File, Line, Name, Elements))
+  DEFINE_MDNODE_GET(DIImportedEntity,
+                    (unsigned Tag, Metadata *Scope, Metadata *Entity,
+                     Metadata *File, unsigned Line, MDString *Name,
+                     Metadata *Elements = nullptr),
+                    (Tag, Scope, Entity, File, Line, Name, Elements))
 
   TempDIImportedEntity clone() const { return cloneImpl(); }
 
@@ -3453,9 +3416,9 @@ class DIGlobalVariableExpression : public MDNode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIGlobalVariableExpression,
-                                (Metadata * Variable, Metadata *Expression),
-                                (Variable, Expression))
+  DEFINE_MDNODE_GET(DIGlobalVariableExpression,
+                    (Metadata * Variable, Metadata *Expression),
+                    (Variable, Expression))
 
   TempDIGlobalVariableExpression clone() const { return cloneImpl(); }
 
@@ -3552,14 +3515,12 @@ class DIMacro : public DIMacroNode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIMacro,
-                                (unsigned MIType, unsigned Line, StringRef Name,
-                                 StringRef Value = ""),
-                                (MIType, Line, Name, Value))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIMacro,
-                                (unsigned MIType, unsigned Line, MDString *Name,
-                                 MDString *Value),
-                                (MIType, Line, Name, Value))
+  DEFINE_MDNODE_GET(DIMacro, (unsigned MIType, unsigned Line, StringRef Name,
+                              StringRef Value = ""),
+                    (MIType, Line, Name, Value))
+  DEFINE_MDNODE_GET(DIMacro, (unsigned MIType, unsigned Line, MDString *Name,
+                              MDString *Value),
+                    (MIType, Line, Name, Value))
 
   TempDIMacro clone() const { return cloneImpl(); }
 
@@ -3605,14 +3566,12 @@ class DIMacroFile : public DIMacroNode {
   }
 
 public:
-  DEFINE_ALL_MDNODE_GET_METHODS(DIMacroFile,
-                                (unsigned MIType, unsigned Line, DIFile *File,
-                                 DIMacroNodeArray Elements),
-                                (MIType, Line, File, Elements))
-  DEFINE_ALL_MDNODE_GET_METHODS(DIMacroFile,
-                                (unsigned MIType, unsigned Line, Metadata *File,
-                                 Metadata *Elements),
-                                (MIType, Line, File, Elements))
+  DEFINE_MDNODE_GET(DIMacroFile, (unsigned MIType, unsigned Line, DIFile *File,
+                                  DIMacroNodeArray Elements),
+                    (MIType, Line, File, Elements))
+  DEFINE_MDNODE_GET(DIMacroFile, (unsigned MIType, unsigned Line,
+                                  Metadata *File, Metadata *Elements),
+                    (MIType, Line, File, Elements))
 
   TempDIMacroFile clone() const { return cloneImpl(); }
 
@@ -3670,9 +3629,7 @@ class DIArgList : public MDNode {
   void dropAllReferences();
 
 public:
-  DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS(DIArgList,
-                                           (ArrayRef<ValueAsMetadata *> Args),
-                                           (Args))
+  DEFINE_MDNODE_GET(DIArgList, (ArrayRef<ValueAsMetadata *> Args), (Args))
 
   TempDIArgList clone() const { return cloneImpl(); }
 
@@ -3776,11 +3733,5 @@ template <> struct DenseMapInfo<DebugVariable> {
 #undef DEFINE_MDNODE_GET_UNPACK_IMPL
 #undef DEFINE_MDNODE_GET_UNPACK
 #undef DEFINE_MDNODE_GET
-#undef DEFINE_MDNODE_GET_IF_EXISTS
-#undef DEFINE_MDNODE_GET_DISTINCT
-#undef DEFINE_MDNODE_GET_TEMPORARY
-#undef DEFINE_ALL_MDNODE_GET_METHODS
-#undef DEFINE_ALWAYS_DISTINCT_MDNODE_GET_METHODS
-#undef DEFINE_ALWAYS_UNIQUED_MDNODE_GET_METHODS
 
 #endif // LLVM_IR_DEBUGINFOMETADATA_H
