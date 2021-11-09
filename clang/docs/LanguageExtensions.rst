@@ -4049,7 +4049,8 @@ in issuing diagnostics. These lines are emitted in preprocessed
 output.
 
 .. code-block:: c
-  # <line:number> <filename:string> <header-type:numbers>
+
+   # <line:number> <filename:string> <header-type:numbers>
 
 The filename is optional, and if unspecified indicates no change in
 source filename. The header-type is an optional, whitespace-delimited,
