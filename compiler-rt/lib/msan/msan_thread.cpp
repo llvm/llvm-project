@@ -65,7 +65,18 @@ void MsanThread::Destroy() {
   DTLS_Destroy();
 }
 
-thread_return_t MsanThread::ThreadStart() { return start_routine_(arg_); }
+thread_return_t MsanThread::ThreadStart() {
+  if (!start_routine_) {
+    // start_routine_ == 0 if we're on the main thread or on one of the
+    // OS X libdispatch worker threads. But nobody is supposed to call
+    // ThreadStart() for the worker threads.
+    return 0;
+  }
+
+  thread_return_t res = start_routine_(arg_);
+
+  return res;
+}
 
 MsanThread::StackBounds MsanThread::GetStackBounds() const {
   if (!stack_switching_)
