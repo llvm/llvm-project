@@ -434,13 +434,21 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     LLVM_FALLTHROUGH;
   case ARCInstKind::RetainRV:
   case ARCInstKind::ClaimRV: {
-    // If we're compiling for a target which needs a special inline-asm
-    // marker to do the return value optimization and the retainRV/claimRV call
-    // wasn't bundled with a call, insert the marker now.
-    if (!RVInstMarker)
-      return false;
+    bool IsInstContainedInBundle = BundledInsts->contains(Inst);
 
-    if (BundledInsts->contains(Inst))
+    // Return now if the target doesn't need a special inline-asm marker. Return
+    // true if this is a bundled retainRV/claimRV call, which is going to be
+    // erased at the end of this pass, to avoid undoing objc-arc-expand and
+    // replacing uses of the retainRV/claimRV call's argument with its result.
+    if (!RVInstMarker)
+      return IsInstContainedInBundle;
+
+    // The target needs a special inline-asm marker.
+
+    // We don't have to emit the marker if this is a bundled call since the
+    // backend is responsible for emitting it. Return false to undo
+    // objc-arc-expand.
+    if (IsInstContainedInBundle)
       return false;
 
     BasicBlock::iterator BBI = Inst->getIterator();
@@ -540,7 +548,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   AA = A;
   DT = D;
   PA.setAA(A);
-  BundledRetainClaimRVs BRV(true);
+  BundledRetainClaimRVs BRV(true, RVInstMarker);
   BundledInsts = &BRV;
 
   std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, DT);
