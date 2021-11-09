@@ -259,7 +259,8 @@ private:
   void initializeSymbols();
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(const Elf_Shdr &sec);
+  InputSectionBase *getRelocTarget(uint32_t idx, StringRef name,
+                                   const Elf_Shdr &sec);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
                                        StringRef shstrtab);
 

@@ -5077,7 +5077,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
     Type *I8Type = Type::getInt8Ty(VecTy->getContext());
 
     MaskCost = getReplicationShuffleCost(
-        I8Type, Factor, VF, APInt::getAllOnes(VF),
+        I8Type, Factor, VF,
         UseMaskForGaps ? DemandedLoadStoreElts
                        : APInt::getAllOnes(VecTy->getNumElements()),
         CostKind);

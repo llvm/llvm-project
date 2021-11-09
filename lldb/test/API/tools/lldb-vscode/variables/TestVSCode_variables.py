@@ -394,3 +394,17 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
         )
+
+        # Test that frame scopes have corresponding presentation hints.
+        frame_id = self.vscode.get_stackFrame()["id"]
+        scopes = self.vscode.request_scopes(frame_id)["body"]["scopes"]
+
+        scope_names = [scope["name"] for scope in scopes]
+        self.assertIn("Locals", scope_names)
+        self.assertIn("Registers", scope_names)
+
+        for scope in scopes:
+            if scope["name"] == "Locals":
+                self.assertEquals(scope.get("presentationHint"), "locals")
+            if scope["name"] == "Registers":
+                self.assertEquals(scope.get("presentationHint"), "registers")

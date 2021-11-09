@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <climits> // INT_MAX
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -237,6 +238,122 @@ int main(int, char**)
         std::priority_queue pri(a, a+2, Comp(), std::move(cont), ConvertibleToAlloc(2));
         static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
         }
+    }
+
+    // Deduction guides should be SFINAE'd away when given:
+    // - "bad" input iterators (that is, a type not qualifying as an input
+    //   iterator);
+    // - a bad allocator;
+    // - an allocator instead of a comparator;
+    // - an allocator instead of a container;
+    // - an allocator and a container that uses a different allocator.
+    {
+        using Comp = std::less<int>;
+        using Cont = std::vector<int>;
+        using Alloc = std::allocator<int>;
+        using Iter = int*;
+
+        // The only requirement in the Standard is that integral types cannot be
+        // considered input iterators, beyond that it is unspecified.
+        using BadIter = int;
+#ifdef _LIBCPP_VERSION
+        struct OutputIter {
+          using iterator_category = std::output_iterator_tag;
+          using value_type = void;
+          using difference_type = void;
+          using pointer = void;
+          using reference = void;
+
+          const OutputIter& operator*() const { return *this; }
+          const OutputIter& operator++() { return *this; }
+          OutputIter operator++(int) const { return *this; }
+        };
+#endif // _LIBCPP_VERSION
+
+        struct BadAlloc {};
+        using AllocAsComp = Alloc;
+        using AllocAsCont = Alloc;
+        using DiffAlloc = test_allocator<int>;
+
+        // (iter, iter)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter>);
+        // Note: (OutputIter, OutputIter) is interpreted as (comp, cont) and fails on accessing
+        // non-existent typedefs in `OutputIter` (as if it were a container). There is no
+        // requirement to SFINAE away bad containers.
+
+        // (iter, iter, comp)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, comp)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Comp>);
+        LIBCPP_STATIC_ASSERT(SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Comp>);
+        // Note: (iter, iter, ALLOC_as_comp) is allowed -- it just calls (iter, iter, alloc).
+
+        // (iter, iter, comp, cont)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, comp, cont)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Comp, Cont>);
+        LIBCPP_STATIC_ASSERT(SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Comp, Cont>);
+        // Cannot deduce from (iter, iter, ALLOC_as_comp, cont)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, AllocAsComp, Cont>);
+        // Note: (iter, iter, comp, ALLOC_as_cont) is allowed -- it just calls (iter, iter, comp,
+        // alloc).
+
+        // (iter, iter, alloc)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Alloc>);
+        LIBCPP_STATIC_ASSERT(SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Alloc>);
+        // Note: (iter, iter, BAD_alloc) is interpreted as (iter, iter, comp) instead and fails upon
+        // instantiation. There is no requirement to SFINAE away bad comparators.
+
+        // (iter, iter, comp, alloc)
+        //
+        // Cannot deduce from (iter, iter, ALLOC_as_comp, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, AllocAsComp, Alloc>);
+        // Note: (iter, iter, comp, BAD_alloc) is interpreted as (iter, iter, comp, cont) instead
+        // and fails upon instantiation. There is no requirement to SFINAE away bad containers.
+
+        // (iter, iter, comp, cont, alloc)
+        //
+        // Cannot deduce from (BAD_iter, BAD_iter, comp, cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadIter, BadIter, Comp, Cont, Alloc>);
+        LIBCPP_STATIC_ASSERT(
+            SFINAEs_away<std::priority_queue, OutputIter, OutputIter, Comp, Cont, Alloc>);
+        // Cannot deduce from (iter, iter, ALLOC_as_comp, cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, AllocAsComp, Cont, Alloc>);
+        // Cannot deduce from (iter, iter, comp, ALLOC_as_cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, Comp, AllocAsCont, Alloc>);
+        // Cannot deduce from (iter, iter, comp, cont, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, Comp, Cont, BadAlloc>);
+        // Cannot deduce from (iter, iter, comp, cont, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Iter, Iter, Comp, Cont, DiffAlloc>);
+
+        // (comp, alloc)
+        //
+        // Cannot deduce from (ALLOC_as_comp, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Alloc>);
+        // Cannot deduce from (comp, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, BadAlloc>);
+
+        // (comp, cont, alloc)
+        //
+        // Cannot deduce from (ALLOC_as_comp, cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Cont, Alloc>);
+        // Cannot deduce from (comp, ALLOC_as_cont, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, AllocAsCont, Alloc>);
+        // Cannot deduce from (comp, cont, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, Cont, BadAlloc>);
+        // Cannot deduce from (comp, cont, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, Cont, DiffAlloc>);
+
+        // (comp, cont)
+        //
+        // Cannot deduce from (ALLOC_as_comp, cont)
+        static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Cont>);
+        // Cannot deduce from (comp, ALLOC_as_cont)
+        static_assert(SFINAEs_away<std::priority_queue, Comp, AllocAsCont>);
     }
 
     return 0;

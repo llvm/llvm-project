@@ -95,6 +95,12 @@ void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
   const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
   const TargetMachine &TM = MF.getTarget();
+  Module &M = *MF.getFunction().getParent();
+
+  if (M.getStackProtectorGuard() == "tls") {
+    expandLoadStackGuardBase(MI, ARM::MRC, ARM::LDRi12);
+    return;
+  }
 
   const GlobalValue *GV =
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
