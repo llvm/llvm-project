@@ -35,6 +35,7 @@
 #include <set>
 #include <type_traits>
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 struct NotAnAllocator {
@@ -185,6 +186,8 @@ int main(int, char **) {
     ASSERT_SAME_TYPE(decltype(s), std::multiset<int *>);
     assert(s.size() == 2);
   }
+
+  AssociativeContainerDeductionGuidesSfinaeAway<std::multiset, std::multiset<int>>();
 
   return 0;
 }

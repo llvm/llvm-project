@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <climits> // INT_MAX
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -134,6 +135,28 @@ int main(int, char**)
         std::stack stk(std::move(source), ConvertibleToAlloc(2));
         static_assert(std::is_same_v<decltype(stk), std::stack<T, Cont>>);
         }
+    }
+
+    // Deduction guides should be SFINAE'd away when given:
+    // - a "bad" allocator (that is, a type not qualifying as an allocator);
+    // - an allocator instead of a container;
+    // - an allocator and a container that uses a different allocator.
+    {
+        using Cont = std::list<int>;
+        using Alloc = std::allocator<int>;
+        using DiffAlloc = test_allocator<int>;
+
+        struct BadAlloc {};
+        using AllocAsCont = Alloc;
+
+        // (cont, alloc)
+        //
+        // Cannot deduce from (ALLOC_as_cont, alloc)
+        static_assert(SFINAEs_away<std::stack, AllocAsCont, Alloc>);
+        // Cannot deduce from (cont, BAD_alloc)
+        static_assert(SFINAEs_away<std::stack, Cont, BadAlloc>);
+        // Cannot deduce from (cont, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::stack, Cont, DiffAlloc>);
     }
 
     return 0;

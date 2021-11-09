@@ -845,24 +845,24 @@ class _LIBCPP_TEMPLATE_VIS list
     typedef typename base::__link_pointer __link_pointer;
 
 public:
-    typedef _Tp                                      value_type;
-    typedef _Alloc                                   allocator_type;
+    typedef _Tp                                                      value_type;
+    typedef _Alloc                                                   allocator_type;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
-    typedef value_type&                              reference;
-    typedef const value_type&                        const_reference;
-    typedef typename base::pointer                   pointer;
-    typedef typename base::const_pointer             const_pointer;
-    typedef typename base::size_type                 size_type;
-    typedef typename base::difference_type           difference_type;
-    typedef typename base::iterator                  iterator;
-    typedef typename base::const_iterator            const_iterator;
-    typedef _VSTD::reverse_iterator<iterator>         reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator>   const_reverse_iterator;
+    typedef value_type&                                              reference;
+    typedef const value_type&                                        const_reference;
+    typedef typename base::pointer                                   pointer;
+    typedef typename base::const_pointer                             const_pointer;
+    typedef typename __allocator_traits<allocator_type>::size_type   size_type;
+    typedef typename base::difference_type                           difference_type;
+    typedef typename base::iterator                                  iterator;
+    typedef typename base::const_iterator                            const_iterator;
+    typedef _VSTD::reverse_iterator<iterator>                        reverse_iterator;
+    typedef _VSTD::reverse_iterator<const_iterator>                  const_reverse_iterator;
 #if _LIBCPP_STD_VER > 17
-    typedef size_type                                __remove_return_type;
+    typedef size_type                                                __remove_return_type;
 #else
-    typedef void                                     __remove_return_type;
+    typedef void                                                     __remove_return_type;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1144,6 +1144,7 @@ private:
 #if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 list(_InputIterator, _InputIterator)
@@ -1151,6 +1152,7 @@ list(_InputIterator, _InputIterator)
 
 template<class _InputIterator,
          class _Alloc,
+         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 list(_InputIterator, _InputIterator, _Alloc)
