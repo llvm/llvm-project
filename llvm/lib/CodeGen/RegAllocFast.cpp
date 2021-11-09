@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
@@ -432,7 +433,7 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
   // every definition of it, meaning we can switch all the DBG_VALUEs over
   // to just reference the stack slot.
   SmallVectorImpl<MachineOperand *> &LRIDbgOperands = LiveDbgValueMap[VirtReg];
-  SmallDenseMap<MachineInstr *, SmallVector<const MachineOperand *>>
+  SmallMapVector<MachineInstr *, SmallVector<const MachineOperand *>, 2>
       SpilledOperandsMap;
   for (MachineOperand *MO : LRIDbgOperands)
     SpilledOperandsMap[MO->getParent()].push_back(MO);
