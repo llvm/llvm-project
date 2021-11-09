@@ -545,11 +545,11 @@ define i8 @umax_sub_op1(i8 %x, i8 %y) {
 
 define <2 x i8> @umax_sub_op1_vec_commute(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @umax_sub_op1_vec_commute(
-; CHECK-NEXT:    [[U:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[U:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[Y:%.*]], <2 x i8> [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[Y]], [[U]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %u = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %x, <2 x i8> %y)
+  %u = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %y, <2 x i8> %x)
   %r = sub <2 x i8> %y, %u
   ret <2 x i8> %r
 }
