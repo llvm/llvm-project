@@ -66,25 +66,6 @@
 # ALIGN-NEXT: {{0*}}[[#ADDR]]      11111111 33333333 22222222 00000000
 # ALIGN-NEXT: {{0*}}[[#ADDR+0x10]] 81818181 81818181 82828282 82828282
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/weak-def.s -o %t/weak-def.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/strong-def.s -o %t/strong-def.o
-# RUN: %lld -dylib -lc++ -o %t/weak-strong-mixed.dylib %t/weak-def.o %t/strong-def.o
-# RUN: %lld -dylib -lc++ -o %t/strong-weak-mixed.dylib %t/strong-def.o %t/weak-def.o
-## Check that omitted weak symbols are not adding their section and unwind stuff.
-
-# RUN: otool -jtV %t/weak-strong-mixed.dylib | FileCheck --check-prefix=MIXED %s
-# RUN: otool -jtV %t/strong-weak-mixed.dylib | FileCheck --check-prefix=MIXED %s
-# MIXED: (__TEXT,__text) section
-# MIXED-NEXT: _foo:
-# MIXED-NEXT: {{.+}} 	3333            	xorl	(%rbx), %esi
-# MIXED-NEXT: {{.+}} 	3333            	xorl	(%rbx), %esi
-# MIXED-NEXT: {{.+}}	c3              	retq
-
-# RUN: llvm-objdump --macho --syms --unwind-info %t/weak-strong-mixed.dylib | FileCheck --check-prefix=MIXED-UNWIND %s
-# RUN: llvm-objdump --macho --syms --unwind-info %t/strong-weak-mixed.dylib | FileCheck --check-prefix=MIXED-UNWIND %s
-# MIXED-UNWIND: g     F __TEXT,__text _foo
-# MIXED-UNWIND-NOT: Contents of __unwind_info section:
-
 #--- weak-sub.s
 .globl _foo, _bar
 .weak_definition _foo, _bar
@@ -211,38 +192,6 @@ _main:
   movl _weak1(%rip), %eax
   movl _weak2(%rip), %ebx
   movaps _aligned(%rip), %xmm0
-  retq
-
-.subsections_via_symbols
-
-#--- weak-def.s
-.section __TEXT,__text,regular,pure_instructions
-
-.globl _foo
-.weak_definition _foo
-_foo:
-  .cfi_startproc
-  .cfi_personality 155, ___gxx_personality_v0
-  .cfi_lsda 16, Lexception
-  pushq %rbp
-  .cfi_def_cfa_offset 128
-  .cfi_offset %rbp, 48
-  movq %rsp, %rbp
-  .cfi_def_cfa_register %rbp
-  popq %rbp
-  retq
-  .cfi_endproc
-
-.section __TEXT,__gcc_except_tab
-Lexception:
-    .space 0x10
-
-.subsections_via_symbols
-#--- strong-def.s
-.globl _foo, _bar
-
-_foo:
-  .4byte 0x33333333
   retq
 
 .subsections_via_symbols
