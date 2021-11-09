@@ -212,7 +212,7 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // These instructions are all fine to convert.
     break;
   }
-  return TII->convertToThreeAddress(MI, nullptr);
+  return TII->convertToThreeAddress(MI, nullptr, nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }

@@ -1392,7 +1392,7 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
   // instruction, so we might as well convert it to the more flexible VOP3-only
   // mad/fma form.
-  if (TII->convertToThreeAddress(*Def, nullptr))
+  if (TII->convertToThreeAddress(*Def, nullptr, nullptr))
     Def->eraseFromParent();
 
   return true;
@@ -1537,7 +1537,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
   // instruction, so we might as well convert it to the more flexible VOP3-only
   // mad/fma form.
-  if (TII->convertToThreeAddress(*Def, nullptr))
+  if (TII->convertToThreeAddress(*Def, nullptr, nullptr))
     Def->eraseFromParent();
 
   return true;

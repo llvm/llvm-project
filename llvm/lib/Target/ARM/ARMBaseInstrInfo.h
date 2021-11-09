@@ -120,8 +120,8 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                      LiveVariables *LV) const override;
+  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                      LiveIntervals *LIS) const override;
 
   virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
