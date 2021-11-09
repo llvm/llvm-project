@@ -148,6 +148,24 @@ public:
                                                /*isPacked=*/false));
   }
 
+  // Use the target specifics to figure out how to map complex to LLVM IR. The
+  // use of complex values in function signatures is handled before conversion
+  // to LLVM IR dialect here.
+  //
+  // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
+  template <typename C>
+  mlir::Type convertComplexType(C cmplx) {
+    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
+    auto eleTy = cmplx.getElementType();
+    return convertType(specifics->complexMemoryType(eleTy));
+  }
+
+  // convert a front-end kind value to either a std or LLVM IR dialect type
+  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
+  mlir::Type convertRealType(fir::KindTy kind) {
+    return fromRealTypeID(kindMapping.getRealTypeID(kind), kind);
+  }
+
   template <typename A>
   mlir::Type convertPointerLike(A &ty) {
     mlir::Type eleTy = ty.getEleTy();
