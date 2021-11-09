@@ -65,6 +65,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_113;
   if (raw_version < 11050)
     return CudaVersion::CUDA_114;
+  if (raw_version < 11060)
+    return CudaVersion::CUDA_115;
   return CudaVersion::NEW;
 }
 
@@ -707,6 +709,7 @@ void CudaToolChain::addClangTargetOptions(
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(115, 75);
     CASE_CUDA_VERSION(114, 74);
     CASE_CUDA_VERSION(113, 73);
     CASE_CUDA_VERSION(112, 72);
