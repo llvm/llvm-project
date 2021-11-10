@@ -119,7 +119,7 @@ Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
 
 void SparseTensorEncodingAttr::print(DialectAsmPrinter &printer) const {
   // Print the struct-like storage in dictionary fashion.
-  printer << "encoding<{ dimLevelType = [ ";
+  printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
     switch (getDimLevelType()[i]) {
     case DimLevelType::Dense:

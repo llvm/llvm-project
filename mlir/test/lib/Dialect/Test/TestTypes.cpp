@@ -109,8 +109,7 @@ Type CompoundAType::parse(DialectAsmParser &parser) {
   return get(parser.getContext(), widthOfSomething, oneType, arrayOfInts);
 }
 void CompoundAType::print(DialectAsmPrinter &printer) const {
-  printer << "cmpnd_a<" << getWidthOfSomething() << ", " << getOneType()
-          << ", [";
+  printer << "<" << getWidthOfSomething() << ", " << getOneType() << ", [";
   auto intArray = getArrayOfInts();
   llvm::interleaveComma(intArray, printer);
   printer << "]>";
@@ -150,7 +149,7 @@ Type TestTypeWithLayoutType::parse(DialectAsmParser &parser) {
 }
 
 void TestTypeWithLayoutType::print(DialectAsmPrinter &printer) const {
-  printer << "test_type_with_layout<" << getKey() << ">";
+  printer << "<" << getKey() << ">";
 }
 
 unsigned

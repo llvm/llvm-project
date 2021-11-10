@@ -339,7 +339,6 @@ static LogicalResult verify(AwaitOp op) {
 #include "mlir/Dialect/Async/IR/AsyncOpsTypes.cpp.inc"
 
 void ValueType::print(DialectAsmPrinter &printer) const {
-  printer << getMnemonic();
   printer << "<";
   printer.printType(getValueType());
   printer << '>';
