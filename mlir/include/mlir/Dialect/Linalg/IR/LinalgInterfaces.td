@@ -412,6 +412,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Set the `i`-th output operand.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setOutputOperand",
+      /*args=*/(ins "int64_t":$i, "Value":$value),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(i >= 0 && i < getNumOutputs());
+        this->getOperation()->setOperand(getNumInputs() + i, value);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the subset of output operands that are of buffer type.
       }],
       /*retTy=*/"OpOperandVector",
