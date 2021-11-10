@@ -61,6 +61,35 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
          }]
       >,
       InterfaceMethod<
+          /*desc=*/[{
+            Return `true` if the given OpResult is a memory write. This is the
+            case if in the following cases:
+
+            * The corresponding aliasing OpOperand bufferizes to a memory write.
+            * Or: There is no corresponding aliasing OpOperand.
+
+            If the OpResult has multiple aliasing OpOperands, this method
+            returns `true` if at least one of them bufferizes to a memory write.
+          }],
+          /*retType=*/"bool",
+          /*methodName=*/"isMemoryWrite",
+          /*args=*/(ins "OpResult":$opResult),
+          /*methodBody=*/"",
+          /*defaultImplementation=*/[{
+            auto bufferizableOp =
+                cast<BufferizableOpInterface>($_op.getOperation());
+            SmallVector<OpOperand*> opOperands =
+              bufferizableOp.getAliasingOpOperand(opResult);
+            if (opOperands.empty())
+              return true;
+            return llvm::any_of(
+                opOperands,
+                [&](OpOperand *operand) {
+                  return bufferizableOp.bufferizesToMemoryWrite(*operand);
+                });
+          }]
+      >,
+      InterfaceMethod<
         /*desc=*/[{
           Return the OpResult that aliases with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands

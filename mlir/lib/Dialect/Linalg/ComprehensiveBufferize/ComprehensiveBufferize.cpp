@@ -734,16 +734,7 @@ static Value findLastPrecedingWrite(Value value) {
           return true;
         if (isa<scf::IfOp>(op))
           return true;
-
-        SmallVector<OpOperand *> opOperands =
-            bufferizableOp.getAliasingOpOperand(value.cast<OpResult>());
-        assert(opOperands.size() <= 1 &&
-               "op with multiple aliasing OpOperands not expected");
-
-        if (opOperands.empty())
-          return true;
-
-        return bufferizesToMemoryWrite(*opOperands.front());
+        return bufferizableOp.isMemoryWrite(value.cast<OpResult>());
       });
   assert(result.size() == 1 && "expected exactly one result");
   return result.front();
