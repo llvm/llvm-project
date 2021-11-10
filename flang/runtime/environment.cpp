@@ -67,6 +67,17 @@ void ExecutionEnvironment::Configure(
     }
   }
 
+  if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noStopMessage = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 }
 
