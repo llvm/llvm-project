@@ -156,7 +156,8 @@ public:
     return kindMapping.getCharacterBitsize(charTy.getFKind());
   }
 
-  // fir.char<n>  -->  llvm<"ix*">   where ix is scaled by kind mapping
+  // fir.char<k,?>  -->  llvm<"ix">          where ix is scaled by kind mapping
+  // fir.char<k,n>  -->  llvm.array<n x "ix">
   mlir::Type convertCharType(fir::CharacterType charTy) {
     auto iTy = mlir::IntegerType::get(&getContext(), characterBitsize(charTy));
     if (charTy.getLen() == fir::CharacterType::unknownLen())
