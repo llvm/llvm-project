@@ -83,17 +83,17 @@ void *__sanitizer_pvalloc(uptr size) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_free(void *ptr) {
-  GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
+  GET_MALLOC_STACK_TRACE;
   hwasan_free(ptr, &stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_cfree(void *ptr) {
-  GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
+  GET_MALLOC_STACK_TRACE;
   hwasan_free(ptr, &stack);
 }
 
@@ -119,16 +119,15 @@ void __sanitizer_malloc_stats(void) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_calloc(uptr nmemb, uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_inited))
     // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
     return AllocateFromLocalPool(nmemb * size);
+  GET_MALLOC_STACK_TRACE;
   return hwasan_calloc(nmemb, size, &stack);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_realloc(void *ptr, uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
     uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
     uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
@@ -137,11 +136,13 @@ void *__sanitizer_realloc(void *ptr, uptr size) {
       new_ptr = AllocateFromLocalPool(copy_size);
     } else {
       copy_size = size;
+      GET_MALLOC_STACK_TRACE;
       new_ptr = hwasan_malloc(copy_size, &stack);
     }
     internal_memcpy(new_ptr, ptr, copy_size);
     return new_ptr;
   }
+  GET_MALLOC_STACK_TRACE;
   return hwasan_realloc(ptr, size, &stack);
 }
 
@@ -153,12 +154,12 @@ void *__sanitizer_reallocarray(void *ptr, uptr nmemb, uptr size) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_malloc(uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_init_is_running))
     ENSURE_HWASAN_INITED();
   if (UNLIKELY(!hwasan_inited))
     // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
     return AllocateFromLocalPool(size);
+  GET_MALLOC_STACK_TRACE;
   return hwasan_malloc(size, &stack);
 }
 

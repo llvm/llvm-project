@@ -221,18 +221,18 @@ INTERCEPTOR(void *, pvalloc, SIZE_T size) {
 #endif
 
 INTERCEPTOR(void, free, void *ptr) {
-  GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
+  GET_MALLOC_STACK_TRACE;
   MsanDeallocate(&stack, ptr);
 }
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(void, cfree, void *ptr) {
-  GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
+  GET_MALLOC_STACK_TRACE;
   MsanDeallocate(&stack, ptr);
 }
-#define MSAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
+#  define MSAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
 #else
 #define MSAN_MAYBE_INTERCEPT_CFREE
 #endif
@@ -886,7 +886,6 @@ INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
-  GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
     uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
     uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
@@ -895,11 +894,13 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
       new_ptr = AllocateFromLocalPool(copy_size);
     } else {
       copy_size = size;
+      GET_MALLOC_STACK_TRACE;
       new_ptr = msan_malloc(copy_size, &stack);
     }
     internal_memcpy(new_ptr, ptr, copy_size);
     return new_ptr;
   }
+  GET_MALLOC_STACK_TRACE;
   return msan_realloc(ptr, size, &stack);
 }
 
@@ -909,16 +910,16 @@ INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
-  GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!msan_inited))
     // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
     return AllocateFromLocalPool(size);
+  GET_MALLOC_STACK_TRACE;
   return msan_malloc(size, &stack);
 }
 
 void __msan_allocated_memory(const void *data, uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (flags()->poison_in_malloc) {
+    GET_MALLOC_STACK_TRACE;
     stack.tag = STACK_TRACE_TAG_POISON;
     PoisonMemory(data, size, &stack);
   }
@@ -930,8 +931,8 @@ void __msan_copy_shadow(void *dest, const void *src, uptr n) {
 }
 
 void __sanitizer_dtor_callback(const void *data, uptr size) {
-  GET_MALLOC_STACK_TRACE;
   if (flags()->poison_in_dtor) {
+    GET_MALLOC_STACK_TRACE;
     stack.tag = STACK_TRACE_TAG_POISON;
     PoisonMemory(data, size, &stack);
   }
