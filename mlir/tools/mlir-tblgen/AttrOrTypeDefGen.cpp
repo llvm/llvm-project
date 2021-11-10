@@ -500,6 +500,34 @@ static ::mlir::OptionalParseResult generated{0}Parser(
                                       ::mlir::{0} &value) {{
 )";
 
+/// The code block for default attribute parser/printer dispatch boilerplate.
+/// {0}: the dialect fully qualified class name.
+static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
+/// Parse an attribute registered to this dialect.
+::mlir::Attribute {0}::parseAttribute(::mlir::DialectAsmParser &parser,
+                                      ::mlir::Type type) const {{
+  ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  ::llvm::StringRef attrTag;
+  if (failed(parser.parseKeyword(&attrTag)))
+    return {{};
+  {{
+    ::mlir::Attribute attr;
+    auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
+    if (parseResult.hasValue())
+      return attr;
+  }
+  parser.emitError(typeLoc) << "unknown  attribute `"
+      << attrTag << "` in dialect `" << getNamespace() << "`";
+  return {{};
+}
+/// Print an attribute registered to this dialect.
+void {0}::printAttribute(::mlir::Attribute attr,
+                         ::mlir::DialectAsmPrinter &printer) const {{
+  if (succeeded(generatedAttributePrinter(attr, printer)))
+    return;
+}
+)";
+
 /// The code block used to start the auto-generated printer function.
 ///
 /// {0}: The name of the base value type, e.g. Attribute or Type.
@@ -985,6 +1013,12 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
       os << "DEFINE_EXPLICIT_TYPE_ID(" << def.getDialect().getCppNamespace()
          << "::" << def.getCppClassName() << ")\n";
   }
+
+  // Emit the default parser/printer for Attributes if the dialect asked for it.
+  if (valueType == "Attribute" &&
+      defs.front().getDialect().useDefaultAttributePrinterParser())
+    os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
+                        defs.front().getDialect().getCppClassName());
 
   return false;
 }

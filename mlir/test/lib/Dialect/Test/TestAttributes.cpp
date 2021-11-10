@@ -229,24 +229,3 @@ void TestDialect::registerAttributes() {
 #include "TestAttrDefs.cpp.inc"
       >();
 }
-
-Attribute TestDialect::parseAttribute(DialectAsmParser &parser,
-                                      Type type) const {
-  StringRef attrTag;
-  if (failed(parser.parseKeyword(&attrTag)))
-    return Attribute();
-  {
-    Attribute attr;
-    auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
-    if (parseResult.hasValue())
-      return attr;
-  }
-  parser.emitError(parser.getNameLoc(), "unknown test attribute");
-  return Attribute();
-}
-
-void TestDialect::printAttribute(Attribute attr,
-                                 DialectAsmPrinter &printer) const {
-  if (succeeded(generatedAttributePrinter(attr, printer)))
-    return;
-}
