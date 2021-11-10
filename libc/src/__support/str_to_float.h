@@ -67,6 +67,17 @@ static inline uint64_t high64(__uint128_t num) {
   return static_cast<uint64_t>(num >> 64);
 }
 
+template <class T> inline void set_implicit_bit(fputil::FPBits<T> &result) {
+  return;
+}
+
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+template <>
+inline void set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
+  result.set_implicit_bit(result.get_unbiased_exponent() != 0);
+}
+#endif
+
 // This Eisel-Lemire implementation is based on the algorithm described in the
 // paper Number Parsing at a Gigabyte per Second, Software: Practice and
 // Experience 51 (8), 2021 (https://arxiv.org/abs/2101.11408), as well as the
@@ -114,9 +125,12 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   // The halfway constant is used to check if the bits that will be shifted away
   // intially are all 1. For doubles this is 64 (bitstype size) - 52 (final
   // mantissa size) - 3 (we shift away the last two bits separately for
-  // accuracy, and the most significant bit is ignored.) = 9. Similarly, it's 6
-  // for floats in this case.
-  const uint64_t halfway_constant = sizeof(T) == 8 ? 0x1FF : 0x3F;
+  // accuracy, and the most significant bit is ignored.) = 9 bits. Similarly,
+  // it's 6 bits for floats in this case.
+  const uint64_t halfway_constant =
+      (uint64_t(1) << (BITS_IN_MANTISSA -
+                       fputil::FloatProperties<T>::MANTISSA_WIDTH - 3)) -
+      1;
   if ((high64(first_approx) & halfway_constant) == halfway_constant &&
       low64(first_approx) + mantissa < mantissa) {
     __uint128_t low_bits = static_cast<__uint128_t>(mantissa) *
@@ -289,6 +303,13 @@ simple_decimal_conversion(const char *__restrict numStart,
                             << fputil::FloatProperties<T>::MANTISSA_WIDTH) {
     final_mantissa >>= 1;
     ++exp2;
+
+    // Check if this rounding causes exp2 to go out of range and make the result
+    // INF. If this is the case, then finalMantissa and exp2 are already the
+    // correct values for an INF result.
+    if (exp2 >= fputil::FPBits<T>::MAX_EXPONENT) {
+      errno = ERANGE; // NOLINT
+    }
   }
 
   if (exp2 == 0) {
@@ -327,6 +348,45 @@ public:
   static constexpr int32_t DIGITS_IN_MANTISSA = 15;
   static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
+
+#if defined(LONG_DOUBLE_IS_DOUBLE)
+template <> class ClingerConsts<long double> {
+public:
+  static constexpr long double POWERS_OF_TEN_ARRAY[] =
+      ClingerConsts<double>::POWERS_OF_TEN_ARRAY;
+  static constexpr int32_t EXACT_POWERS_OF_TEN =
+      ClingerConsts<double>::EXACT_POWERS_OF_TEN;
+  static constexpr int32_t DIGITS_IN_MANTISSA =
+      ClingerConsts<double>::DIGITS_IN_MANTISSA;
+  static constexpr long double MAX_EXACT_INT =
+      ClingerConsts<double>::MAX_EXACT_INT;
+};
+#elif defined(SPECIAL_X86_LONG_DOUBLE)
+template <> class ClingerConsts<long double> {
+public:
+  static constexpr long double POWERS_OF_TEN_ARRAY[] = {
+      1e0L,  1e1L,  1e2L,  1e3L,  1e4L,  1e5L,  1e6L,  1e7L,  1e8L,  1e9L,
+      1e10L, 1e11L, 1e12L, 1e13L, 1e14L, 1e15L, 1e16L, 1e17L, 1e18L, 1e19L,
+      1e20L, 1e21L, 1e22L, 1e23L, 1e24L, 1e25L, 1e26L, 1e27L};
+  static constexpr int32_t EXACT_POWERS_OF_TEN = 27;
+  static constexpr int32_t DIGITS_IN_MANTISSA = 21;
+  static constexpr long double MAX_EXACT_INT = 18446744073709551615.0L;
+};
+#else
+template <> class ClingerConsts<long double> {
+public:
+  static constexpr long double POWERS_OF_TEN_ARRAY[] = {
+      1e0L,  1e1L,  1e2L,  1e3L,  1e4L,  1e5L,  1e6L,  1e7L,  1e8L,  1e9L,
+      1e10L, 1e11L, 1e12L, 1e13L, 1e14L, 1e15L, 1e16L, 1e17L, 1e18L, 1e19L,
+      1e20L, 1e21L, 1e22L, 1e23L, 1e24L, 1e25L, 1e26L, 1e27L, 1e28L, 1e29L,
+      1e30L, 1e31L, 1e32L, 1e33L, 1e34L, 1e35L, 1e36L, 1e37L, 1e38L, 1e39L,
+      1e40L, 1e41L, 1e42L, 1e43L, 1e44L, 1e45L, 1e46L, 1e47L, 1e48L};
+  static constexpr int32_t EXACT_POWERS_OF_TEN = 48;
+  static constexpr int32_t DIGITS_IN_MANTISSA = 33;
+  static constexpr long double MAX_EXACT_INT =
+      10384593717069655257060992658440191.0L;
+};
+#endif
 
 // Take an exact mantissa and exponent and attempt to convert it using only
 // exact floating point arithmetic. This only handles numbers with low
@@ -836,6 +896,10 @@ static inline T strtofloatingpoint(const char *__restrict src,
 
   if (strEnd != nullptr)
     *strEnd = const_cast<char *>(src);
+
+  // This function only does something if T is long double and the platform uses
+  // special 80 bit long doubles. Otherwise it should be inlined out.
+  set_implicit_bit<T>(result);
 
   return T(result);
 }
