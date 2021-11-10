@@ -228,10 +228,6 @@ void DebugLocDwarfExpression::commitTemporaryBuffer() {
   TmpBuf->Comments.clear();
 }
 
-const DIType *DbgVariable::getType() const {
-  return getVariable()->getType();
-}
-
 /// Get .debug_loc entry for the instruction range starting at MI.
 static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
@@ -258,7 +254,7 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
-void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
+void OldDbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
   assert(FrameIndexExprs.empty() && "Already initialized?");
   assert(!ValueLoc.get() && "Already initialized?");
 
@@ -272,7 +268,7 @@ void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
       FrameIndexExprs.push_back({0, E});
 }
 
-ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
+ArrayRef<DbgVariable::FrameIndexExpr> OldDbgVariable::getFrameIndexExprs() const {
   if (FrameIndexExprs.size() == 1)
     return FrameIndexExprs;
 
@@ -290,14 +286,16 @@ ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
   return FrameIndexExprs;
 }
 
-void DbgVariable::addMMIEntry(const DbgVariable &V) {
+void OldDbgVariable::addMMIEntry(const DbgVariable &V) {
+  const OldDbgVariable *OV = dyn_cast<OldDbgVariable>(&V);
+
   assert(DebugLocListIndex == ~0U && !ValueLoc.get() && "not an MMI entry");
-  assert(V.DebugLocListIndex == ~0U && !V.ValueLoc.get() && "not an MMI entry");
-  assert(V.getVariable() == getVariable() && "conflicting variable");
-  assert(V.getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
+  assert(OV->DebugLocListIndex == ~0U && !OV->ValueLoc.get() && "not an MMI entry");
+  assert(OV->getVariable() == getVariable() && "conflicting variable");
+  assert(OV->getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
 
   assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
-  assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
+  assert(!OV->FrameIndexExprs.empty() && "Expected an MMI entry");
 
   // FIXME: This logic should not be necessary anymore, as we now have proper
   // deduplication. However, without it, we currently run into the assertion
@@ -309,7 +307,7 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
       return;
   }
 
-  for (const auto &FIE : V.FrameIndexExprs)
+  for (const auto &FIE : OV->FrameIndexExprs)
     // Ignore duplicate entries.
     if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
           return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
@@ -1516,9 +1514,61 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
     CU.createAbstractEntity(Node, Scope);
 }
 
-// Collect variable information from side table maintained by MF.
+// Collect variable information from MF.
+void DwarfDebug::collectVariableInfoFromMF(
+    DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
+  SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
+  LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF\n");
+  for (const auto &MBB : *Asm->MF) {
+    for (const auto &MI : MBB) {
+      if (!MI.isDebugDef()) {
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
+
+      const DILifetime *LT = MI.getDebugLifetime();
+      const DILocalVariable *LV = dyn_cast<DILocalVariable>(LT->getObject());
+      assert(LV && "DILifetime's object is not DILocalVariable");
+      assert(LV->isValidLocationForIntrinsic(MI.getDebugLoc().get()) &&
+             "Expected inlined-at fields to agree");
+
+      InlinedEntity Var(LV, MI.getDebugLoc().get());
+      Processed.insert(Var);
+      LexicalScope *Scope = LScopes.findLexicalScope(MI.getDebugLoc().get());
+
+      // If variable scope is not found then skip this variable.
+      if (!Scope) {
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << LV->getName()
+                          << ", no variable scope found\n");
+        continue;
+      }
+
+      ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
+      auto RegVar = std::make_unique<NewDbgVariable>(
+                        cast<DILocalVariable>(Var.first), Var.second);
+      RegVar->initializeLifetime(LT);
+      LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LV->getName()
+                        << "\n");
+
+      if (DbgVariable *DbgVar = MFVars.lookup(Var))
+        DbgVar->addMMIEntry(*RegVar);
+      else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
+        MFVars.insert({Var, RegVar.get()});
+        ConcreteEntities.push_back(std::move(RegVar));
+      }
+    }
+  }
+}
+
+// Collect variable information from the side table maintained by MF.
 void DwarfDebug::collectVariableInfoFromMFTable(
     DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
+  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
+    collectVariableInfoFromMF(TheCU, Processed);
+    return;
+  }
+
   SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
   LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF side table\n");
   for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
@@ -1539,7 +1589,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     }
 
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
-    auto RegVar = std::make_unique<DbgVariable>(
+    auto RegVar = std::make_unique<OldDbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
     RegVar->initializeMMI(VI.Expr, VI.Slot);
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
@@ -1823,7 +1873,7 @@ DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
   ensureAbstractEntityIsCreatedIfScoped(TheCU, Node, Scope.getScopeNode());
   if (isa<const DILocalVariable>(Node)) {
     ConcreteEntities.push_back(
-        std::make_unique<DbgVariable>(cast<const DILocalVariable>(Node),
+        std::make_unique<OldDbgVariable>(cast<const DILocalVariable>(Node),
                                        Location));
     InfoHolder.addScopeVariable(&Scope,
         cast<DbgVariable>(ConcreteEntities.back().get()));

@@ -72,7 +72,8 @@ class DbgEntity {
 
 public:
   enum DbgEntityKind {
-    DbgVariableKind,
+    OldDbgVariableKind,
+    NewDbgVariableKind,
     DbgLabelKind
   };
 
@@ -94,8 +95,80 @@ public:
     switch (N->getDbgEntityID()) {
     default:
       return false;
-    case DbgVariableKind:
+    case OldDbgVariableKind:
+    case NewDbgVariableKind:
     case DbgLabelKind:
+      return true;
+    }
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// FIXME(KZHURAVL): Write documentation for DbgVariable.
+class DbgVariable : public DbgEntity {
+protected:
+  struct FrameIndexExpr {
+    int FI;
+    const DIExpression *Expr;
+  };
+
+  DbgVariable(const DILocalVariable *V, const DILocation *IA, unsigned ID)
+      : DbgEntity(V, IA, ID) {}
+
+public:
+  virtual ~DbgVariable() {}
+
+  virtual const DILocalVariable *getVariable() const {
+    return cast<DILocalVariable>(getEntity());
+  }
+  virtual StringRef getName() const {
+    return getVariable()->getName();
+  }
+  virtual dwarf::Tag getTag() const {
+    return getVariable()->isParameter() ? dwarf::DW_TAG_formal_parameter : dwarf::DW_TAG_variable;
+  }
+  virtual const DIType *getType() const {
+    return getVariable()->getType();
+  }
+  virtual bool isArtificial() const {
+    if (getVariable()->isArtificial())
+      return true;
+    if (getType()->isArtificial())
+      return true;
+    return false;
+  }
+  virtual bool isObjectPointer() const {
+    if (getVariable()->isObjectPointer())
+      return true;
+    if (getType()->isObjectPointer())
+      return true;
+    return false;
+  }
+
+  virtual void initializeMMI(const DIExpression *E, int FI) = 0;
+  virtual void initializeDbgValue(DbgValueLoc Value) = 0;
+  virtual void initializeDbgValue(const MachineInstr *DbgValue) = 0;
+  virtual const DIExpression *getSingleExpression() const = 0;
+  virtual void setDebugLocListIndex(unsigned O) = 0;
+  virtual unsigned getDebugLocListIndex() const = 0;
+  virtual void setDebugLocListTagOffset(uint8_t O) = 0;
+  virtual Optional<uint8_t> getDebugLocListTagOffset() const = 0;
+  virtual const DbgValueLoc *getValueLoc() const = 0;
+  virtual ArrayRef<FrameIndexExpr> getFrameIndexExprs() const = 0;
+  virtual bool hasFrameIndexExprs() const = 0;
+  virtual void addMMIEntry(const DbgVariable &V) = 0;
+  virtual bool hasComplexAddress() const = 0;
+
+  virtual void initializeLifetime(const DILifetime *LT) = 0;
+  virtual ArrayRef<const DILifetime*> getLifetimes() const = 0;
+  virtual bool hasLifetimes() const = 0;
+
+  static bool classof(const DbgEntity *N) {
+    switch (N->getDbgEntityID()) {
+    default:
+      return false;
+    case OldDbgVariableKind:
+    case NewDbgVariableKind:
       return true;
     }
   }
@@ -113,7 +186,7 @@ public:
 /// single location use \a ValueLoc and (optionally) a single entry of \a Expr.
 ///
 /// Variables that have been optimized out use none of these fields.
-class DbgVariable : public DbgEntity {
+class OldDbgVariable : public DbgVariable {
   /// Index of the entry list in DebugLocs.
   unsigned DebugLocListIndex = ~0u;
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
@@ -122,23 +195,19 @@ class DbgVariable : public DbgEntity {
   /// Single value location description.
   std::unique_ptr<DbgValueLoc> ValueLoc = nullptr;
 
-  struct FrameIndexExpr {
-    int FI;
-    const DIExpression *Expr;
-  };
   mutable SmallVector<FrameIndexExpr, 1>
       FrameIndexExprs; /// Frame index + expression.
 
 public:
-  /// Construct a DbgVariable.
+  /// Construct an OldDbgVariable.
   ///
   /// Creates a variable without any DW_AT_location.  Call \a initializeMMI()
   /// for MMI entries, or \a initializeDbgValue() for DBG_VALUE instructions.
-  DbgVariable(const DILocalVariable *V, const DILocation *IA)
-      : DbgEntity(V, IA, DbgVariableKind) {}
+  OldDbgVariable(const DILocalVariable *V, const DILocation *IA)
+      : DbgVariable(V, IA, OldDbgVariableKind) {}
 
   /// Initialize from the MMI table.
-  void initializeMMI(const DIExpression *E, int FI) {
+  void initializeMMI(const DIExpression *E, int FI) override {
     assert(FrameIndexExprs.empty() && "Already initialized?");
     assert(!ValueLoc.get() && "Already initialized?");
 
@@ -149,7 +218,7 @@ public:
   }
 
   // Initialize variable's location.
-  void initializeDbgValue(DbgValueLoc Value) {
+  void initializeDbgValue(DbgValueLoc Value) override {
     assert(FrameIndexExprs.empty() && "Already initialized?");
     assert(!ValueLoc && "Already initialized?");
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
@@ -161,56 +230,25 @@ public:
   }
 
   /// Initialize from a DBG_VALUE instruction.
-  void initializeDbgValue(const MachineInstr *DbgValue);
+  void initializeDbgValue(const MachineInstr *DbgValue) override;
 
   // Accessors.
-  const DILocalVariable *getVariable() const {
-    return cast<DILocalVariable>(getEntity());
-  }
-
-  const DIExpression *getSingleExpression() const {
+  const DIExpression *getSingleExpression() const override {
     assert(ValueLoc.get() && FrameIndexExprs.size() <= 1);
     return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
   }
 
-  void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
-  unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
-  void setDebugLocListTagOffset(uint8_t O) { DebugLocListTagOffset = O; }
-  Optional<uint8_t> getDebugLocListTagOffset() const { return DebugLocListTagOffset; }
-  StringRef getName() const { return getVariable()->getName(); }
-  const DbgValueLoc *getValueLoc() const { return ValueLoc.get(); }
+  void setDebugLocListIndex(unsigned O) override { DebugLocListIndex = O; }
+  unsigned getDebugLocListIndex() const override { return DebugLocListIndex; }
+  void setDebugLocListTagOffset(uint8_t O) override { DebugLocListTagOffset = O; }
+  Optional<uint8_t> getDebugLocListTagOffset() const override { return DebugLocListTagOffset; }
+  const DbgValueLoc *getValueLoc() const override { return ValueLoc.get(); }
   /// Get the FI entries, sorted by fragment offset.
-  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
-  bool hasFrameIndexExprs() const { return !FrameIndexExprs.empty(); }
-  void addMMIEntry(const DbgVariable &V);
+  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const override;
+  bool hasFrameIndexExprs() const override { return !FrameIndexExprs.empty(); }
+  void addMMIEntry(const DbgVariable &V) override;
 
-  // Translate tag to proper Dwarf tag.
-  dwarf::Tag getTag() const {
-    // FIXME: Why don't we just infer this tag and store it all along?
-    if (getVariable()->isParameter())
-      return dwarf::DW_TAG_formal_parameter;
-
-    return dwarf::DW_TAG_variable;
-  }
-
-  /// Return true if DbgVariable is artificial.
-  bool isArtificial() const {
-    if (getVariable()->isArtificial())
-      return true;
-    if (getType()->isArtificial())
-      return true;
-    return false;
-  }
-
-  bool isObjectPointer() const {
-    if (getVariable()->isObjectPointer())
-      return true;
-    if (getType()->isObjectPointer())
-      return true;
-    return false;
-  }
-
-  bool hasComplexAddress() const {
+  bool hasComplexAddress() const override {
     assert(ValueLoc.get() && "Expected DBG_VALUE, not MMI variable");
     assert((FrameIndexExprs.empty() ||
             (FrameIndexExprs.size() == 1 &&
@@ -219,10 +257,86 @@ public:
     return !FrameIndexExprs.empty();
   }
 
-  const DIType *getType() const;
+  void initializeLifetime(const DILifetime *LT) override {
+    llvm_unreachable("OldDbgVariable::initializeLifetime is not supported");
+  }
+  ArrayRef<const DILifetime*> getLifetimes() const override {
+    llvm_unreachable("OldDbgVariable::getLifetimes is not supported");
+  }
+  bool hasLifetimes() const override {
+    return false; // FIXME(KZHURAVL).
+  }
 
   static bool classof(const DbgEntity *N) {
-    return N->getDbgEntityID() == DbgVariableKind;
+    return N->getDbgEntityID() == OldDbgVariableKind;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// FIXME(KZHURAVL): Write documentation for NewDbgVariable.
+class NewDbgVariable : public DbgVariable {
+  mutable SmallVector<const DILifetime*, 1> Lifetimes;
+
+public:
+  NewDbgVariable(const DILocalVariable *V, const DILocation *IA)
+      : DbgVariable(V, IA, NewDbgVariableKind) {}
+
+  void initializeMMI(const DIExpression *E, int FI) {
+    llvm_unreachable("NewDbgVariable::initializeMMI is not supported");
+  }
+  void initializeDbgValue(DbgValueLoc Value) {
+    llvm_unreachable("NewDbgVariable::initializeDbgValue is not supported");
+  }
+  void initializeDbgValue(const MachineInstr *DbgValue) {
+    llvm_unreachable("NewDbgVariable::initializeDbgValue is not supported");
+  }
+  const DIExpression *getSingleExpression() const {
+    llvm_unreachable("NewDbgVariable::getSingleExpression is not supported");
+  }
+  void setDebugLocListIndex(unsigned O) {
+    llvm_unreachable("NewDbgVariable::setDebugLocListIndex is not supported");
+  }
+  unsigned getDebugLocListIndex() const {
+    return ~0u; // FIXME(KZHURAVL).
+  }
+  void setDebugLocListTagOffset(uint8_t O) {
+    llvm_unreachable("NewDbgVariable::setDebugLocListTagOffset is not supported");
+  }
+  Optional<uint8_t> getDebugLocListTagOffset() const {
+    llvm_unreachable("NewDbgVariable::getDebugLocListTagOffset is not supported");
+  }
+  const DbgValueLoc *getValueLoc() const {
+    return nullptr; // FIXME(KZHURAVL).
+  }
+  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const {
+    llvm_unreachable("NewDbgVariable::getFrameIndexExprs is not supported");
+  }
+  bool hasFrameIndexExprs() const {
+    return false; // FIXME(KZHURAVL).
+  }
+  void addMMIEntry(const DbgVariable &V) {
+    llvm_unreachable("NewDbgVariable::addMMIEntry is not supported");
+  }
+  bool hasComplexAddress() const {
+    llvm_unreachable("NewDbgVariable::hasComplexAddress is not supported");
+  }
+
+  void initializeLifetime(const DILifetime *LT) override {
+    assert(Lifetimes.empty() && "Already initialized?");
+    assert(LT && "Expected valid lifetime");
+    assert(LT->getLocation() && "Expected valid location (expr)");
+
+    Lifetimes.push_back(LT);
+  }
+  ArrayRef<const DILifetime*> getLifetimes() const override {
+    return Lifetimes;
+  }
+  bool hasLifetimes() const override {
+    return !Lifetimes.empty();
+  }
+
+  static bool classof(const DbgEntity *N) {
+    return N->getDbgEntityID() == NewDbgVariableKind;
   }
 };
 
@@ -620,6 +734,10 @@ private:
   /// scope return true.
   bool buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                          const DbgValueHistoryMap::Entries &Entries);
+
+  /// Collect variable information from MF.
+  void collectVariableInfoFromMF(DwarfCompileUnit &TheCU,
+                                 DenseSet<InlinedEntity> &P);
 
   /// Collect variable information from the side table maintained by MF.
   void collectVariableInfoFromMFTable(DwarfCompileUnit &TheCU,
