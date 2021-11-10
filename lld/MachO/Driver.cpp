@@ -1264,6 +1264,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->icfLevel = getICFLevel(args);
   config->dedupLiterals = args.hasArg(OPT_deduplicate_literals) ||
                           config->icfLevel != ICFLevel::none;
+  config->warnDylibInstallName = args.hasFlag(
+      OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1280,8 +1282,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 #endif
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
-    if (config->outputType != MH_DYLIB)
-      warn(arg->getAsString(args) + ": ignored, only has effect with -dylib");
+    if (config->warnDylibInstallName && config->outputType != MH_DYLIB)
+      warn(
+          arg->getAsString(args) +
+          ": ignored, only has effect with -dylib [--warn-dylib-install-name]");
     else
       config->installName = arg->getValue();
   } else if (config->outputType == MH_DYLIB) {
