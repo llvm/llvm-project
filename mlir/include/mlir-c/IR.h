@@ -517,6 +517,13 @@ MLIR_CAPI_EXPORTED void mlirRegionInsertOwnedBlockBefore(MlirRegion region,
                                                          MlirBlock reference,
                                                          MlirBlock block);
 
+/// Returns first region attached to the operation.
+MLIR_CAPI_EXPORTED MlirRegion mlirOperationGetFirstRegion(MlirOperation op);
+
+/// Returns the region immediately following the given region in its parent
+/// operation.
+MLIR_CAPI_EXPORTED MlirRegion mlirRegionGetNextInOperation(MlirRegion region);
+
 //===----------------------------------------------------------------------===//
 // Block API.
 //===----------------------------------------------------------------------===//

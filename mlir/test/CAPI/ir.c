@@ -226,8 +226,8 @@ int collectStatsSingle(OpListNode *head, ModuleStats *stats) {
     ++stats->numOpResults;
   }
 
-  for (unsigned i = 0; i < numRegions; ++i) {
-    MlirRegion region = mlirOperationGetRegion(operation, i);
+  MlirRegion region = mlirOperationGetFirstRegion(operation);
+  while (!mlirRegionIsNull(region)) {
     for (MlirBlock block = mlirRegionGetFirstBlock(region);
          !mlirBlockIsNull(block); block = mlirBlockGetNextInRegion(block)) {
       ++stats->numBlocks;
@@ -255,6 +255,7 @@ int collectStatsSingle(OpListNode *head, ModuleStats *stats) {
         head->next = node;
       }
     }
+    region = mlirRegionGetNextInOperation(region);
   }
   return 0;
 }
