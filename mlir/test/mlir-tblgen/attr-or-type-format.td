@@ -58,7 +58,6 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR: }
 
 // ATTR: void TestAAttr::print(::mlir::DialectAsmPrinter &printer) const {
-// ATTR:   printer << "attr_a";
 // ATTR:   printer << ' ' << "hello";
 // ATTR:   printer << ' ' << "=";
 // ATTR:   printer << ' ';
@@ -154,7 +153,6 @@ def AttrB : TestAttr<"TestB"> {
 // ATTR: }
 
 // ATTR: void TestFAttr::print(::mlir::DialectAsmPrinter &printer) const {
-// ATTR:   printer << "attr_c";
 // ATTR:   printer << ' ';
 // ATTR:   printer << getV0();
 // ATTR:   printer << ",";
@@ -209,7 +207,6 @@ def AttrC : TestAttr<"TestF"> {
 // TYPE:  }
 
 // TYPE: void TestCType::print(::mlir::DialectAsmPrinter &printer) const {
-// TYPE:   printer << "type_c";
 // TYPE:   printer << ' ' << "foo";
 // TYPE:   printer << ",";
 // TYPE:   printer << ' ' << ":";

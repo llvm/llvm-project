@@ -417,8 +417,7 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
   // llvm.loop.unroll.disable is marked on the back edges of a loop. Therefore,
   // we iterate through each back edge of the loop with header MBB, and check
   // whether its metadata contains llvm.loop.unroll.disable.
-  for (auto I = MBB.pred_begin(); I != MBB.pred_end(); ++I) {
-    const MachineBasicBlock *PMBB = *I;
+  for (const MachineBasicBlock *PMBB : MBB.predecessors()) {
     if (LI.getLoopFor(PMBB) != LI.getLoopFor(&MBB)) {
       // Edges from other loops to MBB are not back edges.
       continue;

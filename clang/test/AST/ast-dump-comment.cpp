@@ -76,10 +76,22 @@ int Test_HTMLTagComment;
 /// \verbatim
 /// Aaa
 /// \endverbatim
+/// \f$ a \f$
+/// \f( b \f)
+/// \f[ c \f]
+/// \f{env}{ c \f}
 int Test_VerbatimBlockComment;
 // CHECK:      VarDecl{{.*}}Test_VerbatimBlockComment
 // CHECK:        VerbatimBlockComment{{.*}} Name="verbatim" CloseName="endverbatim"
 // CHECK-NEXT:     VerbatimBlockLineComment{{.*}} Text=" Aaa"
+// CHECK:        VerbatimBlockComment{{.*}} Name="f$" CloseName="f$"
+// CHECK-NEXT:     VerbatimBlockLineComment{{.*}} Text=" a "
+// CHECK:        VerbatimBlockComment{{.*}} Name="f(" CloseName="f)"
+// CHECK-NEXT:     VerbatimBlockLineComment{{.*}} Text=" b "
+// CHECK:        VerbatimBlockComment{{.*}} Name="f[" CloseName="f]"
+// CHECK-NEXT:     VerbatimBlockLineComment{{.*}} Text=" c "
+// CHECK:        VerbatimBlockComment{{.*}} Name="f{" CloseName="f}"
+// CHECK-NEXT:     VerbatimBlockLineComment{{.*}} Text="env}{ c "
 
 /// \param ... More arguments
 template<typename T>

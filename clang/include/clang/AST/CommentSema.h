@@ -207,10 +207,6 @@ public:
   /// \returns \c true if declaration that this comment is attached to declares
   /// a function pointer.
   bool isFunctionPointerVarDecl();
-  /// \returns \c true if the declaration that this comment is attached to
-  /// declares a variable or a field whose type is a function or a block
-  /// pointer.
-  bool isFunctionOrBlockPointerVarLikeDecl();
   bool isFunctionOrMethodVariadic();
   bool isObjCMethodDecl();
   bool isObjCPropertyDecl();

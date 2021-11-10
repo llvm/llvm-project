@@ -1451,11 +1451,15 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
       DiscardUntilEndOfDirective();
       return;
     }
-    FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
 
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
+
+    // Exiting to an empty string means pop to the including file, so leave
+    // FilenameID as -1 in that case.
+    if (!(IsFileExit && Literal.GetString().empty()))
+      FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
   }
 
   // Create a line note with this information.

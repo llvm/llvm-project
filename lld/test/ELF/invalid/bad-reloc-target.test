@@ -1,6 +1,6 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: not ld.lld %t1.o -o /dev/null 2>&1 | FileCheck %s
-# CHECK: error: {{.*}}.o: unsupported relocation reference
+# CHECK: error: {{.*}}.o: relocation section .rela.text (index 2) has invalid sh_info (0)
 
 --- !ELF
 FileHeader:
@@ -25,7 +25,7 @@ Symbols:
 
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
-# ERR2: error: {{.*}}.o: invalid relocated section index: 99
+# ERR2: error: {{.*}}.o: relocation section .rela.text (index 2) has invalid sh_info (99)
 
 --- !ELF
 FileHeader:

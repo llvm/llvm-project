@@ -592,4 +592,7 @@ def err_cc1_round_trip_ok_then_fail : Error<
   "generated arguments parse failed in round-trip">;
 def err_cc1_round_trip_mismatch : Error<
   "generated arguments do not match in round-trip">;
+
+def err_drv_ssp_missing_offset_argument : Error<
+  "'%0' is used without '-mstack-protector-guard-offset', and there is no default">;
 }

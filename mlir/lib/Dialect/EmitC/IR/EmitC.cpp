@@ -201,7 +201,7 @@ void EmitCDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 }
 
 void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
-  printer << "opaque<\"";
+  printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
   printer << "\">";
 }
@@ -227,27 +227,8 @@ Type emitc::OpaqueType::parse(DialectAsmParser &parser) {
   return get(parser.getContext(), value);
 }
 
-Type EmitCDialect::parseType(DialectAsmParser &parser) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  StringRef mnemonic;
-  if (parser.parseKeyword(&mnemonic))
-    return Type();
-  Type genType;
-  OptionalParseResult parseResult =
-      generatedTypeParser(parser, mnemonic, genType);
-  if (parseResult.hasValue())
-    return genType;
-  parser.emitError(typeLoc, "unknown type in EmitC dialect");
-  return Type();
-}
-
-void EmitCDialect::printType(Type type, DialectAsmPrinter &os) const {
-  if (failed(generatedTypePrinter(type, os)))
-    llvm_unreachable("unexpected 'EmitC' type kind");
-}
-
 void emitc::OpaqueType::print(DialectAsmPrinter &printer) const {
-  printer << "opaque<\"";
+  printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
   printer << "\">";
 }

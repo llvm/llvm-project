@@ -93,7 +93,7 @@ Type RangeType::parse(DialectAsmParser &parser) {
 }
 
 void RangeType::print(DialectAsmPrinter &printer) const {
-  printer << "range<";
+  printer << "<";
   (void)generatedTypePrinter(getElementType(), printer);
   printer << ">";
 }

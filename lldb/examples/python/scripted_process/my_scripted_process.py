@@ -69,7 +69,7 @@ class MyScriptedProcess(ScriptedProcess):
 
 
 class MyScriptedThread(ScriptedThread):
-    registers = {
+    register_ctx = {
         "rax":0x00000000000006e4,
         "rbx":0x00000001040b6060,
         "rcx":0x00000001040b2e00,
@@ -93,8 +93,8 @@ class MyScriptedThread(ScriptedThread):
         "gs":0x0000000000000000,
     }
 
-    def __init__(self, target):
-        super().__init__(target)
+    def __init__(self, process, args):
+        super().__init__(process, args)
 
     def get_thread_id(self) -> int:
         return 0x19
@@ -123,7 +123,7 @@ class MyScriptedThread(ScriptedThread):
         return self.frame_zero[0:0]
 
     def get_register_context(self) -> str:
-        return struct.pack("{}Q".format(len(self.registers)), *self.registers.values())
+        return struct.pack("{}Q".format(len(self.register_ctx)), *self.register_ctx.values())
 
 
 def __lldb_init_module(debugger, dict):

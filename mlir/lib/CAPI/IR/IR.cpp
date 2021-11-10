@@ -379,6 +379,22 @@ MlirRegion mlirOperationGetRegion(MlirOperation op, intptr_t pos) {
   return wrap(&unwrap(op)->getRegion(static_cast<unsigned>(pos)));
 }
 
+MlirRegion mlirOperationGetFirstRegion(MlirOperation op) {
+  Operation *cppOp = unwrap(op);
+  if (cppOp->getNumRegions() == 0)
+    return wrap(static_cast<Region *>(nullptr));
+  return wrap(&cppOp->getRegion(0));
+}
+
+MlirRegion mlirRegionGetNextInOperation(MlirRegion region) {
+  Region *cppRegion = unwrap(region);
+  Operation *parent = cppRegion->getParentOp();
+  intptr_t next = cppRegion->getRegionNumber() + 1;
+  if (parent->getNumRegions() > next)
+    return wrap(&parent->getRegion(next));
+  return wrap(static_cast<Region *>(nullptr));
+}
+
 MlirOperation mlirOperationGetNextInBlock(MlirOperation op) {
   return wrap(unwrap(op)->getNextNode());
 }

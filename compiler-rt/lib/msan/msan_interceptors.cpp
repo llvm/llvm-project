@@ -1033,6 +1033,8 @@ extern "C" int pthread_attr_destroy(void *attr);
 static void *MsanThreadStartFunc(void *arg) {
   MsanThread *t = (MsanThread *)arg;
   SetCurrentThread(t);
+  t->Init();
+  SetSigProcMask(&t->starting_sigset_, nullptr);
   return t->ThreadStart();
 }
 
@@ -1048,7 +1050,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
   AdjustStackSize(attr);
 
   MsanThread *t = MsanThread::Create(callback, param);
-
+  ScopedBlockSignals block(&t->starting_sigset_);
   int res = REAL(pthread_create)(th, attr, MsanThreadStartFunc, t);
 
   if (attr == &myattr)

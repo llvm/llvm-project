@@ -16,7 +16,7 @@
 
 ; NEW-PM-DAG: Running analysis: LoopAnalysis on test
 ; NEW-PM-DAG: Running analysis: DominatorTreeAnalysis on test
-; NEW-PM: Running pass: GVN on test
+; NEW-PM: Running pass: GVNPass on test
 ; NEW-PM-NOT: Running analysis: LoopAnalysis on test
 ; NEW-PM-NOT: Running analysis: DominatorTreeAnalysis on test
 

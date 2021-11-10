@@ -2242,7 +2242,7 @@ class llvm::sroa::AllocaSliceRewriter
 
   const DataLayout &DL;
   AllocaSlices &AS;
-  SROA &Pass;
+  SROAPass &Pass;
   AllocaInst &OldAI, &NewAI;
   const uint64_t NewAllocaBeginOffset, NewAllocaEndOffset;
   Type *NewAllocaTy;
@@ -2290,7 +2290,7 @@ class llvm::sroa::AllocaSliceRewriter
   IRBuilderTy IRB;
 
 public:
-  AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROA &Pass,
+  AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROAPass &Pass,
                       AllocaInst &OldAI, AllocaInst &NewAI,
                       uint64_t NewAllocaBeginOffset,
                       uint64_t NewAllocaEndOffset, bool IsIntegerPromotable,
@@ -3755,7 +3755,7 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
 /// there all along.
 ///
 /// \returns true if any changes are made.
-bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
+bool SROAPass::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   LLVM_DEBUG(dbgs() << "Pre-splitting loads and stores\n");
 
   // Track the loads and stores which are candidates for pre-splitting here, in
@@ -4235,8 +4235,8 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// appropriate new offsets. It also evaluates how successful the rewrite was
 /// at enabling promotion and if it was successful queues the alloca to be
 /// promoted.
-AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
-                                   Partition &P) {
+AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
+                                       Partition &P) {
   // Try to compute a friendly type for this partition of the alloca. This
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
@@ -4387,7 +4387,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
 /// Walks the slices of an alloca and form partitions based on them,
 /// rewriting each of their uses.
-bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
+bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (AS.begin() == AS.end())
     return false;
 
@@ -4558,7 +4558,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 }
 
 /// Clobber a use with undef, deleting the used value if it becomes dead.
-void SROA::clobberUse(Use &U) {
+void SROAPass::clobberUse(Use &U) {
   Value *OldV = U;
   // Replace the use with an undef value.
   U = UndefValue::get(OldV->getType());
@@ -4577,7 +4577,7 @@ void SROA::clobberUse(Use &U) {
 /// This analyzes the alloca to ensure we can reason about it, builds
 /// the slices of the alloca, and then hands it off to be split and
 /// rewritten as needed.
-bool SROA::runOnAlloca(AllocaInst &AI) {
+bool SROAPass::runOnAlloca(AllocaInst &AI) {
   LLVM_DEBUG(dbgs() << "SROA alloca: " << AI << "\n");
   ++NumAllocasAnalyzed;
 
@@ -4651,7 +4651,7 @@ bool SROA::runOnAlloca(AllocaInst &AI) {
 ///
 /// We also record the alloca instructions deleted here so that they aren't
 /// subsequently handed to mem2reg to promote.
-bool SROA::deleteDeadInstructions(
+bool SROAPass::deleteDeadInstructions(
     SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
   bool Changed = false;
   while (!DeadInsts.empty()) {
@@ -4690,7 +4690,7 @@ bool SROA::deleteDeadInstructions(
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.
 /// This function returns whether any promotion occurred.
-bool SROA::promoteAllocas(Function &F) {
+bool SROAPass::promoteAllocas(Function &F) {
   if (PromotableAllocas.empty())
     return false;
 
@@ -4702,8 +4702,8 @@ bool SROA::promoteAllocas(Function &F) {
   return true;
 }
 
-PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
-                                AssumptionCache &RunAC) {
+PreservedAnalyses SROAPass::runImpl(Function &F, DominatorTree &RunDT,
+                                    AssumptionCache &RunAC) {
   LLVM_DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
   C = &F.getContext();
   DT = &RunDT;
@@ -4757,7 +4757,7 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
   return PA;
 }
 
-PreservedAnalyses SROA::run(Function &F, FunctionAnalysisManager &AM) {
+PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   return runImpl(F, AM.getResult<DominatorTreeAnalysis>(F),
                  AM.getResult<AssumptionAnalysis>(F));
 }
@@ -4768,7 +4768,7 @@ PreservedAnalyses SROA::run(Function &F, FunctionAnalysisManager &AM) {
 /// SROA pass.
 class llvm::sroa::SROALegacyPass : public FunctionPass {
   /// The SROA implementation.
-  SROA Impl;
+  SROAPass Impl;
 
 public:
   static char ID;

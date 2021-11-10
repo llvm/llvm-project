@@ -2269,6 +2269,16 @@ public:
                                            EndLoc);
   }
 
+  /// Build a new OpenMP 'align' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPAlignClause(Expr *A, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPAlignClause(A, StartLoc, LParenLoc, EndLoc);
+  }
+
   /// Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -9545,6 +9555,15 @@ TreeTransform<Derived>::TransformOMPFilterClause(OMPFilterClause *C) {
     return nullptr;
   return getDerived().RebuildOMPFilterClause(ThreadID.get(), C->getBeginLoc(),
                                              C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPAlignClause(OMPAlignClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getAlignment());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPAlignClause(E.get(), C->getBeginLoc(),
+                                            C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

@@ -1322,11 +1322,10 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
 defm VFWREDOSUM : VWREDO_FV_V<"vfwredosum", 0b110011>;
 defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
-} // Predicates = [HasStdExtV, HasStdExtF]
 
 def : InstAlias<"vfwredsum.vs $vd, $vs2, $vs1$vm",
                 (VFWREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
-
+} // Predicates = [HasStdExtV, HasStdExtF]
 
 let Predicates = [HasStdExtV] in {
 // Vector Mask-Register Logical Instructions

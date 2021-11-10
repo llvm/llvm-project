@@ -33,7 +33,7 @@
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: AssumptionAnalysis on main
-; CHECK-O: Running pass: SROA on main
+; CHECK-O: Running pass: SROAPass on main
 ; CHECK-O: Running analysis: DominatorTreeAnalysis on main
 ; CHECK-O: Running pass: EarlyCSEPass on main
 ; CHECK-O: Running analysis: TargetLibraryAnalysis on main
@@ -68,7 +68,7 @@
 ; CHECK-O: Invalidating analysis: BasicAA on main
 ; CHECK-O: Invalidating analysis: AAManager on main
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
-; CHECK-O: Running pass: SROA on main
+; CHECK-O: Running pass: SROAPass on main
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to SROA::runImpl
 ; CHECK-O-DAG: Running analysis: DominatorTreeAnalysis on main
@@ -96,9 +96,9 @@
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
-; CHECK-O: Running pass: SROA on main
+; CHECK-O: Running pass: SROAPass on main
 ; CHECK-O: Running pass: MergedLoadStoreMotionPass on main
-; CHECK-O: Running pass: GVN on main
+; CHECK-O: Running pass: GVNPass on main
 ; CHECK-O: Running pass: SCCPPass on main
 ; CHECK-O: Running pass: BDCEPass on main
 ; CHECK-O: Running analysis: DemandedBitsAnalysis on main

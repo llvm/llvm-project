@@ -3618,7 +3618,7 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      class Foo : Bar {}             vs.     class Foo: Bar {}
 
-**SpaceBeforeParens** (``SpaceBeforeParensOptions``) :versionbadge:`clang-format 3.5`
+**SpaceBeforeParens** (``SpaceBeforeParensStyle``) :versionbadge:`clang-format 3.5`
   Defines in which cases to put a space before opening parentheses.
 
   Possible values:
@@ -3688,6 +3688,78 @@ the configuration (without a prefix: ``Auto``).
          }
        }
 
+  * ``SBPO_Custom`` (in configuration: ``Custom``)
+    Configure each individual space before parentheses in
+    `SpaceBeforeParensOptions`.
+
+
+
+**SpaceBeforeParensOptions** (``SpaceBeforeParensCustom``) :versionbadge:`clang-format 14`
+  Control of individual space before parentheses.
+
+  If ``SpaceBeforeParens`` is set to ``Custom``, use this to specify
+  how each individual space before parentheses case should be handled.
+  Otherwise, this is ignored.
+
+  .. code-block:: yaml
+
+    # Example of usage:
+    SpaceBeforeParens: Custom
+    SpaceBeforeParensOptions:
+      AfterControlStatements: true
+      AfterFunctionDefinitionName: true
+
+  Nested configuration flags:
+
+
+  * ``bool AfterControlStatements`` If ``true``, put space betwee control statement keywords
+    (for/if/while...) and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       if (...) {}                     vs.    if(...) {}
+
+  * ``bool AfterForeachMacros`` If ``true``, put space between foreach macros and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       FOREACH (...)                   vs.    FOREACH(...)
+         <loop-body>                            <loop-body>
+
+  * ``bool AfterFunctionDeclarationName`` If ``true``, put a space between function declaration name and opening
+    parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void f ();                      vs.    void f();
+
+  * ``bool AfterFunctionDefinitionName`` If ``true``, put a space between function definition name and opening
+    parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void f () {}                    vs.    void f() {}
+
+  * ``bool AfterIfMacros`` If ``true``, put space between if macros and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       IF (...)                        vs.    IF(...)
+         <conditional-body>                     <conditional-body>
+
+  * ``bool BeforeNonEmptyParentheses`` If ``true``, put a space before opening parentheses only if the
+    parentheses are not empty.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       void f (int a);                 vs.    void f();
+       f (a);                                 f();
 
 
 **SpaceBeforeRangeBasedForLoopColon** (``Boolean``) :versionbadge:`clang-format 7`

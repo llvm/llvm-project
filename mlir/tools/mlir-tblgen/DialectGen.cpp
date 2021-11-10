@@ -208,9 +208,9 @@ static void emitDialectDecl(Dialect &dialect,
 
     // Check for any attributes/types registered to this dialect.  If there are,
     // add the hooks for parsing/printing.
-    if (!dialectAttrs.empty())
+    if (!dialectAttrs.empty() || dialect.useDefaultAttributePrinterParser())
       os << attrParserDecl;
-    if (!dialectTypes.empty())
+    if (!dialectTypes.empty() || dialect.useDefaultTypePrinterParser())
       os << typeParserDecl;
 
     // Add the decls for the various features of the dialect.

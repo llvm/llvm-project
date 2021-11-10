@@ -1,6 +1,6 @@
 // Test FIR to LLVM IR conversion invalid cases and diagnostics.
 
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir --verify-diagnostics %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --verify-diagnostics %s
 
 func @zero_aggregate() {
   // expected-error@+1{{failed to legalize operation 'fir.zero_bits'}}

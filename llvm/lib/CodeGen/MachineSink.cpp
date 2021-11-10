@@ -682,13 +682,9 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
   // There is no need to do this check if all the uses are PHI nodes. PHI
   // sources are only defined on the specific predecessor edges.
   if (!BreakPHIEdge) {
-    for (MachineBasicBlock::pred_iterator PI = ToBB->pred_begin(),
-           E = ToBB->pred_end(); PI != E; ++PI) {
-      if (*PI == FromBB)
-        continue;
-      if (!DT->dominates(ToBB, *PI))
+    for (MachineBasicBlock *Pred : ToBB->predecessors())
+      if (Pred != FromBB && !DT->dominates(ToBB, Pred))
         return false;
-    }
   }
 
   ToSplit.insert(std::make_pair(FromBB, ToBB));

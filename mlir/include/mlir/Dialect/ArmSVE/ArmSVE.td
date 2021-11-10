@@ -67,7 +67,7 @@ def ScalableVectorType : ArmSVE_Type<"ScalableVector"> {
   );
 
   let printer = [{
-    $_printer << "vector<";
+    $_printer << "<";
     for (int64_t dim : getShape())
       $_printer << dim << 'x';
     $_printer << getElementType() << '>';
