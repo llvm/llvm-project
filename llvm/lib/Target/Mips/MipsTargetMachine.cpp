@@ -257,6 +257,7 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreSched2() override;
+  bool addPreRewrite() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -338,6 +339,11 @@ void MipsPassConfig::addPreEmitPass() {
     addPass(createMipsBranchExpansion());
 
   addPass(createMipsConstantIslandPass());
+}
+
+bool MipsPassConfig::addPreRewrite() {
+  addPass(createNanoMipsRegisterReAllocationPass());
+  return true;
 }
 
 bool MipsPassConfig::addIRTranslator() {
