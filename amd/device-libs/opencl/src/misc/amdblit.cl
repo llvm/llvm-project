@@ -520,15 +520,15 @@ __amd_fillImage(
 
 __attribute__((always_inline)) void
 __amd_streamOpsWrite(
-    __global atomic_uint* ptrInt,
+    __global atomic_uint* ptrUint,
     __global atomic_ulong* ptrUlong,
     ulong value) {
 
   // The launch parameters for this shader is a 1 grid work-item
 
   // 32-bit write
-  if (ptrInt) {
-    atomic_store_explicit(ptrInt, (uint)value, memory_order_relaxed, memory_scope_all_svm_devices);
+  if (ptrUint) {
+    atomic_store_explicit(ptrUint, (uint)value, memory_order_relaxed, memory_scope_all_svm_devices);
   }
   // 64-bit write
   else {
@@ -539,7 +539,7 @@ __amd_streamOpsWrite(
 
 __attribute__((always_inline)) void
 __amd_streamOpsWait(
-    __global atomic_uint* ptrInt,
+    __global atomic_uint* ptrUint,
     __global atomic_ulong* ptrUlong,
     ulong value, ulong compareOp, ulong mask) {
 
@@ -547,60 +547,60 @@ __amd_streamOpsWait(
 
     switch (compareOp) {
     case 0: //GEQ
-      if (ptrInt) {
-        while (!((((atomic_load_explicit(ptrInt, memory_order_relaxed,
-                    memory_scope_all_svm_devices)) & (uint)mask) - (uint)value) >= 0)) {
+      if (ptrUint) {
+        while ((int)(atomic_load_explicit(ptrUint, memory_order_relaxed,
+                    memory_scope_all_svm_devices) & (uint)mask) < (uint)value) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       else {
-        while (!((((atomic_load_explicit(ptrUlong, memory_order_relaxed,
-                    memory_scope_all_svm_devices)) & mask) - value) >= 0)) {
+        while ((long)(atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                    memory_scope_all_svm_devices) & mask) < value) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       break;
 
     case 1: // EQ
-      if (ptrInt) {
-        while (!(((atomic_load_explicit(ptrInt, memory_order_relaxed,
-                   memory_scope_all_svm_devices)) & (uint)mask) == (uint)value)) {
+      if (ptrUint) {
+        while ((atomic_load_explicit(ptrUint, memory_order_relaxed,
+                   memory_scope_all_svm_devices) & (uint)mask) != (uint)value) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       else {
-        while (!(((atomic_load_explicit(ptrUlong, memory_order_relaxed,
-                   memory_scope_all_svm_devices)) & mask) == value)) {
+        while ((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                   memory_scope_all_svm_devices) & mask) != value) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       break;
 
     case 2: //AND
-      if (ptrInt) {
-        while (!(((atomic_load_explicit(ptrInt, memory_order_relaxed,
-                   memory_scope_all_svm_devices)) & (uint)mask) & (uint)value)) {
+      if (ptrUint) {
+        while (!((atomic_load_explicit(ptrUint, memory_order_relaxed,
+                   memory_scope_all_svm_devices) & (uint)mask) & (uint)value)) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       else {
-        while (!(((atomic_load_explicit(ptrUlong, memory_order_relaxed,
-                   memory_scope_all_svm_devices)) & mask) & value)) {
+        while (!((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                   memory_scope_all_svm_devices) & mask) & value)) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       break;
 
     case 3: //NOR
-      if (ptrInt) {
-        while (!(~(((atomic_load_explicit(ptrInt, memory_order_relaxed,
-                     memory_scope_all_svm_devices)) & (uint)mask) | (uint)value))) {
+      if (ptrUint) {
+        while (((atomic_load_explicit(ptrUint, memory_order_relaxed,
+                     memory_scope_all_svm_devices) & (uint)mask) | (uint)value) == ~0U) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       else {
-        while (!(~(((atomic_load_explicit(ptrUlong, memory_order_relaxed,
-                     memory_scope_all_svm_devices)) & mask) | value))) {
+        while (((atomic_load_explicit(ptrUlong, memory_order_relaxed,
+                     memory_scope_all_svm_devices) & mask) | value) == ~0UL) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
