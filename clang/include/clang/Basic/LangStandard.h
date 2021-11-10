@@ -28,6 +28,7 @@ enum class Language : uint8_t {
 
   /// LLVM IR: we accept this so that we can run the optimizer on it,
   /// and compile it to assembly or object code.
+  CIR,
   LLVM_IR,
 
   ///@{ Languages that the frontend can parse and compile.

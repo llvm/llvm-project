@@ -7,8 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIRFrontendAction/CIRGenAction.h"
+#include "mlir/Dialect/CIR/IR/CIRDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Parser/Parser.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -138,14 +142,10 @@ public:
 void CIRGenConsumer::anchor() {}
 
 CIRGenAction::CIRGenAction(OutputType act, mlir::MLIRContext *_MLIRContext)
-    : MLIRContext(_MLIRContext ? _MLIRContext : new mlir::MLIRContext),
-      OwnsVMContext(!_MLIRContext), action(act) {}
+    : mlirContext(_MLIRContext ? _MLIRContext : new mlir::MLIRContext),
+      action(act) {}
 
-CIRGenAction::~CIRGenAction() {
-  TheModule.reset();
-  if (OwnsVMContext)
-    delete MLIRContext;
-}
+CIRGenAction::~CIRGenAction() { mlirModule.reset(); }
 
 void CIRGenAction::EndSourceFileAction() {}
 
@@ -176,12 +176,52 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return std::make_unique<cir::CIRGenConsumer>(std::move(out), action);
 }
 
-std::unique_ptr<mlir::ModuleOp>
-CIRGenAction::loadModule(llvm::MemoryBufferRef MBRef) {
-  return {};
+mlir::OwningOpRef<mlir::ModuleOp>
+CIRGenAction::loadModule(llvm::MemoryBufferRef mbRef) {
+  auto module =
+      mlir::parseSourceString<mlir::ModuleOp>(mbRef.getBuffer(), mlirContext);
+  assert(module && "Failed to parse ClangIR module");
+  return module;
 }
 
-void CIRGenAction::ExecuteAction() { ASTFrontendAction::ExecuteAction(); }
+void CIRGenAction::ExecuteAction() {
+  if (getCurrentFileKind().getLanguage() != Language::CIR) {
+    this->ASTFrontendAction::ExecuteAction();
+    return;
+  }
+
+  // If this is a CIR file we have to treat it specially.
+  auto &ci = getCompilerInstance();
+  std::unique_ptr<raw_pwrite_stream> outstream =
+      getOutputStream(ci, getCurrentFile(), action);
+  if (action != OutputType::None && !outstream)
+    return;
+
+  auto &sourceManager = ci.getSourceManager();
+  auto fileID = sourceManager.getMainFileID();
+  auto mainFile = sourceManager.getBufferOrNone(fileID);
+
+  if (!mainFile)
+    return;
+
+  mlirContext->getOrLoadDialect<mlir::cir::CIRDialect>();
+  mlirContext->getOrLoadDialect<mlir::func::FuncDialect>();
+  mlirContext->getOrLoadDialect<mlir::memref::MemRefDialect>();
+
+  // TODO: unwrap this -- this exists because including the `OwningModuleRef` in
+  // CIRGenAction's header would require linking the Frontend against MLIR.
+  // Let's avoid that for now.
+  auto mlirModule = loadModule(*mainFile);
+  if (!mlirModule)
+    return;
+
+  llvm::LLVMContext llvmCtx;
+  auto llvmModule = lowerFromCIRToLLVMIR(
+      *mlirModule, std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx);
+
+  if (outstream)
+    llvmModule->print(*outstream, nullptr);
+}
 
 void EmitAssemblyAction::anchor() {}
 EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *_MLIRContext)
