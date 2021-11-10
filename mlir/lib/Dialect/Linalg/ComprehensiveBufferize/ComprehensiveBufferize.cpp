@@ -2236,6 +2236,7 @@ LogicalResult mlir::linalg::eliminateInsertSliceAnchoredInitTensorOps(
       });
 }
 
+#ifndef NDEBUG
 /// Assert that the current bufferization decisions are consistent.
 static void checkAliasInfoConsistency(FuncOp funcOp,
                                       const DominanceInfo &domInfo,
@@ -2253,6 +2254,7 @@ static void checkAliasInfoConsistency(FuncOp funcOp,
                    "found read after write conflict before running analysis");
   });
 }
+#endif
 
 LogicalResult
 mlir::linalg::runComprehensiveBufferize(ModuleOp moduleOp,
