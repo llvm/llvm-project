@@ -11,12 +11,7 @@ if (current_os == "win") {
 } else {
   supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
-if (android_ndk_path != "") {
-  supported_toolchains += [
-    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
-    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
-  ]
-}
+supported_toolchains += supported_android_toolchains
 group("compiler-rt") {
   deps = [ "//compiler-rt/include($host_toolchain)" ]
   foreach(toolchain, supported_toolchains) {
