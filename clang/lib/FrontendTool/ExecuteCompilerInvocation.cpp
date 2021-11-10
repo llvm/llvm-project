@@ -44,13 +44,18 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   StringRef Action("unknown");
   (void)Action;
 
-  auto CIR = CI.getFrontendOpts().UseClangIRPipeline;
+  auto UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
   auto Act = CI.getFrontendOpts().ProgramAction;
 
-  auto UsesCIR = Act == EmitCIR || Act == EmitCIROnly || Act == EmitLLVM;
-  if ((CIR && !UsesCIR) || (!CIR && UsesCIR))
+  auto EmitsCIR = Act == EmitCIR || Act == EmitCIROnly;
+  auto IsImplementedCIROutput = EmitsCIR || Act == EmitLLVM;
+
+  if (UseCIR && !IsImplementedCIROutput)
     llvm::report_fatal_error("-fenable currently only works with "
                              "-emit-cir, -emit-cir-only and -emit-llvm");
+  if (!UseCIR && EmitsCIR)
+    llvm::report_fatal_error(
+        "-emit-cir and -emit-cir-only only valid when using -fclangir");
 
   switch (CI.getFrontendOpts().ProgramAction) {
   case ASTDeclList:            return std::make_unique<ASTDeclListAction>();
@@ -67,7 +72,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case EmitCIROnly:            return std::make_unique<EmitCIROnlyAction>();
   case EmitHTML:               return std::make_unique<HTMLPrintAction>();
   case EmitLLVM: {
-    if (CIR)
+    if (UseCIR)
       return std::make_unique<cir::EmitLLVMAction>();
     return std::make_unique<EmitLLVMAction>();
   }
