@@ -34,7 +34,7 @@ define i8* @rv_marker_1_retain() {
 ; CHECK-NEXT:    retq
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   ret i8* %call
 }
 
@@ -49,7 +49,7 @@ define i8* @rv_marker_1_claim() {
 ; CHECK-NEXT:    retq
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 1) ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
   ret i8* %call
 }
 
@@ -70,7 +70,7 @@ define void @rv_marker_2_select(i32 %c) {
 entry:
   %tobool.not = icmp eq i32 %c, 0
   %.sink = select i1 %tobool.not, i32 2, i32 1
-  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"(i64 0) ]
+  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   tail call void @foo2(i8* %call1)
   ret void
 }
@@ -92,7 +92,7 @@ define void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_personalit
 ; CHECK-NEXT: Ltmp0:
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   invoke void @objc_object(i8* %call) #5
           to label %invoke.cont unwind label %lpad
 
@@ -127,7 +127,7 @@ entry:
   %s = alloca %struct.S, align 1
   %0 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %0) #2
-  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
@@ -177,7 +177,7 @@ define i8* @rv_marker_5_indirect_call() {
 ;
 entry:
   %lv = load i8* ()*, i8* ()** @fptr, align 8
-  %call = call i8* %lv() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = call i8* %lv() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   tail call void @foo2(i8* %call)
   ret i8* %call
 }
@@ -197,7 +197,7 @@ define void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    popq    %rax
 ; CHECK-NEXT:    retq
 ;
-  %r = call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i64 0) ]
+  %r = call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   ret void
 }
 
@@ -210,10 +210,12 @@ define void @test_nonlazybind() {
 ; CHECK-NEXT:  movq    %rax, %rdi
 ; CHECK-NEXT:  callq   _objc_retainAutoreleasedReturnValue
 ;
-  %call1 = notail call i8* @foo_nonlazybind() [ "clang.arc.attachedcall"(i64 0) ]
+  %call1 = notail call i8* @foo_nonlazybind() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   ret void
 }
 
 declare i8* @foo_nonlazybind()  nonlazybind
 
+declare i8* @objc_retainAutoreleasedReturnValue(i8*)
+declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
 declare i32 @__gxx_personality_v0(...)

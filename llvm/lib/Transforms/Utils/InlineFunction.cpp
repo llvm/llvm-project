@@ -1672,10 +1672,11 @@ void llvm::updateProfileCallee(
 /// 3. Otherwise, a call to objc_retain is inserted if the call in the caller is
 ///    a retainRV call.
 static void
-inlineRetainOrClaimRVCalls(CallBase &CB,
+inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
   Module *Mod = CB.getModule();
-  bool IsRetainRV = objcarc::hasAttachedCallOpBundle(&CB, true),
+  assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
+  bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsClaimRV = !IsRetainRV;
 
   for (auto *RI : Returns) {
@@ -1695,43 +1696,47 @@ inlineRetainOrClaimRVCalls(CallBase &CB,
         continue;
 
       if (auto *II = dyn_cast<IntrinsicInst>(&*CurI)) {
-        if (II->getIntrinsicID() == Intrinsic::objc_autoreleaseReturnValue &&
-            II->hasNUses(0) &&
-            objcarc::GetRCIdentityRoot(II->getOperand(0)) == RetOpnd) {
-          // If we've found a matching authoreleaseRV call:
-          // - If claimRV is attached to the call, insert a call to objc_release
-          //   and erase the autoreleaseRV call.
-          // - If retainRV is attached to the call, just erase the autoreleaseRV
-          //   call.
-          if (IsClaimRV) {
-            Builder.SetInsertPoint(II);
-            Function *IFn =
-                Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-            Value *BC =
-                Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-            Builder.CreateCall(IFn, BC, "");
-          }
-          II->eraseFromParent();
-          InsertRetainCall = false;
+        if (II->getIntrinsicID() != Intrinsic::objc_autoreleaseReturnValue ||
+            !II->hasNUses(0) ||
+            objcarc::GetRCIdentityRoot(II->getOperand(0)) != RetOpnd)
+          break;
+
+        // If we've found a matching authoreleaseRV call:
+        // - If claimRV is attached to the call, insert a call to objc_release
+        //   and erase the autoreleaseRV call.
+        // - If retainRV is attached to the call, just erase the autoreleaseRV
+        //   call.
+        if (IsClaimRV) {
+          Builder.SetInsertPoint(II);
+          Function *IFn =
+              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
+          Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
+          Builder.CreateCall(IFn, BC, "");
         }
-      } else if (auto *CI = dyn_cast<CallInst>(&*CurI)) {
-        if (objcarc::GetRCIdentityRoot(CI) == RetOpnd &&
-            !objcarc::hasAttachedCallOpBundle(CI)) {
-          // If we've found an unannotated call that defines RetOpnd, add a
-          // "clang.arc.attachedcall" operand bundle.
-          Value *BundleArgs[] = {ConstantInt::get(
-              Builder.getInt64Ty(),
-              objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
-          OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
-          auto *NewCall = CallBase::addOperandBundle(
-              CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
-          NewCall->copyMetadata(*CI);
-          CI->replaceAllUsesWith(NewCall);
-          CI->eraseFromParent();
-          InsertRetainCall = false;
-        }
+        II->eraseFromParent();
+        InsertRetainCall = false;
+        break;
       }
 
+      auto *CI = dyn_cast<CallInst>(&*CurI);
+
+      if (!CI)
+        break;
+
+      if (objcarc::GetRCIdentityRoot(CI) != RetOpnd ||
+          objcarc::hasAttachedCallOpBundle(CI))
+        break;
+
+      // If we've found an unannotated call that defines RetOpnd, add a
+      // "clang.arc.attachedcall" operand bundle.
+      Value *BundleArgs[] = {*objcarc::getAttachedARCFunction(&CB)};
+      OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
+      auto *NewCall = CallBase::addOperandBundle(
+          CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
+      NewCall->copyMetadata(*CI);
+      CI->replaceAllUsesWith(NewCall);
+      CI->eraseFromParent();
+      InsertRetainCall = false;
       break;
     }
 
@@ -1953,8 +1958,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     FirstNewBlock = LastBlock; ++FirstNewBlock;
 
     // Insert retainRV/clainRV runtime calls.
-    if (objcarc::hasAttachedCallOpBundle(&CB))
-      inlineRetainOrClaimRVCalls(CB, Returns);
+    objcarc::ARCInstKind RVCallKind = objcarc::getAttachedARCFunctionKind(&CB);
+    if (RVCallKind != objcarc::ARCInstKind::None)
+      inlineRetainOrClaimRVCalls(CB, RVCallKind, Returns);
 
     // Updated caller/callee profiles only when requested. For sample loader
     // inlining, the context-sensitive inlinee profile doesn't need to be
