@@ -1063,21 +1063,23 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   if (N0.getOpcode() != Opc)
     return SDValue();
 
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1))) {
+  SDValue N00 = N0.getOperand(0);
+  SDValue N01 = N0.getOperand(1);
+
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N01)) {
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
-      if (SDValue OpNode =
-              DAG.FoldConstantArithmetic(Opc, DL, VT, {N0.getOperand(1), N1}))
-        return DAG.getNode(Opc, DL, VT, N0.getOperand(0), OpNode);
+      if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1}))
+        return DAG.getNode(Opc, DL, VT, N00, OpNode);
       return SDValue();
     }
     if (N0.hasOneUse()) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
-      SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N0.getOperand(0), N1);
+      SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1);
       if (!OpNode.getNode())
         return SDValue();
-      return DAG.getNode(Opc, DL, VT, OpNode, N0.getOperand(1));
+      return DAG.getNode(Opc, DL, VT, OpNode, N01);
     }
   }
   return SDValue();
