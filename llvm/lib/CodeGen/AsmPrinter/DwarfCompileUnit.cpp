@@ -1118,14 +1118,9 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     ContextCU = DD->lookupCU(ContextDIE->getUnitDie());
   }
 
-  // The abstract definition can only be looked up from the associated node if
-  // the subprogram does not have a concrete function.
-  if (!ContextCU->DD->IsConcrete(SP))
-    AbsDef = ContextCU->getDIE(SP);
-  if (!AbsDef)
-    AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE,
-                                         nullptr);
-
+  // Passing null as the associated node because the abstract definition
+  // shouldn't be found by lookup.
+  AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
   ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
   ContextCU->addSInt(*AbsDef, dwarf::DW_AT_inline,
                      DD->getDwarfVersion() <= 4 ? Optional<dwarf::Form>()
@@ -1307,7 +1302,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
 void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
   DIE *D = getDIE(SP);
   if (DIE *AbsSPDIE = getAbstractSPDies().lookup(SP)) {
-    if (D && D != AbsSPDIE)
+    if (D)
       // If this subprogram has an abstract definition, reference that
       addDIEEntry(*D, dwarf::DW_AT_abstract_origin, *AbsSPDIE);
   } else {
