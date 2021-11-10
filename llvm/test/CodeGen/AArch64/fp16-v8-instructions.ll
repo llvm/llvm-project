@@ -277,21 +277,64 @@ define <8 x i16> @bitcast_h_to_i(float, <8 x half> %a) {
   ret <8 x i16> %2
 }
 
+define <4 x half> @sitofp_v4i8(<4 x i8> %a) #0 {
+; CHECK-CVT-LABEL: sitofp_v4i8:
+; CHECK-CVT-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-CVT-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-CVT-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CVT-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-CVT-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: sitofp_v4i8:
+; CHECK-FP16-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-FP16-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-FP16-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-FP16-NEXT:    ret
+;
+  %1 = sitofp <4 x i8> %a to <4 x half>
+  ret <4 x half> %1
+}
 
-define <8 x half> @sitofp_i8(<8 x i8> %a) #0 {
-; CHECK-LABEL: sitofp_i8:
-; CHECK-NEXT: sshll v[[REG1:[0-9]+]].8h, v0.8b, #0
-; CHECK-NEXT: sshll2 [[LO:v[0-9]+\.4s]], v[[REG1]].8h, #0
-; CHECK-NEXT: sshll  [[HI:v[0-9]+\.4s]], v[[REG1]].4h, #0
-; CHECK-DAG: scvtf [[HIF:v[0-9]+\.4s]], [[HI]]
-; CHECK-DAG: scvtf [[LOF:v[0-9]+\.4s]], [[LO]]
-; CHECK-DAG: fcvtn v[[LOREG:[0-9]+]].4h, [[LOF]]
-; CHECK-DAG: fcvtn v0.4h, [[HIF]]
-; CHECK: mov v0.d[1], v[[LOREG]].d[0]
+define <8 x half> @sitofp_v8i8(<8 x i8> %a) #0 {
+; CHECK-LABEL: sitofp_v8i8:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    scvtf v1.4s, v1.4s
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
+;
   %1 = sitofp <8 x i8> %a to <8 x half>
   ret <8 x half> %1
 }
 
+define <16 x half> @sitofp_v16i8(<16 x i8> %a) #0 {
+; CHECK-LABEL: sitofp_v16i8:
+; CHECK-NEXT:    sshll2  v1.8h, v0.16b, #0
+; CHECK-NEXT:    sshll2  v2.4s, v1.8h, #0
+; CHECK-NEXT:    sshll   v1.4s, v1.4h, #0
+; CHECK-NEXT:    scvtf   v2.4s, v2.4s
+; CHECK-NEXT:    scvtf   v1.4s, v1.4s
+; CHECK-NEXT:    sshll   v0.8h, v0.8b, #0
+; CHECK-NEXT:    fcvtn   v2.4h, v2.4s
+; CHECK-NEXT:    fcvtn   v1.4h, v1.4s
+; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    sshll2  v2.4s, v0.8h, #0
+; CHECK-NEXT:    sshll   v0.4s, v0.4h, #0
+; CHECK-NEXT:    scvtf   v2.4s, v2.4s
+; CHECK-NEXT:    scvtf   v0.4s, v0.4s
+; CHECK-NEXT:    fcvtn   v2.4h, v2.4s
+; CHECK-NEXT:    fcvtn   v0.4h, v0.4s
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    ret
+;
+  %1 = sitofp <16 x i8> %a to <16 x half>
+  ret <16 x half> %1
+}
 
 define <8 x half> @sitofp_i16(<8 x i16> %a) #0 {
 ; CHECK-LABEL: sitofp_i16:
@@ -306,7 +349,6 @@ define <8 x half> @sitofp_i16(<8 x i16> %a) #0 {
   %1 = sitofp <8 x i16> %a to <8 x half>
   ret <8 x half> %1
 }
-
 
 define <8 x half> @sitofp_i32(<8 x i32> %a) #0 {
 ; CHECK-LABEL: sitofp_i32:
@@ -331,20 +373,62 @@ define <8 x half> @sitofp_i64(<8 x i64> %a) #0 {
   ret <8 x half> %1
 }
 
-define <8 x half> @uitofp_i8(<8 x i8> %a) #0 {
-; CHECK-LABEL: uitofp_i8:
-; CHECK-NEXT: ushll v[[REG1:[0-9]+]].8h, v0.8b, #0
-; CHECK-NEXT: ushll2 [[LO:v[0-9]+\.4s]], v[[REG1]].8h, #0
-; CHECK-NEXT: ushll  [[HI:v[0-9]+\.4s]], v[[REG1]].4h, #0
-; CHECK-DAG: ucvtf [[HIF:v[0-9]+\.4s]], [[HI]]
-; CHECK-DAG: ucvtf [[LOF:v[0-9]+\.4s]], [[LO]]
-; CHECK-DAG: fcvtn v[[LOREG:[0-9]+]].4h, [[LOF]]
-; CHECK-DAG: fcvtn v0.4h, [[HIF]]
-; CHECK: mov v0.d[1], v[[LOREG]].d[0]
+define <4 x half> @uitofp_v4i8(<4 x i8> %a) #0 {
+; CHECK-CVT-LABEL: uitofp_v4i8:
+; CHECK-CVT-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-CVT-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-CVT-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-CVT-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: uitofp_v4i8:
+; CHECK-FP16-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-FP16-NEXT:    ret
+;
+  %1 = uitofp <4 x i8> %a to <4 x half>
+  ret <4 x half> %1
+}
+
+define <8 x half> @uitofp_v8i8(<8 x i8> %a) #0 {
+; CHECK-LABEL: uitofp_v8i8:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ucvtf v1.4s, v1.4s
+; CHECK-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
+;
   %1 = uitofp <8 x i8> %a to <8 x half>
   ret <8 x half> %1
 }
 
+define <16 x half> @uitofp_v16i8(<16 x i8> %a) #0 {
+; CHECK-LABEL: uitofp_v16i8:
+; CHECK-NEXT:    ushll2  v1.8h, v0.16b, #0
+; CHECK-NEXT:    ushll2  v2.4s, v1.8h, #0
+; CHECK-NEXT:    ushll   v1.4s, v1.4h, #0
+; CHECK-NEXT:    ucvtf   v2.4s, v2.4s
+; CHECK-NEXT:    ucvtf   v1.4s, v1.4s
+; CHECK-NEXT:    ushll   v0.8h, v0.8b, #0
+; CHECK-NEXT:    fcvtn   v2.4h, v2.4s
+; CHECK-NEXT:    fcvtn   v1.4h, v1.4s
+; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    ushll2  v2.4s, v0.8h, #0
+; CHECK-NEXT:    ushll   v0.4s, v0.4h, #0
+; CHECK-NEXT:    ucvtf   v2.4s, v2.4s
+; CHECK-NEXT:    ucvtf   v0.4s, v0.4s
+; CHECK-NEXT:    fcvtn   v2.4h, v2.4s
+; CHECK-NEXT:    fcvtn   v0.4h, v0.4s
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    ret
+;
+  %1 = uitofp <16 x i8> %a to <16 x half>
+  ret <16 x half> %1
+}
 
 define <8 x half> @uitofp_i16(<8 x i16> %a) #0 {
 ; CHECK-LABEL: uitofp_i16:
