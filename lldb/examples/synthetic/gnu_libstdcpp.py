@@ -9,12 +9,17 @@ import lldb.formatters.Logger
 # before relying on these formatters to do the right thing for your setup
 
 
-class StdListSynthProvider:
-
-    def __init__(self, valobj, dict):
+class AbstractListSynthProvider:
+    def __init__(self, valobj, dict, has_prev):
+        '''
+        :param valobj: The value object of the list
+        :param dict: A dict with metadata provided by LLDB
+        :param has_prev: Whether the list supports a 'prev' pointer besides a 'next' one
+        '''
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.count = None
+        self.has_prev = has_prev
         logger >> "Providing synthetic children for a list named " + \
             str(valobj.GetName())
 
@@ -24,13 +29,13 @@ class StdListSynthProvider:
 
     def is_valid(self, node):
         logger = lldb.formatters.Logger.Logger()
-        valid = self.value(self.next_node(node)) != self.node_address
+        valid = self.value(self.next_node(node)) != self.get_end_of_list_address()
         if valid:
             logger >> "%s is valid" % str(self.valobj.GetName())
         else:
             logger >> "synthetic value is not valid"
         return valid
-
+    
     def value(self, node):
         logger = lldb.formatters.Logger.Logger()
         value = node.GetValueAsUnsigned()
@@ -73,26 +78,30 @@ class StdListSynthProvider:
     def num_children_impl(self):
         logger = lldb.formatters.Logger.Logger()
         try:
-            next_val = self.next.GetValueAsUnsigned(0)
-            prev_val = self.prev.GetValueAsUnsigned(0)
             # After a std::list has been initialized, both next and prev will
             # be non-NULL
-            if next_val == 0 or prev_val == 0:
+            next_val = self.next.GetValueAsUnsigned(0)
+            if next_val == 0: 
                 return 0
-            if next_val == self.node_address:
-                return 0
-            if next_val == prev_val:
-                return 1
             if self.has_loop():
                 return 0
-            size = 2
+            if self.has_prev:
+                prev_val = self.prev.GetValueAsUnsigned(0)
+                if prev_val == 0:
+                    return 0
+                if next_val == self.node_address:
+                    return 0
+                if next_val == prev_val:
+                    return 1   
+            size = 1
             current = self.next
             while current.GetChildMemberWithName(
-                    '_M_next').GetValueAsUnsigned(0) != self.node_address:
+                    '_M_next').GetValueAsUnsigned(0) != self.get_end_of_list_address():
                 size = size + 1
                 current = current.GetChildMemberWithName('_M_next')
-            return (size - 1)
+            return size 
         except:
+            logger >> "Error determining the size"
             return 0
 
     def get_child_index(self, name):
@@ -101,7 +110,7 @@ class StdListSynthProvider:
             return int(name.lstrip('[').rstrip(']'))
         except:
             return -1
-
+      
     def get_child_at_index(self, index):
         logger = lldb.formatters.Logger.Logger()
         logger >> "Fetching child " + str(index)
@@ -115,9 +124,11 @@ class StdListSynthProvider:
             while offset > 0:
                 current = current.GetChildMemberWithName('_M_next')
                 offset = offset - 1
+            # C++ lists store the data of a node after its pointers. In the case of a forward list, there's just one pointer (next), and
+            # in the case of a double-linked list, there's an additional pointer (prev).
             return current.CreateChildAtOffset(
                 '[' + str(index) + ']',
-                2 * current.GetType().GetByteSize(),
+               (2 if self.has_prev else 1) * current.GetType().GetByteSize(),
                 self.data_type)
         except:
             return None
@@ -139,19 +150,60 @@ class StdListSynthProvider:
         # later
         self.count = None
         try:
-            impl = self.valobj.GetChildMemberWithName('_M_impl')
-            self.node = impl.GetChildMemberWithName('_M_node')
-            self.node_address = self.valobj.AddressOf().GetValueAsUnsigned(0)
-            self.next = self.node.GetChildMemberWithName('_M_next')
-            self.prev = self.node.GetChildMemberWithName('_M_prev')
+            self.impl = self.valobj.GetChildMemberWithName('_M_impl')
             self.data_type = self.extract_type()
             self.data_size = self.data_type.GetByteSize()
+            self.updateNodes()
         except:
             pass
         return False
 
+    '''
+    Method is used to extract the list pointers into the variables (e.g self.node, self.next, and optionally to self.prev)
+    and is mandatory to be overriden in each AbstractListSynthProvider subclass
+    '''
+    def updateNodes(self):
+        raise NotImplementedError
+
     def has_children(self):
         return True
+        
+    '''
+     Method is used to identify if a node traversal has reached its end
+     and is mandatory to be overriden in each AbstractListSynthProvider subclass
+    '''
+    def get_end_of_list_address(self):
+        raise NotImplementedError
+
+
+class StdForwardListSynthProvider(AbstractListSynthProvider):
+
+    def __init__(self, valobj, dict):
+        has_prev = False
+        super().__init__(valobj, dict, has_prev)
+
+    def updateNodes(self):
+        self.node = self.impl.GetChildMemberWithName('_M_head')
+        self.next = self.node.GetChildMemberWithName('_M_next')
+
+    def get_end_of_list_address(self):
+        return 0
+
+
+class StdListSynthProvider(AbstractListSynthProvider):
+
+    def __init__(self, valobj, dict):
+        has_prev = True
+        super().__init__(valobj, dict, has_prev)
+
+    def updateNodes(self):
+        self.node_address = self.valobj.AddressOf().GetValueAsUnsigned(0)
+        self.node = self.impl.GetChildMemberWithName('_M_node')
+        self.prev = self.node.GetChildMemberWithName('_M_prev')
+        self.next = self.node.GetChildMemberWithName('_M_next')
+
+    def get_end_of_list_address(self):
+        return self.node_address
 
 
 class StdVectorSynthProvider:
