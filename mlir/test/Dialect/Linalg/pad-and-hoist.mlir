@@ -3,6 +3,8 @@
 
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (5, -d0 + 24)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0) -> (7, -d0 + 25)>
+// CHECK-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 5)>
+// CHECK-DAG: #[[MAP3:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
 // CHECK-DAG: #[[DIV6:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 6)>
 #map0 = affine_map<(d0) -> (5, -d0 + 24)>
 #map1 = affine_map<(d0) -> (7, -d0 + 25)>
@@ -37,7 +39,7 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
     //        CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
     //   CHECK-SAME:                                     %[[IV0]], %[[PIV0]]
     //   CHECK-SAME:                                     %[[TS0]], 6
-    //        CHECK:   %[[V0:.*]] = arith.subi %[[C5]], %[[TS0]]
+    //        CHECK:   %[[V0:.*]] = affine.apply #[[MAP2]](%[[TS0]])
     //        CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold {{.*}} high[%[[V0]]
     //        CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1:.*]] into %{{.*}}[%[[PIDX0]], 0, 0]
     //        CHECK:   scf.yield %[[T2:.*]]
@@ -53,7 +55,7 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
       //        CHECK:   %[[T3:.*]] = tensor.extract_slice %[[ARG1]]
       //   CHECK-SAME:                                     %[[PIV1]], %[[IV1]]
       //   CHECK-SAME:                                     6, %[[TS1]]
-      //        CHECK:   %[[V1:.*]] = arith.subi %[[C7]], %[[TS1]]
+      //        CHECK:   %[[V1:.*]] = affine.apply #[[MAP3]](%[[TS1]])
       //        CHECK:   %[[T4:.*]] = linalg.pad_tensor %[[T3]] nofold {{.*}} high[%[[C0]], %[[V1]]
       //        CHECK:   %[[T5:.*]] = tensor.insert_slice %[[T4:.*]] into %{{.*}}[%[[PIDX1]], 0, 0]
       //        CHECK:   scf.yield %[[T5:.*]]
@@ -93,6 +95,9 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0)[s0] -> (5, -d0 + s0)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0)[s0] -> (6, -d0 + s0)>
 // CHECK-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<(d0)[s0] -> (7, -d0 + s0)>
+// CHECK-DAG: #[[MAP3:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 5)>
+// CHECK-DAG: #[[MAP4:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 6)>
+// CHECK-DAG: #[[MAP5:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
 // CHECK-DAG: #[[SDIV6:[0-9a-z]+]] = affine_map<()[s0] -> (s0 ceildiv 6)>
 // CHECK-DAG: #[[DDIV6:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 6)>
 #map0 = affine_map<(d0)[s0] -> (5, -d0 + s0)>
@@ -137,8 +142,8 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
     //        CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
     //   CHECK-SAME:                                     %[[IV0]], %[[PIV0]]
     //   CHECK-SAME:                                     %[[TS0]], %[[TS1]]
-    //        CHECK:   %[[V0:.*]] = arith.subi %[[C5]], %[[TS0]]
-    //        CHECK:   %[[V1:.*]] = arith.subi %[[C6]], %[[TS1]]
+    //        CHECK:   %[[V0:.*]] = affine.apply #[[MAP3]](%[[TS0]])
+    //        CHECK:   %[[V1:.*]] = affine.apply #[[MAP4]](%[[TS1]])
     //        CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold {{.*}} high[%[[V0]], %[[V1]]
     //        CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1:.*]] into %{{.*}}[%[[PIDX0]], 0, 0]
     //        CHECK:   scf.yield %[[T2:.*]]
@@ -155,8 +160,8 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
       //        CHECK:   %[[T3:.*]] = tensor.extract_slice %[[ARG1]]
       //   CHECK-SAME:                                     %[[PIV1]], %[[IV1]]
       //   CHECK-SAME:                                     %[[TS2]], %[[TS3]]
-      //        CHECK:   %[[V2:.*]] = arith.subi %[[C6]], %[[TS2]]
-      //        CHECK:   %[[V3:.*]] = arith.subi %[[C7]], %[[TS3]]
+      //        CHECK:   %[[V2:.*]] = affine.apply #[[MAP4]](%[[TS2]])
+      //        CHECK:   %[[V3:.*]] = affine.apply #[[MAP5]](%[[TS3]])
       //        CHECK:   %[[T4:.*]] = linalg.pad_tensor %[[T3]] nofold {{.*}} high[%[[V2]], %[[V3]]
       //        CHECK:   %[[T5:.*]] = tensor.insert_slice %[[T4:.*]] into %{{.*}}[%[[PIDX1]], 0, 0]
       //        CHECK:   scf.yield %[[T5:.*]]

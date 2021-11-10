@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns="test-pad-pattern pack-paddings=1,1,0 hoist-paddings=0,0,0" -cse -canonicalize -split-input-file | FileCheck %s
 
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (7, -d0 + 12)>
+// CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
 #map = affine_map<(d0) -> (7, -d0 + 12)>
 
 //      CHECK:  static_sizes_output_divisible
@@ -39,7 +40,7 @@ func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
         %6 = tensor.extract_slice %arg8[%arg3, %arg5] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
 
         // Check statically sized matmul inputs with partially divisible sizes are padded.
-        //      CHECK:   %[[V0:.*]] = arith.subi %[[C7]], %[[TS2]]
+        //      CHECK:   %[[V0:.*]] = affine.apply #[[MAP1]](%[[TS2]])
         //      CHECK:   %[[T3:.*]] = linalg.pad_tensor %[[T0]] nofold
         // CHECK-SAME:                  [%[[C0]], %[[C0]]]
         // CHECK-SAME:                  [%[[C0]], %[[V0]]
@@ -66,6 +67,7 @@ func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
 // -----
 
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (7, -d0 + 25)>
+// CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
 #map = affine_map<(d0) -> (7, -d0 + 25)>
 
 //      CHECK:  static_sizes_input_divisible
@@ -100,7 +102,7 @@ func @static_sizes_input_divisible(%arg0: tensor<24x12xf32>,
         %6 = tensor.extract_slice %arg8[%arg3, %arg5] [4, %4] [1, 1] : tensor<24x25xf32> to tensor<4x?xf32>
 
         // Check the statically sized matmul output with partially divisible sizes is padded.
-        //      CHECK:   %[[V0:.*]] = arith.subi %[[C7]], %[[TS1]]
+        //      CHECK:   %[[V0:.*]] = affine.apply #[[MAP1]](%[[TS1]])
         //      CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] low
         // CHECK-SAME:                  [%[[C0]], %[[C0]]]
         // CHECK-SAME:                  [%[[C0]], %[[V0]]
@@ -127,6 +129,9 @@ func @static_sizes_input_divisible(%arg0: tensor<24x12xf32>,
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0)[s0] -> (5, -d0 + s0)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0)[s0] -> (7, -d0 + s0)>
 // CHECK-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<(d0)[s0] -> (6, -d0 + s0)>
+// CHECK-DAG: #[[MAP3:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 5)>
+// CHECK-DAG: #[[MAP4:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 6)>
+
 #map0 = affine_map<(d0)[s0] -> (5, -d0 + s0)>
 #map1 = affine_map<(d0)[s0] -> (6, -d0 + s0)>
 #map2 = affine_map<(d0)[s0] -> (7, -d0 + s0)>
@@ -175,8 +180,8 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
         %11 = tensor.extract_slice %arg8[%arg3, %arg5] [%6, %9] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
 
         // Check all matmul operands are padded.
-        //      CHECK:   %[[V0:.*]] = arith.subi %[[C5]], %[[TS0]]
-        //      CHECK:   %[[V1:.*]] = arith.subi %[[C6]], %[[TS2]]
+        //      CHECK:   %[[V0:.*]] = affine.apply #[[MAP3]](%[[TS0]])
+        //      CHECK:   %[[V1:.*]] = affine.apply #[[MAP4]](%[[TS2]])
         //      CHECK:   %[[T3:.*]] = linalg.pad_tensor %{{.*}} nofold
         // CHECK-SAME:                  [%[[C0]], %[[C0]]]
         // CHECK-SAME:                  [%[[V0]], %[[V1]]

@@ -1171,22 +1171,21 @@ PadTensorOp PadTensorOp::createPadScalarOp(Type type, Value source, Value pad,
 
 PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
                                          bool nofold, Location loc,
-                                         OpBuilder &builder) {
+                                         OpBuilder &b) {
   SmallVector<OpFoldResult, 4> low, high;
   auto rankedTensorType = type.cast<RankedTensorType>();
   assert(rankedTensorType.hasStaticShape());
-  int rank = rankedTensorType.getRank();
-  for (int i = 0; i < rank; ++i) {
-    auto dimOp = builder.createOrFold<tensor::DimOp>(loc, source, i);
-    auto resultDimSize = builder.createOrFold<arith::ConstantIndexOp>(
-        loc, rankedTensorType.getDimSize(i));
-    auto highValue =
-        builder.createOrFold<arith::SubIOp>(loc, resultDimSize, dimOp);
-    high.push_back(highValue);
-    low.push_back(builder.createOrFold<arith::ConstantIndexOp>(loc, 0));
+  for (auto en : enumerate(rankedTensorType.getShape())) {
+    AffineExpr d0;
+    bindDims(b.getContext(), d0);
+    auto dimOp = b.createOrFold<tensor::DimOp>(loc, source, en.index());
+    Value paddingWidth =
+        makeComposedAffineApply(b, loc, en.value() - d0, {dimOp});
+    high.push_back(paddingWidth);
+    low.push_back(b.createOrFold<arith::ConstantIndexOp>(loc, 0));
   }
   return PadTensorOp::createPadScalarOp(type, source, pad, low, high, nofold,
-                                        loc, builder);
+                                        loc, b);
 }
 
 LogicalResult PadTensorOp::reifyResultShapes(
