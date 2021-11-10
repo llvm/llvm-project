@@ -152,14 +152,17 @@ let Namespace = "Mips" in {
   def RA_64   : Mips64GPRReg< 31, "ra",  [RA]>, DwarfRegNum<[31]>;
 
   // General Purpose nanoMIPS Registers
+  let CostPerUse = [1] in {
   def ZERO_NM : MipsGPRReg< 0, "zero">, DwarfRegNum<[0]>;
   def AT_NM   : MipsGPRReg< 1, "at">,    DwarfRegNum<[1]>;
   def T4_NM   : MipsGPRReg< 2, "t4">,    DwarfRegNum<[2]>;
   def T5_NM   : MipsGPRReg< 3, "t5">,    DwarfRegNum<[3]>;
+  }
   def A0_NM   : MipsGPRReg< 4, "a0">,    DwarfRegNum<[4]>;
   def A1_NM   : MipsGPRReg< 5, "a1">,    DwarfRegNum<[5]>;
   def A2_NM   : MipsGPRReg< 6, "a2">,    DwarfRegNum<[6]>;
   def A3_NM   : MipsGPRReg< 7, "a3">,    DwarfRegNum<[7]>;
+  let CostPerUse = [1] in {
   def A4_NM   : MipsGPRReg< 8, "a4">,    DwarfRegNum<[8]>;
   def A5_NM   : MipsGPRReg< 9, "a5">,    DwarfRegNum<[9]>;
   def A6_NM   : MipsGPRReg< 10, "a6">,  DwarfRegNum<[10]>;
@@ -168,10 +171,12 @@ let Namespace = "Mips" in {
   def T1_NM   : MipsGPRReg< 13, "t1">,  DwarfRegNum<[13]>;
   def T2_NM   : MipsGPRReg< 14, "t2">,  DwarfRegNum<[14]>;
   def T3_NM   : MipsGPRReg< 15, "t3">,  DwarfRegNum<[15]>;
+  }
   def S0_NM   : MipsGPRReg< 16, "s0">,  DwarfRegNum<[16]>;
   def S1_NM   : MipsGPRReg< 17, "s1">,  DwarfRegNum<[17]>;
   def S2_NM   : MipsGPRReg< 18, "s2">,  DwarfRegNum<[18]>;
   def S3_NM   : MipsGPRReg< 19, "s3">,  DwarfRegNum<[19]>;
+  let CostPerUse = [1] in {
   def S4_NM   : MipsGPRReg< 20, "s4">,  DwarfRegNum<[20]>;
   def S5_NM   : MipsGPRReg< 21, "s5">,  DwarfRegNum<[21]>;
   def S6_NM   : MipsGPRReg< 22, "s6">,  DwarfRegNum<[22]>;
@@ -184,6 +189,7 @@ let Namespace = "Mips" in {
   def SP_NM   : MipsGPRReg< 29, "sp">,  DwarfRegNum<[29]>;
   def FP_NM   : MipsGPRReg< 30, "fp">,  DwarfRegNum<[30]>;
   def RA_NM   : MipsGPRReg< 31, "ra">,  DwarfRegNum<[31]>;
+  }
 
   /// Mips Single point precision FPU Registers
   foreach I = 0-31 in
