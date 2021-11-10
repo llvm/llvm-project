@@ -2963,6 +2963,20 @@ TEST(Hover, SpaceshipTemplateNoCrash) {
   EXPECT_EQ(HI->Documentation, "Foo bar baz");
 }
 
+TEST(Hover, ForwardStructNoCrash) {
+  Annotations T(R"cpp(
+  struct Foo;
+  int bar;
+  auto baz = (Fo^o*)&bar;
+    )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&bar");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
