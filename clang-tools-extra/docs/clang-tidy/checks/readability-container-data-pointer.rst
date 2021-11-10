@@ -1,7 +1,7 @@
-.. title:: clang-tidy - readability-data-pointer
+.. title:: clang-tidy - readability-container-data-pointer
 
-readability-data-pointer
-========================
+readability-container-data-pointer
+==================================
 
 Finds cases where code could use ``data()`` rather than the address of the
 element at index 0 in a container. This pattern is commonly used to materialize
