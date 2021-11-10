@@ -63,6 +63,25 @@ func private @foo3(%arg0: !fir.box<!fir.type<derived{f:f32}>>)
 
 // -----
 
+// Test char types `!fir.char<k, n>`
+
+func private @foo0(%arg0: !fir.char<1, 4>, %arg1: !fir.char<1, ?>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.array<4 x i8>
+// CHECK-SAME: i8
+
+func private @foo1(%arg0: !fir.char<2, 12>, %arg1: !fir.char<2, ?>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.array<12 x i16>
+// CHECK-SAME: i16
+
+func private @foo2(%arg0: !fir.char<4, 8>, %arg1: !fir.char<4, ?>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: !llvm.array<8 x i32>
+// CHECK-SAME: i32
+
+// -----
+
 // Test `!fir.logical<KIND>` conversion.
 
 func private @foo0(%arg0: !fir.logical<1>)
