@@ -106,7 +106,7 @@ ScriptedProcess::ScriptedProcess(
 
   StructuredData::GenericSP object_sp = GetInterface().CreatePluginObject(
       m_scripted_process_info.GetClassName().c_str(), exe_ctx,
-      m_scripted_process_info.GetDictionarySP());
+      m_scripted_process_info.GetArgsSP());
 
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",

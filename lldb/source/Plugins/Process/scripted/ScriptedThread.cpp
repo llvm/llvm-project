@@ -55,7 +55,7 @@ ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
   StructuredData::GenericSP object_sp =
       scripted_thread_interface->CreatePluginObject(
           class_name->c_str(), exe_ctx,
-          process.m_scripted_process_info.GetDictionarySP());
+          process.m_scripted_process_info.GetArgsSP());
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorString("Failed to create valid script object");
     return;

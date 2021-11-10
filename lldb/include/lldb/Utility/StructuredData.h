@@ -353,6 +353,17 @@ public:
   public:
     Dictionary() : Object(lldb::eStructuredDataTypeDictionary), m_dict() {}
 
+    Dictionary(ObjectSP obj_sp)
+        : Object(lldb::eStructuredDataTypeDictionary), m_dict() {
+      if (!obj_sp || obj_sp->GetType() != lldb::eStructuredDataTypeDictionary) {
+        SetType(lldb::eStructuredDataTypeInvalid);
+        return;
+      }
+
+      Dictionary *dict = obj_sp->GetAsDictionary();
+      m_dict = dict->m_dict;
+    }
+
     ~Dictionary() override = default;
 
     size_t GetSize() const { return m_dict.size(); }
