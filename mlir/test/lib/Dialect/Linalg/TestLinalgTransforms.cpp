@@ -114,9 +114,6 @@ struct TestLinalgTransforms
       *this, "tile-sizes",
       llvm::cl::desc("Linalg tile sizes for test-tile-pattern"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
-  ListOption<unsigned> testInterchangePattern{
-      *this, "test-interchange-pattern", llvm::cl::MiscFlags::CommaSeparated,
-      llvm::cl::desc("Test the interchange pattern.")};
   ListOption<unsigned> testTiledLoopPeeling{
       *this, "test-tiled-loop-peeling",
       llvm::cl::desc("Test peeling of linalg.tiled_loop ops"),
@@ -612,17 +609,6 @@ static void applyTilePattern(FuncOp funcOp, std::string loopType,
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
-static void applyInterchangePattern(FuncOp funcOp,
-                                    ArrayRef<unsigned> interchangeVector) {
-  MLIRContext *context = funcOp.getContext();
-  RewritePatternSet interchangePattern(context);
-  interchangePattern.add<GenericOpInterchangePattern>(
-      context, interchangeVector,
-      LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                 Identifier::get("interchange", context)));
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(interchangePattern));
-}
-
 static constexpr char kPeeledLoopsLabel[] = "__peeled_loops__";
 static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
@@ -742,8 +728,6 @@ void TestLinalgTransforms::runOnFunction() {
   if (testTileScalarizeDynamicDims)
     return applyTilePattern(getFunction(), loopType, tileSizes,
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
-  if (testInterchangePattern.hasValue())
-    return applyInterchangePattern(getFunction(), testInterchangePattern);
   if (testDecomposeConvolutionPattern)
     return applyDecomposeConvolutionPatterns(getFunction());
 }
