@@ -448,13 +448,12 @@ public:
     }
 
     mlir::Value VisitExpr(Expr *E) {
+      // Crashing here for "ScalarExprClassName"? Please implement
+      // VisitScalarExprClassName(...) to get this working.
       emitError(Builder.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
           << E->getStmtClassName() << "'";
-      if (E->getType()->isVoidType())
-        return nullptr;
-      // FIXME: find a way to return "undef"...
-      // return llvm::UndefValue::get(CGF.ConvertType(E->getType()));
-      return nullptr;
+      assert(0 && "shouldn't be here!");
+      return {};
     }
 
     // Leaves.
