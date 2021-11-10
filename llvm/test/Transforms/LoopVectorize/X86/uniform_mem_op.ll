@@ -207,6 +207,21 @@ define void @uniform_store_uniform_value(i32* align(4) %addr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR:%.*]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -271,29 +286,43 @@ define void @uniform_store_varying_value(i32* align(4) %addr) {
 ; CHECK-NEXT:    [[STEP_ADD5:%.*]] = add <4 x i32> [[VEC_IND4]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[STEP_ADD6:%.*]] = add <4 x i32> [[STEP_ADD5]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[STEP_ADD7:%.*]] = add <4 x i32> [[STEP_ADD6]], <i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 0
-; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP16]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[TMP16]], 2
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP16]], 3
-; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP16]], 4
-; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[TMP16]], 5
-; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP16]], 6
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP16]], 7
-; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP16]], 8
-; CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[TMP16]], 9
-; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[TMP16]], 10
-; CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP16]], 11
-; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP16]], 12
-; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP16]], 13
-; CHECK-NEXT:    [[TMP31:%.*]] = add i32 [[TMP16]], 14
-; CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP16]], 15
-; CHECK-NEXT:    store i32 [[TMP32]], i32* [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[VEC_IND4]], i32 0
+; CHECK-NEXT:    store i32 [[TMP16]], i32* [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[VEC_IND4]], i32 1
+; CHECK-NEXT:    store i32 [[TMP17]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[VEC_IND4]], i32 2
+; CHECK-NEXT:    store i32 [[TMP18]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i32> [[VEC_IND4]], i32 3
+; CHECK-NEXT:    store i32 [[TMP19]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i32> [[STEP_ADD5]], i32 0
+; CHECK-NEXT:    store i32 [[TMP20]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[STEP_ADD5]], i32 1
+; CHECK-NEXT:    store i32 [[TMP21]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[STEP_ADD5]], i32 2
+; CHECK-NEXT:    store i32 [[TMP22]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[STEP_ADD5]], i32 3
+; CHECK-NEXT:    store i32 [[TMP23]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[STEP_ADD6]], i32 0
+; CHECK-NEXT:    store i32 [[TMP24]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[STEP_ADD6]], i32 1
+; CHECK-NEXT:    store i32 [[TMP25]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[STEP_ADD6]], i32 2
+; CHECK-NEXT:    store i32 [[TMP26]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[STEP_ADD6]], i32 3
+; CHECK-NEXT:    store i32 [[TMP27]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[STEP_ADD7]], i32 0
+; CHECK-NEXT:    store i32 [[TMP28]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[STEP_ADD7]], i32 1
+; CHECK-NEXT:    store i32 [[TMP29]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[STEP_ADD7]], i32 2
+; CHECK-NEXT:    store i32 [[TMP30]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[STEP_ADD7]], i32 3
+; CHECK-NEXT:    store i32 [[TMP31]], i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD2]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[VEC_IND_NEXT9]] = add <4 x i32> [[STEP_ADD7]], <i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4097, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -383,6 +412,21 @@ define void @uniform_copy(i32* %A, i32* %B) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A]], align 4, !alias.scope !12
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A]], align 4, !alias.scope !12
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A]], align 4, !alias.scope !12
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP5]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP5]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP5]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP5]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP6]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP6]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP6]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP6]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP7]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP7]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
+; CHECK-NEXT:    store i32 [[TMP7]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
 ; CHECK-NEXT:    store i32 [[TMP7]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
