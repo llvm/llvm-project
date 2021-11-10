@@ -34,12 +34,8 @@ define i1 @test1_logical(i16* %x) {
 define <2 x i1> @test1_vector(<2 x i16>* %x) {
 ; CHECK-LABEL: @test1_vector(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i16>, <2 x i16>* [[X:%.*]], align 4
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i16> [[LOAD]] to <2 x i8>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i8> [[TRUNC]], <i8 127, i8 127>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[LOAD]], <i16 -256, i16 -256>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i16> [[AND]], <i16 17664, i16 17664>
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[LOAD]], <i16 17791, i16 17791>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %load = load <2 x i16>, <2 x i16>* %x, align 4
   %trunc = trunc <2 x i16> %load to <2 x i8>
@@ -83,12 +79,8 @@ define i1 @test2_logical(i16* %x) {
 define <2 x i1> @test2_vector(<2 x i16>* %x) {
 ; CHECK-LABEL: @test2_vector(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i16>, <2 x i16>* [[X:%.*]], align 4
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[LOAD]], <i16 -256, i16 -256>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i16> [[AND]], <i16 32512, i16 32512>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i16> [[LOAD]] to <2 x i8>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i8> [[TRUNC]], <i8 69, i8 69>
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[LOAD]], <i16 32581, i16 32581>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %load = load <2 x i16>, <2 x i16>* %x, align 4
   %and = and <2 x i16> %load, <i16 -256, i16 -256>

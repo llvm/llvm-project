@@ -1310,19 +1310,20 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
 
-  ConstantInt *LHSC, *RHSC;
-  if (!match(LHS->getOperand(1), m_ConstantInt(LHSC)) ||
-      !match(RHS->getOperand(1), m_ConstantInt(RHSC)))
+  const APInt *LHSC, *RHSC;
+  if (!match(LHS->getOperand(1), m_APInt(LHSC)) ||
+      !match(RHS->getOperand(1), m_APInt(RHSC)))
     return nullptr;
 
   if (LHSC == RHSC && PredL == PredR) {
     // (icmp ult A, C) & (icmp ult B, C) --> (icmp ult (A|B), C)
     // where C is a power of 2 or
     // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
-    if ((PredL == ICmpInst::ICMP_ULT && LHSC->getValue().isPowerOf2()) ||
+    if ((PredL == ICmpInst::ICMP_ULT && LHSC->isPowerOf2()) ||
         (PredL == ICmpInst::ICMP_EQ && LHSC->isZero())) {
       Value *NewOr = Builder.CreateOr(LHS0, RHS0);
-      return Builder.CreateICmp(PredL, NewOr, LHSC);
+      return Builder.CreateICmp(PredL, NewOr,
+                                ConstantInt::get(NewOr->getType(), *LHSC));
     }
   }
 
@@ -1332,38 +1333,36 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (PredL == ICmpInst::ICMP_EQ && PredL == PredR && LHS->hasOneUse() &&
       RHS->hasOneUse()) {
     Value *V;
-    ConstantInt *AndC, *SmallC = nullptr, *BigC = nullptr;
+    const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
 
     // (trunc x) == C1 & (and x, CA) == C2
     // (and x, CA) == C2 & (trunc x) == C1
     if (match(RHS0, m_Trunc(m_Value(V))) &&
-        match(LHS0, m_And(m_Specific(V), m_ConstantInt(AndC)))) {
+        match(LHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
       SmallC = RHSC;
       BigC = LHSC;
     } else if (match(LHS0, m_Trunc(m_Value(V))) &&
-               match(RHS0, m_And(m_Specific(V), m_ConstantInt(AndC)))) {
+               match(RHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
       SmallC = LHSC;
       BigC = RHSC;
     }
 
     if (SmallC && BigC) {
-      unsigned BigBitSize = BigC->getType()->getBitWidth();
-      unsigned SmallBitSize = SmallC->getType()->getBitWidth();
+      unsigned BigBitSize = BigC->getBitWidth();
+      unsigned SmallBitSize = SmallC->getBitWidth();
 
       // Check that the low bits are zero.
       APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & AndC->getValue()).isZero() &&
-          (Low & BigC->getValue()).isZero()) {
-        Value *NewAnd = Builder.CreateAnd(V, Low | AndC->getValue());
-        APInt N = SmallC->getValue().zext(BigBitSize) | BigC->getValue();
-        Value *NewVal = ConstantInt::get(AndC->getType()->getContext(), N);
+      if ((Low & *AndC).isZero() && (Low & *BigC).isZero()) {
+        Value *NewAnd = Builder.CreateAnd(V, Low | *AndC);
+        APInt N = SmallC->zext(BigBitSize) | *BigC;
+        Value *NewVal = ConstantInt::get(NewAnd->getType(), N);
         return Builder.CreateICmp(PredL, NewAnd, NewVal);
       }
     }
   }
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
-                                     PredR, RHS0, RHSC->getValue(),
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
                                      Builder, /* IsAnd */ true);
 }
 

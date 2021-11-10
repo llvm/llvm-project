@@ -83,13 +83,11 @@ define i1 @test8_logical(i32 %i) {
   ret i1 %cond
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test8vec(<2 x i32> %i) {
 ; CHECK-LABEL: @test8vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[I:%.*]], zeroinitializer
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i32> [[I]], <i32 14, i32 14>
-; CHECK-NEXT:    [[COND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[I:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 13, i32 13>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %cmp1 = icmp ne <2 x i32> %i, zeroinitializer
   %cmp2 = icmp ult <2 x i32> %i, <i32 14, i32 14>
