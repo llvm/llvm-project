@@ -212,69 +212,6 @@ static bool isRelExpr(RelExpr expr) {
                R_RISCV_PC_INDIRECT, R_PPC64_RELAX_GOT_PC>(expr);
 }
 
-// Returns true if a given relocation can be computed at link-time.
-//
-// For instance, we know the offset from a relocation to its target at
-// link-time if the relocation is PC-relative and refers a
-// non-interposable function in the same executable. This function
-// will return true for such relocation.
-//
-// If this function returns false, that means we need to emit a
-// dynamic relocation so that the relocation will be fixed at load-time.
-static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
-                                     InputSectionBase &s, uint64_t relOff) {
-  // These expressions always compute a constant
-  if (oneof<R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
-            R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
-            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
-            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE>(e))
-    return true;
-
-  // These never do, except if the entire file is position dependent or if
-  // only the low bits are used.
-  if (e == R_GOT || e == R_PLT)
-    return target->usesOnlyLowPageBits(type) || !config->isPic;
-
-  if (sym.isPreemptible)
-    return false;
-  if (!config->isPic)
-    return true;
-
-  // The size of a non preemptible symbol is a constant.
-  if (e == R_SIZE)
-    return true;
-
-  // For the target and the relocation, we want to know if they are
-  // absolute or relative.
-  bool absVal = isAbsoluteValue(sym);
-  bool relE = isRelExpr(e);
-  if (absVal && !relE)
-    return true;
-  if (!absVal && relE)
-    return true;
-  if (!absVal && !relE)
-    return target->usesOnlyLowPageBits(type);
-
-  assert(absVal && relE);
-
-  // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
-  // in PIC mode. This is a little strange, but it allows us to link function
-  // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
-  // Normally such a call will be guarded with a comparison, which will load a
-  // zero from the GOT.
-  if (sym.isUndefWeak())
-    return true;
-
-  // We set the final symbols values for linker script defined symbols later.
-  // They always can be computed as a link time constant.
-  if (sym.scriptDefined)
-      return true;
-
-  error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
-        toString(sym) + getLocation(s, sym, relOff));
-  return true;
-}
 
 static RelExpr toPlt(RelExpr expr) {
   switch (expr) {
@@ -949,6 +886,71 @@ static bool canDefineSymbolInExecutable(Symbol &sym) {
   // of the function. Similar logic for objects.
   return ((sym.isFunc() && config->ignoreFunctionAddressEquality) ||
           (sym.isObject() && config->ignoreDataAddressEquality));
+}
+
+// Returns true if a given relocation can be computed at link-time.
+// This only handles relocation types expected in processRelocAux.
+//
+// For instance, we know the offset from a relocation to its target at
+// link-time if the relocation is PC-relative and refers a
+// non-interposable function in the same executable. This function
+// will return true for such relocation.
+//
+// If this function returns false, that means we need to emit a
+// dynamic relocation so that the relocation will be fixed at load-time.
+static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
+                                     InputSectionBase &s, uint64_t relOff) {
+  // These expressions always compute a constant
+  if (oneof<R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
+            R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
+            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
+            R_PLT_PC, R_PLT_GOTPLT, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
+            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE>(e))
+    return true;
+
+  // These never do, except if the entire file is position dependent or if
+  // only the low bits are used.
+  if (e == R_GOT || e == R_PLT)
+    return target->usesOnlyLowPageBits(type) || !config->isPic;
+
+  if (sym.isPreemptible)
+    return false;
+  if (!config->isPic)
+    return true;
+
+  // The size of a non preemptible symbol is a constant.
+  if (e == R_SIZE)
+    return true;
+
+  // For the target and the relocation, we want to know if they are
+  // absolute or relative.
+  bool absVal = isAbsoluteValue(sym);
+  bool relE = isRelExpr(e);
+  if (absVal && !relE)
+    return true;
+  if (!absVal && relE)
+    return true;
+  if (!absVal && !relE)
+    return target->usesOnlyLowPageBits(type);
+
+  assert(absVal && relE);
+
+  // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
+  // in PIC mode. This is a little strange, but it allows us to link function
+  // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
+  // Normally such a call will be guarded with a comparison, which will load a
+  // zero from the GOT.
+  if (sym.isUndefWeak())
+    return true;
+
+  // We set the final symbols values for linker script defined symbols later.
+  // They always can be computed as a link time constant.
+  if (sym.scriptDefined)
+      return true;
+
+  error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
+        toString(sym) + getLocation(s, sym, relOff));
+  return true;
 }
 
 // The reason we have to do this early scan is as follows
