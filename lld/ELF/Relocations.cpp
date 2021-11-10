@@ -1333,7 +1333,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     // have got-based small code model relocs. The .toc sections get placed
     // after the end of the linker allocated .got section and we do sort those
     // so sections addressed with small code model relocations come first.
-    if (isPPC64SmallCodeModelTocReloc(type))
+    if (type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS)
       sec.file->ppc64SmallCodeModelTocRelocs = true;
 
     // Record the TOC entry (.toc + addend) as not relaxable. See the comment in

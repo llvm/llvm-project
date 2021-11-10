@@ -187,11 +187,6 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
   return 0;
 }
 
-bool elf::isPPC64SmallCodeModelTocReloc(RelType type) {
-  // The only small code model relocations that access the .toc section.
-  return type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS;
-}
-
 void elf::writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
   insn = config->isLE ? insn << 32 | insn >> 32 : insn;
   write64(loc, insn);
