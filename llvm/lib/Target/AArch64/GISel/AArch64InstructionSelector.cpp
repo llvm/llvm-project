@@ -2770,6 +2770,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       } else {
         static unsigned Opcodes[] = {AArch64::STLRB, AArch64::STLRH,
                                      AArch64::STLRW, AArch64::STLRX};
+        Register ValReg = LdSt.getReg(0);
+        if (MRI.getType(ValReg).getSizeInBits() == 64 && MemSizeInBits != 64) {
+          // Emit a subreg copy of 32 bits.
+          Register NewVal = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+          MIB.buildInstr(TargetOpcode::COPY, {NewVal}, {})
+              .addReg(I.getOperand(0).getReg(), 0, AArch64::sub_32);
+          I.getOperand(0).setReg(NewVal);
+        }
         I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
       }
       constrainSelectedInstRegOperands(I, TII, TRI, RBI);
