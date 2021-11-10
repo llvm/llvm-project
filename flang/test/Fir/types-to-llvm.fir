@@ -203,3 +203,15 @@ func private @foo15(%arg0: !fir.vector<2:!fir.real<10>>)
 func private @foo16(%arg0: !fir.vector<2:!fir.real<16>>)
 // CHECK-LABEL: foo16
 // CHECK-SAME: vector<2xf128>
+
+// -----
+
+// Test `!fir.boxchar<n>` conversion
+
+func private @foo0(%arg0: !fir.boxchar<1>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.struct<(ptr<i8>, i64)>
+
+func private @foo1(%arg0: !fir.boxchar<2>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.struct<(ptr<i16>, i64)>

@@ -42,6 +42,14 @@ struct GenericTarget : public CodeGenSpecifics {
     return mlir::TupleType::get(eleTy.getContext(), range);
   }
 
+  mlir::Type boxcharMemoryType(mlir::Type eleTy) const override {
+    auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
+    auto ptrTy = fir::ReferenceType::get(eleTy);
+    // { t*, index }
+    mlir::TypeRange range = {ptrTy, idxTy};
+    return mlir::TupleType::get(eleTy.getContext(), range);
+  }
+
   Marshalling boxcharArgumentType(mlir::Type eleTy, bool sret) const override {
     CodeGenSpecifics::Marshalling marshal;
     auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
