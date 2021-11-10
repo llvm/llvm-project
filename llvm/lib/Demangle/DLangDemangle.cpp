@@ -40,5 +40,6 @@ char *llvm::dlangDemangle(const char *MangledName) {
     return Demangled.getBuffer();
   }
 
+  free(Demangled.getBuffer());
   return nullptr;
 }
