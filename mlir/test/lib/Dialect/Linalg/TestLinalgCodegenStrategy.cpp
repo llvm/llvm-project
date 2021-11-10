@@ -125,6 +125,10 @@ struct TestLinalgCodegenStrategy
       *this, "unroll-vector-transfers",
       llvm::cl::desc("Enable full unrolling of vector.transfer operations"),
       llvm::cl::init(false)};
+  Option<bool> runEnablePass{
+      *this, "run-enable-pass",
+      llvm::cl::desc("Run the enable pass between transformations"),
+      llvm::cl::init(true)};
   Option<std::string> anchorOpName{
       *this, "anchor-op",
       llvm::cl::desc(
@@ -178,11 +182,10 @@ void TestLinalgCodegenStrategy::runStrategy(
               .enableTransferPartialRewrite()
               .enableContractionLowering()
               .enableTransferToSCFConversion());
-
   // Created a nested OpPassManager and run.
   FuncOp funcOp = getFunction();
   OpPassManager dynamicPM("builtin.func");
-  strategy.configurePassPipeline(dynamicPM, funcOp.getContext());
+  strategy.configurePassPipeline(dynamicPM, funcOp.getContext(), runEnablePass);
   if (failed(runPipeline(dynamicPM, funcOp)))
     return signalPassFailure();
 }
