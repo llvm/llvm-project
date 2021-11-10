@@ -1776,6 +1776,32 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::stackrestore: {
+    enum class ClassifyResult {
+      None,
+      Alloca,
+      StackRestore,
+      CallWithSideEffects,
+    };
+    auto Classify = [](const Instruction *I) {
+      if (isa<AllocaInst>(I))
+        return ClassifyResult::Alloca;
+
+      if (auto *CI = dyn_cast<CallInst>(I)) {
+        if (auto *II = dyn_cast<IntrinsicInst>(CI)) {
+          if (II->getIntrinsicID() == Intrinsic::stackrestore)
+            return ClassifyResult::StackRestore;
+
+          if (II->mayHaveSideEffects())
+            return ClassifyResult::CallWithSideEffects;
+        } else {
+          // Consider all non-intrinsic calls to be side effects
+          return ClassifyResult::CallWithSideEffects;
+        }
+      }
+
+      return ClassifyResult::None;
+    };
+
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.
     if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
@@ -1793,29 +1819,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Instruction *TI = II->getParent()->getTerminator();
     bool CannotRemove = false;
     for (++BI; &*BI != TI; ++BI) {
-      if (isa<AllocaInst>(BI)) {
+      switch (Classify(&*BI)) {
+      case ClassifyResult::None:
+        // So far so good, look at next instructions.
+        break;
+
+      case ClassifyResult::StackRestore:
+        // If there is a stackrestore below this one, remove this one.
+        return eraseInstFromFunction(CI);
+
+      case ClassifyResult::Alloca:
+      case ClassifyResult::CallWithSideEffects:
+        // If we found an alloca, a non-intrinsic call, or an intrinsic call
+        // with side effects (such as llvm.stacksave and llvm.read_register),
+        // we can't remove the stack restore.
         CannotRemove = true;
         break;
       }
-      if (CallInst *BCI = dyn_cast<CallInst>(BI)) {
-        if (auto *II2 = dyn_cast<IntrinsicInst>(BCI)) {
-          // If there is a stackrestore below this one, remove this one.
-          if (II2->getIntrinsicID() == Intrinsic::stackrestore)
-            return eraseInstFromFunction(CI);
-
-          // Bail if we cross over an intrinsic with side effects, such as
-          // llvm.stacksave, or llvm.read_register.
-          if (II2->mayHaveSideEffects()) {
-            CannotRemove = true;
-            break;
-          }
-        } else {
-          // If we found a non-intrinsic call, we can't remove the stack
-          // restore.
-          CannotRemove = true;
-          break;
-        }
-      }
+      if (CannotRemove)
+        break;
     }
 
     // If the stack restore is in a return, resume, or unwind block and if there
