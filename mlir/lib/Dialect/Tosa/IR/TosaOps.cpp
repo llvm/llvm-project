@@ -376,6 +376,53 @@ void MulOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
   results.insert<MulOneOptimization>(context);
 }
 
+struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::PadOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.pad_const())
+      return failure();
+
+    auto input = op.input1();
+    auto padding = op.padding();
+
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    Type elementTy = inputTy.getElementType();
+
+    Attribute constantAttr;
+    if (elementTy.isa<FloatType>())
+      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
+    else if (elementTy.isa<IntegerType>() && !op.quantization_info())
+      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
+    else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
+      auto value = op.quantization_info().getValue().input_zp().getValue();
+      constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
+    }
+
+    if (!constantAttr) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "tosa.pad to linalg lowering encountered an unknown element type");
+    }
+
+    auto denseAttr = DenseElementsAttr::get(
+        RankedTensorType::get({}, elementTy), constantAttr);
+    auto constantVal = rewriter.create<tosa::ConstOp>(
+        op.getLoc(), denseAttr.getType(), denseAttr);
+
+    rewriter.replaceOpWithNewOp<tosa::PadOp>(
+        op, op.getType(), ValueRange{input, padding, constantVal},
+        op->getAttrs());
+    return success();
+  }
+};
+
+void PadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                        MLIRContext *context) {
+  results.insert<MaterializePadValue>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
@@ -413,6 +460,18 @@ ReduceFolder(ReduceAllOp) ReduceFolder(ReduceAnyOp) ReduceFolder(ReduceMaxOp)
   if (!inputTy || !outputTy || inputTy != outputTy)
     return {};
   return input1();
+}
+
+OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
+  // If the pad is all zeros we can fold this operation away.
+  if (operands[1]) {
+    auto densePad = operands[1].cast<DenseElementsAttr>();
+    if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
+      return input1();
+    }
+  }
+
+  return {};
 }
 
 OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
