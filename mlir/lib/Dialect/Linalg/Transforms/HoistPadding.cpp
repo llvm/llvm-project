@@ -11,9 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
-#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -26,7 +24,6 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -58,9 +55,8 @@ struct HoistingAnalysis {
 
   bool isValid() { return valid; }
 
-  /// Footprint of the packedTensor, computed from the packingLoops and
-  /// `backwardSlice`.
-  FailureOr<SmallVector<Value>> getPackedTensorSizes(ImplicitLocOpBuilder &b);
+  /// Footprint of the packedTensor, computed from the packingLoops.
+  SmallVector<Value> getPackedTensorSizes(ImplicitLocOpBuilder &b);
 
   /// The outermost loop, determined by `nLevels` above which `padTensorOp` will
   /// be hoisted.
@@ -229,20 +225,19 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
   valid = true;
 }
 
-/// Add all index operands of `operation` to `indexEdges`. An index operand is
-/// an operand of type index.
-static void addIndexOperandsToIndexEdges(Operation *operation,
-                                         SetVector<Value> &indexEdges) {
-  for (Value operand : operation->getOperands())
-    if (operand.getType().isIndex())
-      indexEdges.insert(operand);
-}
-
 SmallVector<scf::ForOp>
 HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
                                    tensor::ExtractSliceOp sliceOp) {
   // Set of all values used for index computation.
   SetVector<Value> indexEdges;
+
+  // Add all index operands of `operation` to `indexEdges`. An index operand is
+  // an operand of type index.
+  auto addIndexOperandsToIndexEdges = [&](Operation *operation) {
+    for (Value operand : operation->getOperands())
+      if (operand.getType().isIndex())
+        indexEdges.insert(operand);
+  };
 
   // Starting from `padTensorOp` and `sliceOp` walk the use-def edges of index
   // type in `backwardSlice`. Add the index operands of an operation to
@@ -268,7 +263,7 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
     // Add the index operands of `padTensorOp` and `sliceOp` to start the
     // exploration of the index computation.
     if (op == padTensorOp || op == sliceOp) {
-      addIndexOperandsToIndexEdges(op, indexEdges);
+      addIndexOperandsToIndexEdges(op);
       continue;
     }
     // Add the index operands of the loop if its induction variable is
@@ -276,7 +271,7 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
     // `indexingLoops`
     if (auto forOp = dyn_cast<scf::ForOp>(op)) {
       if (indexEdges.contains(forOp.getInductionVar())) {
-        addIndexOperandsToIndexEdges(op, indexEdges);
+        addIndexOperandsToIndexEdges(op);
         indexingLoops.push_back(forOp);
         continue;
       }
@@ -285,197 +280,44 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
     // used for index computation.
     if (llvm::any_of(op->getResults(),
                      [&](Value result) { return indexEdges.contains(result); }))
-      addIndexOperandsToIndexEdges(op, indexEdges);
+      addIndexOperandsToIndexEdges(op);
   }
   return indexingLoops;
 }
 
-static bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
-  return outer.isDefinedOutsideOfLoop(v) || v.getDefiningOp<ConstantOp>();
-}
-
-/// For each loop in `loops`, determine the ops involved in the construction of
-/// its upper bound---up to the outerLimit loop--- and fold them as new
-/// inequalities in the constraint set.
-/// This is achieved by computing the backwardSlice of the loop's upper bound
-/// and iteratively folding each op in reverse topological order to guarantee
-/// use-def ordering.
-/// As operations are folded in, their result is projected out of the
-/// constraints set.
-/// The following operations are supported:
-///   - scf::ForOp are simply skipped.
-///   - AffineApplyOp are composed to replace the result by an equality.
-///   - AffineMinOp are composed by adding each entry as an upper bound.
-/// Additionally, the following terminal operations are handled:
-///   - DimOp and ConstantOp are skipped.
-/// If any other operation is met, return failure.
-// TODO: extend on a per-need basis.
-static LogicalResult
-foldUpperBoundsIntoConstraintsSet(FlatAffineValueConstraints &constraints,
-                                  scf::ForOp outerLimit,
-                                  ArrayRef<scf::ForOp> loops) {
-  SetVector<Value> toProjectOut;
-  for (scf::ForOp loop : loops) {
-    auto ub = loop.upperBound();
-
-    // Set of all values used for index computation.
-    SetVector<Value> indexEdges;
-    indexEdges.insert(ub);
-
-    // Compute the backward slice `indexSlice` containing the index computation
-    // performed to obtain the upper bound `ub`. Starting from `ub` add the
-    // index operands of an operation to `indexEdges` if one of its results is
-    // an index edge. Otherwise, stop the slice computation. For a loop, check
-    // if its induction variable is an index edge.
-    //
-    // Example:
-    // ```
-    // %c0 = arith.constant 0
-    // scf.for %i = %c0 to ...
-    //   scf.for %j = %c0 to ...
-    //     %ub = affine.min #map(%i)
-    //     scf.for %k = %c0 to %ub
-    // ```
-    // After computing the backward slice we obtain:
-    // indexEdges = [%ub, %i, %c0]
-    // indexSlice = [arith.constant 0, scf.for %i, affine.min #map(%i)]
-    SetVector<Operation *> indexSlice;
-    getBackwardSlice(ub, &indexSlice, [&](Operation *op) {
-      // Continue only along the index operands of the ForOp.
-      if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-        // Consider only loops part of the enclosing loops.
-        if (!outerLimit->isAncestor(op))
-          return false;
-        if (!indexEdges.contains(forOp.getInductionVar()))
-          return false;
-        addIndexOperandsToIndexEdges(op, indexEdges);
-        return true;
-      }
-      // All supported index operations have one result.
-      assert(op->getNumResults() == 1 &&
-             "expect operations to have one result");
-      if (!indexEdges.contains(op->getResult(0)))
-        return false;
-      addIndexOperandsToIndexEdges(op, indexEdges);
-      return true;
-    });
-    indexSlice.insert(ub.getDefiningOp());
-
-    // Iterate over all ops in the slice and compose them in the constraints.
-    for (Operation *op : llvm::reverse(indexSlice)) {
-      // All ForOps have previously been added to the constraints and ConstantOp
-      // and DimOp are terminals of the index computation.
-      if (isa<scf::ForOp, arith::ConstantOp, tensor::DimOp>(op))
-        continue;
-      // Check all index computation operations are supported.
-      if (!isa<AffineApplyOp, AffineMinOp>(op))
-        return failure();
-      // Ensure there is an id.
-      auto ensureIdFailed = [&](Value v) {
-        if (constraints.containsId(v)) {
-          unsigned pos;
-          constraints.findId(v, &pos);
-          return pos >= constraints.getNumDimIds();
-        }
-        constraints.appendDimId(v);
-        return false;
-      };
-
-      // Ensure all ids exist and add results for later projection.
-      if (llvm::any_of(op->getResults(), ensureIdFailed) ||
-          llvm::any_of(op->getOperands(), ensureIdFailed))
-        return failure();
-
-      // All supported ops have 1 result.
-      // TODO: extend when needed.
-      assert(op->getNumResults() == 1 &&
-             "expect operations to have one result");
-      toProjectOut.insert(op->getResult(0));
-
-      // Compose supported ops.
-      if (auto affineApplyOp = dyn_cast<AffineApplyOp>(op)) {
-        AffineValueMap avm(affineApplyOp.getAffineMap(),
-                           affineApplyOp.getOperands(),
-                           affineApplyOp.getResult());
-        if (failed(constraints.composeMap(&avm)))
-          return failure();
-        continue;
-      }
-      auto affineMinOp = cast<AffineMinOp>(op);
-      unsigned pos;
-      bool foundMinOp = constraints.findId(affineMinOp.getResult(), &pos);
-      (void)foundMinOp;
-      assert(foundMinOp);
-      AffineMap alignedMap = constraints.computeAlignedMap(
-          affineMinOp.getAffineMap(), affineMinOp.getOperands());
-      if (failed(
-              constraints.addBound(FlatAffineConstraints::UB, pos, alignedMap)))
-        return failure();
-    }
-  }
-  for (Value v : toProjectOut)
-    constraints.projectOut(v);
-  return success();
-}
-
-// Footprint of the packedTensor, computed from the packingLoops and
-// `backwardSlice`.
-FailureOr<SmallVector<Value>>
+SmallVector<Value>
 HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
-  // Create the base affine constaints for the packedLoops.
-  auto constraints = FlatAffineValueConstraints::getHyperrectangular(
-      llvm::to_vector<8>(llvm::map_range(
-          packingLoops, [](scf::ForOp op) { return op.getInductionVar(); })),
-      llvm::to_vector<8>(llvm::map_range(
-          packingLoops, [](scf::ForOp op) { return op.lowerBound(); })),
-      llvm::to_vector<8>(llvm::map_range(
-          packingLoops, [](scf::ForOp op) { return op.upperBound(); })));
-
-  // Iteratively try to fold the upper bounds into the constraints set.
-  if (failed(foldUpperBoundsIntoConstraintsSet(
-          constraints, outermostEnclosingForOp, packingLoops)))
-    return failure();
-
-  int nPackedLoops = packingLoops.size();
-  SmallVector<AffineMap> lbs(nPackedLoops), ubs(nPackedLoops);
-  // Compute the bounds of the first positions, assuming the others are fixed.
-  constraints.getSliceBounds(/*pos=*/0, /*num=*/nPackedLoops,
-                             outermostEnclosingForOp->getContext(), &lbs, &ubs);
-
-  SmallVector<Value> allValues;
-  constraints.getAllValues(&allValues);
-  SmallVector<Value> allNonLoopValues(allValues.begin() + nPackedLoops,
-                                      allValues.end());
-
-  // For each packingLoop, create the extent by (ub - lb).ceilDiv(step).
-  // IP just before the outermost loop considered that we hoist above.
-  assert(nPackedLoops == static_cast<int64_t>(lbs.size()) &&
-         "expected matching lb sizes");
-  assert(nPackedLoops == static_cast<int64_t>(ubs.size()) &&
-         "expected matching ub sizes");
   SmallVector<Value> dynamicTensorSizes;
-  for (auto it : llvm::zip(packingLoops, lbs, ubs)) {
-    scf::ForOp loop = std::get<0>(it);
-    AffineMap lbMap = std::get<1>(it);
-    AffineMap ubMap = std::get<2>(it);
-    SmallVector<Value> lbOperands(allNonLoopValues);
-    canonicalizeMapAndOperands(&lbMap, &lbOperands);
-    Value lbVal = b.createOrFold<AffineMaxOp>(lbMap, lbOperands);
 
-    SmallVector<Value> ubOperands(allNonLoopValues);
-    canonicalizeMapAndOperands(&ubMap, &ubOperands);
-    Value ubVal = b.createOrFold<AffineMinOp>(ubMap, ubOperands);
-
+  // Upper bound the packing loop lengths to size the packed tensor. Taking
+  // upper bounds can make the sizes of the packed tensor independent of the
+  // enclosing loops. This independence is a prerequisite for reusing the same
+  // buffer for all enclosing loop iterations and hoisting its allocation out of
+  // the enclosing loops.
+  for (auto forOp : packingLoops) {
+    // Compute an upper bound `ubVal` for the upper bound of `forOp`.
+    AffineMap boundMap;
+    SmallVector<Value> boundOperands;
+    getUpperBoundForIndex(forOp.upperBound(), boundMap, boundOperands);
+    Value ubVal = b.createOrFold<AffineMinOp>(boundMap, boundOperands);
+    // Compute the maximal packing loop length as (ub - lb).ceilDiv(step) and
+    // store the result to `dynamicTensorSizes`.
+    // TODO: instead of using the lower bound of `forOp` directly, implement a
+    // lower bound computation similar to the upper bound computation.
     AffineExpr lb, ub, step;
     bindDims(b.getContext(), lb, ub);
     bindSymbols(b.getContext(), step);
     Value res = b.createOrFold<AffineApplyOp>(
         (ub - lb).ceilDiv(step),
-        ValueRange{lbVal, ubVal, cast<scf::ForOp>(loop).step()});
-
+        ValueRange{forOp.lowerBound(), ubVal, cast<scf::ForOp>(forOp).step()});
     dynamicTensorSizes.push_back(res);
   }
+
   return dynamicTensorSizes;
+}
+
+static bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
+  return outer.isDefinedOutsideOfLoop(v) || v.getDefiningOp<ConstantOp>();
 }
 
 /// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
@@ -512,10 +354,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
   scf::ForOp outer = analysis.outermostEnclosingForOp;
   ImplicitLocOpBuilder b(outer->getLoc(), outer);
 
-  auto maybeDynamicTensorSizes = analysis.getPackedTensorSizes(b);
-  if (failed(maybeDynamicTensorSizes))
-    return failure();
-  SmallVector<Value> dynamicTensorSizes = *maybeDynamicTensorSizes;
+  SmallVector<Value> dynamicTensorSizes = analysis.getPackedTensorSizes(b);
 
   // Update actual number of loops, which may be smaller.
   int nPackedLoops = analysis.packingLoops.size();
