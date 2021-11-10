@@ -1092,6 +1092,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 
   // kernarg_segment_alignment is specified as log of the alignment.
   // The minimum alignment is 16.
+  // FIXME: The metadata treats the minimum as 4?
   Out.kernarg_segment_alignment = Log2(std::max(Align(16), MaxKernArgAlign));
 }
 

@@ -68,15 +68,9 @@ define internal <2 x i64> @_mm_set_epi32(i32 %__i3, i32 %__i2, i32 %__i1, i32 %_
 define <2 x i64> @abs_v4i32(<2 x i64> %x) {
 ; CHECK-LABEL: @abs_v4i32(
 ; CHECK-NEXT:    [[T1_I:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SUB_I:%.*]] = sub <4 x i32> zeroinitializer, [[T1_I]]
-; CHECK-NEXT:    [[T1_I_LOBIT:%.*]] = ashr <4 x i32> [[T1_I]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[T1_I_LOBIT]] to <2 x i64>
-; CHECK-NEXT:    [[T2_I_I:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[AND_I_I1:%.*]] = and <4 x i32> [[T1_I_LOBIT]], [[SUB_I]]
-; CHECK-NEXT:    [[AND_I_I:%.*]] = bitcast <4 x i32> [[AND_I_I1]] to <2 x i64>
-; CHECK-NEXT:    [[AND_I1_I:%.*]] = and <2 x i64> [[T2_I_I]], [[X]]
-; CHECK-NEXT:    [[OR_I_I:%.*]] = or <2 x i64> [[AND_I1_I]], [[AND_I_I]]
-; CHECK-NEXT:    ret <2 x i64> [[OR_I_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[T1_I]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %call = call <2 x i64> @_mm_set1_epi32(i32 -1)
   %call1 = call <2 x i64> @_mm_setzero_si128()
@@ -90,13 +84,9 @@ define <2 x i64> @max_v4i32(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    [[T0_I_I:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[T1_I_I:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp sgt <4 x i32> [[T0_I_I]], [[T1_I_I]]
-; CHECK-NEXT:    [[SEXT_I_I:%.*]] = sext <4 x i1> [[CMP_I_I]] to <4 x i32>
-; CHECK-NEXT:    [[T2_I_I:%.*]] = bitcast <4 x i32> [[SEXT_I_I]] to <2 x i64>
-; CHECK-NEXT:    [[NEG_I_I:%.*]] = xor <2 x i64> [[T2_I_I]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[AND_I_I:%.*]] = and <2 x i64> [[NEG_I_I]], [[Y]]
-; CHECK-NEXT:    [[AND_I1_I:%.*]] = and <2 x i64> [[T2_I_I]], [[X]]
-; CHECK-NEXT:    [[OR_I_I:%.*]] = or <2 x i64> [[AND_I1_I]], [[AND_I_I]]
-; CHECK-NEXT:    ret <2 x i64> [[OR_I_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[CMP_I_I]], <4 x i32> [[T0_I_I]], <4 x i32> [[T1_I_I]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %call = call <2 x i64> @cmpgt_i32_sel_m128i(<2 x i64> %x, <2 x i64> %y, <2 x i64> %y, <2 x i64> %x)
   ret <2 x i64> %call

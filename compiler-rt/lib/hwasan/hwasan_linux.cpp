@@ -250,7 +250,7 @@ void InstallAtExitHandler() { atexit(HwasanAtExit); }
 // ---------------------- TSD ---------------- {{{1
 
 extern "C" void __hwasan_thread_enter() {
-  hwasanThreadList().CreateCurrentThread()->InitRandomState();
+  hwasanThreadList().CreateCurrentThread()->EnsureRandomStateInited();
 }
 
 extern "C" void __hwasan_thread_exit() {

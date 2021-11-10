@@ -61,8 +61,11 @@ llvm::Error IncrementalExecutor::runCtors() const {
 }
 
 llvm::Expected<llvm::JITTargetAddress>
-IncrementalExecutor::getSymbolAddress(llvm::StringRef UnmangledName) const {
-  auto Sym = Jit->lookup(UnmangledName);
+IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
+                                      SymbolNameKind NameKind) const {
+  auto Sym = (NameKind == LinkerName) ? Jit->lookupLinkerMangled(Name)
+                                      : Jit->lookup(Name);
+
   if (!Sym)
     return Sym.takeError();
   return Sym->getAddress();

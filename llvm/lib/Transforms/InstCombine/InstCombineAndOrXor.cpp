@@ -1199,6 +1199,34 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateBinOp(Logic.getOpcode(), Cmp0, SubstituteCmp);
 }
 
+/// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
+/// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
+/// into a single comparison using range-based reasoning.
+static Value *foldAndOrOfICmpsUsingRanges(
+    ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
+    ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
+    IRBuilderBase &Builder, bool IsAnd) {
+  if (V1 != V2)
+    return nullptr;
+
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  Optional<ConstantRange> CR =
+      IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
+  if (!CR)
+    return nullptr;
+
+  CmpInst::Predicate NewPred;
+  APInt NewC, Offset;
+  CR->getEquivalentICmp(NewPred, NewC, Offset);
+
+  Type *Ty = V1->getType();
+  Value *NewV = V1;
+  if (Offset != 0)
+    NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
+  return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
+}
+
 /// Fold (icmp)&(icmp) if possible.
 Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                         BinaryOperator &And) {
@@ -1317,112 +1345,9 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // From here on, we only handle:
-  //    (icmp1 A, C1) & (icmp2 A, C2) --> something simpler.
-  if (LHS0 != RHS0)
-    return nullptr;
-
-  // ICMP_[US][GL]E X, C is folded to ICMP_[US][GL]T elsewhere.
-  if (PredL == ICmpInst::ICMP_UGE || PredL == ICmpInst::ICMP_ULE ||
-      PredR == ICmpInst::ICMP_UGE || PredR == ICmpInst::ICMP_ULE ||
-      PredL == ICmpInst::ICMP_SGE || PredL == ICmpInst::ICMP_SLE ||
-      PredR == ICmpInst::ICMP_SGE || PredR == ICmpInst::ICMP_SLE)
-    return nullptr;
-
-  // We can't fold (ugt x, C) & (sgt x, C2).
-  if (!predicatesFoldable(PredL, PredR))
-    return nullptr;
-
-  // Ensure that the larger constant is on the RHS.
-  bool ShouldSwap;
-  if (CmpInst::isSigned(PredL) ||
-      (ICmpInst::isEquality(PredL) && CmpInst::isSigned(PredR)))
-    ShouldSwap = LHSC->getValue().sgt(RHSC->getValue());
-  else
-    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
-
-  if (ShouldSwap) {
-    std::swap(LHS, RHS);
-    std::swap(LHSC, RHSC);
-    std::swap(PredL, PredR);
-  }
-
-  // At this point, we know we have two icmp instructions
-  // comparing a value against two constants and and'ing the result
-  // together.  Because of the above check, we know that we only have
-  // icmp eq, icmp ne, icmp [su]lt, and icmp [SU]gt here. We also know
-  // (from the icmp folding check above), that the two constants
-  // are not equal and that the larger constant is on the RHS
-  assert(LHSC != RHSC && "Compares not folded above?");
-
-  switch (PredL) {
-  default:
-    llvm_unreachable("Unknown integer condition code!");
-  case ICmpInst::ICMP_NE:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_ULT:
-      // (X != 13 & X u< 14) -> X < 13
-      if (LHSC->getValue() == (RHSC->getValue() - 1))
-        return Builder.CreateICmpULT(LHS0, LHSC);
-      if (LHSC->isZero()) // (X != 0 & X u< C) -> X-1 u< C-1
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               false, true);
-      break; // (X != 13 & X u< 15) -> no change
-    case ICmpInst::ICMP_SLT:
-      // (X != 13 & X s< 14) -> X < 13
-      if (LHSC->getValue() == (RHSC->getValue() - 1))
-        return Builder.CreateICmpSLT(LHS0, LHSC);
-      // (X != INT_MIN & X s< C) -> X-(INT_MIN+1) u< (C-(INT_MIN+1))
-      if (LHSC->isMinValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               true, true);
-      break; // (X != 13 & X s< 15) -> no change
-    case ICmpInst::ICMP_NE:
-      // Potential folds for this case should already be handled.
-      break;
-    }
-    break;
-  case ICmpInst::ICMP_UGT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_NE:
-      // (X u> 13 & X != 14) -> X u> 14
-      if (RHSC->getValue() == (LHSC->getValue() + 1))
-        return Builder.CreateICmp(PredL, LHS0, RHSC);
-      // X u> C & X != UINT_MAX -> (X-(C+1)) u< UINT_MAX-(C+1)
-      if (RHSC->isMaxValue(false))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               false, true);
-      break;                 // (X u> 13 & X != 15) -> no change
-    case ICmpInst::ICMP_ULT: // (X u> 13 & X u< 15) -> (X-14) u< 1
-      return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                             false, true);
-    }
-    break;
-  case ICmpInst::ICMP_SGT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_NE:
-      // (X s> 13 & X != 14) -> X s> 14
-      if (RHSC->getValue() == (LHSC->getValue() + 1))
-        return Builder.CreateICmp(PredL, LHS0, RHSC);
-      // X s> C & X != INT_MAX -> (X-(C+1)) u< INT_MAX-(C+1)
-      if (RHSC->isMaxValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
-                               true, true);
-      break;                 // (X s> 13 & X != 15) -> no change
-    case ICmpInst::ICMP_SLT: // (X s> 13 & X s< 15) -> (X-14) u< 1
-      return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(), true,
-                             true);
-    }
-    break;
-  }
-
-  return nullptr;
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
+                                     PredR, RHS0, RHSC->getValue(),
+                                     Builder, /* IsAnd */ true);
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -2298,22 +2223,30 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
   if (!Ty->isIntOrIntVectorTy() || !B->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  // We need 0 or all-1's bitmasks.
-  if (ComputeNumSignBits(A) != Ty->getScalarSizeInBits())
-    return nullptr;
-
-  // If B is the 'not' value of A, we have our answer.
+  // If A is the 'not' operand of B and has enough signbits, we have our answer.
   if (match(B, m_Not(m_Specific(A)))) {
     // If these are scalars or vectors of i1, A can be used directly.
     if (Ty->isIntOrIntVectorTy(1))
       return A;
-    return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(Ty));
+
+    // If we look through a vector bitcast, the caller will bitcast the operands
+    // to match the condition's number of bits (N x i1).
+    // To make this poison-safe, disallow bitcast from wide element to narrow
+    // element. That could allow poison in lanes where it was not present in the
+    // original code.
+    A = peekThroughBitcast(A);
+    unsigned NumSignBits = ComputeNumSignBits(A);
+    if (NumSignBits == A->getType()->getScalarSizeInBits() &&
+        NumSignBits <= Ty->getScalarSizeInBits())
+      return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(A->getType()));
+    return nullptr;
   }
 
   // If both operands are constants, see if the constants are inverse bitmasks.
   Constant *AConst, *BConst;
   if (match(A, m_Constant(AConst)) && match(B, m_Constant(BConst)))
-    if (AConst == ConstantExpr::getNot(BConst))
+    if (AConst == ConstantExpr::getNot(BConst) &&
+        ComputeNumSignBits(A) == Ty->getScalarSizeInBits())
       return Builder.CreateZExtOrTrunc(A, CmpInst::makeCmpResultType(Ty));
 
   // Look for more complex patterns. The 'not' op may be hidden behind various
@@ -2357,10 +2290,17 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
   B = peekThroughBitcast(B, true);
   if (Value *Cond = getSelectCondition(A, B)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
+    // If this is a vector, we may need to cast to match the condition's length.
     // The bitcasts will either all exist or all not exist. The builder will
     // not create unnecessary casts if the types already match.
-    Value *BitcastC = Builder.CreateBitCast(C, A->getType());
-    Value *BitcastD = Builder.CreateBitCast(D, A->getType());
+    Type *SelTy = A->getType();
+    if (auto *VecTy = dyn_cast<VectorType>(Cond->getType())) {
+      unsigned Elts = VecTy->getElementCount().getKnownMinValue();
+      Type *EltTy = Builder.getIntNTy(SelTy->getPrimitiveSizeInBits() / Elts);
+      SelTy = VectorType::get(EltTy, VecTy->getElementCount());
+    }
+    Value *BitcastC = Builder.CreateBitCast(C, SelTy);
+    Value *BitcastD = Builder.CreateBitCast(D, SelTy);
     Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastD);
     return Builder.CreateBitCast(Select, OrigType);
   }
@@ -2531,105 +2471,9 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
         return Builder.CreateICmpULE(LHS0, LHSC);
   }
 
-  // From here on, we only handle:
-  //    (icmp1 A, C1) | (icmp2 A, C2) --> something simpler.
-  if (LHS0 != RHS0)
-    return nullptr;
-
-  // ICMP_[US][GL]E X, C is folded to ICMP_[US][GL]T elsewhere.
-  if (PredL == ICmpInst::ICMP_UGE || PredL == ICmpInst::ICMP_ULE ||
-      PredR == ICmpInst::ICMP_UGE || PredR == ICmpInst::ICMP_ULE ||
-      PredL == ICmpInst::ICMP_SGE || PredL == ICmpInst::ICMP_SLE ||
-      PredR == ICmpInst::ICMP_SGE || PredR == ICmpInst::ICMP_SLE)
-    return nullptr;
-
-  // We can't fold (ugt x, C) | (sgt x, C2).
-  if (!predicatesFoldable(PredL, PredR))
-    return nullptr;
-
-  // Ensure that the larger constant is on the RHS.
-  bool ShouldSwap;
-  if (CmpInst::isSigned(PredL) ||
-      (ICmpInst::isEquality(PredL) && CmpInst::isSigned(PredR)))
-    ShouldSwap = LHSC->getValue().sgt(RHSC->getValue());
-  else
-    ShouldSwap = LHSC->getValue().ugt(RHSC->getValue());
-
-  if (ShouldSwap) {
-    std::swap(LHS, RHS);
-    std::swap(LHSC, RHSC);
-    std::swap(PredL, PredR);
-  }
-
-  // At this point, we know we have two icmp instructions
-  // comparing a value against two constants and or'ing the result
-  // together.  Because of the above check, we know that we only have
-  // ICMP_EQ, ICMP_NE, ICMP_LT, and ICMP_GT here. We also know (from the
-  // icmp folding check above), that the two constants are not
-  // equal.
-  assert(LHSC != RHSC && "Compares not folded above?");
-
-  switch (PredL) {
-  default:
-    llvm_unreachable("Unknown integer condition code!");
-  case ICmpInst::ICMP_EQ:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:
-      // Potential folds for this case should already be handled.
-      break;
-    case ICmpInst::ICMP_UGT:
-      // (X == 0 || X u> C) -> (X-1) u>= C
-      if (LHSC->isMinValue(false))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue() + 1,
-                               false, false);
-      // (X == 13 | X u> 14) -> no change
-      break;
-    case ICmpInst::ICMP_SGT:
-      // (X == INT_MIN || X s> C) -> (X-(INT_MIN+1)) u>= C-INT_MIN
-      if (LHSC->isMinValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue() + 1,
-                               true, false);
-      // (X == 13 | X s> 14) -> no change
-      break;
-    }
-    break;
-  case ICmpInst::ICMP_ULT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ: // (X u< 13 | X == 14) -> no change
-      // (X u< C || X == UINT_MAX) => (X-C) u>= UINT_MAX-C
-      if (RHSC->isMaxValue(false))
-        return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue(),
-                               false, false);
-      break;
-    case ICmpInst::ICMP_UGT: // (X u< 13 | X u> 15) -> (X-13) u> 2
-      assert(!RHSC->isMaxValue(false) && "Missed icmp simplification");
-      return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue() + 1,
-                             false, false);
-    }
-    break;
-  case ICmpInst::ICMP_SLT:
-    switch (PredR) {
-    default:
-      llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ:
-      // (X s< C || X == INT_MAX) => (X-C) u>= INT_MAX-C
-      if (RHSC->isMaxValue(true))
-        return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue(),
-                               true, false);
-      // (X s< 13 | X == 14) -> no change
-      break;
-    case ICmpInst::ICMP_SGT: // (X s< 13 | X s> 15) -> (X-13) u> 2
-      assert(!RHSC->isMaxValue(true) && "Missed icmp simplification");
-      return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue() + 1, true,
-                             false);
-    }
-    break;
-  }
-  return nullptr;
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
+                                     PredR, RHS0, RHSC->getValue(),
+                                     Builder, /* IsAnd */ false);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
@@ -2790,13 +2634,13 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
 
-  // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
-  // TODO: One use checks are conservative. We have 7 operations in the source
-  //       expression and 3 in the target. We could allow 3 multiple used values
-  //       in RHS and LHS combined, but there is no common infrastructure to
-  //       conveniently do so no.
+  // (~(A | B) & C) | ... --> ...
+  // TODO: One use checks are conservative. We just need to check that a total
+  //       number of multiple used values does not exceed reduction
+  //       in operations.
   if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
                                   m_Value(C))))) {
+    // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
                        m_Specific(B))))) {
@@ -2804,23 +2648,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A));
     }
 
+    // (~(A | B) & C) | (~(B | C) & A) --> (A ^ C) & ~B
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(B), m_Specific(C)))),
                        m_Specific(A))))) {
       Value *Xor = Builder.CreateXor(A, C);
       return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B));
     }
-  }
 
-  // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
-  // TODO: One use checks are conservative. We just need to check that a total
-  //       number of multiple used values does not exceed 3.
-  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
-                                  m_Value(C))))) {
+    // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
     if (match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(C)))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(B, C), A));
 
+    // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
     if (match(Op1, m_Not(m_c_Or(m_Specific(B), m_Specific(C)))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(A, C), B));

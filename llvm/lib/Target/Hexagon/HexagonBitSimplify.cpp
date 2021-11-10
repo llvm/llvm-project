@@ -3335,9 +3335,9 @@ bool HexagonLoopRescheduling::runOnMachineFunction(MachineFunction &MF) {
       continue;
     MachineBasicBlock *PB = nullptr;
     bool IsLoop = false;
-    for (auto PI = B.pred_begin(), PE = B.pred_end(); PI != PE; ++PI) {
-      if (*PI != &B)
-        PB = *PI;
+    for (MachineBasicBlock *Pred : B.predecessors()) {
+      if (Pred != &B)
+        PB = Pred;
       else
         IsLoop = true;
     }
@@ -3345,13 +3345,13 @@ bool HexagonLoopRescheduling::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     MachineBasicBlock *EB = nullptr;
-    for (auto SI = B.succ_begin(), SE = B.succ_end(); SI != SE; ++SI) {
-      if (*SI == &B)
+    for (MachineBasicBlock *Succ : B.successors()) {
+      if (Succ == &B)
         continue;
       // Set EP to the epilog block, if it has only 1 predecessor (i.e. the
       // edge from B to EP is non-critical.
-      if ((*SI)->pred_size() == 1)
-        EB = *SI;
+      if (Succ->pred_size() == 1)
+        EB = Succ;
       break;
     }
 

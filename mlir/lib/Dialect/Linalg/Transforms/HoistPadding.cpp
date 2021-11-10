@@ -54,19 +54,13 @@ using namespace mlir::linalg;
 ///   7. There is no enclosing scf::ForOp that indexes the padded data.
 /// Other cases succeed and will trigger hoisting of the pad op.
 struct HoistingAnalysis {
-  HoistingAnalysis(PadTensorOp padTensorOp, int nLevels);
+  HoistingAnalysis(PadTensorOp padTensorOp, int numLoops);
 
   bool isValid() { return valid; }
 
   /// Footprint of the packedTensor, computed from the packingLoops and
   /// `backwardSlice`.
   FailureOr<SmallVector<Value>> getPackedTensorSizes(ImplicitLocOpBuilder &b);
-
-  /// The padTensorOp that needs to be hoisted.
-  PadTensorOp padTensorOp;
-
-  /// The maximum number of immediately enclosing scf::ForOp to hoist over.
-  int nLevels;
 
   /// The outermost loop, determined by `nLevels` above which `padTensorOp` will
   /// be hoisted.
@@ -81,9 +75,7 @@ struct HoistingAnalysis {
   ///  2. whose induction variable is used, directly or indirectly, in the
   ///     computation of `padTensorOp`.
   /// The span of these loops determines the footprint of the packed tensor.
-  /// SmallSetVector<scf::ForOp> packingLoops;
-  SetVector<scf::ForOp, SmallVector<scf::ForOp>, DenseSet<Operation *>>
-      packingLoops;
+  SmallVector<scf::ForOp> packingLoops;
 
 private:
   /// Returns the loops in `backwardSlice` used to index the padded data. The
@@ -103,8 +95,8 @@ private:
   ///       %padded_slice = linalg.pad_tensor %slice
   /// ```
   /// getIndexingLoops(%padded_slice, %slice) returns [scf.for %i, scf.for %j]
-  SetVector<Operation *> getIndexingLoops(PadTensorOp padTensorOp,
-                                          tensor::ExtractSliceOp sliceOp);
+  SmallVector<scf::ForOp> getIndexingLoops(PadTensorOp padTensorOp,
+                                           tensor::ExtractSliceOp sliceOp);
 
   /// Encodes whether the analysis is valid and hoisting can proceed.
   bool valid;
@@ -148,10 +140,8 @@ getAtMostNEnclosingLoops(PadTensorOp padTensorOp, int nLevels,
   }
 }
 
-HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int nLevels)
-    : padTensorOp(padTensorOp), nLevels(nLevels), valid(false) {
-  AsmState state(padTensorOp->getParentOfType<mlir::FuncOp>());
-  (void)state;
+HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
+  valid = false;
 
   // Bail on any use that isn't an input of a Linalg op.
   // Hoisting of inplace updates happens after vectorization.
@@ -160,7 +150,7 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int nLevels)
 
   // Get at most nLevels of immediately enclosing loops.
   SmallVector<scf::ForOp> reverseEnclosingLoops;
-  getAtMostNEnclosingLoops(padTensorOp, nLevels, reverseEnclosingLoops);
+  getAtMostNEnclosingLoops(padTensorOp, numLoops, reverseEnclosingLoops);
   if (reverseEnclosingLoops.empty()) {
     LLVM_DEBUG(DBGS() << "No immediately enclosing loop -> skip\n");
     return;
@@ -216,19 +206,20 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int nLevels)
   }
 
   // Search the loops found in `backwardSlice` used to index the padded data.
-  SetVector<Operation *> indexingLoops = getIndexingLoops(padTensorOp, sliceOp);
+  SmallVector<scf::ForOp> indexingLoops =
+      getIndexingLoops(padTensorOp, sliceOp);
 
   // Add only the loops part of `indexingLoops` to the packing loops. All other
   // loops are not used to index the padded data and consequently access the
   // same data in every loop iteration. Adding them to the packing loops would
   // increase the cache footprint of the packed data by storing the same data
   // multiple times.
-  for (scf::ForOp forOp : llvm::reverse(reverseEnclosingLoops)) {
-    if (indexingLoops.contains(forOp))
-      packingLoops.insert(forOp);
-  }
-  assert(indexingLoops.size() == packingLoops.size() &&
+  for (scf::ForOp forOp : llvm::reverse(reverseEnclosingLoops))
+    if (!indexingLoops.empty() && indexingLoops.back() == forOp)
+      packingLoops.push_back(indexingLoops.pop_back_val());
+  assert(indexingLoops.empty() &&
          "expect the all indexing loops are enclosing loops");
+
   if (packingLoops.empty()) {
     LLVM_DEBUG(DBGS() << "Cannot find a packing loop -> skip\n");
     return;
@@ -247,7 +238,7 @@ static void addIndexOperandsToIndexEdges(Operation *operation,
       indexEdges.insert(operand);
 }
 
-SetVector<Operation *>
+SmallVector<scf::ForOp>
 HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
                                    tensor::ExtractSliceOp sliceOp) {
   // Set of all values used for index computation.
@@ -272,7 +263,7 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
   // After iterating `backwardSlice` we obtain:
   // indexEdges = [%i, %j, %ubi, %ubj]
   // indexingLoops = [scf.for %i, scf.for %j]
-  SetVector<Operation *> indexingLoops;
+  SmallVector<scf::ForOp> indexingLoops;
   for (Operation *op : llvm::reverse(backwardSlice)) {
     // Add the index operands of `padTensorOp` and `sliceOp` to start the
     // exploration of the index computation.
@@ -286,7 +277,7 @@ HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
     if (auto forOp = dyn_cast<scf::ForOp>(op)) {
       if (indexEdges.contains(forOp.getInductionVar())) {
         addIndexOperandsToIndexEdges(op, indexEdges);
-        indexingLoops.insert(forOp);
+        indexingLoops.push_back(forOp);
         continue;
       }
     }
@@ -442,7 +433,7 @@ HoistingAnalysis::getPackedTensorSizes(ImplicitLocOpBuilder &b) {
 
   // Iteratively try to fold the upper bounds into the constraints set.
   if (failed(foldUpperBoundsIntoConstraintsSet(
-          constraints, outermostEnclosingForOp, packingLoops.getArrayRef())))
+          constraints, outermostEnclosingForOp, packingLoops)))
     return failure();
 
   int nPackedLoops = packingLoops.size();
@@ -577,7 +568,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
     auto forOp = dyn_cast<scf::ForOp>(op);
     assert(forOp && "Expected scf::ForOp when hoisting pad ops");
     // Unused loop, just skip it.
-    if (!analysis.packingLoops.contains(forOp))
+    if (!llvm::is_contained(analysis.packingLoops, forOp))
       continue;
 
     auto clonedForOp =

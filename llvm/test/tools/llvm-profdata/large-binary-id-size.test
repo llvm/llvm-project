@@ -17,4 +17,4 @@ RUN: printf '\0\1\2\3\4\5\6\7' >> %t.profraw
 RUN: printf '\0\1\2\3\0\0\0\0' >> %t.profraw
 
 // RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
-// CHECK: malformed instrumentation profile data
+// CHECK: malformed instrumentation profile data: not enough data to read binary id data

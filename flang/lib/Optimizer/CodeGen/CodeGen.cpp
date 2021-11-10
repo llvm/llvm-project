@@ -14,6 +14,7 @@
 #include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/FIRContext.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -92,6 +93,121 @@ struct CallOpConversion : public FIROpConversion<fir::CallOp> {
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         call, resultTys, adaptor.getOperands(), call->getAttrs());
     return success();
+  }
+};
+
+static mlir::Type getComplexEleTy(mlir::Type complex) {
+  if (auto cc = complex.dyn_cast<mlir::ComplexType>())
+    return cc.getElementType();
+  return complex.cast<fir::ComplexType>().getElementType();
+}
+
+/// convert value of from-type to value of to-type
+struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
+  using FIROpConversion::FIROpConversion;
+
+  static bool isFloatingPointTy(mlir::Type ty) {
+    return ty.isa<mlir::FloatType>();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::ConvertOp convert, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto fromTy = convertType(convert.value().getType());
+    auto toTy = convertType(convert.res().getType());
+    mlir::Value op0 = adaptor.getOperands()[0];
+    if (fromTy == toTy) {
+      rewriter.replaceOp(convert, op0);
+      return success();
+    }
+    auto loc = convert.getLoc();
+    auto convertFpToFp = [&](mlir::Value val, unsigned fromBits,
+                             unsigned toBits, mlir::Type toTy) -> mlir::Value {
+      if (fromBits == toBits) {
+        // TODO: Converting between two floating-point representations with the
+        // same bitwidth is not allowed for now.
+        mlir::emitError(loc,
+                        "cannot implicitly convert between two floating-point "
+                        "representations of the same bitwidth");
+        return {};
+      }
+      if (fromBits > toBits)
+        return rewriter.create<mlir::LLVM::FPTruncOp>(loc, toTy, val);
+      return rewriter.create<mlir::LLVM::FPExtOp>(loc, toTy, val);
+    };
+    // Complex to complex conversion.
+    if (fir::isa_complex(convert.value().getType()) &&
+        fir::isa_complex(convert.res().getType())) {
+      // Special case: handle the conversion of a complex such that both the
+      // real and imaginary parts are converted together.
+      auto zero = mlir::ArrayAttr::get(convert.getContext(),
+                                       rewriter.getI32IntegerAttr(0));
+      auto one = mlir::ArrayAttr::get(convert.getContext(),
+                                      rewriter.getI32IntegerAttr(1));
+      auto ty = convertType(getComplexEleTy(convert.value().getType()));
+      auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, zero);
+      auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, one);
+      auto nt = convertType(getComplexEleTy(convert.res().getType()));
+      auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
+      auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(nt);
+      auto rc = convertFpToFp(rp, fromBits, toBits, nt);
+      auto ic = convertFpToFp(ip, fromBits, toBits, nt);
+      auto un = rewriter.create<mlir::LLVM::UndefOp>(loc, toTy);
+      auto i1 =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, toTy, un, rc, zero);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(convert, toTy, i1,
+                                                             ic, one);
+      return mlir::success();
+    }
+    // Floating point to floating point conversion.
+    if (isFloatingPointTy(fromTy)) {
+      if (isFloatingPointTy(toTy)) {
+        auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(fromTy);
+        auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(toTy);
+        auto v = convertFpToFp(op0, fromBits, toBits, toTy);
+        rewriter.replaceOp(convert, v);
+        return mlir::success();
+      }
+      if (toTy.isa<mlir::IntegerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+    } else if (fromTy.isa<mlir::IntegerType>()) {
+      // Integer to integer conversion.
+      if (toTy.isa<mlir::IntegerType>()) {
+        auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(fromTy);
+        auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(toTy);
+        assert(fromBits != toBits);
+        if (fromBits > toBits) {
+          rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
+          return mlir::success();
+        }
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      // Integer to floating point conversion.
+      if (isFloatingPointTy(toTy)) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      // Integer to pointer conversion.
+      if (toTy.isa<mlir::LLVM::LLVMPointerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+    } else if (fromTy.isa<mlir::LLVM::LLVMPointerType>()) {
+      // Pointer to integer conversion.
+      if (toTy.isa<mlir::IntegerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      // Pointer to pointer conversion.
+      if (toTy.isa<mlir::LLVM::LLVMPointerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+    }
+    return emitError(loc) << "cannot convert " << fromTy << " to " << toTy;
   }
 };
 
@@ -250,6 +366,29 @@ struct SelectOpConversion : public FIROpConversion<fir::SelectOp> {
   }
 };
 
+/// `fir.load` --> `llvm.load`
+struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::LoadOp load, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // fir.box is a special case because it is considered as an ssa values in
+    // fir, but it is lowered as a pointer to a descriptor. So fir.ref<fir.box>
+    // and fir.box end up being the same llvm types and loading a
+    // fir.ref<fir.box> is actually a no op in LLVM.
+    if (load.getType().isa<fir::BoxType>()) {
+      rewriter.replaceOp(load, adaptor.getOperands()[0]);
+    } else {
+      mlir::Type ty = convertType(load.getType());
+      ArrayRef<NamedAttribute> at = load->getAttrs();
+      rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+          load, ty, adaptor.getOperands(), at);
+    }
+    return success();
+  }
+};
+
 /// conversion of fir::SelectRankOp to an if-then-else ladder
 struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   using FIROpConversion::FIROpConversion;
@@ -262,7 +401,31 @@ struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   }
 };
 
-// convert to LLVM IR dialect `undef`
+/// `fir.store` --> `llvm.store`
+struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::StoreOp store, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (store.value().getType().isa<fir::BoxType>()) {
+      // fir.box value is actually in memory, load it first before storing it.
+      mlir::Location loc = store.getLoc();
+      mlir::Type boxPtrTy = adaptor.getOperands()[0].getType();
+      auto val = rewriter.create<mlir::LLVM::LoadOp>(
+          loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
+          adaptor.getOperands()[0]);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+          store, val, adaptor.getOperands()[1]);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+          store, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+    }
+    return success();
+  }
+};
+
+/// convert to LLVM IR dialect `undef`
 struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -275,7 +438,7 @@ struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   }
 };
 
-// convert to LLVM IR dialect `unreachable`
+/// `fir.unreachable` --> `llvm.unreachable`
 struct UnreachableOpConversion : public FIROpConversion<fir::UnreachableOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -487,6 +650,169 @@ struct InsertOnRangeOpConversion
     return success();
   }
 };
+
+//
+// Primitive operations on Complex types
+//
+
+/// Generate inline code for complex addition/subtraction
+template <typename LLVMOP, typename OPTY>
+mlir::LLVM::InsertValueOp complexSum(OPTY sumop, mlir::ValueRange opnds,
+                                     mlir::ConversionPatternRewriter &rewriter,
+                                     fir::LLVMTypeConverter &lowering) {
+  mlir::Value a = opnds[0];
+  mlir::Value b = opnds[1];
+  auto loc = sumop.getLoc();
+  auto ctx = sumop.getContext();
+  auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+  auto c1 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(1));
+  mlir::Type eleTy = lowering.convertType(getComplexEleTy(sumop.getType()));
+  mlir::Type ty = lowering.convertType(sumop.getType());
+  auto x0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c0);
+  auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c1);
+  auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c0);
+  auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c1);
+  auto rx = rewriter.create<LLVMOP>(loc, eleTy, x0, x1);
+  auto ry = rewriter.create<LLVMOP>(loc, eleTy, y0, y1);
+  auto r0 = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+  auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r0, rx, c0);
+  return rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r1, ry, c1);
+}
+
+struct AddcOpConversion : public FIROpConversion<fir::AddcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::AddcOp addc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // given: (x + iy) + (x' + iy')
+    // result: (x + x') + i(y + y')
+    auto r = complexSum<mlir::LLVM::FAddOp>(addc, adaptor.getOperands(),
+                                            rewriter, lowerTy());
+    rewriter.replaceOp(addc, r.getResult());
+    return success();
+  }
+};
+
+struct SubcOpConversion : public FIROpConversion<fir::SubcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::SubcOp subc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // given: (x + iy) - (x' + iy')
+    // result: (x - x') + i(y - y')
+    auto r = complexSum<mlir::LLVM::FSubOp>(subc, adaptor.getOperands(),
+                                            rewriter, lowerTy());
+    rewriter.replaceOp(subc, r.getResult());
+    return success();
+  }
+};
+
+/// Inlined complex multiply
+struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::MulcOp mulc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // TODO: Can we use a call to __muldc3 ?
+    // given: (x + iy) * (x' + iy')
+    // result: (xx'-yy')+i(xy'+yx')
+    mlir::Value a = adaptor.getOperands()[0];
+    mlir::Value b = adaptor.getOperands()[1];
+    auto loc = mulc.getLoc();
+    auto *ctx = mulc.getContext();
+    auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+    auto c1 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(1));
+    mlir::Type eleTy = convertType(getComplexEleTy(mulc.getType()));
+    mlir::Type ty = convertType(mulc.getType());
+    auto x0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c0);
+    auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c1);
+    auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c0);
+    auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c1);
+    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1);
+    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1);
+    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1);
+    auto ri = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xy, yx);
+    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1);
+    auto rr = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, xx, yy);
+    auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+    auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, ra, rr, c0);
+    auto r0 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r1, ri, c1);
+    rewriter.replaceOp(mulc, r0.getResult());
+    return success();
+  }
+};
+
+/// Inlined complex division
+struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DivcOp divc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // TODO: Can we use a call to __divdc3 instead?
+    // Just generate inline code for now.
+    // given: (x + iy) / (x' + iy')
+    // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
+    mlir::Value a = adaptor.getOperands()[0];
+    mlir::Value b = adaptor.getOperands()[1];
+    auto loc = divc.getLoc();
+    auto *ctx = divc.getContext();
+    auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+    auto c1 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(1));
+    mlir::Type eleTy = convertType(getComplexEleTy(divc.getType()));
+    mlir::Type ty = convertType(divc.getType());
+    auto x0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c0);
+    auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c1);
+    auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c0);
+    auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c1);
+    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1);
+    auto x1x1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x1, x1);
+    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1);
+    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1);
+    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1);
+    auto y1y1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y1, y1);
+    auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, x1x1, y1y1);
+    auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xx, yy);
+    auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, yx, xy);
+    auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rrn, d);
+    auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rin, d);
+    auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+    auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, ra, rr, c0);
+    auto r0 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r1, ri, c1);
+    rewriter.replaceOp(divc, r0.getResult());
+    return success();
+  }
+};
+
+/// Inlined complex negation
+struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::NegcOp neg, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // given: -(x + iy)
+    // result: -x - iy
+    auto *ctxt = neg.getContext();
+    auto eleTy = convertType(getComplexEleTy(neg.getType()));
+    auto ty = convertType(neg.getType());
+    auto loc = neg.getLoc();
+    mlir::Value o0 = adaptor.getOperands()[0];
+    auto c0 = mlir::ArrayAttr::get(ctxt, rewriter.getI32IntegerAttr(0));
+    auto c1 = mlir::ArrayAttr::get(ctxt, rewriter.getI32IntegerAttr(1));
+    auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, o0, c0);
+    auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, o0, c1);
+    auto nrp = rewriter.create<mlir::LLVM::FNegOp>(loc, eleTy, rp);
+    auto nip = rewriter.create<mlir::LLVM::FNegOp>(loc, eleTy, ip);
+    auto r = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, o0, nrp, c0);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(neg, ty, r, nip, c1);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -501,15 +827,22 @@ public:
   mlir::ModuleOp getModule() { return getOperation(); }
 
   void runOnOperation() override final {
+    auto mod = getModule();
+    if (!forcedTargetTriple.empty()) {
+      fir::setTargetTriple(mod, forcedTargetTriple);
+    }
+
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
-    pattern.insert<
-        AddrOfOpConversion, CallOpConversion, ExtractValueOpConversion,
-        HasValueOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, SelectOpConversion, SelectRankOpConversion,
-        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
-        typeConverter);
+    pattern.insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
+                   ConvertOpConversion, DivcOpConversion,
+                   ExtractValueOpConversion, HasValueOpConversion,
+                   GlobalOpConversion, InsertOnRangeOpConversion,
+                   InsertValueOpConversion, LoadOpConversion, NegcOpConversion,
+                   MulcOpConversion, SelectOpConversion, SelectRankOpConversion,
+                   StoreOpConversion, SubcOpConversion, UndefOpConversion,
+                   UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);

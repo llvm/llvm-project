@@ -115,7 +115,7 @@ int bar(int n){
 // CHECK: [[ELT_CAST:%.+]] = bitcast double* [[ELT]] to i64*
 // CHECK: [[REMOTE_ELT_CAST:%.+]] = bitcast double* [[REMOTE_ELT]] to i64*
 // CHECK: [[ELT_VAL:%.+]] = load i64, i64* [[ELT_CAST]], align
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT_VAL64:%.+]] = call i64 @__kmpc_shuffle_int64(i64 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
 //
@@ -320,7 +320,7 @@ int bar(int n){
 // CHECK: [[ELT_VAL:%.+]] = load i8, i8* [[ELT_VOID]], align
 //
 // CHECK: [[ELT_CAST:%.+]] = sext i8 [[ELT_VAL]] to i32
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT1_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_CAST]], i16 [[LANEOFFSET]], i16 [[WS]])
 // CHECK: [[REMOTE_ELT1_VAL:%.+]] = trunc i32 [[REMOTE_ELT1_VAL32]] to i8
@@ -336,7 +336,7 @@ int bar(int n){
 // CHECK: [[ELT_CAST:%.+]] = bitcast float* [[ELT]] to i32*
 // CHECK: [[REMOTE_ELT2_CAST:%.+]] = bitcast float* [[REMOTE_ELT2]] to i32*
 // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT_CAST]], align
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT2_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
 //
@@ -617,7 +617,7 @@ int bar(int n){
 // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
 // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT]], align
 //
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT1_VAL:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
 //
@@ -632,7 +632,7 @@ int bar(int n){
 // CHECK: [[ELT_VAL:%.+]] = load i16, i16* [[ELT]], align
 //
 // CHECK: [[ELT_CAST:%.+]] = sext i16 [[ELT_VAL]] to i32
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT2_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_CAST]], i16 [[LANEOFFSET]], i16 [[WS]])
 // CHECK: [[REMOTE_ELT2_VAL:%.+]] = trunc i32 [[REMOTE_ELT2_VAL32]] to i16

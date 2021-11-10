@@ -1,5 +1,6 @@
 ; RUN: opt -inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+; RUN: opt -passes='module-inline' -S < %s | FileCheck %s
 
 ; PR23216: We can't inline functions using llvm.localescape.
 

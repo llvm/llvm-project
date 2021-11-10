@@ -2391,9 +2391,13 @@ void InnerLoopVectorizer::recordVectorLoopValueForInductionCast(
   if (isa<TruncInst>(EntryVal))
     return;
 
-  const SmallVectorImpl<Instruction *> &Casts = ID.getCastInsts();
-  if (Casts.empty())
+  if (!CastDef) {
+    assert(ID.getCastInsts().empty() &&
+           "there are casts for ID, but no CastDef");
     return;
+  }
+  assert(!ID.getCastInsts().empty() &&
+         "there is a CastDef, but no casts for ID");
   // Only the first Cast instruction in the Casts vector is of interest.
   // The rest of the Casts (if exist) have no uses outside the
   // induction update chain itself.
@@ -9332,6 +9336,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   DFS.perform(LI);
 
   VPBasicBlock *VPBB = nullptr;
+  VPBasicBlock *HeaderVPBB = nullptr;
+  SmallVector<VPWidenIntOrFpInductionRecipe *> InductionsToMove;
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
@@ -9339,8 +9345,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     auto *FirstVPBBForBB = new VPBasicBlock(BB->getName());
     if (VPBB)
       VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
-    else
+    else {
       Plan->setEntry(FirstVPBBForBB);
+      HeaderVPBB = FirstVPBBForBB;
+    }
     VPBB = FirstVPBBForBB;
     Builder.setInsertPoint(VPBB);
 
@@ -9382,15 +9390,19 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
           Plan->addVPValue(UV, Def);
         }
 
+        if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) &&
+            HeaderVPBB->getFirstNonPhi() != VPBB->end()) {
+          // Keep track of VPWidenIntOrFpInductionRecipes not in the phi section
+          // of the header block. That can happen for truncates of induction
+          // variables. Those recipes are moved to the phi section of the header
+          // block after applying SinkAfter, which relies on the original
+          // position of the trunc.
+          assert(isa<TruncInst>(Instr));
+          InductionsToMove.push_back(
+              cast<VPWidenIntOrFpInductionRecipe>(Recipe));
+        }
         RecipeBuilder.setRecipe(Instr, Recipe);
-        if (isa<VPWidenIntOrFpInductionRecipe>(Recipe)) {
-          // Make sure induction recipes are all kept in the header block.
-          // VPWidenIntOrFpInductionRecipe may be generated when reaching a
-          // Trunc of an induction Phi, where Trunc may not be in the header.
-          auto *Header = Plan->getEntry()->getEntryBasicBlock();
-          Header->insert(Recipe, Header->getFirstNonPhi());
-        } else
-          VPBB->appendRecipe(Recipe);
+        VPBB->appendRecipe(Recipe);
         continue;
       }
 
@@ -9479,6 +9491,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     }
   }
 
+  // Now that sink-after is done, move induction recipes for optimized truncates
+  // to the phi section of the header block.
+  for (VPWidenIntOrFpInductionRecipe *Ind : InductionsToMove)
+    Ind->moveBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(VPBB, Plan, RecipeBuilder, Range.Start);
 
@@ -9560,6 +9577,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   RSO.flush();
   Plan->setName(PlanName);
 
+  assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }
 

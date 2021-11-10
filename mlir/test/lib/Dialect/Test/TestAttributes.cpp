@@ -38,7 +38,7 @@ Attribute AttrWithSelfTypeParamAttr::parse(DialectAsmParser &parser,
 }
 
 void AttrWithSelfTypeParamAttr::print(DialectAsmPrinter &printer) const {
-  printer << "attr_with_self_type_param " << getType();
+  printer << " " << getType();
 }
 
 //===----------------------------------------------------------------------===//
@@ -53,7 +53,7 @@ Attribute AttrWithTypeBuilderAttr::parse(DialectAsmParser &parser, Type type) {
 }
 
 void AttrWithTypeBuilderAttr::print(DialectAsmPrinter &printer) const {
-  printer << "attr_with_type_builder " << getAttr();
+  printer << " " << getAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -82,8 +82,7 @@ Attribute CompoundAAttr::parse(DialectAsmParser &parser, Type type) {
 }
 
 void CompoundAAttr::print(DialectAsmPrinter &printer) const {
-  printer << "cmpnd_a<" << getWidthOfSomething() << ", " << getOneType()
-          << ", [";
+  printer << "<" << getWidthOfSomething() << ", " << getOneType() << ", [";
   llvm::interleaveComma(getArrayOfInts(), printer);
   printer << "]>";
 }
@@ -110,7 +109,7 @@ Attribute TestI64ElementsAttr::parse(DialectAsmParser &parser, Type type) {
 }
 
 void TestI64ElementsAttr::print(DialectAsmPrinter &printer) const {
-  printer << "i64_elements<[";
+  printer << "<[";
   llvm::interleaveComma(getElements(), printer);
   printer << "] : " << getType() << ">";
 }
@@ -177,8 +176,8 @@ Attribute TestSubElementsAccessAttr::parse(::mlir::DialectAsmParser &parser,
 
 void TestSubElementsAccessAttr::print(
     ::mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getFirst() << ", " << getSecond() << ", "
-          << getThird() << ">";
+  printer << "<" << getFirst() << ", " << getSecond() << ", " << getThird()
+          << ">";
 }
 
 void TestSubElementsAccessAttr::walkImmediateSubElements(
@@ -228,25 +227,4 @@ void TestDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
 #include "TestAttrDefs.cpp.inc"
       >();
-}
-
-Attribute TestDialect::parseAttribute(DialectAsmParser &parser,
-                                      Type type) const {
-  StringRef attrTag;
-  if (failed(parser.parseKeyword(&attrTag)))
-    return Attribute();
-  {
-    Attribute attr;
-    auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
-    if (parseResult.hasValue())
-      return attr;
-  }
-  parser.emitError(parser.getNameLoc(), "unknown test attribute");
-  return Attribute();
-}
-
-void TestDialect::printAttribute(Attribute attr,
-                                 DialectAsmPrinter &printer) const {
-  if (succeeded(generatedAttributePrinter(attr, printer)))
-    return;
 }

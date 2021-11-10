@@ -1121,9 +1121,12 @@ public:
 
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
                                             int VF,
-                                            const APInt &DemandedSrcElts,
                                             const APInt &DemandedReplicatedElts,
                                             TTI::TargetCostKind CostKind) {
+    assert(DemandedReplicatedElts.getBitWidth() ==
+               (unsigned)VF * ReplicationFactor &&
+           "Unexpected size of DemandedReplicatedElts.");
+
     InstructionCost Cost;
 
     auto *SrcVT = FixedVectorType::get(EltTy, VF);
@@ -1139,6 +1142,7 @@ public:
     // The cost is estimated as extract all mask elements from the <8xi1> mask
     // vector and insert them factor times into the <24xi1> shuffled mask
     // vector.
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedReplicatedElts, VF);
     Cost += thisT()->getScalarizationOverhead(SrcVT, DemandedSrcElts,
                                               /*Insert*/ false,
                                               /*Extract*/ true);
@@ -1147,41 +1151,6 @@ public:
                                           /*Insert*/ true, /*Extract*/ false);
 
     return Cost;
-  }
-
-  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
-                                            int VF, ArrayRef<int> Mask,
-                                            TTI::TargetCostKind CostKind) {
-    assert(Mask.size() == (unsigned)VF * ReplicationFactor && "Bad mask size.");
-
-    APInt DemandedSrcElts = APInt::getNullValue(VF);
-
-    ArrayRef<int> RemainingMask = Mask;
-    for (int i = 0; i < VF; i++) {
-      ArrayRef<int> CurrSubMask = RemainingMask.take_front(ReplicationFactor);
-      RemainingMask = RemainingMask.drop_front(CurrSubMask.size());
-
-      assert(all_of(CurrSubMask,
-                    [i](int MaskElt) {
-                      return MaskElt == UndefMaskElem || MaskElt == i;
-                    }) &&
-             "Not a replication mask.");
-
-      if (any_of(CurrSubMask,
-                 [](int MaskElt) { return MaskElt != UndefMaskElem; }))
-        DemandedSrcElts.setBit(i);
-    }
-    assert(RemainingMask.empty() && "Did not consume the entire mask?");
-
-    APInt DemandedReplicatedElts = APInt::getNullValue(Mask.size());
-    for (auto I : enumerate(Mask)) {
-      if (I.value() != UndefMaskElem)
-        DemandedReplicatedElts.setBit(I.index());
-    }
-
-    return thisT()->getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
-                                              DemandedSrcElts,
-                                              DemandedReplicatedElts, CostKind);
   }
 
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -1365,7 +1334,7 @@ public:
     Type *I8Type = Type::getInt8Ty(VT->getContext());
 
     Cost += thisT()->getReplicationShuffleCost(
-        I8Type, Factor, NumSubElts, DemandedAllSubElts,
+        I8Type, Factor, NumSubElts,
         UseMaskForGaps ? DemandedLoadStoreElts : DemandedAllResultElts,
         CostKind);
 

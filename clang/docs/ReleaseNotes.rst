@@ -158,7 +158,7 @@ C++2b Feature Support
 CUDA Language Changes in Clang
 ------------------------------
 
-- Clang now supports CUDA versions up to 11.4.
+- Clang now supports CUDA versions up to 11.5.
 - Default GPU architecture has been changed from sm_20 to sm_35.
 
 Objective-C Language Changes in Clang
@@ -243,6 +243,10 @@ clang-format
 - Option ``QualifierOrder`` has been added to allow the order
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   to be controlled relative to the `type`.
+
+- Add a ``Custom`` style to ``SpaceBeforeParens``, to better configure the
+  space before parentheses. The custom options can be set using
+  ``SpaceBeforeParensOptions``.
 
 libclang
 --------

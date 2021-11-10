@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -linalg-bufferize -std-bufferize \
 // RUN: -tensor-constant-bufferize -tensor-bufferize -func-bufferize \
-// RUN: -finalizing-bufferize -convert-linalg-to-llvm \
+// RUN: -finalizing-bufferize -buffer-deallocation -convert-linalg-to-llvm \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \

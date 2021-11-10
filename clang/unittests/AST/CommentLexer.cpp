@@ -836,12 +836,12 @@ TEST_F(CommentLexerTest, VerbatimBlock8) {
 // LaTeX verbatim blocks.
 TEST_F(CommentLexerTest, VerbatimBlock9) {
   const char *Source =
-    "/// \\f$ Aaa \\f$ \\f[ Bbb \\f] \\f{ Ccc \\f}";
+    "/// \\f$ Aaa \\f$ \\f[ Bbb \\f] \\f{ Ccc \\f} \\f( Ddd \\f)";
   std::vector<Token> Toks;
 
   lexString(Source, Toks);
 
-  ASSERT_EQ(13U, Toks.size());
+  ASSERT_EQ(17U, Toks.size());
 
   ASSERT_EQ(tok::text,                 Toks[0].getKind());
   ASSERT_EQ(StringRef(" "),            Toks[0].getText());
@@ -879,7 +879,19 @@ TEST_F(CommentLexerTest, VerbatimBlock9) {
   ASSERT_EQ(tok::verbatim_block_end,   Toks[11].getKind());
   ASSERT_EQ(StringRef("f}"),           getVerbatimBlockName(Toks[11]));
 
-  ASSERT_EQ(tok::newline,              Toks[12].getKind());
+  ASSERT_EQ(tok::text,                 Toks[12].getKind());
+  ASSERT_EQ(StringRef(" "),            Toks[12].getText());
+
+  ASSERT_EQ(tok::verbatim_block_begin, Toks[13].getKind());
+  ASSERT_EQ(StringRef("f("),           getVerbatimBlockName(Toks[13]));
+
+  ASSERT_EQ(tok::verbatim_block_line,  Toks[14].getKind());
+  ASSERT_EQ(StringRef(" Ddd "),        Toks[14].getVerbatimBlockText());
+
+  ASSERT_EQ(tok::verbatim_block_end,   Toks[15].getKind());
+  ASSERT_EQ(StringRef("f)"),           getVerbatimBlockName(Toks[15]));
+
+  ASSERT_EQ(tok::newline,              Toks[16].getKind());
 }
 
 // Empty verbatim line.

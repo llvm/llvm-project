@@ -688,6 +688,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
   if (ImplicitBytes != 0) {
     const Align Alignment = getAlignmentForImplicitArgPtr();
     TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+    MaxAlign = std::max(MaxAlign, Alignment);
   }
 
   // Being able to dereference past the end is useful for emitting scalar loads.

@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <climits> // INT_MAX
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -125,6 +126,8 @@ int main(int, char**)
         static_assert(std::is_same_v<decltype(fwl), decltype(source)>);
         }
     }
+
+    SequenceContainerDeductionGuidesSfinaeAway<std::forward_list, std::forward_list<int>>();
 
     return 0;
 }

@@ -1,4 +1,8 @@
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gn" %s | FileCheck %s
+
 
 // Test simple global LLVM conversion
 
@@ -375,4 +379,310 @@ func @test_call_return_val() -> i32 {
 // CHECK-LABEL:  llvm.func @test_call_return_val() -> i32 {
 // CHECK-NEXT:    %0 = llvm.call @dummy_return_val() : () -> i32
 // CHECK-NEXT:    llvm.return %0 : i32
+// CHECK-NEXT:  }
+
+// -----
+
+// Test FIR complex addition conversion
+// given: (x + iy) + (x' + iy')
+// result: (x + x') + i(y + y')
+
+func @fir_complex_add(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+  %c = fir.addc %a, %b : !fir.complex<16>
+  return %c : !fir.complex<16>
+}
+
+// CHECK-LABEL: llvm.func @fir_complex_add(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.struct<(f128, f128)>, 
+// CHECK-SAME:                             %[[ARG1:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f128, f128)> {
+// CHECK:         %[[X0:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[ADD_X0_X1:.*]] = llvm.fadd %[[X0]], %[[X1]]  : f128
+// CHECK:         %[[ADD_Y0_Y1:.*]] = llvm.fadd %[[Y0]], %[[Y1]]  : f128
+// CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[ADD_X0_X1]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[ADD_Y0_Y1]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test FIR complex substraction conversion
+// given: (x + iy) - (x' + iy')
+// result: (x - x') + i(y - y')
+
+func @fir_complex_sub(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+  %c = fir.subc %a, %b : !fir.complex<16>
+  return %c : !fir.complex<16>
+}
+
+// CHECK-LABEL: llvm.func @fir_complex_sub(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.struct<(f128, f128)>, 
+// CHECK-SAME:                             %[[ARG1:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f128, f128)> {
+// CHECK:         %[[X0:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[SUB_X0_X1:.*]] = llvm.fsub %[[X0]], %[[X1]]  : f128
+// CHECK:         %[[SUB_Y0_Y1:.*]] = llvm.fsub %[[Y0]], %[[Y1]]  : f128
+// CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[SUB_X0_X1]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[SUB_Y0_Y1]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test FIR complex multiply conversion
+// given: (x + iy) * (x' + iy')
+// result: (xx'-yy')+i(xy'+yx')
+
+func @fir_complex_mul(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+  %c = fir.mulc %a, %b : !fir.complex<16>
+  return %c : !fir.complex<16>
+}
+
+// CHECK-LABEL: llvm.func @fir_complex_mul(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.struct<(f128, f128)>, 
+// CHECK-SAME:                             %[[ARG1:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f128, f128)> {
+// CHECK:         %[[X0:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[MUL_X0_X1:.*]] = llvm.fmul %[[X0]], %[[X1]]  : f128
+// CHECK:         %[[MUL_Y0_X1:.*]] = llvm.fmul %[[Y0]], %[[X1]]  : f128
+// CHECK:         %[[MUL_X0_Y1:.*]] = llvm.fmul %[[X0]], %[[Y1]]  : f128
+// CHECK:         %[[ADD:.*]] = llvm.fadd %[[MUL_X0_Y1]], %[[MUL_Y0_X1]]  : f128
+// CHECK:         %[[MUL_Y0_Y1:.*]] = llvm.fmul %[[Y0]], %[[Y1]]  : f128
+// CHECK:         %[[SUB:.*]] = llvm.fsub %[[MUL_X0_X1]], %[[MUL_Y0_Y1]]  : f128
+// CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[SUB]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[ADD]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test FIR complex division conversion
+// given: (x + iy) / (x' + iy')
+// result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
+
+func @fir_complex_div(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+  %c = fir.divc %a, %b : !fir.complex<16>
+  return %c : !fir.complex<16>
+}
+
+// CHECK-LABEL: llvm.func @fir_complex_div(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.struct<(f128, f128)>, 
+// CHECK-SAME:                             %[[ARG1:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f128, f128)> {
+// CHECK:         %[[X0:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y0:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[X1:.*]] = llvm.extractvalue %[[ARG1]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y1:.*]] = llvm.extractvalue %[[ARG1]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[MUL_X0_X1:.*]] = llvm.fmul %[[X0]], %[[X1]]  : f128
+// CHECK:         %[[MUL_X1_X1:.*]] = llvm.fmul %[[X1]], %[[X1]]  : f128
+// CHECK:         %[[MUL_Y0_X1:.*]] = llvm.fmul %[[Y0]], %[[X1]]  : f128
+// CHECK:         %[[MUL_X0_Y1:.*]] = llvm.fmul %[[X0]], %[[Y1]]  : f128
+// CHECK:         %[[MUL_Y0_Y1:.*]] = llvm.fmul %[[Y0]], %[[Y1]]  : f128
+// CHECK:         %[[MUL_Y1_Y1:.*]] = llvm.fmul %[[Y1]], %[[Y1]]  : f128
+// CHECK:         %[[ADD_X1X1_Y1Y1:.*]] = llvm.fadd %[[MUL_X1_X1]], %[[MUL_Y1_Y1]]  : f128
+// CHECK:         %[[ADD_X0X1_Y0Y1:.*]] = llvm.fadd %[[MUL_X0_X1]], %[[MUL_Y0_Y1]]  : f128
+// CHECK:         %[[SUB_Y0X1_X0Y1:.*]] = llvm.fsub %[[MUL_Y0_X1]], %[[MUL_X0_Y1]]  : f128
+// CHECK:         %[[DIV0:.*]] = llvm.fdiv %[[ADD_X0X1_Y0Y1]], %[[ADD_X1X1_Y1Y1]]  : f128
+// CHECK:         %[[DIV1:.*]] = llvm.fdiv %[[SUB_Y0X1_X0Y1]], %[[ADD_X1X1_Y1Y1]]  : f128
+// CHECK:         %{{.*}} = llvm.mlir.undef : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[DIV0]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[DIV1]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test FIR complex negation conversion
+// given: -(x + iy)
+// result: -x - iy
+
+func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
+  %c = fir.negc %a : !fir.complex<16>
+  return %c : !fir.complex<16>
+}
+
+// CHECK-LABEL: llvm.func @fir_complex_neg(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f128, f128)> {
+// CHECK:         %[[X:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[NEGX:.*]] = llvm.fneg %[[X]]  : f128
+// CHECK:         %[[NEGY:.*]] = llvm.fneg %[[Y]]  : f128
+// CHECK:         %{{.*}} = llvm.insertvalue %[[NEGX]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[NEGY]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test `fir.convert` operation conversion from Float type.
+
+func @convert_from_float(%arg0 : f32) {
+  %0 = fir.convert %arg0 : (f32) -> f16
+  %1 = fir.convert %arg0 : (f32) -> f32
+  %2 = fir.convert %arg0 : (f32) -> f64
+  %3 = fir.convert %arg0 : (f32) -> f80
+  %4 = fir.convert %arg0 : (f32) -> f128
+  %5 = fir.convert %arg0 : (f32) -> i1
+  %6 = fir.convert %arg0 : (f32) -> i8
+  %7 = fir.convert %arg0 : (f32) -> i16
+  %8 = fir.convert %arg0 : (f32) -> i32
+  %9 = fir.convert %arg0 : (f32) -> i64
+  return
+}
+
+// CHECK-LABEL: convert_from_float(
+// CHECK-SAME:                     %[[ARG0:.*]]: f32
+// CHECK:         %{{.*}} = llvm.fptrunc %[[ARG0]] : f32 to f16
+// CHECK-NOT:     f32 to f32
+// CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f64
+// CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f80
+// CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f128
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i1
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i8
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i16
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i32
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i64
+
+// -----
+
+// Test `fir.convert` operation conversion from Integer type.
+
+func @convert_from_int(%arg0 : i32) {
+  %0 = fir.convert %arg0 : (i32) -> f16
+  %1 = fir.convert %arg0 : (i32) -> f32
+  %2 = fir.convert %arg0 : (i32) -> f64
+  %3 = fir.convert %arg0 : (i32) -> f80
+  %4 = fir.convert %arg0 : (i32) -> f128
+  %5 = fir.convert %arg0 : (i32) -> i1
+  %6 = fir.convert %arg0 : (i32) -> i8
+  %7 = fir.convert %arg0 : (i32) -> i16
+  %8 = fir.convert %arg0 : (i32) -> i32
+  %9 = fir.convert %arg0 : (i32) -> i64
+  %10 = fir.convert %arg0 : (i32) -> i64
+  %ptr = fir.convert %10 : (i64) -> !fir.ref<i64>
+  return
+}
+
+// CHECK-LABEL: convert_from_int(
+// CHECK-SAME:                   %[[ARG0:.*]]: i32
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f16
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f32
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f64
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f80
+// CHECK:         %{{.*}} = llvm.sitofp %[[ARG0]] : i32 to f128
+// CHECK:         %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i1
+// CHECK:         %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i8
+// CHECK:         %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i16
+// CHECK-NOT:     %{{.*}} = llvm.trunc %[[ARG0]] : i32 to i32
+// CHECK:         %{{.*}} = llvm.sext %[[ARG0]] : i32 to i64
+// CHECK:         %{{.*}} = llvm.inttoptr %{{.*}} : i64 to !llvm.ptr<i64>
+
+// -----
+
+// Test `fir.convert` operation conversion from !fir.ref<> type.
+
+func @convert_from_ref(%arg0 : !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i8>
+  %1 = fir.convert %arg0 : (!fir.ref<i32>) -> i32
+  return
+}
+
+// CHECK-LABEL: convert_from_ref(
+// CHECK-SAME:                   %[[ARG0:.*]]: !llvm.ptr<i32>
+// CHECK:         %{{.*}} = llvm.bitcast %[[ARG0]] : !llvm.ptr<i32> to !llvm.ptr<i8>
+// CHECK:         %{{.*}} = llvm.ptrtoint %[[ARG0]] : !llvm.ptr<i32> to i32
+
+// -----
+
+// Test `fir.convert` operation conversion between fir.complex types.
+
+func @convert_complex4(%arg0 : !fir.complex<4>) -> !fir.complex<8> {
+  %0 = fir.convert %arg0 : (!fir.complex<4>) -> !fir.complex<8>
+  return %0 : !fir.complex<8>
+}
+
+// CHECK-LABEL: func @convert_complex4(
+// CHECK-SAME:                         %[[ARG0:.*]]: !llvm.struct<(f32, f32)>) -> !llvm.struct<(f64, f64)>
+// CHECK:         %[[X:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f32, f32)>
+// CHECK:         %[[Y:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f32, f32)>
+// CHECK:         %[[CONVERTX:.*]] = llvm.fpext %[[X]] : f32 to f64
+// CHECK:         %[[CONVERTY:.*]] = llvm.fpext %[[Y]] : f32 to f64
+// CHECK:         %[[STRUCT0:.*]] = llvm.mlir.undef : !llvm.struct<(f64, f64)>
+// CHECK:         %[[STRUCT1:.*]] = llvm.insertvalue %[[CONVERTX]], %[[STRUCT0]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK:         %[[STRUCT2:.*]] = llvm.insertvalue %[[CONVERTY]], %[[STRUCT1]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK:         llvm.return %[[STRUCT2]] : !llvm.struct<(f64, f64)>
+
+// Test `fir.convert` operation conversion between fir.complex types.
+
+func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
+  %0 = fir.convert %arg0 : (!fir.complex<16>) -> !fir.complex<2>
+  return %0 : !fir.complex<2>
+}
+
+// CHECK-LABEL: func @convert_complex16(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.struct<(f128, f128)>) -> !llvm.struct<(f16, f16)>
+// CHECK:         %[[X:.*]] = llvm.extractvalue %[[ARG0]][0 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[Y:.*]] = llvm.extractvalue %[[ARG0]][1 : i32] : !llvm.struct<(f128, f128)>
+// CHECK:         %[[CONVERTX:.*]] = llvm.fptrunc %[[X]] : f128 to f16
+// CHECK:         %[[CONVERTY:.*]] = llvm.fptrunc %[[Y]] : f128 to f16
+// CHECK:         %[[STRUCT0:.*]] = llvm.mlir.undef : !llvm.struct<(f16, f16)>
+// CHECK:         %[[STRUCT1:.*]] = llvm.insertvalue %[[CONVERTX]], %[[STRUCT0]][0 : i32] : !llvm.struct<(f16, f16)>
+// CHECK:         %[[STRUCT2:.*]] = llvm.insertvalue %[[CONVERTY]], %[[STRUCT1]][1 : i32] : !llvm.struct<(f16, f16)>
+// CHECK:         llvm.return %[[STRUCT2]] : !llvm.struct<(f16, f16)>
+
+// -----
+
+// Test `fir.store` --> `llvm.store` conversion
+
+func @test_store_index(%val_to_store : index, %addr : !fir.ref<index>) {
+  fir.store %val_to_store to %addr : !fir.ref<index>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @test_store_index
+// CHECK-SAME:    (%[[arg0:.*]]: i64, %[[arg1:.*]]: !llvm.ptr<i64>) {
+// CHECK-NEXT:    llvm.store %[[arg0]], %[[arg1]] : !llvm.ptr<i64>
+// CHECK-NEXT:    llvm.return
+// CHECK-NEXT:  }
+
+func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box : !fir.box<!fir.array<?x?xf32>>) {
+  fir.store %box to %array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
+  return
+}
+
+// CHECK-LABEL:  llvm.func @test_store_box
+// CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>,
+// CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>) {
+// CHECK-NEXT:  %[[box_to_store:.*]] = llvm.load %arg1 : !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>
+// CHECK-NEXT:  llvm.store %[[box_to_store]], %[[arg0]] : !llvm.ptr<struct<(ptr<f{{.*}}>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>>
+// CHECK-NEXT:  llvm.return
+// CHECK-NEXT:  }
+
+// -----
+
+// Test `fir.load` --> `llvm.load` conversion
+
+func @test_load_index(%addr : !fir.ref<index>) {
+  %0 = fir.load %addr : !fir.ref<index>
+  return
+}
+
+// CHECK-LABEL: llvm.func @test_load_index(
+// CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr<i64>) {
+// CHECK-NEXT:    %0 = llvm.load %[[arg1]] : !llvm.ptr<i64>
+// CHECK-NEXT:    llvm.return
+// CHECK-NEXT:  }
+
+func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
+  %0 = fir.load %addr : !fir.ref<!fir.box<!fir.array<10xf32>>>
+  return
+}
+
+// Loading a `fir.ref<!fir.box>> is a no-op
+// CHECK-LABEL: llvm.func @test_load_box
+// CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(ptr<array<10 x f{{.*}}>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>)>>) {
+// CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
