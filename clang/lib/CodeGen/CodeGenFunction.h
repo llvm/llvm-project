@@ -379,6 +379,35 @@ public:
   /// we prefer to insert allocas.
   llvm::AssertingVH<llvm::Instruction> AllocaInsertPt;
 
+private:
+  /// PostAllocaInsertPt - This is a place in the prologue where code can be
+  /// inserted that will be dominated by all the static allocas. This helps
+  /// achieve two things:
+  ///   1. Contiguity of all static allocas (within the prologue) is maintained.
+  ///   2. All other prologue code (which are dominated by static allocas) do
+  ///      appear in the source order immediately after all static allocas.
+  ///
+  /// PostAllocaInsertPt will be lazily created when it is *really* required.
+  llvm::AssertingVH<llvm::Instruction> PostAllocaInsertPt = nullptr;
+
+public:
+  /// Return PostAllocaInsertPt. If it is not yet created, then insert it
+  /// immediately after AllocaInsertPt.
+  llvm::Instruction *getPostAllocaInsertPoint() {
+    if (!PostAllocaInsertPt) {
+      assert(AllocaInsertPt &&
+             "Expected static alloca insertion point at function prologue");
+      auto *EBB = AllocaInsertPt->getParent();
+      assert(EBB->isEntryBlock() &&
+             "EBB should be entry block of the current code gen function");
+      PostAllocaInsertPt = AllocaInsertPt->clone();
+      PostAllocaInsertPt->setName("postallocapt");
+      PostAllocaInsertPt->insertAfter(AllocaInsertPt);
+    }
+
+    return PostAllocaInsertPt;
+  }
+
   /// API for captured statement code generation.
   class CGCapturedStmtInfo {
   public:
