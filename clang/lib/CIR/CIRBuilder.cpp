@@ -447,6 +447,11 @@ public:
       }
     }
 
+    mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
+      assert(!isa<MemberPointerType>(E->getType()) && "not implemented");
+      return Builder.buildLValue(E->getSubExpr()).getPointer();
+    }
+
     mlir::Value VisitExpr(Expr *E) {
       // Crashing here for "ScalarExprClassName"? Please implement
       // VisitScalarExprClassName(...) to get this working.
