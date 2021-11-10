@@ -2016,10 +2016,9 @@ static void replacePrepare(CallInst *Prepare, CallGraph &CG) {
   //    %2 = bitcast %1 to [[TYPE]]
   // ==>
   //    %2 = @some_function
-  for (auto UI = Prepare->use_begin(), UE = Prepare->use_end();
-         UI != UE; ) {
+  for (Use &U : llvm::make_early_inc_range(Prepare->uses())) {
     // Look for bitcasts back to the original function type.
-    auto *Cast = dyn_cast<BitCastInst>((UI++)->getUser());
+    auto *Cast = dyn_cast<BitCastInst>(U.getUser());
     if (!Cast || Cast->getType() != Fn->getType()) continue;
 
     // Check whether the replacement will introduce new direct calls.

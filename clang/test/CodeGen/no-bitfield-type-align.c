@@ -9,7 +9,7 @@ struct S {
   unsigned short  f2:15;
 };
 
-// CHECK: define{{.*}} void @test_zero_width_bitfield(%[[STRUCT_S]]* noundef %[[A:.*]])
+// CHECK: define{{.*}} void @test_zero_width_bitfield(%[[STRUCT_S]]* %[[A:.*]])
 // CHECK: %[[BF_LOAD:.*]] = load i32, i32* %[[V1:.*]], align 1
 // CHECK: %[[BF_CLEAR:.*]] = and i32 %[[BF_LOAD]], 32767
 // CHECK: %[[BF_CAST:.*]] = trunc i32 %[[BF_CLEAR]] to i16

@@ -174,12 +174,9 @@ void PadShortFunc::findReturns(MachineBasicBlock *MBB, unsigned int Cycles) {
   }
 
   // Follow branches in BB and look for returns
-  for (MachineBasicBlock::succ_iterator I = MBB->succ_begin();
-       I != MBB->succ_end(); ++I) {
-    if (*I == MBB)
-      continue;
-    findReturns(*I, Cycles);
-  }
+  for (MachineBasicBlock *Succ : MBB->successors())
+    if (Succ != MBB)
+      findReturns(Succ, Cycles);
 }
 
 /// cyclesUntilReturn - return true if the MBB has a return instruction,

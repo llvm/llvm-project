@@ -13,6 +13,12 @@
 #ifndef FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 #define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 
+#include "DescriptorModel.h"
+#include "Target.h"
+#include "flang/Lower/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Support/KindMapping.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
@@ -22,14 +28,142 @@ namespace fir {
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module)
-      : mlir::LLVMTypeConverter(module.getContext()) {
+      : mlir::LLVMTypeConverter(module.getContext()),
+        kindMapping(getKindMapping(module)),
+        specifics(CodeGenSpecifics::get(module.getContext(),
+                                        getTargetTriple(module),
+                                        getKindMapping(module))) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::Type.
+    addConversion([&](BoxType box) { return convertBoxType(box); });
+    addConversion([&](fir::LogicalType boolTy) {
+      return mlir::IntegerType::get(
+          &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
+    });
+    addConversion(
+        [&](fir::RecordType derived) { return convertRecordType(derived); });
+    addConversion(
+        [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
+    addConversion(
+        [&](fir::RealType real) { return convertRealType(real.getFKind()); });
     addConversion(
         [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
     addConversion(
         [&](SequenceType sequence) { return convertSequenceType(sequence); });
+    addConversion([&](mlir::TupleType tuple) {
+      LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
+      llvm::SmallVector<mlir::Type> inMembers;
+      tuple.getFlattenedTypes(inMembers);
+      llvm::SmallVector<mlir::Type> members;
+      for (auto mem : inMembers)
+        members.push_back(convertType(mem).cast<mlir::Type>());
+      return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                    /*isPacked=*/false);
+    });
+  }
+
+  // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
+  mlir::Type convertRecordType(fir::RecordType derived) {
+    auto name = derived.getName();
+    auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
+    llvm::SmallVector<mlir::Type> members;
+    for (auto mem : derived.getTypeList()) {
+      members.push_back(convertType(mem.second).cast<mlir::Type>());
+    }
+    if (mlir::succeeded(st.setBody(members, /*isPacked=*/false)))
+      return st;
+    return mlir::Type();
+  }
+
+  // Is an extended descriptor needed given the element type of a fir.box type ?
+  // Extended descriptors are required for derived types.
+  bool requiresExtendedDesc(mlir::Type boxElementType) {
+    auto eleTy = fir::unwrapSequenceType(boxElementType);
+    return eleTy.isa<fir::RecordType>();
+  }
+
+  // Magic value to indicate we do not know the rank of an entity, either
+  // because it is assumed rank or because we have not determined it yet.
+  static constexpr int unknownRank() { return -1; }
+
+  // This corresponds to the descriptor as defined in ISO_Fortran_binding.h and
+  // the addendum defined in descriptor.h.
+  mlir::Type convertBoxType(BoxType box, int rank = unknownRank()) {
+    // (base_addr*, elem_len, version, rank, type, attribute, f18Addendum, [dim]
+    SmallVector<mlir::Type> dataDescFields;
+    mlir::Type ele = box.getEleTy();
+    // remove fir.heap/fir.ref/fir.ptr
+    if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
+      ele = removeIndirection;
+    auto eleTy = convertType(ele);
+    // base_addr*
+    if (ele.isa<SequenceType>() && eleTy.isa<mlir::LLVM::LLVMPointerType>())
+      dataDescFields.push_back(eleTy);
+    else
+      dataDescFields.push_back(mlir::LLVM::LLVMPointerType::get(eleTy));
+    // elem_len
+    dataDescFields.push_back(getDescFieldTypeModel<1>()(&getContext()));
+    // version
+    dataDescFields.push_back(getDescFieldTypeModel<2>()(&getContext()));
+    // rank
+    dataDescFields.push_back(getDescFieldTypeModel<3>()(&getContext()));
+    // type
+    dataDescFields.push_back(getDescFieldTypeModel<4>()(&getContext()));
+    // attribute
+    dataDescFields.push_back(getDescFieldTypeModel<5>()(&getContext()));
+    // f18Addendum
+    dataDescFields.push_back(getDescFieldTypeModel<6>()(&getContext()));
+    // [dims]
+    if (rank == unknownRank()) {
+      if (auto seqTy = ele.dyn_cast<SequenceType>())
+        rank = seqTy.getDimension();
+      else
+        rank = 0;
+    }
+    if (rank > 0) {
+      auto rowTy = getDescFieldTypeModel<7>()(&getContext());
+      dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, rank));
+    }
+    // opt-type-ptr: i8* (see fir.tdesc)
+    if (requiresExtendedDesc(ele)) {
+      dataDescFields.push_back(
+          getExtendedDescFieldTypeModel<8>()(&getContext()));
+      auto rowTy = getExtendedDescFieldTypeModel<9>()(&getContext());
+      dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, 1));
+      if (auto recTy = fir::unwrapSequenceType(ele).dyn_cast<fir::RecordType>())
+        if (recTy.getNumLenParams() > 0) {
+          // The descriptor design needs to be clarified regarding the number of
+          // length parameters in the addendum. Since it can change for
+          // polymorphic allocatables, it seems all length parameters cannot
+          // always possibly be placed in the addendum.
+          TODO_NOLOC("extended descriptor derived with length parameters");
+          unsigned numLenParams = recTy.getNumLenParams();
+          dataDescFields.push_back(
+              mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
+        }
+    }
+    return mlir::LLVM::LLVMPointerType::get(
+        mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
+                                               /*isPacked=*/false));
+  }
+
+  // Use the target specifics to figure out how to map complex to LLVM IR. The
+  // use of complex values in function signatures is handled before conversion
+  // to LLVM IR dialect here.
+  //
+  // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
+  template <typename C>
+  mlir::Type convertComplexType(C cmplx) {
+    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
+    auto eleTy = cmplx.getElementType();
+    return convertType(specifics->complexMemoryType(eleTy));
+  }
+
+  // convert a front-end kind value to either a std or LLVM IR dialect type
+  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
+  mlir::Type convertRealType(fir::KindTy kind) {
+    return fromRealTypeID(kindMapping.getRealTypeID(kind), kind);
   }
 
   template <typename A>
@@ -78,6 +212,34 @@ public:
     }
     return mlir::LLVM::LLVMPointerType::get(baseTy);
   }
+
+  /// Convert llvm::Type::TypeID to mlir::Type
+  mlir::Type fromRealTypeID(llvm::Type::TypeID typeID, fir::KindTy kind) {
+    switch (typeID) {
+    case llvm::Type::TypeID::HalfTyID:
+      return mlir::FloatType::getF16(&getContext());
+    case llvm::Type::TypeID::BFloatTyID:
+      return mlir::FloatType::getBF16(&getContext());
+    case llvm::Type::TypeID::FloatTyID:
+      return mlir::FloatType::getF32(&getContext());
+    case llvm::Type::TypeID::DoubleTyID:
+      return mlir::FloatType::getF64(&getContext());
+    case llvm::Type::TypeID::X86_FP80TyID:
+      return mlir::FloatType::getF80(&getContext());
+    case llvm::Type::TypeID::FP128TyID:
+      return mlir::FloatType::getF128(&getContext());
+    default:
+      emitError(UnknownLoc::get(&getContext()))
+          << "unsupported type: !fir.real<" << kind << ">";
+      return {};
+    }
+  }
+
+  KindMapping &getKindMap() { return kindMapping; }
+
+private:
+  KindMapping kindMapping;
+  std::unique_ptr<CodeGenSpecifics> specifics;
 };
 
 } // namespace fir

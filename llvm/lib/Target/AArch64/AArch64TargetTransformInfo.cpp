@@ -695,6 +695,36 @@ static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
   return None;
 }
 
+static Optional<Instruction *> instCombineSVEVectorFMLA(InstCombiner &IC,
+                                                        IntrinsicInst &II) {
+  // fold (fadd p a (fmul p b c)) -> (fma p a b c)
+  Value *P = II.getOperand(0);
+  Value *A = II.getOperand(1);
+  auto FMul = II.getOperand(2);
+  Value *B, *C;
+  if (!match(FMul, m_Intrinsic<Intrinsic::aarch64_sve_fmul>(
+                       m_Specific(P), m_Value(B), m_Value(C))))
+    return None;
+
+  if (!FMul->hasOneUse())
+    return None;
+
+  llvm::FastMathFlags FAddFlags = II.getFastMathFlags();
+  // Stop the combine when the flags on the inputs differ in case dropping flags
+  // would lead to us missing out on more beneficial optimizations.
+  if (FAddFlags != cast<CallInst>(FMul)->getFastMathFlags())
+    return None;
+  if (!FAddFlags.allowContract())
+    return None;
+
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  auto FMLA = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fmla,
+                                      {II.getType()}, {P, A, B, C}, &II);
+  FMLA->setFastMathFlags(FAddFlags);
+  return IC.replaceInstUsesWith(II, FMLA);
+}
+
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul:
@@ -722,6 +752,13 @@ static Optional<Instruction *> instCombineSVEVectorBinOp(InstCombiner &IC,
   auto BinOp =
       Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2));
   return IC.replaceInstUsesWith(II, BinOp);
+}
+
+static Optional<Instruction *> instCombineSVEVectorFAdd(InstCombiner &IC,
+                                                        IntrinsicInst &II) {
+  if (auto FMLA = instCombineSVEVectorFMLA(IC, II))
+    return FMLA;
+  return instCombineSVEVectorBinOp(IC, II);
 }
 
 static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
@@ -969,6 +1006,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fmul:
     return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fadd:
+    return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorBinOp(IC, II);
   case Intrinsic::aarch64_sve_tbl:

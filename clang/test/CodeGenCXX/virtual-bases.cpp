@@ -12,7 +12,7 @@ struct B : virtual A {
   B();
 };
 
-// CHECK-LABEL: define{{.*}} void @_ZN1BC2Ev(%struct.B* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1BC2Ev(%struct.B* {{[^,]*}} %this, i8** %vtt) unnamed_addr
 // CHECK-LABEL: define{{.*}} void @_ZN1BC1Ev(%struct.B* {{[^,]*}} %this) unnamed_addr
 B::B() { }
 
@@ -20,8 +20,8 @@ struct C : virtual A {
   C(bool);
 };
 
-// CHECK-LABEL: define{{.*}} void @_ZN1CC2Eb(%struct.C* {{[^,]*}} %this, i8** noundef %vtt, i1 noundef zeroext %0) unnamed_addr
-// CHECK-LABEL: define{{.*}} void @_ZN1CC1Eb(%struct.C* {{[^,]*}} %this, i1 noundef zeroext %0) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC2Eb(%struct.C* {{[^,]*}} %this, i8** %vtt, i1 zeroext %0) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC1Eb(%struct.C* {{[^,]*}} %this, i1 zeroext %0) unnamed_addr
 C::C(bool) { }
 
 // PR6251
@@ -58,7 +58,7 @@ namespace virtualBaseAlignment {
 // CHECK: %[[X:.*]] = getelementptr inbounds %[[STRUCT_B]], %[[STRUCT_B]]* %[[THIS1]], i32 0, i32 2
 // CHECK: store i32 123, i32* %[[X]], align 16
 
-// CHECK: define linkonce_odr void @_ZN20virtualBaseAlignment1BC2Ev(%[[STRUCT_B]]* {{[^,]*}} %[[THIS:.*]], i8** noundef %{{.*}})
+// CHECK: define linkonce_odr void @_ZN20virtualBaseAlignment1BC2Ev(%[[STRUCT_B]]* {{[^,]*}} %[[THIS:.*]], i8** %{{.*}})
 // CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_B]]*, align 8
 // CHECK: store %[[STRUCT_B]]* %[[THIS]], %[[STRUCT_B]]** %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load %[[STRUCT_B]]*, %[[STRUCT_B]]** %[[THIS_ADDR]], align 8

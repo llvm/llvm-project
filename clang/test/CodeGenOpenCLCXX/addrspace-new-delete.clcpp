@@ -9,7 +9,7 @@ public:
 };
 
 void test_new_delete(A **a) {
-// CHECK: %{{.*}} = call spir_func noundef i8 addrspace(4)* @_ZNU3AS41AnwEj(i32 {{.*}})
+// CHECK: %{{.*}} = call spir_func i8 addrspace(4)* @_ZNU3AS41AnwEj(i32 {{.*}})
     *a = new A;
 // CHECK: call spir_func void @_ZNU3AS41AdlEPU3AS4v(i8 addrspace(4)* {{.*}})
     delete *a;

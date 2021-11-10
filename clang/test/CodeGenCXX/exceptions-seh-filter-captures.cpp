@@ -13,13 +13,13 @@ extern "C" void test_freefunc(int p1) {
   }
 }
 
-// CHECK-LABEL: define dso_local void @test_freefunc(i32 noundef %p1)
+// CHECK-LABEL: define dso_local void @test_freefunc(i32 %p1)
 // CHECK: @llvm.localescape(i32* %[[p1_ptr:[^, ]*]], i32* %[[l1_ptr:[^, ]*]])
 // CHECK: store i32 %p1, i32* %[[p1_ptr]], align 4
 // CHECK: store i32 13, i32* %[[l1_ptr]], align 4
 // CHECK: invoke void @might_crash()
 
-// CHECK-LABEL: define internal noundef i32 @"?filt$0@0@test_freefunc@@"(i8* noundef %exception_pointers, i8* noundef %frame_pointer)
+// CHECK-LABEL: define internal i32 @"?filt$0@0@test_freefunc@@"(i8* %exception_pointers, i8* %frame_pointer)
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (i32)* @test_freefunc to i8*), i8* %frame_pointer)
 // CHECK: %[[p1_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (i32)* @test_freefunc to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[p1_ptr:[^ ]*]] = bitcast i8* %[[p1_i8]] to i32*
@@ -28,7 +28,7 @@ extern "C" void test_freefunc(int p1) {
 // CHECK: %[[s1:[^ ]*]] = load i32, i32* @"?s1@?1??test_freefunc@@9@4HA", align 4
 // CHECK: %[[l1:[^ ]*]] = load i32, i32* %[[l1_ptr]]
 // CHECK: %[[p1:[^ ]*]] = load i32, i32* %[[p1_ptr]]
-// CHECK: call i32 (i32, ...) @basic_filter(i32 noundef %[[p1]], i32 noundef %[[l1]], i32 noundef %[[s1]])
+// CHECK: call i32 (i32, ...) @basic_filter(i32 %[[p1]], i32 %[[l1]], i32 %[[s1]])
 
 struct S {
   int m1;
@@ -49,7 +49,7 @@ void S::test_method() {
 // CHECK: store i32 13, i32* %[[l1_addr]], align 4
 // CHECK: invoke void @might_crash()
 
-// CHECK-LABEL: define internal noundef i32 @"?filt$0@0@test_method@S@@"(i8* noundef %exception_pointers, i8* noundef %frame_pointer)
+// CHECK-LABEL: define internal i32 @"?filt$0@0@test_method@S@@"(i8* %exception_pointers, i8* %frame_pointer)
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (%struct.S*)* @"?test_method@S@@QEAAXXZ" to i8*), i8* %frame_pointer)
 // CHECK: %[[l1_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%struct.S*)* @"?test_method@S@@QEAAXXZ" to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[l1_ptr:[^ ]*]] = bitcast i8* %[[l1_i8]] to i32*
@@ -59,7 +59,7 @@ void S::test_method() {
 // CHECK: %[[m1_ptr:[^ ]*]] = getelementptr inbounds %struct.S, %struct.S* %[[this]], i32 0, i32 0
 // CHECK: %[[m1:[^ ]*]] = load i32, i32* %[[m1_ptr]]
 // CHECK: %[[l1:[^ ]*]] = load i32, i32* %[[l1_ptr]]
-// CHECK: call i32 (i32, ...) @basic_filter(i32 noundef %[[l1]], i32 noundef %[[m1]])
+// CHECK: call i32 (i32, ...) @basic_filter(i32 %[[l1]], i32 %[[m1]])
 
 struct V {
   void test_virtual(int p1);
@@ -74,13 +74,13 @@ void V::test_virtual(int p1) {
   }
 }
 
-// CHECK-LABEL: define dso_local void @"?test_virtual@V@@QEAAXH@Z"(%struct.V* {{[^,]*}} %this, i32 noundef %p1)
+// CHECK-LABEL: define dso_local void @"?test_virtual@V@@QEAAXH@Z"(%struct.V* {{[^,]*}} %this, i32 %p1)
 // CHECK: @llvm.localescape(%struct.V** %[[this_addr:[^, ]*]], i32* %[[p1_addr:[^, ]*]])
 // CHECK: store i32 %p1, i32* %[[p1_addr]], align 4
 // CHECK: store %struct.V* %this, %struct.V** %[[this_addr]], align 8
 // CHECK: invoke void @might_crash()
 
-// CHECK-LABEL: define internal void @"?fin$0@0@test_virtual@V@@"(i8 noundef %abnormal_termination, i8* noundef %frame_pointer)
+// CHECK-LABEL: define internal void @"?fin$0@0@test_virtual@V@@"(i8 %abnormal_termination, i8* %frame_pointer)
 // CHECK: %[[this_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%struct.V*, i32)* @"?test_virtual@V@@QEAAXH@Z" to i8*), i8* %frame_pointer, i32 0)
 // CHECK: %[[this_ptr:[^ ]*]] = bitcast i8* %[[this_i8]] to %struct.V**
 // CHECK: %[[this:[^ ]*]] = load %struct.V*, %struct.V** %[[this_ptr]], align 8
@@ -91,7 +91,7 @@ void V::test_virtual(int p1) {
 // CHECK: %[[vtable:[^ ]*]] = load void (%struct.V*, i32)**, void (%struct.V*, i32)*** %[[this_2]], align 8
 // CHECK: %[[vfn:[^ ]*]] = getelementptr inbounds void (%struct.V*, i32)*, void (%struct.V*, i32)** %[[vtable]], i64 0
 // CHECK: %[[virt:[^ ]*]] = load void (%struct.V*, i32)*, void (%struct.V*, i32)** %[[vfn]], align 8
-// CHECK: call void %[[virt]](%struct.V* {{[^,]*}} %[[this]], i32 noundef %[[p1]])
+// CHECK: call void %[[virt]](%struct.V* {{[^,]*}} %[[this]], i32 %[[p1]])
 
 void test_lambda() {
   int l1 = 13;
@@ -111,7 +111,7 @@ void test_lambda() {
 // CHECK: store i32 42, i32* %[[l2_addr]], align 4
 // CHECK: invoke void @might_crash()
 
-// CHECK-LABEL: define internal noundef i32 @"?filt$0@0@?R<lambda_0>@?0??test_lambda@@YAXXZ@"(i8* noundef %exception_pointers, i8* noundef %frame_pointer)
+// CHECK-LABEL: define internal i32 @"?filt$0@0@?R<lambda_0>@?0??test_lambda@@YAXXZ@"(i8* %exception_pointers, i8* %frame_pointer)
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (%class.anon*)* @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %frame_pointer)
 // CHECK: %[[this_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%class.anon*)* @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[this_ptr:[^ ]*]] = bitcast i8* %[[this_i8]] to %class.anon**
@@ -122,7 +122,7 @@ void test_lambda() {
 // CHECK: %[[l1_ref_ptr:[^ ]*]] = getelementptr inbounds %class.anon, %class.anon* %[[this]], i32 0, i32 0
 // CHECK: %[[l1_ref:[^ ]*]] = load i32*, i32** %[[l1_ref_ptr]]
 // CHECK: %[[l1:[^ ]*]] = load i32, i32* %[[l1_ref]]
-// CHECK: call i32 (i32, ...) @basic_filter(i32 noundef %[[l1]], i32 noundef %[[l2]])
+// CHECK: call i32 (i32, ...) @basic_filter(i32 %[[l1]], i32 %[[l2]])
 
 struct U {
   void this_in_lambda();
@@ -138,10 +138,10 @@ void U::this_in_lambda() {
   lambda();
 }
 
-// CHECK-LABEL: define internal noundef i32 @"?filt$0@0@?R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@"(i8* noundef %exception_pointers, i8* noundef %frame_pointer)
+// CHECK-LABEL: define internal i32 @"?filt$0@0@?R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@"(i8* %exception_pointers, i8* %frame_pointer)
 // CHECK: %[[this_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%class.anon.0*)* @"??R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@QEBA@XZ" to i8*), i8* %[[fp:[^ ]*]], i32 0)
 // CHECK: %[[this_ptr:[^ ]*]] = bitcast i8* %[[this_i8]] to %class.anon.0**
 // CHECK: %[[this:[^ ]*]] = load %class.anon.0*, %class.anon.0** %[[this_ptr]], align 8
 // CHECK: %[[actual_this_ptr:[^ ]*]] = getelementptr inbounds %class.anon.0, %class.anon.0* %[[this]], i32 0, i32 0
 // CHECK: %[[actual_this:[^ ]*]] = load %struct.U*, %struct.U** %[[actual_this_ptr]], align 8
-// CHECK: call i32 (i32, ...) @basic_filter(i32 noundef 0, %struct.U* noundef %[[actual_this]])
+// CHECK: call i32 (i32, ...) @basic_filter(i32 0, %struct.U* %[[actual_this]])

@@ -34,7 +34,7 @@ attributes #0 = { nounwind readnone speculatable }
 !llvm.module.flags = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-master/llvm/test/DebugInfo/debugify-bogus-dbg-value.ll", directory: "/")
+!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-main/llvm/test/DebugInfo/debugify-bogus-dbg-value.ll", directory: "/")
 !2 = !{}
 !3 = !{i32 4}
 !4 = !{i32 4}

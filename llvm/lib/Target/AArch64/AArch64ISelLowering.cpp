@@ -10912,7 +10912,7 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
 
-    if (!isTypeLegal(VT) || !VT.isInteger())
+    if (!isTypeLegal(VT))
       return SDValue();
 
     SDValue Vec0 = Op.getOperand(0);
@@ -10922,9 +10922,19 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     if (VT.getVectorElementCount() != (InVT.getVectorElementCount() * 2))
       return SDValue();
 
-    // Extend elements of smaller vector...
-    EVT WideVT = InVT.widenIntegerVectorElementType(*(DAG.getContext()));
-    SDValue ExtVec = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Vec1);
+    EVT WideVT;
+    SDValue ExtVec;
+
+    if (VT.isFloatingPoint()) {
+      // The InVT type should be legal. We can safely cast the unpacked
+      // subvector from InVT -> VT.
+      WideVT = VT;
+      ExtVec = getSVESafeBitCast(VT, Vec1, DAG);
+    } else {
+      // Extend elements of smaller vector...
+      WideVT = InVT.widenIntegerVectorElementType(*(DAG.getContext()));
+      ExtVec = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Vec1);
+    }
 
     if (Idx == 0) {
       SDValue HiVec0 = DAG.getNode(AArch64ISD::UUNPKHI, DL, WideVT, Vec0);
@@ -12056,6 +12066,18 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 }
 
 static ScalableVectorType *getSVEContainerIRType(FixedVectorType *VTy) {
+  if (VTy->getElementType() == Type::getDoubleTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 2);
+
+  if (VTy->getElementType() == Type::getFloatTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 4);
+
+  if (VTy->getElementType() == Type::getBFloatTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 8);
+
+  if (VTy->getElementType() == Type::getHalfTy(VTy->getContext()))
+    return ScalableVectorType::get(VTy->getElementType(), 8);
+
   if (VTy->getElementType() == Type::getInt64Ty(VTy->getContext()))
     return ScalableVectorType::get(VTy->getElementType(), 2);
 
@@ -13132,12 +13154,44 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
+  // Canonicalize X*(Y+1) -> X*Y+X and (X+1)*Y -> X*Y+Y,
+  // and in MachineCombiner pass, add+mul will be combined into madd.
+  // Similarly, X*(1-Y) -> X - X*Y and (1-Y)*X -> X - Y*X.
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue MulOper;
+  unsigned AddSubOpc;
+
+  auto IsAddSubWith1 = [&](SDValue V) -> bool {
+    AddSubOpc = V->getOpcode();
+    if ((AddSubOpc == ISD::ADD || AddSubOpc == ISD::SUB) && V->hasOneUse()) {
+      SDValue Opnd = V->getOperand(1);
+      MulOper = V->getOperand(0);
+      if (AddSubOpc == ISD::SUB)
+        std::swap(Opnd, MulOper);
+      if (auto C = dyn_cast<ConstantSDNode>(Opnd))
+        return C->isOne();
+    }
+    return false;
+  };
+
+  if (IsAddSubWith1(N0)) {
+    SDValue MulVal = DAG.getNode(ISD::MUL, DL, VT, N1, MulOper);
+    return DAG.getNode(AddSubOpc, DL, VT, N1, MulVal);
+  }
+
+  if (IsAddSubWith1(N1)) {
+    SDValue MulVal = DAG.getNode(ISD::MUL, DL, VT, N0, MulOper);
+    return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
+  }
+
   // The below optimizations require a constant RHS.
-  if (!isa<ConstantSDNode>(N->getOperand(1)))
+  if (!isa<ConstantSDNode>(N1))
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-  ConstantSDNode *C = cast<ConstantSDNode>(N->getOperand(1));
+  ConstantSDNode *C = cast<ConstantSDNode>(N1);
   const APInt &ConstValue = C->getAPIntValue();
 
   // Allow the scaling to be folded into the `cnt` instruction by preventing
@@ -13178,7 +13232,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // and shift+add+shift.
   APInt ShiftedConstValue = ConstValue.ashr(TrailingZeroes);
 
-  unsigned ShiftAmt, AddSubOpc;
+  unsigned ShiftAmt;
   // Is the shifted value the LHS operand of the add/sub?
   bool ShiftValUseIsN0 = true;
   // Do we need to negate the result?
@@ -13215,8 +13269,6 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
   SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, VT, N0,
                                    DAG.getConstant(ShiftAmt, DL, MVT::i64));
 

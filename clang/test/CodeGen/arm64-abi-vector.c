@@ -31,7 +31,7 @@ double varargs_vec_2c(int fixed, ...) {
 }
 
 double test_2c(__char2 *in) {
-// ANDROID: call double (i32, ...) @varargs_vec_2c(i32 noundef 3, i16 noundef {{%.*}})
+// ANDROID: call double (i32, ...) @varargs_vec_2c(i32 3, i16 {{%.*}})
   return varargs_vec_2c(3, *in);
 }
 
@@ -51,7 +51,7 @@ double varargs_vec_3c(int fixed, ...) {
 
 double test_3c(__char3 *in) {
 // CHECK: test_3c
-// CHECK: call double (i32, ...) @varargs_vec_3c(i32 noundef 3, i32 {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3c(i32 3, i32 {{%.*}})
   return varargs_vec_3c(3, *in);
 }
 
@@ -71,7 +71,7 @@ double varargs_vec_4c(int fixed, ...) {
 
 double test_4c(__char4 *in) {
 // CHECK: test_4c
-// CHECK: call double (i32, ...) @varargs_vec_4c(i32 noundef 4, i32 noundef {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_4c(i32 4, i32 {{%.*}})
   return varargs_vec_4c(4, *in);
 }
 
@@ -91,7 +91,7 @@ double varargs_vec_5c(int fixed, ...) {
 
 double test_5c(__char5 *in) {
 // CHECK: test_5c
-// CHECK: call double (i32, ...) @varargs_vec_5c(i32 noundef 5, <2 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_5c(i32 5, <2 x i32> {{%.*}})
   return varargs_vec_5c(5, *in);
 }
 
@@ -113,7 +113,7 @@ double varargs_vec_9c(int fixed, ...) {
 
 double test_9c(__char9 *in) {
 // CHECK: test_9c
-// CHECK: call double (i32, ...) @varargs_vec_9c(i32 noundef 9, <4 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_9c(i32 9, <4 x i32> {{%.*}})
   return varargs_vec_9c(9, *in);
 }
 
@@ -133,7 +133,7 @@ double varargs_vec_19c(int fixed, ...) {
 
 double test_19c(__char19 *in) {
 // CHECK: test_19c
-// CHECK: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, <19 x i8>* noundef {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_19c(i32 19, <19 x i8>* {{%.*}})
   return varargs_vec_19c(19, *in);
 }
 
@@ -153,7 +153,7 @@ double varargs_vec_3s(int fixed, ...) {
 
 double test_3s(__short3 *in) {
 // CHECK: test_3s
-// CHECK: call double (i32, ...) @varargs_vec_3s(i32 noundef 3, <2 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3s(i32 3, <2 x i32> {{%.*}})
   return varargs_vec_3s(3, *in);
 }
 
@@ -175,7 +175,7 @@ double varargs_vec_5s(int fixed, ...) {
 
 double test_5s(__short5 *in) {
 // CHECK: test_5s
-// CHECK: call double (i32, ...) @varargs_vec_5s(i32 noundef 5, <4 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_5s(i32 5, <4 x i32> {{%.*}})
   return varargs_vec_5s(5, *in);
 }
 
@@ -197,7 +197,7 @@ double varargs_vec_3i(int fixed, ...) {
 
 double test_3i(__int3 *in) {
 // CHECK: test_3i
-// CHECK: call double (i32, ...) @varargs_vec_3i(i32 noundef 3, <4 x i32> {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3i(i32 3, <4 x i32> {{%.*}})
   return varargs_vec_3i(3, *in);
 }
 
@@ -218,7 +218,7 @@ double varargs_vec_5i(int fixed, ...) {
 
 double test_5i(__int5 *in) {
 // CHECK: test_5i
-// CHECK: call double (i32, ...) @varargs_vec_5i(i32 noundef 5, <5 x i32>* noundef {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_5i(i32 5, <5 x i32>* {{%.*}})
   return varargs_vec_5i(5, *in);
 }
 
@@ -239,7 +239,7 @@ double varargs_vec_3d(int fixed, ...) {
 
 double test_3d(__double3 *in) {
 // CHECK: test_3d
-// CHECK: call double (i32, ...) @varargs_vec_3d(i32 noundef 3, <3 x double>* noundef {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec_3d(i32 3, <3 x double>* {{%.*}})
   return varargs_vec_3d(3, *in);
 }
 
@@ -301,7 +301,7 @@ double test(__char3 *c3, __char5 *c5, __char9 *c9, __char19 *c19,
             __short3 *s3, __short5 *s5, __int3 *i3, __int5 *i5,
             __double3 *d3) {
   double ret = varargs_vec(3, *c3, *c5, *c9, *c19, *s3, *s5, *i3, *i5, *d3);
-// CHECK: call double (i32, ...) @varargs_vec(i32 noundef 3, i32 {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <19 x i8>* noundef {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <5 x i32>* noundef {{%.*}}, <3 x double>* noundef {{%.*}})
+// CHECK: call double (i32, ...) @varargs_vec(i32 3, i32 {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <19 x i8>* {{%.*}}, <2 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <5 x i32>* {{%.*}}, <3 x double>* {{%.*}})
   return ret;
 }
 
@@ -317,7 +317,7 @@ __attribute__((noinline)) double args_vec_3c(int fixed, __char3 c3) {
 
 double fixed_3c(__char3 *in) {
 // CHECK: fixed_3c
-// CHECK: call double @args_vec_3c(i32 noundef 3, i32 {{%.*}})
+// CHECK: call double @args_vec_3c(i32 3, i32 {{%.*}})
   return args_vec_3c(3, *in);
 }
 
@@ -333,7 +333,7 @@ __attribute__((noinline)) double args_vec_5c(int fixed, __char5 c5) {
 
 double fixed_5c(__char5 *in) {
 // CHECK: fixed_5c
-// CHECK: call double @args_vec_5c(i32 noundef 5, <2 x i32> {{%.*}})
+// CHECK: call double @args_vec_5c(i32 5, <2 x i32> {{%.*}})
   return args_vec_5c(5, *in);
 }
 
@@ -349,7 +349,7 @@ __attribute__((noinline)) double args_vec_9c(int fixed, __char9 c9) {
 
 double fixed_9c(__char9 *in) {
 // CHECK: fixed_9c
-// CHECK: call double @args_vec_9c(i32 noundef 9, <4 x i32> {{%.*}})
+// CHECK: call double @args_vec_9c(i32 9, <4 x i32> {{%.*}})
   return args_vec_9c(9, *in);
 }
 
@@ -363,7 +363,7 @@ __attribute__((noinline)) double args_vec_19c(int fixed, __char19 c19) {
 
 double fixed_19c(__char19 *in) {
 // CHECK: fixed_19c
-// CHECK: call double @args_vec_19c(i32 noundef 19, <19 x i8>* noundef {{%.*}})
+// CHECK: call double @args_vec_19c(i32 19, <19 x i8>* {{%.*}})
   return args_vec_19c(19, *in);
 }
 
@@ -379,7 +379,7 @@ __attribute__((noinline)) double args_vec_3s(int fixed, __short3 c3) {
 
 double fixed_3s(__short3 *in) {
 // CHECK: fixed_3s
-// CHECK: call double @args_vec_3s(i32 noundef 3, <2 x i32> {{%.*}})
+// CHECK: call double @args_vec_3s(i32 3, <2 x i32> {{%.*}})
   return args_vec_3s(3, *in);
 }
 
@@ -395,7 +395,7 @@ __attribute__((noinline)) double args_vec_5s(int fixed, __short5 c5) {
 
 double fixed_5s(__short5 *in) {
 // CHECK: fixed_5s
-// CHECK: call double @args_vec_5s(i32 noundef 5, <4 x i32> {{%.*}})
+// CHECK: call double @args_vec_5s(i32 5, <4 x i32> {{%.*}})
   return args_vec_5s(5, *in);
 }
 
@@ -411,7 +411,7 @@ __attribute__((noinline)) double args_vec_3i(int fixed, __int3 c3) {
 
 double fixed_3i(__int3 *in) {
 // CHECK: fixed_3i
-// CHECK: call double @args_vec_3i(i32 noundef 3, <4 x i32> {{%.*}})
+// CHECK: call double @args_vec_3i(i32 3, <4 x i32> {{%.*}})
   return args_vec_3i(3, *in);
 }
 
@@ -425,7 +425,7 @@ __attribute__((noinline)) double args_vec_5i(int fixed, __int5 c5) {
 
 double fixed_5i(__int5 *in) {
 // CHECK: fixed_5i
-// CHECK: call double @args_vec_5i(i32 noundef 5, <5 x i32>* noundef {{%.*}})
+// CHECK: call double @args_vec_5i(i32 5, <5 x i32>* {{%.*}})
   return args_vec_5i(5, *in);
 }
 
@@ -441,6 +441,6 @@ __attribute__((noinline)) double args_vec_3d(int fixed, __double3 c3) {
 
 double fixed_3d(__double3 *in) {
 // CHECK: fixed_3d
-// CHECK: call double @args_vec_3d(i32 noundef 3, <3 x double>* noundef {{%.*}})
+// CHECK: call double @args_vec_3d(i32 3, <3 x double>* {{%.*}})
   return args_vec_3d(3, *in);
 }

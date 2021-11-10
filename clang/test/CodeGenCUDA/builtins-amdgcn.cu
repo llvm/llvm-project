@@ -194,7 +194,7 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* [[TMP2]], float [[TMP3]], i32 0, i32 0, i1 false)
 // CHECK-NEXT:    store volatile float [[TMP4]], float* [[X_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = load float*, float** [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call void @_Z4funcPf(float* noundef [[TMP5]]) #[[ATTR8:[0-9]+]]
+// CHECK-NEXT:    call void @_Z4funcPf(float* [[TMP5]]) #[[ATTR8:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 __global__ void test_ds_fmin_func(float src, float *__restrict shared) {

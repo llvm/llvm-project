@@ -130,7 +130,7 @@ extern "C" int cleanup_exit_lvalue(bool cond) {
 // CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue({{.*}})
 // CHECK: call {{.*}} @_ZN1AC1Ei
 //    Spill after bar.
-// CHECK: %[[v:[^ ]*]] = call noundef nonnull align 4 dereferenceable(4) i32* @_Z6getrefv({{.*}})
+// CHECK: %[[v:[^ ]*]] = call nonnull align 4 dereferenceable(4) i32* @_Z6getrefv({{.*}})
 // CHECK-NEXT: store i32* %[[v]], i32** %[[tmp:[^, ]*]]
 //    Do cleanup.
 // CHECK: call {{.*}} @_ZN1AD1Ev
@@ -146,7 +146,7 @@ extern "C" int cleanup_exit_lvalue_byval(bool cond, ByVal arg) {
   ByVal &r = (A(1), ({ if (cond) return 0; (void)ByVal(); }), arg);
   return r.x[0];
 }
-// CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_byval({{.*}}, %struct.ByVal* noundef byval(%struct.ByVal) align 4 %arg)
+// CHECK-LABEL: define{{.*}} i32 @cleanup_exit_lvalue_byval({{.*}}, %struct.ByVal* byval(%struct.ByVal) align 4 %arg)
 // CHECK: call {{.*}} @_ZN1AC1Ei
 // CHECK: call {{.*}} @_ZN1AD1Ev
 // CHECK: switch
@@ -202,7 +202,7 @@ void volatile_load() {
   // CHECK-NOT: load volatile
   ({n;});
 
-  // CHECK-LABEL: @then(i32 noundef 1)
+  // CHECK-LABEL: @then(i32 1)
   then(1);
 
   // CHECK-NOT: load volatile
@@ -210,7 +210,7 @@ void volatile_load() {
   // CHECK-NOT: load volatile
   ({goto lab; lab: n;});
 
-  // CHECK-LABEL: @then(i32 noundef 2)
+  // CHECK-LABEL: @then(i32 2)
   then(2);
 
   // CHECK-NOT: load volatile
@@ -218,7 +218,7 @@ void volatile_load() {
   // CHECK-NOT: load volatile
   ({[[gsl::suppress("foo")]] n;});
 
-  // CHECK-LABEL: @then(i32 noundef 3)
+  // CHECK-LABEL: @then(i32 3)
   then(3);
 
   // CHECK-NOT: load volatile
@@ -239,7 +239,7 @@ void volatile_load_template() {
   // CHECK-NOT: load volatile
   ({n;});
 
-  // CHECK-LABEL: @then(i32 noundef 1)
+  // CHECK-LABEL: @then(i32 1)
   then(1);
 
   // CHECK-NOT: load volatile
@@ -247,7 +247,7 @@ void volatile_load_template() {
   // CHECK-NOT: load volatile
   ({goto lab; lab: n;});
 
-  // CHECK-LABEL: @then(i32 noundef 2)
+  // CHECK-LABEL: @then(i32 2)
   then(2);
 
   // CHECK-NOT: load volatile
@@ -255,7 +255,7 @@ void volatile_load_template() {
   // CHECK-NOT: load volatile
   ({[[gsl::suppress("foo")]] n;});
 
-  // CHECK-LABEL: @then(i32 noundef 3)
+  // CHECK-LABEL: @then(i32 3)
   then(3);
 
   // CHECK-NOT: load volatile

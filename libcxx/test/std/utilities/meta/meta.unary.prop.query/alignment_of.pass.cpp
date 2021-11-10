@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Fails for 32-bit builds on AIX.
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
 // type_traits
 
 // alignment_of

@@ -40,7 +40,7 @@ void f(int i) {
 
   p2(i);
 // CHECK: %[[#P2:]] = load {{.*}} @p2
-// CHECK: call void %[[#P2]](i32 noundef %i) #[[#A2]]
+// CHECK: call void %[[#P2]](i32 %i) #[[#A2]]
 
   a0[i]();
 // CHECK: %[[EP0:.*]] = getelementptr {{.*}} @a0
@@ -70,7 +70,7 @@ void f(int i) {
   b[i](i);
 // CHECK: %[[EP5:.*]] = getelementptr {{.*}} @b
 // CHECK: %[[#E5:]] = load {{.*}} %[[EP5]]
-// CHECK: call void %[[#E5]](i32 noundef %i) #[[#A2]]
+// CHECK: call void %[[#E5]](i32 %i) #[[#A2]]
 }
 
 // CHECK: attributes #[[#A1]] = { nounwind }

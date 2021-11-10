@@ -201,11 +201,11 @@ struct B {
 
 B::B()
   // CHECK: call void @_ZN6PR50771AC1Ev
-  // CHECK: call noundef i32 @_ZN6PR50771A1fEv
+  // CHECK: call i32 @_ZN6PR50771A1fEv
   // CHECK: call void @_ZN6PR50771AD1Ev
   : a1(A().f())
   // CHECK: call void @_ZN6PR50771AC1Ev
-  // CHECK: call noundef i32 @_ZN6PR50771gERKNS_1AE
+  // CHECK: call i32 @_ZN6PR50771gERKNS_1AE
   // CHECK: call void @_ZN6PR50771AD1Ev
   , a2(g(A()))
 {
@@ -332,8 +332,8 @@ int& f(int);
 // CHECK-LABEL: define{{.*}} void @_ZN3T121gEv
 void g() {
   // CHECK: call void @_ZN3T121AC1Ev
-  // CHECK-NEXT: call noundef i32 @_ZN3T121A1fEv(
-  // CHECK-NEXT: call noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_ZN3T121fEi(
+  // CHECK-NEXT: call i32 @_ZN3T121A1fEv(
+  // CHECK-NEXT: call {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_ZN3T121fEi(
   // CHECK-NEXT: call void @_ZN3T121AD1Ev(
   int& i = f(A().f());
 }
@@ -348,8 +348,8 @@ namespace PR6648 {
   struct D;
   D& zed(B);
   void foobar() {
-    // NULL-INVALID: call noundef nonnull align 1 %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
-    // NULL-VALID: call noundef align 1 %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
+    // NULL-INVALID: call nonnull align 1 %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
+    // NULL-VALID: call align 1 %"struct.PR6648::D"* @_ZN6PR66483zedENS_1BE
     zed(foo);
   }
 }
@@ -436,10 +436,10 @@ namespace Elision {
     // CHECK-NEXT: [[J:%.*]] = alloca [[A]], align 8
 
     // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[I]])
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[I]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[I]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
     A i = (c ? A() : x);
 
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[J]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[J]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
     // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[J]])
     A j = (c ? x : A());
 
@@ -459,10 +459,10 @@ namespace Elision {
   A test3(int v, A x) {
     if (v < 5)
     // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET:%.*]])
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X:%.*]])
       return (v < 0 ? A() : x);
     else
-    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+    // CHECK:      call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
     // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET]])
       return (v > 10 ? x : A());
 
@@ -480,7 +480,7 @@ namespace Elision {
     // CHECK-NEXT: [[XS0:%.*]] = getelementptr inbounds [2 x [[A]]], [2 x [[A]]]* [[XS]], i64 0, i64 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[XS0]])
     // CHECK-NEXT: [[XS1:%.*]] = getelementptr inbounds [[A]], [[A]]* [[XS0]], i64 1
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[XS1]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[XS1]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
     A xs[] = { A(), x };
 
     // CHECK-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [2 x [[A]]], [2 x [[A]]]* [[XS]], i32 0, i32 0
@@ -507,21 +507,21 @@ namespace Elision {
 
     // CHECK:      call void @_ZN7Elision1BC1Ev([[B]]* {{[^,]*}} [[BT0]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], [[B]]* [[BT0]], i32 0, i32 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[AT0]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
-    // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE([[A]]* noundef [[AT0]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[AT0]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
+    // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE([[A]]* [[AT0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[AT0]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* {{[^,]*}} [[BT0]])
     takeA(B().a);
 
     // CHECK-NEXT: call void @_ZN7Elision1BC1Ev([[B]]* {{[^,]*}} [[BT1]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], [[B]]* [[BT1]], i32 0, i32 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[X]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[X]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* {{[^,]*}} [[BT1]])
     A x = B().a;
 
     // CHECK-NEXT: call void @_ZN7Elision1BC1Ev([[B]]* {{[^,]*}} [[BT2]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds [[B]], [[B]]* [[BT2]], i32 0, i32 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET:%.*]], [[A]]* noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
+    // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_([[A]]* {{[^,]*}} [[RET:%.*]], [[A]]* {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev([[B]]* {{[^,]*}} [[BT2]])
     return B().a;
 
@@ -553,10 +553,10 @@ namespace PR8623 {
     // CHECK:      store i1 false, i1* [[LCONS]]
     // CHECK-NEXT: store i1 false, i1* [[RCONS]]
     // CHECK-NEXT: br i1
-    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* {{[^,]*}} [[TMP]], i32 noundef 2)
+    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* {{[^,]*}} [[TMP]], i32 2)
     // CHECK-NEXT: store i1 true, i1* [[LCONS]]
     // CHECK-NEXT: br label
-    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* {{[^,]*}} [[TMP]], i32 noundef 3)
+    // CHECK:      call void @_ZN6PR86231AC1Ei([[A]]* {{[^,]*}} [[TMP]], i32 3)
     // CHECK-NEXT: store i1 true, i1* [[RCONS]]
     // CHECK-NEXT: br label
     // CHECK:      load i1, i1* [[RCONS]]
@@ -787,19 +787,19 @@ namespace ArrayAccess {
   void f() {
     using T = A[3];
 
-    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 noundef 1
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 1
     // CHECK-NOT: @_ZN11ArrayAccess1AD
-    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 noundef 2
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 2
     // CHECK-NOT: @_ZN11ArrayAccess1AD
-    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 noundef 3
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 3
     // CHECK-NOT: @_ZN11ArrayAccess1AD
     A &&a = T{1, 2, 3}[1];
 
-    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 noundef 4
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 4
     // CHECK-NOT: @_ZN11ArrayAccess1AD
-    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 noundef 5
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 5
     // CHECK-NOT: @_ZN11ArrayAccess1AD
-    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 noundef 6
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 6
     // CHECK-NOT: @_ZN11ArrayAccess1AD
     A &&b = 2[T{4, 5, 6}];
 
@@ -815,7 +815,7 @@ namespace PR14130 {
   struct S { S(int); };
   struct U { S &&s; };
   U v { { 0 } };
-  // CHECK: call void @_ZN7PR141301SC1Ei({{.*}} @_ZGRN7PR141301vE_, i32 noundef 0)
+  // CHECK: call void @_ZN7PR141301SC1Ei({{.*}} @_ZGRN7PR141301vE_, i32 0)
   // CHECK: store {{.*}} @_ZGRN7PR141301vE_, {{.*}} @_ZN7PR141301vE
 }
 

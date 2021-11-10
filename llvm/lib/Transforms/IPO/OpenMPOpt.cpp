@@ -77,7 +77,7 @@ static cl::opt<bool> EnableParallelRegionMerging(
 static cl::opt<bool>
     DisableInternalization("openmp-opt-disable-internalization", cl::ZeroOrMore,
                            cl::desc("Disable function internalization."),
-                           cl::Hidden, cl::init(true));
+                           cl::Hidden, cl::init(false));
 
 static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
                                     cl::Hidden);

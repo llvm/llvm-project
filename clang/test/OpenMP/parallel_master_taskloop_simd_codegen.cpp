@@ -54,7 +54,7 @@ struct S {
 
 #endif
 // CHECK1-LABEL: define {{[^@]+}}@main
-// CHECK1-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK1-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -123,7 +123,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -167,7 +167,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -243,7 +243,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -283,7 +283,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..4
-// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -359,7 +359,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** noundef nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]], i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -462,7 +462,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_privates_map.
-// CHECK1-SAME: (%struct..kmp_privates.t* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK1-SAME: (%struct..kmp_privates.t* noalias [[TMP0:%.*]], i32** noalias [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
@@ -476,7 +476,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -653,7 +653,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_dup.
-// CHECK1-SAME: (%struct.kmp_task_t_with_privates.3* noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noundef [[TMP1:%.*]], i32 noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK1-SAME: (%struct.kmp_task_t_with_privates.3* [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
@@ -673,12 +673,12 @@ struct S {
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK1-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK1-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK1-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK1-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -686,12 +686,12 @@ struct S {
 // CHECK1-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK1-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK1-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK1-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -715,7 +715,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.S* [[THIS:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -786,7 +786,7 @@ struct S {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..10
-// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK1-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -899,7 +899,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@main
-// CHECK2-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK2-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -968,7 +968,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1012,7 +1012,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1088,7 +1088,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1128,7 +1128,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..4
-// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1204,7 +1204,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** noundef nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]], i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1307,7 +1307,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_privates_map.
-// CHECK2-SAME: (%struct..kmp_privates.t* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK2-SAME: (%struct..kmp_privates.t* noalias [[TMP0:%.*]], i32** noalias [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
@@ -1321,7 +1321,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1498,7 +1498,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_dup.
-// CHECK2-SAME: (%struct.kmp_task_t_with_privates.3* noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noundef [[TMP1:%.*]], i32 noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK2-SAME: (%struct.kmp_task_t_with_privates.3* [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
@@ -1516,7 +1516,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK2-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK2-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -1540,7 +1540,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.S* [[THIS:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1611,7 +1611,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..10
-// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK2-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1717,7 +1717,7 @@ struct S {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK2-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK2-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -1725,14 +1725,14 @@ struct S {
 // CHECK2-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK2-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK2-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK2-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1744,7 +1744,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@main
-// CHECK3-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK3-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -1813,7 +1813,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1857,7 +1857,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK3-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK3-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -1933,7 +1933,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1973,7 +1973,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_entry..4
-// CHECK3-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK3-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2049,7 +2049,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** noundef nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]], i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2157,7 +2157,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_privates_map.
-// CHECK3-SAME: (%struct..kmp_privates.t* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK3-SAME: (%struct..kmp_privates.t* noalias [[TMP0:%.*]], i32** noalias [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t*, align 8
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
@@ -2171,7 +2171,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK3-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK3-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2398,7 +2398,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_dup.
-// CHECK3-SAME: (%struct.kmp_task_t_with_privates.3* noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noundef [[TMP1:%.*]], i32 noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK3-SAME: (%struct.kmp_task_t_with_privates.3* [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTADDR:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
 // CHECK3-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
@@ -2418,12 +2418,12 @@ struct S {
 // CHECK3-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK3-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK3-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK3-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK3-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK3-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2431,12 +2431,12 @@ struct S {
 // CHECK3-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK3-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK3-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK3-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK3-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK3-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2460,7 +2460,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK3-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.S* [[THIS:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2531,7 +2531,7 @@ struct S {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_entry..10
-// CHECK3-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK3-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2644,7 +2644,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@main
-// CHECK4-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK4-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -2713,7 +2713,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2757,7 +2757,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK4-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK4-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2833,7 +2833,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..2
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2873,7 +2873,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_entry..4
-// CHECK4-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK4-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.1* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -2949,7 +2949,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..5
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[I:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** noundef nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[I:%.*]], i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i8*** nonnull align 8 dereferenceable(8) [[ARGV:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]], i64 [[DOTCAPTURE_EXPR_1:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3057,7 +3057,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_privates_map.
-// CHECK4-SAME: (%struct..kmp_privates.t* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
+// CHECK4-SAME: (%struct..kmp_privates.t* noalias [[TMP0:%.*]], i32** noalias [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t*, align 8
 // CHECK4-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
@@ -3071,7 +3071,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_entry..7
-// CHECK4-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK4-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -3298,7 +3298,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_dup.
-// CHECK4-SAME: (%struct.kmp_task_t_with_privates.3* noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* noundef [[TMP1:%.*]], i32 noundef [[TMP2:%.*]]) #[[ATTR4]] {
+// CHECK4-SAME: (%struct.kmp_task_t_with_privates.3* [[TMP0:%.*]], %struct.kmp_task_t_with_privates.3* [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTADDR:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
 // CHECK4-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.3*, align 8
@@ -3318,12 +3318,12 @@ struct S {
 // CHECK4-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK4-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK4-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK4-NEXT:    ret void
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK4-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK4-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK4-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3331,12 +3331,12 @@ struct S {
 // CHECK4-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK4-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK4-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK4-NEXT:    ret void
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK4-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK4-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK4-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3360,7 +3360,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..8
-// CHECK4-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.S* noundef [[THIS:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK4-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.S* [[THIS:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i64 [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3431,7 +3431,7 @@ struct S {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_entry..10
-// CHECK4-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK4-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates.5* noalias [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
@@ -3544,7 +3544,7 @@ struct S {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@main
-// CHECK5-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -3774,12 +3774,12 @@ struct S {
 // CHECK5-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK5-SAME: () #[[ATTR2:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK5-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK5-NEXT:    ret void
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK5-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
+// CHECK5-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK5-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3787,12 +3787,12 @@ struct S {
 // CHECK5-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK5-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK5-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK5-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK5-NEXT:    ret void
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK5-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK5-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK5-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3883,7 +3883,7 @@ struct S {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@main
-// CHECK6-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK6-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK6-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -4111,7 +4111,7 @@ struct S {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK6-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 {
+// CHECK6-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK6-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -4195,7 +4195,7 @@ struct S {
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK6-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// CHECK6-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK6-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -4203,14 +4203,14 @@ struct S {
 // CHECK6-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK6-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK6-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK6-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK6-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK6-NEXT:    ret void
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK6-SAME: () #[[ATTR3:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK6-NEXT:  entry:
-// CHECK6-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK6-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK6-NEXT:    ret void
 //
 //
@@ -4222,7 +4222,7 @@ struct S {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@main
-// CHECK7-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK7-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -4517,12 +4517,12 @@ struct S {
 // CHECK7-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK7-SAME: () #[[ATTR2:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK7-NEXT:  entry:
-// CHECK7-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK7-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK7-NEXT:    ret void
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK7-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
+// CHECK7-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK7-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -4530,12 +4530,12 @@ struct S {
 // CHECK7-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK7-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK7-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK7-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK7-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK7-NEXT:    ret void
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK7-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK7-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK7-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -4626,7 +4626,7 @@ struct S {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@main
-// CHECK8-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK8-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK8-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
@@ -4919,7 +4919,7 @@ struct S {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK8-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 {
+// CHECK8-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK8-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -5003,7 +5003,7 @@ struct S {
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK8-SAME: (%struct.S* noundef [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// CHECK8-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 [[C:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK8-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -5011,14 +5011,14 @@ struct S {
 // CHECK8-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
 // CHECK8-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK8-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK8-NEXT:    call void @_ZN1SC2Ei(%struct.S* noundef [[THIS1]], i32 noundef [[TMP0]])
+// CHECK8-NEXT:    call void @_ZN1SC2Ei(%struct.S* nonnull align 4 dereferenceable(4) [[THIS1]], i32 [[TMP0]])
 // CHECK8-NEXT:    ret void
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK8-SAME: () #[[ATTR3:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    call void @_ZN1SC1Ei(%struct.S* noundef @s, i32 noundef 1)
+// CHECK8-NEXT:    call void @_ZN1SC1Ei(%struct.S* nonnull align 4 dereferenceable(4) @s, i32 1)
 // CHECK8-NEXT:    ret void
 //
 //

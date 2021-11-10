@@ -1080,9 +1080,13 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
       if (AbbrevDecl) {
         WithColor(OS, HighlightColor::Tag).get().indent(Indent)
             << formatv("{0}", getTag());
-        if (DumpOpts.Verbose)
+        if (DumpOpts.Verbose) {
           OS << format(" [%u] %c", abbrCode,
                        AbbrevDecl->hasChildren() ? '*' : ' ');
+          if (Optional<uint32_t> ParentIdx = Die->getParentIdx())
+            OS << format(" (0x%8.8" PRIx64 ")",
+                         U->getDIEAtIndex(*ParentIdx).getOffset());
+        }
         OS << '\n';
 
         // Dump all data in the DIE for the attributes.

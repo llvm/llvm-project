@@ -84,6 +84,12 @@ uint32_t ARM::calcEFlags() const {
 RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
+  case R_ARM_ABS32:
+  case R_ARM_MOVW_ABS_NC:
+  case R_ARM_MOVT_ABS:
+  case R_ARM_THM_MOVW_ABS_NC:
+  case R_ARM_THM_MOVT_ABS:
+    return R_ABS;
   case R_ARM_THM_JUMP11:
     return R_PC;
   case R_ARM_CALL:
@@ -156,7 +162,9 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
-    return R_ABS;
+    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+          ") against symbol " + toString(s));
+    return R_NONE;
   }
 }
 
@@ -702,8 +710,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " +
-          toString(rel.type));
+    llvm_unreachable("unknown relocation");
   }
 }
 

@@ -99,9 +99,9 @@ define i32 @test17(i32 %A) {
 
 define i1 @test18(i32 %A) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A_OFF]], 49
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -100
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 100
   %C = icmp slt i32 %A, 50
@@ -111,9 +111,9 @@ define i1 @test18(i32 %A) {
 
 define i1 @test18_logical(i32 %A) {
 ; CHECK-LABEL: @test18_logical(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[A_OFF]], 49
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -100
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 100
   %C = icmp slt i32 %A, 50

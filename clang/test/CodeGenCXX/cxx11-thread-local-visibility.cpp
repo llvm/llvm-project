@@ -6,13 +6,13 @@
 
 // LINUX_AIX: @default_tls ={{.*}} thread_local global i32
 // LINUX_AIX: @hidden_tls ={{( hidden)?}} thread_local global i32
-// LINUX_AIX: define weak_odr hidden noundef i32* @_ZTW11default_tls()
-// LINUX_AIX: define weak_odr hidden noundef i32* @_ZTW10hidden_tls()
+// LINUX_AIX: define weak_odr hidden i32* @_ZTW11default_tls()
+// LINUX_AIX: define weak_odr hidden i32* @_ZTW10hidden_tls()
 //
 // DARWIN: @default_tls = internal thread_local global i32
 // DARWIN: @hidden_tls = internal thread_local global i32
-// DARWIN: define cxx_fast_tlscc noundef i32* @_ZTW11default_tls()
-// DARWIN: define hidden cxx_fast_tlscc noundef i32* @_ZTW10hidden_tls()
+// DARWIN: define cxx_fast_tlscc i32* @_ZTW11default_tls()
+// DARWIN: define hidden cxx_fast_tlscc i32* @_ZTW10hidden_tls()
 
 __attribute__((visibility("default"))) thread_local int default_tls;
 __attribute__((visibility("hidden"))) thread_local int hidden_tls;

@@ -20,6 +20,7 @@
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -40,6 +41,23 @@ using llvm::Record;
 using llvm::RecordKeeper;
 
 #define DEBUG_TYPE "mlir-tblgen-rewritergen"
+
+// The signature of static type verification function
+static const char *typeVerifierSignature =
+    "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+    "::mlir::Operation *op, ::mlir::Type typeOrAttr, "
+    "::llvm::StringRef failureStr)";
+
+// The signature of static attribute verification function
+static const char *attrVerifierSignature =
+    "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+    "::mlir::Operation *op, ::mlir::Attribute typeOrAttr, "
+    "::llvm::StringRef failureStr)";
+
+// The template of error handler in static type/attribute verification function
+static const char *verifierErrorHandler =
+    "rewriter.notifyMatchFailure(op, [&](::mlir::Diagnostic &diag) {\n  diag "
+    "<< failureStr <<  \": {0}\";\n});";
 
 namespace llvm {
 template <>
@@ -87,6 +105,10 @@ private:
   // Emit C++ function call to static DAG matcher.
   void emitStaticMatchCall(DagNode tree, StringRef name);
 
+  // Emit C++ function call to static type/attribute constraint function.
+  void emitStaticVerifierCall(StringRef funcName, StringRef opName,
+                              StringRef arg, StringRef failureStr);
+
   // Emits C++ statements for matching using a native code call.
   void emitNativeCodeMatch(DagNode tree, StringRef name, int depth);
 
@@ -95,10 +117,17 @@ private:
   void emitOpMatch(DagNode tree, StringRef opName, int depth);
 
   // Emits C++ statements for matching the `argIndex`-th argument of the given
-  // DAG `tree` as an operand. operandIndex is the index in the DAG excluding
-  // the preceding attributes.
-  void emitOperandMatch(DagNode tree, StringRef opName, int argIndex,
-                        int operandIndex, int depth);
+  // DAG `tree` as an operand. `operandName` and `operandMatcher` indicate the
+  // bound name and the constraint of the operand respectively.
+  void emitOperandMatch(DagNode tree, StringRef opName, StringRef operandName,
+                        DagLeaf operandMatcher, StringRef argName,
+                        int argIndex);
+
+  // Emits C++ statements for matching the operands which can be matched in
+  // either order.
+  void emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
+                              StringRef opName, int argIndex, int &operandIndex,
+                              int depth);
 
   // Emits C++ statements for matching the `argIndex`-th argument of the given
   // DAG `tree` as an attribute.
@@ -244,7 +273,8 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(RecordOperatorMap &mapper);
+  StaticMatcherHelper(const RecordKeeper &recordKeeper,
+                      RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
   // function.
@@ -258,12 +288,18 @@ public:
     return matcherNames[node];
   }
 
+  // Get the name of static type/attribute verification function.
+  StringRef getVerifierName(Constraint constraint);
+
   // Collect the `Record`s, i.e., the DRR, so that we can get the information of
   // the duplicated DAGs.
   void addPattern(Record *record);
 
   // Emit all static functions of DAG Matcher.
   void populateStaticMatchers(raw_ostream &os);
+
+  // Emit all static functions for Constraints.
+  void populateStaticConstraintFunctions(raw_ostream &os);
 
 private:
   static constexpr unsigned kStaticMatcherThreshold = 1;
@@ -301,6 +337,12 @@ private:
   // Number of static matcher generated. This is used to generate a unique name
   // for each DagNode.
   int staticMatcherCounter = 0;
+
+  // The DagLeaf which contains type or attr constraint.
+  DenseSet<DagLeaf> constraints;
+
+  // Static type/attribute verification function emitter.
+  StaticVerifierFunctionEmitter staticVerifierEmitter;
 };
 
 } // end anonymous namespace
@@ -395,6 +437,15 @@ void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
   os << "}\n";
 }
 
+void PatternEmitter::emitStaticVerifierCall(StringRef funcName,
+                                            StringRef opName, StringRef arg,
+                                            StringRef failureStr) {
+  os << formatv("if(failed({0}(rewriter, {1}, {2}, {3}))) {{\n", funcName,
+                opName, arg, failureStr);
+  os.scope().os << "return ::mlir::failure();\n";
+  os << "}\n";
+}
+
 // Helper function to match patterns.
 void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
                                          int depth) {
@@ -426,6 +477,9 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     std::string argName = formatv("arg{0}_{1}", depth, i);
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
+      if (argTree.isEither())
+        PrintFatalError(loc, "NativeCodeCall cannot have `either` operands");
+
       os << "Value " << argName << ";\n";
     } else {
       auto leaf = tree.getArgAsLeaf(i);
@@ -487,14 +541,15 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       self = argName;
     else
       self = formatv("{0}.getType()", argName);
-    emitMatchCheck(
-        opName,
-        tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
+    StringRef verifier = staticMatcherHelper.getVerifierName(constraint);
+    emitStaticVerifierCall(
+        verifier, opName, self,
         formatv("\"operand {0} of native code call '{1}' failed to satisfy "
                 "constraint: "
                 "'{2}'\"",
                 i, tree.getNativeCodeTemplate(),
-                escapeString(constraint.getSummary())));
+                escapeString(constraint.getSummary()))
+            .str());
   }
 
   LLVM_DEBUG(llvm::dbgs() << "done emitting match for native code call\n");
@@ -539,12 +594,6 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                    formatv("\"{0} is not {1} type\"", castedName,
                            op.getQualCppClassName()));
 
-  if (tree.getNumArgs() != op.getNumArgs())
-    PrintFatalError(loc, formatv("op '{0}' argument number mismatch: {1} in "
-                                 "pattern vs. {2} in definition",
-                                 op.getOperationName(), tree.getNumArgs(),
-                                 op.getNumArgs()));
-
   // If the operand's name is set, set to that variable.
   auto name = tree.getSymbol();
   if (!name.empty())
@@ -556,6 +605,11 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
 
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
+      if (argTree.isEither()) {
+        emitEitherOperandMatch(tree, argTree, castedName, i, nextOperand,
+                               depth);
+        continue;
+      }
       if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
         if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
@@ -564,6 +618,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
           PrintFatalError(loc, error);
         }
       }
+
       os << "{\n";
 
       // Attributes don't count for getODSOperands.
@@ -573,9 +628,10 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
           "(*{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
           argName, castedName, nextOperand);
       // Null check of operand's definingOp
-      emitMatchCheck(castedName, /*matchStr=*/argName,
-                     formatv("\"Operand {0} of {1} has null definingOp\"",
-                             nextOperand++, castedName));
+      emitMatchCheck(
+          castedName, /*matchStr=*/argName,
+          formatv("\"There's no operation that defines operand {0} of {1}\"",
+                  nextOperand++, castedName));
       emitMatch(argTree, argName, depth + 1);
       os << formatv("tblgen_ops.push_back({0});\n", argName);
       os.unindent() << "}\n";
@@ -584,8 +640,12 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
 
     // Next handle DAG leaf: operand or attribute
     if (opArg.is<NamedTypeConstraint *>()) {
-      // emitOperandMatch's argument indexing counts attributes.
-      emitOperandMatch(tree, castedName, i, nextOperand, depth);
+      auto operandName =
+          formatv("{0}.getODSOperands({1})", castedName, nextOperand);
+      emitOperandMatch(tree, castedName, operandName.str(),
+                       /*operandMatcher=*/tree.getArgAsLeaf(i),
+                       /*argName=*/tree.getArgName(i),
+                       /*argIndex=*/i);
       ++nextOperand;
     } else if (opArg.is<NamedAttribute *>()) {
       emitAttributeMatch(tree, opName, i, depth);
@@ -599,24 +659,23 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
 }
 
 void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
-                                      int argIndex, int operandIndex,
-                                      int depth) {
+                                      StringRef operandName,
+                                      DagLeaf operandMatcher, StringRef argName,
+                                      int argIndex) {
   Operator &op = tree.getDialectOp(opMap);
   auto *operand = op.getArg(argIndex).get<NamedTypeConstraint *>();
-  auto matcher = tree.getArgAsLeaf(argIndex);
 
   // If a constraint is specified, we need to generate C++ statements to
   // check the constraint.
-  if (!matcher.isUnspecified()) {
-    if (!matcher.isOperandMatcher()) {
+  if (!operandMatcher.isUnspecified()) {
+    if (!operandMatcher.isOperandMatcher())
       PrintFatalError(
           loc, formatv("the {1}-th argument of op '{0}' should be an operand",
                        op.getOperationName(), argIndex + 1));
-    }
 
     // Only need to verify if the matcher's type is different from the one
     // of op definition.
-    Constraint constraint = matcher.getAsConstraint();
+    Constraint constraint = operandMatcher.getAsConstraint();
     if (operand->constraint != constraint) {
       if (operand->isVariableLength()) {
         auto error = formatv(
@@ -624,33 +683,91 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
             op.getOperationName(), argIndex);
         PrintFatalError(loc, error);
       }
-      auto self = formatv("(*{0}.getODSOperands({1}).begin()).getType()",
-                          opName, operandIndex);
-      emitMatchCheck(
-          opName,
-          tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
-          formatv("\"operand {0} of op '{1}' failed to satisfy constraint: "
-                  "'{2}'\"",
-                  operand - op.operand_begin(), op.getOperationName(),
-                  escapeString(constraint.getSummary())));
+      auto self = formatv("(*{0}.begin()).getType()", operandName);
+      StringRef verifier = staticMatcherHelper.getVerifierName(constraint);
+      emitStaticVerifierCall(
+          verifier, opName, self.str(),
+          formatv(
+              "\"operand {0} of op '{1}' failed to satisfy constraint: '{2}'\"",
+              operand - op.operand_begin(), op.getOperationName(),
+              escapeString(constraint.getSummary()))
+              .str());
     }
   }
 
   // Capture the value
-  auto name = tree.getArgName(argIndex);
   // `$_` is a special symbol to ignore op argument matching.
-  if (!name.empty() && name != "_") {
-    // We need to subtract the number of attributes before this operand to get
-    // the index in the operand list.
-    auto numPrevAttrs = std::count_if(
-        op.arg_begin(), op.arg_begin() + argIndex,
-        [](const Argument &arg) { return arg.is<NamedAttribute *>(); });
-
-    auto res = symbolInfoMap.findBoundSymbol(name, tree, op, argIndex);
-    os << formatv("{0} = {1}.getODSOperands({2});\n",
-                  res->second.getVarName(name), opName,
-                  argIndex - numPrevAttrs);
+  if (!argName.empty() && argName != "_") {
+    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, argIndex);
+    os << formatv("{0} = {1};\n", res->second.getVarName(argName), operandName);
   }
+}
+
+void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
+                                            StringRef opName, int argIndex,
+                                            int &operandIndex, int depth) {
+  constexpr int numEitherArgs = 2;
+  if (eitherArgTree.getNumArgs() != numEitherArgs)
+    PrintFatalError(loc, "`either` only supports grouping two operands");
+
+  Operator &op = tree.getDialectOp(opMap);
+
+  std::string codeBuffer;
+  llvm::raw_string_ostream tblgenOps(codeBuffer);
+
+  std::string lambda = formatv("eitherLambda{0}", depth);
+  os << formatv("auto {0} = [&](OperandRange v0, OperandRange v1) {{\n",
+                lambda);
+
+  os.indent();
+
+  for (int i = 0; i < numEitherArgs; ++i, ++argIndex) {
+    if (DagNode argTree = eitherArgTree.getArgAsNestedDag(i)) {
+      if (argTree.isEither())
+        PrintFatalError(loc, "either cannot be nested");
+
+      std::string argName = formatv("local_op_{0}", i).str();
+
+      os << formatv("auto {0} = (*v{1}.begin()).getDefiningOp();\n", argName,
+                    i);
+      emitMatchCheck(
+          opName, /*matchStr=*/argName,
+          formatv("\"There's no operation that defines operand {0} of {1}\"",
+                  operandIndex++, opName));
+      emitMatch(argTree, argName, depth + 1);
+      // `tblgen_ops` is used to collect the matched operations. In either, we
+      // need to queue the operation only if the matching success. Thus we emit
+      // the code at the end.
+      tblgenOps << formatv("tblgen_ops.push_back({0});\n", argName);
+    } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
+      emitOperandMatch(tree, opName, /*operandName=*/formatv("v{0}", i).str(),
+                       /*operandMatcher=*/eitherArgTree.getArgAsLeaf(i),
+                       /*argName=*/eitherArgTree.getArgName(i), argIndex);
+      ++operandIndex;
+    } else {
+      PrintFatalError(loc, "either can only be applied on operand");
+    }
+  }
+
+  os << tblgenOps.str();
+  os << "return success();\n";
+  os.unindent() << "};\n";
+
+  os << "{\n";
+  os.indent();
+
+  os << formatv("auto eitherOperand0 = {0}.getODSOperands({1});\n", opName,
+                operandIndex - 2);
+  os << formatv("auto eitherOperand1 = {0}.getODSOperands({1});\n", opName,
+                operandIndex - 1);
+
+  os << formatv("if(failed({0}(eitherOperand0, eitherOperand1)) && "
+                "failed({0}(eitherOperand1, "
+                "eitherOperand0)))\n",
+                lambda);
+  os.indent() << "return failure();\n";
+
+  os.unindent().unindent() << "}\n";
 }
 
 void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
@@ -690,15 +807,17 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
                        op.getOperationName(), argIndex + 1));
     }
 
-    // If a constraint is specified, we need to generate C++ statements to
-    // check the constraint.
-    emitMatchCheck(
-        opName,
-        tgfmt(matcher.getConditionTemplate(), &fmtCtx.withSelf("tblgen_attr")),
+    // If a constraint is specified, we need to generate function call to its
+    // static verifier.
+    StringRef verifier =
+        staticMatcherHelper.getVerifierName(matcher.getAsConstraint());
+    emitStaticVerifierCall(
+        verifier, opName, "tblgen_attr",
         formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
                 "'{2}'\"",
                 op.getOperationName(), namedAttr->name,
-                escapeString(matcher.getAsConstraint().getSummary())));
+                escapeString(matcher.getAsConstraint().getSummary()))
+            .str());
   }
 
   // Capture the value
@@ -1571,8 +1690,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   }
 }
 
-StaticMatcherHelper::StaticMatcherHelper(RecordOperatorMap &mapper)
-    : opMap(mapper) {}
+StaticMatcherHelper::StaticMatcherHelper(const RecordKeeper &recordKeeper,
+                                         RecordOperatorMap &mapper)
+    : opMap(mapper), staticVerifierEmitter(recordKeeper) {}
 
 void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   // PatternEmitter will use the static matcher if there's one generated. To
@@ -1592,6 +1712,31 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   }
 }
 
+void StaticMatcherHelper::populateStaticConstraintFunctions(raw_ostream &os) {
+  llvm::SetVector<const void *> typeConstraints;
+  llvm::SetVector<const void *> attrConstraints;
+  for (DagLeaf leaf : constraints) {
+    if (leaf.isOperandMatcher()) {
+      typeConstraints.insert(leaf.getAsConstraint().getAsOpaquePointer());
+    } else {
+      assert(leaf.isAttrMatcher());
+      attrConstraints.insert(leaf.getAsConstraint().getAsOpaquePointer());
+    }
+  }
+
+  staticVerifierEmitter.setBuilder("rewriter").setSelf("typeOrAttr");
+
+  staticVerifierEmitter.emitConstraintMethods(typeVerifierSignature,
+                                              verifierErrorHandler,
+                                              typeConstraints.getArrayRef(), os,
+                                              /*emitDecl=*/false);
+
+  staticVerifierEmitter.emitConstraintMethods(attrVerifierSignature,
+                                              verifierErrorHandler,
+                                              attrConstraints.getArrayRef(), os,
+                                              /*emitDecl=*/false);
+}
+
 void StaticMatcherHelper::addPattern(Record *record) {
   Pattern pat(record, &opMap);
 
@@ -1608,11 +1753,20 @@ void StaticMatcherHelper::addPattern(Record *record) {
     for (unsigned i = 0, e = node.getNumArgs(); i < e; ++i)
       if (DagNode sibling = node.getArgAsNestedDag(i))
         dfs(sibling);
+      else {
+        DagLeaf leaf = node.getArgAsLeaf(i);
+        if (!leaf.isUnspecified())
+          constraints.insert(leaf);
+      }
 
     topologicalOrder.push_back(std::make_pair(node, record));
   };
 
   dfs(pat.getSourcePattern());
+}
+
+StringRef StaticMatcherHelper::getVerifierName(Constraint constraint) {
+  return staticVerifierEmitter.getConstraintFn(constraint);
 }
 
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
@@ -1625,9 +1779,10 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
-  StaticMatcherHelper staticMatcher(recordOpMap);
+  StaticMatcherHelper staticMatcher(recordKeeper, recordOpMap);
   for (Record *p : patterns)
     staticMatcher.addPattern(p);
+  staticMatcher.populateStaticConstraintFunctions(os);
   staticMatcher.populateStaticMatchers(os);
 
   std::vector<std::string> rewriterNames;

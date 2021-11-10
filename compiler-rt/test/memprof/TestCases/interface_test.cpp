@@ -1,8 +1,8 @@
 // Check that user may include MemProf interface header.
 // Also check that interfaces declared in the sanitizer's allocator_interface
 // are defined for MemProf.
-// RUN: %clang_memprof %s -o %t -DMEMPROF && %run %t
-// RUN: %clang_memprof -x c %s -o %t -DMEMPROF && %run %t
+// RUN: %clangxx_memprof %s -o %t -DMEMPROF && %run %t
+// RUN: %clangxx_memprof -x c %s -o %t -DMEMPROF && %run %t
 // RUN: %clang %s -pie -o %t && %run %t
 // RUN: %clang -x c %s -pie -o %t && %run %t
 #include <sanitizer/allocator_interface.h>

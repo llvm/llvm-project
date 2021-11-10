@@ -311,6 +311,9 @@ public:
   bool isSectionBitcode(DataRefImpl Sec) const override;
   bool isDebugSection(DataRefImpl Sec) const override;
 
+  /// Return the raw contents of an entire segment.
+  ArrayRef<uint8_t> getSegmentContents(StringRef SegmentName) const;
+
   /// When dsymutil generates the companion file, it strips all unnecessary
   /// sections (e.g. everything in the _TEXT segment) by omitting their body
   /// and setting the offset in their corresponding load command to zero.

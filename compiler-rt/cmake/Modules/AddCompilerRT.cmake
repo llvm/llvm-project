@@ -130,11 +130,14 @@ macro(set_output_name output name arch)
       else()
         set(triple "${TARGET_TRIPLE}")
       endif()
-      # When using arch-suffixed runtime library names, clang only looks for
-      # libraries named "arm" or "armhf", see getArchNameForCompilerRTLib in
-      # clang. Therefore, try to inspect both the arch name and the triple
-      # if it seems like we're building an armhf target.
-      if ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
+      # Except for baremetal, when using arch-suffixed runtime library names,
+      # clang only looks for libraries named "arm" or "armhf", see
+      # getArchNameForCompilerRTLib in clang. Therefore, try to inspect both
+      # the arch name and the triple if it seems like we're building an armhf
+      # target.
+      if (COMPILER_RT_BAREMETAL_BUILD)
+        set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
+      elseif ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
         set(${output} "${name}-armhf${COMPILER_RT_OS_SUFFIX}")
       else()
         set(${output} "${name}-arm${COMPILER_RT_OS_SUFFIX}")
@@ -188,8 +191,11 @@ function(add_compiler_rt_runtime name type)
     endif()
     if(LLVM_BUILD_INSTRUMENTED MATCHES IR AND COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
       list(APPEND NO_PGO_FLAGS "-fno-profile-generate")
-    elseif(LLVM_BUILD_INSTRUMENTED AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+    elseif((LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE) AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
       list(APPEND NO_PGO_FLAGS "-fno-profile-instr-generate")
+      if(LLVM_BUILD_INSTRUMENTED_COVERAGE AND COMPILER_RT_HAS_FNO_COVERAGE_MAPPING_FLAG)
+        list(APPEND NO_PGO_FLAGS "-fno-coverage-mapping")
+      endif()
     endif()
   endif()
 

@@ -8,7 +8,7 @@
 
 char **__attribute__((alloc_align(2)))
 passthrough(char **x, unsigned long alignment) {
-  // CHECK:      define{{.*}} i8** @[[PASSTHROUGH:.*]](i8** noundef %[[X:.*]], i64 noundef %[[ALIGNMENT:.*]])
+  // CHECK:      define{{.*}} i8** @[[PASSTHROUGH:.*]](i8** %[[X:.*]], i64 %[[ALIGNMENT:.*]])
   // CHECK-NEXT: entry:
   // CHECK-NEXT:   %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:   %[[ALIGNMENT_ADDR:.*]] = alloca i64, align 8
@@ -21,7 +21,7 @@ passthrough(char **x, unsigned long alignment) {
 }
 
 char **caller(char **x, unsigned long alignment) {
-  // CHECK:                           define{{.*}} i8** @{{.*}}(i8** noundef %[[X:.*]], i64 noundef %[[ALIGNMENT:.*]])
+  // CHECK:                           define{{.*}} i8** @{{.*}}(i8** %[[X:.*]], i64 %[[ALIGNMENT:.*]])
   // CHECK-NEXT:                      entry:
   // CHECK-NEXT:                        %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:                        %[[ALIGNMENT_ADDR:.*]] = alloca i64, align 8
@@ -29,7 +29,7 @@ char **caller(char **x, unsigned long alignment) {
   // CHECK-NEXT:                        store i64 %[[ALIGNMENT]], i64* %[[ALIGNMENT_ADDR]], align 8
   // CHECK-NEXT:                        %[[X_RELOADED:.*]] = load i8**, i8*** %[[X_ADDR]], align 8
   // CHECK-NEXT:                        %[[ALIGNMENT_RELOADED:.*]] = load i64, i64* %[[ALIGNMENT_ADDR]], align 8
-  // CHECK-NEXT:                        %[[X_RETURNED:.*]] = call noundef i8** @[[PASSTHROUGH]](i8** noundef %[[X_RELOADED]], i64 noundef %[[ALIGNMENT_RELOADED]])
+  // CHECK-NEXT:                        %[[X_RETURNED:.*]] = call i8** @[[PASSTHROUGH]](i8** %[[X_RELOADED]], i64 %[[ALIGNMENT_RELOADED]])
   // CHECK-SANITIZE-NEXT:               %[[PTRINT:.*]] = ptrtoint i8** %[[X_RETURNED]] to i64
   // CHECK-SANITIZE-NEXT:               %[[MASK:.*]] = sub i64 %[[ALIGNMENT_RELOADED]], 1
   // CHECK-SANITIZE-NEXT:               %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], %[[MASK]]

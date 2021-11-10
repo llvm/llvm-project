@@ -16,9 +16,11 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/bit.h"
 
 using namespace mlir;
 using namespace test;
@@ -125,6 +127,36 @@ TestI64ElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "expected single rank 64-bit shape type, but got: "
                        << type;
   return success();
+}
+
+LogicalResult
+TestAttrWithFormatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                               int64_t one, std::string two, IntegerAttr three,
+                               ArrayRef<int> four) {
+  if (four.size() != static_cast<unsigned>(one))
+    return emitError() << "expected 'one' to equal 'four.size()'";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Utility Functions for Generated Attributes
+//===----------------------------------------------------------------------===//
+
+static FailureOr<SmallVector<int>> parseIntArray(DialectAsmParser &parser) {
+  SmallVector<int> ints;
+  if (parser.parseLSquare() || parser.parseCommaSeparatedList([&]() {
+        ints.push_back(0);
+        return parser.parseInteger(ints.back());
+      }) ||
+      parser.parseRSquare())
+    return failure();
+  return ints;
+}
+
+static void printIntArray(DialectAsmPrinter &printer, ArrayRef<int> ints) {
+  printer << '[';
+  llvm::interleaveComma(ints, printer);
+  printer << ']';
 }
 
 //===----------------------------------------------------------------------===//

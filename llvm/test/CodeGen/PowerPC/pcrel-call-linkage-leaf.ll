@@ -45,12 +45,12 @@ define dso_local signext i32 @AsmClobberX2WithTOC(i32 signext %a, i32 signext %b
 ; CHECK-LARGE:     ld r2, .Lfunc_toc2-.Lfunc_gep2(r12)
 ; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S:         .localentry     AsmClobberX2WithTOC
-; CHECK-S:         add r3, r4, r3
-; CHECK-S-NEXT:    #APP
+; CHECK-S:         #APP
 ; CHECK-S-NEXT:    li r2, 0
 ; CHECK-S-NEXT:    #NO_APP
-; CHECK-S-NEXT:    plwz r4, global_int@PCREL(0), 1
-; CHECK-S-NEXT:    add r3, r3, r4
+; CHECK-S-NEXT:    plwz r5, global_int@PCREL(0), 1
+; CHECK-S-NEXT:    add r3, r4, r3
+; CHECK-S-NEXT:    add r3, r3, r5
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    blr
 entry:

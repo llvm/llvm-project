@@ -332,6 +332,14 @@ public:
   ConstantRange unionWith(const ConstantRange &CR,
                           PreferredRangeType Type = Smallest) const;
 
+  /// Intersect the two ranges and return the result if it can be represented
+  /// exactly, otherwise return None.
+  Optional<ConstantRange> exactIntersectWith(const ConstantRange &CR) const;
+
+  /// Union the two ranges and return the result if it can be represented
+  /// exactly, otherwise return None.
+  Optional<ConstantRange> exactUnionWith(const ConstantRange &CR) const;
+
   /// Return a new range representing the possible values resulting
   /// from an application of the specified cast operator to this range. \p
   /// BitWidth is the target bitwidth of the cast.  For casts which don't

@@ -1574,7 +1574,7 @@ static bool isZeroAttribute(Attribute value) {
   if (auto fpValue = value.dyn_cast<FloatAttr>())
     return fpValue.getValue().isZero();
   if (auto splatValue = value.dyn_cast<SplatElementsAttr>())
-    return isZeroAttribute(splatValue.getSplatValue());
+    return isZeroAttribute(splatValue.getSplatValue<Attribute>());
   if (auto elementsValue = value.dyn_cast<ElementsAttr>())
     return llvm::all_of(elementsValue.getValues<Attribute>(), isZeroAttribute);
   if (auto arrayValue = value.dyn_cast<ArrayAttr>())

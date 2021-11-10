@@ -60,21 +60,21 @@ void test2() {
   // CHECK:      [[BASE:%.*]] = call [[A:%.*]]* @test2_helper()
   // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
   // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: [[LD:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]])
+  // CHECK-NEXT: [[LD:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* [[BASETMP]], i8* [[SEL]])
   // CHECK-NEXT: [[ADD:%.*]] = add nsw i32 [[LD]], 1
   // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
   // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]], i32 noundef [[ADD]])
+  // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32)*)(i8* [[BASETMP]], i8* [[SEL]], i32 [[ADD]])
   test2_helper().dyn++;
 
   // CHECK:      [[BASE:%.*]] = call [[A]]* @test2_helper()
   // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
   // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: [[LD:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]])
+  // CHECK-NEXT: [[LD:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* [[BASETMP]], i8* [[SEL]])
   // CHECK-NEXT: [[ADD:%.*]] = mul nsw i32 [[LD]], 10
   // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8**
   // CHECK-NEXT: [[BASETMP:%.*]] = bitcast [[A]]* [[BASE]] to i8*
-  // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32)*)(i8* noundef [[BASETMP]], i8* noundef [[SEL]], i32 noundef [[ADD]])
+  // CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32)*)(i8* [[BASETMP]], i8* [[SEL]], i32 [[ADD]])
   test2_helper().dyn *= 10;
 }
 
@@ -99,7 +99,7 @@ void test4(Test4 *t) {
   extern int test4_printf(const char *, ...);
   // CHECK: [[TMP:%.*]] = call float {{.*}} @objc_msgSend
   // CHECK-NEXT: [[EXT:%.*]] = fpext float [[TMP]] to double
-  // CHECK-NEXT: call i32 (i8*, ...) @test4_printf(i8* {{.*}}, double noundef [[EXT]])
+  // CHECK-NEXT: call i32 (i8*, ...) @test4_printf(i8* {{.*}}, double [[EXT]])
   // CHECK-NEXT: ret void
   test4_printf("%.2f", t.f);
 }

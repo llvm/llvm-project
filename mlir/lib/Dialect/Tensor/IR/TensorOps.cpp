@@ -340,7 +340,7 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute> operands) {
   // If this is a splat elements attribute, simply return the value. All of the
   // elements of a splat attribute are the same.
   if (auto splatTensor = tensor.dyn_cast<SplatElementsAttr>())
-    return splatTensor.getSplatValue();
+    return splatTensor.getSplatValue<Attribute>();
 
   // Otherwise, collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
@@ -353,7 +353,7 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute> operands) {
   // If this is an elements attribute, query the value at the given indices.
   auto elementsAttr = tensor.dyn_cast<ElementsAttr>();
   if (elementsAttr && elementsAttr.isValidIndex(indices))
-    return elementsAttr.getValue(indices);
+    return elementsAttr.getValues<Attribute>()[indices];
   return {};
 }
 
@@ -440,7 +440,7 @@ OpFoldResult InsertOp::fold(ArrayRef<Attribute> operands) {
   Attribute dest = operands[1];
   if (scalar && dest)
     if (auto splatDest = dest.dyn_cast<SplatElementsAttr>())
-      if (scalar == splatDest.getSplatValue())
+      if (scalar == splatDest.getSplatValue<Attribute>())
         return dest;
   return {};
 }
