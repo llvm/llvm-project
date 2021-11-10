@@ -3643,6 +3643,10 @@ InstructionCost X86TTIImpl::getReplicationShuffleCost(
     if (!ST->hasBWI())
       return bailout();
     break;
+  case 8:
+    if (!ST->hasVBMI())
+      return bailout();
+    break;
   default:
     return bailout();
   }
