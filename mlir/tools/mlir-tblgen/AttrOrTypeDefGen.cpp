@@ -1007,13 +1007,11 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
     os << formatv("    .Case<{0}::{1}>([&]({0}::{1} t) {{\n      ",
                   cppNamespace, cppClassName);
 
+    os << formatv("printer << {0}::{1}::getMnemonic();", cppNamespace,
+                  cppClassName);
     // If the def has no parameters and no printer, just print the mnemonic.
-    if (def.getNumParameters() == 0 && !def.getPrinterCode()) {
-      os << formatv("printer << {0}::{1}::getMnemonic();", cppNamespace,
-                    cppClassName);
-    } else {
+    if (def.getNumParameters() != 0 || def.getPrinterCode())
       os << "t.print(printer);";
-    }
     os << "\n      return ::mlir::success();\n    })\n";
   }
   os << llvm::formatv(

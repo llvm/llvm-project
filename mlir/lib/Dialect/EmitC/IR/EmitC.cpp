@@ -201,7 +201,7 @@ void EmitCDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 }
 
 void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
-  printer << "opaque<\"";
+  printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
   printer << "\">";
 }
@@ -228,7 +228,7 @@ Type emitc::OpaqueType::parse(DialectAsmParser &parser) {
 }
 
 void emitc::OpaqueType::print(DialectAsmPrinter &printer) const {
-  printer << "opaque<\"";
+  printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
   printer << "\">";
 }
