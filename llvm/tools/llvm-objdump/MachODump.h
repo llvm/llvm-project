@@ -36,6 +36,7 @@ void parseMachOOptions(const llvm::opt::InputArgList &InputArgs);
 extern bool Bind;
 extern bool DataInCode;
 extern std::string DisSymName;
+extern bool DyldInfo;
 extern bool DylibId;
 extern bool DylibsUsed;
 extern bool ExportsTrie;
