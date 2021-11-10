@@ -25,7 +25,7 @@ using namespace mlir::tosa;
 /// There are two potential ways implementing broadcast:
 /// a. https://www.tensorflow.org/xla/broadcasting#formal_definition
 /// b. https://numpy.org/doc/stable/user/basics.broadcasting.html
-/// TBD: picking option (a) now.
+/// This pass implements b (numpy style) now.
 
 /// In this pass, we insert RESHAPE operators to increase the rank of the
 /// lower rank operand as a first step in the broadcasting process. The TOSA
@@ -33,75 +33,39 @@ using namespace mlir::tosa;
 /// are equal.
 
 // Examples:
-// If lower=[a], target=[a, b, c], [a] reshaped into [a, 1, 1].
-// TODO: If lower=[b], target=[a, b, c], [b] should but NOT YET reshaped into
-// [1, b, 1].
-// If lower=[c], target=[a, b, c], [c] reshaped into [1, 1, c].
-// If lower=[a, c], target=[a, b, c], [a, c] reshaped into [a, 1, c].
-// If lower=[a, b], target=[a, b, c], [a, b] reshaped into [a, b, 1].
-// If lower=[b, c], target=[a, b, c], [b, c] reshaped into [1, b, c].
-// If lower=[a], target=[a, a], [a] reshaped into [1, a] instead of [a, 1].
+// If lower=[c], higher=[a, b, c], [c] reshaped into [1, 1, c].
+// If lower=[b, c], higher=[a, b, c], [b, c] reshaped into [1, b, c].
+// If lower=[a], higher=[a, a], [a] reshaped into [1, a].
 // If lower=[a], target=[a, b, a], [a] reshaped into [1, 1, a].
 // If lower=[], target=[a, b, c], [] reshaped into [1, 1, 1].
 
-static void computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
-                                 ArrayRef<int64_t> lowerRankShape,
-                                 SmallVectorImpl<int64_t> &reshapeOutputShape) {
+static LogicalResult
+computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
+                     ArrayRef<int64_t> lowerRankShape,
+                     SmallVectorImpl<int64_t> &reshapeOutputShape) {
   // Initialize new shapes with [1] * higherRank.
   int64_t higherRank = higherRankShape.size();
   int64_t lowerRank = lowerRankShape.size();
 
   reshapeOutputShape.assign(higherRank, 1);
 
-  int64_t higherLeftIndex = 0;
-  int64_t higherRightIndex = higherRank;
-  int64_t lowerLeftIndex = 0;
-  int64_t lowerRightIndex = lowerRank;
-  int64_t higherRankDim, lowerRankDim;
+  int64_t higherRankDim;
+  int64_t lowerRankDim;
 
-  if (lowerRightIndex != 0 && higherRightIndex != 0) {
-    // Matches lower rank shape from right dimension first, until not
-    // matching high rank shape or reaching dimension 0.
-    while (true) {
-      higherRankDim = higherRankShape[higherRightIndex - 1];
-      lowerRankDim = lowerRankShape[lowerRightIndex - 1];
-      if (higherRankDim != lowerRankDim)
-        break;
+  for (int64_t i = higherRank - 1, j = lowerRank - 1; i >= 0 && j >= 0;
+       i--, j--) {
+    higherRankDim = higherRankShape[i];
+    lowerRankDim = lowerRankShape[j];
 
-      reshapeOutputShape[higherRightIndex - 1] = higherRankDim;
-
-      if (higherRightIndex > 0)
-        higherRightIndex--;
-
-      if (lowerRightIndex > 0)
-        lowerRightIndex--;
-
-      if (higherRightIndex == 0 || lowerRightIndex == 0)
-        break;
-    }
-    if (lowerRightIndex != 0 && higherRightIndex != 0) {
-      // Matches lower rank shape from left dimension, until not matching
-      // high rank shape or reaching right index.
-      while (true) {
-        higherRankDim = higherRankShape[higherLeftIndex];
-        lowerRankDim = lowerRankShape[lowerLeftIndex];
-        if (higherRankDim != lowerRankDim)
-          break;
-
-        reshapeOutputShape[higherLeftIndex] = higherRankDim;
-
-        if (higherLeftIndex < higherRightIndex)
-          higherLeftIndex++;
-
-        if (lowerLeftIndex < lowerRightIndex)
-          lowerLeftIndex++;
-
-        if (higherLeftIndex == higherRightIndex ||
-            lowerLeftIndex == lowerRightIndex)
-          break;
-      }
-    }
+    if (lowerRankDim == 1 && higherRankDim > 1)
+      reshapeOutputShape[i] = 1;
+    else if ((lowerRankDim > 1 && higherRankDim == 1) ||
+             (lowerRankDim == higherRankDim))
+      reshapeOutputShape[i] = lowerRankDim;
+    else if (higherRankDim != lowerRankDim)
+      return failure();
   }
+  return success();
 }
 
 /// Common code to create the reshape op where necessary to make the rank of the
@@ -143,8 +107,9 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
 
   SmallVector<int64_t, 4> reshapeOutputShape;
 
-  computeReshapeOutput(outputType.getShape(), lowerRankShape,
-                       reshapeOutputShape);
+  if (computeReshapeOutput(higherRankShape, lowerRankShape, reshapeOutputShape)
+          .failed())
+    return failure();
 
   auto reshapeInputType = lowerTensorValue.getType().cast<RankedTensorType>();
   auto reshapeOutputType = RankedTensorType::get(
