@@ -9287,20 +9287,12 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     GV->setDSOLocal(true);
   }
 
+  if (GV->isDeclaration())
+    return;
+
   llvm::Function *F = dyn_cast<llvm::Function>(GV);
   if (!F)
     return;
-
-  if (M.getLangOpts().OpenMP) {
-    F->removeFnAttr(llvm::Attribute::OptimizeNone);
-    F->removeFnAttr(llvm::Attribute::NoInline);
-    F->addFnAttr(llvm::Attribute::AlwaysInline);
-    F->addFnAttr(llvm::Attribute::NoUnwind);
-    F->addFnAttr(llvm::Attribute::NoRecurse);
-  }
-  if (GV->isDeclaration())
-    return;
-  // The rest of setTargetAttributes is for Function definitions
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD)
