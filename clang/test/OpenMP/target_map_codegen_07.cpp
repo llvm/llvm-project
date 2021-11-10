@@ -63,7 +63,7 @@ void implicit_maps_float (int a){
   }
 }
 
-// CK8: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK8: define internal void [[KERNEL]](i[[sz]] [[ARG:%.+]])
 // CK8: [[ADDR:%.+]] = alloca i[[sz]],
 // CK8: store i[[sz]] [[ARG]], i[[sz]]* [[ADDR]],
 // CK8: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to float*

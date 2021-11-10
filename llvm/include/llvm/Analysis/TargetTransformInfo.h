@@ -30,6 +30,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
+#include <utility>
 
 namespace llvm {
 
@@ -388,6 +389,9 @@ public:
   bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const;
 
   unsigned getAssumedAddrSpace(const Value *V) const;
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const;
 
   /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
   /// NewV, which has a different address space. This should happen for every
@@ -915,6 +919,9 @@ public:
   /// \return The maximum value of vscale if the target specifies an
   ///  architectural maximum vector length, and None otherwise.
   Optional<unsigned> getMaxVScale() const;
+
+  /// \return the value of vscale to tune the cost model for.
+  Optional<unsigned> getVScaleForTuning() const;
 
   /// \return True if the vectorization factor should be chosen to
   /// make the vector of the smallest element type match the size of a
@@ -1478,6 +1485,8 @@ public:
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const = 0;
   virtual unsigned getAssumedAddrSpace(const Value *V) const = 0;
+  virtual std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const = 0;
   virtual Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                   Value *OldV,
                                                   Value *NewV) const = 0;
@@ -1590,6 +1599,7 @@ public:
   virtual TypeSize getRegisterBitWidth(RegisterKind K) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() const = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
+  virtual Optional<unsigned> getVScaleForTuning() const = 0;
   virtual bool shouldMaximizeVectorBandwidth() const = 0;
   virtual ElementCount getMinimumVF(unsigned ElemWidth,
                                     bool IsScalable) const = 0;
@@ -1818,6 +1828,11 @@ public:
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
     return Impl.getAssumedAddrSpace(V);
+  }
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const override {
+    return Impl.getPredicatedAddrSpace(V);
   }
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
@@ -2059,6 +2074,9 @@ public:
   }
   Optional<unsigned> getMaxVScale() const override {
     return Impl.getMaxVScale();
+  }
+  Optional<unsigned> getVScaleForTuning() const override {
+    return Impl.getVScaleForTuning();
   }
   bool shouldMaximizeVectorBandwidth() const override {
     return Impl.shouldMaximizeVectorBandwidth();

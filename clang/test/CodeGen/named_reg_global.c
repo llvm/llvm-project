@@ -30,7 +30,7 @@ unsigned long get_stack_pointer_addr() {
 }
 // CHECK: declare{{.*}} i[[bits]] @llvm.read_register.i[[bits]](metadata)
 
-// CHECK: define{{.*}} void @set_stack_pointer_addr(i[[bits]] noundef %addr) #0 {
+// CHECK: define{{.*}} void @set_stack_pointer_addr(i[[bits]] %addr) #0 {
 // CHECK: [[sto:%[0-9]+]] = load i[[bits]], i[[bits]]* %
 // CHECK: call void @llvm.write_register.i[[bits]](metadata !0, i[[bits]] [[sto]])
 // CHECK: ret void

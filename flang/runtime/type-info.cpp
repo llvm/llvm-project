@@ -116,11 +116,15 @@ void Component::EstablishDescriptor(Descriptor &descriptor,
 }
 
 void Component::CreatePointerDescriptor(Descriptor &descriptor,
-    const Descriptor &container, const SubscriptValue subscripts[],
-    Terminator &terminator) const {
+    const Descriptor &container, Terminator &terminator,
+    const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
   EstablishDescriptor(descriptor, container, terminator);
-  descriptor.set_base_addr(container.Element<char>(subscripts) + offset_);
+  if (subscripts) {
+    descriptor.set_base_addr(container.Element<char>(subscripts) + offset_);
+  } else {
+    descriptor.set_base_addr(container.OffsetElement<char>() + offset_);
+  }
   descriptor.raw().attribute = CFI_attribute_pointer;
 }
 
@@ -167,12 +171,11 @@ static void DumpScalarCharacter(
 }
 
 FILE *DerivedType::Dump(FILE *f) const {
-  std::fprintf(
-      f, "DerivedType @ 0x%p:\n", reinterpret_cast<const void *>(this));
+  std::fprintf(f, "DerivedType @ %p:\n", reinterpret_cast<const void *>(this));
   const std::uint64_t *uints{reinterpret_cast<const std::uint64_t *>(this)};
   for (int j{0}; j < 64; ++j) {
     int offset{j * static_cast<int>(sizeof *uints)};
-    std::fprintf(f, "    [+%3d](0x%p) 0x%016jx", offset,
+    std::fprintf(f, "    [+%3d](%p) 0x%016jx", offset,
         reinterpret_cast<const void *>(&uints[j]),
         static_cast<std::uintmax_t>(uints[j]));
     if (offset == offsetof(DerivedType, binding_)) {
@@ -235,7 +238,7 @@ FILE *DerivedType::Dump(FILE *f) const {
 }
 
 FILE *Component::Dump(FILE *f) const {
-  std::fprintf(f, "Component @ 0x%p:\n", reinterpret_cast<const void *>(this));
+  std::fprintf(f, "Component @ %p:\n", reinterpret_cast<const void *>(this));
   std::fputs("    name: ", f);
   DumpScalarCharacter(f, name(), "Component::name");
   if (genre_ == Genre::Data) {
@@ -252,7 +255,7 @@ FILE *Component::Dump(FILE *f) const {
   std::fprintf(f, " category %d  kind %d  rank %d  offset 0x%zx\n", category_,
       kind_, rank_, static_cast<std::size_t>(offset_));
   if (initialization_) {
-    std::fprintf(f, " initialization @ 0x%p:\n",
+    std::fprintf(f, " initialization @ %p:\n",
         reinterpret_cast<const void *>(initialization_));
     for (int j{0}; j < 128; j += sizeof(std::uint64_t)) {
       std::fprintf(f, " [%3d] 0x%016jx\n", j,
@@ -265,7 +268,7 @@ FILE *Component::Dump(FILE *f) const {
 
 FILE *SpecialBinding::Dump(FILE *f) const {
   std::fprintf(
-      f, "SpecialBinding @ 0x%p:\n", reinterpret_cast<const void *>(this));
+      f, "SpecialBinding @ %p:\n", reinterpret_cast<const void *>(this));
   switch (which_) {
   case Which::ScalarAssignment:
     std::fputs("    ScalarAssignment", f);
@@ -297,7 +300,7 @@ FILE *SpecialBinding::Dump(FILE *f) const {
     break;
   }
   std::fprintf(f, "    isArgDescriptorSet: 0x%x\n", isArgDescriptorSet_);
-  std::fprintf(f, "    proc: 0x%p\n", reinterpret_cast<void *>(proc_));
+  std::fprintf(f, "    proc: %p\n", reinterpret_cast<void *>(proc_));
   return f;
 }
 

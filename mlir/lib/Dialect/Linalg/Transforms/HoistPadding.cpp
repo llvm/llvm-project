@@ -48,6 +48,10 @@ using namespace mlir::linalg;
 ///      contains an unknown op with a region.
 ///   4. The backward slice from the pad op to the scf::ForOp to hoist above is
 ///      empty.
+///   5. The source tensor of pad op is not defined by an extract slice op.
+///   6. The source tensor of the extract slice op is not defined outside of
+///      the outermost enclosing scf::ForOp.
+///   7. There is no enclosing scf::ForOp that indexes the padded data.
 /// Other cases succeed and will trigger hoisting of the pad op.
 struct HoistingAnalysis {
   HoistingAnalysis(PadTensorOp padTensorOp, int nLevels);
@@ -82,6 +86,26 @@ struct HoistingAnalysis {
       packingLoops;
 
 private:
+  /// Returns the loops in `backwardSlice` used to index the padded data. The
+  /// method starts from `padTensorOp` and `sliceOp`, follows the use-def
+  /// chains of their index operands, and stores any enclosing loop whose
+  /// induction variable is part of the walked index computation.
+  ///
+  /// Example:
+  /// ```
+  /// %source = linalg.fill(%cst, %arg0)
+  /// scf.for %i
+  ///   scf.for %j
+  ///     scf.for %k // not used to index %source!
+  ///       %ubi = affine.min #map(%i)
+  ///       %ubj = affine.min #map(%j)
+  ///       %slice = tensor.extract_slice %source [%i, %j] [%ubi, %ubj]
+  ///       %padded_slice = linalg.pad_tensor %slice
+  /// ```
+  /// getIndexingLoops(%padded_slice, %slice) returns [scf.for %i, scf.for %j]
+  SetVector<Operation *> getIndexingLoops(PadTensorOp padTensorOp,
+                                          tensor::ExtractSliceOp sliceOp);
+
   /// Encodes whether the analysis is valid and hoisting can proceed.
   bool valid;
 };
@@ -166,26 +190,113 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int nLevels)
   if (analysisFailure || backwardSlice.empty())
     return;
 
-  // Backward slice is a topologically sorted list of ops starting at
-  // `outermostEnclosingForOp`.
-  assert(outermostEnclosingForOp == backwardSlice.front());
+  // Get the `sliceOp` that defines the source tensor of `padTensorOp` and
+  // check its source is defined outside of the outermost loop. This check
+  // ensures the padded data is available for packing before entering the
+  // outermost enclosing loop.
+  //
+  // Example:
+  // ```
+  // %source = linalg.fill(%cst, %arg0)
+  // // %source is available for packing here!
+  // scf.for %i
+  //   scf.for %j
+  //     scf.for %k
+  //       %slice = tensor.extract_slice %source [%i, %j]
+  //       %padded_slice = linalg.pad_tensor %slice
+  // ```
+  auto sliceOp = padTensorOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!sliceOp) {
+    LLVM_DEBUG(DBGS() << "Cannot find the extract slice op -> skip\n");
+    return;
+  }
+  if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.source())) {
+    LLVM_DEBUG(DBGS() << "Source not defined outside of loops -> skip\n");
+    return;
+  }
 
-  // Filter out the loops whose induction variable is not used to compute the
-  // padded result. As a first approximation, just look for IVs that have no use
-  // in the backwardSlice.
-  // These are the dimensions of reuse that we can exploit to reduce the amount
-  // of copy / memory.
+  // Search the loops found in `backwardSlice` used to index the padded data.
+  SetVector<Operation *> indexingLoops = getIndexingLoops(padTensorOp, sliceOp);
+
+  // Add only the loops part of `indexingLoops` to the packing loops. All other
+  // loops are not used to index the padded data and consequently access the
+  // same data in every loop iteration. Adding them to the packing loops would
+  // increase the cache footprint of the packed data by storing the same data
+  // multiple times.
   for (scf::ForOp forOp : llvm::reverse(reverseEnclosingLoops)) {
-    for (Operation *user : forOp.getInductionVar().getUsers()) {
-      if (backwardSlice.contains(user)) {
-        packingLoops.insert(forOp);
-        break;
-      }
-    }
+    if (indexingLoops.contains(forOp))
+      packingLoops.insert(forOp);
+  }
+  assert(indexingLoops.size() == packingLoops.size() &&
+         "expect the all indexing loops are enclosing loops");
+  if (packingLoops.empty()) {
+    LLVM_DEBUG(DBGS() << "Cannot find a packing loop -> skip\n");
+    return;
   }
 
   // The analysis is valid and hoisting can occur.
   valid = true;
+}
+
+/// Add all index operands of `operation` to `indexEdges`. An index operand is
+/// an operand of type index.
+static void addIndexOperandsToIndexEdges(Operation *operation,
+                                         SetVector<Value> &indexEdges) {
+  for (Value operand : operation->getOperands())
+    if (operand.getType().isIndex())
+      indexEdges.insert(operand);
+}
+
+SetVector<Operation *>
+HoistingAnalysis::getIndexingLoops(PadTensorOp padTensorOp,
+                                   tensor::ExtractSliceOp sliceOp) {
+  // Set of all values used for index computation.
+  SetVector<Value> indexEdges;
+
+  // Starting from `padTensorOp` and `sliceOp` walk the use-def edges of index
+  // type in `backwardSlice`. Add the index operands of an operation to
+  // `indexEdges` if one of its results is an index edge found so far and store
+  // all loops part of the index computation to `indexingLoops`.
+  //
+  // Example:
+  // ```
+  // %source = linalg.fill(%cst, %arg0)
+  // scf.for %i
+  //   scf.for %j
+  //     scf.for %k // not used to index %source!
+  //       %ubi = affine.min #map(%i)
+  //       %ubj = affine.min #map(%j)
+  //       %slice = tensor.extract_slice %source [%i, %j] [%ubi, %ubj]
+  //       %padded_slice = linalg.pad_tensor %slice
+  // ```
+  // After iterating `backwardSlice` we obtain:
+  // indexEdges = [%i, %j, %ubi, %ubj]
+  // indexingLoops = [scf.for %i, scf.for %j]
+  SetVector<Operation *> indexingLoops;
+  for (Operation *op : llvm::reverse(backwardSlice)) {
+    // Add the index operands of `padTensorOp` and `sliceOp` to start the
+    // exploration of the index computation.
+    if (op == padTensorOp || op == sliceOp) {
+      addIndexOperandsToIndexEdges(op, indexEdges);
+      continue;
+    }
+    // Add the index operands of the loop if its induction variable is
+    // used for index computation. Additionally, insert the loop into
+    // `indexingLoops`
+    if (auto forOp = dyn_cast<scf::ForOp>(op)) {
+      if (indexEdges.contains(forOp.getInductionVar())) {
+        addIndexOperandsToIndexEdges(op, indexEdges);
+        indexingLoops.insert(forOp);
+        continue;
+      }
+    }
+    // Add the index operands of all other operations if at least one result is
+    // used for index computation.
+    if (llvm::any_of(op->getResults(),
+                     [&](Value result) { return indexEdges.contains(result); }))
+      addIndexOperandsToIndexEdges(op, indexEdges);
+  }
+  return indexingLoops;
 }
 
 static bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
@@ -204,6 +315,8 @@ static bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
 ///   - scf::ForOp are simply skipped.
 ///   - AffineApplyOp are composed to replace the result by an equality.
 ///   - AffineMinOp are composed by adding each entry as an upper bound.
+/// Additionally, the following terminal operations are handled:
+///   - DimOp and ConstantOp are skipped.
 /// If any other operation is met, return failure.
 // TODO: extend on a per-need basis.
 static LogicalResult
@@ -213,23 +326,60 @@ foldUpperBoundsIntoConstraintsSet(FlatAffineValueConstraints &constraints,
   SetVector<Value> toProjectOut;
   for (scf::ForOp loop : loops) {
     auto ub = loop.upperBound();
-    if (isDefinedOutsideOrConstant(outerLimit, ub))
-      continue;
 
-    // Compute a backward slice up to, but not including, `outerLimit`.
-    SetVector<Operation *> backwardSlice;
-    getBackwardSlice(ub, &backwardSlice, [&](Operation *op) {
-      return outerLimit->isProperAncestor(op);
+    // Set of all values used for index computation.
+    SetVector<Value> indexEdges;
+    indexEdges.insert(ub);
+
+    // Compute the backward slice `indexSlice` containing the index computation
+    // performed to obtain the upper bound `ub`. Starting from `ub` add the
+    // index operands of an operation to `indexEdges` if one of its results is
+    // an index edge. Otherwise, stop the slice computation. For a loop, check
+    // if its induction variable is an index edge.
+    //
+    // Example:
+    // ```
+    // %c0 = arith.constant 0
+    // scf.for %i = %c0 to ...
+    //   scf.for %j = %c0 to ...
+    //     %ub = affine.min #map(%i)
+    //     scf.for %k = %c0 to %ub
+    // ```
+    // After computing the backward slice we obtain:
+    // indexEdges = [%ub, %i, %c0]
+    // indexSlice = [arith.constant 0, scf.for %i, affine.min #map(%i)]
+    SetVector<Operation *> indexSlice;
+    getBackwardSlice(ub, &indexSlice, [&](Operation *op) {
+      // Continue only along the index operands of the ForOp.
+      if (auto forOp = dyn_cast<scf::ForOp>(op)) {
+        // Consider only loops part of the enclosing loops.
+        if (!outerLimit->isAncestor(op))
+          return false;
+        if (!indexEdges.contains(forOp.getInductionVar()))
+          return false;
+        addIndexOperandsToIndexEdges(op, indexEdges);
+        return true;
+      }
+      // All supported index operations have one result.
+      assert(op->getNumResults() == 1 &&
+             "expect operations to have one result");
+      if (!indexEdges.contains(op->getResult(0)))
+        return false;
+      addIndexOperandsToIndexEdges(op, indexEdges);
+      return true;
     });
-    backwardSlice.insert(ub.getDefiningOp());
+    indexSlice.insert(ub.getDefiningOp());
 
     // Iterate over all ops in the slice and compose them in the constraints.
-    for (Operation *op : llvm::reverse(backwardSlice)) {
-      if (!isa<scf::ForOp, AffineApplyOp, AffineMinOp>(op))
-        return failure();
-      if (isa<scf::ForOp>(op))
+    for (Operation *op : llvm::reverse(indexSlice)) {
+      // All ForOps have previously been added to the constraints and ConstantOp
+      // and DimOp are terminals of the index computation.
+      if (isa<scf::ForOp, arith::ConstantOp, tensor::DimOp>(op))
         continue;
-      // Ensure there is a
+      // Check all index computation operations are supported.
+      if (!isa<AffineApplyOp, AffineMinOp>(op))
+        return failure();
+      // Ensure there is an id.
       auto ensureIdFailed = [&](Value v) {
         if (constraints.containsId(v)) {
           unsigned pos;
@@ -247,6 +397,8 @@ foldUpperBoundsIntoConstraintsSet(FlatAffineValueConstraints &constraints,
 
       // All supported ops have 1 result.
       // TODO: extend when needed.
+      assert(op->getNumResults() == 1 &&
+             "expect operations to have one result");
       toProjectOut.insert(op->getResult(0));
 
       // Compose supported ops.

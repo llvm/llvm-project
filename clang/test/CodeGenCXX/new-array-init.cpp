@@ -34,7 +34,7 @@ void check_array_value_init() {
   struct S;
   new (int S::*[3][4][5]) ();
 
-  // CHECK: call noalias noundef nonnull i8* @_Zna{{.}}(i{{32 noundef 240|64 noundef 480}})
+  // CHECK: call noalias nonnull i8* @_Zna{{.}}(i{{32 240|64 480}})
   // CHECK: getelementptr inbounds i{{32|64}}, i{{32|64}}* {{.*}}, i{{32|64}} 60
 
   // CHECK: phi
@@ -49,7 +49,7 @@ void string_nonconst(int n) {
   // CHECK: icmp slt i{{32|64}} %{{[^ ]+}}, 4
   // FIXME: Conditionally throw an exception rather than passing -1 to alloc function
   // CHECK: select
-  // CHECK: %[[PTR:.*]] = call noalias noundef nonnull i8* @_Zna{{.}}(i{{32|64}}
+  // CHECK: %[[PTR:.*]] = call noalias nonnull i8* @_Zna{{.}}(i{{32|64}}
   // CHECK: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} %[[PTR]], i8* align {{[0-9]+}} getelementptr inbounds ([4 x i8], [4 x i8]* @[[ABC4]], i32 0, i32 0), i32 4,
   // CHECK: %[[REST:.*]] = getelementptr inbounds i8, i8* %[[PTR]], i32 4
   // CHECK: %[[RESTSIZE:.*]] = sub {{.*}}, 4
@@ -60,7 +60,7 @@ void string_nonconst(int n) {
 // CHECK-LABEL: define{{.*}} void @_Z12string_exactv
 void string_exact() {
   // CHECK-NOT: icmp
-  // CHECK: %[[PTR:.*]] = call noalias noundef nonnull i8* @_Zna{{.}}(i{{32|64}} noundef 4)
+  // CHECK: %[[PTR:.*]] = call noalias nonnull i8* @_Zna{{.}}(i{{32|64}} 4)
   // CHECK: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} %[[PTR]], i8* align {{[0-9]+}} getelementptr inbounds ([4 x i8], [4 x i8]* @[[ABC4]], i32 0, i32 0), i32 4,
   // CHECK-NOT: memset
   new char[4] { "abc" };
@@ -69,7 +69,7 @@ void string_exact() {
 // CHECK-LABEL: define{{.*}} void @_Z17string_sufficientv
 void string_sufficient() {
   // CHECK-NOT: icmp
-  // CHECK: %[[PTR:.*]] = call noalias noundef nonnull i8* @_Zna{{.}}(i{{32|64}} noundef 15)
+  // CHECK: %[[PTR:.*]] = call noalias nonnull i8* @_Zna{{.}}(i{{32|64}} 15)
   // FIXME: For very large arrays, it would be preferable to emit a small copy and a memset.
   // CHECK: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} %[[PTR]], i8* align {{[0-9]+}} getelementptr inbounds ([15 x i8], [15 x i8]* @[[ABC15]], i32 0, i32 0), i32 15,
   // CHECK-NOT: memset
@@ -79,7 +79,7 @@ void string_sufficient() {
 // CHECK-LABEL: define{{.*}} void @_Z10aggr_exactv
 void aggr_exact() {
   // CHECK-NOT: icmp
-  // CHECK: %[[MEM:.*]] = call noalias noundef nonnull i8* @_Zna{{.}}(i{{32|64}} noundef 16)
+  // CHECK: %[[MEM:.*]] = call noalias nonnull i8* @_Zna{{.}}(i{{32|64}} 16)
   // CHECK: %[[PTR0:.*]] = bitcast i8* %[[MEM]] to %[[AGGR:.*]]*
   // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], %[[AGGR]]* %[[PTR0]], i32 0, i32 0{{$}}
   // CHECK: store i32 1, i32* %[[FIELD]]
@@ -99,7 +99,7 @@ void aggr_exact() {
 // CHECK-LABEL: define{{.*}} void @_Z15aggr_sufficienti
 void aggr_sufficient(int n) {
   // CHECK: icmp ult i32 %{{.*}}, 2
-  // CHECK: %[[MEM:.*]] = call noalias noundef nonnull i8* @_Zna{{.}}(
+  // CHECK: %[[MEM:.*]] = call noalias nonnull i8* @_Zna{{.}}(
   // CHECK: %[[PTR0:.*]] = bitcast i8* %[[MEM]] to %[[AGGR:.*]]*
   // CHECK: %[[FIELD:.*]] = getelementptr inbounds %[[AGGR]], %[[AGGR]]* %[[PTR0]], i32 0, i32 0{{$}}
   // CHECK: store i32 1, i32* %[[FIELD]]
@@ -120,7 +120,7 @@ void aggr_sufficient(int n) {
 
 // SIO-LABEL: define{{.*}} void @_Z14constexpr_testv
 void constexpr_test() {
-  // SIO: call noalias noundef nonnull i8* @_Zna{{.}}(i32 noundef 4)
+  // SIO: call noalias nonnull i8* @_Zna{{.}}(i32 4)
   new int[0+1]{0};
 }
 
@@ -128,7 +128,7 @@ void constexpr_test() {
 void unknown_bound() {
   struct Aggr { int x, y, z; };
   new Aggr[]{1, 2, 3, 4};
-  // CHECK: call {{.*}}_Znaj(i32 noundef 24)
+  // CHECK: call {{.*}}_Znaj(i32 24)
   // CHECK: store i32 1
   // CHECK: store i32 2
   // CHECK: store i32 3
@@ -142,6 +142,6 @@ void unknown_bound() {
 // CHECK-LABEL: define{{.*}} void @_Z20unknown_bound_stringv
 void unknown_bound_string() {
   new char[]{"hello"};
-  // CHECK: call {{.*}}_Znaj(i32 noundef 6)
+  // CHECK: call {{.*}}_Znaj(i32 6)
   // CHECK: memcpy{{.*}} i32 6,
 }

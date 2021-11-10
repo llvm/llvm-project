@@ -35,8 +35,8 @@ define i1 @testi16i8_com(i16 %add) {
 
 define i1 @testi16i8_ne(i16 %add) {
 ; CHECK-LABEL: @testi16i8_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], 128
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt i16 [[TMP1]], 255
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], -128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], -256
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -49,8 +49,8 @@ define i1 @testi16i8_ne(i16 %add) {
 
 define i1 @testi16i8_ne_com(i16 %add) {
 ; CHECK-LABEL: @testi16i8_ne_com(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], 128
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt i16 [[TMP1]], 255
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD:%.*]], -128
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], -256
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -77,8 +77,8 @@ define i1 @testi64i32(i64 %add) {
 
 define i1 @testi64i32_ne(i64 %add) {
 ; CHECK-LABEL: @testi64i32_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ADD:%.*]], 2147483648
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ADD:%.*]], -2147483648
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i64 [[TMP1]], -4294967296
 ; CHECK-NEXT:    ret i1 [[CMP_NOT_I]]
 ;
   %sh = lshr i64 %add, 32

@@ -14,7 +14,7 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 
 #endif // HEADER
 // CHECK-LABEL: define {{[^@]+}}@workshareloop_unsigned
-// CHECK-SAME: (float* noundef [[A:%.*]], float* noundef [[B:%.*]], float* noundef [[C:%.*]], float* noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -98,7 +98,7 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[DISTANCE:%.*]], %struct.anon* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (i32* nonnull align 4 dereferenceable(4) [[DISTANCE:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DISTANCE_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
@@ -135,7 +135,7 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK-SAME: (i32* noundef nonnull align 4 dereferenceable(4) [[LOOPVAR:%.*]], i32 noundef [[LOGICAL:%.*]], %struct.anon.0* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (i32* nonnull align 4 dereferenceable(4) [[LOOPVAR:%.*]], i32 [[LOGICAL:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[LOOPVAR_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[LOGICAL_ADDR:%.*]] = alloca i32, align 4

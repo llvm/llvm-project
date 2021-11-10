@@ -100,7 +100,7 @@ namespace test1 {
     // CHECK-NEXT: call void @_ZN5test11AD1Ev([[A]]* {{[^,]*}} [[CUR]])
     // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq [[A]]* [[CUR]], [[BEGIN]]
     // CHECK-NEXT: br i1 [[ISDONE]]
-    // CHECK:      call void @_ZdaPv(i8* noundef [[ALLOC]])
+    // CHECK:      call void @_ZdaPv(i8* [[ALLOC]])
   }
 }
 
@@ -139,14 +139,14 @@ namespace test4 {
     // CHECK-NEXT: [[T0:%.*]] = bitcast [[X]]* [[XP]] to i8*
     // CHECK-NEXT: [[ALLOCATED:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 [[OFFSET]]
     //   Load the complete-object destructor (not the deleting destructor)
-    //   and call noundef it.
+    //   and call it.
     // CHECK-NEXT: [[T0:%.*]] = bitcast [[X:%.*]]* [[XP:%.*]] to void ([[X]]*)***
     // CHECK-NEXT: [[VTABLE:%.*]] = load void ([[X]]*)**, void ([[X]]*)*** [[T0]]
     // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds void ([[X]]*)*, void ([[X]]*)** [[VTABLE]], i64 0
     // CHECK-NEXT: [[DTOR:%.*]] = load void ([[X]]*)*, void ([[X]]*)** [[T0]]
     // CHECK-NEXT: call void [[DTOR]]([[X]]* {{[^,]*}} [[OBJ:%.*]])
     //   Call the global operator delete.
-    // CHECK-NEXT: call void @_ZdlPv(i8* noundef [[ALLOCATED]]) [[NUW:#[0-9]+]]
+    // CHECK-NEXT: call void @_ZdlPv(i8* [[ALLOCATED]]) [[NUW:#[0-9]+]]
     ::delete xp;
   }
 }

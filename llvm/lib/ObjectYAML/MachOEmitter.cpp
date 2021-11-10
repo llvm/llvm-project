@@ -288,6 +288,7 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
 }
 
 Error MachOWriter::writeSectionData(raw_ostream &OS) {
+  uint64_t LinkEditOff = 0;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SEGMENT:
@@ -297,6 +298,9 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
       if (0 ==
           strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
         FoundLinkEditSeg = true;
+        LinkEditOff = segOff;
+        if (Obj.RawLinkEditSegment)
+          continue;
         writeLinkEditData(OS);
       }
       for (auto &Sec : LC.Sections) {
@@ -344,6 +348,13 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
     }
   }
 
+  if (Obj.RawLinkEditSegment) {
+    ZeroToOffset(OS, LinkEditOff);
+    if (OS.tell() - fileStart > LinkEditOff || !LinkEditOff)
+      return createStringError(errc::invalid_argument,
+                               "section offsets don't line up");
+    Obj.RawLinkEditSegment->writeAsBinary(OS);
+  }
   return Error::success();
 }
 

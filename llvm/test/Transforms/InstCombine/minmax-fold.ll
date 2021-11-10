@@ -1120,6 +1120,10 @@ define i32 @add_umax_wrong_pred(i32 %x) {
 
 ; Negative test
 
+; Without the nuw that would allow pushing the add through the umax, the
+; add + icmp ugt combination can be interpreted as a range check, and would
+; normally be canonicalized to use ult instead. However, this is not done when
+; used as part of a umax to avoid breaking the SPF pattern.
 define i32 @add_umax_wrong_wrap(i32 %x) {
 ; CHECK-LABEL: @add_umax_wrong_wrap(
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 15

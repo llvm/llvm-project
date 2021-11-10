@@ -8,19 +8,19 @@
 __bf16 test_ret_bf16(__bf16 v) {
   return v;
 }
-// CHECK32-HARD: define{{.*}} arm_aapcs_vfpcc bfloat @test_ret_bf16(bfloat noundef returned %v) {{.*}} {
+// CHECK32-HARD: define{{.*}} arm_aapcs_vfpcc bfloat @test_ret_bf16(bfloat returned %v) {{.*}} {
 // CHECK32-HARD: ret bfloat %v
-// CHECK32-SOFTFP: define{{.*}} bfloat @test_ret_bf16(bfloat noundef returned %v) {{.*}} {
+// CHECK32-SOFTFP: define{{.*}} bfloat @test_ret_bf16(bfloat returned %v) {{.*}} {
 // CHECK32-SOFTFP: ret bfloat %v
-// CHECK64: define{{.*}} bfloat @test_ret_bf16(bfloat noundef returned %v) {{.*}} {
+// CHECK64: define{{.*}} bfloat @test_ret_bf16(bfloat returned %v) {{.*}} {
 // CHECK64: ret bfloat %v
 
 bfloat16x4_t test_ret_bf16x4_t(bfloat16x4_t v) {
   return v;
 }
-// CHECK32-HARD: define{{.*}} arm_aapcs_vfpcc <4 x bfloat> @test_ret_bf16x4_t(<4 x bfloat> noundef returned %v) {{.*}} {
+// CHECK32-HARD: define{{.*}} arm_aapcs_vfpcc <4 x bfloat> @test_ret_bf16x4_t(<4 x bfloat> returned %v) {{.*}} {
 // CHECK32-HARD: ret <4 x bfloat> %v
 // CHECK32-SOFTFP: define{{.*}} <2 x i32> @test_ret_bf16x4_t(<2 x i32> [[V0:.*]]) {{.*}} {
 // CHECK32-SOFTFP: ret <2 x i32> %v
-// CHECK64: define{{.*}} <4 x bfloat> @test_ret_bf16x4_t(<4 x bfloat> noundef returned %v) {{.*}} {
+// CHECK64: define{{.*}} <4 x bfloat> @test_ret_bf16x4_t(<4 x bfloat> returned %v) {{.*}} {
 // CHECK64: ret <4 x bfloat> %v

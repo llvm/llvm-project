@@ -2255,7 +2255,7 @@ void CodeGenModule::ConstructAttributeList(
                      getLangOpts().Sanitize.has(SanitizerKind::Return);
 
   // Determine if the return type could be partially undef
-  if (!CodeGenOpts.DisableNoundefAttrs && HasStrictReturn) {
+  if (CodeGenOpts.EnableNoundefAttrs && HasStrictReturn) {
     if (!RetTy->isVoidType() && RetAI.getKind() != ABIArgInfo::Indirect &&
         DetermineNoUndef(RetTy, getTypes(), DL, RetAI))
       RetAttrs.addAttribute(llvm::Attribute::NoUndef);
@@ -2390,7 +2390,7 @@ void CodeGenModule::ConstructAttributeList(
 
     // Decide whether the argument we're handling could be partially undef
     bool ArgNoUndef = DetermineNoUndef(ParamType, getTypes(), DL, AI);
-    if (!CodeGenOpts.DisableNoundefAttrs && ArgNoUndef)
+    if (CodeGenOpts.EnableNoundefAttrs && ArgNoUndef)
       Attrs.addAttribute(llvm::Attribute::NoUndef);
 
     // 'restrict' -> 'noalias' is done in EmitFunctionProlog when we

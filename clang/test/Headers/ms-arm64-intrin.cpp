@@ -14,16 +14,16 @@ void check_nop() {
 }
 
 unsigned short check_byteswap_ushort(unsigned short val) {
-// CHECK: call i16 @_byteswap_ushort(i16 noundef %val)
+// CHECK: call i16 @_byteswap_ushort(i16 %val)
   return _byteswap_ushort(val);
 }
 
 unsigned long check_byteswap_ulong(unsigned long val) {
-// CHECK: call i32 @_byteswap_ulong(i32 noundef %val)
+// CHECK: call i32 @_byteswap_ulong(i32 %val)
   return _byteswap_ulong(val);
 }
 
 unsigned __int64 check_byteswap_uint64(unsigned __int64 val) {
-// CHECK: call i64 @_byteswap_uint64(i64 noundef %val)
+// CHECK: call i64 @_byteswap_uint64(i64 %val)
   return _byteswap_uint64(val);
 }

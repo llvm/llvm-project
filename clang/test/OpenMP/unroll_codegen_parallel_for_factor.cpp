@@ -168,7 +168,7 @@ extern "C" void func(int start, int end, int step) {
 // IR-NEXT:    %[[TMP35:.+]] = load i32, i32* %[[TMP0]], align 4
 // IR-NEXT:    %[[TMP36:.+]] = load i32, i32* %[[TMP1]], align 4
 // IR-NEXT:    %[[TMP37:.+]] = load i32, i32* %[[I]], align 4
-// IR-NEXT:    call void (...) @body(i32 noundef %[[TMP34]], i32 noundef %[[TMP35]], i32 noundef %[[TMP36]], i32 noundef %[[TMP37]])
+// IR-NEXT:    call void (...) @body(i32 %[[TMP34]], i32 %[[TMP35]], i32 %[[TMP36]], i32 %[[TMP37]])
 // IR-NEXT:    br label %[[FOR_INC:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_INC]]:

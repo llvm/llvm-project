@@ -268,6 +268,11 @@ unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
 }
 
+std::pair<const Value *, unsigned>
+TargetTransformInfo::getPredicatedAddrSpace(const Value *V) const {
+  return TTIImpl->getPredicatedAddrSpace(V);
+}
+
 Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
     IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
@@ -602,6 +607,10 @@ unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
 
 Optional<unsigned> TargetTransformInfo::getMaxVScale() const {
   return TTIImpl->getMaxVScale();
+}
+
+Optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
+  return TTIImpl->getVScaleForTuning();
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth() const {

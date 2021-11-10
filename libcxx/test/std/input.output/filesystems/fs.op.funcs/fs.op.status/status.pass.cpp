@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <filesystem>
 
 // file_status status(const path& p);

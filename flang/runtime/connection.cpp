@@ -8,6 +8,7 @@
 
 #include "connection.h"
 #include "environment.h"
+#include "io-stmt.h"
 #include <algorithm>
 
 namespace Fortran::runtime::io {
@@ -32,5 +33,22 @@ void ConnectionState::HandleAbsolutePosition(std::int64_t n) {
 
 void ConnectionState::HandleRelativePosition(std::int64_t n) {
   positionInRecord = std::max(leftTabLimit.value_or(0), positionInRecord + n);
+}
+
+SavedPosition::SavedPosition(IoStatementState &io) : io_{io} {
+  ConnectionState &conn{io_.GetConnectionState()};
+  saved_ = conn;
+  conn.pinnedFrame = true;
+}
+
+SavedPosition::~SavedPosition() {
+  ConnectionState &conn{io_.GetConnectionState()};
+  while (conn.currentRecordNumber > saved_.currentRecordNumber) {
+    io_.BackspaceRecord();
+  }
+  conn.leftTabLimit = saved_.leftTabLimit;
+  conn.furthestPositionInRecord = saved_.furthestPositionInRecord;
+  conn.positionInRecord = saved_.positionInRecord;
+  conn.pinnedFrame = saved_.pinnedFrame;
 }
 } // namespace Fortran::runtime::io

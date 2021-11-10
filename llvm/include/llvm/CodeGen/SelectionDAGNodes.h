@@ -2049,6 +2049,14 @@ public:
   int32_t getConstantFPSplatPow2ToLog2Int(BitVector *UndefElements,
                                           uint32_t BitWidth) const;
 
+  /// Extract the raw bit data from a build vector of Undef, Constant or
+  /// ConstantFP node elements. Each raw bit element will be \p
+  /// DstEltSizeInBits wide, undef elements are treated as zero, and entirely
+  /// undefined elements are flagged in \p UndefElements.
+  bool getConstantRawBits(bool IsLittleEndian, unsigned DstEltSizeInBits,
+                          SmallVectorImpl<APInt> &RawBitElements,
+                          BitVector &UndefElements) const;
+
   bool isConstant() const;
 
   static bool classof(const SDNode *N) {

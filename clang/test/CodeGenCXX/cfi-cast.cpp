@@ -125,8 +125,8 @@ void bcp_call(B *p) {
   ((C *)p)->f();
 }
 
-// CHECK-UCAST-LABEL: define hidden noundef i32 @_Z6a_callP1A
-// CHECK-UCAST-STRICT-LABEL: define hidden noundef i32 @_Z6a_callP1A
+// CHECK-UCAST-LABEL: define hidden i32 @_Z6a_callP1A
+// CHECK-UCAST-STRICT-LABEL: define hidden i32 @_Z6a_callP1A
 int a_call(A *a) {
   // CHECK-UCAST-NOT: @llvm.type.test
   // CHECK-UCAST-STRICT-NOT: @llvm.type.test

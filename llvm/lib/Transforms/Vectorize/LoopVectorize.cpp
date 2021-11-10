@@ -1103,11 +1103,10 @@ static OptimizationRemarkAnalysis createLVAnalysis(const char *PassName,
 }
 
 /// Return a value for Step multiplied by VF.
-static Value *createStepForVF(IRBuilder<> &B, Constant *Step, ElementCount VF) {
-  assert(isa<ConstantInt>(Step) && "Expected an integer step");
-  Constant *StepVal = ConstantInt::get(
-      Step->getType(),
-      cast<ConstantInt>(Step)->getSExtValue() * VF.getKnownMinValue());
+static Value *createStepForVF(IRBuilder<> &B, Type *Ty, ElementCount VF,
+                              int64_t Step) {
+  assert(Ty->isIntegerTy() && "Expected an integer step");
+  Constant *StepVal = ConstantInt::get(Ty, Step * VF.getKnownMinValue());
   return VF.isScalable() ? B.CreateVScale(StepVal) : StepVal;
 }
 
@@ -2620,8 +2619,7 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   }
 
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Value *StartIdx0 =
-        createStepForVF(Builder, ConstantInt::get(IntStepTy, Part), VF);
+    Value *StartIdx0 = createStepForVF(Builder, IntStepTy, VF, Part);
 
     if (!IsUniform && VF.isScalable()) {
       auto *SplatStartIdx = Builder.CreateVectorSplat(VF, StartIdx0);
@@ -2963,7 +2961,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         BlockInMaskParts[Part] = reverseVector(BlockInMaskParts[Part]);
     } else {
-      Value *Increment = createStepForVF(Builder, Builder.getInt32(Part), VF);
+      Value *Increment =
+          createStepForVF(Builder, Builder.getInt32Ty(), VF, Part);
       PartPtr = cast<GetElementPtrInst>(
           Builder.CreateGEP(ScalarDataTy, Ptr, Increment));
       PartPtr->setIsInBounds(InBounds);
@@ -3182,7 +3181,7 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
 
   Type *Ty = TC->getType();
   // This is where we can make the step a runtime constant.
-  Value *Step = createStepForVF(Builder, ConstantInt::get(Ty, UF), VF);
+  Value *Step = createStepForVF(Builder, Ty, VF, UF);
 
   // If the tail is to be folded by masking, round the number of iterations N
   // up to a multiple of Step instead of rounding down. This is done by first
@@ -3272,8 +3271,7 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
   // If tail is to be folded, vector loop takes care of all iterations.
   Value *CheckMinIters = Builder.getFalse();
   if (!Cost->foldTailByMasking()) {
-    Value *Step =
-        createStepForVF(Builder, ConstantInt::get(Count->getType(), UF), VF);
+    Value *Step = createStepForVF(Builder, Count->getType(), VF, UF);
     CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
   }
   // Create new preheader for vector loop.
@@ -3749,7 +3747,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // The loop step is equal to the vectorization factor (num of SIMD elements)
   // times the unroll factor (num of SIMD instructions).
   Builder.SetInsertPoint(&*Lp->getHeader()->getFirstInsertionPt());
-  Value *Step = createStepForVF(Builder, ConstantInt::get(IdxTy, UF), VF);
+  Value *Step = createStepForVF(Builder, IdxTy, VF, UF);
   Value *CountRoundDown = getOrCreateVectorTripCount(Lp);
   Induction =
       createInductionVariable(Lp, StartIdx, CountRoundDown, Step,
@@ -4751,8 +4749,8 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       }
 
       for (unsigned Part = 0; Part < UF; ++Part) {
-        Value *PartStart = createStepForVF(
-            Builder, ConstantInt::get(PtrInd->getType(), Part), VF);
+        Value *PartStart =
+            createStepForVF(Builder, PtrInd->getType(), VF, Part);
 
         if (NeedsVectorIndex) {
           // Here we cache the whole vector, which means we can support the
@@ -6023,19 +6021,27 @@ bool LoopVectorizationCostModel::isMoreProfitable(
     return RTCostA < RTCostB;
   }
 
-  // When set to preferred, for now assume vscale may be larger than 1, so
-  // that scalable vectorization is slightly favorable over fixed-width
-  // vectorization.
+  // Improve estimate for the vector width if it is scalable.
+  unsigned EstimatedWidthA = A.Width.getKnownMinValue();
+  unsigned EstimatedWidthB = B.Width.getKnownMinValue();
+  if (Optional<unsigned> VScale = TTI.getVScaleForTuning()) {
+    if (A.Width.isScalable())
+      EstimatedWidthA *= VScale.getValue();
+    if (B.Width.isScalable())
+      EstimatedWidthB *= VScale.getValue();
+  }
+
+  // When set to preferred, for now assume vscale may be larger than 1 (or the
+  // one being tuned for), so that scalable vectorization is slightly favorable
+  // over fixed-width vectorization.
   if (Hints->isScalableVectorizationPreferred())
     if (A.Width.isScalable() && !B.Width.isScalable())
-      return (CostA * B.Width.getKnownMinValue()) <=
-             (CostB * A.Width.getKnownMinValue());
+      return (CostA * B.Width.getFixedValue()) <= (CostB * EstimatedWidthA);
 
   // To avoid the need for FP division:
   //      (CostA / A.Width) < (CostB / B.Width)
   // <=>  (CostA * B.Width) < (CostB * A.Width)
-  return (CostA * B.Width.getKnownMinValue()) <
-         (CostB * A.Width.getKnownMinValue());
+  return (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA);
 }
 
 VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
@@ -6065,11 +6071,22 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
 
     VectorizationCostTy C = expectedCost(i, &InvalidCosts);
     VectorizationFactor Candidate(i, C.first);
-    LLVM_DEBUG(
-        dbgs() << "LV: Vector loop of width " << i << " costs: "
-               << (Candidate.Cost / Candidate.Width.getKnownMinValue())
-               << (i.isScalable() ? " (assuming a minimum vscale of 1)" : "")
-               << ".\n");
+
+#ifndef NDEBUG
+    unsigned AssumedMinimumVscale = 1;
+    if (Optional<unsigned> VScale = TTI.getVScaleForTuning())
+      AssumedMinimumVscale = VScale.getValue();
+    unsigned Width =
+        Candidate.Width.isScalable()
+            ? Candidate.Width.getKnownMinValue() * AssumedMinimumVscale
+            : Candidate.Width.getFixedValue();
+    LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << i
+                      << " costs: " << (Candidate.Cost / Width));
+    if (i.isScalable())
+      LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
+                        << AssumedMinimumVscale << ")");
+    LLVM_DEBUG(dbgs() << ".\n");
+#endif
 
     if (!C.second && !ForceVectorization) {
       LLVM_DEBUG(
@@ -6233,15 +6250,6 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
     return Result;
   }
 
-  // FIXME: This can be fixed for scalable vectors later, because at this stage
-  // the LoopVectorizer will only consider vectorizing a loop with scalable
-  // vectors when the loop has a hint to enable vectorization for a given VF.
-  if (MainLoopVF.isScalable()) {
-    LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization for scalable vectors not "
-                         "yet supported.\n");
-    return Result;
-  }
-
   // Not really a cost consideration, but check for unsupported cases here to
   // simplify the logic.
   if (!isCandidateForEpilogueVectorization(*TheLoop, MainLoopVF)) {
@@ -6254,7 +6262,7 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
   if (EpilogueVectorizationForceVF > 1) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n";);
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
-    if (LVP.hasPlanWithVFs({MainLoopVF, ForcedEC}))
+    if (LVP.hasPlanWithVF(ForcedEC))
       return {ForcedEC, 0};
     else {
       LLVM_DEBUG(
@@ -6272,14 +6280,24 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
     return Result;
   }
 
-  if (!isEpilogueVectorizationProfitable(MainLoopVF))
+  auto FixedMainLoopVF = ElementCount::getFixed(MainLoopVF.getKnownMinValue());
+  if (MainLoopVF.isScalable())
+    LLVM_DEBUG(
+        dbgs() << "LEV: Epilogue vectorization using scalable vectors not "
+                  "yet supported. Converting to fixed-width (VF="
+               << FixedMainLoopVF << ") instead\n");
+
+  if (!isEpilogueVectorizationProfitable(FixedMainLoopVF)) {
+    LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is not profitable for "
+                         "this loop\n");
     return Result;
+  }
 
   for (auto &NextVF : ProfitableVFs)
-    if (ElementCount::isKnownLT(NextVF.Width, MainLoopVF) &&
+    if (ElementCount::isKnownLT(NextVF.Width, FixedMainLoopVF) &&
         (Result.Width.getFixedValue() == 1 ||
          isMoreProfitable(NextVF, Result)) &&
-        LVP.hasPlanWithVFs({MainLoopVF, NextVF.Width}))
+        LVP.hasPlanWithVF(NextVF.Width))
       Result = NextVF;
 
   if (Result != VectorizationFactor::Disabled())
@@ -8408,7 +8426,9 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   OldInduction = Legal->getPrimaryInduction();
   Type *IdxTy = Legal->getWidestInductionType();
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
-  Constant *Step = ConstantInt::get(IdxTy, VF.getKnownMinValue() * UF);
+
+  IRBuilder<> B(&*Lp->getLoopPreheader()->getFirstInsertionPt());
+  Value *Step = getRuntimeVF(B, IdxTy, VF * UF);
   Value *CountRoundDown = getOrCreateVectorTripCount(Lp);
   EPI.VectorTripCount = CountRoundDown;
   Induction =
@@ -8457,7 +8477,7 @@ BasicBlock *EpilogueVectorizerMainLoop::emitMinimumIterationCountCheck(
       ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
 
   Value *CheckMinIters = Builder.CreateICmp(
-      P, Count, getRuntimeVF(Builder, Count->getType(), VFactor * UFactor),
+      P, Count, createStepForVF(Builder, Count->getType(), VFactor, UFactor),
       "min.iters.check");
 
   if (!ForEpilogue)
@@ -8609,10 +8629,11 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   auto P = Cost->requiresScalarEpilogue(EPI.EpilogueVF) ?
       ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
 
-  Value *CheckMinIters = Builder.CreateICmp(
-      P, Count,
-      getRuntimeVF(Builder, Count->getType(), EPI.EpilogueVF * EPI.EpilogueUF),
-      "min.epilog.iters.check");
+  Value *CheckMinIters =
+      Builder.CreateICmp(P, Count,
+                         createStepForVF(Builder, Count->getType(),
+                                         EPI.EpilogueVF, EPI.EpilogueUF),
+                         "min.epilog.iters.check");
 
   ReplaceInstWithInst(
       Insert->getTerminator(),
@@ -9468,16 +9489,20 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     if (!RecurPhi)
       continue;
 
+    VPRecipeBase *PrevRecipe = RecurPhi->getBackedgeRecipe();
+    VPBasicBlock *InsertBlock = PrevRecipe->getParent();
+    auto *Region = GetReplicateRegion(PrevRecipe);
+    if (Region)
+      InsertBlock = cast<VPBasicBlock>(Region->getSingleSuccessor());
+    if (Region || PrevRecipe->isPhi())
+      Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
+    else
+      Builder.setInsertPoint(InsertBlock, std::next(PrevRecipe->getIterator()));
+
     auto *RecurSplice = cast<VPInstruction>(
         Builder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                              {RecurPhi, RecurPhi->getBackedgeValue()}));
 
-    VPRecipeBase *PrevRecipe = RecurPhi->getBackedgeRecipe();
-    if (auto *Region = GetReplicateRegion(PrevRecipe)) {
-      VPBasicBlock *Succ = cast<VPBasicBlock>(Region->getSingleSuccessor());
-      RecurSplice->moveBefore(*Succ, Succ->getFirstNonPhi());
-    } else
-      RecurSplice->moveAfter(PrevRecipe);
     RecurPhi->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to RecurPhi again, after replacing
     // all users.
@@ -10418,7 +10443,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                              F->getParent()->getDataLayout());
     if (!VF.Width.isScalar() || IC > 1)
       Checks.Create(L, *LVL.getLAI(), PSE.getUnionPredicate());
-    VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
 
     using namespace ore;
     if (!VectorizeLoop) {
@@ -10427,6 +10451,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // interleave it.
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
+
+      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT);
 
       ORE->emit([&]() {
@@ -10450,7 +10476,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
-        LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, BestPlan, MainILV, DT);
+        VPlan &BestMainPlan = LVP.getBestPlanFor(EPI.MainLoopVF);
+        LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV,
+                        DT);
         ++LoopsVectorized;
 
         simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
@@ -10463,7 +10491,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TLI, TTI, AC,
                                                  ORE, EPI, &LVL, &CM, BFI, PSI,
                                                  Checks);
-        LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestPlan, EpilogILV,
+
+        VPlan &BestEpiPlan = LVP.getBestPlanFor(EPI.EpilogueVF);
+        LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
                         DT);
         ++LoopsEpilogueVectorized;
 
@@ -10472,6 +10502,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       } else {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, IC,
                                &LVL, &CM, BFI, PSI, Checks);
+
+        VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT);
         ++LoopsVectorized;
 

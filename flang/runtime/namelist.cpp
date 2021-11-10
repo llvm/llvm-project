@@ -236,7 +236,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
         type{addendum ? addendum->derivedType() : nullptr}) {
       if (const typeInfo::Component *
           comp{type->FindDataComponent(compName, std::strlen(compName))}) {
-        comp->CreatePointerDescriptor(desc, source, nullptr, handler);
+        comp->CreatePointerDescriptor(desc, source, handler);
         return true;
       } else {
         handler.SignalError(
@@ -244,6 +244,10 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
             "a component of its derived type",
             compName, name);
       }
+    } else if (source.type().IsDerived()) {
+      handler.Crash("Derived type object '%s' in NAMELIST is missing its "
+                    "derived type information!",
+          name);
     } else {
       handler.SignalError("NAMELIST component reference '%%%s' of input group "
                           "item %s for non-derived type",
@@ -320,9 +324,14 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
         whichStaticDesc ^= 1;
         if (*next == '(') {
-          HandleSubscripts(io, mutableDescriptor, *useDescriptor, name);
+          if (!(HandleSubscripts(
+                  io, mutableDescriptor, *useDescriptor, name))) {
+            return false;
+          }
         } else {
-          HandleComponent(io, mutableDescriptor, *useDescriptor, name);
+          if (!HandleComponent(io, mutableDescriptor, *useDescriptor, name)) {
+            return false;
+          }
         }
         useDescriptor = &mutableDescriptor;
         next = io.GetCurrentChar();
@@ -359,7 +368,7 @@ bool IsNamelistName(IoStatementState &io) {
   if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
     ConnectionState &connection{io.GetConnectionState()};
     if (connection.modes.inNamelist) {
-      SavedPosition savedPosition{connection};
+      SavedPosition savedPosition{io};
       if (auto ch{io.GetNextNonBlank()}) {
         if (IsLegalIdStart(*ch)) {
           do {
@@ -368,7 +377,7 @@ bool IsNamelistName(IoStatementState &io) {
           } while (ch && IsLegalIdChar(*ch));
           ch = io.GetNextNonBlank();
           // TODO: how to deal with NaN(...) ambiguity?
-          return ch && (ch == '=' || ch == '(' || ch == '%');
+          return ch && (*ch == '=' || *ch == '(' || *ch == '%');
         }
       }
     }

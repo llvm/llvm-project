@@ -153,7 +153,7 @@ X test4(bool B) {
       return x;
   }
   // CHECK: call {{.*}} @_ZN1XD1Ev
-  // CHECK: call void @exit(i32 noundef 1)
+  // CHECK: call void @exit(i32 1)
   exit(1);
 }
 
@@ -181,7 +181,7 @@ X test6() {
   // CHECK-NEXT: [[PTR:%.*]] = getelementptr inbounds %class.X, %class.X* [[A]], i32 0, i32 0
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[PTR]])
   // CHECK-NEXT: call {{.*}} @_ZN1XC1Ev([[X]]* {{[^,]*}} [[A]])
-  // CHECK-NEXT: call {{.*}} @_ZN1XC1ERKS_([[X]]* {{[^,]*}} {{%.*}}, [[X]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]])
+  // CHECK-NEXT: call {{.*}} @_ZN1XC1ERKS_([[X]]* {{[^,]*}} {{%.*}}, [[X]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]])
   // CHECK-NEXT: call {{.*}} @_ZN1XD1Ev([[X]]* {{[^,]*}} [[A]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[PTR]])
   // CHECK-NEXT: ret void

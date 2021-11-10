@@ -20682,10 +20682,7 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
   return InsertFencesForAtomic;
 }
 
-// This has so far only been implemented for MachO.
-bool ARMTargetLowering::useLoadStackGuardNode() const {
-  return Subtarget->isTargetMachO();
-}
+bool ARMTargetLowering::useLoadStackGuardNode() const { return true; }
 
 void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
   if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())

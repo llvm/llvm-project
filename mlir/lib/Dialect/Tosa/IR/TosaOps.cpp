@@ -230,6 +230,7 @@ struct ConstantTransposeOptimization
     // Transpose the input constant. Because we don't know its rank in advance,
     // we need to loop over the range [0, element count) and delinearize the
     // index.
+    auto attrValues = inputValues.getValues<Attribute>();
     for (int srcLinearIndex = 0; srcLinearIndex < numElements;
          ++srcLinearIndex) {
       SmallVector<uint64_t, 6> srcIndices(inputType.getRank(), 0);
@@ -247,7 +248,7 @@ struct ConstantTransposeOptimization
       for (int dim = 1; dim < outputType.getRank(); ++dim)
         dstLinearIndex = dstLinearIndex * outputShape[dim] + dstIndices[dim];
 
-      outputValues[dstLinearIndex] = inputValues.getValue(srcIndices);
+      outputValues[dstLinearIndex] = attrValues[srcIndices];
     }
 
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(
@@ -424,8 +425,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-static LogicalResult verifyConvOp(T op) {
+template <typename T> static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
   auto inputType = op.input().getType().template dyn_cast<RankedTensorType>();
   auto weightType = op.weight().getType().template dyn_cast<RankedTensorType>();
@@ -609,11 +609,25 @@ static void buildUnaryOpWithQuantInfo(OpBuilder &builder,
 
 /// This builder is called on TOSA pad operator that needs to create its own
 /// OptionalAttr quantization_attr parameter to scale the padding values
-/// correctly.
+/// correctly. No pad_const is interpreted as zero-padding.
 static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                                     Type outputType, Value input,
                                     Value paddings) {
   result.addOperands({input, paddings});
+  auto quantAttr = buildPadOpQuantizationAttr(builder, input);
+  if (quantAttr)
+    result.addAttribute("quantization_info", quantAttr);
+  result.types.push_back(outputType);
+}
+
+/// This builder is called on TOSA pad operator when an explicit pad_const
+/// value is passed in. It also optionally constructs quantization_attr.
+static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
+                                                 OperationState &result,
+                                                 Type outputType, Value input,
+                                                 Value paddings,
+                                                 Value pad_const) {
+  result.addOperands({input, paddings, pad_const});
   auto quantAttr = buildPadOpQuantizationAttr(builder, input);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);
