@@ -189,10 +189,8 @@ static const char *const parseErrorStr =
 /// Format for defining an attribute or type printer.
 ///
 /// $0: The attribute or type C++ class name.
-/// $1: The attribute or type mnemonic.
 static const char *const attrOrTypePrinterDefn = R"(
 void $0::print(::mlir::DialectAsmPrinter &$_printer) const {
-  $_printer << "$1";
 )";
 
 /// Loop declaration for struct parser.
@@ -464,8 +462,7 @@ void AttrOrTypeFormat::genPrinter(raw_ostream &os) {
   ctx.addSubst("_printer", "printer");
 
   /// Generate the definition.
-  os << tgfmt(attrOrTypePrinterDefn, &ctx, def.getCppClassName(),
-              *def.getMnemonic());
+  os << tgfmt(attrOrTypePrinterDefn, &ctx, def.getCppClassName());
 
   /// Generate printers.
   shouldEmitSpace = true;
