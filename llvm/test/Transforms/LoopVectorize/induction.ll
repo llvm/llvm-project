@@ -896,3 +896,40 @@ loop:                                         ; preds = %loop, %entry
   br i1 %exitcond.i, label %exit, label %loop
 
 }
+
+; Test case for PR52460.
+define void @pr52460_first_order_recurrence_truncated_iv(i32* noalias %src, i32* %dst) {
+; CHECK-LABEL: vector.body:
+; CHECK-NEXT:  [[MAIN_IV:%.+]] = phi i64 [ 0, %vector.ph ], [ [[MAIN_IV_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:  [[VEC_IV_64:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IV_64_NEXT:%.+]], %vector.body ]
+; CHECK-NEXT:  [[VEC_RECUR:%.+]] = phi <2 x i32> [ <i32 poison, i32 0>, %vector.ph ], [ [[VEC_IV_32:%.+]], %vector.body ]
+; CHECK-NEXT:  [[VEC_IV_32]] = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ [[VEC_IV_32_NEXT:%.+]], %vector.body ]
+; CHECK:       [[RECUR_SHUFFLE:%.+]] = shufflevector <2 x i32> [[VEC_RECUR]], <2 x i32> [[VEC_IV_32]], <2 x i32> <i32 1, i32 2>
+; CHECK:       mul nsw <2 x i32> {{.+}}, [[RECUR_SHUFFLE]]
+; CHECK:       [[ADD:%.+]] = add <2 x i32> [[VEC_IV_32]]
+; CHECK:       store <2 x i32> [[ADD]], <2 x i32>*
+; CHECK-NEXT:  [[MAIN_IV_NEXT]] = add nuw i64 [[MAIN_IV]], 2
+; CHECK-NEXT:  [[VEC_IV_64_NEXT]] = add <2 x i64> [[VEC_IV_64]], <i64 2, i64 2>
+; CHECK-NEXT:  [[VEC_IV_32_NEXT]] = add <2 x i32> [[VEC_IV_32]], <i32 2, i32 2>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %trunc.iv = phi i32 [ 0, %entry ], [ %trunc.iv.next, %loop ]
+  %recur = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ]
+  %lv = load i32, i32* %src, align 4
+  %mul = mul nsw i32 %lv, %recur
+  %trunc.iv.next  = add i32 %trunc.iv, 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %iv.trunc = trunc i64 %iv to i32
+  %dst.gep = getelementptr i32, i32* %dst, i32 %iv.trunc
+  %add = add i32 %iv.trunc, %mul
+  store i32 %add, i32* %dst.gep
+  %exitcond = icmp eq i32 %trunc.iv.next, 100
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
