@@ -903,6 +903,31 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
           continue;
       }
 
+      // If uConflictingWrite is an InsertSliceOp...
+      if (auto insertSliceOp = dyn_cast<InsertSliceOp>(conflictingWritingOp))
+        // As an example, consider the following IR.
+        //
+        // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace= [true] }
+        // %1 = linalg.fill %cst, %0 {inplace= [true] }
+        // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+        //     {inplace= [true] }
+        // %3 = vector.transfer_read %1, %cst
+        //
+        // In the above example:
+        // uRead             = OpOperand 0 (%1) of vector.transfer_read
+        // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+        // lastWrite         = %1
+        //
+        // This is not a conflict because the InsertSliceOp overwrites the
+        // memory segment of %1 with the exact same data. (Effectively, there
+        // is no memory write here.)
+        if (uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
+            aliasInfo.areEquivalentBufferizedValues(uRead->get(),
+                                                    insertSliceOp.source()) &&
+            hasMatchingExtractSliceOp(aliasInfo, insertSliceOp.source(),
+                                      insertSliceOp))
+          continue;
+
       // All requirements are met. Conflict found!
       LDBG("CONFLICT CONFIRMED!\n\n");
       return true;
