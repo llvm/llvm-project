@@ -452,6 +452,25 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         if (!IsIndirect)
           I = CallGraphResourceInfo.find(Callee);
 
+        // FIXME: Call site could have norecurse on it
+        if (!Callee || !Callee->doesNotRecurse()) {
+          Info.HasRecursion = true;
+
+          // TODO: If we happen to know there is no stack usage in the
+          // callgraph, we don't need to assume an infinitely growing stack.
+          if (!MI.isReturn()) {
+            // We don't need to assume an unknown stack size for tail calls.
+
+            // FIXME: This only benefits in the case where the kernel does not
+            // directly call the tail called function. If a kernel directly
+            // calls a tail recursive function, we'll assume maximum stack size
+            // based on the regular call instruction.
+            CalleeFrameSize =
+              std::max(CalleeFrameSize,
+                       static_cast<uint64_t>(AssumedStackSizeForExternalCall));
+          }
+        }
+
         if (IsIndirect || I == CallGraphResourceInfo.end()) {
           CalleeFrameSize =
               std::max(CalleeFrameSize,
@@ -476,10 +495,6 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           Info.HasRecursion |= I->second.HasRecursion;
           Info.HasIndirectCall |= I->second.HasIndirectCall;
         }
-
-        // FIXME: Call site could have norecurse on it
-        if (!Callee || !Callee->doesNotRecurse())
-          Info.HasRecursion = true;
       }
     }
   }
