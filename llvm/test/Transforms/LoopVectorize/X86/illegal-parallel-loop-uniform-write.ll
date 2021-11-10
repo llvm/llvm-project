@@ -84,11 +84,17 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i32* [[TMP21]] to <4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP23]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP23]], i32 0
 ; CHECK-NEXT:    store i32 [[TMP24]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP23]], i32 1
+; CHECK-NEXT:    store i32 [[TMP25]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP23]], i32 2
+; CHECK-NEXT:    store i32 [[TMP26]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP23]], i32 3
+; CHECK-NEXT:    store i32 [[TMP27]], i32* [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_US]], label [[SCALAR_PH]]

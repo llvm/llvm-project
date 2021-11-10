@@ -45,11 +45,13 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK:       pred.srem.continue4:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ [[TMP9]], [[PRED_SREM_CONTINUE]] ], [ [[TMP12]], [[PRED_SREM_IF3]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i16> <i16 5786, i16 5786>, <2 x i16> [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 0
 ; CHECK-NEXT:    store i16 [[TMP14]], i16* @v_39, align 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
+; CHECK-NEXT:    store i16 [[TMP15]], i16* @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 12, 12
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -72,7 +74,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[COND6]], i16* @v_39, align 1
 ; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RV:%.*]] = load i16, i16* @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]
