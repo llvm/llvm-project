@@ -13,8 +13,7 @@ void *f1_ifunc();
 void f1() __attribute__((ifunc("f1_ifunc")));
 // expected-error@-1 {{ifunc must point to a defined function}}
 
-void *f2_a() __attribute__((ifunc("f2_b")));
-// expected-error@-1 {{ifunc definition is part of a cycle}}
+void *f2_a() __attribute__((alias("f2_b")));
 void *f2_b() __attribute__((ifunc("f2_a")));
 // expected-error@-1 {{ifunc definition is part of a cycle}}
 
@@ -26,6 +25,15 @@ void *f3_c() { return 0; }
 void f4_ifunc() {}
 void f4() __attribute__((ifunc("f4_ifunc")));
 // expected-error@-1 {{ifunc resolver function must return a pointer}}
+
+int f5_resolver_gvar;
+void f5() __attribute__((ifunc("f5_resolver_gvar")));
+// expected-error@-1 {{ifunc must point to a defined function}}
+
+void *f6_resolver_resolver() { return 0; }
+void *f6_resolver() __attribute__((ifunc("f6_resolver_resolver")));
+void f6() __attribute__((ifunc("f6_resolver")));
+// expected-error@-1 {{ifunc must point to a defined function}}
 
 #else
 void f1a() __asm("f1");
