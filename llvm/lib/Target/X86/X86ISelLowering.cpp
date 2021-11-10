@@ -44441,7 +44441,6 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Only support vXi32 vectors.
-  // TODO: Can we support > 32-bit elements?
   if (!VT.isVector() || VT.getVectorElementType() != MVT::i32)
     return SDValue();
 
