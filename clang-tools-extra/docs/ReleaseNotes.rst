@@ -101,11 +101,14 @@ New checks
   Reports identifiers whose names are too short. Currently checks local
   variables and function parameters only.
 
-
 - New :doc:`readability-data-pointer <clang-tidy/checks/readability-data-pointer>` check.
 
   Finds cases where code could use ``data()`` rather than the address of the
   element at index 0 in a container.
+
+- New :doc:`misc-misleading-identifier <clang-tidy/checks/misc-misleading-identifier>` check.
+
+  Reports identifier with unicode right-to-left characters.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
