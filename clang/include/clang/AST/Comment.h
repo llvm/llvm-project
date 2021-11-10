@@ -1019,6 +1019,7 @@ struct DeclInfo {
     /// \li member function template,
     /// \li member function template specialization,
     /// \li ObjC method,
+    /// \li variable of function pointer, member function pointer or block type,
     /// \li a typedef for a function pointer, member function pointer,
     ///     ObjC block.
     FunctionKind,
@@ -1030,8 +1031,8 @@ struct DeclInfo {
     ClassKind,
 
     /// Something that we consider a "variable":
-    /// \li namespace scope variables;
-    /// \li static and non-static class data members;
+    /// \li namespace scope variables and variable templates;
+    /// \li static and non-static class data members and member templates;
     /// \li enumerators.
     VariableKind,
 

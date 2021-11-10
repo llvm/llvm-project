@@ -169,10 +169,7 @@ void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
     const MachineBasicBlock *EC = EquivalenceClass[BB];
     uint64_t BBWeight = BlockWeights[EC];
     uint64_t SumEdgeWeight = 0;
-    for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
-                                          SE = BB->succ_end();
-         SI != SE; ++SI) {
-      MachineBasicBlock *Succ = *SI;
+    for (MachineBasicBlock *Succ : BB->successors()) {
       Edge E = std::make_pair(BB, Succ);
       SumEdgeWeight += EdgeWeights[E];
     }

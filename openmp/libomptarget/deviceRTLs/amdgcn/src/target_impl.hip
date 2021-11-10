@@ -161,8 +161,11 @@ EXTERN int __kmpc_get_hardware_num_threads_in_block() {
                            __builtin_amdgcn_workgroup_size_x());
 }
 
+EXTERN unsigned __kmpc_get_warp_size() {
+  return WARPSIZE;
+}
+
 EXTERN unsigned GetWarpId() { return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE; }
-EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }

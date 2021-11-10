@@ -96,6 +96,121 @@ struct CallOpConversion : public FIROpConversion<fir::CallOp> {
   }
 };
 
+static mlir::Type getComplexEleTy(mlir::Type complex) {
+  if (auto cc = complex.dyn_cast<mlir::ComplexType>())
+    return cc.getElementType();
+  return complex.cast<fir::ComplexType>().getElementType();
+}
+
+/// convert value of from-type to value of to-type
+struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
+  using FIROpConversion::FIROpConversion;
+
+  static bool isFloatingPointTy(mlir::Type ty) {
+    return ty.isa<mlir::FloatType>();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::ConvertOp convert, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto fromTy = convertType(convert.value().getType());
+    auto toTy = convertType(convert.res().getType());
+    mlir::Value op0 = adaptor.getOperands()[0];
+    if (fromTy == toTy) {
+      rewriter.replaceOp(convert, op0);
+      return success();
+    }
+    auto loc = convert.getLoc();
+    auto convertFpToFp = [&](mlir::Value val, unsigned fromBits,
+                             unsigned toBits, mlir::Type toTy) -> mlir::Value {
+      if (fromBits == toBits) {
+        // TODO: Converting between two floating-point representations with the
+        // same bitwidth is not allowed for now.
+        mlir::emitError(loc,
+                        "cannot implicitly convert between two floating-point "
+                        "representations of the same bitwidth");
+        return {};
+      }
+      if (fromBits > toBits)
+        return rewriter.create<mlir::LLVM::FPTruncOp>(loc, toTy, val);
+      return rewriter.create<mlir::LLVM::FPExtOp>(loc, toTy, val);
+    };
+    // Complex to complex conversion.
+    if (fir::isa_complex(convert.value().getType()) &&
+        fir::isa_complex(convert.res().getType())) {
+      // Special case: handle the conversion of a complex such that both the
+      // real and imaginary parts are converted together.
+      auto zero = mlir::ArrayAttr::get(convert.getContext(),
+                                       rewriter.getI32IntegerAttr(0));
+      auto one = mlir::ArrayAttr::get(convert.getContext(),
+                                      rewriter.getI32IntegerAttr(1));
+      auto ty = convertType(getComplexEleTy(convert.value().getType()));
+      auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, zero);
+      auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, one);
+      auto nt = convertType(getComplexEleTy(convert.res().getType()));
+      auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
+      auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(nt);
+      auto rc = convertFpToFp(rp, fromBits, toBits, nt);
+      auto ic = convertFpToFp(ip, fromBits, toBits, nt);
+      auto un = rewriter.create<mlir::LLVM::UndefOp>(loc, toTy);
+      auto i1 =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, toTy, un, rc, zero);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(convert, toTy, i1,
+                                                             ic, one);
+      return mlir::success();
+    }
+    // Floating point to floating point conversion.
+    if (isFloatingPointTy(fromTy)) {
+      if (isFloatingPointTy(toTy)) {
+        auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(fromTy);
+        auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(toTy);
+        auto v = convertFpToFp(op0, fromBits, toBits, toTy);
+        rewriter.replaceOp(convert, v);
+        return mlir::success();
+      }
+      if (toTy.isa<mlir::IntegerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+    } else if (fromTy.isa<mlir::IntegerType>()) {
+      // Integer to integer conversion.
+      if (toTy.isa<mlir::IntegerType>()) {
+        auto fromBits = mlir::LLVM::getPrimitiveTypeSizeInBits(fromTy);
+        auto toBits = mlir::LLVM::getPrimitiveTypeSizeInBits(toTy);
+        assert(fromBits != toBits);
+        if (fromBits > toBits) {
+          rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
+          return mlir::success();
+        }
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      // Integer to floating point conversion.
+      if (isFloatingPointTy(toTy)) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      // Integer to pointer conversion.
+      if (toTy.isa<mlir::LLVM::LLVMPointerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+    } else if (fromTy.isa<mlir::LLVM::LLVMPointerType>()) {
+      // Pointer to integer conversion.
+      if (toTy.isa<mlir::IntegerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+      // Pointer to pointer conversion.
+      if (toTy.isa<mlir::LLVM::LLVMPointerType>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
+        return mlir::success();
+      }
+    }
+    return emitError(loc) << "cannot convert " << fromTy << " to " << toTy;
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -251,6 +366,29 @@ struct SelectOpConversion : public FIROpConversion<fir::SelectOp> {
   }
 };
 
+/// `fir.load` --> `llvm.load`
+struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::LoadOp load, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // fir.box is a special case because it is considered as an ssa values in
+    // fir, but it is lowered as a pointer to a descriptor. So fir.ref<fir.box>
+    // and fir.box end up being the same llvm types and loading a
+    // fir.ref<fir.box> is actually a no op in LLVM.
+    if (load.getType().isa<fir::BoxType>()) {
+      rewriter.replaceOp(load, adaptor.getOperands()[0]);
+    } else {
+      mlir::Type ty = convertType(load.getType());
+      ArrayRef<NamedAttribute> at = load->getAttrs();
+      rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+          load, ty, adaptor.getOperands(), at);
+    }
+    return success();
+  }
+};
+
 /// conversion of fir::SelectRankOp to an if-then-else ladder
 struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   using FIROpConversion::FIROpConversion;
@@ -263,7 +401,31 @@ struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   }
 };
 
-// convert to LLVM IR dialect `undef`
+/// `fir.store` --> `llvm.store`
+struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::StoreOp store, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (store.value().getType().isa<fir::BoxType>()) {
+      // fir.box value is actually in memory, load it first before storing it.
+      mlir::Location loc = store.getLoc();
+      mlir::Type boxPtrTy = adaptor.getOperands()[0].getType();
+      auto val = rewriter.create<mlir::LLVM::LoadOp>(
+          loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
+          adaptor.getOperands()[0]);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+          store, val, adaptor.getOperands()[1]);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+          store, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+    }
+    return success();
+  }
+};
+
+/// convert to LLVM IR dialect `undef`
 struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -276,7 +438,7 @@ struct UndefOpConversion : public FIROpConversion<fir::UndefOp> {
   }
 };
 
-// convert to LLVM IR dialect `unreachable`
+/// `fir.unreachable` --> `llvm.unreachable`
 struct UnreachableOpConversion : public FIROpConversion<fir::UnreachableOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -489,12 +651,6 @@ struct InsertOnRangeOpConversion
   }
 };
 
-static mlir::Type getComplexEleTy(mlir::Type complex) {
-  if (auto cc = complex.dyn_cast<mlir::ComplexType>())
-    return cc.getElementType();
-  return complex.cast<fir::ComplexType>().getElementType();
-}
-
 //
 // Primitive operations on Complex types
 //
@@ -671,15 +827,21 @@ public:
   mlir::ModuleOp getModule() { return getOperation(); }
 
   void runOnOperation() override final {
+    auto mod = getModule();
+    if (!forcedTargetTriple.empty()) {
+      fir::setTargetTriple(mod, forcedTargetTriple);
+    }
+
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
-                   DivcOpConversion, ExtractValueOpConversion,
-                   HasValueOpConversion, GlobalOpConversion,
-                   InsertOnRangeOpConversion, InsertValueOpConversion,
-                   NegcOpConversion, MulcOpConversion, SelectOpConversion,
-                   SelectRankOpConversion, SubcOpConversion, UndefOpConversion,
+                   ConvertOpConversion, DivcOpConversion,
+                   ExtractValueOpConversion, HasValueOpConversion,
+                   GlobalOpConversion, InsertOnRangeOpConversion,
+                   InsertValueOpConversion, LoadOpConversion, NegcOpConversion,
+                   MulcOpConversion, SelectOpConversion, SelectRankOpConversion,
+                   StoreOpConversion, SubcOpConversion, UndefOpConversion,
                    UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,

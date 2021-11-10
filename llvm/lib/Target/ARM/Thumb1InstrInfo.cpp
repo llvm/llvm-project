@@ -135,6 +135,10 @@ void Thumb1InstrInfo::expandLoadStackGuard(
     MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
   const TargetMachine &TM = MF.getTarget();
+
+  assert(MF.getFunction().getParent()->getStackProtectorGuard() != "tls" &&
+         "TLS stack protector not supported for Thumb1 targets");
+
   if (TM.isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi);
   else

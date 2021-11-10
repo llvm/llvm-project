@@ -12375,7 +12375,7 @@ SCEVAddRecExpr::getPostIncExpr(ScalarEvolution &SE) const {
 }
 
 // Return true when S contains at least an undef value.
-static inline bool containsUndefs(const SCEV *S) {
+bool ScalarEvolution::containsUndefs(const SCEV *S) const {
   return SCEVExprContains(S, [](const SCEV *S) {
     if (const auto *SU = dyn_cast<SCEVUnknown>(S))
       return isa<UndefValue>(SU->getValue());

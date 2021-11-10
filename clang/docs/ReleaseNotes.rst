@@ -244,6 +244,10 @@ clang-format
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   to be controlled relative to the `type`.
 
+- Add a ``Custom`` style to ``SpaceBeforeParens``, to better configure the
+  space before parentheses. The custom options can be set using
+  ``SpaceBeforeParensOptions``.
+
 libclang
 --------
 

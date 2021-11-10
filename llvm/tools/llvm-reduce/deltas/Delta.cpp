@@ -27,6 +27,10 @@ static cl::opt<bool> AbortOnInvalidReduction(
     "abort-on-invalid-reduction",
     cl::desc("Abort if any reduction results in invalid IR"));
 
+static cl::opt<unsigned int> StartingGranularityLevel(
+    "starting-granularity-level",
+    cl::desc("Number of times to divide chunks prior to first test"));
+
 void writeOutput(ReducerWorkItem &M, llvm::StringRef Message);
 
 bool isReduced(ReducerWorkItem &M, TestRunner &Test,
@@ -117,6 +121,10 @@ void runDeltaPassInt(
 
   std::vector<Chunk> ChunksStillConsideredInteresting = {{1, Targets}};
   std::unique_ptr<ReducerWorkItem> ReducedProgram;
+
+  for (unsigned int Level = 0; Level < StartingGranularityLevel; Level++) {
+    increaseGranularity(ChunksStillConsideredInteresting);
+  }
 
   bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {
