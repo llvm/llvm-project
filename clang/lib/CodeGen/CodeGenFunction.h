@@ -397,8 +397,7 @@ public:
     if (!PostAllocaInsertPt) {
       assert(AllocaInsertPt &&
              "Expected static alloca insertion point at function prologue");
-      auto *EBB = AllocaInsertPt->getParent();
-      assert(EBB->isEntryBlock() &&
+      assert(AllocaInsertPt->getParent()->isEntryBlock() &&
              "EBB should be entry block of the current code gen function");
       PostAllocaInsertPt = AllocaInsertPt->clone();
       PostAllocaInsertPt->setName("postallocapt");
