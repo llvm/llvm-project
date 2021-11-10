@@ -91,6 +91,25 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
+          Return `true` if the given OpResult must bufferize in-place with its
+          corresponding aliasing OpOperand. Alias sets and inplace attributes
+          will be set up accordingly before making any other bufferization
+          decisions. This method will never be called on OpResults that do not
+          have a tensor type.
+
+          Note: This method may not return `true` if the given OpResult does not
+          have an aliasing OpOperand.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"mustBufferizeInPlace",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
           Return the OpResult that aliases with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
