@@ -171,16 +171,20 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   staticSizes.reserve(opToPad.getRank(opOperand));
   auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
   for (auto size : shapedOp.getMixedSizes()) {
-    auto indexAttr = size.is<Attribute>()
-                         ? size.get<Attribute>().dyn_cast<IntegerAttr>()
-                         : linalg::getSmallestBoundingIndex(size.get<Value>());
-    // SmallestBoundingIndex must exist for all sizes.
-    // For now return an error if we can't find it.
-    if (!indexAttr) {
+    // If the size is an attribute add it directly to `staticSizes`.
+    if (size.is<Attribute>()) {
+      staticSizes.push_back(
+          size.get<Attribute>().dyn_cast<IntegerAttr>().getInt());
+      continue;
+    }
+    // Otherwise, try to compute a constant upper bound for the size value.
+    FailureOr<int64_t> upperBound =
+        getConstantUpperBoundForIndex(size.get<Value>());
+    if (failed(upperBound)) {
       LLVM_DEBUG(DBGS() << "No constant bounding box can be found for padding");
       return failure();
     }
-    staticSizes.push_back(indexAttr.getInt());
+    staticSizes.push_back(upperBound.getValue());
   }
   auto staticTensorType = RankedTensorType::get(
       staticSizes, getElementTypeOrSelf(opOperand->get()));
