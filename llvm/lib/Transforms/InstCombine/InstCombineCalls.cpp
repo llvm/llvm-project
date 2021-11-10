@@ -1802,14 +1802,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return ClassifyResult::None;
     };
 
-    // If the save is right next to the restore, remove the restore.  This can
-    // happen when variable allocas are DCE'd.
+    // If the stacksave and the stackrestore are in the same BB, and there is
+    // no intervening call, alloca, or stackrestore of a different stacksave,
+    // remove the restore. This can happen when variable allocas are DCE'd.
     if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
-      if (SS->getIntrinsicID() == Intrinsic::stacksave) {
-        // Skip over debug info.
-        if (SS->getNextNonDebugInstruction() == II) {
-          return eraseInstFromFunction(CI);
+      if (SS->getIntrinsicID() == Intrinsic::stacksave &&
+          SS->getParent() == II->getParent()) {
+        BasicBlock::iterator BI(SS);
+        bool CannotRemove = false;
+        for (++BI; &*BI != II; ++BI) {
+          switch (Classify(&*BI)) {
+          case ClassifyResult::None:
+            // So far so good, look at next instructions.
+            break;
+
+          case ClassifyResult::StackRestore:
+            // If we found an intervening stackrestore for a different
+            // stacksave, we can't remove the stackrestore. Otherwise, continue.
+            if (cast<IntrinsicInst>(*BI).getArgOperand(0) != SS)
+              CannotRemove = true;
+            break;
+
+          case ClassifyResult::Alloca:
+          case ClassifyResult::CallWithSideEffects:
+            // If we found an alloca, a non-intrinsic call, or an intrinsic
+            // call with side effects, we can't remove the stackrestore.
+            CannotRemove = true;
+            break;
+          }
+          if (CannotRemove)
+            break;
         }
+
+        if (!CannotRemove)
+          return eraseInstFromFunction(CI);
       }
     }
 
