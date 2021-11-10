@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2043,7 +2044,7 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   OS << "  return None;\n";
   OS << "}\n\n";
 
-  std::map<const Record *, std::vector<AttributeSubjectMatchRule>>
+  llvm::MapVector<const Record *, std::vector<AttributeSubjectMatchRule>>
       SubMatchRules;
   for (const auto &Rule : Rules) {
     if (!Rule.isSubRule())
