@@ -2340,8 +2340,9 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
   Value *LHS1 = LHS->getOperand(1), *RHS1 = RHS->getOperand(1);
-  auto *LHSC = dyn_cast<ConstantInt>(LHS1);
-  auto *RHSC = dyn_cast<ConstantInt>(RHS1);
+  const APInt *LHSC = nullptr, *RHSC = nullptr;
+  match(LHS1, m_APInt(LHSC));
+  match(RHS1, m_APInt(RHSC));
 
   // Fold (icmp ult/ule (A + C1), C3) | (icmp ult/ule (A + C2), C3)
   //                   -->  (icmp ult/ule ((A & ~(C1 ^ C2)) + max(C1, C2)), C3)
@@ -2355,40 +2356,41 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // This implies all values in the two ranges differ by exactly one bit.
   if ((PredL == ICmpInst::ICMP_ULT || PredL == ICmpInst::ICMP_ULE) &&
       PredL == PredR && LHSC && RHSC && LHS->hasOneUse() && RHS->hasOneUse() &&
-      LHSC->getType() == RHSC->getType() &&
-      LHSC->getValue() == (RHSC->getValue())) {
+      LHSC->getBitWidth() == RHSC->getBitWidth() && *LHSC == *RHSC) {
 
     Value *AddOpnd;
-    ConstantInt *LAddC, *RAddC;
-    if (match(LHS0, m_Add(m_Value(AddOpnd), m_ConstantInt(LAddC))) &&
-        match(RHS0, m_Add(m_Specific(AddOpnd), m_ConstantInt(RAddC))) &&
-        LAddC->getValue().ugt(LHSC->getValue()) &&
-        RAddC->getValue().ugt(LHSC->getValue())) {
+    const APInt *LAddC, *RAddC;
+    if (match(LHS0, m_Add(m_Value(AddOpnd), m_APInt(LAddC))) &&
+        match(RHS0, m_Add(m_Specific(AddOpnd), m_APInt(RAddC))) &&
+        LAddC->ugt(*LHSC) && RAddC->ugt(*LHSC)) {
 
-      APInt DiffC = LAddC->getValue() ^ RAddC->getValue();
+      APInt DiffC = *LAddC ^ *RAddC;
       if (DiffC.isPowerOf2()) {
-        ConstantInt *MaxAddC = nullptr;
-        if (LAddC->getValue().ult(RAddC->getValue()))
+        const APInt *MaxAddC = nullptr;
+        if (LAddC->ult(*RAddC))
           MaxAddC = RAddC;
         else
           MaxAddC = LAddC;
 
-        APInt RRangeLow = -RAddC->getValue();
-        APInt RRangeHigh = RRangeLow + LHSC->getValue();
-        APInt LRangeLow = -LAddC->getValue();
-        APInt LRangeHigh = LRangeLow + LHSC->getValue();
+        APInt RRangeLow = -*RAddC;
+        APInt RRangeHigh = RRangeLow + *LHSC;
+        APInt LRangeLow = -*LAddC;
+        APInt LRangeHigh = LRangeLow + *LHSC;
         APInt LowRangeDiff = RRangeLow ^ LRangeLow;
         APInt HighRangeDiff = RRangeHigh ^ LRangeHigh;
         APInt RangeDiff = LRangeLow.sgt(RRangeLow) ? LRangeLow - RRangeLow
                                                    : RRangeLow - LRangeLow;
 
         if (LowRangeDiff.isPowerOf2() && LowRangeDiff == HighRangeDiff &&
-            RangeDiff.ugt(LHSC->getValue())) {
-          Value *MaskC = ConstantInt::get(LAddC->getType(), ~DiffC);
+            RangeDiff.ugt(*LHSC)) {
+          Type *Ty = AddOpnd->getType();
+          Value *MaskC = ConstantInt::get(Ty, ~DiffC);
 
           Value *NewAnd = Builder.CreateAnd(AddOpnd, MaskC);
-          Value *NewAdd = Builder.CreateAdd(NewAnd, MaxAddC);
-          return Builder.CreateICmp(LHS->getPredicate(), NewAdd, LHSC);
+          Value *NewAdd = Builder.CreateAdd(NewAnd,
+                                            ConstantInt::get(Ty, *MaxAddC));
+          return Builder.CreateICmp(LHS->getPredicate(), NewAdd,
+                                    ConstantInt::get(Ty, *LHSC));
         }
       }
     }
@@ -2480,8 +2482,7 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (!LHSC || !RHSC)
     return nullptr;
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
-                                     PredR, RHS0, RHSC->getValue(),
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
                                      Builder, /* IsAnd */ false);
 }
 
