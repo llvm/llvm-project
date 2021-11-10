@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi \
 // RUN:   -target-feature +cdecp0 -target-feature +mve.fp \
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
