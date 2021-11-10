@@ -189,4 +189,16 @@ def ROCDL_MubufStoreOp :
   }];
 }
 
+def ROCDL_ShflBflyOp :
+  ROCDL_Op<"shfl.sync.bfly">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$active_mask,
+                 LLVM_Type:$val,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$mask_and_clamp)> {
+  string llvmBuilder = [{
+      $res = createAMDGPUShflBfly($val, $offset, $mask_and_clamp, builder);
+  }];
+}
+
 #endif // ROCDLIR_OPS
