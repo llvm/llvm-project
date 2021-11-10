@@ -229,7 +229,7 @@ class PtyProcess(object):
             pid, fd = _fork_pty.fork_pty()
 
         # Some platforms must call setwinsize() and setecho() from the
-        # child process, and others from the master process. We do both,
+        # child process, and others from the primary process. We do both,
         # allowing IOError for either.
 
         if pid == CHILD:
