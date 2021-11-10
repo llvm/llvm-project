@@ -204,6 +204,10 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
       End(*m_objfile_sp);
   assert(Record::classify(*It) == Record::Func);
   ++It; // Skip FUNC record.
+  // Skip INLINE records.
+  while (It != End && Record::classify(*It) == Record::Inline)
+    ++It;
+
   if (It != End) {
     auto record = LineRecord::parse(*It);
     if (record && record->FileNum < m_files->size())
@@ -282,13 +286,88 @@ bool SymbolFileBreakpad::ParseSupportFiles(CompileUnit &comp_unit,
   return true;
 }
 
+size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  CompileUnit *comp_unit = func.GetCompileUnit();
+  lldbassert(comp_unit);
+  ParseInlineOriginRecords();
+  // A vector of current each level's parent block. For example, when parsing
+  // "INLINE 0 ...", the current level is 0 and its parent block is the
+  // funciton block at index 0.
+  std::vector<Block *> blocks;
+  Block &block = func.GetBlock(false);
+  block.AddRange(Block::Range(0, func.GetAddressRange().GetByteSize()));
+  blocks.push_back(&block);
+
+  size_t blocks_added = 0;
+  addr_t func_base = func.GetAddressRange().GetBaseAddress().GetOffset();
+  CompUnitData &data = m_cu_data->GetEntryRef(comp_unit->GetID()).data;
+  LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
+      End(*m_objfile_sp);
+  ++It; // Skip the FUNC record.
+  size_t last_added_nest_level = 0;
+  while (It != End && Record::classify(*It) == Record::Inline) {
+    if (auto record = InlineRecord::parse(*It)) {
+      if (record->InlineNestLevel == 0 ||
+          record->InlineNestLevel <= last_added_nest_level + 1) {
+        last_added_nest_level = record->InlineNestLevel;
+        BlockSP block_sp = std::make_shared<Block>(It.GetBookmark().offset);
+        FileSpec callsite_file;
+        if (record->CallSiteFileNum < m_files->size())
+          callsite_file = (*m_files)[record->CallSiteFileNum];
+        llvm::StringRef name;
+        if (record->OriginNum < m_inline_origins->size())
+          name = (*m_inline_origins)[record->OriginNum];
+
+        Declaration callsite(callsite_file, record->CallSiteLineNum);
+        block_sp->SetInlinedFunctionInfo(name.str().c_str(),
+                                         /*mangled=*/nullptr,
+                                         /*decl_ptr=*/nullptr, &callsite);
+        for (const auto &range : record->Ranges) {
+          block_sp->AddRange(
+              Block::Range(range.first - func_base, range.second));
+        }
+        block_sp->FinalizeRanges();
+
+        blocks[record->InlineNestLevel]->AddChild(block_sp);
+        if (record->InlineNestLevel + 1 >= blocks.size()) {
+          blocks.resize(blocks.size() + 1);
+        }
+        blocks[record->InlineNestLevel + 1] = block_sp.get();
+        ++blocks_added;
+      }
+    }
+    ++It;
+  }
+  return blocks_added;
+}
+
+void SymbolFileBreakpad::ParseInlineOriginRecords() {
+  if (m_inline_origins)
+    return;
+  m_inline_origins.emplace();
+
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS);
+  for (llvm::StringRef line : lines(Record::InlineOrigin)) {
+    auto record = InlineOriginRecord::parse(line);
+    if (!record) {
+      LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
+      continue;
+    }
+
+    if (record->Number >= m_inline_origins->size())
+      m_inline_origins->resize(record->Number + 1);
+    (*m_inline_origins)[record->Number] = record->Name;
+  }
+}
+
 uint32_t
 SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
                                          SymbolContextItem resolve_scope,
                                          SymbolContext &sc) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!(resolve_scope & (eSymbolContextCompUnit | eSymbolContextLineEntry |
-                         eSymbolContextFunction)))
+                         eSymbolContextFunction | eSymbolContextBlock)))
     return 0;
 
   ParseCUData();
@@ -305,11 +384,20 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
       result |= eSymbolContextLineEntry;
     }
   }
-  if (resolve_scope & eSymbolContextFunction) {
+
+  if (resolve_scope & (eSymbolContextFunction | eSymbolContextBlock)) {
     FunctionSP func_sp = GetOrCreateFunction(*sc.comp_unit);
     if (func_sp) {
       sc.function = func_sp.get();
       result |= eSymbolContextFunction;
+      if (resolve_scope & eSymbolContextBlock) {
+        Block &block = func_sp->GetBlock(true);
+        sc.block = block.FindInnermostBlockByOffset(
+            so_addr.GetFileAddress() -
+            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+        if (sc.block)
+          result |= eSymbolContextBlock;
+      }
     }
   }
 
@@ -774,6 +862,10 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
       End(*m_objfile_sp);
   assert(Record::classify(*It) == Record::Func);
   for (++It; It != End; ++It) {
+    // Skip INLINE records
+    if (Record::classify(*It) == Record::Inline)
+      continue;
+
     auto record = LineRecord::parse(*It);
     if (!record)
       break;
