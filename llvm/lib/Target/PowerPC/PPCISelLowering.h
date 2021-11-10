@@ -200,6 +200,14 @@ namespace llvm {
     /// and 64-bit AIX.
     BCTRL_LOAD_TOC,
 
+    /// The variants that implicitly define rounding mode for calls with
+    /// strictfp semantics.
+    CALL_RM,
+    CALL_NOP_RM,
+    CALL_NOTOC_RM,
+    BCTRL_RM,
+    BCTRL_LOAD_TOC_RM,
+
     /// Return with a flag operand, matched by 'blr'
     RET_FLAG,
 

@@ -2246,11 +2246,13 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
 
     return true;
   } else if (OpC == PPC::BCTR || OpC == PPC::BCTR8 || OpC == PPC::BCTRL ||
-             OpC == PPC::BCTRL8) {
+             OpC == PPC::BCTRL8 || OpC == PPC::BCTRL_RM ||
+             OpC == PPC::BCTRL8_RM) {
     if (Pred[1].getReg() == PPC::CTR8 || Pred[1].getReg() == PPC::CTR)
       llvm_unreachable("Cannot predicate bctr[l] on the ctr register");
 
-    bool setLR = OpC == PPC::BCTRL || OpC == PPC::BCTRL8;
+    bool setLR = OpC == PPC::BCTRL || OpC == PPC::BCTRL8 ||
+                 OpC == PPC::BCTRL_RM || OpC == PPC::BCTRL8_RM;
     bool isPPC64 = Subtarget.isPPC64();
 
     if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
@@ -2274,6 +2276,9 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::Implicit)
           .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::ImplicitDefine);
+    if (OpC == PPC::BCTRL_RM || OpC == PPC::BCTRL8_RM)
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(PPC::RM, RegState::ImplicitDefine);
 
     return true;
   }
