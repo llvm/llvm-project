@@ -61,9 +61,9 @@ define i1 @test7_logical(i32 %i, i1 %b) {
 
 define i1 @test8(i32 %i) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[I_OFF:%.*]] = add i32 [[I:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I_OFF]], 13
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 13
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i32 %i, 0
   %cmp2 = icmp ult i32 %i, 14
@@ -73,9 +73,9 @@ define i1 @test8(i32 %i) {
 
 define i1 @test8_logical(i32 %i) {
 ; CHECK-LABEL: @test8_logical(
-; CHECK-NEXT:    [[I_OFF:%.*]] = add i32 [[I:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I_OFF]], 13
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 13
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i32 %i, 0
   %cmp2 = icmp ult i32 %i, 14

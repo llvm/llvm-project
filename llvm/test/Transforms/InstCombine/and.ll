@@ -347,9 +347,9 @@ define i1 @test24_logical(i32 %A) {
 
 define i1 @test25(i32 %A) {
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 50
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -50
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 50
   %C = icmp slt i32 %A, 100
@@ -359,9 +359,9 @@ define i1 @test25(i32 %A) {
 
 define i1 @test25_logical(i32 %A) {
 ; CHECK-LABEL: @test25_logical(
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 50
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -50
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 50
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %B = icmp sge i32 %A, 50
   %C = icmp slt i32 %A, 100
