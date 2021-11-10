@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kMCTargetDesc.h"
+#include "M88kBaseInfo.h"
 #include "M88kInstPrinter.h"
 #include "M88kMCAsmInfo.h"
 #include "M88kTargetStreamer.h"

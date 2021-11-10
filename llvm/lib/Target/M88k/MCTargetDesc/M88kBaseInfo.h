@@ -16,6 +16,8 @@
 #ifndef LLVM_LIB_TARGET_M88K_MCTARGETDESC_M88KBASEINFO_H
 #define LLVM_LIB_TARGET_M88K_MCTARGETDESC_M88KBASEINFO_H
 
+#include "llvm/MC/MCInstrDesc.h"
+
 namespace llvm {
 // M88kII - This namespace holds all of the target specific flags that
 // instruction info tracks.
@@ -31,6 +33,18 @@ enum TOF {
   MO_ABS_LO = 0x2
 };
 } // end namespace M88kII
+
+namespace M88kOp {
+enum OperandType : unsigned {
+  OPERAND_FIRST_M88K = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_UIMM5 = OPERAND_FIRST_M88K,
+  OPERAND_UIMM16,
+  OPERAND_SIMM16,
+  OPERAND_CONDITION_CODE,
+  OPERAND_BITFIELD,
+  OPERAND_REGISTER_SCALED,
+};
+} // namespace M88kOp
 
 } // namespace llvm
 

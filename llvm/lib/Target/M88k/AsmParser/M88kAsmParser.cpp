@@ -58,7 +58,6 @@ class M88kOperand : public MCParsedAsmOperand {
     OpKind_Token,
     OpKind_Reg,
     OpKind_Imm,
-    OpKind_Mem // Reg+Imm, Reg+Reg, Reg+(Reg<<(1,2,4,8))
   };
 
   OperandKind Kind;
@@ -72,6 +71,7 @@ class M88kOperand : public MCParsedAsmOperand {
 
   struct RegOp {
     unsigned RegNo;
+    bool IsScaled;
   };
 
   union {
@@ -100,12 +100,15 @@ public:
   // getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  bool isReg() const override { return Kind == OpKind_Reg; }
+  bool isReg() const override { return Kind == OpKind_Reg && !Reg.IsScaled; }
 
   unsigned getReg() const override {
     assert(isReg() && "Invalid type access!");
     return Reg.RegNo;
   }
+
+  // TODO
+  bool isScaledReg() const { return Kind == OpKind_Reg && Reg.IsScaled; }
 
   bool isImm() const override { return Kind == OpKind_Imm; }
 
@@ -118,14 +121,14 @@ public:
     return Imm;
   }
 
-  bool isMem() const override { return Kind == OpKind_Mem; }
-
   bool isToken() const override { return Kind == OpKind_Token; }
 
   StringRef getToken() const {
     assert(isToken() && "Not a token");
     return StringRef(Token.Data, Token.Length);
   }
+
+  bool isMem() const override { return false; }
 
   static std::unique_ptr<M88kOperand> createToken(StringRef Str, SMLoc Loc) {
     auto Op = std::make_unique<M88kOperand>(OpKind_Token, Loc, Loc);
@@ -134,10 +137,11 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<M88kOperand> createReg(unsigned Num, SMLoc StartLoc,
-                                                SMLoc EndLoc) {
+  static std::unique_ptr<M88kOperand> createReg(unsigned Num, bool IsScaled,
+                                                SMLoc StartLoc, SMLoc EndLoc) {
     auto Op = std::make_unique<M88kOperand>(OpKind_Reg, StartLoc, EndLoc);
     Op->Reg.RegNo = Num;
+    Op->Reg.IsScaled = IsScaled;
     return Op;
   }
 
@@ -155,7 +159,23 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
+  void addScaledRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands");
+    assert(isScaledReg() && "Expected a scaled register");
+    Inst.addOperand(MCOperand::createReg(Reg.RegNo));
+  }
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands");
+    addExpr(Inst, getImm());
+  }
+
+  void addBitFieldOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands");
+    addExpr(Inst, getImm());
+  }
+
+  void addConditionCodeOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands");
     addExpr(Inst, getImm());
   }
@@ -163,9 +183,11 @@ public:
   bool isU5Imm() const { return isImm(0, 31); }
   // TODO
   bool isU5ImmO() const { return isImm(0, 31); }
-  bool isU10ImmWO() const { return isImm(0, 1023); }
   bool isU16Imm() const { return isImm(0, 65535); }
   bool isS16Imm() const { return isImm(-32768, 32767); }
+
+  bool isBitField() const { return isImm(0, 1023); }
+  bool isCCode() const { return isImm(0, 31); }
 
   void print(raw_ostream &OS) const override {
     switch (Kind) {
@@ -176,10 +198,11 @@ public:
       OS << "Token: " << getToken() << "\n";
       break;
     case OpKind_Reg:
-      OS << "Reg: %r" << /*getReg() <<*/ "\n";
-      break;
-    case OpKind_Mem:
-      OS << "MemImm: " << /* *getMemOffset() <<*/ "\n";
+      OS << "Reg: ";
+      if (Reg.IsScaled) OS << "[";
+      OS << "%r"; /*getReg() <<*/
+      if (Reg.IsScaled) OS << "]";
+      OS << "\n";
       break;
     }
   }
@@ -210,14 +233,19 @@ class M88kAsmParser : public MCTargetAsmParser {
                      bool RestoreOnFailure);
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
-  OperandMatchResultTy parseImmWO(OperandVector &Operands);
+  OperandMatchResultTy parseScaledRegister(OperandVector &Operands);
+
+  OperandMatchResultTy parseBitField(OperandVector &Operands);
+  OperandMatchResultTy parseConditionCode(OperandVector &Operands);
+
+  OperandMatchResultTy parsePCRel(OperandVector &Operands, unsigned Bits);
+
   OperandMatchResultTy parsePCRel16(OperandVector &Operands) {
-    // return parsePCRel(Operands, -(1LL << 16), (1LL << 16) - 1, false);
-    return MatchOperand_ParseFail;
+    return parsePCRel(Operands, 18);
   }
 
   OperandMatchResultTy parsePCRel26(OperandVector &Operands) {
-    return MatchOperand_ParseFail;
+    return parsePCRel(Operands, 28);
   }
 
   bool MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
@@ -317,22 +345,33 @@ bool M88kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Read the remaining operands.
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
+
     // Read the first operand.
     if (parseOperand(Operands, Name)) {
-      return true;
+      return Error(getLexer().getLoc(), "expected operand");
     }
 
-    // Read any subsequent operands.
-    while (getLexer().is(AsmToken::Comma)) {
+    // Read the second operand.
+    if (getLexer().is(AsmToken::Comma)) {
       Parser.Lex();
       if (parseOperand(Operands, Name)) {
-        return true;
+        return Error(getLexer().getLoc(), "expected operand");
+      }
+
+      // Read the third operand or a scaled register.
+      if (getLexer().is(AsmToken::Comma)) {
+        Parser.Lex();
+        if (parseOperand(Operands, Name)) {
+          return Error(getLexer().getLoc(), "expected operand");
+        }
+      } else if (getLexer().is(AsmToken::LBrac)) {
+        if (parseScaledRegister(Operands) != MatchOperand_Success)
+          return Error(getLexer().getLoc(), "expected scaled register operand");
       }
     }
-    if (getLexer().isNot(AsmToken::EndOfStatement)) {
-      SMLoc Loc = getLexer().getLoc();
-      return Error(Loc, "unexpected token in argument list");
-    }
+
+    if (getLexer().isNot(AsmToken::EndOfStatement))
+      return Error(getLexer().getLoc(), "unexpected token in argument list");
   }
 
   // Consume the EndOfStatement.
@@ -358,7 +397,7 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     SMLoc StartLoc, EndLoc;
     if (parseRegister(RegNo, StartLoc, EndLoc, false))
       return true;
-    Operands.push_back(M88kOperand::createReg(RegNo, StartLoc, EndLoc));
+    Operands.push_back(M88kOperand::createReg(RegNo, false, StartLoc, EndLoc));
     return false;
   }
 
@@ -376,7 +415,45 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   return true;
 }
 
-OperandMatchResultTy M88kAsmParser::parseImmWO(OperandVector &Operands) {
+OperandMatchResultTy
+M88kAsmParser::parseScaledRegister(OperandVector &Operands) {
+  SMLoc StartLoc = Parser.getTok().getLoc();
+
+  // Eat the '[' bracket.
+  if (Lexer.isNot(AsmToken::LBrac))
+    return MatchOperand_NoMatch;
+  const AsmToken &LBracTok = Parser.getTok();
+  Parser.Lex();
+
+  // Eat the '%' prefix.
+  if (Parser.getTok().isNot(AsmToken::Percent))
+    return MatchOperand_NoMatch;
+  Parser.Lex();
+
+  // Match the register.
+  unsigned RegNo;
+  if (Lexer.getKind() != AsmToken::Identifier ||
+      (RegNo = MatchRegisterName(Lexer.getTok().getIdentifier())) == 0) {
+    Lexer.UnLex(LBracTok);
+    return MatchOperand_NoMatch;
+  }
+  Parser.Lex();
+
+  // Eat the ']' bracket.
+  if (Lexer.isNot(AsmToken::RBrac)) {
+    Lexer.UnLex(LBracTok);
+    return MatchOperand_NoMatch;
+  }
+  SMLoc EndLoc = Parser.getTok().getLoc();
+  Parser.Lex();
+
+  Operands.push_back(M88kOperand::createReg(RegNo, true, StartLoc, EndLoc));
+
+  // Announce match.
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy M88kAsmParser::parseBitField(OperandVector &Operands) {
   // Parses operands like 5<6> and <7>.
   MCContext &Ctx = getContext();
   SMLoc StartLoc = Parser.getTok().getLoc();
@@ -404,10 +481,95 @@ OperandMatchResultTy M88kAsmParser::parseImmWO(OperandVector &Operands) {
   // TODO Check values.
   int64_t Val = Width << 5 | Offset;
   const MCExpr *Expr = MCConstantExpr::create(Val, Ctx);
-  SMLoc EndLoc = Parser.getTok().getLoc();
+  SMLoc EndLoc =
+    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
 
-  // Announce no match.
+  // Announce match.
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+M88kAsmParser::parseConditionCode(OperandVector &Operands) {
+  // Parses condition codes for brcond/tcond.
+  SMLoc StartLoc = getLexer().getLoc();
+  unsigned CC;
+  if (Lexer.is(AsmToken::Integer)) {
+    int64_t CCVal = Lexer.getTok().getIntVal();
+    if (isUInt<5>(CCVal))
+      return MatchOperand_NoMatch;
+    CC = static_cast<unsigned>(CCVal);
+  } else {
+    CC = StringSwitch<unsigned>(Parser.getTok().getString())
+             .Case("eq0", 0x2)
+             .Case("ne0", 0xd)
+             .Case("gt0", 0x1)
+             .Case("lt0", 0xc)
+             .Case("ge0", 0x3)
+             .Case("le0", 0xe)
+             .Default(0);
+    if (CC == 0)
+      return MatchOperand_NoMatch;
+  }
+  Parser.Lex();
+
+  // Create expression.
+  SMLoc EndLoc =
+      SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  const MCExpr *CCExpr = MCConstantExpr::create(CC, getContext());
+  Operands.push_back(M88kOperand::createImm(CCExpr, StartLoc, EndLoc));
+
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy M88kAsmParser::parsePCRel(OperandVector &Operands, unsigned Bits) {
+  MCContext &Ctx = getContext();
+  MCStreamer &Out = getStreamer();
+  const MCExpr *Expr;
+  SMLoc StartLoc = Parser.getTok().getLoc();
+  if (getParser().parseExpression(Expr))
+    return MatchOperand_NoMatch;
+
+  const int64_t MinVal = -(1LL << Bits);
+  const int64_t MaxVal = (1LL << Bits) -1;
+  auto isOutOfRangeConstant = [&](const MCExpr *E) -> bool {
+    if (auto *CE = dyn_cast<MCConstantExpr>(E)) {
+      int64_t Value = CE->getValue();
+      if ((Value & 1) || Value < MinVal || Value > MaxVal)
+        return true;
+    }
+    return false;
+  };
+
+  // For consistency with the GNU assembler, treat immediates as offsets
+  // from ".".
+  if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
+    if (isOutOfRangeConstant(CE)) {
+      Error(StartLoc, "offset out of range");
+      return MatchOperand_ParseFail;
+    }
+    int64_t Value = CE->getValue();
+    MCSymbol *Sym = Ctx.createTempSymbol();
+    Out.emitLabel(Sym);
+    const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
+                                                 Ctx);
+    Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
+  }
+
+  // For consistency with the GNU assembler, conservatively assume that a
+  // constant offset must by itself be within the given size range.
+  if (const auto *BE = dyn_cast<MCBinaryExpr>(Expr))
+    if (isOutOfRangeConstant(BE->getLHS()) ||
+        isOutOfRangeConstant(BE->getRHS())) {
+      Error(StartLoc, "offset out of range");
+      return MatchOperand_ParseFail;
+    }
+
+  SMLoc EndLoc =
+    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+  Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+
   return MatchOperand_Success;
 }
 

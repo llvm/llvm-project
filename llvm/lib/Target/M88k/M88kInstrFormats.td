@@ -235,7 +235,7 @@ class F_LSINDSC<bits<4> func, bits<2> ty, bits<1> user,
                 dag outs, dag ins, string asm, list<dag> pattern = [],
                 InstrItinClass itin = NoItinerary>
    : F_LSINDIRECT<func, ty, /*scaled=*/ 0b1, user, outs, ins, asm,
-                  "$rd, $rs1[$rs2]", pattern, itin>;
+                  "$rd, $rs1$rs2", pattern, itin>;
 
 // Category: Flow control.
 

@@ -39,14 +39,18 @@ public:
   static void printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
                            raw_ostream &O);
 
+  void printScaledRegister(const MCInst *MI, int OpNum,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printU5ImmOperand(const MCInst *MI, int OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printU5ImmOOperand(const MCInst *MI, int OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU10ImmWOOperand(const MCInst *MI, int OpNum,
-                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, int OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBitFieldOperand(const MCInst *MI, int OpNum,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
+  void printCCodeOperand(const MCInst *MI, int OpNum,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printPCRelOperand(const MCInst *MI, uint64_t Address, int OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 

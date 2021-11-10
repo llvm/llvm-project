@@ -42,10 +42,6 @@ def m88k_rot : SDNode<"M88kISD::ROT", SDTIntBinOp>;
 def m88k_ff1 : SDNode<"M88kISD::FF1", SDTIntBitCountUnaryOp>;
 def m88k_ff0 : SDNode<"M88kISD::FF0", SDTIntBitCountUnaryOp>;
 
-def m88k_bb0 : SDNode<"M88kISD::BB0", SDTIntBinOp>;
-def m88k_bb1 : SDNode<"M88kISD::BB0", SDTIntBinOp>;
-def m88k_bcond : SDNode<"M88kISD::BB0", SDTIntBinOp>;
-
 // Hi16 and Lo16 nodes are used to handle global addresses.
 def m88k_hi : SDNode<"M88kISD::Hi16", SDTIntUnaryOp>;
 def m88k_lo : SDNode<"M88kISD::Lo16", SDTIntUnaryOp>;
@@ -94,17 +90,39 @@ class PCRelOperand<ValueType vt, AsmOperandClass asmop> : Operand<vt> {
   let OperandType = "OPERAND_PCREL";
 }
 
-
 // Signed and unsigned operands.
 def U5Imm : ImmediateAsmOperand<"U5Imm">;
 def U5ImmO : ImmediateAsmOperand<"U5ImmO">  {
-  let ParserMethod = "parseImmWO";
-}
-def U10ImmWO : ImmediateAsmOperand<"U10ImmWO"> {
-  let ParserMethod = "parseImmWO";
+  let ParserMethod = "parseBitField";
 }
 def S16Imm : ImmediateAsmOperand<"S16Imm">;
 def U16Imm : ImmediateAsmOperand<"U16Imm">;
+
+// Bitfield operand.
+def BFImm : AsmOperandClass {
+  let Name = "BitField";
+  let RenderMethod = "addBitFieldOperands";
+  let ParserMethod = "parseBitField";
+}
+def bfimm : ImmOpWithPattern<i32, "BFImm", [{
+  return isUInt<10>(N->getZExtValue());
+}], NOOP_SDNodeXForm> {
+  let PrintMethod = "printBitFieldOperand";
+  let DecoderMethod = "decodeBitFieldOperand";
+  let OperandNamespace = "M88kOp";
+  let OperandType = "OPERAND_BITFIELD";
+}
+
+// Condition code operands.
+def CCode : AsmOperandClass {
+  let Name = "CCode";
+  let RenderMethod = "addConditionCodeOperands";
+  let ParserMethod = "parseConditionCode";
+}
+def ccode : ImmediateOp<i8, "CCode"> {
+  let OperandNamespace = "M88kOp";
+  let OperandType = "OPERAND_CONDITION_CODE";
+}
 
 // PC-relative asm operands.
 def PCRel16 : PCRelAsmOperand<"16">;
@@ -122,6 +140,19 @@ def brtarget26 : PCRelOperand<OtherVT, PCRel26> {
   let DecoderMethod = "decodePC26BranchOperand";
 }
 
+def GPRScaledAsmOp : AsmOperandClass {
+  let Name = "ScaledReg";
+  let RenderMethod = "addScaledRegOperands";
+  let ParserMethod = "parseScaledRegister";
+}
+def GPRScaled : Operand<i32> {
+  let MIOperandInfo = (ops GPR:$rs2);
+  let PrintMethod = "printScaledRegister";
+  let DecoderMethod = "decodeScaledRegister";
+  let ParserMatchClass = GPRScaledAsmOp; //!cast<AsmOperandClass>(asmop);
+  let OperandNamespace = "M88kOp";
+  let OperandType = "OPERAND_REGISTER_SCALED";
+}
 
 // Extracting immediate operands from nodes.
 
@@ -169,10 +200,6 @@ defm imm32zx16 : Immediate<i32, [{
 defm imm32zx5O : Immediate<i32, [{
   return (N->getZExtValue() & ~0x000000000000001fULL) == 0;
 }], NOOP_SDNodeXForm, "U5ImmO">;
-
-defm imm32zx10WO : Immediate<i32, [{
-  return (N->getZExtValue() & ~0x00000000000003ffULL) == 0;
-}], NOOP_SDNodeXForm, "U10ImmWO">;
 
 // Predicate: Arbitrary 32 bit value.
 def uimm32 : PatLeaf<(imm), [{
@@ -275,11 +302,11 @@ multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode, PatLeaf ImmOp,
                  itin>;
 }
 
-defm CLR  : Bitfield<0b100000, "clr", m88k_clr, imm32zx10WO>;
-defm SET  : Bitfield<0b100010, "set", m88k_set, imm32zx10WO>;
-defm EXT  : Bitfield<0b100100, "ext", m88k_ext, imm32zx10WO>;
-defm EXTU : Bitfield<0b100110, "extu", m88k_extu, imm32zx10WO>;
-defm MAK  : Bitfield<0b101000, "mak", m88k_mak, imm32zx10WO>;
+defm CLR  : Bitfield<0b100000, "clr", m88k_clr, bfimm>;
+defm SET  : Bitfield<0b100010, "set", m88k_set, bfimm>;
+defm EXT  : Bitfield<0b100100, "ext", m88k_ext, bfimm>;
+defm EXTU : Bitfield<0b100110, "extu", m88k_extu, bfimm>;
+defm MAK  : Bitfield<0b101000, "mak", m88k_mak, bfimm>;
 defm ROT  : Bitfield<0b101010, "rot", m88k_rot, imm32zx5O>;
 
 // Pattern for shifts
@@ -525,74 +552,74 @@ multiclass LoadScaled<bits<4> Func, string OpcStr,
                       InstrItinClass itin = NoItinerary> {
   let regfile = 1 in {
     def rrsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
-                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".d"),
                     [],
                     itin>;
     def rrsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     OpcStr,
                     [],
                     itin>;
     def rrsb  : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ 0b0,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".b"),
                     [],
                     itin>;
     def rrsh  : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".h"),
                     [],
                     itin>;
     def rrsdu : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
-                    (outs GPR64:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR64:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".d.usr"),
                     [],
                     itin>;
     def rrswu : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".usr"),
                     [],
                     itin>;
     def rrsbu : F_LSINDSC<Func, /*ty=*/ 0b11, /*user=*/ 0b1,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".b.usr"),
                     [],
                     itin>;
     def rrshu : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".h.usr"),
                     [],
                     itin>;
   }
   let regfile = 0, Predicates = [IsMC881100] in {
     def xxsw  : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b0,
-                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     OpcStr,
                     [],
                     itin>;
     def xxsd  : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b0,
-                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".d"),
                     [],
                     itin>;
     def xxsq  : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b0,
-                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".x"),
                     [],
                     itin>;
     def xxswu : F_LSINDSC<Func, /*ty=*/ 0b01, /*user=*/ 0b1,
-                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".usr"),
                     [],
                     itin>;
     def xxsdu : F_LSINDSC<Func, /*ty=*/ 0b00, /*user=*/ 0b1,
-                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".d.usr"),
                     [],
                     itin>;
     def xxsqu : F_LSINDSC<Func, /*ty=*/ 0b10, /*user=*/ 0b1,
-                    (outs XR:$rd), (ins XR:$rs1, XR:$rs2),
+                    (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
                     !strconcat(OpcStr, ".x.usr"),
                     [],
                     itin>;
@@ -661,7 +688,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
                     (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
                     "bb1">;
   def BCOND : F_BCOND<0b11101,
-                      (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
+                      (outs), (ins ccode:$m5, GPR:$rs1, brtarget16:$d16),
                       "bcnd">;
   let hasDelaySlot = 1 in {
     def BB0n : F_BCOND<0b11010,
@@ -671,7 +698,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
                       (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
                       "bb1.n">;
     def BCONDn : F_BCOND<0b11101,
-                        (outs), (ins imm32zx5:$m5, GPR:$rs1, brtarget16:$d16),
+                        (outs), (ins ccode:$m5, GPR:$rs1, brtarget16:$d16),
                         "bcnd.n">;
   }
 }

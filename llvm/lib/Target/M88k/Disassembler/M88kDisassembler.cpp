@@ -159,6 +159,12 @@ static DecodeStatus decodeGPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
+static DecodeStatus decodeScaledRegister(MCInst &Inst, uint64_t Imm,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))
@@ -177,15 +183,20 @@ static DecodeStatus decodeU5ImmOperand(MCInst &Inst, uint64_t Imm,
   return decodeUImmOperand<5>(Inst, Imm);
 }
 
-static DecodeStatus decodeU10ImmWOOperand(MCInst &Inst, uint64_t Imm,
+static DecodeStatus decodeU16ImmOperand(MCInst &Inst, uint64_t Imm,
+                                        uint64_t Address, const void *Decoder) {
+  return decodeUImmOperand<16>(Inst, Imm);
+}
+
+static DecodeStatus decodeBitFieldOperand(MCInst &Inst, uint64_t Imm,
                                           uint64_t Address,
                                           const void *Decoder) {
   return decodeUImmOperand<10>(Inst, Imm);
 }
 
-static DecodeStatus decodeU16ImmOperand(MCInst &Inst, uint64_t Imm,
-                                        uint64_t Address, const void *Decoder) {
-  return decodeUImmOperand<16>(Inst, Imm);
+static DecodeStatus decodeCCodeOperand(MCInst &Inst, uint64_t Imm,
+                                       uint64_t Address, const void *Decoder) {
+  return decodeUImmOperand<5>(Inst, Imm);
 }
 
 static DecodeStatus decodePC26BranchOperand(MCInst &Inst, uint64_t Imm,

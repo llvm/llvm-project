@@ -63,42 +63,42 @@ isns:
   bb1.n     0, %r1, 0
 
   # conditional branch
-#  bcnd       eq0, %r1, 0
-#  bcnd       eq0, %r1, 10
-#  bcnd       eq0, %r1, -10
-#  bcnd.n     eq0, %r1, 0
-#  bcnd.n     eq0, %r1, 10
-#  bcnd.n     eq0, %r1, -10
-#  bcnd       ne0, %r1, 0
-#  bcnd       ne0, %r1, 10
-#  bcnd       ne0, %r1, -10
-#  bcnd.n     ne0, %r1, 0
-#  bcnd.n     ne0, %r1, 10
-#  bcnd.n     ne0, %r1, -10
-#  bcnd       gt0, %r1, 0
-#  bcnd       gt0, %r1, 10
-#  bcnd       gt0, %r1, -10
-#  bcnd.n     gt0, %r1, 0
-#  bcnd.n     gt0, %r1, 10
-#  bcnd.n     gt0, %r1, -10
-#  bcnd       lt0, %r1, 0
-#  bcnd       lt0, %r1, 10
-#  bcnd       lt0, %r1, -10
-#  bcnd.n     lt0, %r1, 0
-#  bcnd.n     lt0, %r1, 10
-#  bcnd.n     lt0, %r1, -10
-#  bcnd       ge0, %r1, 0
-#  bcnd       ge0, %r1, 10
-#  bcnd       ge0, %r1, -10
-#  bcnd.n     ge0, %r1, 0
-#  bcnd.n     ge0, %r1, 10
-#  bcnd.n     ge0, %r1, -10
-#  bcnd       le0, %r1, 0
-#  bcnd       le0, %r1, 10
-#  bcnd       le0, %r1, -10
-#  bcnd.n     le0, %r1, 0
-#  bcnd.n     le0, %r1, 10
-#  bcnd.n     le0, %r1, -10
+  bcnd       eq0, %r1, 0
+  bcnd       eq0, %r1, 10
+  bcnd       eq0, %r1, -10
+  bcnd.n     eq0, %r1, 0
+  bcnd.n     eq0, %r1, 10
+  bcnd.n     eq0, %r1, -10
+  bcnd       ne0, %r1, 0
+  bcnd       ne0, %r1, 10
+  bcnd       ne0, %r1, -10
+  bcnd.n     ne0, %r1, 0
+  bcnd.n     ne0, %r1, 10
+  bcnd.n     ne0, %r1, -10
+  bcnd       gt0, %r1, 0
+  bcnd       gt0, %r1, 10
+  bcnd       gt0, %r1, -10
+  bcnd.n     gt0, %r1, 0
+  bcnd.n     gt0, %r1, 10
+  bcnd.n     gt0, %r1, -10
+  bcnd       lt0, %r1, 0
+  bcnd       lt0, %r1, 10
+  bcnd       lt0, %r1, -10
+  bcnd.n     lt0, %r1, 0
+  bcnd.n     lt0, %r1, 10
+  bcnd.n     lt0, %r1, -10
+  bcnd       ge0, %r1, 0
+  bcnd       ge0, %r1, 10
+  bcnd       ge0, %r1, -10
+  bcnd.n     ge0, %r1, 0
+  bcnd.n     ge0, %r1, 10
+  bcnd.n     ge0, %r1, -10
+  bcnd       le0, %r1, 0
+  bcnd       le0, %r1, 10
+  bcnd       le0, %r1, -10
+  bcnd.n     le0, %r1, 0
+  bcnd.n     le0, %r1, 10
+  bcnd.n     le0, %r1, -10
   # using m5 field
   bcnd       3, %r1, 0
   bcnd       3, %r1, 10
@@ -361,18 +361,18 @@ isns:
 # CHECK: ld.usr       %r1, %r2, %r3      | encoding: [0xf4,0x22,0x15,0x03]
 # CHECK: ld.d.usr     %r2, %r3, %r4      | encoding: [0xf4,0x43,0x11,0x04]
 
-#  ld.b         %r0, %r1[%r2]
+  ld.b         %r0, %r1[%r2]
 #  ld.bu        %r1, %r2[%r3]
-#  ld.h         %r2, %r3[%r4]
+  ld.h         %r2, %r3[%r4]
 #  ld.hu        %r3, %r4[%r5]
-#  ld           %r4, %r5[%r6]
-#  ld.d         %r5, %r6[%r7]
-#  ld.b.usr     %r6, %r7[%r8]
+  ld           %r4, %r5[%r6]
+  ld.d         %r5, %r6[%r7]
+  ld.b.usr     %r6, %r7[%r8]
 #  ld.bu.usr    %r7, %r8[%r9]
-#  ld.h.usr     %r8, %r9[%r1]
+  ld.h.usr     %r8, %r9[%r1]
 #  ld.hu.usr    %r9, %r1[%r2]
-#  ld.usr       %r1, %r2[%r3]
-#  ld.d.usr     %r2, %r3[%r4]
+  ld.usr       %r1, %r2[%r3]
+  ld.d.usr     %r2, %r3[%r4]
 
 # load address
 #  lda.h        %r0, %r1[%r2]
@@ -556,6 +556,20 @@ isns:
 # exchange control register
   xcr          %r0, %r3, %cr10
 # CHECK: xcr          %r0, %r3, %cr10    | encoding: [0x80,0x03,0xc1,0x43]
+
+# exchange register with memory
+#  xmem.bu      %r0, %r1, 0
+#  xmem.bu      %r0, %r1, 10
+#  xmem         %r0, %r1, 0
+#  xmem         %r1, %r2, 4096
+#  xmem.bu      %r0, %r1, %r2
+#  xmem         %r1, %r2, %r3
+#  xmem.bu.usr  %r4, %r5, %r6
+#  xmem.usr     %r5, %r6, %r7
+#  xmem.bu      %r2, %r3[%r4]
+#  xmem         %r3, %r4[%r5]
+#  xmem.bu.usr  %r4, %r5[%r9]
+#  xmem.usr     %r5, %r6[%r10]
 
 # logical exclusive or
   xor      %r0, %r1, %r2
