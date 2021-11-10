@@ -51,8 +51,12 @@ class ScriptedProcesTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
-        scripted_process_example_relpath = 'dummy_scripted_process.py'
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
+        scripted_process_example_relpath = 'dummy_scripted_process.py'
         self.runCmd("command script import " + os.path.join(self.getSourceDir(),
                                                             scripted_process_example_relpath))
 
@@ -98,6 +102,7 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(self.dbg.DeleteTarget(target), "Couldn't delete target")
 
     @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
     @skipIf(archs=no_match(['x86_64']))
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
@@ -115,8 +120,12 @@ class ScriptedProcesTestCase(TestBase):
         error = target.SetModuleLoadAddress(main_module, 0)
         self.assertTrue(error.Success(), "Reloading main module at offset 0 failed.")
 
-        scripted_process_example_relpath = 'stack_core_scripted_process.py'
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
+        scripted_process_example_relpath = 'stack_core_scripted_process.py'
         self.runCmd("command script import " + os.path.join(self.getSourceDir(),
                                                             scripted_process_example_relpath))
 
