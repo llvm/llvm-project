@@ -9,6 +9,7 @@ target_link_libraries(cir-tool PRIVATE
   ${dialect_libs}
   ${conversion_libs}
 
+  clangCIR
   MLIRAnalysis
   MLIRIR
   MLIROptLib

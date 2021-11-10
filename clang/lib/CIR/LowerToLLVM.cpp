@@ -33,17 +33,20 @@
 #include "llvm/ADT/Sequence.h"
 
 using namespace cir;
+using namespace llvm;
 
 namespace cir {
 
-struct CIRToLLVMLoweringPass
-    : public mlir::PassWrapper<CIRToLLVMLoweringPass,
+struct ConvertCIRToLLVMPass
+    : public mlir::PassWrapper<ConvertCIRToLLVMPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
     registry.insert<mlir::LLVM::LLVMDialect, mlir::func::FuncDialect,
                     mlir::scf::SCFDialect>();
   }
   void runOnOperation() final;
+
+  virtual StringRef getArgument() const override { return "cir-to-llvm"; }
 };
 
 class CIRReturnLowering : public mlir::OpRewritePattern<mlir::cir::ReturnOp> {
@@ -103,7 +106,7 @@ void populateCIRToStdConversionPatterns(mlir::RewritePatternSet &patterns) {
                CIRStoreLowering>(patterns.getContext());
 }
 
-void CIRToLLVMLoweringPass::runOnOperation() {
+void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::LLVMConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
 
@@ -124,29 +127,28 @@ void CIRToLLVMLoweringPass::runOnOperation() {
 std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
                      std::unique_ptr<mlir::MLIRContext> mlirCtx,
-                     llvm::LLVMContext &llvmCtx) {
+                     LLVMContext &llvmCtx) {
   mlir::PassManager pm(mlirCtx.get());
 
-  pm.addPass(createLowerToLLVMPass());
+  pm.addPass(createConvertCIRToLLVMPass());
 
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)
-    llvm::report_fatal_error(
-        "The pass manager failed to lower CIR to llvm IR!");
+    report_fatal_error("The pass manager failed to lower CIR to llvm IR!");
 
   mlir::registerLLVMDialectTranslation(*mlirCtx);
 
-  llvm::LLVMContext llvmContext;
+  LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(theModule, llvmCtx);
 
   if (!llvmModule)
-    llvm::report_fatal_error("Lowering from llvm dialect to llvm IR failed!");
+    report_fatal_error("Lowering from llvm dialect to llvm IR failed!");
 
   return llvmModule;
 }
 
-std::unique_ptr<mlir::Pass> createLowerToLLVMPass() {
-  return std::make_unique<CIRToLLVMLoweringPass>();
+std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
+  return std::make_unique<ConvertCIRToLLVMPass>();
 }
 
 } // namespace cir

@@ -12,6 +12,8 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
+#include "mlir/Pass/Pass.h"
+
 #include <memory>
 
 namespace llvm {
@@ -31,7 +33,6 @@ std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
                      std::unique_ptr<mlir::MLIRContext> mlirCtx,
                      llvm::LLVMContext &llvmCtx);
-
 } // namespace cir
 
 #endif // CLANG_CIR_LOWERTOLLVM_H_
