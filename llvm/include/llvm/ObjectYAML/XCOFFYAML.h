@@ -29,6 +29,38 @@ struct FileHeader {
   llvm::yaml::Hex16 Flags;
 };
 
+struct AuxiliaryHeader {
+  Optional<llvm::yaml::Hex16> Magic;
+  Optional<llvm::yaml::Hex16> Version;
+  Optional<llvm::yaml::Hex64> TextStartAddr;
+  Optional<llvm::yaml::Hex64> DataStartAddr;
+  Optional<llvm::yaml::Hex64> TOCAnchorAddr;
+  Optional<uint16_t> SecNumOfEntryPoint;
+  Optional<uint16_t> SecNumOfText;
+  Optional<uint16_t> SecNumOfData;
+  Optional<uint16_t> SecNumOfTOC;
+  Optional<uint16_t> SecNumOfLoader;
+  Optional<uint16_t> SecNumOfBSS;
+  Optional<llvm::yaml::Hex16> MaxAlignOfText;
+  Optional<llvm::yaml::Hex16> MaxAlignOfData;
+  Optional<llvm::yaml::Hex16> ModuleType;
+  Optional<llvm::yaml::Hex8> CpuFlag;
+  Optional<llvm::yaml::Hex8> CpuType;
+  Optional<llvm::yaml::Hex8> TextPageSize;
+  Optional<llvm::yaml::Hex8> DataPageSize;
+  Optional<llvm::yaml::Hex8> StackPageSize;
+  Optional<llvm::yaml::Hex8> FlagAndTDataAlignment;
+  Optional<llvm::yaml::Hex64> TextSize;
+  Optional<llvm::yaml::Hex64> InitDataSize;
+  Optional<llvm::yaml::Hex64> BssDataSize;
+  Optional<llvm::yaml::Hex64> EntryPointAddr;
+  Optional<llvm::yaml::Hex64> MaxStackSize;
+  Optional<llvm::yaml::Hex64> MaxDataSize;
+  Optional<uint16_t> SecNumOfTData;
+  Optional<uint16_t> SecNumOfTBSS;
+  Optional<llvm::yaml::Hex16> Flag;
+};
+
 struct Relocation {
   llvm::yaml::Hex64 VirtualAddress;
   llvm::yaml::Hex64 SymbolIndex;
@@ -70,6 +102,7 @@ struct StringTable {
 
 struct Object {
   FileHeader Header;
+  Optional<AuxiliaryHeader> AuxHeader;
   std::vector<Section> Sections;
   std::vector<Symbol> Symbols;
   StringTable StrTbl;
@@ -97,6 +130,9 @@ template <> struct MappingTraits<XCOFFYAML::FileHeader> {
   static void mapping(IO &IO, XCOFFYAML::FileHeader &H);
 };
 
+template <> struct MappingTraits<XCOFFYAML::AuxiliaryHeader> {
+  static void mapping(IO &IO, XCOFFYAML::AuxiliaryHeader &AuxHdr);
+};
 
 template <> struct MappingTraits<XCOFFYAML::Symbol> {
   static void mapping(IO &IO, XCOFFYAML::Symbol &S);
