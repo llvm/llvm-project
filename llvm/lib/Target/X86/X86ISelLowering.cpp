@@ -28846,7 +28846,7 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
 
 // Return true if the required (according to Opcode) shift-imm form is natively
 // supported by the Subtarget
-static bool SupportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
+static bool supportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
                                         unsigned Opcode) {
   if (VT.getScalarSizeInBits() < 16)
     return false;
@@ -28866,14 +28866,14 @@ static bool SupportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
 // The shift amount is a variable, but it is the same for all vector lanes.
 // These instructions are defined together with shift-immediate.
 static
-bool SupportedVectorShiftWithBaseAmnt(MVT VT, const X86Subtarget &Subtarget,
+bool supportedVectorShiftWithBaseAmnt(MVT VT, const X86Subtarget &Subtarget,
                                       unsigned Opcode) {
-  return SupportedVectorShiftWithImm(VT, Subtarget, Opcode);
+  return supportedVectorShiftWithImm(VT, Subtarget, Opcode);
 }
 
 // Return true if the required (according to Opcode) variable-shift form is
 // natively supported by the Subtarget
-static bool SupportedVectorVarShift(MVT VT, const X86Subtarget &Subtarget,
+static bool supportedVectorVarShift(MVT VT, const X86Subtarget &Subtarget,
                                     unsigned Opcode) {
 
   if (!Subtarget.hasInt256() || VT.getScalarSizeInBits() < 16)
@@ -28949,7 +28949,7 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
 
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
 
-  if (SupportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
+  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
     return getTargetVShiftByConstNode(X86Opc, dl, VT, R, ShiftAmt, DAG);
 
   // i64 SRA needs to be performed as partial shifts.
@@ -29033,7 +29033,7 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
   unsigned X86OpcV = getTargetVShiftUniformOpcode(Opcode, true);
 
   if (SDValue BaseShAmt = DAG.getSplatValue(Amt)) {
-    if (SupportedVectorShiftWithBaseAmnt(VT, Subtarget, Opcode)) {
+    if (supportedVectorShiftWithBaseAmnt(VT, Subtarget, Opcode)) {
       MVT EltVT = VT.getVectorElementType();
       assert(EltVT.bitsLE(MVT::i64) && "Unexpected element type!");
       if (EltVT != MVT::i64 && EltVT.bitsGT(MVT::i32))
@@ -29051,7 +29051,7 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
         !Subtarget.hasXOP()) {
       unsigned NumElts = VT.getVectorNumElements();
       MVT ExtVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
-      if (SupportedVectorShiftWithBaseAmnt(ExtVT, Subtarget, Opcode)) {
+      if (supportedVectorShiftWithBaseAmnt(ExtVT, Subtarget, Opcode)) {
         unsigned LogicalOp = (Opcode == ISD::SHL ? ISD::SHL : ISD::SRL);
         unsigned LogicalX86Op = getTargetVShiftUniformOpcode(LogicalOp, false);
         BaseShAmt = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, BaseShAmt);
@@ -29103,7 +29103,7 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
           return SDValue();
     }
 
-    if (SupportedVectorShiftWithBaseAmnt(VT, Subtarget, Op.getOpcode()))
+    if (supportedVectorShiftWithBaseAmnt(VT, Subtarget, Op.getOpcode()))
       return DAG.getNode(X86OpcV, dl, VT, R, Op.getOperand(1));
   }
   return SDValue();
@@ -29196,7 +29196,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (SDValue V = LowerScalarVariableShift(Op, DAG, Subtarget))
     return V;
 
-  if (SupportedVectorVarShift(VT, Subtarget, Opc))
+  if (supportedVectorVarShift(VT, Subtarget, Opc))
     return Op;
 
   // XOP has 128-bit variable logical/arithmetic shifts.
@@ -29815,8 +29815,8 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
-  bool LegalVarShifts = SupportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
-                        SupportedVectorVarShift(VT, Subtarget, ISD::SRL);
+  bool LegalVarShifts = supportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
+                        supportedVectorVarShift(VT, Subtarget, ISD::SRL);
 
   // Fallback for splats + all supported variable shifts.
   // Fallback for non-constants AVX2 vXi16 as well.
@@ -45816,7 +45816,7 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
   if (isBitwiseNot(Op0))
     return SDValue();
 
-  if (!SupportedVectorShiftWithImm(VT0.getSimpleVT(), Subtarget, ISD::SRL))
+  if (!supportedVectorShiftWithImm(VT0.getSimpleVT(), Subtarget, ISD::SRL))
     return SDValue();
 
   unsigned EltBitWidth = VT0.getScalarSizeInBits();
