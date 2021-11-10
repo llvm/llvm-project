@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple thumbv7-none-linux-gnueabihf \
 // RUN:   -target-abi aapcs \
 // RUN:   -target-cpu cortex-a7 \

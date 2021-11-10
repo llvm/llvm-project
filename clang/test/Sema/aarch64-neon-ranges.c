@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -ffreestanding -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon -ffreestanding -fsyntax-only -verify %s
 
