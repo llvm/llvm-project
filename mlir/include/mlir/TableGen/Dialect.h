@@ -78,6 +78,10 @@ public:
   /// attribute printing/parsing.
   bool useDefaultAttributePrinterParser() const;
 
+  /// Returns true if this dialect should generate the default dispatch for
+  /// type printing/parsing.
+  bool useDefaultTypePrinterParser() const;
+
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;
