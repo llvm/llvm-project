@@ -4433,7 +4433,13 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
   // Gather the Documentation lists from each of the attributes, based on the
   // category provided.
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::map<const Record *, std::vector<DocumentationData>> SplitDocs;
+  struct CategoryLess {
+    bool operator()(const Record *L, const Record *R) const {
+      return L->getValueAsString("Name") < R->getValueAsString("Name");
+    }
+  };
+  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
+      SplitDocs;
   for (const auto *A : Attrs) {
     const Record &Attr = *A;
     std::vector<Record *> Docs = Attr.getValueAsListOfDefs("Documentation");
