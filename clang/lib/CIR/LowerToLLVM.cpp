@@ -129,18 +129,18 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
 
   pm.addPass(createLowerToLLVMIRPass());
 
-  // TODO: Handle this error
-  if (mlir::failed(pm.run(theModule)))
-    ;
+  auto result = !mlir::failed(pm.run(theModule));
+  if (!result)
+    llvm::report_fatal_error(
+        "The pass manager failed to lower CIR to llvm IR!");
 
   mlir::registerLLVMDialectTranslation(*mlirCtx);
 
   llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(theModule, llvmCtx);
 
-  // TODO: Handle this error
   if (!llvmModule)
-    ;
+    llvm::report_fatal_error("Lowering from llvm dialect to llvm IR failed!");
 
   return llvmModule;
 }
