@@ -1298,15 +1298,23 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // Said condition must be one-use.
   if (!Cmp0.hasOneUse())
     return nullptr;
+  ICmpInst::Predicate Pred0 = Cmp0.getPredicate();
   Value *Cmp00 = Cmp0.getOperand(0);
   Constant *C0;
   if (!match(Cmp0.getOperand(1),
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
-  // Canonicalize Cmp0 into the form we expect.
+
+  if (!isa<SelectInst>(Sel1)) {
+    Pred0 = ICmpInst::getInversePredicate(Pred0);
+    std::swap(X, Sel1);
+  }
+
+  // Canonicalize Cmp0 into ult or uge.
   // FIXME: we shouldn't care about lanes that are 'undef' in the end?
-  switch (Cmp0.getPredicate()) {
+  switch (Pred0) {
   case ICmpInst::Predicate::ICMP_ULT:
+  case ICmpInst::Predicate::ICMP_UGE:
     // Although icmp ult %x, 0 is an unusual thing to try and should generally
     // have been simplified, it does not verify with undef inputs so ensure we
     // are not in a strange state.
@@ -1316,25 +1324,16 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
       return nullptr;
     break; // Great!
   case ICmpInst::Predicate::ICMP_ULE:
-    // We'd have to increment C0 by one, and for that it must not have all-ones
-    // element, but then it would have been canonicalized to 'ult' before
-    // we get here. So we can't do anything useful with 'ule'.
-    return nullptr;
   case ICmpInst::Predicate::ICMP_UGT:
-    // We want to canonicalize it to 'ult', so we'll need to increment C0,
-    // which again means it must not have any all-ones elements.
+    // We want to canonicalize it to 'ult' or 'uge', so we'll need to increment
+    // C0, which again means it must not have any all-ones elements.
     if (!match(C0,
                m_SpecificInt_ICMP(
                    ICmpInst::Predicate::ICMP_NE,
                    APInt::getAllOnes(C0->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have all-ones element[s].
     C0 = InstCombiner::AddOne(C0);
-    std::swap(X, Sel1);
     break;
-  case ICmpInst::Predicate::ICMP_UGE:
-    // The only way we'd get this predicate if this `icmp` has extra uses,
-    // but then we won't be able to do this fold.
-    return nullptr;
   default:
     return nullptr; // Unknown predicate.
   }
@@ -1407,6 +1406,8 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // The thresholds of this clamp-like pattern.
   auto *ThresholdLowIncl = ConstantExpr::getNeg(C1);
   auto *ThresholdHighExcl = ConstantExpr::getSub(C0, C1);
+  if (Pred0 == ICmpInst::Predicate::ICMP_UGE)
+    std::swap(ThresholdLowIncl, ThresholdHighExcl);
 
   // The fold has a precondition 1: C2 s>= ThresholdLow
   auto *Precond1 = ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_SGE, C2,
@@ -2304,16 +2305,6 @@ Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
 
   // Create the new type (which can be a vector type)
   Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
-  // Match the two extends from the add/sub
-  Value *A, *B;
-  if(!match(AddSub, m_BinOp(m_SExt(m_Value(A)), m_SExt(m_Value(B)))))
-    return nullptr;
-  // And check the incoming values are of a type smaller than or equal to the
-  // size of the saturation. Otherwise the higher bits can cause different
-  // results.
-  if (A->getType()->getScalarSizeInBits() > NewBitWidth ||
-      B->getType()->getScalarSizeInBits() > NewBitWidth)
-    return nullptr;
 
   Intrinsic::ID IntrinsicID;
   if (AddSub->getOpcode() == Instruction::Add)
@@ -2323,10 +2314,16 @@ Instruction *InstCombinerImpl::matchSAddSubSat(Instruction &MinMax1) {
   else
     return nullptr;
 
+  // The two operands of the add/sub must be nsw-truncatable to the NewTy. This
+  // is usually achieved via a sext from a smaller type.
+  if (ComputeMinSignedBits(AddSub->getOperand(0), 0, AddSub) > NewBitWidth ||
+      ComputeMinSignedBits(AddSub->getOperand(1), 0, AddSub) > NewBitWidth)
+    return nullptr;
+
   // Finally create and return the sat intrinsic, truncated to the new type
   Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
-  Value *AT = Builder.CreateSExt(A, NewTy);
-  Value *BT = Builder.CreateSExt(B, NewTy);
+  Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
+  Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
   Value *Sat = Builder.CreateCall(F, {AT, BT});
   return CastInst::Create(Instruction::SExt, Sat, Ty);
 }

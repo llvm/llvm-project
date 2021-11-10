@@ -39,7 +39,7 @@ body: |
     liveins: $edi
 
     $eax = COPY killed $edi
-    RETQ killed $eax
+    RET64 killed $eax
 ...
 ---
 name:            func
@@ -92,5 +92,5 @@ body: |
     $eax = MOV32r0 implicit-def dead $eflags
     $rsp = ADD64ri8 $rsp, 16, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 ...

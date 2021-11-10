@@ -10,11 +10,11 @@ struct S {
 };
 
 struct T {
-  int a[4] __attribute__((aligned(16))); // expected-warning {{requesting an alignment of 16 bytes or greater for struct members is not binary compatible with AIX XL 16.1 and older}}
+  int a[4] __attribute__((aligned(16))); // expected-warning {{requesting an alignment of 16 bytes or greater for struct members is not binary compatible with IBM XL C/C++ for AIX 16.1.0 and older}}
 };
 
 struct U {
-  int a[2] __attribute__((aligned(32))); // expected-warning {{requesting an alignment of 16 bytes or greater for struct members is not binary compatible with AIX XL 16.1 and older}}
+  int a[2] __attribute__((aligned(32))); // expected-warning {{requesting an alignment of 16 bytes or greater for struct members is not binary compatible with IBM XL C/C++ for AIX 16.1.0 and older}}
 };
 
 int a[8] __attribute__((aligned(8)));  // no-warning

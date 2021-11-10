@@ -159,7 +159,7 @@ static MachineInstr *getLastNonPseudo(MachineBasicBlock &MBB,
   // If there is no non-pseudo in the current block, loop back around and try
   // the previous block (if there is one).
   while ((FMBB = getBBFallenThrough(FMBB, TII))) {
-    for (MachineInstr &I : make_range(FMBB->rbegin(), FMBB->rend()))
+    for (MachineInstr &I : llvm::reverse(*FMBB))
       if (!I.isPseudo())
         return &I;
   }

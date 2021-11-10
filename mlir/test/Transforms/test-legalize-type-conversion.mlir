@@ -98,3 +98,17 @@ func @test_block_argument_not_converted() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// Make sure argument type changes aren't implicitly forwarded.
+func @test_signature_conversion_no_converter() {
+  "test.signature_conversion_no_converter"() ({
+  // expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion}}
+  ^bb0(%arg0: f32):
+    // expected-note@below {{see existing live user here}}
+    "test.type_consumer"(%arg0) : (f32) -> ()
+    "test.return"(%arg0) : (f32) -> ()
+  }) : () -> ()
+  return
+}

@@ -155,7 +155,7 @@ body:             |
     TAILJMPd64 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $al, debug-location !35
 
   bb.1.if.end:
-    RETQ debug-location !36
+    RET64 debug-location !36
 
 ...
 ---
@@ -177,6 +177,6 @@ body:             |
     TAILJMPd64 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $al, debug-location !49
 
   bb.1.if.end:
-    RETQ debug-location !50
+    RET64 debug-location !50
 
 ...

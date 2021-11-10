@@ -17,7 +17,7 @@
 ; CHECK:   DBG_VALUE 43, $noreg, ![[X]],
 ; CHECK: bb.2.if.end:
 ; CHECK-NOT:  DBG_VALUE 23, $noreg, ![[X]],
-; CHECK:   RETQ $eax
+; CHECK:   RET64 $eax
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"

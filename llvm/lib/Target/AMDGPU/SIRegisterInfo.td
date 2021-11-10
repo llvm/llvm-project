@@ -697,6 +697,14 @@ def CCR_SGPR_64 : RegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
   let AllocationPriority = SGPR_64.AllocationPriority;
 }
 
+// Call clobbered 64-bit SGPRs for AMDGPU_Gfx CC
+def Gfx_CCR_SGPR_64 : RegisterClass<"AMDGPU", SGPR_64.RegTypes, 32,
+                                (add (trunc (shl SGPR_64, 15), 1), // s[30:31]
+                                     (trunc (shl SGPR_64, 18), 14))> { // s[36:37]-s[s62:63]
+  let CopyCost = SGPR_64.CopyCost;
+  let AllocationPriority = SGPR_64.AllocationPriority;
+}
+
 def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32,
                             (add TTMP_64Regs)> {
   let isAllocatable = 0;
@@ -1058,6 +1066,18 @@ defm VSrc : SIRegOperand32_Deferred<"VS", "VSrc", "OPERAND_REG_IMM">;
 def VRegSrc_32 : RegisterOperand<VGPR_32> {
   //let ParserMatchClass = RegImmMatcher<"VRegSrc32">;
   let DecoderMethod = "DecodeVS_32RegisterClass";
+}
+
+def VRegSrc_64 : RegisterOperand<VReg_64> {
+  let DecoderMethod = "decodeOperand_VReg_64";
+}
+
+def VRegSrc_128 : RegisterOperand<VReg_128> {
+  let DecoderMethod = "decodeOperand_VReg_128";
+}
+
+def VRegSrc_256 : RegisterOperand<VReg_256> {
+  let DecoderMethod = "decodeOperand_VReg_256";
 }
 
 //===----------------------------------------------------------------------===//

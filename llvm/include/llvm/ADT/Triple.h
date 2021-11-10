@@ -93,6 +93,8 @@ public:
     hsail64,        // AMD HSAIL with 64-bit pointers
     spir,           // SPIR: standard portable IR for OpenCL 32-bit version
     spir64,         // SPIR: standard portable IR for OpenCL 64-bit version
+    spirv32,        // SPIR-V with 32-bit pointers
+    spirv64,        // SPIR-V with 64-bit pointers
     kalimba,        // Kalimba: generic kalimba
     shave,          // SHAVE: Movidius vector VLIW processors
     lanai,          // Lanai: Lanai 32-bit
@@ -697,6 +699,11 @@ public:
   /// Tests whether the target is SPIR (32- or 64-bit).
   bool isSPIR() const {
     return getArch() == Triple::spir || getArch() == Triple::spir64;
+  }
+
+  /// Tests whether the target is SPIR-V (32/64-bit).
+  bool isSPIRV() const {
+    return getArch() == Triple::spirv32 || getArch() == Triple::spirv64;
   }
 
   /// Tests whether the target is NVPTX (32- or 64-bit).

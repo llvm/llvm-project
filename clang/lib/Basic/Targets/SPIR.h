@@ -1,4 +1,4 @@
-//===--- SPIR.h - Declare SPIR target feature support -----------*- C++ -*-===//
+//===--- SPIR.h - Declare SPIR and SPIR-V target feature support *- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares SPIR TargetInfo objects.
+// This file declares SPIR and SPIR-V TargetInfo objects.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +21,7 @@
 namespace clang {
 namespace targets {
 
+// Used by both the SPIR and SPIR-V targets.
 static const unsigned SPIRDefIsPrivMap[] = {
     0, // Default
     1, // opencl_global
@@ -44,6 +45,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0  // ptr64
 };
 
+// Used by both the SPIR and SPIR-V targets.
 static const unsigned SPIRDefIsGenMap[] = {
     4, // Default
     // OpenCL address space values for this map are dummy and they can't be used
@@ -67,14 +69,15 @@ static const unsigned SPIRDefIsGenMap[] = {
     0  // ptr64
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRTargetInfo : public TargetInfo {
-public:
-  SPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+// Base class for SPIR and SPIR-V target info.
+class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+protected:
+  BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
     assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "SPIR target must use unknown OS");
+           "SPIR(-V) target must use unknown OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
-           "SPIR target must use unknown environment type");
+           "SPIR(-V) target must use unknown environment type");
     TLSSupported = false;
     VLASupported = false;
     LongWidth = LongAlign = 64;
@@ -87,13 +90,7 @@ public:
     NoAsmVariants = true;
   }
 
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
-
-  bool hasFeature(StringRef Feature) const override {
-    return Feature == "spir";
-  }
-
+public:
   // SPIR supports the half type and the only llvm intrinsic allowed in SPIR is
   // memcpy as per section 3 of the SPIR spec.
   bool useFP16ConversionIntrinsics() const override { return false; }
@@ -149,13 +146,31 @@ public:
 
   void setSupportedOpenCLOpts() override {
     // Assume all OpenCL extensions and optional core features are supported
-    // for SPIR since it is a generic target.
+    // for SPIR and SPIR-V since they are generic targets.
     supportAllOpenCLOpts();
   }
 
   bool hasExtIntType() const override { return true; }
 
   bool hasInt128Type() const override { return false; }
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRTargetInfo : public BaseSPIRTargetInfo {
+public:
+  SPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : BaseSPIRTargetInfo(Triple, Opts) {
+    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
+           "SPIR target must use unknown OS");
+    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
+           "SPIR target must use unknown environment type");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+
+  bool hasFeature(StringRef Feature) const override {
+    return Feature == "spir";
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIR32TargetInfo : public SPIRTargetInfo {
@@ -187,6 +202,55 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY SPIRVTargetInfo : public BaseSPIRTargetInfo {
+public:
+  SPIRVTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : BaseSPIRTargetInfo(Triple, Opts) {
+    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
+           "SPIR-V target must use unknown OS");
+    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
+           "SPIR-V target must use unknown environment type");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+
+  bool hasFeature(StringRef Feature) const override {
+    return Feature == "spirv";
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRV32TargetInfo : public SPIRVTargetInfo {
+public:
+  SPIRV32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : SPIRVTargetInfo(Triple, Opts) {
+    PointerWidth = PointerAlign = 32;
+    SizeType = TargetInfo::UnsignedInt;
+    PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRV64TargetInfo : public SPIRVTargetInfo {
+public:
+  SPIRV64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : SPIRVTargetInfo(Triple, Opts) {
+    PointerWidth = PointerAlign = 64;
+    SizeType = TargetInfo::UnsignedLong;
+    PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+};
+
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H

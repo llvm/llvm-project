@@ -3472,6 +3472,9 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
     uint32_t Trunc = static_cast<uint32_t>(Imm);
     return AMDGPU::isInlinableLiteralV216(Trunc, ST.hasInv2PiInlineImm());
   }
+  case AMDGPU::OPERAND_KIMM32:
+  case AMDGPU::OPERAND_KIMM16:
+    return false;
   default:
     llvm_unreachable("invalid bitwidth");
   }
@@ -7329,31 +7332,19 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return Size;
   }
 
-  // 4-byte instructions may have a 32-bit literal encoded after them. Check
-  // operands that coud ever be literals.
+  // Instructions may have a 32-bit literal encoded after them. Check
+  // operands that could ever be literals.
   if (isVALU(MI) || isSALU(MI)) {
-    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
-    if (Src0Idx == -1)
-      return DescSize; // No operands.
-
-    if (isLiteralConstantLike(MI.getOperand(Src0Idx), Desc.OpInfo[Src0Idx]))
-      return isVOP3(MI) ? 12 : (DescSize + 4);
-
-    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
-    if (Src1Idx == -1)
+    if (isDPP(MI))
       return DescSize;
-
-    if (isLiteralConstantLike(MI.getOperand(Src1Idx), Desc.OpInfo[Src1Idx]))
-      return isVOP3(MI) ? 12 : (DescSize + 4);
-
-    int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
-    if (Src2Idx == -1)
-      return DescSize;
-
-    if (isLiteralConstantLike(MI.getOperand(Src2Idx), Desc.OpInfo[Src2Idx]))
-      return isVOP3(MI) ? 12 : (DescSize + 4);
-
-    return DescSize;
+    bool HasLiteral = false;
+    for (int I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
+      if (isLiteralConstant(MI, I)) {
+        HasLiteral = true;
+        break;
+      }
+    }
+    return HasLiteral ? DescSize + 4 : DescSize;
   }
 
   // Check whether we have extra NSA words.
@@ -7441,19 +7432,16 @@ void SIInstrInfo::convertNonUniformLoopRegion(
     Register BackEdgeReg = MRI.createVirtualRegister(RI.getBoolRC());
     MachineInstrBuilder HeaderPHIBuilder =
         BuildMI(*(MF), Branch->getDebugLoc(), get(TargetOpcode::PHI), DstReg);
-    for (MachineBasicBlock::pred_iterator PI = LoopEntry->pred_begin(),
-                                          E = LoopEntry->pred_end();
-         PI != E; ++PI) {
-      if (*PI == LoopEnd) {
+    for (MachineBasicBlock *PMBB : LoopEntry->predecessors()) {
+      if (PMBB == LoopEnd) {
         HeaderPHIBuilder.addReg(BackEdgeReg);
       } else {
-        MachineBasicBlock *PMBB = *PI;
         Register ZeroReg = MRI.createVirtualRegister(RI.getBoolRC());
         materializeImmediate(*PMBB, PMBB->getFirstTerminator(), DebugLoc(),
                              ZeroReg, 0);
         HeaderPHIBuilder.addReg(ZeroReg);
       }
-      HeaderPHIBuilder.addMBB(*PI);
+      HeaderPHIBuilder.addMBB(PMBB);
     }
     MachineInstr *HeaderPhi = HeaderPHIBuilder;
     MachineInstr *SIIFBREAK = BuildMI(*(MF), Branch->getDebugLoc(),

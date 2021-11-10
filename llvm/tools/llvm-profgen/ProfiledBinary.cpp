@@ -657,13 +657,19 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t StartOffset,
                                                        uint64_t EndOffset) {
-  uint32_t Index = getIndexForOffset(StartOffset);
-  if (CodeAddrOffsets[Index] != StartOffset)
-    WithColor::warning() << "Invalid start instruction at "
-                         << format("%8" PRIx64, StartOffset) << "\n";
+  uint64_t RangeBegin = offsetToVirtualAddr(StartOffset);
+  uint64_t RangeEnd = offsetToVirtualAddr(EndOffset);
+  InstructionPointer IP(this, RangeBegin, true);
 
-  uint64_t Offset = CodeAddrOffsets[Index];
-  while (Offset < EndOffset) {
+  if (IP.Address != RangeBegin)
+    WithColor::warning() << "Invalid start instruction at "
+                         << format("%8" PRIx64, RangeBegin) << "\n";
+
+  if (IP.Address >= RangeEnd)
+    return;
+
+  do {
+    uint64_t Offset = virtualAddrToOffset(IP.Address);
     const SampleContextFrameVector &SymbolizedCallStack =
         getFrameLocationStack(Offset, UsePseudoProbes);
     uint64_t Size = Offset2InstSizeMap[Offset];
@@ -671,8 +677,7 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t StartOffset,
     // Record instruction size for the corresponding context
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
 
-    Offset = CodeAddrOffsets[++Index];
-  }
+  } while (IP.advance() && IP.Address < RangeEnd);
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,
@@ -682,18 +687,31 @@ InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,
   if (RoundToNext) {
     // we might get address which is not the code
     // it should round to the next valid address
-    this->Address = Binary->getAddressforIndex(Index);
+    if (Index >= Binary->getCodeOffsetsSize())
+      this->Address = UINT64_MAX;
+    else
+      this->Address = Binary->getAddressforIndex(Index);
   }
 }
 
-void InstructionPointer::advance() {
+bool InstructionPointer::advance() {
   Index++;
+  if (Index >= Binary->getCodeOffsetsSize()) {
+    Address = UINT64_MAX;
+    return false;
+  }
   Address = Binary->getAddressforIndex(Index);
+  return true;
 }
 
-void InstructionPointer::backward() {
+bool InstructionPointer::backward() {
+  if (Index == 0) {
+    Address = 0;
+    return false;
+  }
   Index--;
   Address = Binary->getAddressforIndex(Index);
+  return true;
 }
 
 void InstructionPointer::update(uint64_t Addr) {

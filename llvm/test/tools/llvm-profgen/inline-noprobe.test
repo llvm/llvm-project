@@ -9,6 +9,8 @@
 ; RUN: echo -e "0\n0" > %t
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1 --fill-zero-for-all-funcs
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-ALL-ZERO
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/out-of-bounds.raw.prof --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-OB
 
 CHECK: main:188:0
 CHECK:  0: 0
@@ -57,6 +59,33 @@ CHECK-RAW-PROFILE-NEXT: 669-691:21
 CHECK-RAW-PROFILE-NEXT: 2
 CHECK-RAW-PROFILE-NEXT: 677->650:21
 CHECK-RAW-PROFILE-NEXT: 691->669:43
+
+;CHECK-OB: foo:8:0
+;CHECK-OB:  0: 1
+;CHECK-OB:  2.1: 1
+;CHECK-OB:  3: 1
+;CHECK-OB:  3.2: 1
+;CHECK-OB:  4: 1
+;CHECK-OB:  3.1: bar:1
+;CHECK-OB:   1: 1
+;CHECK-OB:  3.2: bar:2
+;CHECK-OB:   1: 1
+;CHECK-OB:   7: 1
+;CHECK-OB: main:8:0
+;CHECK-OB:  0: 1
+;CHECK-OB:  2: 1
+;CHECK-OB:  1: foo:6
+;CHECK-OB:   2.1: 1
+;CHECK-OB:   3: 1
+;CHECK-OB:   3.2: 1
+;CHECK-OB:   4: 1
+;CHECK-OB:   3.1: bar:1
+;CHECK-OB:    1: 1
+;CHECK-OB:   3.2: bar:1
+;CHECK-OB:    1: 1
+;CHECK-OB: bar:2:0
+;CHECK-OB:  1: 1
+;CHECK-OB:  5: 1
 
 ; original code:
 ; clang -O3 -g -fdebug-info-for-profiling test.c -o a.out

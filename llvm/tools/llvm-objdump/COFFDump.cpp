@@ -278,10 +278,7 @@ static void printTLSDirectory(const COFFObjectFile *Obj) {
     return;
 
   const data_directory *DataDir = Obj->getDataDirectory(COFF::TLS_TABLE);
-  if (!DataDir)
-    reportError("missing data dir for TLS table", Obj->getFileName());
-
-  if (DataDir->RelativeVirtualAddress == 0)
+  if (!DataDir || DataDir->RelativeVirtualAddress == 0)
     return;
 
   uintptr_t IntPtr = 0;

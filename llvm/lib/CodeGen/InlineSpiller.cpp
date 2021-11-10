@@ -341,9 +341,8 @@ void InlineSpiller::collectRegsToSpill() {
   if (Original == Reg)
     return;
 
-  for (MachineRegisterInfo::reg_instr_iterator
-       RI = MRI.reg_instr_begin(Reg), E = MRI.reg_instr_end(); RI != E; ) {
-    MachineInstr &MI = *RI++;
+  for (MachineInstr &MI :
+       llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
     Register SnipReg = isFullCopyOf(MI, Reg);
     if (!isSibling(SnipReg))
       continue;
@@ -465,10 +464,8 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
     LLVM_DEBUG(dbgs() << "Merged to stack int: " << *StackInt << '\n');
 
     // Find all spills and copies of VNI.
-    for (MachineRegisterInfo::use_instr_nodbg_iterator
-         UI = MRI.use_instr_nodbg_begin(Reg), E = MRI.use_instr_nodbg_end();
-         UI != E; ) {
-      MachineInstr &MI = *UI++;
+    for (MachineInstr &MI :
+         llvm::make_early_inc_range(MRI.use_nodbg_instructions(Reg))) {
       if (!MI.isCopy() && !MI.mayStore())
         continue;
       SlotIndex Idx = LIS.getInstructionIndex(MI);
@@ -676,11 +673,7 @@ void InlineSpiller::reMaterializeAll() {
   bool anyRemat = false;
   for (Register Reg : RegsToSpill) {
     LiveInterval &LI = LIS.getInterval(Reg);
-    for (MachineRegisterInfo::reg_bundle_iterator
-           RegI = MRI.reg_bundle_begin(Reg), E = MRI.reg_bundle_end();
-         RegI != E; ) {
-      MachineInstr &MI = *RegI++;
-
+    for (MachineInstr &MI : llvm::make_early_inc_range(MRI.reg_bundles(Reg))) {
       // Debug values are not allowed to affect codegen.
       if (MI.isDebugValue())
         continue;
@@ -1071,57 +1064,53 @@ void InlineSpiller::spillAroundUses(Register Reg) {
   LiveInterval &OldLI = LIS.getInterval(Reg);
 
   // Iterate over instructions using Reg.
-  for (MachineRegisterInfo::reg_bundle_iterator
-       RegI = MRI.reg_bundle_begin(Reg), E = MRI.reg_bundle_end();
-       RegI != E; ) {
-    MachineInstr *MI = &*(RegI++);
-
+  for (MachineInstr &MI : llvm::make_early_inc_range(MRI.reg_bundles(Reg))) {
     // Debug values are not allowed to affect codegen.
-    if (MI->isDebugValue()) {
+    if (MI.isDebugValue()) {
       // Modify DBG_VALUE now that the value is in a spill slot.
-      MachineBasicBlock *MBB = MI->getParent();
-      LLVM_DEBUG(dbgs() << "Modifying debug info due to spill:\t" << *MI);
-      buildDbgValueForSpill(*MBB, MI, *MI, StackSlot, Reg);
+      MachineBasicBlock *MBB = MI.getParent();
+      LLVM_DEBUG(dbgs() << "Modifying debug info due to spill:\t" << MI);
+      buildDbgValueForSpill(*MBB, &MI, MI, StackSlot, Reg);
       MBB->erase(MI);
       continue;
     }
 
-    assert(!MI->isDebugInstr() && "Did not expect to find a use in debug "
+    assert(!MI.isDebugInstr() && "Did not expect to find a use in debug "
            "instruction that isn't a DBG_VALUE");
 
     // Ignore copies to/from snippets. We'll delete them.
-    if (SnippetCopies.count(MI))
+    if (SnippetCopies.count(&MI))
       continue;
 
     // Stack slot accesses may coalesce away.
-    if (coalesceStackAccess(MI, Reg))
+    if (coalesceStackAccess(&MI, Reg))
       continue;
 
     // Analyze instruction.
     SmallVector<std::pair<MachineInstr*, unsigned>, 8> Ops;
-    VirtRegInfo RI = AnalyzeVirtRegInBundle(*MI, Reg, &Ops);
+    VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, Reg, &Ops);
 
     // Find the slot index where this instruction reads and writes OldLI.
     // This is usually the def slot, except for tied early clobbers.
-    SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
+    SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
     if (VNInfo *VNI = OldLI.getVNInfoAt(Idx.getRegSlot(true)))
       if (SlotIndex::isSameInstr(Idx, VNI->def))
         Idx = VNI->def;
 
     // Check for a sibling copy.
-    Register SibReg = isFullCopyOf(*MI, Reg);
+    Register SibReg = isFullCopyOf(MI, Reg);
     if (SibReg && isSibling(SibReg)) {
       // This may actually be a copy between snippets.
       if (isRegToSpill(SibReg)) {
-        LLVM_DEBUG(dbgs() << "Found new snippet copy: " << *MI);
-        SnippetCopies.insert(MI);
+        LLVM_DEBUG(dbgs() << "Found new snippet copy: " << MI);
+        SnippetCopies.insert(&MI);
         continue;
       }
       if (RI.Writes) {
-        if (hoistSpillInsideBB(OldLI, *MI)) {
+        if (hoistSpillInsideBB(OldLI, MI)) {
           // This COPY is now dead, the value is already in the stack slot.
-          MI->getOperand(0).setIsDead();
-          DeadDefs.push_back(MI);
+          MI.getOperand(0).setIsDead();
+          DeadDefs.push_back(&MI);
           continue;
         }
       } else {
@@ -1141,7 +1130,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     Register NewVReg = Edit->createFrom(Reg);
 
     if (RI.Reads)
-      insertReload(NewVReg, Idx, MI);
+      insertReload(NewVReg, Idx, &MI);
 
     // Rewrite instruction operands.
     bool hasLiveDef = false;
@@ -1156,12 +1145,12 @@ void InlineSpiller::spillAroundUses(Register Reg) {
           hasLiveDef = true;
       }
     }
-    LLVM_DEBUG(dbgs() << "\trewrite: " << Idx << '\t' << *MI << '\n');
+    LLVM_DEBUG(dbgs() << "\trewrite: " << Idx << '\t' << MI << '\n');
 
     // FIXME: Use a second vreg if instruction has no tied ops.
     if (RI.Writes)
       if (hasLiveDef)
-        insertSpill(NewVReg, true, MI);
+        insertSpill(NewVReg, true, &MI);
   }
 }
 
@@ -1196,10 +1185,8 @@ void InlineSpiller::spillAll() {
 
   // Finally delete the SnippetCopies.
   for (Register Reg : RegsToSpill) {
-    for (MachineRegisterInfo::reg_instr_iterator
-         RI = MRI.reg_instr_begin(Reg), E = MRI.reg_instr_end();
-         RI != E; ) {
-      MachineInstr &MI = *(RI++);
+    for (MachineInstr &MI :
+         llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
       assert(SnippetCopies.count(&MI) && "Remaining use wasn't a snippet copy");
       // FIXME: Do this with a LiveRangeEdit callback.
       LIS.RemoveMachineInstrFromMaps(MI);

@@ -265,6 +265,7 @@ def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 let isReturn = 1 in {
 // Define variant marked as return rather than branch.
 def S_SETPC_B64_return : SOP1_1<"", CCR_SGPR_64, [(AMDGPUret_flag i64:$src0)]>;
+def S_SETPC_B64_return_gfx : SOP1_1<"", Gfx_CCR_SGPR_64, [(AMDGPUret_gfx_flag i64:$src0)]>;
 }
 } // End isTerminator = 1, isBarrier = 1
 

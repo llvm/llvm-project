@@ -195,6 +195,6 @@ body:             |
     $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !28
     $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !28
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !28
-    RETQ $rax, debug-location !28
+    RET64 $rax, debug-location !28
 
 ...

@@ -24,7 +24,12 @@ llvm::Optional<int> OptionalNone(llvm::None);
 llvm::SmallVector<int, 5> SmallVector = {10, 11, 12};
 llvm::SmallString<5> SmallString("foo");
 llvm::StringRef StringRef = "bar";
-llvm::Twine Twine = llvm::Twine(SmallString) + StringRef;
+// Should test std::string in Twine too, but it's currently broken because I
+// don't know how to add 'str' and 'gdb.LazyString' (can't figure out any way to
+// string-ify LazyString).
+std::string String = "foo";
+llvm::Twine TempTwine = llvm::Twine(String) + StringRef;
+llvm::Twine Twine = TempTwine + "baz";
 llvm::PointerIntPair<int *, 1> PointerIntPair(IntPtr, 1);
 
 struct alignas(8) Z {};

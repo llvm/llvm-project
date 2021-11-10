@@ -75,7 +75,7 @@ body: |
     ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
     ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
     ; CHECK: $eax = COPY %0, debug-location !13
-    ; CHECK: RETQ $eax, debug-location !13
+    ; CHECK: RET64 $eax, debug-location !13
     %0 = COPY $edi
     DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
     ; Test whether debug-use is still recognized for compatibility with old
@@ -83,7 +83,7 @@ body: |
     DBG_VALUE debug-use _, 0, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0, debug-location !14
-    RETQ $eax, debug-location !14
+    RET64 $eax, debug-location !14
 ...
 ---
 name:            test_typed_immediates
@@ -107,7 +107,7 @@ body: |
     DBG_VALUE _, i128 123492148938512984928424384934328985928, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 name:            test_mir_created
@@ -135,5 +135,5 @@ body: |
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 4, scope: !15, inlinedAt: !16)
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 5, scope: !15, inlinedAt: !DILocation(line: 4, scope: !15))
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...

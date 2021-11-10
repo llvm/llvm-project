@@ -2048,6 +2048,46 @@ bool MachOObjectFile::isDebugSection(DataRefImpl Sec) const {
          SectionName == "__swift_ast";
 }
 
+namespace {
+template <typename LoadCommandType>
+ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
+                                     MachOObjectFile::LoadCommandInfo LoadCmd,
+                                     StringRef SegmentName) {
+  auto SegmentOrErr = getStructOrErr<LoadCommandType>(Obj, LoadCmd.Ptr);
+  if (!SegmentOrErr) {
+    consumeError(SegmentOrErr.takeError());
+    return {};
+  }
+  auto &Segment = SegmentOrErr.get();
+  if (StringRef(Segment.segname, 16).startswith(SegmentName))
+    return arrayRefFromStringRef(Obj.getData().slice(
+        Segment.fileoff, Segment.fileoff + Segment.filesize));
+  return {};
+}
+} // namespace
+
+ArrayRef<uint8_t>
+MachOObjectFile::getSegmentContents(StringRef SegmentName) const {
+  for (auto LoadCmd : load_commands()) {
+    ArrayRef<uint8_t> Contents;
+    switch (LoadCmd.C.cmd) {
+    case MachO::LC_SEGMENT:
+      Contents = ::getSegmentContents<MachO::segment_command>(*this, LoadCmd,
+                                                              SegmentName);
+      break;
+    case MachO::LC_SEGMENT_64:
+      Contents = ::getSegmentContents<MachO::segment_command_64>(*this, LoadCmd,
+                                                                 SegmentName);
+      break;
+    default:
+      continue;
+    }
+    if (!Contents.empty())
+      return Contents;
+  }
+  return {};
+}
+
 unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {
   return Sec.getRawDataRefImpl().d.a;
 }

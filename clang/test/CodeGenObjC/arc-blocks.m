@@ -126,9 +126,9 @@ void test4(void) {
   // 0x02000000 - has copy/dispose helpers strong
   // CHECK-NEXT: store i32 838860800, i32* [[T0]]
   // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[VAR]], i32 0, i32 6
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @test4_source()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
-  // CHECK-NEXT: store i8* [[T1]], i8** [[SLOT]]
+  // CHECK-NEXT: [[T0:%.*]] = call i8* @test4_source() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T0]])
+  // CHECK-NEXT: store i8* [[T0]], i8** [[SLOT]]
   // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[VAR]], i32 0, i32 6
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1040187392,
@@ -180,8 +180,8 @@ void test5(void) {
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
   // CHECK-NEXT: [[VARPTR1:%.*]] = bitcast i8** [[VAR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[VARPTR1]])
-  // CHECK: [[T0:%.*]] = call i8* @test5_source()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK: [[T1:%.*]] = call i8* @test5_source() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: store i8* [[T1]], i8** [[VAR]],
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
   // 0x40800000 - has signature but no copy/dispose, as well as BLOCK_HAS_EXTENDED_LAYOUT
@@ -211,8 +211,8 @@ void test6(void) {
   // 0x02000000 - has copy/dispose helpers weak
   // CHECK-NEXT: store i32 1107296256, i32* [[T0]]
   // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[VAR]], i32 0, i32 6
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @test6_source()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @test6_source() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[SLOT]], i8* [[T1]])
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
   // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], [[BYREF_T]]* [[VAR]], i32 0, i32 6
@@ -257,8 +257,8 @@ void test7(void) {
   // CHECK-LABEL:    define{{.*}} void @test7()
   // CHECK:      [[VAR:%.*]] = alloca i8*,
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK:      [[T0:%.*]] = call i8* @test7_source()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call i8* @test7_source() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[VAR]], i8* [[T1]])
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
@@ -325,8 +325,8 @@ id test9(void) {
 // CHECK-NEXT: tail call i8* @llvm.objc.autoreleaseReturnValue
 // CHECK-NEXT: ret i8*
 
-// CHECK:      call i8* @test9_produce()
-// CHECK-NEXT: call i8* @llvm.objc.retain
+// CHECK:      call i8* @test9_produce() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(
 // CHECK-NEXT: ret i8*
 }
 

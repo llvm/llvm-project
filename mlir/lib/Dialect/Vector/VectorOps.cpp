@@ -1395,7 +1395,7 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   if (operands[0].getType().isIntOrIndexOrFloat())
     return DenseElementsAttr::get(vectorType, operands[0]);
   if (auto attr = operands[0].dyn_cast<SplatElementsAttr>())
-    return DenseElementsAttr::get(vectorType, attr.getSplatValue());
+    return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
   return {};
 }
 
@@ -2212,7 +2212,7 @@ public:
     if (!dense)
       return failure();
     auto newAttr = DenseElementsAttr::get(extractStridedSliceOp.getType(),
-                                          dense.getSplatValue());
+                                          dense.getSplatValue<Attribute>());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
                                                    newAttr);
     return success();
@@ -3670,8 +3670,9 @@ public:
     auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
     if (!dense)
       return failure();
-    auto newAttr = DenseElementsAttr::get(
-        shapeCastOp.getType().cast<VectorType>(), dense.getSplatValue());
+    auto newAttr =
+        DenseElementsAttr::get(shapeCastOp.getType().cast<VectorType>(),
+                               dense.getSplatValue<Attribute>());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(shapeCastOp, newAttr);
     return success();
   }

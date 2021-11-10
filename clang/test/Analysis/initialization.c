@@ -58,44 +58,35 @@ void glob_invalid_index2() {
   int res = ptr[x]; // expected-warning{{garbage or undefined}}
 }
 
-// TODO: Support multidimensional array.
 const int glob_arr2[3][3] = {[0][0] = 1, [1][1] = 5, [2][0] = 7};
 void glob_arr_index3() {
-  // FIXME: These all should be TRUE.
-  clang_analyzer_eval(glob_arr2[0][0] == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[0][1] == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[0][2] == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[1][0] == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[1][1] == 5); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[1][2] == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[2][0] == 7); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[2][1] == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(glob_arr2[2][2] == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(glob_arr2[0][0] == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[0][1] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[0][2] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[1][0] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[1][1] == 5); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[1][2] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[2][0] == 7); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[2][1] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(glob_arr2[2][2] == 0); // expected-warning{{TRUE}}
 }
 
-// TODO: Support multidimensional array.
 void negative_index() {
   int x = 2, y = -2;
-  // FIXME: Should be UNDEFINED.
-  clang_analyzer_eval(glob_arr2[x][y] == 5); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(glob_arr2[x][y] == 5); // expected-warning{{UNDEFINED}}
   x = 3;
   y = -3;
-  // FIXME: Should be UNDEFINED.
-  clang_analyzer_eval(glob_arr2[x][y] == 7); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(glob_arr2[x][y] == 7); // expected-warning{{UNDEFINED}}
 }
 
-// TODO: Support multidimensional array.
 void glob_invalid_index3() {
   int x = -1, y = -1;
-  // FIXME: Should warn {{garbage or undefined}}.
-  int res = glob_arr2[x][y]; // no-warning
+  int res = glob_arr2[x][y]; // expected-warning{{garbage or undefined}}
 }
 
-// TODO: Support multidimensional array.
 void glob_invalid_index4() {
   int x = 3, y = 2;
-  // FIXME: Should warn {{garbage or undefined}}.
-  int res = glob_arr2[x][y]; // no-warning
+  int res = glob_arr2[x][y]; // expected-warning{{garbage or undefined}}
 }
 
 const int glob_arr_no_init[10];

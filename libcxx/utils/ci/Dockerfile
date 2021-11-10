@@ -37,7 +37,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # CI builders to rebuild their copy of the Docker image. This is not a great
 # solution, however without that, the CI builders will keep the same cached
 # Docker image forever.
-RUN echo 1
+RUN echo 2
 
 RUN apt-get update && apt-get install -y bash curl
 
@@ -91,7 +91,7 @@ WORKDIR /home/libcxx-builder
 
 # Install the Buildkite agent and dependencies. This must be done as non-root
 # for the Buildkite agent to be installed in a path where we can find it.
-RUN bash -c "$(curl -sL https://raw.githubusercontent.com/buildkite/agent/master/install.sh)"
+RUN bash -c "$(curl -sL https://raw.githubusercontent.com/buildkite/agent/main/install.sh)"
 ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 RUN echo "tags=\"queue=libcxx-builders,arch=$(uname -m),os=linux\"" >> "/home/libcxx-builder/.buildkite-agent/buildkite-agent.cfg"
 

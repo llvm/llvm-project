@@ -158,15 +158,15 @@ define dso_local double @P10_Spill_CR_EQ(%2* %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mfocrf r8, 4
 ; CHECK-NEXT:    rlwimi r8, r9, 9, 23, 23
 ; CHECK-NEXT:    lwz r9, -4(r1)
-; CHECK-NEXT:    add r5, r7, r5
 ; CHECK-NEXT:    mtocrf 4, r8
 ; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; CHECK-NEXT:    setbc r8, 4*cr5+un
 ; CHECK-NEXT:    isel r6, 0, r6, 4*cr5+gt
-; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq
+; CHECK-NEXT:    add r5, r7, r5
+; CHECK-NEXT:    add r5, r8, r5
 ; CHECK-NEXT:    mtocrf 128, r9
 ; CHECK-NEXT:    lwz r9, -8(r1)
-; CHECK-NEXT:    add r5, r8, r5
+; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq
 ; CHECK-NEXT:    iseleq r3, 0, r3
 ; CHECK-NEXT:    mtfprd f0, r5
 ; CHECK-NEXT:    xscvsxddp f0, f0
@@ -174,13 +174,13 @@ define dso_local double @P10_Spill_CR_EQ(%2* %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwz r9, -12(r1)
 ; CHECK-NEXT:    lwz r12, 8(r1)
 ; CHECK-NEXT:    iseleq r6, 0, r6
-; CHECK-NEXT:    add r3, r6, r3
 ; CHECK-NEXT:    xsmuldp f0, f0, f2
 ; CHECK-NEXT:    mtocrf 128, r9
 ; CHECK-NEXT:    mtocrf 32, r12
 ; CHECK-NEXT:    mtocrf 16, r12
 ; CHECK-NEXT:    mtocrf 8, r12
 ; CHECK-NEXT:    iseleq r4, 0, r4
+; CHECK-NEXT:    add r3, r6, r3
 ; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    mtfprd f1, r3
 ; CHECK-NEXT:    xscvsxddp f1, f1

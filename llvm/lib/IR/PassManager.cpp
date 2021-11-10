@@ -15,17 +15,6 @@
 using namespace llvm;
 
 namespace llvm {
-// Experimental option to eagerly invalidate more analyses. This has the
-// potential to decrease max memory usage in exchange for more compile time.
-// This may affect codegen due to either passes using analyses only when
-// cached, or invalidating and recalculating an analysis that was
-// stale/imprecise but still valid. Currently this invalidates all function
-// analyses after a module->function or cgscc->function adaptor.
-// TODO: make this a PipelineTuningOption.
-cl::opt<bool> EagerlyInvalidateAnalyses(
-    "eagerly-invalidate-analyses", cl::init(false), cl::Hidden,
-    cl::desc("Eagerly invalidate more analyses in default pipelines"));
-
 // Explicit template instantiations and specialization defininitions for core
 // template typedefs.
 template class AllAnalysesOn<Module>;
@@ -105,7 +94,10 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
 
 void ModuleToFunctionPassAdaptor::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  OS << "function(";
+  OS << "function";
+  if (EagerlyInvalidate)
+    OS << "<eager-inv>";
+  OS << "(";
   Pass->printPipeline(OS, MapClassName2PassName);
   OS << ")";
 }
@@ -141,8 +133,7 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
     // We know that the function pass couldn't have invalidated any other
     // function's analyses (that's the contract of a function pass), so
     // directly handle the function analysis manager's invalidation here.
-    FAM.invalidate(F, EagerlyInvalidateAnalyses ? PreservedAnalyses::none()
-                                                : PassPA);
+    FAM.invalidate(F, EagerlyInvalidate ? PreservedAnalyses::none() : PassPA);
 
     // Then intersect the preserved set so that invalidation of module
     // analyses will eventually occur when the module pass completes.

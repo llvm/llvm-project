@@ -1733,8 +1733,7 @@ public:
                                  ArrayRef<SDValue> Ops);
 
   SDValue FoldConstantVectorArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                       ArrayRef<SDValue> Ops,
-                                       const SDNodeFlags Flags = SDNodeFlags());
+                                       ArrayRef<SDValue> Ops);
 
   /// Fold floating-point operations with 2 operands when both operands are
   /// constants and/or undefined.
@@ -1836,6 +1835,19 @@ public:
   /// TargetLowering class to allow target nodes to be understood.
   unsigned ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
                               unsigned Depth = 0) const;
+
+  /// Get the minimum bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
+  /// Similar to the APInt::getMinSignedBits function.
+  /// Helper wrapper to ComputeNumSignBits.
+  unsigned ComputeMinSignedBits(SDValue Op, unsigned Depth = 0) const;
+
+  /// Get the minimum bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
+  /// Similar to the APInt::getMinSignedBits function.
+  /// Helper wrapper to ComputeNumSignBits.
+  unsigned ComputeMinSignedBits(SDValue Op, const APInt &DemandedElts,
+                                unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
   /// and, if \p PoisonOnly is false, does not have undef bits.

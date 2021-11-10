@@ -30,6 +30,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
+#include <utility>
 
 namespace llvm {
 
@@ -388,6 +389,9 @@ public:
   bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const;
 
   unsigned getAssumedAddrSpace(const Value *V) const;
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const;
 
   /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
   /// NewV, which has a different address space. This should happen for every
@@ -916,6 +920,9 @@ public:
   ///  architectural maximum vector length, and None otherwise.
   Optional<unsigned> getMaxVScale() const;
 
+  /// \return the value of vscale to tune the cost model for.
+  Optional<unsigned> getVScaleForTuning() const;
+
   /// \return True if the vectorization factor should be chosen to
   /// make the vector of the smallest element type match the size of a
   /// vector register. For wider element types, this could result in
@@ -1112,6 +1119,20 @@ public:
   /// Use -1 to indicate that there is no information on the index value.
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index = -1) const;
+
+  /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
+  /// \p ReplicationFactor times.
+  ///
+  /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
+  ///   <0,0,0,1,1,1,2,2,2,3,3,3>
+  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                            int VF,
+                                            const APInt &DemandedSrcElts,
+                                            const APInt &DemandedReplicatedElts,
+                                            TTI::TargetCostKind CostKind);
+  InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                            int VF, ArrayRef<int> Mask,
+                                            TTI::TargetCostKind CostKind);
 
   /// \return The cost of Load and Store instructions.
   InstructionCost
@@ -1464,6 +1485,8 @@ public:
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const = 0;
   virtual unsigned getAssumedAddrSpace(const Value *V) const = 0;
+  virtual std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const = 0;
   virtual Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                   Value *OldV,
                                                   Value *NewV) const = 0;
@@ -1576,6 +1599,7 @@ public:
   virtual TypeSize getRegisterBitWidth(RegisterKind K) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() const = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
+  virtual Optional<unsigned> getVScaleForTuning() const = 0;
   virtual bool shouldMaximizeVectorBandwidth() const = 0;
   virtual ElementCount getMinimumVF(unsigned ElemWidth,
                                     bool IsScalable) const = 0;
@@ -1636,6 +1660,15 @@ public:
                                              const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              unsigned Index) = 0;
+
+  virtual InstructionCost getReplicationShuffleCost(
+      Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedSrcElts,
+      const APInt &DemandedReplicatedElts, TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            ArrayRef<int> Mask,
+                            TTI::TargetCostKind CostKind) = 0;
+
   virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                           Align Alignment,
                                           unsigned AddressSpace,
@@ -1795,6 +1828,11 @@ public:
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
     return Impl.getAssumedAddrSpace(V);
+  }
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const override {
+    return Impl.getPredicatedAddrSpace(V);
   }
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
@@ -2037,6 +2075,9 @@ public:
   Optional<unsigned> getMaxVScale() const override {
     return Impl.getMaxVScale();
   }
+  Optional<unsigned> getVScaleForTuning() const override {
+    return Impl.getVScaleForTuning();
+  }
   bool shouldMaximizeVectorBandwidth() const override {
     return Impl.shouldMaximizeVectorBandwidth();
   }
@@ -2136,6 +2177,22 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
+  }
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedSrcElts,
+                            const APInt &DemandedReplicatedElts,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
+                                          DemandedSrcElts,
+                                          DemandedReplicatedElts, CostKind);
+  }
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            ArrayRef<int> Mask,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF, Mask,
+                                          CostKind);
   }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,

@@ -185,26 +185,30 @@ DictionaryAttr DictionaryAttr::getWithSorted(MLIRContext *context,
 
 /// Return the specified attribute if present, null otherwise.
 Attribute DictionaryAttr::get(StringRef name) const {
-  Optional<NamedAttribute> attr = getNamed(name);
-  return attr ? attr->second : nullptr;
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? it.first->second : Attribute();
 }
 Attribute DictionaryAttr::get(Identifier name) const {
-  Optional<NamedAttribute> attr = getNamed(name);
-  return attr ? attr->second : nullptr;
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? it.first->second : Attribute();
 }
 
 /// Return the specified named attribute if present, None otherwise.
 Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
-  ArrayRef<NamedAttribute> values = getValue();
-  const auto *it = llvm::lower_bound(values, name);
-  return it != values.end() && it->first == name ? *it
-                                                 : Optional<NamedAttribute>();
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
 }
 Optional<NamedAttribute> DictionaryAttr::getNamed(Identifier name) const {
-  for (auto elt : getValue())
-    if (elt.first == name)
-      return elt;
-  return llvm::None;
+  auto it = impl::findAttrSorted(begin(), end(), name);
+  return it.second ? *it.first : Optional<NamedAttribute>();
+}
+
+/// Return whether the specified attribute is present.
+bool DictionaryAttr::contains(StringRef name) const {
+  return impl::findAttrSorted(begin(), end(), name).second;
+}
+bool DictionaryAttr::contains(Identifier name) const {
+  return impl::findAttrSorted(begin(), end(), name).second;
 }
 
 DictionaryAttr::iterator DictionaryAttr::begin() const {
@@ -898,10 +902,10 @@ LLVM_ATTRIBUTE_UNUSED static bool isComplexOfIntType(Type type) {
 }
 
 auto DenseElementsAttr::getComplexIntValues() const
-    -> llvm::iterator_range<ComplexIntElementIterator> {
+    -> iterator_range_impl<ComplexIntElementIterator> {
   assert(isComplexOfIntType(getElementType()) &&
          "expected complex integral type");
-  return {ComplexIntElementIterator(*this, 0),
+  return {getType(), ComplexIntElementIterator(*this, 0),
           ComplexIntElementIterator(*this, getNumElements())};
 }
 auto DenseElementsAttr::complex_value_begin() const
@@ -919,10 +923,10 @@ auto DenseElementsAttr::complex_value_end() const -> ComplexIntElementIterator {
 /// Return the held element values as a range of APFloat. The element type of
 /// this attribute must be of float type.
 auto DenseElementsAttr::getFloatValues() const
-    -> llvm::iterator_range<FloatElementIterator> {
+    -> iterator_range_impl<FloatElementIterator> {
   auto elementType = getElementType().cast<FloatType>();
   const auto &elementSemantics = elementType.getFloatSemantics();
-  return {FloatElementIterator(elementSemantics, raw_int_begin()),
+  return {getType(), FloatElementIterator(elementSemantics, raw_int_begin()),
           FloatElementIterator(elementSemantics, raw_int_end())};
 }
 auto DenseElementsAttr::float_value_begin() const -> FloatElementIterator {
@@ -935,11 +939,12 @@ auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
 }
 
 auto DenseElementsAttr::getComplexFloatValues() const
-    -> llvm::iterator_range<ComplexFloatElementIterator> {
+    -> iterator_range_impl<ComplexFloatElementIterator> {
   Type eltTy = getElementType().cast<ComplexType>().getElementType();
   assert(eltTy.isa<FloatType>() && "expected complex float type");
   const auto &semantics = eltTy.cast<FloatType>().getFloatSemantics();
-  return {{semantics, {*this, 0}},
+  return {getType(),
+          {semantics, {*this, 0}},
           {semantics, {*this, static_cast<size_t>(getNumElements())}}};
 }
 auto DenseElementsAttr::complex_float_value_begin() const
@@ -1244,13 +1249,6 @@ bool DenseIntElementsAttr::classof(Attribute attr) {
 // OpaqueElementsAttr
 //===----------------------------------------------------------------------===//
 
-/// Return the value at the given index. If index does not refer to a valid
-/// element, then a null attribute is returned.
-Attribute OpaqueElementsAttr::getValue(ArrayRef<uint64_t> index) const {
-  assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  return Attribute();
-}
-
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
   Dialect *dialect = getDialect().getDialect();
   if (!dialect)
@@ -1274,47 +1272,6 @@ OpaqueElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 // SparseElementsAttr
 //===----------------------------------------------------------------------===//
-
-/// Return the value of the element at the given index.
-Attribute SparseElementsAttr::getValue(ArrayRef<uint64_t> index) const {
-  assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  auto type = getType();
-
-  // The sparse indices are 64-bit integers, so we can reinterpret the raw data
-  // as a 1-D index array.
-  auto sparseIndices = getIndices();
-  auto sparseIndexValues = sparseIndices.getValues<uint64_t>();
-
-  // Check to see if the indices are a splat.
-  if (sparseIndices.isSplat()) {
-    // If the index is also not a splat of the index value, we know that the
-    // value is zero.
-    auto splatIndex = *sparseIndexValues.begin();
-    if (llvm::any_of(index, [=](uint64_t i) { return i != splatIndex; }))
-      return getZeroAttr();
-
-    // If the indices are a splat, we also expect the values to be a splat.
-    assert(getValues().isSplat() && "expected splat values");
-    return getValues().getSplatValue();
-  }
-
-  // Build a mapping between known indices and the offset of the stored element.
-  llvm::SmallDenseMap<llvm::ArrayRef<uint64_t>, size_t> mappedIndices;
-  auto numSparseIndices = sparseIndices.getType().getDimSize(0);
-  size_t rank = type.getRank();
-  for (size_t i = 0, e = numSparseIndices; i != e; ++i)
-    mappedIndices.try_emplace(
-        {&*std::next(sparseIndexValues.begin(), i * rank), rank}, i);
-
-  // Look for the provided index key within the mapped indices. If the provided
-  // index is not found, then return a zero attribute.
-  auto it = mappedIndices.find(index);
-  if (it == mappedIndices.end())
-    return getZeroAttr();
-
-  // Otherwise, return the held sparse value element.
-  return getValues().getValue(it->second);
-}
 
 /// Get a zero APFloat for the given sparse attribute.
 APFloat SparseElementsAttr::getZeroAPFloat() const {

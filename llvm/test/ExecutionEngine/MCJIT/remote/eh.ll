@@ -3,6 +3,8 @@
 ; XFAIL: arm, cygwin, windows-msvc, windows-gnu
 ; UNSUPPORTED: powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
+; FIXME: Something hangs here.
+; UNSUPPORTED: use_msan_with_origins
 declare i8* @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(i8*, i8*, i8*)
 declare i32 @__gxx_personality_v0(...)

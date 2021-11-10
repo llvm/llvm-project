@@ -1,5 +1,5 @@
 // Example source from breakpad's linux tutorial
-// https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/linux_starter_guide.md
+// https://chromium.googlesource.com/breakpad/breakpad/+/main/docs/linux_starter_guide.md
 
 #include <stdio.h>
 #include <sys/types.h>

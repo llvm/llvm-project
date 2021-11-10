@@ -39,5 +39,5 @@ body: |
     MOV32mr $rsp, 1, _, -4, _, $edi
     MOV64mi32 $rsp, 1, _, -16, _, 2
     $eax = MOV32rm $rsp, 1, _, -4, _
-    RETQ $eax
+    RET64 $eax
 ...

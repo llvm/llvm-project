@@ -695,6 +695,191 @@ entry:
   ret i64 %spec.store.select8
 }
 
+define i32 @ashrA(i64 %a, i32 %b) {
+; CHECK-LABEL: @ashrA(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[A:%.*]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP1]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %conv = ashr i64 %a, 32
+  %conv1 = sext i32 %b to i64
+  %add = add i64 %conv1, %conv
+  %spec.store.select = call i64 @llvm.smin.i64(i64 %add, i64 2147483647)
+  %spec.store.select8 = call i64 @llvm.smax.i64(i64 %spec.store.select, i64 -2147483648)
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
+define i32 @ashrB(i32 %a, i64 %b) {
+; CHECK-LABEL: @ashrB(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[B:%.*]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP1]], i32 [[A:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %conv = sext i32 %a to i64
+  %conv1 = ashr i64 %b, 32
+  %add = add i64 %conv1, %conv
+  %0 = icmp sgt i64 %add, -2147483648
+  %spec.store.select = select i1 %0, i64 %add, i64 -2147483648
+  %1 = icmp slt i64 %spec.store.select, 2147483647
+  %spec.store.select8 = select i1 %1, i64 %spec.store.select, i64 2147483647
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
+define i32 @ashrAB(i64 %a, i64 %b) {
+; CHECK-LABEL: @ashrAB(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[A:%.*]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[B:%.*]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP2]], i32 [[TMP3]])
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+entry:
+  %conv = ashr i64 %a, 32
+  %conv1 = ashr i64 %b, 32
+  %add = add i64 %conv1, %conv
+  %0 = icmp sgt i64 %add, -2147483648
+  %spec.store.select = select i1 %0, i64 %add, i64 -2147483648
+  %1 = icmp slt i64 %spec.store.select, 2147483647
+  %spec.store.select8 = select i1 %1, i64 %spec.store.select, i64 2147483647
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
+define i32 @ashrA31(i64 %a, i32 %b) {
+; CHECK-LABEL: @ashrA31(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = ashr i64 [[A:%.*]], 31
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV]], [[CONV1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[ADD]], -2147483648
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[TMP0]], i64 [[ADD]], i64 -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[SPEC_STORE_SELECT]], 2147483647
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = select i1 [[TMP1]], i64 [[SPEC_STORE_SELECT]], i64 2147483647
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc i64 [[SPEC_STORE_SELECT8]] to i32
+; CHECK-NEXT:    ret i32 [[CONV7]]
+;
+entry:
+  %conv = ashr i64 %a, 31
+  %conv1 = sext i32 %b to i64
+  %add = add i64 %conv1, %conv
+  %0 = icmp sgt i64 %add, -2147483648
+  %spec.store.select = select i1 %0, i64 %add, i64 -2147483648
+  %1 = icmp slt i64 %spec.store.select, 2147483647
+  %spec.store.select8 = select i1 %1, i64 %spec.store.select, i64 2147483647
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
+define i32 @ashrA33(i64 %a, i32 %b) {
+; CHECK-LABEL: @ashrA33(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = ashr i64 [[A:%.*]], 33
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[CONV]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP0]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+entry:
+  %conv = ashr i64 %a, 33
+  %conv1 = sext i32 %b to i64
+  %add = add i64 %conv1, %conv
+  %0 = icmp sgt i64 %add, -2147483648
+  %spec.store.select = select i1 %0, i64 %add, i64 -2147483648
+  %1 = icmp slt i64 %spec.store.select, 2147483647
+  %spec.store.select8 = select i1 %1, i64 %spec.store.select, i64 2147483647
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
+define <2 x i8> @ashrv2i8(<2 x i16> %a, <2 x i8> %b) {
+; CHECK-LABEL: @ashrv2i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = ashr <2 x i16> [[A:%.*]], <i16 8, i16 12>
+; CHECK-NEXT:    [[CONV1:%.*]] = sext <2 x i8> [[B:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i16> [[CONV]], [[CONV1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <2 x i16> [[ADD]], <i16 -128, i16 -128>
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select <2 x i1> [[TMP0]], <2 x i16> [[ADD]], <2 x i16> <i16 -128, i16 -128>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i16> [[SPEC_STORE_SELECT]], <i16 127, i16 127>
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[SPEC_STORE_SELECT]], <2 x i16> <i16 127, i16 127>
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc <2 x i16> [[SPEC_STORE_SELECT8]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[CONV7]]
+;
+entry:
+  %conv = ashr <2 x i16> %a, <i16 8, i16 12>
+  %conv1 = sext <2 x i8> %b to <2 x i16>
+  %add = add <2 x i16> %conv1, %conv
+  %0 = icmp sgt <2 x i16> %add, <i16 -128, i16 -128>
+  %spec.store.select = select <2 x i1> %0, <2 x i16> %add, <2 x i16> <i16 -128, i16 -128>
+  %1 = icmp slt <2 x i16> %spec.store.select, <i16 127, i16 127>
+  %spec.store.select8 = select <2 x i1> %1, <2 x i16> %spec.store.select, <2 x i16> <i16 127, i16 127>
+  %conv7 = trunc <2 x i16> %spec.store.select8 to <2 x i8>
+  ret <2 x i8> %conv7
+}
+
+define <2 x i8> @ashrv2i8_s(<2 x i16> %a, <2 x i8> %b) {
+; CHECK-LABEL: @ashrv2i8_s(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 8, i16 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[TMP0]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[TMP1]], <2 x i8> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+;
+entry:
+  %conv = ashr <2 x i16> %a, <i16 8, i16 8>
+  %conv1 = sext <2 x i8> %b to <2 x i16>
+  %add = add <2 x i16> %conv1, %conv
+  %0 = icmp sgt <2 x i16> %add, <i16 -128, i16 -128>
+  %spec.store.select = select <2 x i1> %0, <2 x i16> %add, <2 x i16> <i16 -128, i16 -128>
+  %1 = icmp slt <2 x i16> %spec.store.select, <i16 127, i16 127>
+  %spec.store.select8 = select <2 x i1> %1, <2 x i16> %spec.store.select, <2 x i16> <i16 127, i16 127>
+  %conv7 = trunc <2 x i16> %spec.store.select8 to <2 x i8>
+  ret <2 x i8> %conv7
+}
+
+define i16 @or(i8 %X, i16 %Y) {
+; CHECK-LABEL: @or(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], -16
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X:%.*]], i8 [[TMP2]])
+; CHECK-NEXT:    [[L12:%.*]] = sext i8 [[TMP3]] to i16
+; CHECK-NEXT:    ret i16 [[L12]]
+;
+  %conv10 = sext i8 %X to i16
+  %conv14 = or i16 %Y, 65520
+  %sub = sub nsw i16 %conv10, %conv14
+  %l9 = icmp sgt i16 %sub, -128
+  %l10 = select i1 %l9, i16 %sub, i16 -128
+  %l11 = icmp slt i16 %l10, 127
+  %l12 = select i1 %l11, i16 %l10, i16 127
+  ret i16 %l12
+}
+
+define i16 @const(i8 %X) {
+; CHECK-LABEL: @const(
+; CHECK-NEXT:    [[CONV10:%.*]] = sext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i16 [[CONV10]], 117
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i16 [[CONV10]], i16 117
+; CHECK-NEXT:    [[L12:%.*]] = add nsw i16 [[TMP2]], 10
+; CHECK-NEXT:    ret i16 [[L12]]
+;
+  %conv10 = sext i8 %X to i16
+  %sub = add i16 %conv10, 10
+  %l9 = icmp sgt i16 %sub, -128
+  %l10 = select i1 %l9, i16 %sub, i16 -128
+  %l11 = icmp slt i16 %l10, 127
+  %l12 = select i1 %l11, i16 %l10, i16 127
+  ret i16 %l12
+}
+
 declare void @use64(i64)
 declare i64 @llvm.smin.i64(i64, i64)
 declare i64 @llvm.smax.i64(i64, i64)

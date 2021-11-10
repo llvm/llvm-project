@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_CSKY_CSKYTARGETMACHINE_H
 #define LLVM_LIB_TARGET_CSKY_CSKYTARGETMACHINE_H
 
+#include "CSKYSubtarget.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 

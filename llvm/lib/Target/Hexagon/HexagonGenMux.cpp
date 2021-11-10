@@ -357,21 +357,21 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
         return true;
     return false;
   };
-  for (auto I = B.rbegin(), E = B.rend(); I != E; ++I) {
-    if (I->isDebugInstr())
+  for (MachineInstr &I : llvm::reverse(B)) {
+    if (I.isDebugInstr())
       continue;
     // This isn't 100% accurate, but it's safe.
     // It won't detect (as a kill) a case like this
     //   r0 = add r0, 1    <-- r0 should be "killed"
     //   ... = r0
-    for (MachineOperand &Op : I->operands()) {
+    for (MachineOperand &Op : I.operands()) {
       if (!Op.isReg() || !Op.isUse())
         continue;
       assert(Op.getSubReg() == 0 && "Should have physical registers only");
       bool Live = IsLive(Op.getReg());
       Op.setIsKill(!Live);
     }
-    LPR.stepBackward(*I);
+    LPR.stepBackward(I);
   }
 
   return Changed;

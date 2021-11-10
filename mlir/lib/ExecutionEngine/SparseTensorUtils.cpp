@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/ExecutionEngine/SparseTensorUtils.h"
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
@@ -162,8 +163,6 @@ private:
 /// function overloading to implement "partial" method specialization.
 class SparseTensorStorageBase {
 public:
-  enum DimLevelType : uint8_t { kDense = 0, kCompressed = 1, kSingleton = 2 };
-
   virtual uint64_t getDimSize(uint64_t) = 0;
 
   // Overhead storage.
@@ -206,7 +205,7 @@ public:
   /// permutation, and per-dimension dense/sparse annotations, using
   /// the coordinate scheme tensor for the initial contents if provided.
   SparseTensorStorage(const std::vector<uint64_t> &szs, const uint64_t *perm,
-                      const uint8_t *sparsity, SparseTensorCOO<V> *tensor)
+                      const DimLevelType *sparsity, SparseTensorCOO<V> *tensor)
       : sizes(szs), rev(getRank()), pointers(getRank()), indices(getRank()) {
     uint64_t rank = getRank();
     // Store "reverse" permutation.
@@ -216,17 +215,18 @@ public:
     // TODO: needs fine-tuning based on sparsity
     for (uint64_t r = 0, s = 1; r < rank; r++) {
       s *= sizes[r];
-      if (sparsity[r] == kCompressed) {
+      if (sparsity[r] == DimLevelType::kCompressed) {
         pointers[r].reserve(s + 1);
         indices[r].reserve(s);
         s = 1;
       } else {
-        assert(sparsity[r] == kDense && "singleton not yet supported");
+        assert(sparsity[r] == DimLevelType::kDense &&
+               "singleton not yet supported");
       }
     }
     // Prepare sparse pointer structures for all dimensions.
     for (uint64_t r = 0; r < rank; r++)
-      if (sparsity[r] == kCompressed)
+      if (sparsity[r] == DimLevelType::kCompressed)
         pointers[r].push_back(0);
     // Then assign contents from coordinate scheme tensor if provided.
     if (tensor) {
@@ -288,7 +288,7 @@ public:
   /// permutation as is desired for the new sparse tensor storage.
   static SparseTensorStorage<P, I, V> *
   newSparseTensor(uint64_t rank, const uint64_t *sizes, const uint64_t *perm,
-                  const uint8_t *sparsity, SparseTensorCOO<V> *tensor) {
+                  const DimLevelType *sparsity, SparseTensorCOO<V> *tensor) {
     SparseTensorStorage<P, I, V> *n = nullptr;
     if (tensor) {
       assert(tensor->getRank() == rank);
@@ -311,8 +311,8 @@ private:
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
   /// tensor in coordinate scheme. This method prepares the pointers and
   /// indices arrays under the given per-dimension dense/sparse annotations.
-  void fromCOO(SparseTensorCOO<V> *tensor, const uint8_t *sparsity, uint64_t lo,
-               uint64_t hi, uint64_t d) {
+  void fromCOO(SparseTensorCOO<V> *tensor, const DimLevelType *sparsity,
+               uint64_t lo, uint64_t hi, uint64_t d) {
     const std::vector<Element<V>> &elements = tensor->getElements();
     // Once dimensions are exhausted, insert the numerical values.
     if (d == getRank()) {
@@ -331,7 +331,7 @@ private:
       while (seg < hi && elements[seg].indices[d] == idx)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
-      if (sparsity[d] == kCompressed) {
+      if (sparsity[d] == DimLevelType::kCompressed) {
         indices[d].push_back(idx);
       } else {
         // For dense storage we must fill in all the zero values between
@@ -346,7 +346,7 @@ private:
       lo = seg;
     }
     // Finalize the sparse pointer structure at this dimension.
-    if (sparsity[d] == kCompressed) {
+    if (sparsity[d] == DimLevelType::kCompressed) {
       pointers[d].push_back(indices[d].size());
     } else {
       // For dense storage we must fill in all the zero values after
@@ -543,52 +543,34 @@ typedef uint64_t index_t;
 //
 //===----------------------------------------------------------------------===//
 
-enum OverheadTypeEnum : uint32_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
-
-enum PrimaryTypeEnum : uint32_t {
-  kF64 = 1,
-  kF32 = 2,
-  kI64 = 3,
-  kI32 = 4,
-  kI16 = 5,
-  kI8 = 6
-};
-
-enum Action : uint32_t {
-  kEmpty = 0,
-  kFromFile = 1,
-  kFromCOO = 2,
-  kEmptyCOO = 3,
-  kToCOO = 4,
-  kToIter = 5
-};
-
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v)) {                          \
     SparseTensorCOO<V> *tensor = nullptr;                                      \
-    if (action <= kFromCOO) {                                                  \
-      if (action == kFromFile) {                                               \
+    if (action <= Action::kFromCOO) {                                          \
+      if (action == Action::kFromFile) {                                       \
         char *filename = static_cast<char *>(ptr);                             \
         tensor = openSparseTensorCOO<V>(filename, rank, sizes, perm);          \
-      } else if (action == kFromCOO) {                                         \
+      } else if (action == Action::kFromCOO) {                                 \
         tensor = static_cast<SparseTensorCOO<V> *>(ptr);                       \
       } else {                                                                 \
-        assert(action == kEmpty);                                              \
+        assert(action == Action::kEmpty);                                      \
       }                                                                        \
       return SparseTensorStorage<P, I, V>::newSparseTensor(rank, sizes, perm,  \
                                                            sparsity, tensor);  \
-    } else if (action == kEmptyCOO) {                                          \
+    } else if (action == Action::kEmptyCOO) {                                  \
       return SparseTensorCOO<V>::newSparseTensorCOO(rank, sizes, perm);        \
     } else {                                                                   \
       tensor = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);  \
-      if (action == kToIter) {                                                 \
+      if (action == Action::kToIterator) {                                     \
         tensor->startIterator();                                               \
       } else {                                                                 \
-        assert(action == kToCOO);                                              \
+        assert(action == Action::kToCOO);                                      \
       }                                                                        \
       return tensor;                                                           \
     }                                                                          \
   }
+
+#define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
 
 #define IMPL_SPARSEVALUES(NAME, TYPE, LIB)                                     \
   void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor) {    \
@@ -656,78 +638,110 @@ enum Action : uint32_t {
 /// Constructs a new sparse tensor. This is the "swiss army knife"
 /// method for materializing sparse tensors into the computation.
 ///
-/// action:
+/// Action:
 /// kEmpty = returns empty storage to fill later
 /// kFromFile = returns storage, where ptr contains filename to read
 /// kFromCOO = returns storage, where ptr contains coordinate scheme to assign
 /// kEmptyCOO = returns empty coordinate scheme to fill and use with kFromCOO
 /// kToCOO = returns coordinate scheme from storage in ptr to use with kFromCOO
-/// kToIter = returns iterator from storage in ptr (call getNext() to use)
+/// kToIterator = returns iterator from storage in ptr (call getNext() to use)
 void *
-_mlir_ciface_newSparseTensor(StridedMemRefType<uint8_t, 1> *aref, // NOLINT
+_mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
                              StridedMemRefType<index_t, 1> *sref,
                              StridedMemRefType<index_t, 1> *pref,
-                             uint32_t ptrTp, uint32_t indTp, uint32_t valTp,
-                             uint32_t action, void *ptr) {
+                             OverheadType ptrTp, OverheadType indTp,
+                             PrimaryType valTp, Action action, void *ptr) {
   assert(aref && sref && pref);
   assert(aref->strides[0] == 1 && sref->strides[0] == 1 &&
          pref->strides[0] == 1);
   assert(aref->sizes[0] == sref->sizes[0] && sref->sizes[0] == pref->sizes[0]);
-  const uint8_t *sparsity = aref->data + aref->offset;
+  const DimLevelType *sparsity = aref->data + aref->offset;
   const index_t *sizes = sref->data + sref->offset;
   const index_t *perm = pref->data + pref->offset;
   uint64_t rank = aref->sizes[0];
 
   // Double matrices with all combinations of overhead storage.
-  CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
-  CASE(kU64, kU32, kF64, uint64_t, uint32_t, double);
-  CASE(kU64, kU16, kF64, uint64_t, uint16_t, double);
-  CASE(kU64, kU8, kF64, uint64_t, uint8_t, double);
-  CASE(kU32, kU64, kF64, uint32_t, uint64_t, double);
-  CASE(kU32, kU32, kF64, uint32_t, uint32_t, double);
-  CASE(kU32, kU16, kF64, uint32_t, uint16_t, double);
-  CASE(kU32, kU8, kF64, uint32_t, uint8_t, double);
-  CASE(kU16, kU64, kF64, uint16_t, uint64_t, double);
-  CASE(kU16, kU32, kF64, uint16_t, uint32_t, double);
-  CASE(kU16, kU16, kF64, uint16_t, uint16_t, double);
-  CASE(kU16, kU8, kF64, uint16_t, uint8_t, double);
-  CASE(kU8, kU64, kF64, uint8_t, uint64_t, double);
-  CASE(kU8, kU32, kF64, uint8_t, uint32_t, double);
-  CASE(kU8, kU16, kF64, uint8_t, uint16_t, double);
-  CASE(kU8, kU8, kF64, uint8_t, uint8_t, double);
+  CASE(OverheadType::kU64, OverheadType::kU64, PrimaryType::kF64, uint64_t,
+       uint64_t, double);
+  CASE(OverheadType::kU64, OverheadType::kU32, PrimaryType::kF64, uint64_t,
+       uint32_t, double);
+  CASE(OverheadType::kU64, OverheadType::kU16, PrimaryType::kF64, uint64_t,
+       uint16_t, double);
+  CASE(OverheadType::kU64, OverheadType::kU8, PrimaryType::kF64, uint64_t,
+       uint8_t, double);
+  CASE(OverheadType::kU32, OverheadType::kU64, PrimaryType::kF64, uint32_t,
+       uint64_t, double);
+  CASE(OverheadType::kU32, OverheadType::kU32, PrimaryType::kF64, uint32_t,
+       uint32_t, double);
+  CASE(OverheadType::kU32, OverheadType::kU16, PrimaryType::kF64, uint32_t,
+       uint16_t, double);
+  CASE(OverheadType::kU32, OverheadType::kU8, PrimaryType::kF64, uint32_t,
+       uint8_t, double);
+  CASE(OverheadType::kU16, OverheadType::kU64, PrimaryType::kF64, uint16_t,
+       uint64_t, double);
+  CASE(OverheadType::kU16, OverheadType::kU32, PrimaryType::kF64, uint16_t,
+       uint32_t, double);
+  CASE(OverheadType::kU16, OverheadType::kU16, PrimaryType::kF64, uint16_t,
+       uint16_t, double);
+  CASE(OverheadType::kU16, OverheadType::kU8, PrimaryType::kF64, uint16_t,
+       uint8_t, double);
+  CASE(OverheadType::kU8, OverheadType::kU64, PrimaryType::kF64, uint8_t,
+       uint64_t, double);
+  CASE(OverheadType::kU8, OverheadType::kU32, PrimaryType::kF64, uint8_t,
+       uint32_t, double);
+  CASE(OverheadType::kU8, OverheadType::kU16, PrimaryType::kF64, uint8_t,
+       uint16_t, double);
+  CASE(OverheadType::kU8, OverheadType::kU8, PrimaryType::kF64, uint8_t,
+       uint8_t, double);
 
   // Float matrices with all combinations of overhead storage.
-  CASE(kU64, kU64, kF32, uint64_t, uint64_t, float);
-  CASE(kU64, kU32, kF32, uint64_t, uint32_t, float);
-  CASE(kU64, kU16, kF32, uint64_t, uint16_t, float);
-  CASE(kU64, kU8, kF32, uint64_t, uint8_t, float);
-  CASE(kU32, kU64, kF32, uint32_t, uint64_t, float);
-  CASE(kU32, kU32, kF32, uint32_t, uint32_t, float);
-  CASE(kU32, kU16, kF32, uint32_t, uint16_t, float);
-  CASE(kU32, kU8, kF32, uint32_t, uint8_t, float);
-  CASE(kU16, kU64, kF32, uint16_t, uint64_t, float);
-  CASE(kU16, kU32, kF32, uint16_t, uint32_t, float);
-  CASE(kU16, kU16, kF32, uint16_t, uint16_t, float);
-  CASE(kU16, kU8, kF32, uint16_t, uint8_t, float);
-  CASE(kU8, kU64, kF32, uint8_t, uint64_t, float);
-  CASE(kU8, kU32, kF32, uint8_t, uint32_t, float);
-  CASE(kU8, kU16, kF32, uint8_t, uint16_t, float);
-  CASE(kU8, kU8, kF32, uint8_t, uint8_t, float);
+  CASE(OverheadType::kU64, OverheadType::kU64, PrimaryType::kF32, uint64_t,
+       uint64_t, float);
+  CASE(OverheadType::kU64, OverheadType::kU32, PrimaryType::kF32, uint64_t,
+       uint32_t, float);
+  CASE(OverheadType::kU64, OverheadType::kU16, PrimaryType::kF32, uint64_t,
+       uint16_t, float);
+  CASE(OverheadType::kU64, OverheadType::kU8, PrimaryType::kF32, uint64_t,
+       uint8_t, float);
+  CASE(OverheadType::kU32, OverheadType::kU64, PrimaryType::kF32, uint32_t,
+       uint64_t, float);
+  CASE(OverheadType::kU32, OverheadType::kU32, PrimaryType::kF32, uint32_t,
+       uint32_t, float);
+  CASE(OverheadType::kU32, OverheadType::kU16, PrimaryType::kF32, uint32_t,
+       uint16_t, float);
+  CASE(OverheadType::kU32, OverheadType::kU8, PrimaryType::kF32, uint32_t,
+       uint8_t, float);
+  CASE(OverheadType::kU16, OverheadType::kU64, PrimaryType::kF32, uint16_t,
+       uint64_t, float);
+  CASE(OverheadType::kU16, OverheadType::kU32, PrimaryType::kF32, uint16_t,
+       uint32_t, float);
+  CASE(OverheadType::kU16, OverheadType::kU16, PrimaryType::kF32, uint16_t,
+       uint16_t, float);
+  CASE(OverheadType::kU16, OverheadType::kU8, PrimaryType::kF32, uint16_t,
+       uint8_t, float);
+  CASE(OverheadType::kU8, OverheadType::kU64, PrimaryType::kF32, uint8_t,
+       uint64_t, float);
+  CASE(OverheadType::kU8, OverheadType::kU32, PrimaryType::kF32, uint8_t,
+       uint32_t, float);
+  CASE(OverheadType::kU8, OverheadType::kU16, PrimaryType::kF32, uint8_t,
+       uint16_t, float);
+  CASE(OverheadType::kU8, OverheadType::kU8, PrimaryType::kF32, uint8_t,
+       uint8_t, float);
 
-  // Integral matrices with same overhead storage.
-  CASE(kU64, kU64, kI64, uint64_t, uint64_t, int64_t);
-  CASE(kU64, kU64, kI32, uint64_t, uint64_t, int32_t);
-  CASE(kU64, kU64, kI16, uint64_t, uint64_t, int16_t);
-  CASE(kU64, kU64, kI8, uint64_t, uint64_t, int8_t);
-  CASE(kU32, kU32, kI32, uint32_t, uint32_t, int32_t);
-  CASE(kU32, kU32, kI16, uint32_t, uint32_t, int16_t);
-  CASE(kU32, kU32, kI8, uint32_t, uint32_t, int8_t);
-  CASE(kU16, kU16, kI32, uint16_t, uint16_t, int32_t);
-  CASE(kU16, kU16, kI16, uint16_t, uint16_t, int16_t);
-  CASE(kU16, kU16, kI8, uint16_t, uint16_t, int8_t);
-  CASE(kU8, kU8, kI32, uint8_t, uint8_t, int32_t);
-  CASE(kU8, kU8, kI16, uint8_t, uint8_t, int16_t);
-  CASE(kU8, kU8, kI8, uint8_t, uint8_t, int8_t);
+  // Integral matrices with both overheads of the same type.
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kI64, uint64_t, int64_t);
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kI32, uint64_t, int32_t);
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kI16, uint64_t, int16_t);
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kI8, uint64_t, int8_t);
+  CASE_SECSAME(OverheadType::kU32, PrimaryType::kI32, uint32_t, int32_t);
+  CASE_SECSAME(OverheadType::kU32, PrimaryType::kI16, uint32_t, int16_t);
+  CASE_SECSAME(OverheadType::kU32, PrimaryType::kI8, uint32_t, int8_t);
+  CASE_SECSAME(OverheadType::kU16, PrimaryType::kI32, uint16_t, int32_t);
+  CASE_SECSAME(OverheadType::kU16, PrimaryType::kI16, uint16_t, int16_t);
+  CASE_SECSAME(OverheadType::kU16, PrimaryType::kI8, uint16_t, int8_t);
+  CASE_SECSAME(OverheadType::kU8, PrimaryType::kI32, uint8_t, int32_t);
+  CASE_SECSAME(OverheadType::kU8, PrimaryType::kI16, uint8_t, int16_t);
+  CASE_SECSAME(OverheadType::kU8, PrimaryType::kI8, uint8_t, int8_t);
 
   // Unsupported case (add above if needed).
   fputs("unsupported combination of types\n", stderr);
@@ -830,7 +844,7 @@ void delSparseTensor(void *tensor) {
 void *convertToMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape,
                                 double *values, uint64_t *indices) {
   // Setup all-dims compressed and default ordering.
-  std::vector<uint8_t> sparse(rank, SparseTensorStorageBase::kCompressed);
+  std::vector<DimLevelType> sparse(rank, DimLevelType::kCompressed);
   std::vector<uint64_t> perm(rank);
   std::iota(perm.begin(), perm.end(), 0);
   // Convert external format to internal COO.

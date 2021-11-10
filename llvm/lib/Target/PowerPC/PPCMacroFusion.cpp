@@ -75,6 +75,19 @@ static bool matchingRegOps(const MachineInstr &FirstMI,
   return Op1.getReg() == Op2.getReg();
 }
 
+static bool matchingImmOps(const MachineInstr &MI,
+                           int MIOpIndex,
+                           int64_t Expect,
+                           unsigned ExtendFrom = 64) {
+  const MachineOperand &Op = MI.getOperand(MIOpIndex);
+  if (!Op.isImm())
+    return false;
+  int64_t Imm = Op.getImm();
+  if (ExtendFrom < 64)
+    Imm = SignExtend64(Imm, ExtendFrom);
+  return Imm == Expect;
+}
+
 // Return true if the FirstMI meets the constraints of SecondMI according to
 // fusion specification.
 static bool checkOpConstraints(FusionFeature::FusionKind Kd,
@@ -116,7 +129,7 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
     if (((Imm & 0xFFF0) != 0) && ((Imm & 0xFFF0) != 0xFFF0))
       return false;
 
-    // If si = 1111111111110000 and the msb of the d/ds field of the load equals 
+    // If si = 1111111111110000 and the msb of the d/ds field of the load equals
     // 1, then fusion does not occur.
     if ((Imm & 0xFFF0) == 0xFFF0) {
       const MachineOperand &D = SecondMI.getOperand(1);
@@ -132,6 +145,10 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
     }
     return true;
   }
+
+  case FusionFeature::FK_SldiAdd:
+    return (matchingImmOps(FirstMI, 2, 3) && matchingImmOps(FirstMI, 3, 60)) ||
+           (matchingImmOps(FirstMI, 2, 6) && matchingImmOps(FirstMI, 3, 57));
   }
 
   llvm_unreachable("All the cases should have been handled");

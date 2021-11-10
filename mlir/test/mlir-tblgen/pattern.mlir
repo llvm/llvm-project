@@ -532,6 +532,40 @@ func @redundantTest(%arg0: i32) -> i32 {
 }
 
 //===----------------------------------------------------------------------===//
+// Test either directive
+//===----------------------------------------------------------------------===//
+
+// CHECK: @either_dag_leaf_only
+func @either_dag_leaf_only_1(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
+  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %0 = "test.either_op_a"(%arg0, %arg1, %arg2) : (i32, i16, i8) -> i32
+  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %1 = "test.either_op_a"(%arg1, %arg0, %arg2) : (i16, i32, i8) -> i32
+  return
+}
+
+// CHECK: @either_dag_leaf_dag_node
+func @either_dag_leaf_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
+  %0 = "test.either_op_b"(%arg0) : (i32) -> i32
+  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %1 = "test.either_op_a"(%0, %arg1, %arg2) : (i32, i16, i8) -> i32
+  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %2 = "test.either_op_a"(%arg1, %0, %arg2) : (i16, i32, i8) -> i32
+  return
+}
+
+// CHECK: @either_dag_node_dag_node
+func @either_dag_node_dag_node(%arg0 : i32, %arg1 : i16, %arg2 : i8) -> () {
+  %0 = "test.either_op_b"(%arg0) : (i32) -> i32
+  %1 = "test.either_op_b"(%arg1) : (i16) -> i32
+  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %2 = "test.either_op_a"(%0, %1, %arg2) : (i32, i32, i8) -> i32
+  // CHECK: "test.either_op_b"(%arg1) : (i16) -> i32
+  %3 = "test.either_op_a"(%1, %0, %arg2) : (i32, i32, i8) -> i32
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // Test that ops without type deduction can be created with type builders.
 //===----------------------------------------------------------------------===//
 

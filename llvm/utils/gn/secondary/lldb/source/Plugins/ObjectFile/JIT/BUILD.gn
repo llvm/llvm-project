@@ -9,6 +9,7 @@ static_library("JIT") {
     #"//lldb/source/Target", # 2-hop dependency cycle.
     "//llvm/lib/Support",
   ]
+
   # For Utility/UuidCompatibility.h.
   include_dirs = [ "//lldb/source" ]
   sources = [ "ObjectFileJIT.cpp" ]

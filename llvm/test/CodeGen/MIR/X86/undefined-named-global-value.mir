@@ -22,5 +22,5 @@ body: |
     $rax = MOV64rm $rip, 1, _, @GG, _
     $eax = MOV32rm $rax, 1, _, 0, _
     $eax = INC32r $eax
-    RETQ $eax
+    RET64 $eax
 ...

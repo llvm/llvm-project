@@ -896,6 +896,7 @@ define amdgpu_kernel void @sdiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    s_sext_i32_i16 s4, s4
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v2, s4
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v3, v2
+; GFX11-NEXT:    s_set_inst_prefetch_distance 0x1
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  BB6_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -921,6 +922,7 @@ define amdgpu_kernel void @sdiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    global_store_b16 v[5:6], v0, off
 ; GFX11-NEXT:    s_cbranch_vccz BB6_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
+; GFX11-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX11-NEXT:    s_endpgm
 bb:
   br label %bb3

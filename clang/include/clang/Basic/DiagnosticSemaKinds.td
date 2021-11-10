@@ -833,6 +833,10 @@ def warn_fortify_source_format_overflow : Warning<
   " but format string expands to at least %2">,
   InGroup<FortifySource>;
 
+def warn_fortify_scanf_overflow : Warning<
+  "'%0' may overflow; destination buffer in argument %1 has size "
+  "%2, but the corresponding specifier may require size %3">,
+  InGroup<FortifySource>;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -3277,7 +3281,8 @@ def warn_assume_aligned_too_great
       InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
 def warn_not_xl_compatible
     : Warning<"requesting an alignment of 16 bytes or greater for struct"
-              " members is not binary compatible with AIX XL 16.1 and older">,
+              " members is not binary compatible with IBM XL C/C++ for AIX"
+              " 16.1.0 and older">,
       InGroup<AIXCompat>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,

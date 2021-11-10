@@ -551,6 +551,61 @@ let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1 in {
 def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 
+class VOPProfileWMMA_w32<VOPProfile P, RegisterOperand _Src01RC64, bit _HasClamp, bit _HasOpSel> : VOP3P_Profile<P> {
+  let DstRC = VDst_256;
+  let Src0RC64 = _Src01RC64;
+  let Src1RC64 = _Src01RC64;
+  let Src2RC64 = VISrc_256_f64;
+  let HasClamp = _HasClamp;
+  let HasOpSel = _HasOpSel;
+}
+
+class VOPProfileWMMA_w64<VOPProfile P, RegisterOperand _Src01RC64, bit _HasClamp, bit _HasOpSel> : VOP3P_Profile<P> {
+  let DstRC = VDst_128;
+  let Src0RC64 = _Src01RC64;
+  let Src1RC64 = _Src01RC64;
+  let Src2RC64 = VISrc_128_f32;
+  let HasClamp = _HasClamp;
+  let HasOpSel = _HasOpSel;
+}
+
+def VOP_V8F32_V8F32_V8F32_V8F32 : VOPProfile <[v8f32, v8f32, v8f32, v8f32]>;
+def VOP_V8I32_V4I32_V4I32_V8I32 : VOPProfile <[v8i32, v4i32, v4i32, v8i32]>;
+def VOP_V8I32_V8I32_V8I32_V8I32 : VOPProfile <[v8i32, v8i32, v8i32, v8i32]>;
+def VOP_V4F32_V8F32_V8F32_V4F32 : VOPProfile <[v4f32, v8f32, v8f32, v4f32]>;
+def VOP_V4I32_V4I32_V4I32_V4I32 : VOPProfile <[v4i32, v4i32, v4i32, v4i32]>;
+def VOP_V4I32_V8I32_V8I32_V4I32 : VOPProfile <[v4i32, v8i32, v8i32, v4i32]>;
+
+multiclass WMMAInst_w32<string str, VOPProfile P, RegisterOperand _Src01RC64 = VRegSrc_256, bit _HasClamp = 0, bit _HasOpSel = 0> {
+  let Mnemonic = str in {
+    defm _w32 : VOP3PInst<str # "_w32", VOPProfileWMMA_w32<P, _Src01RC64, _HasClamp, _HasOpSel>>;
+  }
+}
+
+multiclass WMMAInst_w64<string str, VOPProfile P, RegisterOperand _Src01RC64 = VRegSrc_256, bit _HasClamp = 0, bit _HasOpSel = 0> {
+  let Mnemonic = str in {
+    defm _w64 : VOP3PInst<str # "_w64", VOPProfileWMMA_w64<P, _Src01RC64, _HasClamp, _HasOpSel>>;
+  }
+}
+
+let WaveSizePredicate = isWave32 in {
+  defm V_WMMA_F32_16X16X16_F16   : WMMAInst_w32<"v_wmma_f32_16x16x16_f16",   VOP_V8F32_V8F32_V8F32_V8F32>;
+  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst_w32<"v_wmma_f32_16x16x16_bf16",  VOP_V8F32_V8F32_V8F32_V8F32>;
+  defm V_WMMA_F16_16X16X16_F16   : WMMAInst_w32<"v_wmma_f16_16x16x16_f16",   VOP_V8F32_V8F32_V8F32_V8F32, VRegSrc_256, 0, 1>;
+  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst_w32<"v_wmma_bf16_16x16x16_bf16", VOP_V8F32_V8F32_V8F32_V8F32, VRegSrc_256, 0, 1>;
+  defm V_WMMA_I32_16X16X16_IU8   : WMMAInst_w32<"v_wmma_i32_16x16x16_iu8",   VOP_V8I32_V4I32_V4I32_V8I32, VRegSrc_128, 1>;
+  defm V_WMMA_I32_16X16X16_IU4   : WMMAInst_w32<"v_wmma_i32_16x16x16_iu4",   VOP_V8I32_V8I32_V8I32_V8I32, VRegSrc_64,  1>;
+}
+
+let WaveSizePredicate = isWave64 in {
+  defm V_WMMA_F32_16X16X16_F16   : WMMAInst_w64<"v_wmma_f32_16x16x16_f16",   VOP_V4F32_V8F32_V8F32_V4F32>;
+  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst_w64<"v_wmma_f32_16x16x16_bf16",  VOP_V4F32_V8F32_V8F32_V4F32>;
+  defm V_WMMA_F16_16X16X16_F16   : WMMAInst_w64<"v_wmma_f16_16x16x16_f16",   VOP_V4F32_V8F32_V8F32_V4F32, VRegSrc_256, 0, 1>;
+  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst_w64<"v_wmma_bf16_16x16x16_bf16", VOP_V4F32_V8F32_V8F32_V4F32, VRegSrc_256, 0, 1>;
+  defm V_WMMA_I32_16X16X16_IU8   : WMMAInst_w64<"v_wmma_i32_16x16x16_iu8",   VOP_V4I32_V4I32_V4I32_V4I32, VRegSrc_128, 1>;
+  defm V_WMMA_I32_16X16X16_IU4   : WMMAInst_w64<"v_wmma_i32_16x16x16_iu4",   VOP_V4I32_V8I32_V8I32_V4I32, VRegSrc_64,  1>;
+}
+
 //===----------------------------------------------------------------------===//
 // Begin Real Encodings
 //===----------------------------------------------------------------------===//
@@ -625,13 +680,21 @@ defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18>;
 def : MnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">, Requires<[isGFX11Plus]>;
 defm V_DOT2_F32_BF16             : VOP3P_Real_gfx11 <0x1a>;
 
-// TODO-GFX11 new instructions
-/*defm V_WMMA_F32_16X16X16_F16   : VOP3P_Real_gfx11 <0x040>;*/
-/*defm V_WMMA_F32_16X16X16_BF16  : VOP3P_Real_gfx11 <0x041>;*/
-/*defm V_WMMA_F16_16X16X16_F16   : VOP3P_Real_gfx11 <0x042>;*/
-/*defm V_WMMA_BF16_16X16X16_BF16 : VOP3P_Real_gfx11 <0x043>;*/
-/*defm V_WMMA_I32_16X16X16_IU8   : VOP3P_Real_gfx11 <0x044>;*/
-/*defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_gfx11 <0x045>;*/
+multiclass VOP3P_Real_WMMA <bits<7> op> {
+  let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
+    defm _w32 : VOP3P_Real_gfx11 <op>;
+  }
+  let WaveSizePredicate = isWave64, DecoderNamespace = "WMMAGFX11" in {
+    defm _w64 : VOP3P_Real_gfx11 <op>;
+  }
+}
+
+defm V_WMMA_F32_16X16X16_F16   : VOP3P_Real_WMMA <0x040>;
+defm V_WMMA_F32_16X16X16_BF16  : VOP3P_Real_WMMA <0x041>;
+defm V_WMMA_F16_16X16X16_F16   : VOP3P_Real_WMMA <0x042>;
+defm V_WMMA_BF16_16X16X16_BF16 : VOP3P_Real_WMMA <0x043>;
+defm V_WMMA_I32_16X16X16_IU8   : VOP3P_Real_WMMA <0x044>;
+defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 
 //===----------------------------------------------------------------------===//
 // GFX8 (VI)

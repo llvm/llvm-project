@@ -163,8 +163,8 @@ constexpr const static unsigned kBitsInByte = 8;
 /// Returns the value that corresponds to named position `pos` from the
 /// attribute `attr` assuming it's a dense integer elements attribute.
 static unsigned extractPointerSpecValue(Attribute attr, DLEntryPos pos) {
-  return attr.cast<DenseIntElementsAttr>().getValue<unsigned>(
-      static_cast<unsigned>(pos));
+  return attr.cast<DenseIntElementsAttr>()
+      .getValues<unsigned>()[static_cast<unsigned>(pos)];
 }
 
 /// Returns the part of the data layout entry that corresponds to `pos` for the

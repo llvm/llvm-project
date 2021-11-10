@@ -20,5 +20,5 @@ body: |
   ; CHECK: [[@LINE+1]]:83: the tied-def operand #3 is already tied with another register operand
     INLINEASM &"$foo", 1, 2818058, def $rdi, 2147483657, killed $rdi(tied-def 3), killed $rdi(tied-def 3)
     $rax = COPY killed $rdi
-    RETQ killed $rax
+    RET64 killed $rax
 ...

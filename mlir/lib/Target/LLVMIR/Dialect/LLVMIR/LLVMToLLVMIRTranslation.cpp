@@ -386,14 +386,12 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    auto weights = condbrOp.getBranchWeights();
     llvm::MDNode *branchWeights = nullptr;
-    if (weights) {
+    if (auto weights = condbrOp.getBranchWeights()) {
       // Map weight attributes to LLVM metadata.
-      auto trueWeight =
-          weights.getValue().getValue(0).cast<IntegerAttr>().getInt();
-      auto falseWeight =
-          weights.getValue().getValue(1).cast<IntegerAttr>().getInt();
+      auto weightValues = weights->getValues<APInt>();
+      auto trueWeight = weightValues[0].getSExtValue();
+      auto falseWeight = weightValues[1].getSExtValue();
       branchWeights =
           llvm::MDBuilder(moduleTranslation.getLLVMContext())
               .createBranchWeights(static_cast<uint32_t>(trueWeight),

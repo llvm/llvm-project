@@ -483,7 +483,7 @@ Enable migration to use NS\_NONATOMIC\_IOSONLY macro for setting property's 'ato
 
 Enable migration to annotate property with NS\_RETURNS\_INNER\_POINTER
 
-.. option:: -objcmt-whitelist-dir-path=<arg>, -objcmt-white-list-dir-path=<arg>
+.. option:: -objcmpt-allowlist-dir-path=<arg>, -objcmt-whitelist-dir-path=<arg>, -objcmt-white-list-dir-path=<arg>
 
 Only modify files with a filename contained in the provided directory path
 

@@ -465,14 +465,14 @@ static LinearExpression GetLinearExpression(
   return Val;
 }
 
-/// To ensure a pointer offset fits in an integer of size PointerSize
-/// (in bits) when that size is smaller than the maximum pointer size. This is
+/// To ensure a pointer offset fits in an integer of size IndexSize
+/// (in bits) when that size is smaller than the maximum index size. This is
 /// an issue, for example, in particular for 32b pointers with negative indices
 /// that rely on two's complement wrap-arounds for precise alias information
-/// where the maximum pointer size is 64b.
-static APInt adjustToPointerSize(const APInt &Offset, unsigned PointerSize) {
-  assert(PointerSize <= Offset.getBitWidth() && "Invalid PointerSize!");
-  unsigned ShiftBits = Offset.getBitWidth() - PointerSize;
+/// where the maximum index size is 64b.
+static APInt adjustToIndexSize(const APInt &Offset, unsigned IndexSize) {
+  assert(IndexSize <= Offset.getBitWidth() && "Invalid IndexSize!");
+  unsigned ShiftBits = Offset.getBitWidth() - IndexSize;
   return (Offset << ShiftBits).ashr(ShiftBits);
 }
 
@@ -549,9 +549,9 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   SearchTimes++;
   const Instruction *CxtI = dyn_cast<Instruction>(V);
 
-  unsigned MaxPointerSize = DL.getMaxPointerSizeInBits();
+  unsigned MaxIndexSize = DL.getMaxIndexSizeInBits();
   DecomposedGEP Decomposed;
-  Decomposed.Offset = APInt(MaxPointerSize, 0);
+  Decomposed.Offset = APInt(MaxIndexSize, 0);
   do {
     // See if this is a bitcast or GEP.
     const Operator *Op = dyn_cast<Operator>(V);
@@ -620,7 +620,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
-    unsigned PointerSize = DL.getPointerSizeInBits(AS);
+    unsigned IndexSize = DL.getIndexSizeInBits(AS);
     // Assume all GEP operands are constants until proven otherwise.
     bool GepHasConstantOffset = true;
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();
@@ -643,26 +643,26 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           continue;
         Decomposed.Offset +=
             DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
-            CIdx->getValue().sextOrTrunc(MaxPointerSize);
+            CIdx->getValue().sextOrTrunc(MaxIndexSize);
         continue;
       }
 
       GepHasConstantOffset = false;
 
-      // If the integer type is smaller than the pointer size, it is implicitly
-      // sign extended to pointer size.
+      // If the integer type is smaller than the index size, it is implicitly
+      // sign extended or truncated to index size.
       unsigned Width = Index->getType()->getIntegerBitWidth();
-      unsigned SExtBits = PointerSize > Width ? PointerSize - Width : 0;
-      unsigned TruncBits = PointerSize < Width ? Width - PointerSize : 0;
+      unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
+      unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
       LinearExpression LE = GetLinearExpression(
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // Scale by the type size.
       unsigned TypeSize =
           DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
-      LE = LE.mul(APInt(PointerSize, TypeSize), GEPOp->isInBounds());
-      Decomposed.Offset += LE.Offset.sextOrSelf(MaxPointerSize);
-      APInt Scale = LE.Scale.sextOrSelf(MaxPointerSize);
+      LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
+      Decomposed.Offset += LE.Offset.sextOrSelf(MaxIndexSize);
+      APInt Scale = LE.Scale.sextOrSelf(MaxIndexSize);
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
@@ -678,8 +678,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       }
 
       // Make sure that we have a scale that makes sense for this target's
-      // pointer size.
-      Scale = adjustToPointerSize(Scale, PointerSize);
+      // index size.
+      Scale = adjustToIndexSize(Scale, IndexSize);
 
       if (!!Scale) {
         VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW};
@@ -689,7 +689,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     // Take care of wrap-arounds
     if (GepHasConstantOffset)
-      Decomposed.Offset = adjustToPointerSize(Decomposed.Offset, PointerSize);
+      Decomposed.Offset = adjustToIndexSize(Decomposed.Offset, IndexSize);
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
@@ -1258,7 +1258,7 @@ AliasResult BasicAAResult::aliasGEP(
     CR = Index.Val.evaluateWith(CR).sextOrTrunc(OffsetRange.getBitWidth());
 
     assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
-           "Bit widths are normalized to MaxPointerSize");
+           "Bit widths are normalized to MaxIndexSize");
     if (Index.IsNSW)
       OffsetRange = OffsetRange.add(CR.smul_sat(ConstantRange(Scale)));
     else

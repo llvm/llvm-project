@@ -1745,7 +1745,8 @@ void *internal_start_thread(void *(*func)(void *arg), void *arg) {
   internal_sigfillset(&set);
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
-  // on any thread, setuid call hangs (see test/tsan/setuid.c).
+  // on any thread, setuid call hangs.
+  // See test/sanitizer_common/TestCases/Linux/setuid.c.
   internal_sigdelset(&set, 33);
 #endif
   internal_sigprocmask(SIG_SETMASK, &set, &old);
@@ -1773,7 +1774,7 @@ struct __sanitizer_esr_context {
 
 static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
   static const u32 kEsrMagic = 0x45535201;
-  u8 *aux = ucontext->uc_mcontext.__reserved;
+  u8 *aux = reinterpret_cast<u8 *>(ucontext->uc_mcontext.__reserved);
   while (true) {
     _aarch64_ctx *ctx = (_aarch64_ctx *)aux;
     if (ctx->size == 0) break;

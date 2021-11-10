@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/CodeGenHelpers.h"
-#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -24,21 +23,34 @@ using namespace mlir;
 using namespace mlir::tblgen;
 
 StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
-    const llvm::RecordKeeper &records, raw_ostream &os)
-    : os(os), uniqueOutputLabel(getUniqueName(records)) {}
+    const llvm::RecordKeeper &records)
+    : uniqueOutputLabel(getUniqueName(records)) {}
 
-void StaticVerifierFunctionEmitter::emitFunctionsFor(
-    StringRef signatureFormat, StringRef errorHandlerFormat,
-    StringRef typeArgName, ArrayRef<llvm::Record *> opDefs, bool emitDecl) {
-  llvm::Optional<NamespaceEmitter> namespaceEmitter;
-  if (!emitDecl)
-    namespaceEmitter.emplace(os, Operator(*opDefs[0]).getCppNamespace());
-
-  emitTypeConstraintMethods(signatureFormat, errorHandlerFormat, typeArgName,
-                            opDefs, emitDecl);
+StaticVerifierFunctionEmitter &
+StaticVerifierFunctionEmitter::setSelf(StringRef str) {
+  fctx.withSelf(str);
+  return *this;
 }
 
-StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
+StaticVerifierFunctionEmitter &
+StaticVerifierFunctionEmitter::setBuilder(StringRef str) {
+  fctx.withBuilder(str);
+  return *this;
+}
+
+void StaticVerifierFunctionEmitter::emitConstraintMethodsInNamespace(
+    StringRef signatureFormat, StringRef errorHandlerFormat,
+    StringRef cppNamespace, ArrayRef<const void *> constraints, raw_ostream &os,
+    bool emitDecl) {
+  llvm::Optional<NamespaceEmitter> namespaceEmitter;
+  if (!emitDecl)
+    namespaceEmitter.emplace(os, cppNamespace);
+
+  emitConstraintMethods(signatureFormat, errorHandlerFormat, constraints, os,
+                        emitDecl);
+}
+
+StringRef StaticVerifierFunctionEmitter::getConstraintFn(
     const Constraint &constraint) const {
   auto it = localTypeConstraints.find(constraint.getAsOpaquePointer());
   assert(it != localTypeConstraints.end() && "expected valid constraint fn");
@@ -65,28 +77,16 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(
   return uniqueName;
 }
 
-void StaticVerifierFunctionEmitter::emitTypeConstraintMethods(
+void StaticVerifierFunctionEmitter::emitConstraintMethods(
     StringRef signatureFormat, StringRef errorHandlerFormat,
-    StringRef typeArgName, ArrayRef<llvm::Record *> opDefs, bool emitDecl) {
-  // Collect a set of all of the used type constraints within the operation
-  // definitions.
-  llvm::SetVector<const void *> typeConstraints;
-  for (Record *def : opDefs) {
-    Operator op(*def);
-    for (NamedTypeConstraint &operand : op.getOperands())
-      if (operand.hasPredicate())
-        typeConstraints.insert(operand.constraint.getAsOpaquePointer());
-    for (NamedTypeConstraint &result : op.getResults())
-      if (result.hasPredicate())
-        typeConstraints.insert(result.constraint.getAsOpaquePointer());
-  }
+    ArrayRef<const void *> constraints, raw_ostream &rawOs, bool emitDecl) {
+  raw_indented_ostream os(rawOs);
 
   // Record the mapping from predicate to constraint. If two constraints has the
   // same predicate and constraint summary, they can share the same verification
   // function.
   llvm::DenseMap<Pred, const void *> predToConstraint;
-  FmtContext fctx;
-  for (auto it : llvm::enumerate(typeConstraints)) {
+  for (auto it : llvm::enumerate(constraints)) {
     std::string name;
     Constraint constraint = Constraint::getFromOpaquePointer(it.value());
     Pred pred = constraint.getPredicate();
@@ -101,7 +101,7 @@ void StaticVerifierFunctionEmitter::emitTypeConstraintMethods(
         // summary, otherwise we may report the wrong message while verification
         // fails.
         if (constraint.getSummary() == built.getSummary()) {
-          name = getTypeConstraintFn(built).str();
+          name = getConstraintFn(built).str();
           break;
         }
         ++iter;
@@ -126,12 +126,11 @@ void StaticVerifierFunctionEmitter::emitTypeConstraintMethods(
       continue;
 
     os << formatv(signatureFormat.data(), name) << " {\n";
-    os.indent() << "if (!("
-                << tgfmt(constraint.getConditionTemplate(),
-                         &fctx.withSelf(typeArgName))
+    os.indent() << "if (!(" << tgfmt(constraint.getConditionTemplate(), &fctx)
                 << ")) {\n";
     os.indent() << "return "
-                << formatv(errorHandlerFormat.data(), constraint.getSummary())
+                << formatv(errorHandlerFormat.data(),
+                           escapeString(constraint.getSummary()))
                 << ";\n";
     os.unindent() << "}\nreturn ::mlir::success();\n";
     os.unindent() << "}\n\n";

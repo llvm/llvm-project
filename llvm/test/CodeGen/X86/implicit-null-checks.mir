@@ -427,15 +427,15 @@ body:             |
 
   bb.2.ret_200:
     $eax = MOV32ri 200
-    RETQ $eax
+    RET64 $eax
 
   bb.3.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
   bb.4.ret_100:
     $eax = MOV32ri 100
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -474,11 +474,11 @@ body:             |
   bb.3.is_null:
     liveins: $eax, $ah, $al, $ax, $bh, $bl, $bp, $bpl, $bx, $eax, $ebp, $ebx, $rax, $rbp, $rbx, $r12, $r13, $r14, $r15, $r12b, $r13b, $r14b, $r15b, $r12d, $r13d, $r14d, $r15d, $r12w, $r13w, $r14w, $r15w
 
-    RETQ $eax
+    RET64 $eax
 
   bb.4.ret_100:
     $eax = MOV32ri 100
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -511,15 +511,15 @@ body:             |
 
   bb.2.ret_200:
     $eax = MOV32ri 200
-    RETQ $eax
+    RET64 $eax
 
   bb.3.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
   bb.4.ret_100:
     $eax = MOV32ri 100
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -551,15 +551,15 @@ body:             |
 
   bb.2.ret_200:
     $eax = MOV32ri 200
-    RETQ $eax
+    RET64 $eax
 
   bb.3.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
   bb.4.ret_100:
     $eax = MOV32ri 100
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -592,15 +592,15 @@ body:             |
 
   bb.2.ret_200:
     $eax = MOV32ri 200
-    RETQ $eax
+    RET64 $eax
 
   bb.3.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
   bb.4.ret_100:
     $eax = MOV32ri 100
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -635,12 +635,12 @@ body:             |
     CALL64pcrel32 @f, csr_64, implicit $rsp, implicit-def $rsp
     $eax = MOV32rm killed $rbx, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
   bb.2.leave:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -673,11 +673,11 @@ body:             |
     $esi = MOV32ri 3076
     $eax = BEXTR32rm killed $rdi, 1, $noreg, 0, $noreg, killed $esi, implicit-def dead $eflags :: (load (s32) from %ir.ptr)
     $eax = ADD32rm killed $eax, killed $rcx, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.val)
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -706,11 +706,11 @@ body:             |
     $rcx = MOV64rm killed $rsi, 1, $noreg, 0, $noreg
     $rcx = AND64rm killed $rcx, $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags
     $rax = MOV64rm killed $rdi, 1, $noreg, 0, $noreg
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -737,11 +737,11 @@ body:             |
     $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
     $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from %ir.x)
     $eax = LEA64_32r killed $rax, 1, killed $rsi, 4, $noreg
-    RETQ $eax
+    RET64 $eax
   
   bb.1.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -769,11 +769,11 @@ body:             |
     $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
     $esi = AND32rm killed $esi, $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags
     $eax = MOV32rr $esi
-    RETQ $eax
+    RET64 $eax
   
   bb.1.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -800,10 +800,10 @@ body:             |
     liveins: $rdi, $rsi
 
     MOV64mr killed $rdi, 1, $noreg, 0, $noreg, killed $rsi
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -830,10 +830,10 @@ body:             |
     liveins: $rdi, $rsi
 
     MOV64mr killed $rdi, 1, $noreg, 16, $noreg, killed $rsi
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -863,10 +863,10 @@ body:             |
 
     $esi = ADD32rr killed $esi, killed $esi, implicit-def dead $eflags
     MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -895,13 +895,13 @@ body:             |
     $esi = ADD32rr $esi, $esi, implicit-def dead $eflags
     MOV32mr killed $rdi, 1, $noreg, 0, $noreg, $esi
     $eax = MOV32rr killed $esi
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     liveins: $rsi
     
     $eax = MOV32rr killed $esi
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -928,10 +928,10 @@ body:             |
     liveins: $rdi, $rsi
 
     MOV32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi :: (volatile store (s32) into %ir.ptr)
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -960,10 +960,10 @@ body:             |
     $esi = ADD32rr killed $esi, killed $esi, implicit-def dead $eflags
     $esi = ADD32ri killed $esi, 15, implicit-def dead $eflags
     MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -991,10 +991,10 @@ body:             |
 
     $rdi = ADD64rr killed $rdi, killed $rdi, implicit-def dead $eflags
     MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -1022,11 +1022,11 @@ body:             |
 
     $rax = MOV64rr $rdi
     MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $rax = XOR64rr undef $rax, undef $rax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1063,12 +1063,12 @@ body:             |
     MOV32mi $rbx, 1, $noreg, 0, $noreg, 20
     $rax = MOV64rr killed $rbx
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1097,11 +1097,11 @@ body:             |
     $eax = MOV32rr $esi
     $esi = ADD32ri killed $esi, 15, implicit-def dead $eflags
     MOV32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1129,11 +1129,11 @@ body:             |
 
     MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 2
     $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg 
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1161,11 +1161,11 @@ body:             |
 
     $eax = MOV32rm killed $rsi, 1, $noreg, 0, $noreg 
     MOV32mi killed $rdi, 1, $noreg, 0, $noreg, 2
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1193,10 +1193,10 @@ body:             |
 
     MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 
     MOV32mi killed $rdi, 1, $noreg, 0, $noreg, 2
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -1224,10 +1224,10 @@ body:             |
 
     $esi = ADD32rr $esi, $esi, implicit-def dead $eflags
     ADD32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi, implicit-def dead $eflags
-    RETQ
+    RET64
 
   bb.2.is_null:
-    RETQ
+    RET64
 
 ...
 ---
@@ -1255,11 +1255,11 @@ body:             |
 
     MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store (s32) into %ir.ptr2)
     $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1287,11 +1287,11 @@ body:             |
 
     MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store (s32) into %ir.ptr2)
     $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1325,11 +1325,11 @@ body:             |
     MOV64mr $rsp, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
     $edi = MOV32rm $rdi, 1, $noreg, 8, $noreg :: (load (s32) from %ir.ptr)
     $eax = MOV32rr $edi
-    RETQ $eax
+    RET64 $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 
 ...
 ---
@@ -1354,10 +1354,10 @@ body:             |
   
     $rcx = MOV64ri -9223372036854775808
     $eax = MOV32rm killed $rdi, 2, $rcx, 0, $noreg, implicit-def $rax
-    RETQ $eax
+    RET64 $eax
   
   bb.1.is_null:
     $eax = MOV32ri 42
-    RETQ $eax
+    RET64 $eax
 
 ...

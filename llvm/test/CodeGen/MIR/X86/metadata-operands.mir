@@ -56,5 +56,5 @@ body: |
     DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0
-    RETQ $eax
+    RET64 $eax
 ...

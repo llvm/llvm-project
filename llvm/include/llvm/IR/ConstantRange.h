@@ -189,6 +189,11 @@ public:
   /// successful.
   bool getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS) const;
 
+  /// Set up \p Pred, \p RHS and \p Offset such that (V + Offset) Pred RHS
+  /// is true iff V is in the range. Prefers using Offset == 0 if possible.
+  void
+  getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS, APInt &Offset) const;
+
   /// Return the lower value for this range.
   const APInt &getLower() const { return Lower; }
 
@@ -326,6 +331,14 @@ public:
   /// in either set before.
   ConstantRange unionWith(const ConstantRange &CR,
                           PreferredRangeType Type = Smallest) const;
+
+  /// Intersect the two ranges and return the result if it can be represented
+  /// exactly, otherwise return None.
+  Optional<ConstantRange> exactIntersectWith(const ConstantRange &CR) const;
+
+  /// Union the two ranges and return the result if it can be represented
+  /// exactly, otherwise return None.
+  Optional<ConstantRange> exactUnionWith(const ConstantRange &CR) const;
 
   /// Return a new range representing the possible values resulting
   /// from an application of the specified cast operator to this range. \p
