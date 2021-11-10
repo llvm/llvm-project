@@ -1966,8 +1966,8 @@ void FlatAffineConstraints::mergeLocalIds(FlatAffineConstraints &other) {
 
   for (unsigned i = 0, e = divs2.size(); i < e; ++i)
     if (denoms2[i] != 0)
-    divs2[i].insert(divs2[i].begin() + fac2.getIdKindOffset(IdKind::Local),
-                    initLocals, 0);
+      divs2[i].insert(divs2[i].begin() + fac2.getIdKindOffset(IdKind::Local),
+                      initLocals, 0);
   fac2.insertLocalId(0, initLocals);
 
   // Merge division representations extracted from fac1 and fac2.
