@@ -617,16 +617,16 @@ public:
     return Value;
   }
 
-  void buildStoreOfScalar(mlir::Value value, LValue lvalue, const Decl *D,
-                          bool isInit) {
+  void buildStoreOfScalar(mlir::Value value, LValue lvalue,
+                          const Decl *InitDecl) {
     // TODO: constant matrix type, volatile, non temporal, TBAA
     buildStoreOfScalar(value, lvalue.getAddress(), false, lvalue.getType(),
-                       lvalue.getBaseInfo(), D, isInit, false);
+                       lvalue.getBaseInfo(), InitDecl, false);
   }
 
   void buildStoreOfScalar(mlir::Value Value, RawAddress Addr, bool Volatile,
-                          QualType Ty, LValueBaseInfo BaseInfo, const Decl *D,
-                          bool isInit, bool isNontemporal) {
+                          QualType Ty, LValueBaseInfo BaseInfo,
+                          const Decl *InitDecl, bool isNontemporal) {
     // TODO: PreserveVec3Type
     // TODO: LValueIsSuitableForInlineAtomic ?
     // TODO: TBAA
@@ -638,9 +638,9 @@ public:
     // Update the alloca with more info on initialization.
     auto SrcAlloca = dyn_cast_or_null<mlir::cir::AllocaOp>(
         Addr.getPointer().getDefiningOp());
-    if (isInit) {
+    if (InitDecl) {
       InitStyle IS;
-      const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
+      const VarDecl *VD = dyn_cast_or_null<VarDecl>(InitDecl);
       assert(VD && "VarDecl expected");
       if (VD->hasInit()) {
         switch (VD->getInitStyle()) {
@@ -667,18 +667,17 @@ public:
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
-  void buldStoreThroughLValue(RValue Src, LValue Dst, const Decl *D,
-                              bool isInit) {
+  void buldStoreThroughLValue(RValue Src, LValue Dst, const Decl *InitDecl) {
     assert(Dst.isSimple() && "only implemented simple");
     // TODO: ObjC lifetime.
     assert(Src.isScalar() && "Can't emit an agg store with this method");
-    buildStoreOfScalar(Src.getScalarVal(), Dst, D, isInit);
+    buildStoreOfScalar(Src.getScalarVal(), Dst, InitDecl);
   }
 
   void buildScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue) {
     // TODO: this is where a lot of ObjC lifetime stuff would be done.
     mlir::Value value = buildScalarExpr(init);
-    buldStoreThroughLValue(RValue::get(value), lvalue, D, true);
+    buldStoreThroughLValue(RValue::get(value), lvalue, D);
     return;
   }
 
@@ -1260,7 +1259,7 @@ public:
           "@finally statements should be handled by EmitObjCAtTryStmt");
     }
 
-    return mlir::failure();
+    return mlir::success();
   }
 
   mlir::LogicalResult buildFunctionBody(const Stmt *Body) {
