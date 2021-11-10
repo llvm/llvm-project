@@ -109,78 +109,28 @@ void PlatformLinux::Terminate() {
 /// Default Constructor
 PlatformLinux::PlatformLinux(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
-{}
-
-bool PlatformLinux::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                    ArchSpec &arch) {
-  if (IsHost()) {
+{
+  if (is_host) {
     ArchSpec hostArch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    if (hostArch.GetTriple().isOSLinux()) {
-      if (idx == 0) {
-        arch = hostArch;
-        return arch.IsValid();
-      } else if (idx == 1) {
-        // If the default host architecture is 64-bit, look for a 32-bit
-        // variant
-        if (hostArch.IsValid() && hostArch.GetTriple().isArch64Bit()) {
-          arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-          return arch.IsValid();
-        }
-      }
+    m_supported_architectures.push_back(hostArch);
+    if (hostArch.GetTriple().isArch64Bit()) {
+      m_supported_architectures.push_back(
+          HostInfo::GetArchitecture(HostInfo::eArchKind32));
     }
   } else {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetSupportedArchitectureAtIndex(idx, arch);
-
-    llvm::Triple triple;
-    // Set the OS to linux
-    triple.setOS(llvm::Triple::Linux);
-    // Set the architecture
-    switch (idx) {
-    case 0:
-      triple.setArchName("x86_64");
-      break;
-    case 1:
-      triple.setArchName("i386");
-      break;
-    case 2:
-      triple.setArchName("arm");
-      break;
-    case 3:
-      triple.setArchName("aarch64");
-      break;
-    case 4:
-      triple.setArchName("mips64");
-      break;
-    case 5:
-      triple.setArchName("hexagon");
-      break;
-    case 6:
-      triple.setArchName("mips");
-      break;
-    case 7:
-      triple.setArchName("mips64el");
-      break;
-    case 8:
-      triple.setArchName("mipsel");
-      break;
-    case 9:
-      triple.setArchName("s390x");
-      break;
-    default:
-      return false;
-    }
-    // Leave the vendor as "llvm::Triple:UnknownVendor" and don't specify the
-    // vendor by calling triple.SetVendorName("unknown") so that it is a
-    // "unspecified unknown". This means when someone calls
-    // triple.GetVendorName() it will return an empty string which indicates
-    // that the vendor can be set when two architectures are merged
-
-    // Now set the triple into "arch" and return true
-    arch.SetTriple(triple);
-    return true;
+    m_supported_architectures = CreateArchList(
+        {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::arm,
+         llvm::Triple::aarch64, llvm::Triple::mips64, llvm::Triple::mips64,
+         llvm::Triple::hexagon, llvm::Triple::mips, llvm::Triple::mips64el,
+         llvm::Triple::mipsel, llvm::Triple::systemz},
+        llvm::Triple::Linux);
   }
-  return false;
+}
+
+std::vector<ArchSpec> PlatformLinux::GetSupportedArchitectures() {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetSupportedArchitectures();
+  return m_supported_architectures;
 }
 
 void PlatformLinux::GetStatus(Stream &strm) {
