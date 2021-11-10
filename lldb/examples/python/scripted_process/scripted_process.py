@@ -190,18 +190,20 @@ class ScriptedThread:
     """
 
     @abstractmethod
-    def __init__(self, target):
+    def __init__(self, process, args):
         """ Construct a scripted thread.
 
         Args:
-            target (lldb.SBTarget): The target launching the scripted process.
+            process (lldb.SBProcess): The scripted process owning this thread.
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
-                key/value pairs used by the scripted process.
+                key/value pairs used by the scripted thread.
         """
         self.target = None
+        self.process = None
         self.args = None
-        if isinstance(target, lldb.SBTarget) and target.IsValid():
-            self.target = target
+        if isinstance(process, lldb.SBProcess) and process.IsValid():
+            self.process = process
+            self.target = process.GetTarget()
 
         self.id = None
         self.name = None
