@@ -895,9 +895,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
 
-  // TODO: Do the same for FP_TO_*INT_SAT.
   setTargetDAGCombine(ISD::FP_TO_SINT);
   setTargetDAGCombine(ISD::FP_TO_UINT);
+  setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
+  setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
   setTargetDAGCombine(ISD::FDIV);
 
   // Try and combine setcc with csel
@@ -13432,8 +13433,16 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   assert((ResTy != MVT::v4i64 || DCI.isBeforeLegalizeOps()) &&
          "Illegal vector type after legalization");
 
+  if (N->getOpcode() == ISD::FP_TO_SINT_SAT ||
+      N->getOpcode() == ISD::FP_TO_UINT_SAT) {
+    EVT SatVT = cast<VTSDNode>(N->getOperand(1))->getVT();
+    if (SatVT.getScalarSizeInBits() != IntBits)
+      return SDValue();
+  }
+
   SDLoc DL(N);
-  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT;
+  bool IsSigned = (N->getOpcode() == ISD::FP_TO_SINT ||
+                   N->getOpcode() == ISD::FP_TO_SINT_SAT);
   unsigned IntrinsicOpcode = IsSigned ? Intrinsic::aarch64_neon_vcvtfp2fxs
                                       : Intrinsic::aarch64_neon_vcvtfp2fxu;
   SDValue FixConv =
@@ -17241,6 +17250,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performIntToFpCombine(N, DAG, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::FDIV:
     return performFDivCombine(N, DAG, DCI, Subtarget);
