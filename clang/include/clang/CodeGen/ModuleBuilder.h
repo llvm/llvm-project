@@ -74,6 +74,10 @@ public:
   /// This may return null if there was no matching declaration.
   const Decl *GetDeclForMangledName(llvm::StringRef MangledName);
 
+  /// Given a global declaration, return a mangled name for this declaration
+  /// which has been added to this code generator via a Handle method.
+  llvm::StringRef GetMangledName(GlobalDecl GD);
+
   /// Return the LLVM address of the given global entity.
   ///
   /// \param isForDefinition If true, the caller intends to define the
