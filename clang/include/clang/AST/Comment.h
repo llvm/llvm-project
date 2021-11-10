@@ -1031,8 +1031,8 @@ struct DeclInfo {
     ClassKind,
 
     /// Something that we consider a "variable":
-    /// \li namespace scope variables;
-    /// \li static and non-static class data members;
+    /// \li namespace scope variables and variable templates;
+    /// \li static and non-static class data members and member templates;
     /// \li enumerators.
     VariableKind,
 
