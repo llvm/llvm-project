@@ -434,6 +434,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertEqual(process.threads[0].GetStopDescription(100),
                          'signal SIGBUS')
 
+    @skipIfWindows
     def test_signal_lldb_old(self):
         class MyResponder(MockGDBServerResponder):
             def qSupported(self, client_supported):
@@ -461,6 +462,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertEqual(process.threads[0].GetStopDescription(100),
                          'signal SIGUSR1')
 
+    @skipIfWindows
     def test_signal_lldb(self):
         class MyResponder(MockGDBServerResponder):
             def qSupported(self, client_supported):
