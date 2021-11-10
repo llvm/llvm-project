@@ -294,7 +294,7 @@ mlir::Type BoxProcType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::BoxProcType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getEleTy() << '>';
+  printer << "<" << getEleTy() << '>';
 }
 
 mlir::LogicalResult
@@ -337,7 +337,7 @@ mlir::Type fir::BoxType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::BoxType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getEleTy();
+  printer << "<" << getEleTy();
   if (auto map = getLayoutMap()) {
     printer << ", " << map;
   }
@@ -360,7 +360,7 @@ mlir::Type fir::BoxCharType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::BoxCharType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getKind() << ">";
+  printer << "<" << getKind() << ">";
 }
 
 CharacterType
@@ -395,7 +395,7 @@ mlir::Type fir::CharacterType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::CharacterType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getFKind();
+  printer << "<" << getFKind();
   auto len = getLen();
   if (len != fir::CharacterType::singleton()) {
     printer << ',';
@@ -416,7 +416,7 @@ mlir::Type fir::ComplexType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::ComplexType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getFKind() << '>';
+  printer << "<" << getFKind() << '>';
 }
 
 mlir::Type fir::ComplexType::getElementType() const {
@@ -433,7 +433,7 @@ mlir::Type fir::HeapType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::HeapType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getEleTy() << '>';
+  printer << "<" << getEleTy() << '>';
 }
 
 mlir::LogicalResult
@@ -455,7 +455,7 @@ mlir::Type fir::IntegerType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::IntegerType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getFKind() << '>';
+  printer << "<" << getFKind() << '>';
 }
 
 //===----------------------------------------------------------------------===//
@@ -468,7 +468,7 @@ mlir::Type fir::LogicalType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::LogicalType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getFKind() << '>';
+  printer << "<" << getFKind() << '>';
 }
 
 //===----------------------------------------------------------------------===//
@@ -481,7 +481,7 @@ mlir::Type fir::PointerType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::PointerType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getEleTy() << '>';
+  printer << "<" << getEleTy() << '>';
 }
 
 mlir::LogicalResult fir::PointerType::verify(
@@ -502,7 +502,7 @@ mlir::Type fir::RealType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::RealType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getFKind() << '>';
+  printer << "<" << getFKind() << '>';
 }
 
 mlir::LogicalResult
@@ -573,7 +573,7 @@ mlir::Type fir::RecordType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::RecordType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getName();
+  printer << "<" << getName();
   if (!recordTypeVisited.count(uniqueKey())) {
     recordTypeVisited.insert(uniqueKey());
     if (getLenParamList().size()) {
@@ -652,7 +652,7 @@ mlir::Type fir::ReferenceType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::ReferenceType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getEleTy() << '>';
+  printer << "<" << getEleTy() << '>';
 }
 
 mlir::LogicalResult fir::ReferenceType::verify(
@@ -693,7 +693,6 @@ mlir::Type fir::SequenceType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::SequenceType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic();
   auto shape = getShape();
   if (shape.size()) {
     printer << '<';
@@ -764,7 +763,7 @@ mlir::Type fir::ShapeType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::ShapeType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getImpl()->rank << ">";
+  printer << "<" << getImpl()->rank << ">";
 }
 
 //===----------------------------------------------------------------------===//
@@ -776,7 +775,7 @@ mlir::Type fir::ShapeShiftType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::ShapeShiftType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getRank() << ">";
+  printer << "<" << getRank() << ">";
 }
 
 //===----------------------------------------------------------------------===//
@@ -788,7 +787,7 @@ mlir::Type fir::ShiftType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::ShiftType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getRank() << ">";
+  printer << "<" << getRank() << ">";
 }
 
 //===----------------------------------------------------------------------===//
@@ -801,7 +800,7 @@ mlir::Type fir::SliceType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::SliceType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getRank() << '>';
+  printer << "<" << getRank() << '>';
 }
 
 //===----------------------------------------------------------------------===//
@@ -814,7 +813,7 @@ mlir::Type fir::TypeDescType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::TypeDescType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getOfTy() << '>';
+  printer << "<" << getOfTy() << '>';
 }
 
 mlir::LogicalResult fir::TypeDescType::verify(
@@ -843,7 +842,7 @@ mlir::Type fir::VectorType::parse(mlir::DialectAsmParser &parser) {
 }
 
 void fir::VectorType::print(mlir::DialectAsmPrinter &printer) const {
-  printer << getMnemonic() << "<" << getLen() << ':' << getEleTy() << '>';
+  printer << "<" << getLen() << ':' << getEleTy() << '>';
 }
 
 mlir::LogicalResult fir::VectorType::verify(
