@@ -335,30 +335,8 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // Peel loops.
   peelLoops(rewriter, *res, options);
 
-  // Consider padding on the fly only if the op has tensor semantics.
-  if (!options.paddingValueComputationFunction ||
-      !linalgOp.hasTensorSemantics()) {
-    result = *res;
-    return success();
-  }
-
-  // Try to pad on the fly by rewriting res->op as a padded op. If successful,
-  // `res.op` is rewritten in static form with padded operands.
-  LinalgOp paddedOp;
-  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
-      rewriter, res->op, options.paddingValueComputationFunction,
-      options.paddingNoFoldComputationFunction, paddedOp);
-  if (succeeded(newResults)) {
-    rewriter.replaceOp(res->op, newResults.getValue());
-    filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
-    res->op = paddedOp;
-    result = *res;
-    // Do not perform replacement of `linalgOp`, let the derived patterns
-    // do this as they see fit, from the resulting TiledLinalgOp.
-    return success();
-  }
-  // Set so RAII guard does not propagate TiledLinalgOp to `result`.
-  return failure();
+  result = *res;
+  return success();
 }
 
 static ValueRange getTiledOpResult(TiledLinalgOp tiledOp) {

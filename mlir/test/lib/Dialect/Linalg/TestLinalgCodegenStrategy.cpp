@@ -143,14 +143,6 @@ struct TestLinalgCodegenStrategy
       llvm::cl::init("")};
 };
 
-// For now, just assume it is the zero of type.
-// In the future, it should be the zero of type + op.
-static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
-  auto t = getElementTypeOrSelf(op.get());
-  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
-                                     b.getZeroAttr(t));
-}
-
 void TestLinalgCodegenStrategy::runStrategy(
     LinalgTilingOptions tilingOptions,
     LinalgTilingOptions registerTilingOptions,
@@ -195,6 +187,14 @@ void TestLinalgCodegenStrategy::runStrategy(
     return signalPassFailure();
 }
 } // end anonymous namespace
+
+// For now, just assume it is the zero of type.
+// In the future, it should be the zero of type + op.
+static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
+  auto t = getElementTypeOrSelf(op.get());
+  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
+                                     b.getZeroAttr(t));
+}
 
 /// Apply transformations specified as patterns.
 void TestLinalgCodegenStrategy::runOnFunction() {
