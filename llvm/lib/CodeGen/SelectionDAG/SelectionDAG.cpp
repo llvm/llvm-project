@@ -10830,59 +10830,83 @@ bool BuildVectorSDNode::getConstantRawBits(
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
 
-  unsigned NumDstOps = (NumSrcOps * SrcEltSizeInBits) / DstEltSizeInBits;
-  UndefElements.clear();
-  UndefElements.resize(NumDstOps, false);
-  RawBitElements.assign(NumDstOps, APInt::getNullValue(DstEltSizeInBits));
+  // Extract raw src bits.
+  SmallVector<APInt> SrcBitElements(NumSrcOps,
+                                    APInt::getNullValue(SrcEltSizeInBits));
+  BitVector SrcUndeElements(NumSrcOps, false);
 
-  // Concatenate src elements constant bits together into dst element.
-  if (SrcEltSizeInBits <= DstEltSizeInBits) {
-    unsigned Scale = DstEltSizeInBits / SrcEltSizeInBits;
-    for (unsigned I = 0; I != NumDstOps; ++I) {
-      UndefElements.set(I);
-      APInt &RawBits = RawBitElements[I];
-      for (unsigned J = 0; J != Scale; ++J) {
-        unsigned Idx = (I * Scale) + (IsLittleEndian ? J : (Scale - J - 1));
-        SDValue Op = getOperand(Idx);
-        if (Op.isUndef())
-          continue;
-        UndefElements.reset(I);
-        auto *CInt = dyn_cast<ConstantSDNode>(Op);
-        auto *CFP = dyn_cast<ConstantFPSDNode>(Op);
-        assert((CInt || CFP) && "Unknown constant");
-        APInt EltBits =
-            CInt ? CInt->getAPIntValue().truncOrSelf(SrcEltSizeInBits)
-                 : CFP->getValueAPF().bitcastToAPInt();
-        assert(EltBits.getBitWidth() == SrcEltSizeInBits &&
-               "Illegal constant bitwidths");
-        RawBits.insertBits(EltBits, J * SrcEltSizeInBits);
-      }
-    }
-    return true;
-  }
-
-  // Split src element constant bits into dst elements.
-  unsigned Scale = SrcEltSizeInBits / DstEltSizeInBits;
   for (unsigned I = 0; I != NumSrcOps; ++I) {
     SDValue Op = getOperand(I);
     if (Op.isUndef()) {
-      UndefElements.set(I * Scale, (I + 1) * Scale);
+      SrcUndeElements.set(I);
       continue;
     }
     auto *CInt = dyn_cast<ConstantSDNode>(Op);
     auto *CFP = dyn_cast<ConstantFPSDNode>(Op);
     assert((CInt || CFP) && "Unknown constant");
-    APInt EltBits =
-        CInt ? CInt->getAPIntValue() : CFP->getValueAPF().bitcastToAPInt();
-
-    for (unsigned J = 0; J != Scale; ++J) {
-      unsigned Idx = (I * Scale) + (IsLittleEndian ? J : (Scale - J - 1));
-      APInt &RawBits = RawBitElements[Idx];
-      RawBits = EltBits.extractBits(DstEltSizeInBits, J * DstEltSizeInBits);
-    }
+    SrcBitElements[I] =
+        CInt ? CInt->getAPIntValue().truncOrSelf(SrcEltSizeInBits)
+             : CFP->getValueAPF().bitcastToAPInt();
   }
 
+  // Recast to dst width.
+  recastRawBits(IsLittleEndian, DstEltSizeInBits, RawBitElements,
+                SrcBitElements, UndefElements, SrcUndeElements);
   return true;
+}
+
+void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
+                                      unsigned DstEltSizeInBits,
+                                      SmallVectorImpl<APInt> &DstBitElements,
+                                      ArrayRef<APInt> SrcBitElements,
+                                      BitVector &DstUndefElements,
+                                      const BitVector &SrcUndefElements) {
+  unsigned NumSrcOps = SrcBitElements.size();
+  unsigned SrcEltSizeInBits = SrcBitElements[0].getBitWidth();
+  assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
+         "Invalid bitcast scale");
+  assert(NumSrcOps == SrcUndefElements.size() &&
+         "Vector size mismatch");
+
+  unsigned NumDstOps = (NumSrcOps * SrcEltSizeInBits) / DstEltSizeInBits;
+  DstUndefElements.clear();
+  DstUndefElements.resize(NumDstOps, false);
+  DstBitElements.assign(NumDstOps, APInt::getNullValue(DstEltSizeInBits));
+
+  // Concatenate src elements constant bits together into dst element.
+  if (SrcEltSizeInBits <= DstEltSizeInBits) {
+    unsigned Scale = DstEltSizeInBits / SrcEltSizeInBits;
+    for (unsigned I = 0; I != NumDstOps; ++I) {
+      DstUndefElements.set(I);
+      APInt &DstBits = DstBitElements[I];
+      for (unsigned J = 0; J != Scale; ++J) {
+        unsigned Idx = (I * Scale) + (IsLittleEndian ? J : (Scale - J - 1));
+        if (SrcUndefElements[Idx])
+          continue;
+        DstUndefElements.reset(I);
+        const APInt &SrcBits = SrcBitElements[Idx];
+        assert(SrcBits.getBitWidth() == SrcEltSizeInBits &&
+               "Illegal constant bitwidths");
+        DstBits.insertBits(SrcBits, J * SrcEltSizeInBits);
+      }
+    }
+    return;
+  }
+
+  // Split src element constant bits into dst elements.
+  unsigned Scale = SrcEltSizeInBits / DstEltSizeInBits;
+  for (unsigned I = 0; I != NumSrcOps; ++I) {
+    if (SrcUndefElements[I]) {
+      DstUndefElements.set(I * Scale, (I + 1) * Scale);
+      continue;
+    }
+    const APInt &SrcBits = SrcBitElements[I];
+    for (unsigned J = 0; J != Scale; ++J) {
+      unsigned Idx = (I * Scale) + (IsLittleEndian ? J : (Scale - J - 1));
+      APInt &DstBits = DstBitElements[Idx];
+      DstBits = SrcBits.extractBits(DstEltSizeInBits, J * DstEltSizeInBits);
+    }
+  }
 }
 
 bool BuildVectorSDNode::isConstant() const {
