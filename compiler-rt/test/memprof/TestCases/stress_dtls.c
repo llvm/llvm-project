@@ -7,9 +7,9 @@
 // RUN: %clang_memprof %s -ldl -pthread -o %t
 // RUN: %run %t 0 3
 // RUN: %run %t 2 3
-// RUN: %env_memprof_opts=log_path=stderr:verbosity=2 %run %t 10 2 2>&1 | FileCheck %s
-// RUN: %env_memprof_opts=log_path=stderr:verbosity=2:intercept_tls_get_addr=1 %run %t 10 2 2>&1 | FileCheck %s
-// RUN: %env_memprof_opts=log_path=stderr:verbosity=2:intercept_tls_get_addr=0 %run %t 10 2 2>&1 | FileCheck %s --check-prefix=CHECK0
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr:verbosity=2 %run %t 10 2 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr:verbosity=2:intercept_tls_get_addr=1 %run %t 10 2 2>&1 | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stderr:verbosity=2:intercept_tls_get_addr=0 %run %t 10 2 2>&1 | FileCheck %s --check-prefix=CHECK0
 // CHECK: ==__tls_get_addr:
 // CHECK: Creating thread 0
 // CHECK: ==__tls_get_addr:

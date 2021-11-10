@@ -33,6 +33,7 @@ default_memprof_opts = list(config.default_sanitizer_opts)
 default_memprof_opts_str = ':'.join(default_memprof_opts)
 if default_memprof_opts_str:
   config.environment['MEMPROF_OPTIONS'] = default_memprof_opts_str
+  default_memprof_opts_str += ':'
 config.substitutions.append(('%env_memprof_opts=',
                              'env MEMPROF_OPTIONS=' + default_memprof_opts_str))
 
