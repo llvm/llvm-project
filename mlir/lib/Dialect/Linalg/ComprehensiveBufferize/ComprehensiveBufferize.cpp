@@ -1735,36 +1735,16 @@ static LogicalResult bufferizeFuncOpInternals(
   LLVM_DEBUG(llvm::dbgs() << "\n\n");
   LDBG("Begin BufferizeFuncOpInternals:\n" << funcOp << '\n');
   OpBuilder b(funcOp->getContext());
-  /// Start by bufferizing `funcOp` arguments.
+
+  // Start by bufferizing `funcOp` arguments.
   if (failed(bufferize(b, funcOp, bvm, aliasInfo, allocationFns)))
     return failure();
 
   // Cannot erase ops during the traversal. Do that afterwards.
   SmallVector<Operation *> toErase;
-  // Bufferize the function body. `bufferizedOps` keeps track ops that were
-  // already bufferized with pre-order traversal.
-  DenseSet<Operation *> bufferizedOps;
+
   auto walkFunc = [&](Operation *op) -> WalkResult {
-    // Collect ops that need to be bufferized before `op`.
-    SmallVector<Operation *> preorderBufferize;
-    Operation *parentOp = op->getParentOp();
-    // scf::ForOp and TiledLoopOp must be bufferized before their blocks
-    // ("pre-order") because BBargs must be mapped when bufferizing children.
-    while (isa_and_nonnull<scf::ForOp, TiledLoopOp>(parentOp)) {
-      if (bufferizedOps.contains(parentOp))
-        break;
-      bufferizedOps.insert(parentOp);
-      preorderBufferize.push_back(parentOp);
-      parentOp = parentOp->getParentOp();
-    }
-
-    for (Operation *op : llvm::reverse(preorderBufferize))
-      if (failed(bufferizeOp(op, bvm, aliasInfo, allocationFns,
-                             &bufferizedFunctionTypes)))
-        return failure();
-
-    if (!bufferizedOps.contains(op) &&
-        failed(bufferizeOp(op, bvm, aliasInfo, allocationFns,
+    if (failed(bufferizeOp(op, bvm, aliasInfo, allocationFns,
                            &bufferizedFunctionTypes)))
       return failure();
 
@@ -1776,7 +1756,11 @@ static LogicalResult bufferizeFuncOpInternals(
 
     return success();
   };
-  if (funcOp.walk(walkFunc).wasInterrupted())
+
+  // Bufferize ops pre-order, i.e., bufferize ops first, then their children.
+  // This is needed for ops with blocks that have BlockArguments. These must be
+  // mapped before bufferizing the children.
+  if (funcOp.walk<WalkOrder::PreOrder>(walkFunc).wasInterrupted())
     return failure();
 
   LDBG("End BufferizeFuncOpInternals:\n" << funcOp << '\n');
@@ -2798,31 +2782,40 @@ struct IfOpInterface
                           BlockAndValueMapping &bvm,
                           BufferizationAliasInfo &aliasInfo,
                           AllocationCallbacks &allocationFn) const {
-    auto ifOp = cast<scf::IfOp>(op);
-
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-
-    for (OpResult opResult : ifOp->getResults()) {
-      if (!opResult.getType().isa<TensorType>())
-        continue;
-      // TODO: Atm we bail on unranked TensorType because we don't know how to
-      // alloc an UnrankedMemRefType + its underlying ranked MemRefType.
-      assert(opResult.getType().isa<RankedTensorType>() &&
-             "unsupported unranked tensor");
-
-      Value resultBuffer =
-          getResultBuffer(b, opResult, bvm, aliasInfo, allocationFn);
-      if (!resultBuffer)
-        return failure();
-
-      aliasInfo.createAliasInfoEntry(resultBuffer);
-      map(bvm, opResult, resultBuffer);
-    }
-
+    // scf::IfOp is bufferized after scf::YieldOp in the else branch.
     return success();
   }
 };
+
+/// Bufferize the scf::IfOp. This function is called after the YieldOp was
+/// bufferized.
+static LogicalResult bufferizeIfOp(scf::IfOp ifOp, OpBuilder &b,
+                                   BlockAndValueMapping &bvm,
+                                   BufferizationAliasInfo &aliasInfo,
+                                   AllocationCallbacks &allocationFn) {
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(ifOp);
+
+  for (OpResult opResult : ifOp->getResults()) {
+    if (!opResult.getType().isa<TensorType>())
+      continue;
+    // TODO: Atm we bail on unranked TensorType because we don't know how to
+    // alloc an UnrankedMemRefType + its underlying ranked MemRefType.
+    assert(opResult.getType().isa<RankedTensorType>() &&
+           "unsupported unranked tensor");
+
+    Value resultBuffer =
+        getResultBuffer(b, opResult, bvm, aliasInfo, allocationFn);
+    if (!resultBuffer)
+      return failure();
+
+    aliasInfo.createAliasInfoEntry(resultBuffer);
+    map(bvm, opResult, resultBuffer);
+  }
+
+  return success();
+}
 
 struct ForOpInterface
     : public BufferizableOpInterface::ExternalModel<ForOpInterface,
@@ -2862,6 +2855,9 @@ struct ForOpInterface
                           BlockAndValueMapping &bvm,
                           BufferizationAliasInfo &aliasInfo,
                           AllocationCallbacks &allocationFn) const {
+    // Note: This method is just setting up the mappings for the block arguments
+    // and the result buffer. The op is bufferized after the scf::YieldOp.
+
     auto forOp = cast<scf::ForOp>(op);
 
     // Take a guard before anything else.
@@ -2893,6 +2889,39 @@ struct ForOpInterface
   }
 };
 
+/// Bufferize the scf::ForOp. This function is called after the YieldOp was
+/// bufferized.
+static LogicalResult bufferizeForOp(scf::ForOp forOp, OpBuilder &b,
+                                    BlockAndValueMapping &bvm,
+                                    BufferizationAliasInfo &aliasInfo,
+                                    AllocationCallbacks &allocationFn) {
+  auto yieldOp = cast<scf::YieldOp>(&forOp.region().front().back());
+  for (OpOperand &operand : yieldOp->getOpOperands()) {
+    auto tensorType = operand.get().getType().dyn_cast<TensorType>();
+    if (!tensorType)
+      continue;
+
+    OpOperand &forOperand = forOp.getOpOperandForResult(
+        forOp->getResult(operand.getOperandNumber()));
+    auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
+    Value yieldedBuffer = lookup(bvm, operand.get());
+    Value bbArgBuffer = lookup(bvm, bbArg);
+    if (!aliasInfo.areEquivalentBufferizedValues(yieldedBuffer, bbArgBuffer)) {
+      // TODO: this could get resolved with copies but it can also turn into
+      // swaps so we need to be careful about order of copies.
+      return yieldOp->emitError()
+             << "Yield operand #" << operand.getOperandNumber()
+             << " does not bufferize to an equivalent buffer to the matching"
+             << " enclosing scf::for operand";
+    }
+
+    // Buffers are equivalent so the work is already done and we just yield
+    // the bbArg so that it later canonicalizes away.
+    operand.set(bbArg);
+  }
+  return success();
+}
+
 struct YieldOpInterface
     : public BufferizableOpInterface::ExternalModel<YieldOpInterface,
                                                     scf::YieldOp> {
@@ -2918,11 +2947,6 @@ struct YieldOpInterface
                           AllocationCallbacks &allocationFn) const {
     auto yieldOp = cast<scf::YieldOp>(op);
 
-    // Take a guard before anything else.
-    OpBuilder::InsertionGuard g(b);
-    // Cannot create IR past a yieldOp.
-    b.setInsertionPoint(yieldOp);
-
     if (auto execOp = dyn_cast<scf::ExecuteRegionOp>(yieldOp->getParentOp())) {
       if (execOp->getNumResults() != 0)
         return execOp->emitError(
@@ -2930,37 +2954,19 @@ struct YieldOpInterface
       return success();
     }
 
-    if (auto ifOp = dyn_cast<scf::IfOp>(yieldOp->getParentOp()))
-      return success();
-
-    scf::ForOp forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp());
-    if (!forOp)
-      return yieldOp->emitError("expected scf::ForOp parent for scf::YieldOp");
-    for (OpOperand &operand : yieldOp->getOpOperands()) {
-      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
-      if (!tensorType)
-        continue;
-
-      OpOperand &forOperand = forOp.getOpOperandForResult(
-          forOp->getResult(operand.getOperandNumber()));
-      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      Value yieldedBuffer = lookup(bvm, operand.get());
-      Value bbArgBuffer = lookup(bvm, bbArg);
-      if (!aliasInfo.areEquivalentBufferizedValues(yieldedBuffer,
-                                                   bbArgBuffer)) {
-        // TODO: this could get resolved with copies but it can also turn into
-        // swaps so we need to be careful about order of copies.
-        return yieldOp->emitError()
-               << "Yield operand #" << operand.getOperandNumber()
-               << " does not bufferize to an equivalent buffer to the matching"
-               << " enclosing scf::for operand";
-      }
-
-      // Buffers are equivalent so the work is already done and we just yield
-      // the bbArg so that it later canonicalizes away.
-      operand.set(bbArg);
+    // Bufferize scf::IfOp after bufferizing the scf::YieldOp in the else
+    // branch.
+    if (auto ifOp = dyn_cast<scf::IfOp>(yieldOp->getParentOp())) {
+      if (ifOp.elseYield() != yieldOp)
+        return success();
+      return bufferizeIfOp(ifOp, b, bvm, aliasInfo, allocationFn);
     }
-    return success();
+
+    // Bufferize scf::ForOp after bufferizing the scf::YieldOp.
+    if (auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp()))
+      return bufferizeForOp(forOp, b, bvm, aliasInfo, allocationFn);
+
+    return yieldOp->emitError("expected scf::ForOp parent for scf::YieldOp");
   }
 };
 
