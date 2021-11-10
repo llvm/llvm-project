@@ -20,7 +20,6 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterContext.h"
-
 #include "lldb/Utility/State.h"
 
 #include <mutex>
@@ -291,6 +290,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   // actually new threads will get added to new_thread_list.
 
   CheckInterpreterAndScriptObject();
+  m_thread_plans.ClearThreadCache();
 
   Status error;
   ScriptLanguage language = m_interpreter->GetLanguage();
@@ -314,6 +314,12 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
   new_thread_list.AddThread(thread_sp);
 
   return new_thread_list.GetSize(false) > 0;
+}
+
+void ScriptedProcess::RefreshStateAfterStop() {
+  // Let all threads recover from stopping and do any clean up based on the
+  // previous thread state (if any).
+  m_thread_list.RefreshStateAfterStop();
 }
 
 bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
