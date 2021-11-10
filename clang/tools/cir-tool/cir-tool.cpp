@@ -14,16 +14,20 @@
 
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
-
-using namespace mlir;
+#include "clang/CIR/Passes.h"
 
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
   mlir::DialectRegistry registry;
   // TODO: add memref::MemRefDialect> when we add lowering
-  registry.insert<func::FuncDialect>();
-  registry.insert<cir::CIRDialect>();
+  registry.insert<mlir::func::FuncDialect>();
+  registry.insert<mlir::cir::CIRDialect>();
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return cir::createConvertCIRToLLVMPass();
+  });
 
   return failed(MlirOptMain(
       argc, argv, "Clang IR analysis and optimization tool\n", registry));

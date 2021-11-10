@@ -4,6 +4,6 @@
 
 void foo() {}
 
-// CHECK: define void @foo()
-// CHECK-NEXT: ret void,
+//      CHECK: define void @foo()
+// CHECK-NEXT:   ret void,
 // CHECK-NEXT: }

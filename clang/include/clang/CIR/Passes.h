@@ -18,13 +18,11 @@
 #include <memory>
 
 namespace cir {
-class Pass;
 
 /// Create a pass for lowering from `CIR` operations well as `Affine` and `Std`,
 /// to the LLVM dialect for codegen. We'll want to separate this eventually into
 /// different phases instead of doing it all at once.
-std::unique_ptr<mlir::Pass> createLowerToLLVMPass();
-
+std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass();
 } // end namespace cir
 
 #endif // CLANG_CIR_PASSES_H
