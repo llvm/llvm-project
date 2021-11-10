@@ -45801,10 +45801,8 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
   SDValue Op0 = peekThroughBitcasts(N->getOperand(0));
   SDValue Op1 = peekThroughBitcasts(N->getOperand(1));
-  EVT VT0 = Op0.getValueType();
-  EVT VT1 = Op1.getValueType();
-
-  if (VT0 != VT1 || !VT0.isSimple() || !VT0.isInteger())
+  EVT VT = Op0.getValueType();
+  if (VT != Op1.getValueType() || !VT.isSimple() || !VT.isInteger())
     return SDValue();
 
   APInt SplatVal;
@@ -45816,17 +45814,17 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
   if (isBitwiseNot(Op0))
     return SDValue();
 
-  if (!supportedVectorShiftWithImm(VT0.getSimpleVT(), Subtarget, ISD::SRL))
+  if (!supportedVectorShiftWithImm(VT.getSimpleVT(), Subtarget, ISD::SRL))
     return SDValue();
 
-  unsigned EltBitWidth = VT0.getScalarSizeInBits();
+  unsigned EltBitWidth = VT.getScalarSizeInBits();
   if (EltBitWidth != DAG.ComputeNumSignBits(Op0))
     return SDValue();
 
   SDLoc DL(N);
   unsigned ShiftVal = SplatVal.countTrailingOnes();
   SDValue ShAmt = DAG.getTargetConstant(EltBitWidth - ShiftVal, DL, MVT::i8);
-  SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT0, Op0, ShAmt);
+  SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT, Op0, ShAmt);
   return DAG.getBitcast(N->getValueType(0), Shift);
 }
 
