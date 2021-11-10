@@ -2640,8 +2640,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // TODO: One use checks are conservative. We just need to check that a total
   //       number of multiple used values does not exceed reduction
   //       in operations.
-  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
-                                  m_Value(C))))) {
+  if (match(Op0, m_c_And(m_Not(m_Or(m_Value(A), m_Value(B))), m_Value(C)))) {
     // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
@@ -2659,12 +2658,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
 
     // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
-    if (match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(C)))))
+    if (match(Op1,
+              m_OneUse(m_Not(m_OneUse(m_c_Or(m_Specific(A), m_Specific(C)))))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(B, C), A));
 
     // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
-    if (match(Op1, m_Not(m_c_Or(m_Specific(B), m_Specific(C)))))
+    if (match(Op1,
+              m_OneUse(m_Not(m_OneUse(m_c_Or(m_Specific(B), m_Specific(C)))))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(A, C), B));
   }
