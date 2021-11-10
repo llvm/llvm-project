@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s misc-misleading-identifier %t
 
-#include <stdio.h>
+int printf(const char *format, ...);
 
 // CHECK-MESSAGES: :[[#@LINE+1]]:1: warning: identifier has right-to-left codepoints [misc-misleading-identifier]
 short int א = (short int)0;
