@@ -545,8 +545,6 @@ BufferizationAliasInfo::BufferizationAliasInfo(Operation *rootOp) {
                                ifOp.elseYield().results(), ifOp.results())) {
         aliasInfo.unionSets(std::get<0>(it), std::get<1>(it));
         aliasInfo.unionSets(std::get<0>(it), std::get<2>(it));
-        equivalentInfo.unionSets(std::get<0>(it), std::get<1>(it));
-        equivalentInfo.unionSets(std::get<0>(it), std::get<2>(it));
       }
     }
   });
@@ -1344,6 +1342,9 @@ static Value getResultBuffer(OpBuilder &b, OpResult result,
   assert(operandBuffer && "operand buffer not found");
   // Make sure that all OpOperands are the same buffer. If this is not the case,
   // we would have to materialize a memref value.
+  // TODO: Should be looking for checking for "equivalent buffers" instead of
+  // operator== here, but equivalent buffers for scf.if yield values are not
+  // set up yet.
   if (!llvm::all_of(aliasingOperands, [&](OpOperand *o) {
         return lookup(bvm, o->get()) == operandBuffer;
       })) {

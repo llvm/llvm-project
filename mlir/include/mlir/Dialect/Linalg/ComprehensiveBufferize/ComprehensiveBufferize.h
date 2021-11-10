@@ -109,12 +109,19 @@ private:
   /// Set of tensors that are known to bufferize to writable memory.
   llvm::DenseSet<Value> bufferizeToWritableMemory;
 
-  /// Auxiliary structure to store all the values a given value aliases with.
-  /// These are the conservative cases that can further decompose into
-  /// "equivalent" buffer relationships.
+  /// Auxiliary structure to store all the values a given value may alias with.
+  /// Alias information is "may be" conservative: In the presence of branches, a
+  /// value may alias with one of multiple other values. The concrete aliasing
+  /// value may not even be known at compile time. All such values are
+  /// considered to be aliases.
   llvm::EquivalenceClasses<Value, ValueComparator> aliasInfo;
 
-  /// Auxiliary structure to store all the equivalent buffer classes.
+  /// Auxiliary structure to store all the equivalent buffer classes. Equivalent
+  /// buffer information is "must be" conservative: Only if two values are
+  /// guaranteed to be equivalent at runtime, they said to be equivalent. It is
+  /// possible that, in the presence of branches, it cannot be determined
+  /// statically if two values are equivalent. In that case, the values are
+  /// considered to be not equivalent.
   llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
 };
 

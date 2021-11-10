@@ -887,4 +887,3 @@ func @scf_if_inplace(%cond: i1,
   }
   return %r : tensor<?xf32>
 }
-
