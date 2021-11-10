@@ -50,7 +50,7 @@ std::size_t TotalElementCount(const ConstantSubscripts &);
 
 // Validate dimension re-ordering like ORDER in RESHAPE.
 // On success, return a vector that can be used as dimOrder in
-// ConstantBound::IncrementSubscripts().
+// ConstantBounds::IncrementSubscripts().
 std::optional<std::vector<int>> ValidateDimensionOrder(
     int rank, const std::vector<int> &order);
 
