@@ -25,17 +25,15 @@ protected:
   public:
     ScriptedProcessInfo(const ProcessLaunchInfo &launch_info) {
       m_class_name = launch_info.GetScriptedProcessClassName();
-      m_dictionary_sp = launch_info.GetScriptedProcessDictionarySP();
+      m_args_sp = launch_info.GetScriptedProcessDictionarySP();
     }
 
     std::string GetClassName() const { return m_class_name; }
-    StructuredData::DictionarySP GetDictionarySP() const {
-      return m_dictionary_sp;
-    }
+    StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
 
   private:
     std::string m_class_name;
-    StructuredData::DictionarySP m_dictionary_sp;
+    StructuredData::DictionarySP m_args_sp;
   };
 
 public:
