@@ -33,8 +33,8 @@ static bool canReduceUse(Use &Op) {
   if (!Ty->isFirstClassType())
     return false;
 
-  // Don't pass labels as arguments.
-  if (Ty->isLabelTy())
+  // Don't pass labels/metadata as arguments.
+  if (Ty->isLabelTy() || Ty->isMetadataTy())
     return false;
 
   // No need to replace values that are already arguments.
