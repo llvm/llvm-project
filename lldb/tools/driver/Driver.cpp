@@ -18,6 +18,7 @@
 #include "lldb/API/SBReproducer.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
+#include "lldb/API/SBStructuredData.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
@@ -200,6 +201,9 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 
   if (args.hasArg(OPT_python_path)) {
     m_option_data.m_print_python_path = true;
+  }
+  if (args.hasArg(OPT_print_script_interpreter_info)) {
+    m_option_data.m_print_script_interpreter_info = true;
   }
 
   if (args.hasArg(OPT_batch)) {
@@ -394,6 +398,22 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
         llvm::outs() << "<PATH TOO LONG>\n";
     } else
       llvm::outs() << "<COULD NOT FIND PATH>\n";
+    exiting = true;
+    return error;
+  }
+
+  if (m_option_data.m_print_script_interpreter_info) {
+    SBStructuredData info =
+        m_debugger.GetScriptInterpreterInfo(m_debugger.GetScriptLanguage());
+    if (!info) {
+      error.SetErrorString("no script interpreter.");
+    } else {
+      SBStream stream;
+      error = info.GetAsJSON(stream);
+      if (error.Success()) {
+        llvm::outs() << stream.GetData() << '\n';
+      }
+    }
     exiting = true;
     return error;
   }

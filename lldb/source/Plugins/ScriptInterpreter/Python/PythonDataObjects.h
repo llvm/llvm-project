@@ -71,6 +71,18 @@ class PythonDictionary;
 class PythonInteger;
 class PythonException;
 
+class GIL {
+public:
+  GIL() {
+    m_state = PyGILState_Ensure();
+    assert(!PyErr_Occurred());
+  }
+  ~GIL() { PyGILState_Release(m_state); }
+
+protected:
+  PyGILState_STATE m_state;
+};
+
 class StructuredPythonObject : public StructuredData::Generic {
 public:
   StructuredPythonObject() : StructuredData::Generic() {}

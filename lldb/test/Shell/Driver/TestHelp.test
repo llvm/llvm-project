@@ -62,6 +62,7 @@ CHECK: -r
 
 CHECK: SCRIPTING
 CHECK: -l
+CHECK: --print-script-interpreter-info
 CHECK: --python-path
 CHECK: -P
 CHECK: --script-language
