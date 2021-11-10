@@ -127,6 +127,213 @@ define dso_local void @test__tw_no_match(i32 %a, i32 %b) {
   ret void
 }
 
+; tw -> twi
+define dso_local void @test__twi_boundary_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twi_boundary_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twi 3, r3, 32767
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 32767, i32 3)
+  ret void
+}
+
+define dso_local void @test__twi_boundary_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twi_boundary_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twi 3, r3, 32767
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 32767, i32 %a, i32 3)
+  ret void
+}
+
+define dso_local void @test__twi_boundary1_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twi_boundary1_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twi 3, r3, -32768
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 -32768, i32 3)
+  ret void
+}
+
+define dso_local void @test__twi_boundary1_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twi_boundary1_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twi 3, r3, -32768
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 -32768, i32 %a, i32 3)
+  ret void
+}
+
+define dso_local void @test__tw_boundary2_reg_imm(i32 %a) {
+; CHECK-LABEL: test__tw_boundary2_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lis r4, 0
+; CHECK-NEXT:    ori r4, r4, 32768
+; CHECK-NEXT:    tw 3, r3, r4
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 32768, i32 3)
+  ret void
+}
+
+define dso_local void @test__tw_boundary2_imm_reg(i32 %a) {
+; CHECK-LABEL: test__tw_boundary2_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lis r4, 0
+; CHECK-NEXT:    ori r4, r4, 32768
+; CHECK-NEXT:    tw 3, r4, r3
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 32768, i32 %a, i32 3)
+  ret void
+}
+
+define dso_local void @test__tw_boundary3_reg_imm(i32 %a) {
+; CHECK-LABEL: test__tw_boundary3_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lis r4, -1
+; CHECK-NEXT:    ori r4, r4, 32767
+; CHECK-NEXT:    tw 3, r3, r4
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 -32769, i32 3)
+  ret void
+}
+
+define dso_local void @test__tw_boundary3_imm_reg(i32 %a) {
+; CHECK-LABEL: test__tw_boundary3_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lis r4, -1
+; CHECK-NEXT:    ori r4, r4, 32767
+; CHECK-NEXT:    tw 3, r4, r3
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 -32769, i32 %a, i32 3)
+  ret void
+}
+
+define dso_local void @test__twlgti_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twlgti_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twlgti r3, 0
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 0, i32 1)
+  ret void
+}
+
+define dso_local void @test__twllti_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twllti_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twllti r3, 0
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 0, i32 %a, i32 1)
+  ret void
+}
+
+define dso_local void @test__twllti_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twllti_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twllti r3, 1
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 1, i32 2)
+  ret void
+}
+
+define dso_local void @test__twlgti_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twlgti_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twlgti r3, 1
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 1, i32 %a, i32 2)
+  ret void
+}
+
+define dso_local void @test__tweqi_reg_imm(i32 %a) {
+; CHECK-LABEL: test__tweqi_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tweqi r3, 2
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 2, i32 4)
+  ret void
+}
+
+define dso_local void @test__tweqi_imm_reg(i32 %a) {
+; CHECK-LABEL: test__tweqi_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tweqi r3, 2
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 2, i32 %a, i32 4)
+  ret void
+}
+
+define dso_local void @test__twgti_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twgti_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twgti r3, 16
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 16, i32 8)
+  ret void
+}
+
+define dso_local void @test__twlti_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twlti_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twlti r3, 16
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 16, i32 %a, i32 8)
+  ret void
+}
+
+define dso_local void @test__twlti_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twlti_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twlti r3, 64
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 64, i32 16)
+  ret void
+}
+
+define dso_local void @test__twgti_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twgti_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twgti r3, 64
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 64, i32 %a, i32 16)
+  ret void
+}
+
+define dso_local void @test__twnei_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twnei_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twnei r3, 256
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 256, i32 24)
+  ret void
+}
+
+define dso_local void @test__twnei_imm_reg(i32 %a) {
+; CHECK-LABEL: test__twnei_imm_reg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twnei r3, 256
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 256, i32 %a, i32 24)
+  ret void
+}
+
+define dso_local void @test__twui_reg_imm(i32 %a) {
+; CHECK-LABEL: test__twui_reg_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twui r3, 512
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 %a, i32 512, i32 31)
+  ret void
+}
+
+define dso_local void @test__twui_imm_imm(i32 %a) {
+; CHECK-LABEL: test__twui_imm_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    twui r3, 512
+; CHECK-NEXT:    blr
+  call void @llvm.ppc.tw(i32 512, i32 %a, i32 31)
+  ret void
+}
+
 ; trap
 declare void @llvm.ppc.trap(i32 %a)
 define dso_local void @test__trap(i32 %a) {

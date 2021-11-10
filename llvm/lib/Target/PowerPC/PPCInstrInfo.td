@@ -5538,8 +5538,6 @@ def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (STWCX gprc:$A, ForceXForm:$dst)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
           (STBCX gprc:$A, ForceXForm:$dst)>;
-def : Pat<(int_ppc_tw gprc:$A, gprc:$B, i32:$IMM),
-          (TW $IMM, $A, $B)>;
 def : Pat<(int_ppc_trap gprc:$A),
           (TWI 24, $A, 0)>;
 
