@@ -1187,3 +1187,20 @@ define i1 @and_ranges_no_overlap(i8 %x) {
   %c7 = and i1 %c3, %c6
   ret i1 %c7
 }
+
+define i1 @and_ranges_signed_pred(i64 %x) {
+; CHECK-LABEL: @and_ranges_signed_pred(
+; CHECK-NEXT:    [[T1:%.*]] = add i64 [[X:%.*]], 127
+; CHECK-NEXT:    [[T2:%.*]] = icmp slt i64 [[T1]], 1024
+; CHECK-NEXT:    [[T3:%.*]] = add i64 [[X]], 128
+; CHECK-NEXT:    [[T4:%.*]] = icmp slt i64 [[T3]], 256
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
+;
+  %t1 = add i64 %x, 127
+  %t2 = icmp slt i64 %t1, 1024
+  %t3 = add i64 %x, 128
+  %t4 = icmp slt i64 %t3, 256
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
+}
