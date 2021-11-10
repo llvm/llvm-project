@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
+// RUN: mlir-translate -mlir-to-llvmir %t.mlir -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// XFAIL: *
+
+module {
+  func.func @foo() {
+    cir.return
+  }
+}
+
+//      LLVM: define void @foo()
+// LLVM-NEXT:   ret void,
+// LLVM-NEXT: }
+
+//      MLIR: module  {
+// MLIR-NEXT:   llvm.func @foo() {
+// MLIR-NEXT:     llvm.return
+// MLIR-NEXT:   }
+// MLIR-NEXT: }
