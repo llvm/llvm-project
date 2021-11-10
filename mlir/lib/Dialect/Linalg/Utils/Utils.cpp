@@ -177,41 +177,6 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b) {
   return dynOperands;
 }
 
-/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
-/// is a constant then return a new value set to the smallest such constant.
-/// Otherwise returngetSmallestBoundingIndex nullptr.
-IntegerAttr getSmallestBoundingIndex(Value size) {
-  Optional<int64_t> boundingConst = {};
-  if (auto affineMinOp = size.getDefiningOp<AffineMinOp>()) {
-    for (auto e : affineMinOp.getAffineMap().getResults())
-      if (auto cst = e.dyn_cast<AffineConstantExpr>())
-        boundingConst = boundingConst
-                            ? std::min(boundingConst.getValue(), cst.getValue())
-                            : cst.getValue();
-  } else if (auto constIndexOp = size.getDefiningOp<arith::ConstantOp>()) {
-    if (constIndexOp.getType().isa<IndexType>())
-      boundingConst = constIndexOp.getValue().cast<IntegerAttr>().getInt();
-  } else if (auto affineApplyOp = size.getDefiningOp<AffineApplyOp>()) {
-    if (auto cExpr = affineApplyOp.getAffineMap()
-                         .getResult(0)
-                         .dyn_cast<AffineConstantExpr>())
-      boundingConst = cExpr.getValue();
-  } else if (auto dimOp = size.getDefiningOp<tensor::DimOp>()) {
-    auto shape = dimOp.source().getType().dyn_cast<ShapedType>();
-    if (auto constOp = dimOp.index().getDefiningOp<arith::ConstantOp>()) {
-      if (auto indexAttr = constOp.getValue().dyn_cast<IntegerAttr>()) {
-        auto dimIndex = indexAttr.getInt();
-        if (!shape.isDynamicDim(dimIndex)) {
-          boundingConst = shape.getShape()[dimIndex];
-        }
-      }
-    }
-  }
-  if (boundingConst && *boundingConst >= 0)
-    return Builder(size.getContext()).getIndexAttr(*boundingConst);
-  return nullptr;
-}
-
 void getUpperBoundForIndex(Value value, AffineMap &boundMap,
                            SmallVectorImpl<Value> &boundOperands) {
   // Initialize `boundMap` and `boundOperands` to the identity returning

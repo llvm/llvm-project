@@ -54,12 +54,6 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 /// constructing the necessary DimOp operators.
 SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 
-/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
-/// is a constant then return a new value set to the smallest such constant.
-/// If `size` comes from a ConstantOp, return the constant.
-/// Otherwise return nullptr.
-IntegerAttr getSmallestBoundingIndex(Value size);
-
 /// Computes an upper bound for the result `value` of an index computation.
 /// Translates AffineMinOps and AffineApplyOps along the use-def chains of the
 /// index computation to affine constraints and projects out intermediate
