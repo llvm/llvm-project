@@ -1206,11 +1206,28 @@ static Value *foldAndOrOfICmpsUsingRanges(
     ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
     ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
     IRBuilderBase &Builder, bool IsAnd) {
+  // Look through add of a constant offset on V1, V2, or both operands. This
+  // allows us to interpret the V + C' < C'' range idiom into a proper range.
+  const APInt *Offset1 = nullptr, *Offset2 = nullptr;
+  if (V1 != V2) {
+    Value *X;
+    if (match(V1, m_Add(m_Value(X), m_APInt(Offset1))))
+      V1 = X;
+    if (match(V2, m_Add(m_Value(X), m_APInt(Offset2))))
+      V2 = X;
+  }
+
   if (V1 != V2)
     return nullptr;
 
   ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  if (Offset1)
+    CR1 = CR1.subtract(*Offset1);
+
   ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  if (Offset2)
+    CR2 = CR2.subtract(*Offset2);
+
   Optional<ConstantRange> CR =
       IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
   if (!CR)
@@ -2463,15 +2480,6 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSC || !RHSC)
     return nullptr;
-
-  // (icmp ult (X + CA), C1) | (icmp eq X, C2) -> (icmp ule (X + CA), C1)
-  //   iff C2 + CA == C1.
-  if (PredL == ICmpInst::ICMP_ULT && PredR == ICmpInst::ICMP_EQ) {
-    ConstantInt *AddC;
-    if (match(LHS0, m_Add(m_Specific(RHS0), m_ConstantInt(AddC))))
-      if (RHSC->getValue() + AddC->getValue() == LHSC->getValue())
-        return Builder.CreateICmpULE(LHS0, LHSC);
-  }
 
   return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
                                      PredR, RHS0, RHSC->getValue(),
