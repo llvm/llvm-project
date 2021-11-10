@@ -3639,6 +3639,10 @@ InstructionCost X86TTIImpl::getReplicationShuffleCost(
   case 32:
   case 64:
     break; // AVX512F.
+  case 16:
+    if (!ST->hasBWI())
+      return bailout();
+    break;
   default:
     return bailout();
   }
