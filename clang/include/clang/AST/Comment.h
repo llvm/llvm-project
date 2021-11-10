@@ -1019,6 +1019,7 @@ struct DeclInfo {
     /// \li member function template,
     /// \li member function template specialization,
     /// \li ObjC method,
+    /// \li variable of function pointer, member function pointer or block type,
     /// \li a typedef for a function pointer, member function pointer,
     ///     ObjC block.
     FunctionKind,
