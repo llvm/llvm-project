@@ -250,10 +250,10 @@ def icf_safe: F<"icf=safe">, HelpText<"Enable safe identical code folding">;
 
 def icf_none: F<"icf=none">, HelpText<"Disable identical code folding (default)">;
 
-def ignore_function_address_equality: F<"ignore-function-address-equality">,
+def ignore_function_address_equality: FF<"ignore-function-address-equality">,
   HelpText<"lld can break the address equality of functions">;
 
-def ignore_data_address_equality: F<"ignore-data-address-equality">,
+def ignore_data_address_equality: FF<"ignore-data-address-equality">,
   HelpText<"lld can break the address equality of data">;
 
 defm image_base: EEq<"image-base", "Set the base address">;
@@ -353,7 +353,7 @@ def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
 defm reproduce:
-  Eq<"reproduce",
+  EEq<"reproduce",
      "Write tar file containing inputs and command to reproduce link">;
 
 defm rosegment: BB<"rosegment",
@@ -404,7 +404,7 @@ defm target2:
   MetaVarName<"<type>">;
 
 defm threads
-    : Eq<"threads",
+    : EEq<"threads",
          "Number of threads. '1' disables multi-threading. By default all "
          "available hardware threads are used">;
 
@@ -501,7 +501,7 @@ defm wrap : Eq<"wrap", "Redirect symbol references to __wrap_symbol and "
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
-def visual_studio_diagnostics_format : F<"vs-diagnostics">,
+def visual_studio_diagnostics_format : FF<"vs-diagnostics">,
 HelpText<"Format diagnostics for Visual Studio compatibility">;
 
 // Aliases
