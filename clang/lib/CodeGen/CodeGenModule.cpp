@@ -565,6 +565,7 @@ void CodeGenModule::Release() {
         "__amdgpu_device_library_preserve_asan_functions_ptr", nullptr,
         llvm::GlobalVariable::NotThreadLocal);
     addCompilerUsedGlobal(Var);
+    getModule().addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
   }
 
   emitLLVMUsed();
