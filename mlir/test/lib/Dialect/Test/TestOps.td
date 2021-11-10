@@ -40,11 +40,6 @@ def Test_Dialect : Dialect {
     void registerAttributes();
     void registerTypes();
 
-    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
-                                     ::mlir::Type type) const override;
-    void printAttribute(::mlir::Attribute attr,
-                        ::mlir::DialectAsmPrinter &printer) const override;
-
     // Provides a custom printing/parsing for some operations.
     ::llvm::Optional<ParseOpHook>
       getParseOperationHook(::llvm::StringRef opName) const override;
@@ -58,6 +53,10 @@ def Test_Dialect : Dialect {
 
   }];
 }
+
+// Include the attribute definitions.
+include "TestAttrDefs.td"
+
 
 class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -1895,6 +1894,11 @@ def FormatOptionalEnumAttr : TEST_Op<"format_optional_enum_attr"> {
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
+}
+
+def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
+  let arguments = (ins CompoundAttrA:$compound);
+  let assemblyFormat = "$compound attr-dict-with-keyword";
 }
 
 //===----------------------------------------------------------------------===//
