@@ -79,6 +79,10 @@ public:
     });
   }
 
+  // i32 is used here because LLVM wants i32 constants when indexing into struct
+  // types. Indexing into other aggregate types is more flexible.
+  mlir::Type offsetType() { return mlir::IntegerType::get(&getContext(), 32); }
+
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
   mlir::Type convertRecordType(fir::RecordType derived) {
     auto name = derived.getName();
