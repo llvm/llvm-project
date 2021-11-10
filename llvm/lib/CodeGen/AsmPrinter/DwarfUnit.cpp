@@ -1146,11 +1146,6 @@ DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
     }
   }
 
-  // Try to reference the abstract origin if the subprogram is not concrete.
-  if (!DD->IsConcrete(SP))
-    if (auto *SPDie = DU->getAbstractSPDies().lookup(SP))
-      return SPDie;
-
   // DW_TAG_inlined_subroutine may refer to this DIE.
   DIE &SPDie = createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, SP);
 
