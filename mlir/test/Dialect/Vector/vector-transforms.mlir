@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-to-vector-conversion="unroll" | FileCheck %s
+// RUN: mlir-opt %s -test-vector-to-vector-lowering="unroll" | FileCheck %s
 
 // CHECK-DAG: #[[MAP1:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
 

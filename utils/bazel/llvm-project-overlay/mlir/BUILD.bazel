@@ -1458,6 +1458,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":StandardOps",
+        ":VectorOps",
         ":X86Vector",
         "//llvm:Core",
         "//llvm:Support",
@@ -6401,6 +6402,7 @@ cc_library(
         ":TransformUtils",
         ":VectorOps",
         ":VectorToSCF",
+        ":X86VectorTransforms",
         "//llvm:Support",
     ],
 )
