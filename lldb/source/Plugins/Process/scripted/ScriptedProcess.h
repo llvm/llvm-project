@@ -77,7 +77,7 @@ public:
 
   Status DoDestroy() override;
 
-  void RefreshStateAfterStop() override{};
+  void RefreshStateAfterStop() override;
 
   bool IsAlive() override;
 
