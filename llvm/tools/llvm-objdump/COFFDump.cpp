@@ -48,7 +48,7 @@ public:
 private:
   template <typename T> FormattedNumber formatAddr(T V) const {
     return format_hex_no_prefix(V, Is64 ? 16 : 8);
-  };
+  }
 
   uint32_t getBaseOfData(const void *Hdr) const {
     return Is64 ? 0 : static_cast<const pe32_header *>(Hdr)->BaseOfData;
