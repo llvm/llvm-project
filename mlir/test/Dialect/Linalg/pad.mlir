@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-pad-pattern pack-paddings=1,1,0 hoist-paddings=0,0,0" -cse -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad pack-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-FILL
 
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (7, -d0 + 12)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
@@ -51,7 +52,7 @@ func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
         // CHECK-SAME:                  ins(%[[T3]], %[[T4]] : tensor<4x7xf32>, tensor<7x5xf32>)
         // CHECK-SAME:                  outs(%[[T2]] : tensor<4x5xf32>)
         //      CHECK:   %[[T6:.*]] = tensor.insert_slice %[[T5]]
-        %7 = linalg.matmul {__internal_linalg_transform__ = "pad"} ins(%4, %5 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%6 : tensor<4x5xf32>) -> tensor<4x5xf32>
+        %7 = linalg.matmul ins(%4, %5 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%6 : tensor<4x5xf32>) -> tensor<4x5xf32>
         %8 = tensor.insert_slice %7 into %arg8[%arg3, %arg5] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
 
         //      CHECK:   scf.yield %[[T6]]
@@ -111,7 +112,7 @@ func @static_sizes_input_divisible(%arg0: tensor<24x12xf32>,
         // CHECK-SAME:                  outs(%[[T1]] : tensor<4x7xf32>)
         //      CHECK:   %[[T3:.*]] = tensor.extract_slice %[[T2]]
         //      CHECK:   %[[T4:.*]] = tensor.insert_slice %[[T3]]
-        %7 = linalg.matmul {__internal_linalg_transform__ = "pad"} ins(%3, %5 : tensor<4x6xf32>, tensor<6x?xf32>) outs(%6 : tensor<4x?xf32>) -> tensor<4x?xf32>
+        %7 = linalg.matmul ins(%3, %5 : tensor<4x6xf32>, tensor<6x?xf32>) outs(%6 : tensor<4x?xf32>) -> tensor<4x?xf32>
         %8 = tensor.insert_slice %7 into %arg8[%arg3, %arg5] [4, %4] [1, 1] : tensor<4x?xf32> into tensor<24x25xf32>
 
         //      CHECK:   scf.yield %[[T4]]
@@ -197,7 +198,7 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
         // CHECK-SAME:                  outs(%[[T5]] : tensor<5x7xf32>)
         //      CHECK:   %[[T7:.*]] = tensor.extract_slice %[[T6]][0, 0] [%[[TS0]], %[[TS1]]]
         //      CHECK:   %[[T8:.*]] = tensor.insert_slice %[[T7]]
-        %12 = linalg.matmul {__internal_linalg_transform__ = "pad"} ins(%8, %10 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%11 : tensor<?x?xf32>) -> tensor<?x?xf32>
+        %12 = linalg.matmul ins(%8, %10 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%11 : tensor<?x?xf32>) -> tensor<?x?xf32>
         %13 = tensor.insert_slice %12 into %arg8[%arg3, %arg5] [%6, %9] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
         //      CHECK:   scf.yield %[[T8]]
@@ -214,9 +215,9 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
 
 #map = affine_map<(d0) -> (7, -d0 + 12)>
 
-//      CHECK:  scalar_operand
-// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: f32
-// CHECK-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<24x12xf32>
+//      CHECK-FILL:  scalar_operand
+// CHECK-FILL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: f32
+// CHECK-FILL-SAME:    %[[ARG1:[0-9a-zA-Z]*]]: tensor<24x12xf32>
 func @scalar_operand(%arg0: f32, %arg1: tensor<24x12xf32>) -> tensor<24x12xf32> {
   %c0 = arith.constant 0 : index
   %c12 = arith.constant 12 : index
@@ -224,20 +225,20 @@ func @scalar_operand(%arg0: f32, %arg1: tensor<24x12xf32>) -> tensor<24x12xf32> 
   %c7 = arith.constant 7 : index
   %c4 = arith.constant 4 : index
 
-  //      CHECK:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
+  //      CHECK-FILL:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
   %0 = scf.for %arg2 = %c0 to %c24 step %c4 iter_args(%arg3 = %arg1) -> (tensor<24x12xf32>) {
 
-    //      CHECK:  scf.for %[[IV1:[0-9a-zA-Z]*]] = {{.*}} iter_args(%[[ARG2:.*]] =
+    //      CHECK-FILL:  scf.for %[[IV1:[0-9a-zA-Z]*]] = {{.*}} iter_args(%[[ARG2:.*]] =
     %1 = scf.for %arg4 = %c0 to %c12 step %c7 iter_args(%arg5 = %arg3) -> (tensor<24x12xf32>) {
       %2 = affine.min #map(%arg4)
 
-      //      CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG2]]
-      //      CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold
+      //      CHECK-FILL:   %[[T0:.*]] = tensor.extract_slice %[[ARG2]]
+      //      CHECK-FILL:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold
       %3 = tensor.extract_slice %arg5[%arg2, %arg4] [4, %2] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
 
       // Check only the fill output operand is padded.
-      //      CHECK:   %[[T6:.*]] = linalg.fill(%[[ARG0]], %[[T1]]
-      %4 = linalg.fill(%arg0, %3) {__internal_linalg_transform__ = "pad"} : f32, tensor<4x?xf32> -> tensor<4x?xf32>
+      //      CHECK-FILL:   %[[T6:.*]] = linalg.fill(%[[ARG0]], %[[T1]]
+      %4 = linalg.fill(%arg0, %3) : f32, tensor<4x?xf32> -> tensor<4x?xf32>
       %5 = tensor.insert_slice %4 into %arg5[%arg2, %arg4] [4, %2] [1, 1] : tensor<4x?xf32> into tensor<24x12xf32>
       scf.yield %5 : tensor<24x12xf32>
     }
