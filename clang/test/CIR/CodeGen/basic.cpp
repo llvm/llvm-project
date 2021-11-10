@@ -9,3 +9,14 @@ int *p0() {
 // CHECK: func @p0() -> !cir.ptr<i32> {
 // CHECK: %1 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
 // CHECK: cir.store %1, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+
+int *p1() {
+  int *p;
+  p = nullptr;
+  return p;
+}
+
+// CHECK: func @p1() -> !cir.ptr<i32> {
+// CHECK: %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, [uninitialized]
+// CHECK: %1 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
+// CHECK: cir.store %1, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>

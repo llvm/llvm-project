@@ -1062,6 +1062,57 @@ public:
     llvm_unreachable("Unhandled DeclRefExpr?");
   }
 
+  /// Emit code to compute the specified expression which
+  /// can have any type.  The result is returned as an RValue struct.
+  /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
+  /// where the result should be returned.
+  RValue buildAnyExpr(const Expr *E) {
+    switch (CIRCodeGenFunction::getEvaluationKind(E->getType())) {
+    case TEK_Scalar:
+      return RValue::get(buildScalarExpr(E));
+    case TEK_Complex:
+      assert(0 && "not implemented");
+    case TEK_Aggregate:
+      assert(0 && "not implemented");
+    }
+    llvm_unreachable("bad evaluation kind");
+  }
+
+  LValue buildBinaryOperatorLValue(const BinaryOperator *E) {
+    // Comma expressions just emit their LHS then their RHS as an l-value.
+    if (E->getOpcode() == BO_Comma) {
+      assert(0 && "not implemented");
+    }
+
+    if (E->getOpcode() == BO_PtrMemD || E->getOpcode() == BO_PtrMemI)
+      assert(0 && "not implemented");
+
+    assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
+
+    // Note that in all of these cases, __block variables need the RHS
+    // evaluated first just in case the variable gets moved by the RHS.
+
+    switch (CIRCodeGenFunction::getEvaluationKind(E->getType())) {
+    case TEK_Scalar: {
+      assert(E->getLHS()->getType().getObjCLifetime() ==
+                 clang::Qualifiers::ObjCLifetime::OCL_None &&
+             "not implemented");
+
+      RValue RV = buildAnyExpr(E->getRHS());
+      LValue LV = buildLValue(E->getLHS());
+      buldStoreThroughLValue(RV, LV, nullptr /*InitDecl*/);
+      assert(!astCtx.getLangOpts().OpenMP && "last priv cond not implemented");
+      return LV;
+    }
+
+    case TEK_Complex:
+      assert(0 && "not implemented");
+    case TEK_Aggregate:
+      assert(0 && "not implemented");
+    }
+    llvm_unreachable("bad evaluation kind");
+  }
+
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
   /// FIXME: document this function better.
@@ -1073,10 +1124,12 @@ public:
           << E->getStmtClassName() << "'";
       assert(0 && "not implemented");
     }
-    case Expr::ObjCPropertyRefExprClass:
-      llvm_unreachable("cannot emit a property reference directly");
+    case Expr::BinaryOperatorClass:
+      return buildBinaryOperatorLValue(cast<BinaryOperator>(E));
     case Expr::DeclRefExprClass:
       return buildDeclRefLValue(cast<DeclRefExpr>(E));
+    case Expr::ObjCPropertyRefExprClass:
+      llvm_unreachable("cannot emit a property reference directly");
     }
 
     return LValue::makeAddr(RawAddress::invalid(), E->getType());
