@@ -104,8 +104,6 @@ void P2::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     ArgStringList CmdArgs;
     AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
-    CmdArgs.push_back("-v");
-
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
 
@@ -113,7 +111,9 @@ void P2::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
     CmdArgs.push_back("-lc");
+    CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lp2");
+    CmdArgs.push_back("--no-whole-archive");
     CmdArgs.push_back("-Tp2.ld");
 
     std::string sys_root = getToolChain().computeSysRoot();
