@@ -93,9 +93,6 @@ struct TestLinalgTransforms
       *this, "test-tile-scalarize-dynamic-dims",
       llvm::cl::desc("Test tiling of dynamic dims by 1"),
       llvm::cl::init(false)};
-  Option<int> testHoistPadding{*this, "test-hoist-padding",
-                               llvm::cl::desc("Test hoist padding"),
-                               llvm::cl::init(0)};
   Option<bool> testPadPattern{*this, "test-pad-pattern",
                               llvm::cl::desc("Test pad pattern"),
                               llvm::cl::init(false)};
@@ -112,14 +109,6 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test rewrite of subtensor(pad_tensor) into "
                      "pad_tensor(subtensor)"),
       llvm::cl::init(false)};
-  ListOption<int64_t> paddedOperands{
-      *this, "padded-operands",
-      llvm::cl::desc("Operands to pad when test-tile-pattern"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
-  ListOption<int64_t> nofoldOperands{
-      *this, "nofold-operands",
-      llvm::cl::desc("Operands to set nofold when test-tile-pattern"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> packPaddings{
       *this, "pack-paddings",
       llvm::cl::desc("Operand packing flags when test-pad-pattern"),
@@ -615,8 +604,6 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
 
 static void applyTilePattern(FuncOp funcOp, std::string loopType,
                              ArrayRef<int64_t> tileSizes,
-                             ArrayRef<int64_t> paddedOperands,
-                             ArrayRef<int64_t> nofoldOperands,
                              ArrayRef<int64_t> peeledLoops,
                              bool scalarizeDynamicDims) {
   MLIRContext *context = funcOp.getContext();
@@ -636,21 +623,6 @@ static void applyTilePattern(FuncOp funcOp, std::string loopType,
            "tileSizes and scalarizeDynamicDims is mutually exclusive");
   } else {
     linalgTilingOptions.setTileSizes(tileSizes);
-  }
-  if (!paddedOperands.empty()) {
-    auto paddingFunc = [&](OpBuilder &b,
-                           OpOperand &opOperand) -> FailureOr<Value> {
-      if (llvm::count(paddedOperands, opOperand.getOperandNumber()) == 0)
-        return failure();
-      return getNeutralOfLinalgOp(b, opOperand);
-    };
-    auto nofoldFunc = [&](OpOperand &opOperand) {
-      if (llvm::count(nofoldOperands, opOperand.getOperandNumber()) != 0)
-        return true;
-      return false;
-    };
-    linalgTilingOptions.setPaddingValueComputationFunction(paddingFunc);
-    linalgTilingOptions.setPaddingNoFoldComputationFunction(nofoldFunc);
   }
   tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulOp>,
                     linalg::LinalgTilingPattern<linalg::GenericOp>>(
@@ -808,24 +780,11 @@ void TestLinalgTransforms::runOnFunction() {
     return applyTiledLoopPeelingPattern(getFunction(), testTiledLoopPeeling,
                                         skipPartial);
   if (testTilePattern)
-    return applyTilePattern(getFunction(), loopType, tileSizes, paddedOperands,
-                            nofoldOperands, peeledLoops,
+    return applyTilePattern(getFunction(), loopType, tileSizes, peeledLoops,
                             /*scalarizeDynamicDims=*/false);
   if (testTileScalarizeDynamicDims)
-    return applyTilePattern(getFunction(), loopType, tileSizes, paddedOperands,
-                            nofoldOperands,
+    return applyTilePattern(getFunction(), loopType, tileSizes,
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
-  if (testHoistPadding) {
-    getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
-      PadTensorOp hoistedOp;
-      FailureOr<Value> newResult = linalg::hoistPaddingOnTensors(
-          padTensorOp, testHoistPadding, hoistedOp);
-      if (succeeded(newResult)) {
-        padTensorOp.getResult().replaceAllUsesWith(newResult.getValue());
-        padTensorOp->erase();
-      }
-    });
-  }
   if (testPadPattern)
     return applyPadPattern(getFunction(), packPaddings, hoistPaddings);
   if (testInterchangePattern.hasValue())
