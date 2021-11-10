@@ -164,8 +164,8 @@ define amdgpu_kernel void @s_ctpop_i128(i32 addrspace(1)* noalias %out, i128 %va
 }
 
 ; FUNC-LABEL: {{^}}s_ctpop_i65:
-; GCN: s_bcnt1_i32_b64 [[REG0:s[0-9]+]],
 ; GCN: s_and_b32
+; GCN: s_bcnt1_i32_b64 [[REG0:s[0-9]+]],
 ; GCN: s_bcnt1_i32_b64 [[REG1:s[0-9]+]],
 ; GCN: s_add_i32 {{s[0-9]+}}, [[REG0]], [[REG1]]
 ; GCN: s_endpgm

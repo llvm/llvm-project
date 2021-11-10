@@ -417,14 +417,14 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; FIXEDABI-SDAG-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[6:7], 0x40
-; FIXEDABI-SDAG-NEXT:    s_load_dword s5, s[6:7], 0x44
+; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[6:7], 0x44
+; FIXEDABI-SDAG-NEXT:    s_load_dword s5, s[6:7], 0x40
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s5
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s4
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s5
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, 1

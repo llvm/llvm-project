@@ -160,9 +160,9 @@ define amdgpu_kernel void @reorder_smrd_load_local_store_smrd_load(i32 addrspace
 }
 
 ; GCN-LABEL: {{^}}reorder_global_load_local_store_global_load:
+; CI: buffer_load_dword
+; CI: buffer_load_dword
 ; CI: ds_write_b32
-; CI: buffer_load_dword
-; CI: buffer_load_dword
 ; CI: buffer_store_dword
 
 ; GFX9: global_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4
@@ -291,8 +291,8 @@ define amdgpu_kernel void @reorder_global_offsets_addr64_soffset0(i32 addrspace(
 }
 
 ; GCN-LABEL: {{^}}reorder_local_load_tbuffer_store_local_load:
-; GCN: tbuffer_store_format
 ; GCN: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:1 offset1:2
+; GCN: tbuffer_store_format
 define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(i32 addrspace(1)* %out, i32 %a1, i32 %vaddr) #0 {
   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 

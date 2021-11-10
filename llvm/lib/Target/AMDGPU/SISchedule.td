@@ -93,16 +93,16 @@ def HWBranch : ProcResource<1> {
   let BufferSize = 1;
 }
 def HWExport : ProcResource<1> {
-  let BufferSize = 7; // Taken from S_WAITCNT
+  let BufferSize = 1;
 }
 def HWLGKM   : ProcResource<1> {
-  let BufferSize = 31;  // Taken from S_WAITCNT
+  let BufferSize = 1;
 }
 def HWSALU   : ProcResource<1> {
   let BufferSize = 1;
 }
 def HWVMEM   : ProcResource<1> {
-  let BufferSize = 15;  // Taken from S_WAITCNT
+  let BufferSize = 1;
 }
 def HWVALU   : ProcResource<1> {
   let BufferSize = 1;

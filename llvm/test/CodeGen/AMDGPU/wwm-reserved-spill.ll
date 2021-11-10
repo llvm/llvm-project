@@ -640,19 +640,21 @@ define amdgpu_gfx void @strict_wwm_call_i64(<4 x i32> inreg %tmp14, i64 inreg %a
 ; GFX9-O3-NEXT:    s_mov_b64 s[36:37], s[30:31]
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v6, s8
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v7, s9
+; GFX9-O3-NEXT:    s_or_saveexec_b64 s[30:31], -1
+; GFX9-O3-NEXT:    s_getpc_b64 s[34:35]
+; GFX9-O3-NEXT:    s_add_u32 s34, s34, strict_wwm_called_i64@gotpcrel32@lo+4
+; GFX9-O3-NEXT:    s_addc_u32 s35, s35, strict_wwm_called_i64@gotpcrel32@hi+12
+; GFX9-O3-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
+; GFX9-O3-NEXT:    s_mov_b64 exec, s[30:31]
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[38:39], -1
-; GFX9-O3-NEXT:    s_getpc_b64 s[30:31]
-; GFX9-O3-NEXT:    s_add_u32 s30, s30, strict_wwm_called_i64@gotpcrel32@lo+4
-; GFX9-O3-NEXT:    s_addc_u32 s31, s31, strict_wwm_called_i64@gotpcrel32@hi+12
-; GFX9-O3-NEXT:    s_load_dwordx2 s[30:31], s[30:31], 0x0
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, v7
 ; GFX9-O3-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-O3-NEXT:    s_swappc_b64 s[30:31], s[30:31]
+; GFX9-O3-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX9-O3-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v6

@@ -41,8 +41,8 @@ define double @v_trig_preop_f64_imm(double %a, i32 %b) {
 define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ; CI-LABEL: s_trig_preop_f64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], v0
@@ -52,8 +52,8 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ;
 ; VI-LABEL: s_trig_preop_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x8
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], v0
@@ -63,14 +63,25 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ;
 ; GFX9-LABEL: s_trig_preop_f64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dword s2, s[4:5], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], v0
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: s_trig_preop_f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x8
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], s2
+; GFX10-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 %b)
   store volatile double %result, double* undef
   ret void
@@ -85,6 +96,15 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_endpgm
+;
+; GFX10-LABEL: s_trig_preop_f64_imm:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_trig_preop_f64 v[0:1], s[0:1], 7
+; GFX10-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 7)
   store volatile double %result, double* undef
   ret void

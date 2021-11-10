@@ -5,7 +5,6 @@
 define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; SI-LABEL: main:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; SI-NEXT:    s_mov_b32 s0, 0
 ; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    s_mov_b32 s2, s0
@@ -15,6 +14,7 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; SI-NEXT:    s_mov_b32 s6, s0
 ; SI-NEXT:    s_mov_b32 s7, s0
 ; SI-NEXT:    image_load v2, v0, s[0:7] dmask:0x1 unorm
+; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 7, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, v0, v2
@@ -26,7 +26,6 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ;
 ; VI-LABEL: main:
 ; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_mov_b32 s1, s0
 ; VI-NEXT:    s_mov_b32 s2, s0
@@ -36,6 +35,7 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; VI-NEXT:    s_mov_b32 s6, s0
 ; VI-NEXT:    s_mov_b32 s7, s0
 ; VI-NEXT:    image_load v2, v0, s[0:7] dmask:0x1 unorm
+; VI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 7, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v0, v0, v2

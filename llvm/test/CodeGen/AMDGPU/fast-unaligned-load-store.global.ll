@@ -11,10 +11,11 @@ define i32 @global_load_2xi16_align2(i16 addrspace(1)* %p) #0 {
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
 ; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GFX7-ALIGNED-NEXT:    flat_load_ushort v2, v[2:3]
 ; GFX7-ALIGNED-NEXT:    flat_load_ushort v0, v[0:1]
-; GFX7-ALIGNED-NEXT:    flat_load_ushort v1, v[2:3]
+; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-ALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -23,10 +24,11 @@ define i32 @global_load_2xi16_align2(i16 addrspace(1)* %p) #0 {
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
 ; GFX7-UNALIGNED-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GFX7-UNALIGNED-NEXT:    flat_load_ushort v2, v[2:3]
 ; GFX7-UNALIGNED-NEXT:    flat_load_ushort v0, v[0:1]
-; GFX7-UNALIGNED-NEXT:    flat_load_ushort v1, v[2:3]
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; GFX7-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-UNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -125,25 +127,26 @@ define i32 @global_load_2xi16_align1(i16 addrspace(1)* %p) #0 {
 ; GFX7-ALIGNED-LABEL: global_load_2xi16_align1:
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
+; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
 ; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v4, vcc, 1, v0
-; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v6, vcc, 3, v0
-; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
-; GFX7-ALIGNED-NEXT:    flat_load_ubyte v0, v[0:1]
-; GFX7-ALIGNED-NEXT:    flat_load_ubyte v1, v[6:7]
-; GFX7-ALIGNED-NEXT:    flat_load_ubyte v4, v[4:5]
+; GFX7-ALIGNED-NEXT:    flat_load_ubyte v4, v[2:3]
+; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 3, v0
+; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GFX7-ALIGNED-NEXT:    flat_load_ubyte v5, v[0:1]
 ; GFX7-ALIGNED-NEXT:    flat_load_ubyte v2, v[2:3]
+; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v0, vcc, 2, v0
+; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX7-ALIGNED-NEXT:    flat_load_ubyte v0, v[0:1]
+; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(3)
+; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 8, v4
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
+; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
+; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v1, v1, v2
-; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v0, v3, v0
-; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX7-ALIGNED-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX7-ALIGNED-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7-ALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: global_load_2xi16_align1:

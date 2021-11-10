@@ -28,13 +28,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_local_lo_hi_v2i16_multi_use_hi:
 ; GFX900: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-DAG: ds_read_u16 [[LO:v[0-9]+]], v0
 ; GFX900-DAG: ds_read_u16 [[HI:v[0-9]+]], v0 offset:16
+; GFX900-DAG: ds_read_u16 [[LO:v[0-9]+]], v0
 ; GFX900-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; GFX900-DAG: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, [[LO]]
-; GFX900-DAG: s_waitcnt lgkmcnt(0)
+; GFX900-DAG: s_waitcnt lgkmcnt(1)
 ; GFX900-DAG: ds_write_b16 [[ZERO]], [[HI]]
-; GFX900: v_lshl_or_b32 [[HI]], [[HI]], 16, [[AND]]
+; GFX900: v_lshl_or_b32 v{{[0-9]+}}, [[HI]], 16, [[AND]]
 ; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: s_setpc_b64 s[30:31]
 define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(i16 addrspace(3)* noalias %in) #0 {

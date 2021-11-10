@@ -7,14 +7,14 @@
 define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
 ; GFX8-LABEL: dpp_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GFX8-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; GFX8-NEXT:    s_load_dword s2, s[0:1], 0x2c
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v2, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    s_nop 0
 ; GFX8-NEXT:    v_mov_b32_dpp v2, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;

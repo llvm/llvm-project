@@ -57,9 +57,8 @@ done:                                             ; preds = %loop
 ; SI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x2ee0
 ; GCN: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; GCN: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
-; SI: s_mov_b32
-; SI: s_nop 1
-; SI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, [[OFFSET]]
+; SI-DAG: s_mov_b32
+; SI-DAG: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, [[OFFSET]]
 
 ; CI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0xbb8
 ; GCN: v_mov_b32_e32 [[V_OUT:v[0-9]+]], [[OUT]]
@@ -171,10 +170,10 @@ entry:
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x8:
 ; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
-; CI-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
 ; CI-NOHSA-NOT: v_add
 ; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
-; CI-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; CI-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
+; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
 ; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
 
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -203,9 +202,9 @@ entry:
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
 ; SI: s_mov_b32 {{s[0-9]+}}, 0x13480
-; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:32
-; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:48
-; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:32
+; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:48
 ; SI: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], {{s[0-9]+}} addr64
 ; CI-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
 ; CI-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
