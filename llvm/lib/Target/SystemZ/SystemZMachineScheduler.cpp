@@ -46,9 +46,9 @@ static MachineBasicBlock *getSingleSchedPred(MachineBasicBlock *MBB,
   // The loop header has two predecessors, return the latch, but not for a
   // single block loop.
   if (MBB->pred_size() == 2 && Loop != nullptr && Loop->getHeader() == MBB) {
-    for (auto I = MBB->pred_begin(); I != MBB->pred_end(); ++I)
-      if (Loop->contains(*I))
-        PredMBB = (*I == MBB ? nullptr : *I);
+    for (MachineBasicBlock *Pred : MBB->predecessors())
+      if (Loop->contains(Pred))
+        PredMBB = (Pred == MBB ? nullptr : Pred);
   }
 
   assert ((PredMBB == nullptr || !Loop || Loop->contains(PredMBB))

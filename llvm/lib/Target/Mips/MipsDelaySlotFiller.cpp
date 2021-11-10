@@ -838,9 +838,8 @@ bool MipsDelaySlotFiller::searchSuccBBs(MachineBasicBlock &MBB,
   auto *Fn = MBB.getParent();
 
   // Iterate over SuccBB's predecessor list.
-  for (MachineBasicBlock::pred_iterator PI = SuccBB->pred_begin(),
-       PE = SuccBB->pred_end(); PI != PE; ++PI)
-    if (!examinePred(**PI, *SuccBB, RegDU, HasMultipleSuccs, BrMap))
+  for (MachineBasicBlock *Pred : SuccBB->predecessors())
+    if (!examinePred(*Pred, *SuccBB, RegDU, HasMultipleSuccs, BrMap))
       return false;
 
   // Do not allow moving instructions which have unallocatable register operands
