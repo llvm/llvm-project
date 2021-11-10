@@ -223,9 +223,12 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     auto rangeValue = en.value();
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
-    IntegerAttr sizeAttr = getSmallestBoundingIndex(rangeValue.size);
-    Value size = (!sizeAttr) ? rangeValue.size
-                             : b.create<arith::ConstantOp>(loc, sizeAttr);
+    FailureOr<int64_t> upperBound =
+        getConstantUpperBoundForIndex(rangeValue.size);
+    Value size =
+        failed(upperBound)
+            ? rangeValue.size
+            : b.create<arith::ConstantIndexOp>(loc, upperBound.getValue());
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(
