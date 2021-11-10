@@ -4921,7 +4921,6 @@ void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
   const char *gdb_type = default_gdb_type;
   const char *default_lldb_format = "hex";
   const char *lldb_format = default_lldb_format;
-  const char *lldb_set = NULL;
 
   switch (reg.nub_info.type) {
   case Uint:
@@ -4989,8 +4988,6 @@ void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
     lldb_format = "vector-uint128";
     break;
   };
-  if (reg_set_info && reg.nub_info.set < num_reg_sets)
-    lldb_set = reg_set_info[reg.nub_info.set].name;
 
   uint32_t indent = 2;
 
