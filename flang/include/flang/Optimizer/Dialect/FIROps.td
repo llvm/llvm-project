@@ -498,6 +498,8 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
     llvm::Optional<mlir::OperandRange> getCompareOperands(unsigned cond);
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
+    llvm::Optional<mlir::ValueRange> getCompareOperands(
+        mlir::ValueRange operands, unsigned cond);
 
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);

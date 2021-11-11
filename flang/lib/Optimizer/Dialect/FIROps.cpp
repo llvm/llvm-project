@@ -2297,6 +2297,16 @@ fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
 
+llvm::Optional<mlir::ValueRange>
+fir::SelectCaseOp::getCompareOperands(mlir::ValueRange operands,
+                                      unsigned cond) {
+  auto a = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      getCompareOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      getOperandSegmentSizeAttr());
+  return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
+}
+
 llvm::Optional<mlir::MutableOperandRange>
 fir::SelectCaseOp::getMutableSuccessorOperands(unsigned oper) {
   return ::getMutableSuccessorOperands(oper, targetArgsMutable(),
@@ -2305,6 +2315,16 @@ fir::SelectCaseOp::getMutableSuccessorOperands(unsigned oper) {
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectCaseOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
+                                        unsigned oper) {
+  auto a =
+      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      getOperandSegmentSizeAttr());
+  return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
+}
+
+llvm::Optional<mlir::ValueRange>
+fir::SelectCaseOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
       (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
