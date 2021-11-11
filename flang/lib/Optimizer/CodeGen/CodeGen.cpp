@@ -560,6 +560,46 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   }
 };
 
+/// Lower `fir.dispatch` operation. A virtual call to a method in a dispatch
+/// table.
+struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DispatchOp dispatch, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        dispatch, "fir.dispatch codegen is not implemented yet");
+  }
+};
+
+/// Lower `fir.dispatch_table` operation. The dispatch table for a Fortran
+/// derived type.
+struct DispatchTableOpConversion
+    : public FIROpConversion<fir::DispatchTableOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DispatchTableOp dispTab, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        dispTab, "fir.dispatch_table codegen is not implemented yet");
+  }
+};
+
+/// Lower `fir.dt_entry` operation. An entry in a dispatch table; binds a
+/// method-name to a function.
+struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DTEntryOp dtEnt, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        dtEnt, "fir.dt_entry codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -1189,6 +1229,7 @@ public:
         BoxAddrOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
         BoxRankOpConversion, CallOpConversion, ConvertOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
         DivcOpConversion, ExtractValueOpConversion, HasValueOpConversion,
         GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
         LoadOpConversion, NegcOpConversion, MulcOpConversion,
