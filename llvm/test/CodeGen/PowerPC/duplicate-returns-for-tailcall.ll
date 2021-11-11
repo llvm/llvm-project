@@ -43,7 +43,7 @@ if.then6:                                         ; preds = %if.end4
   %call7 = tail call fastcc signext i32 @call3(i32 signext %a, i32 signext %b, i32 signext %c)
   br label %return
 ; tail calling a fastcc function from a ccc function is supported.
-; CHECK_LABEL: if.then13:
+; CHECK-LABEL: if.then6:
 ; CHECK:       %[[T2:[a-zA-Z0-9]+]] = tail call fastcc signext i32 @call3
 ; CHECK-NEXT:  ret i32 %[[T2]]
 

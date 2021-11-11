@@ -7,15 +7,6 @@
 ; RUN:   FileCheck %s --check-prefix=CHECK-AIX32
 
 define dso_local void @mtfsb0() local_unnamed_addr #0 {
-; CHECK-PWR8-LABEL: mtfsb0:
-; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    mtfsb0 10
-; CHECK-PWR8-NEXT:    blr
-;
-; CHECK-PWR7-LABEL: mtfsb0:
-; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    mtfsb0 10
-; CHECK-PWR7-NEXT:    blr
 ; CHECK-LABEL: mtfsb0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtfsb0 10
@@ -36,15 +27,6 @@ entry:
 }
 
 define dso_local void @mtfsb1() local_unnamed_addr #0 {
-; CHECK-PWR8-LABEL: mtfsb1:
-; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    mtfsb1 0
-; CHECK-PWR8-NEXT:    blr
-;
-; CHECK-PWR7-LABEL: mtfsb1:
-; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    mtfsb1 0
-; CHECK-PWR7-NEXT:    blr
 ; CHECK-LABEL: mtfsb1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtfsb1 0

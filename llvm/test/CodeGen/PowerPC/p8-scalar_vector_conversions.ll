@@ -2496,7 +2496,6 @@ entry:
   ret double %vecext
 
 
-; CHECK-AIXT: xxlor 1, 34, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -2520,8 +2519,6 @@ define double @getd1(<2 x double> %vd) {
 entry:
   %vecext = extractelement <2 x double> %vd, i32 1
   ret double %vecext
-
-
 }
 
 ; Function Attrs: norecurse nounwind readnone

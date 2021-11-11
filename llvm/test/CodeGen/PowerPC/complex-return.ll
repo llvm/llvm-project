@@ -27,7 +27,7 @@ entry:
 ; CHECK-DAG: lfd 1
 ; CHECK-DAG: lfd 2
 ; CHECK-DAG: lfd 3
-; CHECK_DAG: lfd 4
+; CHECK-DAG: lfd 4
 
 define { float, float } @oof() nounwind {
 entry:
