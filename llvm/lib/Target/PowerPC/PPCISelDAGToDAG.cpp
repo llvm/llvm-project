@@ -5021,6 +5021,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         // The 2nd and 3rd operands are imm + reg.
         bool isOperand4IntS16Immediate =
             isIntS16Immediate(N->getOperand(4), SImmOperand4);
+        (void)isOperand4IntS16Immediate;
         assert(isOperand4IntS16Immediate &&
                "The 4th operand is not an Immediate");
         // We need to flip the condition immediate TO.
