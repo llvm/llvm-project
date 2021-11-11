@@ -4526,7 +4526,8 @@ void Process::SettingsInitialize() { Thread::SettingsInitialize(); }
 void Process::SettingsTerminate() { Thread::SettingsTerminate(); }
 
 namespace {
-// RestorePlanState is used to record the "is private", "is master" and "okay
+// RestorePlanState is used to record the "is private", "is controlling" and
+// "okay
 // to discard" fields of the plan we are running, and reset it on Clean or on
 // destruction. It will only reset the state once, so you can call Clean and
 // then monkey with the state and it won't get reset on you again.
@@ -4537,7 +4538,7 @@ public:
       : m_thread_plan_sp(thread_plan_sp), m_already_reset(false) {
     if (m_thread_plan_sp) {
       m_private = m_thread_plan_sp->GetPrivate();
-      m_is_master = m_thread_plan_sp->IsMasterPlan();
+      m_is_controlling = m_thread_plan_sp->IsControllingPlan();
       m_okay_to_discard = m_thread_plan_sp->OkayToDiscard();
     }
   }
@@ -4548,7 +4549,7 @@ public:
     if (!m_already_reset && m_thread_plan_sp) {
       m_already_reset = true;
       m_thread_plan_sp->SetPrivate(m_private);
-      m_thread_plan_sp->SetIsMasterPlan(m_is_master);
+      m_thread_plan_sp->SetIsControllingPlan(m_is_controlling);
       m_thread_plan_sp->SetOkayToDiscard(m_okay_to_discard);
     }
   }
@@ -4557,7 +4558,7 @@ private:
   lldb::ThreadPlanSP m_thread_plan_sp;
   bool m_already_reset;
   bool m_private;
-  bool m_is_master;
+  bool m_is_controlling;
   bool m_okay_to_discard;
 };
 } // anonymous namespace
@@ -4708,11 +4709,11 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   thread_plan_sp->SetPrivate(false);
 
-  // The plans run with RunThreadPlan also need to be terminal master plans or
-  // when they are done we will end up asking the plan above us whether we
+  // The plans run with RunThreadPlan also need to be terminal controlling plans
+  // or when they are done we will end up asking the plan above us whether we
   // should stop, which may give the wrong answer.
 
-  thread_plan_sp->SetIsMasterPlan(true);
+  thread_plan_sp->SetIsControllingPlan(true);
   thread_plan_sp->SetOkayToDiscard(false);
 
   // If we are running some utility expression for LLDB, we now have to mark

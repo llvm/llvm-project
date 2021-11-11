@@ -63,7 +63,9 @@ public:
     return ParseInlineAsmUsingAsmParser;
   }
   bool isPICDefault() const override { return true; }
-  bool isPIEDefault() const override { return false; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return false;
+  }
   bool isPICDefaultForced() const override { return true; }
 
   void

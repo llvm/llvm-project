@@ -1130,11 +1130,12 @@ def GPU_ELEMENTWISE_OP_ADD : StrEnumAttrCase<"ADDF">;
 def GPU_ELEMENTWISE_OP_MUL : StrEnumAttrCase<"MULF">;
 def GPU_ELEMENTWISE_OP_MAXF : StrEnumAttrCase<"MAXF">;
 def GPU_ELEMENTWISE_OP_MINF : StrEnumAttrCase<"MINF">;
+def GPU_ELEMENTWISE_OP_DIVF : StrEnumAttrCase<"DIVF">;
 
 def MMAElementWiseAttr : StrEnumAttr<"MMAElementwiseOp",
   "elementwise operation to apply to mma matrix",
   [GPU_ELEMENTWISE_OP_ADD, GPU_ELEMENTWISE_OP_MUL,
-   GPU_ELEMENTWISE_OP_MAXF, GPU_ELEMENTWISE_OP_MINF]> {
+   GPU_ELEMENTWISE_OP_MAXF, GPU_ELEMENTWISE_OP_MINF, GPU_ELEMENTWISE_OP_DIVF]> {
   let cppNamespace = "::mlir::gpu";
   let storageType = "::mlir::StringAttr";
   let returnType = "::mlir::gpu::MMAElementwiseOp";

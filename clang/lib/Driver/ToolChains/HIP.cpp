@@ -16,6 +16,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -36,6 +37,42 @@ using namespace llvm::opt;
 namespace {
 const unsigned HIPCodeObjectAlign = 4096;
 } // namespace
+
+static bool shouldSkipSanitizeOption(const ToolChain &TC,
+                                     const llvm::opt::ArgList &DriverArgs,
+                                     StringRef TargetID,
+                                     const llvm::opt::Arg *A) {
+  // For actions without targetID, do nothing.
+  if (TargetID.empty())
+    return false;
+  Option O = A->getOption();
+  if (!O.matches(options::OPT_fsanitize_EQ))
+    return false;
+
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                          -options::OPT_fno_gpu_sanitize))
+    return true;
+
+  auto &Diags = TC.getDriver().getDiags();
+
+  // For simplicity, we only allow -fsanitize=address
+  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+  if (K != SanitizerKind::Address)
+    return true;
+
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
+
+  assert(OptionalGpuArch && "Invalid Target ID");
+  auto Loc = FeatureMap.find("xnack");
+  if (Loc == FeatureMap.end() || !Loc->second) {
+    Diags.Report(
+        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    return true;
+  }
+  return false;
+}
 
 void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                           const InputInfoList &Inputs,
@@ -85,12 +122,6 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
-
-  if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                   false))
-    llvm::for_each(TC.getHIPDeviceLibs(Args), [&](auto BCFile) {
-      LldArgs.push_back(Args.MakeArgString(BCFile.Path));
-    });
 
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
@@ -237,6 +268,14 @@ HIPToolChain::HIPToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
+
+  // Diagnose unsupported sanitizer options only once.
+  for (auto A : Args.filtered(options::OPT_fsanitize_EQ)) {
+    SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+    if (K != SanitizerKind::Address)
+      D.getDiags().Report(clang::diag::warn_drv_unsupported_option_for_target)
+          << A->getAsString(Args) << getTriple().str();
+  }
 }
 
 void HIPToolChain::addClangTargetOptions(
@@ -295,7 +334,8 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    if (!shouldSkipArgument(A))
+    if (!shouldSkipArgument(A) &&
+        !shouldSkipSanitizeOption(*this, Args, BoundArch, A))
       DAL->append(A);
   }
 
@@ -399,7 +439,8 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
 
     // If --hip-device-lib is not set, add the default bitcode libraries.
     if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                           options::OPT_fno_gpu_sanitize, false)) {
+                           options::OPT_fno_gpu_sanitize) &&
+        getSanitizerArgs(DriverArgs).needsAsanRt()) {
       auto AsanRTL = RocmInstallation.getAsanRTLPath();
       if (AsanRTL.empty()) {
         unsigned DiagID = getDriver().getDiags().getCustomDiagID(
@@ -439,22 +480,6 @@ void HIPToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << PTID.OptionalTargetID.getValue();
-    return;
   }
-
-  assert(PTID.OptionalFeatures && "Invalid return from getParsedTargetID");
-  auto &FeatureMap = PTID.OptionalFeatures.getValue();
-  // Sanitizer is not supported with xnack-.
-  if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, false)) {
-    auto Loc = FeatureMap.find("xnack");
-    if (Loc != FeatureMap.end() && !Loc->second) {
-      auto &Diags = getDriver().getDiags();
-      auto DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "'-fgpu-sanitize' is not compatible with offload arch '%0'. "
-          "Use an offload arch without 'xnack-' instead");
-      Diags.Report(DiagID) << PTID.OptionalTargetID.getValue();
-    }
-  }
+  return;
 }

@@ -65,7 +65,8 @@ class SanitizerArgs {
 
 public:
   /// Parses the sanitizer arguments from an argument list.
-  SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args);
+  SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                bool DiagnoseErrors = true);
 
   bool needsSharedRt() const { return SharedRuntime; }
 
