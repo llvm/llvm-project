@@ -372,6 +372,15 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   NonLoc InputLHS = lhs;
   NonLoc InputRHS = rhs;
 
+  // Constraints may have changed since the creation of a bound SVal. Check if
+  // the values can be simplified based on those new constraints.
+  SVal simplifiedLhs = simplifySVal(state, lhs);
+  SVal simplifiedRhs = simplifySVal(state, rhs);
+  if (auto simplifiedLhsAsNonLoc = simplifiedLhs.getAs<NonLoc>())
+    lhs = *simplifiedLhsAsNonLoc;
+  if (auto simplifiedRhsAsNonLoc = simplifiedRhs.getAs<NonLoc>())
+    rhs = *simplifiedRhsAsNonLoc;
+
   // Handle trivial case where left-side and right-side are the same.
   if (lhs == rhs)
     switch (op) {
@@ -618,16 +627,6 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           return MakeSymIntVal(symIntExpr, op, *RHSValue, resultTy);
         }
       }
-
-      // Does the symbolic expression simplify to a constant?
-      // If so, "fold" the constant by setting 'lhs' to a ConcreteInt
-      // and try again.
-      SVal simplifiedLhs = simplifySVal(state, lhs);
-      if (simplifiedLhs != lhs)
-        if (auto simplifiedLhsAsNonLoc = simplifiedLhs.getAs<NonLoc>()) {
-          lhs = *simplifiedLhsAsNonLoc;
-          continue;
-        }
 
       // Is the RHS a constant?
       if (const llvm::APSInt *RHSValue = getKnownValue(state, rhs))
