@@ -1753,7 +1753,7 @@ def IntNonNegative : AttrConstraint<
     "whose value is non-negative">;
 
 def IntPositive : AttrConstraint<
-    CPred<"$_self.cast<IntegerAttr>().getValue().isStrictlyPositive()">,
+    CPred<"$_self.cast<::mlir::IntegerAttr>().getValue().isStrictlyPositive()">,
     "whose value is positive">;
 
 class ArrayMinCount<int n> : AttrConstraint<
