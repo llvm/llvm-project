@@ -1326,11 +1326,11 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
   const int IntvMaxVALUs = 6;
   const int NoHazardVALUWaitStates = IntvMaxVALUs + 2;
 
-  typedef struct {
+  struct StateType {
     SmallDenseMap<Register, int, 4> DefPos;
     int ExecPos = std::numeric_limits<int>::max();
     int VALUs = 0;
-  } StateType;
+  };
 
   StateType State;
 
