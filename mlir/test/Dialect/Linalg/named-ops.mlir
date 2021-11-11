@@ -29,6 +29,19 @@ func @depthwise_conv2D_nhwc_memref(%input: memref<2x4x5x2xf32>, %filter: memref<
   return
 }
 
+// CHECK-LABEL: func @depthwise_conv1D_nw_tensor
+func @depthwise_conv1D_nw_tensor(%input: tensor<1x113x96xf32>, %filter: tensor<3x96xf32>) -> tensor<1x56x96xf32> {
+  %init = linalg.init_tensor [1, 56, 96] : tensor<1x56x96xf32>
+  // CHECK:      %{{.+}} = linalg.depthwise_conv1D_nw
+  // CHECK-SAME:   {dilations = dense<1> : vector<1xi64>, strides = dense<2> : vector<1xi64>}
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : tensor<1x113x96xf32>, tensor<3x96xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : tensor<1x56x96xf32>) -> tensor<1x56x96xf32>
+  %0 = linalg.depthwise_conv1D_nw {dilations = dense<1> : vector<1xi64>, strides = dense<2> : vector<1xi64>}
+         ins(%input, %filter: tensor<1x113x96xf32>, tensor<3x96xf32>)
+         outs(%init: tensor<1x56x96xf32>) -> tensor<1x56x96xf32>
+  return %0: tensor<1x56x96xf32>
+}
+
 // CHECK-LABEL: func @depthwise_conv2D_nhw_tensor
 func @depthwise_conv2D_nhw_tensor(%input: tensor<1x113x113x96xf32>, %filter: tensor<3x3x96xf32>) -> tensor<1x56x56x96xf32> {
   %init = linalg.init_tensor [1, 56, 56, 96] : tensor<1x56x56x96xf32>
