@@ -38,8 +38,8 @@ Value mlir::x86vector::avx2::mm256UnpackHiPs(ImplicitLocOpBuilder &b, Value v1,
 ///                                 0:127    |         128:255
 ///                            b01  b23  C8  D8  |  b01+4 b23+4 C8+4 D8+4
 Value mlir::x86vector::avx2::mm256ShufflePs(ImplicitLocOpBuilder &b, Value v1,
-                                            Value v2, char mask) {
-  char b01, b23, b45, b67;
+                                            Value v2, int8_t mask) {
+  int8_t b01, b23, b45, b67;
   MaskHelper::extractShuffle(mask, b01, b23, b45, b67);
   SmallVector<int64_t> shuffleMask{b01,     b23,     b45 + 8,     b67 + 8,
                                    b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
@@ -54,9 +54,9 @@ Value mlir::x86vector::avx2::mm256ShufflePs(ImplicitLocOpBuilder &b, Value v1,
 // imm[0:1] out of imm[4:7].
 Value mlir::x86vector::avx2::mm256Permute2f128Ps(ImplicitLocOpBuilder &b,
                                                  Value v1, Value v2,
-                                                 char mask) {
+                                                 int8_t mask) {
   SmallVector<int64_t> shuffleMask;
-  auto appendToMask = [&](char control) {
+  auto appendToMask = [&](int8_t control) {
     if (control == 0)
       llvm::append_range(shuffleMask, ArrayRef<int64_t>{0, 1, 2, 3});
     else if (control == 1)
@@ -68,7 +68,7 @@ Value mlir::x86vector::avx2::mm256Permute2f128Ps(ImplicitLocOpBuilder &b,
     else
       llvm_unreachable("control > 3 : overflow");
   };
-  char b03, b47;
+  int8_t b03, b47;
   MaskHelper::extractPermute(mask, b03, b47);
   appendToMask(b03);
   appendToMask(b47);
