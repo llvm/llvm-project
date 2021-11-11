@@ -1,6 +1,5 @@
-"""Test that we can unwind out of a SIGABRT handler"""
-
-
+"""Test that we can unwind out of a signal handler.
+   Which for AArch64 Linux requires a specific unwind plan."""
 
 
 import lldb
@@ -9,31 +8,29 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class HandleAbortTestCase(TestBase):
+class UnwindSignalTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows  # signals do not exist on Windows
-    @expectedFailureNetBSD
-    def test_inferior_handle_sigabrt(self):
-        """Inferior calls abort() and handles the resultant SIGABRT.
-           Stopped at a breakpoint in the handler, verify that the backtrace
-           includes the function that called abort()."""
+    @skipUnlessArch("aarch64")
+    @skipUnlessPlatform(["linux"])
+    def test_unwind_signal(self):
+        """Inferior calls sigill() and handles the resultant SIGILL.
+           Stopped at a breakpoint in the handler, check that we can unwind
+           back to sigill() and get the expected register contents there."""
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        # launch
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetState(), lldb.eStateStopped)
-        signo = process.GetUnixSignals().GetSignalNumberFromName("SIGABRT")
+        signo = process.GetUnixSignals().GetSignalNumberFromName("SIGILL")
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
         self.assertTrue(
@@ -43,9 +40,9 @@ class HandleAbortTestCase(TestBase):
             thread.GetStopReasonDataCount() >= 1,
             "There should be data in the event.")
         self.assertEqual(thread.GetStopReasonDataAtIndex(0),
-                         signo, "The stop signal should be SIGABRT")
+                         signo, "The stop signal should be SIGILL")
 
-        # Continue to breakpoint in abort handler
+        # Continue to breakpoint in sigill handler
         bkpt = target.FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(self, "Set a breakpoint here"))
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
@@ -56,13 +53,26 @@ class HandleAbortTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual(frame.GetDisplayFunctionName(), "handler", "Unexpected break?")
 
-        # Expect that unwinding should find 'abort_caller'
-        foundFoo = False
-        for frame in thread:
-            if frame.GetDisplayFunctionName() == "abort_caller":
-                foundFoo = True
+        # Expect that unwinding should find 'sigill'
+        found_caller = False
+        for frame in thread.get_thread_frames():
+            if frame.GetDisplayFunctionName() == "sigill":
+                # We should have ascending values in the x registers
+                regs = frame.GetRegisters().GetValueAtIndex(0)
+                err = lldb.SBError()
 
-        self.assertTrue(foundFoo, "Unwinding did not find func that called abort")
+                for i in range(31):
+                  name = 'x{}'.format(i)
+                  value = regs.GetChildMemberWithName(name).GetValueAsUnsigned(err)
+                  self.assertTrue(err.Success(), "Failed to get register {}: {}".format(
+                                      name, err))
+                  self.assertEqual(value, i, "Unexpected value for register {}".format(
+                                      name))
+
+                found_caller = True
+                break
+
+        self.assertTrue(found_caller, "Unwinding did not find func that caused the SIGILL")
 
         # Continue until we exit.
         process.Continue()
