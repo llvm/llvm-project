@@ -150,6 +150,26 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 
 namespace __sanitizer {
 
+void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *old) {
+  CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, old));
+}
+
+ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
+  __sanitizer_sigset_t set;
+  internal_sigfillset(&set);
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+  // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
+  // on any thread, setuid call hangs.
+  // See test/sanitizer_common/TestCases/Linux/setuid.c.
+  internal_sigdelset(&set, 33);
+#  endif
+  SetSigProcMask(&set, &saved_);
+  if (copy)
+    internal_memcpy(copy, &saved_, sizeof(saved_));
+}
+
+ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
+
 #if SANITIZER_LINUX && defined(__x86_64__)
 #include "sanitizer_syscall_linux_x86_64.inc"
 #elif SANITIZER_LINUX && SANITIZER_RISCV64
@@ -841,26 +861,6 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
                           (uptr)k_oldset, sizeof(__sanitizer_kernel_sigset_t));
 #endif
 }
-
-void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *old) {
-  CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, old));
-}
-
-ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
-  __sanitizer_sigset_t set;
-  internal_sigfillset(&set);
-#    if SANITIZER_LINUX && !SANITIZER_ANDROID
-  // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
-  // on any thread, setuid call hangs.
-  // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  internal_sigdelset(&set, 33);
-#    endif
-  SetSigProcMask(&set, &saved_);
-  if (copy)
-    internal_memcpy(copy, &saved_, sizeof(saved_));
-}
-
-ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 
 void internal_sigfillset(__sanitizer_sigset_t *set) {
   internal_memset(set, 0xff, sizeof(*set));
