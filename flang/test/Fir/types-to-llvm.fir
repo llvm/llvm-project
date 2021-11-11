@@ -215,3 +215,11 @@ func private @foo0(%arg0: !fir.boxchar<1>)
 func private @foo1(%arg0: !fir.boxchar<2>)
 // CHECK-LABEL: foo1
 // CHECK-SAME: !llvm.struct<(ptr<i16>, i64)>
+
+// -----
+
+// Test `!fir.field` conversion
+
+func private @foo0(%arg0: !fir.field)
+// CHECK-LABEL: foo0
+// CHECK-SAME: i32

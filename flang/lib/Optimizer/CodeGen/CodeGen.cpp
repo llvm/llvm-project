@@ -13,6 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "PassDetail.h"
 #include "flang/ISO_Fortran_binding.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -38,6 +39,13 @@ genConstantIndex(mlir::Location loc, mlir::Type ity,
                  std::int64_t offset) {
   auto cattr = rewriter.getI64IntegerAttr(offset);
   return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+}
+
+static Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Block *insertBefore) {
+  assert(insertBefore && "expected valid insertion block");
+  return rewriter.createBlock(insertBefore->getParent(),
+                              mlir::Region::iterator(insertBefore));
 }
 
 namespace {
@@ -560,6 +568,46 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   }
 };
 
+/// Lower `fir.dispatch` operation. A virtual call to a method in a dispatch
+/// table.
+struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DispatchOp dispatch, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        dispatch, "fir.dispatch codegen is not implemented yet");
+  }
+};
+
+/// Lower `fir.dispatch_table` operation. The dispatch table for a Fortran
+/// derived type.
+struct DispatchTableOpConversion
+    : public FIROpConversion<fir::DispatchTableOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DispatchTableOp dispTab, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        dispTab, "fir.dispatch_table codegen is not implemented yet");
+  }
+};
+
+/// Lower `fir.dt_entry` operation. An entry in a dispatch table; binds a
+/// method-name to a function.
+struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DTEntryOp dtEnt, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        dtEnt, "fir.dt_entry codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -652,6 +700,122 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
         return mlir::LLVM::Linkage::Weak;
     }
     return mlir::LLVM::Linkage::External;
+  }
+};
+
+void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
+                 Optional<mlir::ValueRange> destOps,
+                 mlir::ConversionPatternRewriter &rewriter,
+                 mlir::Block *newBlock) {
+  if (destOps.hasValue())
+    rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, destOps.getValue(),
+                                          newBlock, mlir::ValueRange());
+  else
+    rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, newBlock);
+}
+
+template <typename A, typename B>
+void genBrOp(A caseOp, mlir::Block *dest, Optional<B> destOps,
+             mlir::ConversionPatternRewriter &rewriter) {
+  if (destOps.hasValue())
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, destOps.getValue(),
+                                                  dest);
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, llvm::None, dest);
+}
+
+void genCaseLadderStep(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
+                       Optional<mlir::ValueRange> destOps,
+                       mlir::ConversionPatternRewriter &rewriter) {
+  auto *thisBlock = rewriter.getInsertionBlock();
+  auto *newBlock = createBlock(rewriter, dest);
+  rewriter.setInsertionPointToEnd(thisBlock);
+  genCondBrOp(loc, cmp, dest, destOps, rewriter, newBlock);
+  rewriter.setInsertionPointToEnd(newBlock);
+}
+
+/// Conversion of `fir.select_case`
+///
+/// The `fir.select_case` operation is converted to a if-then-else ladder.
+/// Depending on the case condition type, one or several comparison and
+/// conditional branching can be generated.
+///
+/// A a point value case such as `case(4)`, a lower bound case such as
+/// `case(5:)` or an upper bound case such as `case(:3)` are converted to a
+/// simple comparison between the selector value and the constant value in the
+/// case. The block associated with the case condition is then executed if
+/// the comparison succeed otherwise it branch to the next block with the
+/// comparison for the the next case conditon.
+///
+/// A closed interval case condition such as `case(7:10)` is converted with a
+/// first comparison and conditional branching for the lower bound. If
+/// successful, it branch to a second block with the comparison for the
+/// upper bound in the same case condition.
+///
+/// TODO: lowering of CHARACTER type cases is not handled yet.
+struct SelectCaseOpConversion : public FIROpConversion<fir::SelectCaseOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::SelectCaseOp caseOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    unsigned conds = caseOp.getNumConditions();
+    llvm::ArrayRef<mlir::Attribute> cases = caseOp.getCases().getValue();
+    // Type can be CHARACTER, INTEGER, or LOGICAL (C1145)
+    LLVM_ATTRIBUTE_UNUSED auto ty = caseOp.getSelector().getType();
+    if (ty.isa<fir::CharacterType>())
+      return rewriter.notifyMatchFailure(caseOp,
+                                         "conversion of fir.select_case with "
+                                         "character type not implemented yet");
+    mlir::Value selector = caseOp.getSelector(adaptor.getOperands());
+    auto loc = caseOp.getLoc();
+    for (unsigned t = 0; t != conds; ++t) {
+      mlir::Block *dest = caseOp.getSuccessor(t);
+      llvm::Optional<mlir::ValueRange> destOps =
+          caseOp.getSuccessorOperands(adaptor.getOperands(), t);
+      llvm::Optional<mlir::ValueRange> cmpOps =
+          *caseOp.getCompareOperands(adaptor.getOperands(), t);
+      mlir::Value caseArg = *(cmpOps.getValue().begin());
+      mlir::Attribute attr = cases[t];
+      if (attr.isa<fir::PointIntervalAttr>()) {
+        auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::eq, selector, caseArg);
+        genCaseLadderStep(loc, cmp, dest, destOps, rewriter);
+        continue;
+      }
+      if (attr.isa<fir::LowerBoundAttr>()) {
+        auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::sle, caseArg, selector);
+        genCaseLadderStep(loc, cmp, dest, destOps, rewriter);
+        continue;
+      }
+      if (attr.isa<fir::UpperBoundAttr>()) {
+        auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::sle, selector, caseArg);
+        genCaseLadderStep(loc, cmp, dest, destOps, rewriter);
+        continue;
+      }
+      if (attr.isa<fir::ClosedIntervalAttr>()) {
+        auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::sle, caseArg, selector);
+        auto *thisBlock = rewriter.getInsertionBlock();
+        auto *newBlock1 = createBlock(rewriter, dest);
+        auto *newBlock2 = createBlock(rewriter, dest);
+        rewriter.setInsertionPointToEnd(thisBlock);
+        rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, newBlock1, newBlock2);
+        rewriter.setInsertionPointToEnd(newBlock1);
+        mlir::Value caseArg0 = *(cmpOps.getValue().begin() + 1);
+        auto cmp0 = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::sle, selector, caseArg0);
+        genCondBrOp(loc, cmp0, dest, destOps, rewriter, newBlock2);
+        rewriter.setInsertionPointToEnd(newBlock2);
+        continue;
+      }
+      assert(attr.isa<mlir::UnitAttr>());
+      assert((t + 1 == conds) && "unit must be last");
+      genBrOp(caseOp, dest, destOps, rewriter);
+    }
+    return success();
   }
 };
 
@@ -1189,12 +1353,13 @@ public:
         BoxAddrOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
         BoxRankOpConversion, CallOpConversion, ConvertOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
         DivcOpConversion, ExtractValueOpConversion, HasValueOpConversion,
         GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
         LoadOpConversion, NegcOpConversion, MulcOpConversion,
-        SelectOpConversion, SelectRankOpConversion, StoreOpConversion,
-        SubcOpConversion, UndefOpConversion, UnreachableOpConversion,
-        ZeroOpConversion>(typeConverter);
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        StoreOpConversion, SubcOpConversion, UndefOpConversion,
+        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);

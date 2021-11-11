@@ -961,3 +961,155 @@ func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.array<4x?
 // CHECK: [[PROD3:%.*]] = llvm.mul [[PROD2]], [[B]] : i64
 // CHECK: [[RES:%.*]] = llvm.alloca [[PROD3]] x i32 {in_type = !fir.array<4x?x3x?x5xi32>
 // CHECK: llvm.return [[RES]] : !llvm.ptr<i32>
+
+// -----
+
+// Test `fir.select_case` operation conversion with INTEGER.
+
+func @select_case_integer(%arg0: !fir.ref<i32>) -> i32 {
+  %2 = fir.load %arg0 : !fir.ref<i32>
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %c4_i32 = arith.constant 4 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c7_i32 = arith.constant 7 : i32
+  %c8_i32 = arith.constant 8 : i32
+  %c15_i32 = arith.constant 15 : i32
+  %c21_i32 = arith.constant 21 : i32
+  fir.select_case %2 : i32 [#fir.upper, %c1_i32, ^bb1,
+                            #fir.point, %c2_i32, ^bb2,
+                            #fir.interval, %c4_i32, %c5_i32, ^bb4,
+                            #fir.point, %c7_i32, ^bb5,
+                            #fir.interval, %c8_i32, %c15_i32, ^bb5,
+                            #fir.lower, %c21_i32, ^bb5,
+                            unit, ^bb3]
+^bb1:  // pred: ^bb0
+  %c1_i32_0 = arith.constant 1 : i32
+  fir.store %c1_i32_0 to %arg0 : !fir.ref<i32>
+  br ^bb6
+^bb2:  // pred: ^bb0
+  %c2_i32_1 = arith.constant 2 : i32
+  fir.store %c2_i32_1 to %arg0 : !fir.ref<i32>
+  br ^bb6
+^bb3:  // pred: ^bb0
+  %c0_i32 = arith.constant 0 : i32
+  fir.store %c0_i32 to %arg0 : !fir.ref<i32>
+  br ^bb6
+^bb4:  // pred: ^bb0
+  %c4_i32_2 = arith.constant 4 : i32
+  fir.store %c4_i32_2 to %arg0 : !fir.ref<i32>
+  br ^bb6
+^bb5:  // 3 preds: ^bb0, ^bb0, ^bb0
+  %c7_i32_3 = arith.constant 7 : i32
+  fir.store %c7_i32_3 to %arg0 : !fir.ref<i32>
+  br ^bb6
+^bb6:  // 5 preds: ^bb1, ^bb2, ^bb3, ^bb4, ^bb5
+  %3 = fir.load %arg0 : !fir.ref<i32>
+  return %3 : i32
+}
+
+// CHECK-LABEL: llvm.func @select_case_integer(
+// CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr<i32>) -> i32 {
+// CHECK:         %[[SELECT_VALUE:.*]] = llvm.load %[[ARG0]] : !llvm.ptr<i32>
+// CHECK:         %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK:         %[[CST4:.*]] = llvm.mlir.constant(4 : i32) : i32
+// CHECK:         %[[CST5:.*]] = llvm.mlir.constant(5 : i32) : i32
+// CHECK:         %[[CST7:.*]] = llvm.mlir.constant(7 : i32) : i32
+// CHECK:         %[[CST8:.*]] = llvm.mlir.constant(8 : i32) : i32
+// CHECK:         %[[CST15:.*]] = llvm.mlir.constant(15 : i32) : i32
+// CHECK:         %[[CST21:.*]] = llvm.mlir.constant(21 : i32) : i32
+// Check for upper bound `case (:1)`
+// CHECK:         %[[CMP_SLE:.*]] = llvm.icmp "sle" %[[SELECT_VALUE]], %[[CST1]] : i32
+// CHECK:         llvm.cond_br %[[CMP_SLE]], ^bb2, ^bb1
+// CHECK-LABEL: ^bb1:
+// Check for point value `case (2)`
+// CHECK:         %[[CMP_EQ:.*]] = llvm.icmp "eq" %[[SELECT_VALUE]], %[[CST2]] : i32
+// CHECK:         llvm.cond_br %[[CMP_EQ]], ^bb4, ^bb3
+// Block ^bb1 in original FIR code.
+// CHECK-LABEL: ^bb2:
+// CHECK:         llvm.br ^bb{{.*}}
+// CHECK-LABEL: ^bb3:
+// Check for the lower bound for the interval `case (4:5)`
+// CHECK:        %[[CMP_SLE:.*]] = llvm.icmp "sle" %[[CST4]], %[[SELECT_VALUE]] : i32
+// CHECK:        llvm.cond_br %[[CMP_SLE]], ^bb[[UPPERBOUND5:.*]], ^bb7
+// Block ^bb2 in original FIR code.
+// CHECK-LABEL: ^bb4:
+// CHECK:        llvm.br ^bb{{.*}}
+// Block ^bb3 in original FIR code.
+// CHECK-LABEL: ^bb5:
+// CHECK:        llvm.br ^bb{{.*}}
+// CHECK:       ^bb[[UPPERBOUND5]]:
+// Check for the upper bound for the interval `case (4:5)`
+// CHECK:        %[[CMP_SLE:.*]] = llvm.icmp "sle" %[[SELECT_VALUE]], %[[CST5]] : i32
+// CHECK:        llvm.cond_br %[[CMP_SLE]], ^bb8, ^bb7
+// CHECK-LABEL: ^bb7:
+// Check for the point value 7 in `case (7,8:15,21:)`
+// CHECK: %[[CMP_EQ:.*]] = llvm.icmp "eq" %[[SELECT_VALUE]], %[[CST7]] : i32
+// CHECK: llvm.cond_br %[[CMP_EQ]], ^bb13, ^bb9
+// Block ^bb4 in original FIR code.
+// CHECK-LABEL: ^bb8:
+// CHECK:        llvm.br ^bb{{.*}}
+// CHECK-LABEL: ^bb9:
+// Check for lower bound 8 in `case (7,8:15,21:)`
+// CHECK:        %[[CMP_SLE:.*]] = llvm.icmp "sle" %[[CST8]], %[[SELECT_VALUE]] : i32
+// CHECK:        llvm.cond_br %[[CMP_SLE]], ^bb[[INTERVAL8_15:.*]], ^bb11
+// CHECK:       ^bb[[INTERVAL8_15]]:
+// Check for upper bound 15 in `case (7,8:15,21:)`
+// CHECK:        %[[CMP_SLE:.*]] = llvm.icmp "sle" %[[SELECT_VALUE]], %[[CST15]] : i32
+// CHECK:        llvm.cond_br %[[CMP_SLE]], ^bb13, ^bb11
+// CHECK-LABEL: ^bb11:
+// Check for lower bound 21 in `case (7,8:15,21:)`
+// CHECK:        %[[CMP_SLE:.*]]  = llvm.icmp "sle" %[[CST21]], %[[SELECT_VALUE]] : i32
+// CHECK:        llvm.cond_br %[[CMP_SLE]], ^bb13, ^bb12
+// CHECK-LABEL: ^bb12:
+// CHECK:         llvm.br ^bb5
+// Block ^bb5 in original FIR code.
+// CHECK-LABEL: ^bb13:
+// CHECK:        llvm.br ^bb14
+// Block ^bb6 in original FIR code.
+// CHECK-LABEL: ^bb14:
+// CHECK:        %[[RET:.*]] = llvm.load %[[ARG0:.*]] : !llvm.ptr<i32>
+// CHECK:        llvm.return %[[RET]] : i32
+
+// -----
+
+// Test `fir.select_case` operation conversion with LOGICAL.
+
+func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
+  %1 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
+  %2 = fir.convert %1 : (!fir.logical<4>) -> i1
+  %false = arith.constant false
+  %true = arith.constant true
+  fir.select_case %2 : i1 [#fir.point, %false, ^bb1,
+                           #fir.point, %true, ^bb2,
+                            unit, ^bb3]
+^bb1:
+  %c1_i32 = arith.constant 1 : i32
+  br ^bb3
+^bb2:
+  %c2_i32 = arith.constant 2 : i32
+  br ^bb3
+^bb3:
+  return
+}
+
+// CHECK-LABEL: llvm.func @select_case_logical(
+// CHECK-SAME:                                 %[[ARG0:.*]]: !llvm.ptr<i32>
+// CHECK:         %[[LOAD_ARG0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr<i32>
+// CHECK:         %[[SELECT_VALUE:.*]] = llvm.trunc %[[LOAD_ARG0]] : i32 to i1
+// CHECK:         %[[CST_FALSE:.*]] = llvm.mlir.constant(false) : i1
+// CHECK:         %[[CST_TRUE:.*]] = llvm.mlir.constant(true) : i1
+// CHECK:         %[[CMPEQ:.*]] = llvm.icmp "eq" %[[SELECT_VALUE]], %[[CST_FALSE]] : i1
+// CHECK:         llvm.cond_br %[[CMPEQ]], ^bb2, ^bb1
+// CHECK-LABEL: ^bb1:
+// CHECK:         %[[CMPEQ:.*]] = llvm.icmp "eq" %[[SELECT_VALUE]], %[[CST_TRUE]] : i1
+// CHECK:         llvm.cond_br %[[CMPEQ]], ^bb4, ^bb3
+// CHECK-LABEL: ^bb2:
+// CHECK:         llvm.br ^bb5
+// CHECK-LABEL: ^bb3:
+// CHECK:         llvm.br ^bb5
+// CHECK-LABEL: ^bb4:
+// CHECK:         llvm.br ^bb5
+// CHECK-LABEL: ^bb5:
+// CHECK:        llvm.return
