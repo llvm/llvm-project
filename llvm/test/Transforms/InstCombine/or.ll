@@ -221,8 +221,8 @@ define i1 @test25_logical(i32 %A, i32 %B) {
 }
 
 ; PR5634
-define i1 @test26(i32 %A, i32 %B) {
-; CHECK-LABEL: @test26(
+define i1 @and_icmp_eq_0(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_icmp_eq_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TMP2]]
@@ -234,8 +234,46 @@ define i1 @test26(i32 %A, i32 %B) {
   ret i1 %D
 }
 
-define i1 @test26_logical(i32 %A, i32 %B) {
-; CHECK-LABEL: @test26_logical(
+define <2 x i1> @and_icmp_eq_0_vector(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @and_icmp_eq_0_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %C1 = icmp eq <2 x i32> %A, zeroinitializer
+  %C2 = icmp eq <2 x i32> %B, zeroinitializer
+  %D = and <2 x i1> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define <2 x i1> @and_icmp_eq_0_vector_undef1(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @and_icmp_eq_0_vector_undef1(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 0, i32 undef>
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq <2 x i32> [[B:%.*]], <i32 0, i32 undef>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %C1 = icmp eq <2 x i32> %A, <i32 0, i32 undef>
+  %C2 = icmp eq <2 x i32> %B, <i32 0, i32 undef>
+  %D = and <2 x i1> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define <2 x i1> @and_icmp_eq_0_vector_undef2(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @and_icmp_eq_0_vector_undef2(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 0, i32 undef>
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq <2 x i32> [[B:%.*]], <i32 undef, i32 0>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %C1 = icmp eq <2 x i32> %A, <i32 0, i32 undef>
+  %C2 = icmp eq <2 x i32> %B, <i32 undef, i32 0>
+  %D = and <2 x i1> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define i1 @and_icmp_eq_0_logical(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_icmp_eq_0_logical(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    [[D:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
