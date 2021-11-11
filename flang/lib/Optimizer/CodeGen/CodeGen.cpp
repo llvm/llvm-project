@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "PassDetail.h"
+#include "flang/ISO_Fortran_binding.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FIRContext.h"
@@ -28,6 +29,11 @@
 
 // fir::LLVMTypeConverter for converting to LLVM IR dialect types.
 #include "TypeConverter.h"
+
+/// `fir.box` attribute values as defined for CFI_attribute_t in
+/// flang/ISO_Fortran_binding.h.
+static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
+static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
 namespace {
 /// FIR conversion pattern template
@@ -51,16 +57,17 @@ protected:
     return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
   }
 
-  /// Construct code sequence to get the rank from a box.
-  mlir::Value getRankFromBox(mlir::Location loc, mlir::Value box,
-                             mlir::Type resultTy,
-                             mlir::ConversionPatternRewriter &rewriter) const {
+  /// Construct code sequence to extract the specifc value from a `fir.box`.
+  mlir::Value getValueFromBox(mlir::Location loc, mlir::Value box,
+                              mlir::Type resultTy,
+                              mlir::ConversionPatternRewriter &rewriter,
+                              unsigned boxValue) const {
     mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
-    mlir::LLVM::ConstantOp cRank =
-        genConstantOffset(loc, rewriter, kRankPosInBox);
+    mlir::LLVM::ConstantOp cValuePos =
+        genConstantOffset(loc, rewriter, boxValue);
     auto pty = mlir::LLVM::LLVMPointerType::get(resultTy);
     auto p = rewriter.create<mlir::LLVM::GEPOp>(
-        loc, pty, mlir::ValueRange{box, c0, cRank});
+        loc, pty, mlir::ValueRange{box, c0, cValuePos});
     return rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
   }
 
@@ -114,6 +121,23 @@ protected:
     auto pty = mlir::LLVM::LLVMPointerType::get(ty);
     mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, c0, cElemLen);
     return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  }
+
+  // Load the attribute from the \p box and perform a check against \p maskValue
+  // The final comparison is implemented as `(attribute & maskValue) != 0`.
+  mlir::Value genBoxAttributeCheck(mlir::Location loc, mlir::Value box,
+                                   mlir::ConversionPatternRewriter &rewriter,
+                                   unsigned maskValue) const {
+    mlir::Type attrTy = rewriter.getI32Type();
+    mlir::Value attribute =
+        getValueFromBox(loc, box, attrTy, rewriter, kAttributePosInBox);
+    mlir::LLVM::ConstantOp attrMask =
+        genConstantOffset(loc, rewriter, maskValue);
+    auto maskRes =
+        rewriter.create<mlir::LLVM::AndOp>(loc, attrTy, attribute, attrMask);
+    mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
+    return rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::ne, maskRes, c0);
   }
 
   template <typename... ARGS>
@@ -218,7 +242,60 @@ struct BoxEleSizeOpConversion : public FIROpConversion<fir::BoxEleSizeOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxelesz.getLoc();
     auto ty = convertType(boxelesz.getType());
-    rewriter.replaceOp(boxelesz, loadElementSizeFromBox(loc, ty, a, rewriter));
+    auto elemSize = getValueFromBox(loc, a, ty, rewriter, kElemLenPosInBox);
+    rewriter.replaceOp(boxelesz, elemSize);
+    return success();
+  }
+};
+
+/// Lower `fir.box_isalloc` to a sequence of operations to determine if the
+/// boxed value was from an ALLOCATABLE entity.
+struct BoxIsAllocOpConversion : public FIROpConversion<fir::BoxIsAllocOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxIsAllocOp boxisalloc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value box = adaptor.getOperands()[0];
+    auto loc = boxisalloc.getLoc();
+    mlir::Value check =
+        genBoxAttributeCheck(loc, box, rewriter, kAttrAllocatable);
+    rewriter.replaceOp(boxisalloc, check);
+    return success();
+  }
+};
+
+/// Lower `fir.box_isarray` to a sequence of operations to determine if the
+/// boxed is an array.
+struct BoxIsArrayOpConversion : public FIROpConversion<fir::BoxIsArrayOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxIsArrayOp boxisarray, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value a = adaptor.getOperands()[0];
+    auto loc = boxisarray.getLoc();
+    auto rank =
+        getValueFromBox(loc, a, rewriter.getI32Type(), rewriter, kRankPosInBox);
+    auto c0 = genConstantOffset(loc, rewriter, 0);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        boxisarray, mlir::LLVM::ICmpPredicate::ne, rank, c0);
+    return success();
+  }
+};
+
+/// Lower `fir.box_isptr` to a sequence of operations to determined if the
+/// boxed value was from a POINTER entity.
+struct BoxIsPtrOpConversion : public FIROpConversion<fir::BoxIsPtrOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxIsPtrOp boxisptr, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value box = adaptor.getOperands()[0];
+    auto loc = boxisptr.getLoc();
+    mlir::Value check = genBoxAttributeCheck(loc, box, rewriter, kAttrPointer);
+    rewriter.replaceOp(boxisptr, check);
     return success();
   }
 };
@@ -234,7 +311,7 @@ struct BoxRankOpConversion : public FIROpConversion<fir::BoxRankOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxrank.getLoc();
     mlir::Type ty = convertType(boxrank.getType());
-    auto result = getRankFromBox(loc, a, ty, rewriter);
+    auto result = getValueFromBox(loc, a, ty, rewriter, kRankPosInBox);
     rewriter.replaceOp(boxrank, result);
     return success();
   }
@@ -997,7 +1074,8 @@ public:
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<
         AddcOpConversion, AddrOfOpConversion, BoxAddrOpConversion,
-        BoxDimsOpConversion, BoxEleSizeOpConversion, BoxRankOpConversion,
+        BoxDimsOpConversion, BoxEleSizeOpConversion, BoxIsAllocOpConversion,
+        BoxIsArrayOpConversion, BoxIsPtrOpConversion, BoxRankOpConversion,
         CallOpConversion, ConvertOpConversion, DivcOpConversion,
         ExtractValueOpConversion, HasValueOpConversion, GlobalOpConversion,
         InsertOnRangeOpConversion, InsertValueOpConversion, LoadOpConversion,
