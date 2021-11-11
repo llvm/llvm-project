@@ -1757,6 +1757,34 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
         mi->RemoveOperand(1);
         mi->setDesc(TII->get(TargetOpcode::COPY));
         LLVM_DEBUG(dbgs() << "\t\tconvert to:\t" << *mi);
+
+        // Update LiveIntervals.
+        if (LIS) {
+          Register Reg = mi->getOperand(0).getReg();
+          LiveInterval &LI = LIS->getInterval(Reg);
+          if (LI.hasSubRanges()) {
+            // The COPY no longer defines subregs of %reg except for
+            // %reg.subidx.
+            LaneBitmask LaneMask =
+                TRI->getSubRegIndexLaneMask(mi->getOperand(0).getSubReg());
+            SlotIndex Idx = LIS->getInstructionIndex(*mi);
+            for (auto &S : LI.subranges()) {
+              if ((S.LaneMask & LaneMask).none()) {
+                LiveRange::iterator UseSeg = S.FindSegmentContaining(Idx);
+                LiveRange::iterator DefSeg = std::next(UseSeg);
+                S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+              }
+            }
+
+            // The COPY no longer has a use of %reg.
+            LIS->shrinkToUses(&LI);
+          } else {
+            // The live interval for Reg did not have subranges but now it needs
+            // them because we have introduced a subreg def. Recompute it.
+            LIS->removeInterval(Reg);
+            LIS->createAndComputeVirtRegInterval(Reg);
+          }
+        }
       }
 
       // Clear TiedOperands here instead of at the top of the loop
