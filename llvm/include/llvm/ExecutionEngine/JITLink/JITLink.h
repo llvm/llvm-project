@@ -1299,6 +1299,8 @@ public:
                      bool PreserveSrcSection = false) {
     if (&DstSection == &SrcSection)
       return;
+    for (auto *B : SrcSection.blocks())
+      B->setSection(DstSection);
     SrcSection.transferContentTo(DstSection);
     if (!PreserveSrcSection)
       removeSection(SrcSection);
