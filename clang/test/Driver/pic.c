@@ -267,30 +267,12 @@
 //
 // On Android PIC is enabled by default, and PIE is enabled by default starting
 // with API16.
-// RUN: %clang -c %s -target i686-linux-android -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
-// RUN: %clang -c %s -target i686-linux-android14 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
-// RUN: %clang -c %s -target i686-linux-android16 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s -target i686-linux-android24 -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 //
-// RUN: %clang -c %s -target arm-linux-androideabi -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
-// RUN: %clang -c %s -target arm-linux-androideabi14 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
-// RUN: %clang -c %s -target arm-linux-androideabi16 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s -target arm-linux-androideabi24 -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 //
-// RUN: %clang -c %s -target mipsel-linux-android -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
-// RUN: %clang -c %s -target mipsel-linux-android14 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
-// RUN: %clang -c %s -target mipsel-linux-android16 -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 // RUN: %clang -c %s -target mipsel-linux-android24 -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE1
 //
@@ -305,10 +287,6 @@
 // Default value of PIE can be overwritten, even on 64-bit targets.
 // RUN: %clang -c %s -target arm-linux-androideabi -fPIE -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
-// RUN: %clang -c %s -target i686-linux-android14 -fPIE -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
-// RUN: %clang -c %s -target i686-linux-android16 -fno-PIE -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 // RUN: %clang -c %s -target aarch64-linux-android -fno-PIE -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 // RUN: %clang -c %s -target aarch64-linux-android24 -fno-PIE -### 2>&1 \

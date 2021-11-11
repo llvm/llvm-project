@@ -83,7 +83,7 @@ entry:
 ; ASM64-DAG:      ld 16, -128(1)                  # 8-byte Folded Reload
 ; ASM64:          blr
 
-; ASM32-LABEl: .gprs_only:
+; ASM32-LABEL: .gprs_only:
 ; ASM32-DAG:     stw 16, -64(1)                  # 4-byte Folded Spill
 ; ASM32-DAG:     stw 22, -40(1)                  # 4-byte Folded Spill
 ; ASM32-DAG:     stw 30, -8(1)                   # 4-byte Folded Spill
