@@ -9,7 +9,7 @@ line, as described in `Trojan Source <https://trojansource.codes>`_.
 
 An example of such misleading code follows:
 
-.. code-block:: c
+.. code-block:: text
 
   #include <stdio.h>
 
