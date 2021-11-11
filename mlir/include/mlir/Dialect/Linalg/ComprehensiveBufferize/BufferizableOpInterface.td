@@ -233,6 +233,18 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           && static_cast<bool>(
               bufferizableOp.getAliasingOpResult(opOperand));
     }
+
+    // TODO: The following two attributes should belong to the tensor dialect.
+    // The corresponding verifier should also be in the tensor dialect.
+    /// Attribute name used to mark region arguments that can be bufferized
+    /// in-place during linalg comprehensive bufferization.
+    constexpr const static ::llvm::StringLiteral
+      kInplaceableAttrName = "linalg.inplaceable";
+
+    /// Attribute name used to mark the bufferization layout for region
+    /// arguments during linalg comprehensive bufferization.
+    constexpr const static ::llvm::StringLiteral
+      kBufferLayoutAttrName = "linalg.buffer_layout";
   }];
 }
 
