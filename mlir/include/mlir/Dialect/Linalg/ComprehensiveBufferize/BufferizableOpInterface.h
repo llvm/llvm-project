@@ -18,6 +18,8 @@ namespace mlir {
 class BlockAndValueMapping;
 
 namespace linalg {
+namespace comprehensive_bufferize {
+
 struct AllocationCallbacks;
 class BufferizationAliasInfo;
 
@@ -28,6 +30,37 @@ enum class BufferRelation {
   // TODO: OperandContainsResult,
   Equivalent
 };
+
+/// Determine which OpOperand* will alias with `result` if the op is bufferized
+/// in place. Return an empty vector if the op is not bufferizable.
+SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
+
+/// Determine which OpResult will alias with `opOperand` if the op is bufferized
+/// in place. Return an empty OpResult if the op is not bufferizable.
+OpResult getAliasingOpResult(OpOperand &opOperand);
+
+/// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
+/// op is not bufferizable.
+bool bufferizesToMemoryRead(OpOperand &opOperand);
+
+/// Return true if `opOperand` bufferizes to a memory write. Return
+/// `true` if the op is not bufferizable.
+bool bufferizesToMemoryWrite(OpOperand &opOperand);
+
+/// Return true if `opOperand` does neither read nor write but bufferizes to an
+/// alias. Return false if the op is not bufferizable.
+bool bufferizesToAliasOnly(OpOperand &opOperand);
+
+/// Return true if the given value is read by an op that bufferizes to a memory
+/// read. Also takes into account ops that create an alias but do not read by
+/// themselves (e.g., ExtractSliceOp).
+bool isValueRead(Value value);
+
+/// Return the relationship between the operand and the its corresponding
+/// OpResult that it may alias with. Return None if the op is not bufferizable.
+BufferRelation bufferRelation(OpOperand &opOperand);
+
+} // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir
 

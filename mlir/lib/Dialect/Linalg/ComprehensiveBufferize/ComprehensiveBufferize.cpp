@@ -132,6 +132,7 @@
 using namespace mlir;
 using namespace linalg;
 using namespace tensor;
+using namespace comprehensive_bufferize;
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
@@ -402,97 +403,6 @@ static std::string printValueInfo(Value value, bool prefix) {
   os << value;
   printTensorOrBufferInfo("\n\t - ", value, state, os);
   return result;
-}
-
-//===----------------------------------------------------------------------===//
-// Helper functions for BufferizableOpInterface
-//===----------------------------------------------------------------------===//
-
-/// Determine which OpOperand* will alias with `result` if the op is bufferized
-/// in place. Return an empty vector if the op is not bufferizable.
-static SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) {
-  if (Operation *op = result.getDefiningOp())
-    if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
-      return bufferizableOp.getAliasingOpOperand(result);
-  return {};
-}
-
-/// Determine which OpResult will alias with `opOperand` if the op is bufferized
-/// in place. Return an empty OpResult if the op is not bufferizable.
-static OpResult getAliasingOpResult(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.getAliasingOpResult(opOperand);
-  return OpResult();
-}
-
-/// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
-/// op is not bufferizable.
-static bool bufferizesToMemoryRead(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.bufferizesToMemoryRead(opOperand);
-
-  // Unknown op that returns a tensor. The inplace analysis does not support it.
-  // Conservatively return true.
-  return true;
-}
-
-/// Return true if `opOperand` bufferizes to a memory write. Return
-/// `true` if the op is not bufferizable.
-static bool bufferizesToMemoryWrite(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.bufferizesToMemoryWrite(opOperand);
-
-  // Unknown op that returns a tensor. The inplace analysis does not support it.
-  // Conservatively return true.
-  return true;
-}
-
-/// Return true if `opOperand` does neither read nor write but bufferizes to an
-/// alias. Return false if the op is not bufferizable.
-static bool bufferizesToAliasOnly(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.bufferizesToAliasOnly(opOperand);
-
-  // Unknown op that returns a tensor. The inplace analysis does not support it.
-  // Conservatively return false.
-  return false;
-}
-
-/// Return true if the given value is read by an op that bufferizes to a memory
-/// read. Also takes into account ops that create an alias but do not read by
-/// themselves (e.g., ExtractSliceOp).
-static bool isValueRead(Value value) {
-  SmallVector<OpOperand *> workingSet;
-  for (OpOperand &use : value.getUses())
-    workingSet.push_back(&use);
-
-  while (!workingSet.empty()) {
-    OpOperand *uMaybeReading = workingSet.pop_back_val();
-    // Skip over all ops that neither read nor write (but create an alias).
-    if (bufferizesToAliasOnly(*uMaybeReading))
-      for (OpOperand &use : getAliasingOpResult(*uMaybeReading).getUses())
-        workingSet.push_back(&use);
-    if (bufferizesToMemoryRead(*uMaybeReading))
-      return true;
-  }
-
-  return false;
-}
-
-/// Return the relationship between the operand and the its corresponding
-/// OpResult that it may alias with. Return None if the op is not bufferizable.
-static BufferRelation bufferRelation(OpOperand &opOperand) {
-  if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
-    return bufferizableOp.bufferRelation(opOperand);
-
-  // Unknown op that returns a tensor. The inplace analysis does not support it.
-  // Conservatively return None.
-  return BufferRelation::None;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1623,10 +1533,9 @@ bufferizableInPlaceAnalysis(OpOperand &operand,
 /// Analyze the `ops` to determine which OpResults are inplaceable. Walk ops in
 /// reverse and bufferize ops greedily. This is a good starter heuristic.
 /// ExtractSliceOps are interleaved with other ops in traversal order.
-LogicalResult mlir::linalg::inPlaceAnalysis(SmallVector<Operation *> &ops,
-                                            BufferizationAliasInfo &aliasInfo,
-                                            const DominanceInfo &domInfo,
-                                            unsigned analysisFuzzerSeed) {
+LogicalResult mlir::linalg::comprehensive_bufferize::inPlaceAnalysis(
+    SmallVector<Operation *> &ops, BufferizationAliasInfo &aliasInfo,
+    const DominanceInfo &domInfo, unsigned analysisFuzzerSeed) {
   if (analysisFuzzerSeed) {
     // This is a fuzzer. For testing purposes only. Randomize the order in which
     // operations are analyzed. The bufferization quality is likely worse, but
@@ -1685,25 +1594,27 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
 // Bufferization entry-point for functions.
 //===----------------------------------------------------------------------===//
 
-Optional<Value>
-mlir::linalg::defaultAllocationFn(OpBuilder &b, Location loc, MemRefType type,
-                                  const SmallVector<Value> &dynShape) {
+Optional<Value> mlir::linalg::comprehensive_bufferize::defaultAllocationFn(
+    OpBuilder &b, Location loc, MemRefType type,
+    const SmallVector<Value> &dynShape) {
   Value allocated = b.create<memref::AllocOp>(
       loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
   return allocated;
 }
 
-void mlir::linalg::defaultDeallocationFn(OpBuilder &b, Location loc,
-                                         Value allocatedBuffer) {
+void mlir::linalg::comprehensive_bufferize::defaultDeallocationFn(
+    OpBuilder &b, Location loc, Value allocatedBuffer) {
   b.create<memref::DeallocOp>(loc, allocatedBuffer);
 }
 
-void mlir::linalg::defaultMemCpyFn(OpBuilder &b, Location loc, Value from,
-                                   Value to) {
+void mlir::linalg::comprehensive_bufferize::defaultMemCpyFn(OpBuilder &b,
+                                                            Location loc,
+                                                            Value from,
+                                                            Value to) {
   b.create<CopyOp>(loc, from, to);
 }
 
-LogicalResult mlir::linalg::bufferizeOp(
+LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
     Operation *op, BlockAndValueMapping &bvm, BufferizationAliasInfo &aliasInfo,
     AllocationCallbacks allocationFns,
     DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes) {
@@ -2119,7 +2030,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
-LogicalResult mlir::linalg::initTensorElimination(
+LogicalResult mlir::linalg::comprehensive_bufferize::initTensorElimination(
     FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo,
     std::function<bool(OpOperand &)> anchorMatchFunc,
     std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
@@ -2214,8 +2125,10 @@ LogicalResult mlir::linalg::initTensorElimination(
 ///
 /// Note that the newly inserted ExtractSliceOp may have to bufferize
 /// out-of-place due to RaW conflicts.
-LogicalResult mlir::linalg::eliminateInsertSliceAnchoredInitTensorOps(
-    FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo) {
+LogicalResult mlir::linalg::comprehensive_bufferize::
+    eliminateInsertSliceAnchoredInitTensorOps(FuncOp funcOp,
+                                              BufferizationAliasInfo &aliasInfo,
+                                              DominanceInfo &domInfo) {
   return initTensorElimination(
       funcOp, aliasInfo, domInfo,
       [](OpOperand &operand) {
@@ -2256,9 +2169,8 @@ static void checkAliasInfoConsistency(FuncOp funcOp,
 }
 #endif
 
-LogicalResult
-mlir::linalg::runComprehensiveBufferize(ModuleOp moduleOp,
-                                        const BufferizationOptions &options) {
+LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
+    ModuleOp moduleOp, const BufferizationOptions &options) {
   SmallVector<FuncOp> orderedFuncOps;
   DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
   DenseMap<FuncOp, FunctionType> bufferizedFunctionTypes;
@@ -2356,6 +2268,7 @@ mlir::linalg::runComprehensiveBufferize(ModuleOp moduleOp,
 
 namespace mlir {
 namespace linalg {
+namespace comprehensive_bufferize {
 namespace arith_ext {
 
 struct ConstantOpInterface
@@ -3585,5 +3498,6 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
       >::registerOpInterface(registry);
 }
 
+} // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir

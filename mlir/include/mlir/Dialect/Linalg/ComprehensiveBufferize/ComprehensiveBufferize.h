@@ -22,6 +22,7 @@ class GlobalCreator;
 class ModuleOp;
 
 namespace linalg {
+namespace comprehensive_bufferize {
 
 // TODO: from some HW description.
 static constexpr int64_t kBufferAlignments = 128;
@@ -217,6 +218,7 @@ struct BufferizationOptions {
 LogicalResult runComprehensiveBufferize(ModuleOp moduleOp,
                                         const BufferizationOptions &options);
 
+} // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir
 

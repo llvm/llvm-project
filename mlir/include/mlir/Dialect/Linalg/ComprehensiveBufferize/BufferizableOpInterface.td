@@ -16,7 +16,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     An op interface for Comprehensive Bufferization. Ops that implement this
     interface can be bufferized using Comprehensive Bufferization.
   }];
-  let cppNamespace = "::mlir::linalg";
+  let cppNamespace = "::mlir::linalg::comprehensive_bufferize";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
