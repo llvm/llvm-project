@@ -528,63 +528,63 @@ define float @ffloor_s(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.flog.f32(float)
+declare float @llvm.log.f32(float)
 
-define float @fflog_s(float %a) nounwind {
-; RV64I-LABEL: fflog_s:
+define float @flog_s(float %a) nounwind {
+; RV64I-LABEL: flog_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llvm.flog.f32@plt
+; RV64I-NEXT:    call logf@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.flog.f32(float %a)
+  %1 = call float @llvm.log.f32(float %a)
   ret float %1
 }
 
-declare float @llvm.flog2.f32(float)
+declare float @llvm.log2.f32(float)
 
-define float @fflog2_s(float %a) nounwind {
-; RV64I-LABEL: fflog2_s:
+define float @flog2_s(float %a) nounwind {
+; RV64I-LABEL: flog2_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llvm.flog2.f32@plt
+; RV64I-NEXT:    call log2f@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.flog2.f32(float %a)
+  %1 = call float @llvm.log2.f32(float %a)
   ret float %1
 }
 
-declare float @llvm.flog10.f32(float)
+declare float @llvm.log10.f32(float)
 
-define float @fflog10_s(float %a) nounwind {
-; RV64I-LABEL: fflog10_s:
+define float @flog10_s(float %a) nounwind {
+; RV64I-LABEL: flog10_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llvm.flog10.f32@plt
+; RV64I-NEXT:    call log10f@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.flog10.f32(float %a)
+  %1 = call float @llvm.log10.f32(float %a)
   ret float %1
 }
 
-declare float @llvm.fnearbyint.f32(float)
+declare float @llvm.nearbyint.f32(float)
 
 define float @fnearbyint_s(float %a) nounwind {
 ; RV64I-LABEL: fnearbyint_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llvm.fnearbyint.f32@plt
+; RV64I-NEXT:    call nearbyintf@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.fnearbyint.f32(float %a)
+  %1 = call float @llvm.nearbyint.f32(float %a)
   ret float %1
 }
 
@@ -618,21 +618,6 @@ define float @froundeven_s(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.fpround.f32(float)
-
-define float @fpround_s(float %a) nounwind {
-; RV64I-LABEL: fpround_s:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llvm.fpround.f32@plt
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ret
-  %1 = call float @llvm.fpround.f32(float %a)
-  ret float %1
-}
-
 declare float @llvm.rint.f32(float)
 
 define float @frint_s(float %a) nounwind {
@@ -648,18 +633,16 @@ define float @frint_s(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.rem.f32(float)
-
-define float @frem_s(float %a) nounwind {
+define float @frem_s(float %a, float %b) nounwind {
 ; RV64I-LABEL: frem_s:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call llvm.rem.f32@plt
+; RV64I-NEXT:    call fmodf@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.rem.f32(float %a)
+  %1 = frem float %a, %b
   ret float %1
 }
 

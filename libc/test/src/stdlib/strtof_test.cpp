@@ -82,7 +82,8 @@ TEST_F(LlvmLibcStrToFTest, DecimalsWithRoundingProblems) {
 }
 
 TEST_F(LlvmLibcStrToFTest, DecimalSubnormals) {
-  runTest("1.4012984643248170709237295832899161312802619418765e-45", 55, 0x1);
+  runTest("1.4012984643248170709237295832899161312802619418765e-45", 55, 0x1,
+          ERANGE);
 }
 
 TEST_F(LlvmLibcStrToFTest, DecimalWithLongExponent) {

@@ -1113,3 +1113,87 @@ func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
 // CHECK:         llvm.br ^bb5
 // CHECK-LABEL: ^bb5:
 // CHECK:        llvm.return
+
+// -----
+
+// Test `fir.is_present`
+
+func @test_is_present_i64(%arg0: !fir.ref<i64>) -> () {
+  %0 = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
+  return
+}
+
+// CHECK-LABEL: @test_is_present_i64
+// CHECK-SAME: (%[[arg:.*]]: !llvm.ptr<i64>)
+// CHECK-NEXT:  %[[constant:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NEXT:  %[[ptr:.*]] = llvm.ptrtoint %[[arg]] : !llvm.ptr<i64> to i64
+// CHECK-NEXT:  %{{.*}} = llvm.icmp "ne" %[[ptr]], %[[constant]] : i64
+// CHECK-NEXT:  llvm.return
+// CHECK-NEXT: }
+
+func @test_is_present_box(%arg0: !fir.box<!fir.ref<i64>>) -> () {
+  %0 = fir.is_present %arg0 : (!fir.box<!fir.ref<i64>>) -> i1
+  return
+}
+
+// CHECK-LABEL: @test_is_present_box
+// CHECK-SAME: (%[[arg:.*]]: !llvm.ptr<struct<(ptr<i64>, i64, i32, i8, i8, i8, i8)>>)
+// CHECK-NEXT: %[[constant:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NEXT: %[[ptr:.*]] = llvm.ptrtoint %[[arg]] : !llvm.ptr<struct<(ptr<i64>, i64, i32, i8, i8, i8, i8)>> to i64
+// CHECK-NEXT: %{{.*}} = llvm.icmp "ne" %[[ptr]], %[[constant]] : i64
+// CHECK-NEXT: llvm.return
+// CHECK-NEXT: }
+
+
+// -----
+
+// Test `fir.absent`
+
+func @test_absent_i64() -> () {
+  %0 = fir.absent !fir.ref<i64>
+  return
+}
+
+// CHECK-LABEL: @test_absent_i64
+// CHECK-NEXT:  %{{.*}} = llvm.mlir.null : !llvm.ptr<i64>
+// CHECK-NEXT:  llvm.return
+// CHECK-NEXT:  }
+
+func @test_absent_box() -> () {
+  %0 = fir.absent !fir.box<!fir.array<?xf32>>
+  return
+}
+// CHECK-LABEL: @test_absent_box
+// CHECK-NEXT:  %{{.*}} = llvm.mlir.null : !llvm.ptr<struct<(ptr<f32>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>>
+// CHECK-NEXT:  llvm.return
+// CHECK-NEXT:  }
+
+// -----
+
+// This is a bit more comprehensive test for `fir.is_present` and `fir.absent`
+// when used together
+
+func @is_present(%arg0: !fir.ref<i64>) -> i1 {
+  %0 = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @is_present
+// CHECK-SAME: (%[[arg:.*]]: !llvm.ptr<i64>) -> i1
+// CHECK-NEXT:  %[[constant:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NEXT:  %[[ptr:.*]] = llvm.ptrtoint %[[arg]] : !llvm.ptr<i64> to i64
+// CHECK-NEXT:  %[[ret_val:.*]] = llvm.icmp "ne" %[[ptr]], %[[constant]] : i64
+// CHECK-NEXT:  llvm.return %[[ret_val]] : i1
+// CHECK-NEXT: }
+
+func @absent() -> i1 {
+  %0 = fir.absent !fir.ref<i64>
+  %1 = fir.call @is_present(%0) : (!fir.ref<i64>) -> i1
+  return %1 : i1
+}
+
+// CHECK-LABEL: @absent
+// CHECK-SAME:  () -> i1
+// CHECK-NEXT:  %[[ptr:.*]] = llvm.mlir.null : !llvm.ptr<i64>
+// CHECK-NEXT:  %[[ret_val:.*]] = llvm.call @is_present(%[[ptr]]) : (!llvm.ptr<i64>) -> i1
+// CHECK-NEXT:  llvm.return %[[ret_val]] : i1

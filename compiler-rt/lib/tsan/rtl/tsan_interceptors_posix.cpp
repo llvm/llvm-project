@@ -2210,6 +2210,32 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
   return WRAP(fork)(fake);
 }
 
+#if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
+                 void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
+  SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
+                         child_tid);
+  struct Arg {
+    int (*fn)(void *);
+    void *arg;
+  };
+  auto wrapper = +[](void *p) -> int {
+    auto *thr = cur_thread();
+    uptr pc = GET_CURRENT_PC();
+    ForkChildAfter(thr, pc);
+    FdOnFork(thr, pc);
+    auto *arg = static_cast<Arg *>(p);
+    return arg->fn(arg->arg);
+  };
+  ForkBefore(thr, pc);
+  Arg arg_wrapper = {fn, arg};
+  int pid = REAL(clone)(wrapper, stack, flags, &arg_wrapper, parent_tid, tls,
+                        child_tid);
+  ForkParentAfter(thr, pc);
+  return pid;
+}
+#endif
+
 #if !SANITIZER_MAC && !SANITIZER_ANDROID
 typedef int (*dl_iterate_phdr_cb_t)(__sanitizer_dl_phdr_info *info, SIZE_T size,
                                     void *data);
@@ -2841,6 +2867,9 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
+#if SANITIZER_LINUX
+  TSAN_INTERCEPT(clone);
+#endif
 #if !SANITIZER_ANDROID
   TSAN_INTERCEPT(dl_iterate_phdr);
 #endif

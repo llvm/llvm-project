@@ -338,7 +338,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     for (auto Op : FPOpToExpand)
       setOperationAction(Op, MVT::f16, Expand);
 
-    setOperationAction(ISD::FREM, MVT::f16, Promote);
+    setOperationAction(ISD::FREM,       MVT::f16, Promote);
+    setOperationAction(ISD::FCEIL,      MVT::f16,  Promote);
+    setOperationAction(ISD::FFLOOR,     MVT::f16,  Promote);
+    setOperationAction(ISD::FNEARBYINT, MVT::f16,  Promote);
+    setOperationAction(ISD::FRINT,      MVT::f16,  Promote);
+    setOperationAction(ISD::FROUND,     MVT::f16,  Promote);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f16,  Promote);
+    setOperationAction(ISD::FTRUNC,     MVT::f16,  Promote);
   }
 
   if (Subtarget.hasStdExtF()) {

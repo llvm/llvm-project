@@ -6,24 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// <forward_list>
 
-// <memory>
+// template <class Compare> void merge(forward_list& x, Compare comp);
 
-// void declare_reachable(void* p);
-// template <class T> T* undeclare_reachable(T* p);
+// Validate whether the operation properly guards against ADL-hijacking operator&
 
-#include <memory>
-#include <cassert>
+#include <forward_list>
 
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
-int main(int, char**)
-{
-    int* p = new int;
-    std::declare_reachable(p);
-    assert(std::undeclare_reachable(p) == p);
-    delete p;
-
-  return 0;
+void test() {
+  std::forward_list<operator_hijacker> lo;
+  std::forward_list<operator_hijacker> l;
+  lo.merge(l, std::less<operator_hijacker>());
 }

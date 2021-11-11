@@ -194,6 +194,356 @@ define half @copysign_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
+declare half @llvm.floor.f16(half)
+
+define half @floor_f16(half %a) nounwind {
+; RV32IZFH-LABEL: floor_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call floorf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: floor_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call floorf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: floor_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call floorf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: floor_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call floorf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.floor.f16(half %a)
+  ret half %1
+}
+
+declare half @llvm.ceil.f16(half)
+
+define half @ceil_f16(half %a) nounwind {
+; RV32IZFH-LABEL: ceil_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call ceilf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: ceil_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call ceilf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: ceil_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call ceilf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: ceil_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call ceilf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.ceil.f16(half %a)
+  ret half %1
+}
+
+declare half @llvm.trunc.f16(half)
+
+define half @trunc_f16(half %a) nounwind {
+; RV32IZFH-LABEL: trunc_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call truncf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: trunc_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call truncf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: trunc_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call truncf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: trunc_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call truncf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.trunc.f16(half %a)
+  ret half %1
+}
+
+declare half @llvm.rint.f16(half)
+
+define half @rint_f16(half %a) nounwind {
+; RV32IZFH-LABEL: rint_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call rintf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: rint_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call rintf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: rint_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call rintf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: rint_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call rintf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.rint.f16(half %a)
+  ret half %1
+}
+
+declare half @llvm.nearbyint.f16(half)
+
+define half @nearbyint_f16(half %a) nounwind {
+; RV32IZFH-LABEL: nearbyint_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call nearbyintf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: nearbyint_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call nearbyintf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: nearbyint_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call nearbyintf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: nearbyint_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call nearbyintf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.nearbyint.f16(half %a)
+  ret half %1
+}
+
+declare half @llvm.round.f16(half)
+
+define half @round_f16(half %a) nounwind {
+; RV32IZFH-LABEL: round_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call roundf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: round_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call roundf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: round_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call roundf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: round_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call roundf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.round.f16(half %a)
+  ret half %1
+}
+
+declare half @llvm.roundeven.f16(half)
+
+define half @roundeven_f16(half %a) nounwind {
+; RV32IZFH-LABEL: roundeven_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call roundevenf@plt
+; RV32IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: roundeven_f16:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    addi sp, sp, -16
+; RV32IDZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IDZFH-NEXT:    call roundevenf@plt
+; RV32IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IDZFH-NEXT:    addi sp, sp, 16
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: roundeven_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    addi sp, sp, -16
+; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    call roundevenf@plt
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: roundeven_f16:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    addi sp, sp, -16
+; RV64IDZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IDZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IDZFH-NEXT:    call roundevenf@plt
+; RV64IDZFH-NEXT:    fcvt.h.s fa0, fa0
+; RV64IDZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IDZFH-NEXT:    addi sp, sp, 16
+; RV64IDZFH-NEXT:    ret
+  %1 = call half @llvm.roundeven.f16(half %a)
+  ret half %1
+}
+
 declare iXLen @llvm.lrint.iXLen.f16(float)
 
 define iXLen @lrint_f16(float %a) nounwind {

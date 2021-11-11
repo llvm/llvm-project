@@ -470,9 +470,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __list_const_iterator& operator=(const __list_const_iterator& __p)
     {
-        if (this != &__p)
+        if (this != _VSTD::addressof(__p))
         {
-            __get_db()->__iterator_copy(this, &__p);
+            __get_db()->__iterator_copy(this, _VSTD::addressof(__p));
             __ptr_ = __p.__ptr_;
         }
         return *this;
@@ -797,7 +797,7 @@ __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 #if _LIBCPP_DEBUG_LEVEL == 2
     __libcpp_db* __db = __get_db();
     __c_node* __cn1 = __db->__find_c_and_lock(this);
-    __c_node* __cn2 = __db->__find_c(&__c);
+    __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
     _VSTD::swap(__cn1->beg_, __cn2->beg_);
     _VSTD::swap(__cn1->end_, __cn2->end_);
     _VSTD::swap(__cn1->cap_, __cn2->cap_);
@@ -1451,7 +1451,7 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, const value_type& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::insert(iterator, x) called with an iterator not"
         " referring to this list");
 #endif
@@ -1472,7 +1472,7 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::insert(iterator, n, x) called with an iterator not"
         " referring to this list");
     iterator __r(__p.__ptr_, this);
@@ -1697,7 +1697,7 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::emplace(const_iterator __p, _Args&&... __args)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::emplace(iterator, args...) called with an iterator not"
         " referring to this list");
 #endif
@@ -1720,7 +1720,7 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, value_type&& __x)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::insert(iterator, x) called with an iterator not"
         " referring to this list");
 #endif
@@ -1803,7 +1803,7 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::erase(const_iterator __p)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::erase(iterator) called with an iterator not"
         " referring to this list");
 #endif
@@ -2006,10 +2006,10 @@ template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
 {
-    _LIBCPP_ASSERT(this != &__c,
+    _LIBCPP_ASSERT(this != _VSTD::addressof(__c),
                    "list::splice(iterator, list) called with this == &list");
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::splice(iterator, list) called with an iterator not"
         " referring to this list");
 #endif
@@ -2022,10 +2022,10 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
         base::__sz() += __c.__sz();
         __c.__sz() = 0;
 #if _LIBCPP_DEBUG_LEVEL == 2
-        if (&__c != this) {
+        if (_VSTD::addressof(__c) != this) {
             __libcpp_db* __db = __get_db();
             __c_node* __cn1 = __db->__find_c_and_lock(this);
-            __c_node* __cn2 = __db->__find_c(&__c);
+            __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
             for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
             {
                 --__ip;
@@ -2049,13 +2049,13 @@ void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::splice(iterator, list, iterator) called with the first iterator"
         " not referring to this list");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__i) == &__c,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__i)) == _VSTD::addressof(__c),
         "list::splice(iterator, list, iterator) called with the second iterator"
         " not referring to the list argument");
-    _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(&__i),
+    _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(_VSTD::addressof(__i)),
         "list::splice(iterator, list, iterator) called with the second iterator"
         " not dereferenceable");
 #endif
@@ -2067,10 +2067,10 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
         --__c.__sz();
         ++base::__sz();
 #if _LIBCPP_DEBUG_LEVEL == 2
-        if (&__c != this) {
+        if (_VSTD::addressof(__c) != this) {
             __libcpp_db* __db = __get_db();
             __c_node* __cn1 = __db->__find_c_and_lock(this);
-            __c_node* __cn2 = __db->__find_c(&__c);
+            __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
             for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
             {
                 --__ip;
@@ -2094,16 +2094,16 @@ void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l)
 {
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
         "list::splice(iterator, list, iterator, iterator) called with first iterator not"
         " referring to this list");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__f) == &__c,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__f)) == _VSTD::addressof(__c),
         "list::splice(iterator, list, iterator, iterator) called with second iterator not"
         " referring to the list argument");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__l) == &__c,
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__l)) == _VSTD::addressof(__c),
         "list::splice(iterator, list, iterator, iterator) called with third iterator not"
         " referring to the list argument");
-    if (this == &__c)
+    if (this == _VSTD::addressof(__c))
     {
         for (const_iterator __i = __f; __i != __l; ++__i)
             _LIBCPP_ASSERT(__i != __p,
@@ -2117,7 +2117,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         __link_pointer __first = __f.__ptr_;
         --__l;
         __link_pointer __last = __l.__ptr_;
-        if (this != &__c)
+        if (this != _VSTD::addressof(__c))
         {
             size_type __s = _VSTD::distance(__f, __l) + 1;
             __c.__sz() -= __s;
@@ -2126,10 +2126,10 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         base::__unlink_nodes(__first, __last);
         __link_nodes(__p.__ptr_, __first, __last);
 #if _LIBCPP_DEBUG_LEVEL == 2
-        if (&__c != this) {
+        if (_VSTD::addressof(__c) != this) {
             __libcpp_db* __db = __get_db();
             __c_node* __cn1 = __db->__find_c_and_lock(this);
-            __c_node* __cn2 = __db->__find_c(&__c);
+            __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
             for (__i_node** __ip = __cn2->end_; __ip != __cn2->beg_;)
             {
                 --__ip;
@@ -2265,7 +2265,7 @@ list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
 #if _LIBCPP_DEBUG_LEVEL == 2
         __libcpp_db* __db = __get_db();
         __c_node* __cn1 = __db->__find_c_and_lock(this);
-        __c_node* __cn2 = __db->__find_c(&__c);
+        __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
         for (__i_node** __p = __cn2->end_; __p != __cn2->beg_;)
         {
             --__p;
