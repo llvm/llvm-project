@@ -351,58 +351,6 @@ static bool isInplaceMemoryWrite(OpOperand &opOperand,
   return opResult && aliasInfo.isInPlace(opResult);
 }
 
-BufferizationAliasInfo::BufferizationAliasInfo(Operation *rootOp) {
-  rootOp->walk([&](Operation *op) {
-    for (Value v : op->getResults())
-      if (v.getType().isa<TensorType>())
-        createAliasInfoEntry(v);
-    for (Region &r : op->getRegions())
-      for (Block &b : r.getBlocks())
-        for (auto bbArg : b.getArguments())
-          if (bbArg.getType().isa<TensorType>())
-            createAliasInfoEntry(bbArg);
-  });
-
-  // Set up alias sets for OpResults that must bufferize in-place. This should
-  // be done before making any other bufferization decisions.
-  rootOp->walk([&](BufferizableOpInterface bufferizableOp) {
-    for (OpResult opResult : bufferizableOp->getOpResults()) {
-      if (opResult.getType().isa<TensorType>())
-        if (bufferizableOp.mustBufferizeInPlace(opResult)) {
-          SmallVector<OpOperand *> operands =
-              bufferizableOp.getAliasingOpOperand(opResult);
-          assert(!operands.empty() &&
-                 "expected that OpResult has aliasing OpOperand");
-          for (OpOperand *operand : operands)
-            aliasInfo.unionSets(operand->get(), opResult);
-          markInPlace(opResult);
-        }
-    }
-  });
-}
-
-/// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
-/// beginning the alias and equivalence sets only contain `v` itself.
-void BufferizationAliasInfo::createAliasInfoEntry(Value v) {
-  aliasInfo.insert(v);
-  equivalentInfo.insert(v);
-}
-
-/// Insert an info entry for `newValue` and merge its alias set with that of
-/// `alias`.
-void BufferizationAliasInfo::insertNewBufferAlias(Value newValue, Value alias) {
-  createAliasInfoEntry(newValue);
-  aliasInfo.unionSets(newValue, alias);
-}
-
-/// Insert an info entry for `newValue` and merge its alias set with that of
-/// `alias`. Additionally, merge their equivalence classes.
-void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
-                                                        Value alias) {
-  insertNewBufferAlias(newValue, alias);
-  equivalentInfo.unionSets(newValue, alias);
-}
-
 /// Return true if, under current bufferization decisions, the buffer of `value`
 /// is not writable.
 static bool aliasesNonWritableBuffer(Value value,
@@ -438,15 +386,6 @@ static bool aliasesNonWritableBuffer(Value value,
   return foundNonWritableBuffer;
 }
 
-bool BufferizationAliasInfo::bufferizesToWritableMemory(Value v) const {
-  return bufferizeToWritableMemory.count(v) > 0;
-}
-
-/// Specify that the value is known to bufferize to writable memory.
-void BufferizationAliasInfo::setBufferizesToWritableMemory(Value v) {
-  bufferizeToWritableMemory.insert(v);
-}
-
 /// Return true if the buffer to which `operand` would bufferize is equivalent
 /// to some buffer write.
 static bool aliasesInPlaceWrite(Value value,
@@ -469,45 +408,6 @@ static bool aliasesInPlaceWrite(Value value,
     LDBG("----------->does not alias an inplace write\n");
 
   return foundInplaceWrite;
-}
-
-/// Return `true` if a value was marked as in-place bufferized.
-bool BufferizationAliasInfo::isInPlace(OpResult opResult) const {
-  bool inplace = inplaceBufferized.contains(opResult);
-#ifndef NDEBUG
-  if (inplace) {
-    auto bufferizableOp =
-        dyn_cast<BufferizableOpInterface>(opResult.getDefiningOp());
-    assert(bufferizableOp &&
-           "expected that in-place bufferized op is bufferizable");
-    SmallVector<OpOperand *> operands =
-        bufferizableOp.getAliasingOpOperand(opResult);
-    for (OpOperand *operand : operands)
-      assert(areAliasingBufferizedValues(operand->get(), opResult) &&
-             "expected that in-place bufferized OpResult aliases with "
-             "aliasing OpOperand");
-  }
-#endif // NDEBUG
-  return inplace;
-}
-
-/// Set the inPlace bufferization spec to true.
-void BufferizationAliasInfo::bufferizeInPlace(OpResult result,
-                                              OpOperand &operand) {
-  markInPlace(result);
-  aliasInfo.unionSets(result, operand.get());
-  // Dump the updated alias analysis.
-  LLVM_DEBUG(dumpAliases());
-  if (bufferRelation(operand) == BufferRelation::Equivalent)
-    equivalentInfo.unionSets(result, operand.get());
-  // Dump the updated equivalence analysis.
-  LLVM_DEBUG(dumpEquivalences());
-}
-
-/// Set the inPlace bufferization spec to false.
-void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
-  if (inplaceBufferized.contains(result))
-    inplaceBufferized.erase(result);
 }
 
 /// Starting from `value`, follow the use-def chain in reverse, always selecting
@@ -868,81 +768,6 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand, OpResult opResult,
 
   LDBG("->the corresponding buffer is not writeable\n");
   return true;
-}
-
-/// Apply `fun` to all the members of the equivalence class of `v`.
-void BufferizationAliasInfo::applyOnEquivalenceClass(
-    Value v, function_ref<void(Value)> fun) const {
-  auto leaderIt = equivalentInfo.findLeader(v);
-  for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
-       ++mit) {
-    fun(*mit);
-  }
-}
-
-/// Apply `fun` to all aliases of `v`.
-void BufferizationAliasInfo::applyOnAliases(
-    Value v, function_ref<void(Value)> fun) const {
-  auto leaderIt = aliasInfo.findLeader(v);
-  for (auto mit = leaderIt, meit = aliasInfo.member_end(); mit != meit; ++mit) {
-    fun(*mit);
-  }
-}
-
-void BufferizationAliasInfo::printAliases(raw_ostream &os) const {
-  os << "\n/===================== AliasInfo =====================\n";
-  for (auto it = aliasInfo.begin(), eit = aliasInfo.end(); it != eit; ++it) {
-    if (!it->isLeader())
-      continue;
-    Value leader = it->getData();
-    os << "|\n| -- leader: " << printValueInfo(leader, /*prefix=*/false)
-       << '\n';
-    for (auto mit = aliasInfo.member_begin(it), meit = aliasInfo.member_end();
-         mit != meit; ++mit) {
-      Value v = static_cast<Value>(*mit);
-      os << "| ---- aliasing member: " << printValueInfo(v, /*prefix=*/false)
-         << '\n';
-    }
-  }
-  os << "\n/===================== End AliasInfo =====================\n\n";
-}
-
-void BufferizationAliasInfo::printEquivalences(raw_ostream &os) const {
-  os << "\n/********************* Equivalent Buffers *********************\n";
-  for (auto it = equivalentInfo.begin(), eit = equivalentInfo.end(); it != eit;
-       ++it) {
-    if (!it->isLeader())
-      continue;
-    Value leader = it->getData();
-    os << "|\n| -- leader: " << printValueInfo(leader, /*prefix=*/false)
-       << '\n';
-    for (auto mit = equivalentInfo.member_begin(it),
-              meit = equivalentInfo.member_end();
-         mit != meit; ++mit) {
-      Value v = static_cast<Value>(*mit);
-      os << "| ---- equivalent member: " << printValueInfo(v, /*prefix=*/false)
-         << '\n';
-    }
-  }
-  os << "|\n\\***************** End Equivalent Buffers *****************\n\n";
-}
-
-BufferizationAliasInfo::EquivalenceClassRangeType
-BufferizationAliasInfo::getAliases(Value v) const {
-  DenseSet<Value> res;
-  auto it = aliasInfo.findValue(aliasInfo.getLeaderValue(v));
-  for (auto mit = aliasInfo.member_begin(it), meit = aliasInfo.member_end();
-       mit != meit; ++mit) {
-    res.insert(static_cast<Value>(*mit));
-  }
-  return BufferizationAliasInfo::EquivalenceClassRangeType(
-      aliasInfo.member_begin(it), aliasInfo.member_end());
-}
-
-void BufferizationAliasInfo::dumpAliases() const { printAliases(llvm::errs()); }
-
-void BufferizationAliasInfo::dumpEquivalences() const {
-  printEquivalences(llvm::errs());
 }
 
 //===----------------------------------------------------------------------===//
