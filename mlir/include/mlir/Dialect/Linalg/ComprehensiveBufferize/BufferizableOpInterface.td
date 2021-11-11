@@ -160,8 +160,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           llvm_unreachable("bufferRelation not implemented");
         }]
       >,
-      // TODO: Simplify method signature: Pass an OpBuilder and a
-      // BufferizationState object.
       InterfaceMethod<
         /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
@@ -171,9 +169,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
         /*args=*/(ins "OpBuilder &":$b,
-                      "BlockAndValueMapping &":$bvm,
-                      "BufferizationAliasInfo &":$aliasInfo,
-                      "AllocationCallbacks &":$allocationFn),
+                      "BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");
