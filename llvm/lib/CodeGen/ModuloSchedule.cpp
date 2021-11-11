@@ -713,15 +713,13 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
         continue;
       }
       bool used = true;
-      for (MachineInstr::mop_iterator MOI = MI->operands_begin(),
-                                      MOE = MI->operands_end();
-           MOI != MOE; ++MOI) {
-        if (!MOI->isReg() || !MOI->isDef())
+      for (const MachineOperand &MO : MI->operands()) {
+        if (!MO.isReg() || !MO.isDef())
           continue;
-        Register reg = MOI->getReg();
+        Register reg = MO.getReg();
         // Assume physical registers are used, unless they are marked dead.
         if (Register::isPhysicalRegister(reg)) {
-          used = !MOI->isDead();
+          used = !MO.isDead();
           if (used)
             break;
           continue;
