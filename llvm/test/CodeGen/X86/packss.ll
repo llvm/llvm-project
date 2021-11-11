@@ -159,7 +159,7 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-SSE-NEXT:    psllq $63, %xmm1
 ; X86-SSE-NEXT:    psllq $63, %xmm0
 ; X86-SSE-NEXT:    psrlq $63, %xmm0
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,0,0]
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,0,2147483648]
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    psubq %xmm2, %xmm0
 ; X86-SSE-NEXT:    psrlq $63, %xmm1
@@ -196,11 +196,11 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [63,0,0,0,63,0,0,0]
 ; X86-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
 ; X86-AVX2-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
-; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [1,0,0,2147483648,1,0,0,2147483648]
+; X86-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; X86-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0

@@ -990,7 +990,7 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) nounwind {
 ; X86-SSE-NEXT:    psrlq $1, %xmm1
 ; X86-SSE-NEXT:    psrlq $7, %xmm0
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-SSE-NEXT:    movapd {{.*#+}} xmm1 = [2.0E+0,7.2911220195563975E-304]
+; X86-SSE-NEXT:    movapd {{.*#+}} xmm1 = [0,1073741824,0,16777216]
 ; X86-SSE-NEXT:    xorpd %xmm1, %xmm0
 ; X86-SSE-NEXT:    psubq %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
