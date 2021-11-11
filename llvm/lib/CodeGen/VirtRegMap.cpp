@@ -542,11 +542,7 @@ void VirtRegRewriter::rewrite() {
        MBBI != MBBE; ++MBBI) {
     LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
     for (MachineInstr &MI : llvm::make_early_inc_range(MBBI->instrs())) {
-      for (MachineInstr::mop_iterator MOI = MI.operands_begin(),
-                                      MOE = MI.operands_end();
-           MOI != MOE; ++MOI) {
-        MachineOperand &MO = *MOI;
-
+      for (MachineOperand &MO : MI.operands()) {
         // Make sure MRI knows about registers clobbered by regmasks.
         if (MO.isRegMask())
           MRI->addPhysRegsUsedFromRegMask(MO.getRegMask());
