@@ -178,8 +178,7 @@ contains
     external :: s_external
     !ERROR: Procedure pointer 'p' with explicit interface may not be associated with procedure designator 's_external' with implicit interface
     p => s_external
-    !ERROR: Procedure pointer 'r' with implicit interface may not be associated with procedure designator 's_module' with explicit interface
-    r => s_module
+    r => s_module ! OK for a pointer with implicit interface to be associated with a procedure with an explicit interface.  See 10.2.2.4 (3)
   end
 
   ! 10.2.2.4(5)
