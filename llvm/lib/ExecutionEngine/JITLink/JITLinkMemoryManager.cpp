@@ -72,12 +72,6 @@ static Error runAllocAction(JITLinkMemoryManager::AllocActionCall &C) {
                     static_cast<size_t>(C.CtxSize)));
 }
 
-// Align a JITTargetAddress to conform with block alignment requirements.
-static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
-  uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
-  return Addr + Delta;
-}
-
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
   for (auto &Sec : G.sections()) {
