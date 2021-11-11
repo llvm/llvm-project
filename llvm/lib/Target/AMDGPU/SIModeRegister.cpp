@@ -225,7 +225,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   // RequirePending is used to indicate whether we are collecting the initial
   // requirements for the block, and need to defer the first InsertionPoint to
   // Phase 3. It is set to false once we have set FirstInsertionPoint, or when
-  // we discover an explict setreg that means this block doesn't have any
+  // we discover an explicit setreg that means this block doesn't have any
   // initial requirements.
   bool RequirePending = true;
   Status IPChange;

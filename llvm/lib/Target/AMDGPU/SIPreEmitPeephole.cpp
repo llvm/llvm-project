@@ -174,7 +174,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
   } else if (IsVCCZ && MaskValue == 0) {
     // Will always branch
-    // Remove all succesors shadowed by new unconditional branch
+    // Remove all successors shadowed by new unconditional branch
     MachineBasicBlock *Parent = MI.getParent();
     SmallVector<MachineInstr *, 4> ToRemove;
     bool Found = false;

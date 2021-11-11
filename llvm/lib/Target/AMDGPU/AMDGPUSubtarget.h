@@ -251,7 +251,7 @@ public:
   uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
   unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
 
-  /// \returns Corresponsing DWARF register number mapping flavour for the
+  /// \returns Corresponding DWARF register number mapping flavour for the
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const;
 

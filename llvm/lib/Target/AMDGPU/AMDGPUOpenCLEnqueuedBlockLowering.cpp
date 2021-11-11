@@ -13,7 +13,7 @@
 //
 // In LLVM CodeGen the runtime-handle metadata will be translated to
 // RuntimeHandle metadata in code object. Runtime allocates a global buffer
-// for each kernel with RuntimeHandel metadata and saves the kernel address
+// for each kernel with RuntimeHandle metadata and saves the kernel address
 // required for the AQL packet into the buffer. __enqueue_kernel function
 // in device library knows that the invoke function pointer in the block
 // literal is actually runtime handle and loads the kernel address from it

@@ -4408,8 +4408,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       if (ConstantLod->isZero() || ConstantLod->isNegative()) {
         // Set new opcode to _lz variant of _l, and change the intrinsic ID.
         const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
-            AMDGPU::getImageDimInstrinsicByBaseOpcode(LZMappingInfo->LZ,
-                                                      Intr->Dim);
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(LZMappingInfo->LZ,
+                                                     Intr->Dim);
 
         // The starting indexes should remain in the same place.
         --CorrectedNumVAddrs;

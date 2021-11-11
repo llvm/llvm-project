@@ -1108,7 +1108,7 @@ def ImageDimIntrinsicTable : GenericTable {
   let PrimaryKeyEarlyOut = 1;
 }
 
-def getImageDimInstrinsicByBaseOpcode : SearchIndex {
+def getImageDimIntrinsicByBaseOpcode : SearchIndex {
   let Table = ImageDimIntrinsicTable;
   let Key = ["BaseOpcode", "Dim"];
 }

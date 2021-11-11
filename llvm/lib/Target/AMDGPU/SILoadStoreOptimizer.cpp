@@ -146,7 +146,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
         if (!AddrOp->isReg())
           return false;
 
-        // TODO: We should be able to merge physical reg addreses.
+        // TODO: We should be able to merge physical reg addresses.
         if (AddrOp->getReg().isPhysical())
           return false;
 
@@ -652,7 +652,7 @@ static bool canMoveInstsAcrossMemOp(MachineInstr &MemOp,
 }
 
 // This function assumes that \p A and \p B have are identical except for
-// size and offset, and they referecne adjacent memory.
+// size and offset, and they reference adjacent memory.
 static MachineMemOperand *combineKnownAdjacentMMOs(MachineFunction &MF,
                                                    const MachineMemOperand *A,
                                                    const MachineMemOperand *B) {

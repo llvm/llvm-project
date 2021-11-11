@@ -1545,7 +1545,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
 }
 
 int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
-  // On gfx90a+ releveant hazards are checked in checkMAIVALUHazards()
+  // On gfx90a+ relevant hazards are checked in checkMAIVALUHazards()
   if (!ST.hasMAIInsts() || ST.hasGFX90AInsts())
     return 0;
 

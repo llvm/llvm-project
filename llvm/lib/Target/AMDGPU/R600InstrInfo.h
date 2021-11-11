@@ -175,7 +175,7 @@ public:
                         int *BytesAdded = nullptr) const override;
 
   unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemvoed = nullptr) const override;
+                        int *BytesRemoved = nullptr) const override;
 
   bool isPredicated(const MachineInstr &MI) const override;
 

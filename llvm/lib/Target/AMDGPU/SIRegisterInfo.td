@@ -834,7 +834,7 @@ defm AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)
 
 // This is not a real register. This is just to have a register to add
 // to VReg_1 that does not alias any real register that would
-// introduce inferred register classess.
+// introduce inferred register classes.
 def ARTIFICIAL_VGPR : SIReg <"invalid vgpr", 0> {
   let isArtificial = 1;
 }

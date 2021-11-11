@@ -125,7 +125,7 @@ private:
   BasicBlock::iterator getEntryIns(CallInst * UI);
   // Insert an Alloc instruction.
   AllocaInst* insertAlloca(CallInst * UI, IRBuilder<> &B, const char *prefix);
-  // Get a scalar native builtin signle argument FP function
+  // Get a scalar native builtin single argument FP function
   FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
 protected:

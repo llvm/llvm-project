@@ -73,7 +73,7 @@ public:
 
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
-// s_waitcnt instruction needs to be emited.
+// s_waitcnt instruction needs to be emitted.
 
 #define CNT_MASK(t) (1u << (t))
 

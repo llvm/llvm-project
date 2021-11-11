@@ -415,7 +415,7 @@ def FeatureDPP : SubtargetFeature<"dpp",
   "Support DPP (Data Parallel Primitives) extension"
 >;
 
-// DPP8 allows arbitrary cross-lane swizzling withing groups of 8 lanes.
+// DPP8 allows arbitrary cross-lane swizzling within groups of 8 lanes.
 def FeatureDPP8 : SubtargetFeature<"dpp8",
   "HasDPP8",
   "true",

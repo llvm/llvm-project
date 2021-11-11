@@ -926,7 +926,7 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
       std::swap(LHS, RHS);
       CC = DAG.getCondCode(CCSwapped);
     } else {
-      // Try inverting the conditon and then swapping the operands
+      // Try inverting the condition and then swapping the operands
       ISD::CondCode CCInv = ISD::getSetCCInverse(CCOpcode, CompareVT);
       CCSwapped = ISD::getSetCCSwappedOperands(CCInv);
       if (isCondCodeLegal(CCSwapped, CompareVT.getSimpleVT())) {

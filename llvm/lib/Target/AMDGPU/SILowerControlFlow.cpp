@@ -13,7 +13,7 @@
 /// All control flow is handled using predicated instructions and
 /// a predicate stack.  Each Scalar ALU controls the operations of 64 Vector
 /// ALUs.  The Scalar ALU can update the predicate for any of the Vector ALUs
-/// by writting to the 64-bit EXEC register (each bit corresponds to a
+/// by writing to the 64-bit EXEC register (each bit corresponds to a
 /// single vector ALU).  Typically, for predicates, a vector ALU will write
 /// to its bit of the VCC register (like EXEC VCC is 64-bits, one for each
 /// Vector ALU) and then the ScalarALU will AND the VCC register with the
@@ -38,7 +38,8 @@
 /// %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0 // Do the IF block of the branch
 ///
 /// label0:
-/// %sgpr0 = S_OR_SAVEEXEC_B64 %sgpr0  // Restore the exec mask for the Then block
+/// %sgpr0 = S_OR_SAVEEXEC_B64 %sgpr0  // Restore the exec mask for the Then
+///                                    // block
 /// %exec = S_XOR_B64 %sgpr0, %exec    // Update the exec mask
 /// S_BRANCH_EXECZ label1              // Use our branch optimization
 ///                                    // instruction again.
