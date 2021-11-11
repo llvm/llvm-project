@@ -152,6 +152,7 @@ void bad_attributes_in_do_while() {
       [[ab]ab] ns::i); // expected-error {{an attribute list cannot appear here}}
   do {} while ( // expected-note {{to match this '('}}
       alignas(4 ns::i; // expected-note {{to match this '('}}
+                       // expected-error@-1 {{expected ';' after do/while}}
 } // expected-error 2{{expected ')'}} expected-error {{expected expression}}
 
 [[]] using T = int; // expected-error {{an attribute list cannot appear here}}

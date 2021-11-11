@@ -869,12 +869,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
                              Stmt *thenStmt, SourceLocation ElseLoc,
                              Stmt *elseStmt) {
   if (Cond.isInvalid())
-    Cond = ConditionResult(
-        *this, nullptr,
-        MakeFullExpr(new (Context) OpaqueValueExpr(SourceLocation(),
-                                                   Context.BoolTy, VK_PRValue),
-                     IfLoc),
-        false);
+    return StmtError();
 
   bool ConstevalOrNegatedConsteval =
       StatementKind == IfStatementKind::ConstevalNonNegated ||
@@ -2468,6 +2463,7 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
                                       Stmt *First, SourceLocation ColonLoc,
                                       Expr *Range, SourceLocation RParenLoc,
                                       BuildForRangeKind Kind) {
+  // FIXME: recover in order to allow the body to be parsed.
   if (!First)
     return StmtError();
 

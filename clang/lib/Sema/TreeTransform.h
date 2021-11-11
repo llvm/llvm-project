@@ -4076,7 +4076,8 @@ Sema::ConditionResult TreeTransform<Derived>::TransformCondition(
     if (CondExpr.isInvalid())
       return Sema::ConditionError();
 
-    return getSema().ActOnCondition(nullptr, Loc, CondExpr.get(), Kind);
+    return getSema().ActOnCondition(nullptr, Loc, CondExpr.get(), Kind,
+                                    /*MissingOK=*/true);
   }
 
   return Sema::ConditionResult();
