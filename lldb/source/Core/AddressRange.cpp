@@ -59,15 +59,6 @@ bool AddressRange::Contains(const Address &addr) const {
   return ContainsFileAddress(addr);
 }
 
-//
-// bool
-// AddressRange::Contains (const Address *addr) const
-//{
-//    if (addr)
-//        return Contains (*addr);
-//    return false;
-//}
-
 bool AddressRange::ContainsFileAddress(const Address &addr) const {
   if (addr.GetSection() == m_base_addr.GetSection())
     return (addr.GetOffset() - m_base_addr.GetOffset()) < GetByteSize();
@@ -212,11 +203,3 @@ void AddressRange::DumpDebug(Stream *s) const {
             static_cast<void *>(m_base_addr.GetSection().get()),
             m_base_addr.GetOffset(), GetByteSize());
 }
-//
-// bool
-// lldb::operator==    (const AddressRange& lhs, const AddressRange& rhs)
-//{
-//    if (lhs.GetBaseAddress() == rhs.GetBaseAddress())
-//        return lhs.GetByteSize() == rhs.GetByteSize();
-//    return false;
-//}
