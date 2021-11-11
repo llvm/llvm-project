@@ -1212,7 +1212,7 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
     return getPrimaryContext()->Encloses(DC);
 
   for (; DC; DC = DC->getParent())
-    if (DC->getPrimaryContext() == this)
+    if (!isa<LinkageSpecDecl>(DC) && DC->getPrimaryContext() == this)
       return true;
   return false;
 }
