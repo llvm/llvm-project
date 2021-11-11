@@ -284,9 +284,8 @@ define <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <16 x i8> @not_signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: not_signbit_mask_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmgt v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    cmge v0.16b, v0.16b, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp sgt <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %r = select <16 x i1> %cond, <16 x i8> %b, <16 x i8> zeroinitializer
@@ -296,9 +295,8 @@ define <16 x i8> @not_signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @not_signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: not_signbit_mask_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmgt v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp sgt <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> zeroinitializer
@@ -308,9 +306,8 @@ define <8 x i16> @not_signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: not_signbit_mask_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %r = select <4 x i1> %cond, <4 x i32> %b, <4 x i32> zeroinitializer
@@ -320,9 +317,8 @@ define <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: not_signbit_mask_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmgt v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    cmge v0.2d, v0.2d, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp sgt <2 x i64> %a, <i64 -1, i64 -1>
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
