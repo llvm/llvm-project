@@ -248,10 +248,8 @@ static bool lldb_skip_name(llvm::StringRef mangled,
 
   // No filters for this scheme yet. Include all names in indexing.
   case Mangled::eManglingSchemeMSVC:
-    return false;
-
-  // No filters for this scheme yet. Include all names in indexing.
   case Mangled::eManglingSchemeRustV0:
+  case Mangled::eManglingSchemeD:
     return false;
 
   // Don't try and demangle things we can't categorize.

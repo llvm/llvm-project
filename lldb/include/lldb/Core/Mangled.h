@@ -44,7 +44,8 @@ public:
     eManglingSchemeNone = 0,
     eManglingSchemeMSVC,
     eManglingSchemeItanium,
-    eManglingSchemeRustV0
+    eManglingSchemeRustV0,
+    eManglingSchemeD
   };
 
   /// Default constructor.
