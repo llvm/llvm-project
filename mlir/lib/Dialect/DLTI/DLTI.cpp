@@ -154,7 +154,7 @@ DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     } else {
       auto id = entry.getKey().get<Identifier>();
       if (!ids.insert(id).second)
-        return emitError() << "repeated layout entry key: " << id;
+        return emitError() << "repeated layout entry key: " << id.getValue();
     }
   }
   return success();
@@ -221,7 +221,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
 
   for (const auto &kvp : newEntriesForID) {
     Identifier id = kvp.second.getKey().get<Identifier>();
-    Dialect *dialect = id.getDialect();
+    Dialect *dialect = id.getReferencedDialect();
     if (!entriesForID.count(id)) {
       entriesForID[id] = kvp.second;
       continue;
@@ -377,6 +377,6 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
     return success();
   }
 
-  return op->emitError() << "attribute '" << attr.first
+  return op->emitError() << "attribute '" << attr.first.getValue()
                          << "' not supported by dialect";
 }

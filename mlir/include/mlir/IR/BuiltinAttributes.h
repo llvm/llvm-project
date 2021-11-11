@@ -885,7 +885,35 @@ auto SparseElementsAttr::value_begin() const -> iterator<T> {
       };
   return iterator<T>(llvm::seq<ptrdiff_t>(0, getNumElements()).begin(), mapFn);
 }
-} // end namespace mlir.
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+//===----------------------------------------------------------------------===//
+
+/// Define comparisons for StringAttr against nullptr and itself to avoid the
+/// StringRef overloads from being chosen when not desirable.
+inline bool operator==(StringAttr lhs, std::nullptr_t) { return !lhs; }
+inline bool operator!=(StringAttr lhs, std::nullptr_t) {
+  return static_cast<bool>(lhs);
+}
+inline bool operator==(StringAttr lhs, StringAttr rhs) {
+  return (Attribute)lhs == (Attribute)rhs;
+}
+inline bool operator!=(StringAttr lhs, StringAttr rhs) { return !(lhs == rhs); }
+
+/// Allow direct comparison with StringRef.
+inline bool operator==(StringAttr lhs, StringRef rhs) {
+  return lhs.getValue() == rhs;
+}
+inline bool operator!=(StringAttr lhs, StringRef rhs) { return !(lhs == rhs); }
+inline bool operator==(StringRef lhs, StringAttr rhs) {
+  return rhs.getValue() == lhs;
+}
+inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
+
+inline Type StringAttr::getType() const { return Attribute::getType(); }
+
+} // end namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Attribute Utilities
@@ -894,11 +922,29 @@ auto SparseElementsAttr::value_begin() const -> iterator<T> {
 namespace llvm {
 
 template <>
+struct DenseMapInfo<mlir::StringAttr> : public DenseMapInfo<mlir::Attribute> {
+  static mlir::StringAttr getEmptyKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
+    return mlir::StringAttr::getFromOpaquePointer(pointer);
+  }
+  static mlir::StringAttr getTombstoneKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
+    return mlir::StringAttr::getFromOpaquePointer(pointer);
+  }
+};
+template <>
+struct PointerLikeTypeTraits<mlir::StringAttr>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::StringAttr getFromVoidPointer(void *p) {
+    return mlir::StringAttr::getFromOpaquePointer(p);
+  }
+};
+
+template <>
 struct PointerLikeTypeTraits<mlir::SymbolRefAttr>
     : public PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::SymbolRefAttr getFromVoidPointer(void *ptr) {
-    return PointerLikeTypeTraits<mlir::Attribute>::getFromVoidPointer(ptr)
-        .cast<mlir::SymbolRefAttr>();
+    return mlir::SymbolRefAttr::getFromOpaquePointer(ptr);
   }
 };
 

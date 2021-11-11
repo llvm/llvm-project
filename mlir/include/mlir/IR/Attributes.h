@@ -13,7 +13,10 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
-class Identifier;
+class StringAttr;
+
+// TODO: Remove this when all usages have been replaced with StringAttr.
+using Identifier = StringAttr;
 
 /// Attributes are known-constant values of operations.
 ///
@@ -61,7 +64,7 @@ public:
   TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
 
   /// Return the type of this attribute.
-  Type getType() const;
+  Type getType() const { return impl->getType(); }
 
   /// Return the context this attribute belongs to.
   MLIRContext *getContext() const;
@@ -126,7 +129,7 @@ template <typename U> U Attribute::cast() const {
 }
 
 inline ::llvm::hash_code hash_value(Attribute arg) {
-  return ::llvm::hash_value(arg.impl);
+  return DenseMapInfo<const Attribute::ImplType *>::getHashValue(arg.impl);
 }
 
 //===----------------------------------------------------------------------===//

@@ -24,7 +24,6 @@ class SourceMgr;
 
 namespace mlir {
 class DiagnosticEngine;
-class Identifier;
 struct LogicalResult;
 class MLIRContext;
 class Operation;
@@ -196,6 +195,7 @@ public:
     arguments.push_back(DiagnosticArgument(std::forward<Arg>(val)));
     return *this;
   }
+  Diagnostic &operator<<(StringAttr val);
 
   /// Stream in a string literal.
   Diagnostic &operator<<(const char *val) {
@@ -207,9 +207,6 @@ public:
   Diagnostic &operator<<(char val);
   Diagnostic &operator<<(const Twine &val);
   Diagnostic &operator<<(Twine &&val);
-
-  /// Stream in an Identifier.
-  Diagnostic &operator<<(Identifier val);
 
   /// Stream in an OperationName.
   Diagnostic &operator<<(OperationName val);

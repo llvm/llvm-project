@@ -753,7 +753,7 @@ struct DeduplicateGenericOpInputs : public OpRewritePattern<GenericOp> {
     // Copy over unknown attributes. They might be load bearing for some flow.
     ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
     for (NamedAttribute kv : genericOp->getAttrs()) {
-      if (!llvm::is_contained(odsAttrs, kv.first.c_str())) {
+      if (!llvm::is_contained(odsAttrs, kv.first.getValue())) {
         newOp->setAttr(kv.first, kv.second);
       }
     }
