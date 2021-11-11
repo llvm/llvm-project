@@ -22,8 +22,8 @@
 #include "msan_report.h"
 #include "msan_thread.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
@@ -75,22 +75,9 @@ bool IsInInterceptorScope() {
   return in_interceptor_scope;
 }
 
-static uptr allocated_for_dlsym;
-static const uptr kDlsymAllocPoolSize = 1024;
-static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
-
-static bool IsInDlsymAllocPool(const void *ptr) {
-  uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-  return off < sizeof(alloc_memory_for_dlsym);
-}
-
-static void *AllocateFromLocalPool(uptr size_in_bytes) {
-  uptr size_in_words = RoundUpTo(size_in_bytes, kWordSize) / kWordSize;
-  void *mem = (void *)&alloc_memory_for_dlsym[allocated_for_dlsym];
-  allocated_for_dlsym += size_in_words;
-  CHECK_LT(allocated_for_dlsym, kDlsymAllocPoolSize);
-  return mem;
-}
+struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return !msan_inited; }
+};
 
 #define ENSURE_MSAN_INITED() do { \
   CHECK(!msan_init_is_running); \
@@ -221,14 +208,20 @@ INTERCEPTOR(void *, pvalloc, SIZE_T size) {
 #endif
 
 INTERCEPTOR(void, free, void *ptr) {
-  if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
   GET_MALLOC_STACK_TRACE;
   MsanDeallocate(&stack, ptr);
 }
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(void, cfree, void *ptr) {
-  if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr))) return;
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
   GET_MALLOC_STACK_TRACE;
   MsanDeallocate(&stack, ptr);
 }
@@ -879,27 +872,14 @@ INTERCEPTOR(int, epoll_pwait, int epfd, void *events, int maxevents,
 
 INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  if (UNLIKELY(!msan_inited))
-    // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(nmemb * size);
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   return msan_calloc(nmemb, size, &stack);
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
-  if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
-    uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-    uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
-    void *new_ptr;
-    if (UNLIKELY(!msan_inited)) {
-      new_ptr = AllocateFromLocalPool(copy_size);
-    } else {
-      copy_size = size;
-      GET_MALLOC_STACK_TRACE;
-      new_ptr = msan_malloc(copy_size, &stack);
-    }
-    internal_memcpy(new_ptr, ptr, copy_size);
-    return new_ptr;
-  }
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   GET_MALLOC_STACK_TRACE;
   return msan_realloc(ptr, size, &stack);
 }
@@ -910,9 +890,8 @@ INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
-  if (UNLIKELY(!msan_inited))
-    // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
-    return AllocateFromLocalPool(size);
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
   GET_MALLOC_STACK_TRACE;
   return msan_malloc(size, &stack);
 }

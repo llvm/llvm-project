@@ -13,6 +13,7 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -43,6 +44,22 @@ int pthread_key_create(unsigned *key, void (*destructor)(void* v));
 int pthread_setspecific(unsigned key, const void *v);
 }
 
+struct DlsymAlloc : DlSymAllocator<DlsymAlloc> {
+  static bool UseImpl() { return lsan_init_is_running; }
+  static void OnAllocate(const void *ptr, uptr size) {
+#if CAN_SANITIZE_LEAKS
+    // Suppress leaks from dlerror(). Previously dlsym hack on global array was
+    // used by leak sanitizer as a root region.
+    __lsan_register_root_region(ptr, size);
+#endif
+  }
+  static void OnFree(const void *ptr, uptr size) {
+#if CAN_SANITIZE_LEAKS
+    __lsan_unregister_root_region(ptr, size);
+#endif
+  }
+};
+
 ///// Malloc/free interceptors. /////
 
 namespace std {
@@ -52,41 +69,34 @@ namespace std {
 
 #if !SANITIZER_MAC
 INTERCEPTOR(void*, malloc, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
   return lsan_malloc(size, stack);
 }
 
 INTERCEPTOR(void, free, void *p) {
+  if (DlsymAlloc::PointerIsMine(p))
+    return DlsymAlloc::Free(p);
   ENSURE_LSAN_INITED;
   lsan_free(p);
 }
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
-  // This hack is not required for Fuchsia because there are no dlsym calls
-  // involved in setting up interceptors.
-#if !SANITIZER_FUCHSIA
-  if (lsan_init_is_running) {
-    // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
-    const uptr kCallocPoolSize = 1024;
-    static uptr calloc_memory_for_dlsym[kCallocPoolSize];
-    static uptr allocated;
-    uptr size_in_words = ((nmemb * size) + kWordSize - 1) / kWordSize;
-    void *mem = (void*)&calloc_memory_for_dlsym[allocated];
-    allocated += size_in_words;
-    CHECK(allocated < kCallocPoolSize);
-    return mem;
-  }
-#endif  // !SANITIZER_FUCHSIA
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
   return lsan_calloc(nmemb, size, stack);
 }
 
-INTERCEPTOR(void*, realloc, void *q, uptr size) {
+INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size);
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
-  return lsan_realloc(q, size, stack);
+  return lsan_realloc(ptr, size, stack);
 }
 
 INTERCEPTOR(void*, reallocarray, void *q, uptr nmemb, uptr size) {
