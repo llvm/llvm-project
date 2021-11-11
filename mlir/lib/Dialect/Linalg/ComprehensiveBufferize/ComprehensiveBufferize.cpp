@@ -2079,6 +2079,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::initTensorElimination(
       // InitTensorOps without uses are ignored by the bufferization.
       initTensor.replaceAllUsesWith(replacement);
       aliasInfo.createAliasInfoEntry(replacement);
+      aliasInfo.unionAliasSets(initTensor, replacement);
+      aliasInfo.unionEquivalenceClasses(initTensor, replacement);
 
       // Run analysis on the newly created op.
       if (auto opResult = replacement.dyn_cast<OpResult>()) {
