@@ -281,7 +281,7 @@ bool TypePromotion::isSafeWrap(Instruction *I) {
   // wrap in respect to itself in the original bitwidth. If it doesn't wrap,
   // just underflows the range, the icmp would give the same result whether the
   // result has been truncated or not. We calculate this by:
-  // - Zero extending both constants, if needed, to 32-bits.
+  // - Zero extending both constants, if needed, to RegisterBitWidth.
   // - Take the absolute value of I's constant, adding this to the icmp const.
   // - Check that this value is not out of range for small type. If it is, it
   //   means that it has underflowed enough to wrap around the icmp constant.
@@ -359,25 +359,16 @@ bool TypePromotion::isSafeWrap(Instruction *I) {
     return false;
 
   // Now check that the result can't wrap on itself.
-  APInt Total = ICmpConst->getValue().getBitWidth() < 32 ?
-    ICmpConst->getValue().zext(32) : ICmpConst->getValue();
+  APInt Total = ICmpConst->getValue().zextOrSelf(RegisterBitWidth);
+  Total += OverflowConst->getValue().abs().zextOrSelf(RegisterBitWidth);
 
-  Total += OverflowConst->getValue().getBitWidth() < 32 ?
-    OverflowConst->getValue().abs().zext(32) : OverflowConst->getValue().abs();
+  APInt Max = APInt::getAllOnes(TypeSize).zextOrSelf(RegisterBitWidth);
 
-  APInt Max = APInt::getAllOnes(TypePromotion::TypeSize);
-
-  if (Total.getBitWidth() > Max.getBitWidth()) {
-    if (Total.ugt(Max.zext(Total.getBitWidth())))
-      return false;
-  } else if (Max.getBitWidth() > Total.getBitWidth()) {
-    if (Total.zext(Max.getBitWidth()).ugt(Max))
-      return false;
-  } else if (Total.ugt(Max))
+  if (Total.ugt(Max))
     return false;
 
-  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for "
-             << *I << "\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for " << *I
+                    << "\n");
   SafeWrap.push_back(I);
   return true;
 }
