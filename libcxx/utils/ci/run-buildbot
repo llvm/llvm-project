@@ -475,7 +475,8 @@ bootstrapping-build)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
-          -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu" \
+          -DLLVM_RUNTIME_TARGETS="$(c++ --print-target-triple)" \
+          -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake" \
           -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
