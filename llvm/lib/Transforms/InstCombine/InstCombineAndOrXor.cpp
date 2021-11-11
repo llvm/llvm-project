@@ -1310,22 +1310,20 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
 
+  // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
+  // TODO: Remove this when foldLogOpOfMaskedICmps can handle undefs.
+  if (PredL == ICmpInst::ICMP_EQ && match(LHS->getOperand(1), m_ZeroInt()) &&
+      PredR == ICmpInst::ICMP_EQ && match(RHS->getOperand(1), m_ZeroInt()) &&
+      LHS0->getType() == RHS0->getType()) {
+    Value *NewOr = Builder.CreateOr(LHS0, RHS0);
+    return Builder.CreateICmp(PredL, NewOr,
+                              Constant::getNullValue(NewOr->getType()));
+  }
+
   const APInt *LHSC, *RHSC;
   if (!match(LHS->getOperand(1), m_APInt(LHSC)) ||
       !match(RHS->getOperand(1), m_APInt(RHSC)))
     return nullptr;
-
-  if (LHSC == RHSC && PredL == PredR) {
-    // (icmp ult A, C) & (icmp ult B, C) --> (icmp ult (A|B), C)
-    // where C is a power of 2 or
-    // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
-    if ((PredL == ICmpInst::ICMP_ULT && LHSC->isPowerOf2()) ||
-        (PredL == ICmpInst::ICMP_EQ && LHSC->isZero())) {
-      Value *NewOr = Builder.CreateOr(LHS0, RHS0);
-      return Builder.CreateICmp(PredL, NewOr,
-                                ConstantInt::get(NewOr->getType(), *LHSC));
-    }
-  }
 
   // (trunc x) == C1 & (and x, CA) == C2 -> (and x, CA|CMAX) == C1|C2
   // where CMAX is the all ones value for the truncated type,
@@ -2468,10 +2466,9 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return X;
 
   // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
-  // TODO: Remove this when foldLogOpOfMaskedICmps can handle vectors.
-  if (PredL == ICmpInst::ICMP_NE && match(LHS1, m_Zero()) &&
-      PredR == ICmpInst::ICMP_NE && match(RHS1, m_Zero()) &&
-      LHS0->getType()->isIntOrIntVectorTy() &&
+  // TODO: Remove this when foldLogOpOfMaskedICmps can handle undefs.
+  if (PredL == ICmpInst::ICMP_NE && match(LHS1, m_ZeroInt()) &&
+      PredR == ICmpInst::ICMP_NE && match(RHS1, m_ZeroInt()) &&
       LHS0->getType() == RHS0->getType()) {
     Value *NewOr = Builder.CreateOr(LHS0, RHS0);
     return Builder.CreateICmp(PredL, NewOr,
