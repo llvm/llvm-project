@@ -1,7 +1,7 @@
 // RUN: %clangxx_memprof  %s -o %t
 
-// RUN: %env_memprof_opts=log_path=stdout %run %t | FileCheck --check-prefix=CHECK-TEXT %s
-// RUN: %env_memprof_opts=log_path=stdout,print_text=false %run %t > %t.memprofraw
+// RUN: %env_memprof_opts=print_text=true:log_path=stdout %run %t | FileCheck --check-prefix=CHECK-TEXT %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stdout,print_text=false %run %t > %t.memprofraw
 // RUN: od -c -N 8 %t.memprofraw | FileCheck --check-prefix=CHECK-RAW %s
 
 #include <sanitizer/memprof_interface.h>

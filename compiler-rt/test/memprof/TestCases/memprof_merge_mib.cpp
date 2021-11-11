@@ -1,6 +1,6 @@
 // RUN: %clangxx_memprof  %s -o %t
 
-// RUN: %env_memprof_opts=log_path=stdout %run %t | FileCheck %s
+// RUN: %env_memprof_opts=print_text=true:log_path=stdout %run %t | FileCheck %s
 
 #include <sanitizer/memprof_interface.h>
 #include <stdlib.h>
