@@ -1271,9 +1271,14 @@ def : DiagGroup<"spirv-compat", [SpirCompat]>; // Alias.
 // Warning for the GlobalISel options.
 def GlobalISel : DiagGroup<"global-isel">;
 
+// A warning group for the GNU extension to allow mixed specifier types for
+// target-clones multiversioning.
+def TargetClonesMixedSpecifiers : DiagGroup<"target-clones-mixed-specifiers">;
+
 // A warning group specifically for warnings related to function
 // multiversioning.
-def FunctionMultiVersioning : DiagGroup<"function-multiversion">;
+def FunctionMultiVersioning
+    : DiagGroup<"function-multiversion", [TargetClonesMixedSpecifiers]>;
 
 def NoDeref : DiagGroup<"noderef">;
 
