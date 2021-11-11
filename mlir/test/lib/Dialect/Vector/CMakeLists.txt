@@ -8,6 +8,7 @@ add_mlir_library(MLIRVectorTestPasses
   MLIRAffine
   MLIRAnalysis
   MLIRLinalg
+  MLIRLinalgTransforms
   MLIRMemRef
   MLIRPass
   MLIRSCF
