@@ -260,3 +260,56 @@ mlir::linalg::comprehensive_bufferize::bufferRelation(OpOperand &opOperand) {
   // Conservatively return None.
   return BufferRelation::None;
 }
+
+// Starting from `value`, follow the use-def chain in reverse, always selecting
+// the aliasing OpOperands. Find and return Values for which `condition`
+// evaluates to true. OpOperands of such matching Values are not traversed any
+// further.
+llvm::SetVector<Value>
+mlir::linalg::comprehensive_bufferize::findValueInReverseUseDefChain(
+    Value value, std::function<bool(Value)> condition) {
+  llvm::SetVector<Value> result, workingSet;
+  workingSet.insert(value);
+
+  while (!workingSet.empty()) {
+    Value value = workingSet.pop_back_val();
+    if (condition(value) || value.isa<BlockArgument>()) {
+      result.insert(value);
+      continue;
+    }
+
+    OpResult opResult = value.cast<OpResult>();
+    SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
+    if (opOperands.empty()) {
+      result.insert(value);
+      continue;
+    }
+
+    for (OpOperand *o : opOperands)
+      workingSet.insert(o->get());
+  }
+
+  return result;
+}
+
+// Find the Value of the last preceding write of a given Value.
+Value mlir::linalg::comprehensive_bufferize::findLastPrecedingWrite(
+    Value value) {
+  SetVector<Value> result =
+      findValueInReverseUseDefChain(value, [](Value value) {
+        Operation *op = value.getDefiningOp();
+        if (!op)
+          return true;
+        auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+        if (!bufferizableOp)
+          return true;
+        return bufferizableOp.isMemoryWrite(value.cast<OpResult>());
+      });
+
+  // To simplify the analysis, `scf.if` ops are considered memory writes. There
+  // are currently no other ops where one OpResult may alias with multiple
+  // OpOperands. Therefore, this function should return exactly one result at
+  // the moment.
+  assert(result.size() == 1 && "expected exactly one result");
+  return result.front();
+}
