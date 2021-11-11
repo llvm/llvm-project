@@ -33,7 +33,7 @@ struct LinalgComprehensiveModuleBufferize
     registry
         .insert<linalg::LinalgDialect, memref::MemRefDialect,
                 tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
-                arith::ArithmeticDialect, StandardOpsDialect>();
+                arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
     registerBufferizableOpInterfaceExternalModels(registry);
   }
 };

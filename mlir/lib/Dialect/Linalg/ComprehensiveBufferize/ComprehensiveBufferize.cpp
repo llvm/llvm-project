@@ -873,21 +873,6 @@ static FunctionType getOrCreateBufferizedFunctionType(
 // Bufferization-specific scoped alloc/dealloc insertion support.
 //===----------------------------------------------------------------------===//
 
-template <typename... Args>
-Operation *getFirstParentOfType(Value v) {
-  Operation *parent;
-  if (auto bbArg = v.dyn_cast<BlockArgument>())
-    parent = bbArg.getOwner()->getParentOp();
-  else
-    parent = v.getDefiningOp()->getParentOp();
-  while (parent) {
-    if (isa<Args...>(parent))
-      return parent;
-    parent = parent->getParentOp();
-  }
-  return nullptr;
-}
-
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 static Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
@@ -939,17 +924,31 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
 
   // If the buffer is statically shaped, try to hoist it to the first enclosing
   // parallel region.
-  // TODO: this concept of parallel region and threadlocal needs interfaces.
   // TODO: also hoist in the dynamic case. For now this relies on subsequent
   // calls to LICM and buffer hoisting which will most likely not succeed.
   // TODO: when packing, allocate a static bounding box which will enable more
   // hoisting.
   if (dynShape.empty()) {
-    Operation *parent =
-        getFirstParentOfType<FuncOp, TiledLoopOp, scf::ParallelOp,
-                             AffineParallelOp>(shapedValue);
-    if (parent)
-      b.setInsertionPointToStart(&(parent->getRegion(0).front()));
+    Operation *parent;
+    if (auto bbArg = shapedValue.dyn_cast<BlockArgument>())
+      parent = bbArg.getOwner()->getParentOp();
+    else
+      parent = shapedValue.getDefiningOp()->getParentOp();
+    while (parent) {
+      if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(parent))
+        if (bufferizableOp.isAllocationHoistingBarrier())
+          break;
+      parent = parent->getParentOp();
+    }
+
+    // FuncOp is an allocation hoisting barrier, so the above loop should never
+    // run out of parents.
+    assert(
+        (parent &&
+         cast<BufferizableOpInterface>(parent).isAllocationHoistingBarrier()) &&
+        "expected traversal to end at allocation hoisting barrier");
+
+    b.setInsertionPointToStart(&(parent->getRegion(0).front()));
   }
   return allocMemRefType;
 }
@@ -2294,6 +2293,8 @@ struct TiledLoopOpInterface
     return true;
   }
 
+  bool isAllocationHoistingBarrier(Operation *op) const { return true; }
+
   LogicalResult bufferize(Operation *op, OpBuilder &b,
                           BlockAndValueMapping &bvm,
                           BufferizationAliasInfo &aliasInfo,
@@ -3277,6 +3278,13 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
                           vector_ext::TransferReadOpInterface>();
   registry.addOpInterface<vector::TransferWriteOp,
                           vector_ext::TransferWriteOpInterface>();
+
+  // Ops that are not bufferizable but are allocation hoisting barriers.
+  registry.addOpInterface<FuncOp, AllocationHoistingBarrierOnly<FuncOp>>();
+  registry.addOpInterface<scf::ParallelOp,
+                          AllocationHoistingBarrierOnly<scf::ParallelOp>>();
+  registry.addOpInterface<AffineParallelOp,
+                          AllocationHoistingBarrierOnly<AffineParallelOp>>();
 
   // Register all Linalg structured ops. `LinalgOp` is an interface and it is
   // not possible to attach an external interface to an existing interface.

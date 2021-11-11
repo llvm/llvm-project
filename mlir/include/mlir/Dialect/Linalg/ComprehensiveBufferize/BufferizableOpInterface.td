@@ -203,6 +203,22 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the op is an allocation hoisting barrier. Buffer
+          allocations will never be beyond such ops. E.g., ops with certain
+          parallel semantics may be allocation hoisting barriers. The majority
+          of ops, however, is not a barrier. Therefore, this method returns
+          `false` by default.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isAllocationHoistingBarrier",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
       >
   ];
 
