@@ -339,7 +339,7 @@ class MockGDBServerResponder:
         pass
 
 
-class ServerSocket:
+class ServerChannel:
     """
     A wrapper class for TCP or pty-based server.
     """
@@ -366,21 +366,13 @@ class ServerSocket:
         """Send the data to the connected client."""
 
 
-class TCPServerSocket(ServerSocket):
-    def __init__(self):
-        family, type, proto, _, addr = socket.getaddrinfo(
-                "localhost", 0, proto=socket.IPPROTO_TCP)[0]
+class ServerSocket(ServerChannel):
+    def __init__(self, family, type, proto, addr):
         self._server_socket = socket.socket(family, type, proto)
         self._connection = None
 
         self._server_socket.bind(addr)
         self._server_socket.listen(1)
-
-    def get_connect_address(self):
-        return "[{}]:{}".format(*self._server_socket.getsockname())
-
-    def get_connect_url(self):
-        return "connect://" + self.get_connect_address()
 
     def close_server(self):
         self._server_socket.close()
@@ -410,7 +402,31 @@ class TCPServerSocket(ServerSocket):
         return self._connection.sendall(data)
 
 
-class PtyServerSocket(ServerSocket):
+class TCPServerSocket(ServerSocket):
+    def __init__(self):
+        family, type, proto, _, addr = socket.getaddrinfo(
+                "localhost", 0, proto=socket.IPPROTO_TCP)[0]
+        super().__init__(family, type, proto, addr)
+
+    def get_connect_address(self):
+        return "[{}]:{}".format(*self._server_socket.getsockname())
+
+    def get_connect_url(self):
+        return "connect://" + self.get_connect_address()
+
+
+class UnixServerSocket(ServerSocket):
+    def __init__(self, addr):
+        super().__init__(socket.AF_UNIX, socket.SOCK_STREAM, 0, addr)
+
+    def get_connect_address(self):
+        return self._server_socket.getsockname()
+
+    def get_connect_url(self):
+        return "unix-connect://" + self.get_connect_address()
+
+
+class PtyServerSocket(ServerChannel):
     def __init__(self):
         import pty
         import tty
@@ -486,6 +502,7 @@ class MockGDBServer:
         try:
             self._socket.accept()
         except:
+            traceback.print_exc()
             return
         self._shouldSendAck = True
         self._receivedData = ""
