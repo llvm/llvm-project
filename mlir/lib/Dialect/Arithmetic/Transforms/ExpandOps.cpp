@@ -13,6 +13,30 @@ using namespace mlir;
 
 namespace {
 
+/// Expands CeilDivUIOp (n, m) into
+///  n == 0 ? 0 : ((n-1) / m) + 1
+struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::CeilDivUIOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    Value a = op.lhs();
+    Value b = op.rhs();
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(a.getType(), 0));
+    Value compare =
+        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, a, zero);
+    Value one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(a.getType(), 1));
+    Value minusOne = rewriter.create<arith::SubIOp>(loc, a, one);
+    Value quotient = rewriter.create<arith::DivUIOp>(loc, minusOne, b);
+    Value plusOne = rewriter.create<arith::AddIOp>(loc, quotient, one);
+    Value res = rewriter.create<SelectOp>(loc, compare, zero, plusOne);
+    rewriter.replaceOp(op, {res});
+    return success();
+  }
+};
+
 /// Expands CeilDivSIOp (n, m) into
 ///   1) x = (m > 0) ? -1 : 1
 ///   2) (n*m>0) ? ((n+x) / m) + 1 : - (-n / m)
@@ -132,7 +156,8 @@ struct ArithmeticExpandOpsPass
     arith::populateArithmeticExpandOpsPatterns(patterns);
 
     target.addLegalDialect<arith::ArithmeticDialect, StandardOpsDialect>();
-    target.addIllegalOp<arith::CeilDivSIOp, arith::FloorDivSIOp>();
+    target.addIllegalOp<arith::CeilDivUIOp, arith::CeilDivSIOp,
+                        arith::FloorDivSIOp>();
 
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
@@ -144,8 +169,9 @@ struct ArithmeticExpandOpsPass
 
 void mlir::arith::populateArithmeticExpandOpsPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CeilDivSIOpConverter, FloorDivSIOpConverter>(
-      patterns.getContext());
+  patterns
+      .add<CeilDivUIOpConverter, CeilDivSIOpConverter, FloorDivSIOpConverter>(
+          patterns.getContext());
 }
 
 std::unique_ptr<Pass> mlir::arith::createArithmeticExpandOpsPass() {

@@ -1028,6 +1028,26 @@ func @tensor_arith.ceildivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 
 // -----
 
+// CHECK-LABEL: func @arith.ceildivui_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @arith.ceildivui_by_one(%arg0: i32) -> (i32) {
+  %c1 = arith.constant 1 : i32
+  %res = arith.ceildivui %arg0, %c1 : i32
+  // CHECK: return %[[ARG]]
+  return %res : i32
+}
+
+// CHECK-LABEL: func @tensor_arith.ceildivui_by_one
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]
+func @tensor_arith.ceildivui_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
+  %c1 = arith.constant dense<1> : tensor<4x5xi32>
+  %res = arith.ceildivui %arg0, %c1 : tensor<4x5xi32>
+  // CHECK: return %[[ARG]]
+  return %res : tensor<4x5xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast_folding_subview
 func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<?x?xf32, offset:? , strides: [?, ?]>) {
   %0 = memref.cast %arg0 : memref<4x5xf32> to memref<?x?xf32>

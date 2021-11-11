@@ -175,7 +175,8 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
 
     target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
                            StandardOpsDialect>();
-    target.addIllegalOp<arith::CeilDivSIOp, arith::FloorDivSIOp>();
+    target.addIllegalOp<arith::CeilDivUIOp, arith::CeilDivSIOp,
+                        arith::FloorDivSIOp>();
     target.addDynamicallyLegalOp<AtomicRMWOp>([](AtomicRMWOp op) {
       return op.getKind() != AtomicRMWKind::maxf &&
              op.getKind() != AtomicRMWKind::minf;

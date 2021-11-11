@@ -478,6 +478,44 @@ func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 
 // -----
 
+// CHECK-LABEL: func @simple_arith.ceildivui
+func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
+  // CHECK-DAG: [[C0:%.+]] = arith.constant 0
+  %z = arith.constant 0 : i32
+  // CHECK-DAG: [[C6:%.+]] = arith.constant 7
+  %0 = arith.constant 7 : i32
+  %1 = arith.constant 2 : i32
+
+  // ceil(7, 2) = 4
+  // CHECK-NEXT: [[C3:%.+]] = arith.constant 4 : i32
+  %2 = arith.ceildivui %0, %1 : i32
+
+  %3 = arith.constant -2 : i32
+
+  // ceil(7, -2) = 0
+  // CHECK-NEXT: [[CM1:%.+]] = arith.constant 1 : i32
+  %4 = arith.ceildivui %0, %3 : i32
+
+  %5 = arith.constant -8 : i32
+
+  // ceil(-8, 2) = 2147483644
+  // CHECK-NEXT: [[CM4:%.+]] = arith.constant 2147483644 : i32
+  %6 = arith.ceildivui %5, %1 : i32
+
+  %7 = arith.constant -15 : i32
+
+  // ceil(-15, -2) = 0
+  // CHECK-NOT: arith.constant 1 : i32
+  %8 = arith.ceildivui %7, %3 : i32
+
+  // CHECK-NEXT: [[XZ:%.+]] = arith.ceildivui [[C6]], [[C0]]
+  %9 = arith.ceildivui %0, %z : i32
+
+  return %2, %4, %6, %8, %9 : i32, i32, i32, i32, i32
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_arith.remsi
 func @simple_arith.remsi(%a : i32) -> (i32, i32, i32) {
   %0 = arith.constant 5 : i32
