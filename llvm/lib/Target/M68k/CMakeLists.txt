@@ -17,10 +17,10 @@ tablegen(LLVM M68kGenAsmMatcher.inc       -gen-asm-matcher)
 add_public_tablegen_target(M68kCommonTableGen)
 
 add_llvm_target(M68kCodeGen
-  GlSel/M68kCallLowering.cpp
-  GlSel/M68kInstructionSelector.cpp
-  GlSel/M68kLegalizerInfo.cpp
-  GlSel/M68kRegisterBankInfo.cpp
+  GISel/M68kCallLowering.cpp
+  GISel/M68kInstructionSelector.cpp
+  GISel/M68kLegalizerInfo.cpp
+  GISel/M68kRegisterBankInfo.cpp
   M68kAsmPrinter.cpp
   M68kCollapseMOVEMPass.cpp
   M68kExpandPseudo.cpp
