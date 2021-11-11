@@ -16,6 +16,7 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+using namespace mlir::linalg::comprehensive_bufferize;
 
 namespace {
 struct LinalgComprehensiveModuleBufferize
