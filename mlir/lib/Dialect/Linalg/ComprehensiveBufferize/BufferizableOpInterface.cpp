@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
 
@@ -259,4 +260,124 @@ mlir::linalg::comprehensive_bufferize::bufferRelation(OpOperand &opOperand) {
   // Unknown op that returns a tensor. The inplace analysis does not support it.
   // Conservatively return None.
   return BufferRelation::None;
+}
+
+// Starting from `value`, follow the use-def chain in reverse, always selecting
+// the aliasing OpOperands. Find and return Values for which `condition`
+// evaluates to true. OpOperands of such matching Values are not traversed any
+// further.
+llvm::SetVector<Value>
+mlir::linalg::comprehensive_bufferize::findValueInReverseUseDefChain(
+    Value value, std::function<bool(Value)> condition) {
+  llvm::SetVector<Value> result, workingSet;
+  workingSet.insert(value);
+
+  while (!workingSet.empty()) {
+    Value value = workingSet.pop_back_val();
+    if (condition(value) || value.isa<BlockArgument>()) {
+      result.insert(value);
+      continue;
+    }
+
+    OpResult opResult = value.cast<OpResult>();
+    SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
+    if (opOperands.empty()) {
+      result.insert(value);
+      continue;
+    }
+
+    for (OpOperand *o : opOperands)
+      workingSet.insert(o->get());
+  }
+
+  return result;
+}
+
+// Find the Value of the last preceding write of a given Value.
+Value mlir::linalg::comprehensive_bufferize::findLastPrecedingWrite(
+    Value value) {
+  SetVector<Value> result =
+      findValueInReverseUseDefChain(value, [](Value value) {
+        Operation *op = value.getDefiningOp();
+        if (!op)
+          return true;
+        auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+        if (!bufferizableOp)
+          return true;
+        return bufferizableOp.isMemoryWrite(value.cast<OpResult>());
+      });
+
+  // To simplify the analysis, `scf.if` ops are considered memory writes. There
+  // are currently no other ops where one OpResult may alias with multiple
+  // OpOperands. Therefore, this function should return exactly one result at
+  // the moment.
+  assert(result.size() == 1 && "expected exactly one result");
+  return result.front();
+}
+
+/// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+/// a new buffer and copy over data from the existing buffer if out-of-place
+/// bufferization is necessary.
+Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
+    OpBuilder &b, OpResult result, const BlockAndValueMapping &bvm,
+    BufferizationAliasInfo &aliasInfo, AllocationCallbacks allocationFns) {
+  OpBuilder::InsertionGuard guard(b);
+  Operation *op = result.getOwner();
+  SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
+  assert(!aliasingOperands.empty() && "could not get aliasing OpOperand");
+  OpOperand *opOperand = aliasingOperands.front();
+  Value operand = opOperand->get();
+  Value operandBuffer = bvm.lookupOrNull(operand);
+  assert(operandBuffer && "operand buffer not found");
+  // Make sure that all OpOperands are the same buffer. If this is not the case,
+  // we would have to materialize a memref value.
+  // TODO: Should be looking for checking for "equivalent buffers" instead of
+  // operator== here, but equivalent buffers for scf.if yield values are not
+  // set up yet.
+  if (!llvm::all_of(aliasingOperands, [&](OpOperand *o) {
+        return bvm.lookup(o->get()) == operandBuffer;
+      })) {
+    op->emitError("result buffer is ambiguous");
+    return Value();
+  }
+
+  // If bufferizing out-of-place, allocate a new buffer.
+  if (!aliasInfo.isInPlace(result)) {
+    // Ops with multiple aliasing operands can currently not bufferize
+    // out-of-place.
+    assert(
+        aliasingOperands.size() == 1 &&
+        "ops with multiple aliasing OpOperands cannot bufferize out-of-place");
+    Location loc = op->getLoc();
+    // Allocate the result buffer.
+    Value resultBuffer = allocationFns.createAllocDeallocFn(
+        b, loc, operand, aliasInfo, allocationFns);
+    bool skipCopy = false;
+    // Do not copy if the last preceding write of `operand` is an op that does
+    // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
+    // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
+    // use-def chain, it returns that value, regardless of whether it is a
+    // memory write or not.
+    Value lastWrite = findLastPrecedingWrite(operand);
+    if (auto bufferizableOp =
+            lastWrite.getDefiningOp<BufferizableOpInterface>())
+      if (!bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>()))
+        skipCopy = true;
+    // Do not copy if the copied data is never read.
+    if (!isValueRead(result))
+      skipCopy = true;
+    // Do not copy if this op does not read the data, but writes it.
+    if (bufferizesToMemoryWrite(*opOperand) &&
+        !bufferizesToMemoryRead(*opOperand))
+      skipCopy = true;
+    if (!skipCopy) {
+      // Set insertion point now that potential alloc/dealloc are introduced.
+      b.setInsertionPoint(op);
+      allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
+    }
+    return resultBuffer;
+  }
+
+  // Bufferizing in-place. No need to allocate a new buffer.
+  return operandBuffer;
 }

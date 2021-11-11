@@ -285,7 +285,9 @@ class ValueUserIterator final
           ValueUserIterator<UseIteratorT, OperandType>, UseIteratorT,
           Operation *> {
 public:
-  using ValueUserIterator::BaseT::BaseT;
+  using llvm::mapped_iterator_base<ValueUserIterator<UseIteratorT, OperandType>,
+                                   UseIteratorT,
+                                   Operation *>::mapped_iterator_base;
 
   /// Map the element to the iterator result type.
   Operation *mapElement(OperandType &value) const { return value.getOwner(); }

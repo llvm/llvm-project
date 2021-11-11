@@ -24,8 +24,8 @@ class TypeSize;
 
 namespace mlir {
 
-class DialectAsmParser;
-class DialectAsmPrinter;
+class AsmParser;
+class AsmPrinter;
 
 namespace LLVM {
 class LLVMDialect;
@@ -419,7 +419,7 @@ namespace detail {
 Type parseType(DialectAsmParser &parser);
 
 /// Prints an LLVM Dialect type.
-void printType(Type type, DialectAsmPrinter &printer);
+void printType(Type type, AsmPrinter &printer);
 } // namespace detail
 
 //===----------------------------------------------------------------------===//

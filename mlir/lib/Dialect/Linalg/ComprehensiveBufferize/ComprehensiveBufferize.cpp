@@ -138,8 +138,10 @@ using namespace comprehensive_bufferize;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
 // Forward declarations.
+#ifndef NDEBUG
 static std::string printOperationInfo(Operation *, bool prefix = true);
 static std::string printValueInfo(Value, bool prefix = true);
+#endif
 
 //===----------------------------------------------------------------------===//
 // Generic helpers.
@@ -266,6 +268,7 @@ static void removeBufferizationFuncArguments(BlockArgument bbArg) {
 // Printing helpers.
 //===----------------------------------------------------------------------===//
 
+#ifndef NDEBUG
 /// Helper method printing the bufferization information of a buffer / tensor.
 static void printTensorOrBufferInfo(std::string prefix, Value value,
                                     AsmState &state, llvm::raw_ostream &os) {
@@ -310,6 +313,7 @@ static std::string printValueInfo(Value value, bool prefix) {
   printTensorOrBufferInfo("\n\t - ", value, state, os);
   return result;
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Bufferization-specific alias analysis.
@@ -400,84 +404,6 @@ static bool aliasesInPlaceWrite(Value value,
     LDBG("----------->does not alias an inplace write\n");
 
   return foundInplaceWrite;
-}
-
-/// Starting from `value`, follow the use-def chain in reverse, always selecting
-/// the aliasing OpOperands. Find and return Values for which `condition`
-/// evaluates to true. OpOperands of such matching Values are not traversed any
-/// further.
-///
-/// When reaching the end of a chain (BlockArgument or Value without aliasing
-/// OpOperands), also return the last Value of that chain.
-///
-/// Example:
-///
-///                               8
-///                               |
-///   6*         7*         +-----+----+
-///   |          |          |          |
-///   2*         3          4*         5
-///   |          |          |          |
-///   +----------+----------+----------+
-///              |
-///              1
-///
-/// In the above example, Values with a star satisfy the condition. When
-/// starting the traversal from Value 1, the resulting SetVector is:
-/// { 2, 7, 8, 5 }
-static llvm::SetVector<Value>
-findValueInReverseUseDefChain(Value value,
-                              std::function<bool(Value)> condition) {
-  llvm::SetVector<Value> result, workingSet;
-  workingSet.insert(value);
-
-  while (!workingSet.empty()) {
-    Value value = workingSet.pop_back_val();
-    if (condition(value) || value.isa<BlockArgument>()) {
-      result.insert(value);
-      continue;
-    }
-
-    OpResult opResult = value.cast<OpResult>();
-    SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
-    if (opOperands.empty()) {
-      result.insert(value);
-      continue;
-    }
-
-    for (OpOperand *o : opOperands)
-      workingSet.insert(o->get());
-  }
-
-  return result;
-}
-
-/// Find the Value of the last preceding write of a given Value.
-///
-/// Note: Unknown ops are handled conservatively and assumed to be writes.
-/// Furthermore, BlockArguments are also assumed to be writes. There is no
-/// analysis across block boundaries.
-///
-/// Note: When reaching an end of the reverse SSA use-def chain, that value
-/// is returned regardless of whether it is a memory write or not.
-static Value findLastPrecedingWrite(Value value) {
-  SetVector<Value> result =
-      findValueInReverseUseDefChain(value, [](Value value) {
-        Operation *op = value.getDefiningOp();
-        if (!op)
-          return true;
-        auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
-        if (!bufferizableOp)
-          return true;
-        return bufferizableOp.isMemoryWrite(value.cast<OpResult>());
-      });
-
-  // To simplify the analysis, `scf.if` ops are considered memory writes. There
-  // are currently no other ops where one OpResult may alias with multiple
-  // OpOperands. Therefore, this function should return exactly one result at
-  // the moment.
-  assert(result.size() == 1 && "expected exactly one result");
-  return result.front();
 }
 
 /// Return true if `value` is originating from an ExtractSliceOp that matches
@@ -984,74 +910,6 @@ static Value createNewAllocDeallocPairForShapedValue(
 //===----------------------------------------------------------------------===//
 // Bufferization as simple BlockAndValueMapping rewrites.
 //===----------------------------------------------------------------------===//
-
-/// Return the result buffer (memref) for a given OpResult (tensor). Allocate
-/// a new buffer and copy over data from the existing buffer if out-of-place
-/// bufferization is necessary.
-static Value getResultBuffer(OpBuilder &b, OpResult result,
-                             const BlockAndValueMapping &bvm,
-                             BufferizationAliasInfo &aliasInfo,
-                             AllocationCallbacks allocationFns) {
-  OpBuilder::InsertionGuard guard(b);
-  Operation *op = result.getOwner();
-  SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
-  assert(!aliasingOperands.empty() && "could not get aliasing OpOperand");
-  OpOperand *opOperand = aliasingOperands.front();
-  Value operand = opOperand->get();
-  Value operandBuffer = lookup(bvm, operand);
-  assert(operandBuffer && "operand buffer not found");
-  // Make sure that all OpOperands are the same buffer. If this is not the case,
-  // we would have to materialize a memref value.
-  // TODO: Should be looking for checking for "equivalent buffers" instead of
-  // operator== here, but equivalent buffers for scf.if yield values are not
-  // set up yet.
-  if (!llvm::all_of(aliasingOperands, [&](OpOperand *o) {
-        return lookup(bvm, o->get()) == operandBuffer;
-      })) {
-    op->emitError("result buffer is ambiguous");
-    return Value();
-  }
-
-  // If bufferizing out-of-place, allocate a new buffer.
-  if (!aliasInfo.isInPlace(result)) {
-    // Ops with multiple aliasing operands can currently not bufferize
-    // out-of-place.
-    assert(
-        aliasingOperands.size() == 1 &&
-        "ops with multiple aliasing OpOperands cannot bufferize out-of-place");
-    Location loc = op->getLoc();
-    // Allocate the result buffer.
-    Value resultBuffer = createNewAllocDeallocPairForShapedValue(
-        b, loc, operand, aliasInfo, allocationFns);
-    bool skipCopy = false;
-    // Do not copy if the last preceding write of `operand` is an op that does
-    // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
-    // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
-    // use-def chain, it returns that value, regardless of whether it is a
-    // memory write or not.
-    Value lastWrite = findLastPrecedingWrite(operand);
-    if (auto bufferizableOp =
-            lastWrite.getDefiningOp<BufferizableOpInterface>())
-      if (!bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>()))
-        skipCopy = true;
-    // Do not copy if the copied data is never read.
-    if (!isValueRead(result))
-      skipCopy = true;
-    // Do not copy if this op does not read the data, but writes it.
-    if (bufferizesToMemoryWrite(*opOperand) &&
-        !bufferizesToMemoryRead(*opOperand))
-      skipCopy = true;
-    if (!skipCopy) {
-      // Set insertion point now that potential alloc/dealloc are introduced.
-      b.setInsertionPoint(op);
-      allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
-    }
-    return resultBuffer;
-  }
-
-  // Bufferizing in-place. No need to allocate a new buffer.
-  return operandBuffer;
-}
 
 /// In a first approximation, all the function arguments of a FuncOp are marked
 /// inplaceable. For now, it is the responsibility of the `callOp` bufferization
@@ -2034,6 +1892,18 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
 
   return success();
 }
+
+std::unique_ptr<AllocationCallbacks>
+mlir::linalg::comprehensive_bufferize::defaultAllocationCallbacks() {
+  return std::make_unique<AllocationCallbacks>(
+      defaultAllocationFn, defaultDeallocationFn, defaultMemCpyFn,
+      createNewAllocDeallocPairForShapedValue);
+}
+
+// Default constructor for BufferizationOptions that sets all allocation
+// callbacks to their default functions.
+BufferizationOptions::BufferizationOptions()
+    : allocationFns(defaultAllocationCallbacks()) {}
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface Implementations

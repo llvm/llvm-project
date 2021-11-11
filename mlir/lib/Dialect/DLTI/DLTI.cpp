@@ -65,7 +65,7 @@ Attribute DataLayoutEntryAttr::getValue() const { return getImpl()->value; }
 
 /// Parses an attribute with syntax:
 ///   attr ::= `#target.` `dl_entry` `<` (type | quoted-string) `,` attr `>`
-DataLayoutEntryAttr DataLayoutEntryAttr::parse(DialectAsmParser &parser) {
+DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -92,7 +92,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(DialectAsmParser &parser) {
               : get(parser.getBuilder().getIdentifier(identifier), value);
 }
 
-void DataLayoutEntryAttr::print(DialectAsmPrinter &os) const {
+void DataLayoutEntryAttr::print(AsmPrinter &os) const {
   os << DataLayoutEntryAttr::kAttrKeyword << "<";
   if (auto type = getKey().dyn_cast<Type>())
     os << type;
@@ -277,7 +277,7 @@ DataLayoutEntryListRef DataLayoutSpecAttr::getEntries() const {
 ///   attr ::= `#target.` `dl_spec` `<` attr-list? `>`
 ///   attr-list ::= attr
 ///               | attr `,` attr-list
-DataLayoutSpecAttr DataLayoutSpecAttr::parse(DialectAsmParser &parser) {
+DataLayoutSpecAttr DataLayoutSpecAttr::parse(AsmParser &parser) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -298,7 +298,7 @@ DataLayoutSpecAttr DataLayoutSpecAttr::parse(DialectAsmParser &parser) {
                     parser.getContext(), entries);
 }
 
-void DataLayoutSpecAttr::print(DialectAsmPrinter &os) const {
+void DataLayoutSpecAttr::print(AsmPrinter &os) const {
   os << DataLayoutSpecAttr::kAttrKeyword << "<";
   llvm::interleaveComma(getEntries(), os);
   os << ">";

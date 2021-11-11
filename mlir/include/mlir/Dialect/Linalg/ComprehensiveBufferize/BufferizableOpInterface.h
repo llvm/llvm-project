@@ -14,6 +14,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 class BlockAndValueMapping;
@@ -21,7 +22,6 @@ class BlockAndValueMapping;
 namespace linalg {
 namespace comprehensive_bufferize {
 
-struct AllocationCallbacks;
 class BufferizationAliasInfo;
 
 /// Specify fine-grain relationship between buffers to enable more analysis.
@@ -159,6 +159,84 @@ bool isValueRead(Value value);
 /// Return the relationship between the operand and the its corresponding
 /// OpResult that it may alias with. Return None if the op is not bufferizable.
 BufferRelation bufferRelation(OpOperand &opOperand);
+
+/// Starting from `value`, follow the use-def chain in reverse, always selecting
+/// the aliasing OpOperands. Find and return Values for which `condition`
+/// evaluates to true. OpOperands of such matching Values are not traversed any
+/// further.
+///
+/// When reaching the end of a chain (BlockArgument or Value without aliasing
+/// OpOperands), also return the last Value of that chain.
+///
+/// Example:
+///
+///                               8
+///                               |
+///   6*         7*         +-----+----+
+///   |          |          |          |
+///   2*         3          4*         5
+///   |          |          |          |
+///   +----------+----------+----------+
+///              |
+///              1
+///
+/// In the above example, Values with a star satisfy the condition. When
+/// starting the traversal from Value 1, the resulting SetVector is:
+/// { 2, 7, 8, 5 }
+llvm::SetVector<Value>
+findValueInReverseUseDefChain(Value value,
+                              std::function<bool(Value)> condition);
+
+/// Find the Value of the last preceding write of a given Value.
+///
+/// Note: Unknown ops are handled conservatively and assumed to be writes.
+/// Furthermore, BlockArguments are also assumed to be writes. There is no
+/// analysis across block boundaries.
+///
+/// Note: When reaching an end of the reverse SSA use-def chain, that value
+/// is returned regardless of whether it is a memory write or not.
+Value findLastPrecedingWrite(Value value);
+
+/// Callback functions that are used to allocate/deallocate/copy memory buffers.
+/// Comprehensive Bufferize provides default implementations of these functions.
+// TODO: Could be replaced with a "bufferization strategy" object with virtual
+// functions in the future.
+struct AllocationCallbacks {
+  using AllocationFn = std::function<Optional<Value>(
+      OpBuilder &, Location, MemRefType, const SmallVector<Value> &)>;
+  using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
+  using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
+  using CreateAllocDeallocFn =
+      std::function<Value(OpBuilder &, Location, Value,
+                          BufferizationAliasInfo &, AllocationCallbacks &)>;
+
+  AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
+                      MemCpyFn copyFn, CreateAllocDeallocFn allocDeallocFn)
+      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn),
+        createAllocDeallocFn(allocDeallocFn) {}
+
+  /// A function that allocates memory.
+  AllocationFn allocationFn;
+
+  /// A function that deallocated memory. Must be allocated by `allocationFn`.
+  DeallocationFn deallocationFn;
+
+  /// A function that copies memory between two allocations.
+  MemCpyFn memCpyFn;
+
+  /// A function that creates an alloc-dealloc pair. This function may perform
+  /// additional optimizations such as buffer allocation hoisting. This function
+  /// calls `allocationFn` and `deallocationFn` to create (de)allocations.
+  CreateAllocDeallocFn createAllocDeallocFn;
+};
+
+/// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+/// a new buffer and copy over data from the existing buffer if out-of-place
+/// bufferization is necessary.
+Value getResultBuffer(OpBuilder &b, OpResult result,
+                      const BlockAndValueMapping &bvm,
+                      BufferizationAliasInfo &aliasInfo,
+                      AllocationCallbacks allocationFns);
 
 } // namespace comprehensive_bufferize
 } // namespace linalg

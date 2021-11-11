@@ -6380,6 +6380,7 @@ cc_library(
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":ComplexDialect",
         ":ComprehensiveBufferize",
         ":DialectUtils",

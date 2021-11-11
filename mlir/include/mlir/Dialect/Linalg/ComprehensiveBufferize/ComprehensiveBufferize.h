@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
 #define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
 
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SetOperations.h"
@@ -22,8 +23,6 @@ class ModuleOp;
 
 namespace linalg {
 namespace comprehensive_bufferize {
-
-class BufferizationAliasInfo;
 
 // TODO: from some HW description.
 static constexpr int64_t kBufferAlignments = 128;
@@ -49,29 +48,8 @@ void defaultDeallocationFn(OpBuilder &b, Location loc, Value allocatedBuffer);
 /// pass. Creates a `linalg.copy` op.
 void defaultMemCpyFn(OpBuilder &b, Location loc, Value from, Value to);
 
-/// Callback functions that are used by the comprehensive bufferization pass to
-/// allocate/deallocate memory. These default to use the
-/// `defaultAllocationFn`/`defaultDeallocationFn`, but can be overridden by the
-/// caller. The `deallocationFn` is gauranteed to recieve the `Value` returned
-/// by the `allocationFn`.
-struct AllocationCallbacks {
-  using AllocationFn = std::function<Optional<Value>(
-      OpBuilder &, Location, MemRefType, const SmallVector<Value> &)>;
-  using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
-  using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
-
-  AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
-                      MemCpyFn copyFn)
-      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn) {}
-
-  AllocationCallbacks()
-      : allocationFn(defaultAllocationFn),
-        deallocationFn(defaultDeallocationFn), memCpyFn(defaultMemCpyFn) {}
-
-  AllocationFn allocationFn;
-  DeallocationFn deallocationFn;
-  MemCpyFn memCpyFn;
-};
+/// Return default allocation callbacks.
+std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 
 /// Bufferize one particular op.
 /// `bufferizedFunctionTypes` (resp. `globalCreator`) are expected to be
@@ -108,8 +86,7 @@ LogicalResult eliminateInsertSliceAnchoredInitTensorOps(
     FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo);
 
 struct BufferizationOptions {
-  BufferizationOptions()
-      : allocationFns(std::make_unique<AllocationCallbacks>()) {}
+  BufferizationOptions();
 
   std::unique_ptr<AllocationCallbacks> allocationFns;
   bool allowReturnMemref = false;
