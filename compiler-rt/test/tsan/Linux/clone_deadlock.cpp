@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %env_tsan_opts=atexit_sleep_ms=0 %run %t 2>&1 | FileCheck %s
-#include "test.h"
+#include "../test.h"
 #include <errno.h>
 #include <sched.h>
 #include <sys/types.h>
