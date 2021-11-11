@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace linalg {
@@ -19,8 +20,149 @@ namespace comprehensive_bufferize {
 } // namespace linalg
 } // namespace mlir
 
+#define DEBUG_TYPE "bufferizable-op-interface"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X)
+
 using namespace mlir;
 using namespace linalg::comprehensive_bufferize;
+
+//===----------------------------------------------------------------------===//
+// BufferizationAliasInfo
+//===----------------------------------------------------------------------===//
+
+BufferizationAliasInfo::BufferizationAliasInfo(Operation *rootOp) {
+  rootOp->walk([&](Operation *op) {
+    for (Value v : op->getResults())
+      if (v.getType().isa<TensorType>())
+        createAliasInfoEntry(v);
+    for (Region &r : op->getRegions())
+      for (Block &b : r.getBlocks())
+        for (auto bbArg : b.getArguments())
+          if (bbArg.getType().isa<TensorType>())
+            createAliasInfoEntry(bbArg);
+  });
+
+  // Set up alias sets for OpResults that must bufferize in-place. This should
+  // be done before making any other bufferization decisions.
+  rootOp->walk([&](BufferizableOpInterface bufferizableOp) {
+    for (OpResult opResult : bufferizableOp->getOpResults()) {
+      if (opResult.getType().isa<TensorType>())
+        if (bufferizableOp.mustBufferizeInPlace(opResult)) {
+          SmallVector<OpOperand *> operands =
+              bufferizableOp.getAliasingOpOperand(opResult);
+          assert(!operands.empty() &&
+                 "expected that OpResult has aliasing OpOperand");
+          for (OpOperand *operand : operands)
+            aliasInfo.unionSets(operand->get(), opResult);
+          markInPlace(opResult);
+        }
+    }
+  });
+}
+
+/// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
+/// beginning the alias and equivalence sets only contain `v` itself.
+void BufferizationAliasInfo::createAliasInfoEntry(Value v) {
+  aliasInfo.insert(v);
+  equivalentInfo.insert(v);
+}
+
+/// Insert an info entry for `newValue` and merge its alias set with that of
+/// `alias`.
+void BufferizationAliasInfo::insertNewBufferAlias(Value newValue, Value alias) {
+  createAliasInfoEntry(newValue);
+  aliasInfo.unionSets(newValue, alias);
+}
+
+/// Insert an info entry for `newValue` and merge its alias set with that of
+/// `alias`. Additionally, merge their equivalence classes.
+void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
+                                                        Value alias) {
+  insertNewBufferAlias(newValue, alias);
+  equivalentInfo.unionSets(newValue, alias);
+}
+
+bool BufferizationAliasInfo::bufferizesToWritableMemory(Value v) const {
+  return bufferizeToWritableMemory.count(v) > 0;
+}
+
+/// Specify that the value is known to bufferize to writable memory.
+void BufferizationAliasInfo::setBufferizesToWritableMemory(Value v) {
+  bufferizeToWritableMemory.insert(v);
+}
+
+/// Return `true` if a value was marked as in-place bufferized.
+bool BufferizationAliasInfo::isInPlace(OpResult opResult) const {
+  bool inplace = inplaceBufferized.contains(opResult);
+#ifndef NDEBUG
+  if (inplace) {
+    auto bufferizableOp =
+        dyn_cast<BufferizableOpInterface>(opResult.getDefiningOp());
+    assert(bufferizableOp &&
+           "expected that in-place bufferized op is bufferizable");
+    SmallVector<OpOperand *> operands =
+        bufferizableOp.getAliasingOpOperand(opResult);
+    for (OpOperand *operand : operands)
+      assert(areAliasingBufferizedValues(operand->get(), opResult) &&
+             "expected that in-place bufferized OpResult aliases with "
+             "aliasing OpOperand");
+  }
+#endif // NDEBUG
+  return inplace;
+}
+
+/// Set the inPlace bufferization spec to true.
+void BufferizationAliasInfo::bufferizeInPlace(OpResult result,
+                                              OpOperand &operand) {
+  LLVM_DEBUG(llvm::dbgs() << "bufferizeInPlace: ");
+  LLVM_DEBUG(result.print(llvm::dbgs()));
+
+  markInPlace(result);
+  aliasInfo.unionSets(result, operand.get());
+  if (bufferRelation(operand) == BufferRelation::Equivalent)
+    equivalentInfo.unionSets(result, operand.get());
+}
+
+/// Set the inPlace bufferization spec to false.
+void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
+  LLVM_DEBUG(llvm::dbgs() << "bufferizeOutOfPlace: ");
+  LLVM_DEBUG(result.print(llvm::dbgs()));
+
+  if (inplaceBufferized.contains(result))
+    inplaceBufferized.erase(result);
+}
+
+/// Apply `fun` to all the members of the equivalence class of `v`.
+void BufferizationAliasInfo::applyOnEquivalenceClass(
+    Value v, function_ref<void(Value)> fun) const {
+  auto leaderIt = equivalentInfo.findLeader(v);
+  for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
+       ++mit) {
+    fun(*mit);
+  }
+}
+
+/// Apply `fun` to all aliases of `v`.
+void BufferizationAliasInfo::applyOnAliases(
+    Value v, function_ref<void(Value)> fun) const {
+  auto leaderIt = aliasInfo.findLeader(v);
+  for (auto mit = leaderIt, meit = aliasInfo.member_end(); mit != meit; ++mit) {
+    fun(*mit);
+  }
+}
+
+BufferizationAliasInfo::EquivalenceClassRangeType
+BufferizationAliasInfo::getAliases(Value v) const {
+  DenseSet<Value> res;
+  auto it = aliasInfo.findValue(aliasInfo.getLeaderValue(v));
+  for (auto mit = aliasInfo.member_begin(it), meit = aliasInfo.member_end();
+       mit != meit; ++mit) {
+    res.insert(static_cast<Value>(*mit));
+  }
+  return BufferizationAliasInfo::EquivalenceClassRangeType(
+      aliasInfo.member_begin(it), aliasInfo.member_end());
+}
 
 //===----------------------------------------------------------------------===//
 // Helper functions for BufferizableOpInterface
