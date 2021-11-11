@@ -2069,10 +2069,14 @@ void MCAsmStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind,
 
   OS << "\t.seh_handler ";
   Sym->print(OS, MAI);
+  char Marker = '@';
+  const Triple &T = getContext().getTargetTriple();
+  if (T.getArch() == Triple::arm || T.getArch() == Triple::thumb)
+    Marker = '%';
   if (Unwind)
-    OS << ", @unwind";
+    OS << ", " << Marker << "unwind";
   if (Except)
-    OS << ", @except";
+    OS << ", " << Marker << "except";
   EmitEOL();
 }
 

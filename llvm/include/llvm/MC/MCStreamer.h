@@ -171,6 +171,17 @@ public:
 
   void emitConstantPools() override;
 
+  virtual void emitARMWinCFIAllocStack(unsigned Size, bool Wide);
+  virtual void emitARMWinCFISaveRegMask(unsigned Mask, bool Wide);
+  virtual void emitARMWinCFISaveSP(unsigned Reg);
+  virtual void emitARMWinCFISaveFRegs(unsigned First, unsigned Last);
+  virtual void emitARMWinCFISaveLR(unsigned Offset);
+  virtual void emitARMWinCFIPrologEnd(bool Fragment);
+  virtual void emitARMWinCFINop(bool Wide);
+  virtual void emitARMWinCFIEpilogStart(unsigned Condition);
+  virtual void emitARMWinCFIEpilogEnd();
+  virtual void emitARMWinCFICustom(unsigned Opcode);
+
   /// Reset any state between object emissions, i.e. the equivalent of
   /// MCStreamer's reset method.
   virtual void reset();
