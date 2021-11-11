@@ -503,7 +503,9 @@ public:
   struct DerivedAttributeElementIterator
       : public llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
                                           AttributeElementIterator, T> {
-    using DerivedAttributeElementIterator::BaseT::BaseT;
+    using llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
+                                     AttributeElementIterator,
+                                     T>::mapped_iterator_base;
 
     /// Map the element to the iterator result type.
     T mapElement(Attribute attr) const { return attr.cast<T>(); }

@@ -127,7 +127,8 @@ class ValueTypeIterator final
     : public llvm::mapped_iterator_base<ValueTypeIterator<ValueIteratorT>,
                                         ValueIteratorT, Type> {
 public:
-  using ValueTypeIterator::BaseT::BaseT;
+  using llvm::mapped_iterator_base<ValueTypeIterator<ValueIteratorT>,
+                                   ValueIteratorT, Type>::mapped_iterator_base;
 
   /// Map the element to the iterator result type.
   Type mapElement(Value value) const { return value.getType(); }
