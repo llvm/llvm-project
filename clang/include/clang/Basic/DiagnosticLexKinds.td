@@ -564,7 +564,7 @@ def note_pp_macro_annotation :
 def warn_pragma_final_macro :
   ExtWarn<"macro %0 has been marked as final and should not be "
           "%select{undefined|redefined}1">,
-  InGroup<FinalMacro>;
+  InGroup<FinalMacro>,  ShowInSystemHeader;
 
 // - #pragma execution_character_set(...)
 def warn_pragma_exec_charset_expected :

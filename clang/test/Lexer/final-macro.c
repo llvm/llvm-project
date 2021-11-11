@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wfinal-macro %s -fsyntax-only -verify
+// RUN: %clang_cc1 -Wfinal-macro %s -fsyntax-only -isystem %S/Inputs -verify
 
 // Test warning production
 #define Foo 1
@@ -43,3 +43,8 @@
 // no diagnostics triggered by these pragmas.
 #pragma clang deprecated(Foo)
 #pragma clang restrict_expansion(Foo)
+
+#define SYSTEM_MACRO Woah
+// expected-note@+1 2{{macro marked 'final' here}}
+#pragma clang final(SYSTEM_MACRO)
+#include <final-macro-system.h>
