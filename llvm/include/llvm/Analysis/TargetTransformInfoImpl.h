@@ -632,7 +632,8 @@ public:
     return 1;
   }
 
-  unsigned getNumberOfParts(Type *Tp) const { return 0; }
+  // Assume that we have a register of the right size for the type.
+  unsigned getNumberOfParts(Type *Tp) const { return 1; }
 
   InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
                                             const SCEV *) const {

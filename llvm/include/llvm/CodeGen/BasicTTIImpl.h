@@ -2026,7 +2026,7 @@ public:
   unsigned getNumberOfParts(Type *Tp) {
     std::pair<InstructionCost, MVT> LT =
         getTLI()->getTypeLegalizationCost(DL, Tp);
-    return *LT.first.getValue();
+    return LT.first.isValid() ? *LT.first.getValue() : 0;
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
