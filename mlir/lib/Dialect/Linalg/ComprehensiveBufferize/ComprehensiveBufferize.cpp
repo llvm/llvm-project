@@ -138,8 +138,10 @@ using namespace comprehensive_bufferize;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
 // Forward declarations.
+#ifndef NDEBUG
 static std::string printOperationInfo(Operation *, bool prefix = true);
 static std::string printValueInfo(Value, bool prefix = true);
+#endif
 
 //===----------------------------------------------------------------------===//
 // Generic helpers.
@@ -266,6 +268,7 @@ static void removeBufferizationFuncArguments(BlockArgument bbArg) {
 // Printing helpers.
 //===----------------------------------------------------------------------===//
 
+#ifndef NDEBUG
 /// Helper method printing the bufferization information of a buffer / tensor.
 static void printTensorOrBufferInfo(std::string prefix, Value value,
                                     AsmState &state, llvm::raw_ostream &os) {
@@ -310,6 +313,7 @@ static std::string printValueInfo(Value value, bool prefix) {
   printTensorOrBufferInfo("\n\t - ", value, state, os);
   return result;
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Bufferization-specific alias analysis.
