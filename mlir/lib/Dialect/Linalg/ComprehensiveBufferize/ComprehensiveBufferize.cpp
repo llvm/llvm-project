@@ -209,7 +209,8 @@ static void setInPlaceOpResult(OpResult opResult, bool inPlace) {
 /// `bbArg`.
 static void setInPlaceFuncArgument(BlockArgument bbArg, bool inPlace) {
   auto funcOp = cast<FuncOp>(bbArg.getOwner()->getParentOp());
-  funcOp.setArgAttr(bbArg.getArgNumber(), LinalgDialect::kInplaceableAttrName,
+  funcOp.setArgAttr(bbArg.getArgNumber(),
+                    BufferizableOpInterface::kInplaceableAttrName,
                     BoolAttr::get(bbArg.getContext(), inPlace));
 }
 
@@ -218,9 +219,9 @@ static void setInPlaceFuncArgument(BlockArgument bbArg, bool inPlace) {
 static void removeBufferizationFuncArguments(BlockArgument bbArg) {
   auto funcOp = cast<FuncOp>(bbArg.getOwner()->getParentOp());
   funcOp.removeArgAttr(bbArg.getArgNumber(),
-                       LinalgDialect::kBufferLayoutAttrName);
+                       BufferizableOpInterface::kBufferLayoutAttrName);
   funcOp.removeArgAttr(bbArg.getArgNumber(),
-                       LinalgDialect::kInplaceableAttrName);
+                       BufferizableOpInterface::kInplaceableAttrName);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1146,7 +1147,7 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
   // bufferizing to a writeable memory.
   for (BlockArgument bbArg : funcOp.getArguments()) {
     BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
-        bbArg.getArgNumber(), LinalgDialect::kInplaceableAttrName);
+        bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
     if (inplaceAttr && inplaceAttr.getValue())
       aliasInfo.setBufferizesToWritableMemory(bbArg);
   }
@@ -1179,7 +1180,7 @@ void mlir::linalg::comprehensive_bufferize::defaultMemCpyFn(OpBuilder &b,
                                                             Location loc,
                                                             Value from,
                                                             Value to) {
-  b.create<CopyOp>(loc, from, to);
+  b.create<memref::CopyOp>(loc, from, to);
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
@@ -1532,7 +1533,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
       Type inputType = it.value();
       auto memrefType = inputType.dyn_cast<MemRefType>();
       auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
-          argNumber, LinalgDialect::kBufferLayoutAttrName);
+          argNumber, BufferizableOpInterface::kBufferLayoutAttrName);
       AffineMap desiredLayoutMap =
           layoutAttr ? layoutAttr.getValue() : AffineMap();
       AffineMap currentLayoutMap =
