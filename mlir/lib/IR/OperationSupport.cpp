@@ -73,10 +73,10 @@ void NamedAttrList::assign(const_iterator in_start, const_iterator in_end) {
 
 void NamedAttrList::push_back(NamedAttribute newAttribute) {
   assert(newAttribute.second && "unexpected null attribute");
-  if (isSorted())
-    dictionarySorted.setInt(
-        attrs.empty() ||
-        strcmp(attrs.back().first.data(), newAttribute.first.data()) < 0);
+  if (isSorted()) {
+    dictionarySorted.setInt(attrs.empty() ||
+                            attrs.back().first.compare(newAttribute.first) < 0);
+  }
   dictionarySorted.setPointer(nullptr);
   attrs.push_back(newAttribute);
 }

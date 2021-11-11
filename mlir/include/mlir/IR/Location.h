@@ -19,7 +19,6 @@
 
 namespace mlir {
 
-class Identifier;
 class Location;
 class WalkResult;
 

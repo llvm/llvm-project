@@ -253,7 +253,7 @@ static LogicalResult verify(ModuleOp op) {
             attr.first.strref()))
       return op.emitOpError() << "can only contain attributes with "
                                  "dialect-prefixed names, found: '"
-                              << attr.first << "'";
+                              << attr.first.getValue() << "'";
   }
 
   // Check that there is at most one data layout spec attribute.
@@ -266,7 +266,8 @@ static LogicalResult verify(ModuleOp op) {
             op.emitOpError() << "expects at most one data layout attribute";
         diag.attachNote() << "'" << layoutSpecAttrName
                           << "' is a data layout attribute";
-        diag.attachNote() << "'" << na.first << "' is a data layout attribute";
+        diag.attachNote() << "'" << na.first.getValue()
+                          << "' is a data layout attribute";
       }
       layoutSpecAttrName = na.first.strref();
       layoutSpec = spec;

@@ -805,7 +805,7 @@ MlirOperation mlirSymbolTableLookup(MlirSymbolTable symbolTable,
 
 MlirAttribute mlirSymbolTableInsert(MlirSymbolTable symbolTable,
                                     MlirOperation operation) {
-  return wrap(unwrap(symbolTable)->insert(unwrap(operation)));
+  return wrap((Attribute)unwrap(symbolTable)->insert(unwrap(operation)));
 }
 
 void mlirSymbolTableErase(MlirSymbolTable symbolTable,

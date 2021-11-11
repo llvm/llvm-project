@@ -494,7 +494,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
             .setLoopType(LinalgTilingLoopType::Loops)
-            .setDistributionOptions(cyclicNprocsEqNiters),
+          .setDistributionOptions(cyclicNprocsEqNiters),
         LinalgTransformationFilter(
             Identifier::get("tensors_distribute1", context),
             Identifier::get("tensors_after_distribute1", context)));
@@ -508,8 +508,7 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
   MLIRContext *ctx = funcOp.getContext();
   SmallVector<RewritePatternSet, 4> stage1Patterns;
   if (testMatmulToVectorPatterns1dTiling) {
-    fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("START", ctx),
-                                          stage1Patterns);
+    fillL1TilingAndMatmulToVectorPatterns(funcOp, "START", stage1Patterns);
   } else if (testMatmulToVectorPatterns2dTiling) {
     stage1Patterns.emplace_back(
         ctx, std::make_unique<LinalgTilingPattern<MatmulOp>>(
@@ -519,8 +518,7 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
                      .setInterchange({1, 2, 0}),
                  LinalgTransformationFilter(Identifier::get("START", ctx),
                                             Identifier::get("L2", ctx))));
-    fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("L2", ctx),
-                                          stage1Patterns);
+    fillL1TilingAndMatmulToVectorPatterns(funcOp, "L2", stage1Patterns);
   }
   {
     // Canonicalization patterns

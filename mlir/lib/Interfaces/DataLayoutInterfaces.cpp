@@ -431,7 +431,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
   for (const auto &kvp : ids) {
     Identifier identifier = kvp.second.getKey().get<Identifier>();
-    Dialect *dialect = identifier.getDialect();
+    Dialect *dialect = identifier.getReferencedDialect();
 
     // Ignore attributes that belong to an unknown dialect, the dialect may
     // actually implement the relevant interface but we don't know about that.

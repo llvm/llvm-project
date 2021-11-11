@@ -264,6 +264,12 @@ StringAttr StringAttr::get(const Twine &twine, Type type) {
   return Base::get(type.getContext(), twine.toStringRef(tempStr), type);
 }
 
+StringRef StringAttr::getValue() const { return getImpl()->value; }
+
+Dialect *StringAttr::getReferencedDialect() const {
+  return getImpl()->referencedDialect;
+}
+
 //===----------------------------------------------------------------------===//
 // FloatAttr
 //===----------------------------------------------------------------------===//
@@ -1250,7 +1256,7 @@ bool DenseIntElementsAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  Dialect *dialect = getDialect().getDialect();
+  Dialect *dialect = getContext()->getLoadedDialect(getDialect());
   if (!dialect)
     return true;
   auto *interface =

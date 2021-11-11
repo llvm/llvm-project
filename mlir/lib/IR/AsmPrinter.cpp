@@ -46,10 +46,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-void Identifier::print(raw_ostream &os) const { os << str(); }
-
-void Identifier::dump() const { print(llvm::errs()); }
-
 void OperationName::print(raw_ostream &os) const { os << getStringRef(); }
 
 void OperationName::dump() const { print(llvm::errs()); }
@@ -1339,7 +1335,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty) {
       })
       .Case<FileLineColLoc>([&](FileLineColLoc loc) {
         if (pretty) {
-          os << loc.getFilename();
+          os << loc.getFilename().getValue();
         } else {
           os << "\"";
           printEscapedString(loc.getFilename(), os);
@@ -1693,7 +1689,7 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
       printElidedElementsAttr(os);
     } else {
-      os << "opaque<\"" << opaqueAttr.getDialect() << "\", \"0x"
+      os << "opaque<" << opaqueAttr.getDialect() << ", \"0x"
          << llvm::toHex(opaqueAttr.getValue()) << "\">";
     }
 

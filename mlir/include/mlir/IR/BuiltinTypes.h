@@ -20,10 +20,13 @@ namespace mlir {
 class AffineExpr;
 class AffineMap;
 class FloatType;
-class Identifier;
 class IndexType;
 class IntegerType;
+class StringAttr;
 class TypeRange;
+
+// TODO: Remove this when all usages have been replaced with StringAttr.
+using Identifier = StringAttr;
 
 //===----------------------------------------------------------------------===//
 // FloatType

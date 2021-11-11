@@ -15,8 +15,6 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
-class Identifier;
-class Operation;
 
 /// This class allows for representing and managing the symbol table used by
 /// operations with the 'SymbolTable' trait. Inserting into and erasing from
