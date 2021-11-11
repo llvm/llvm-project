@@ -663,8 +663,8 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
 }
 
 bool Linux::isPIEDefault() const {
-  return (getTriple().isAndroid() && !getTriple().isAndroidVersionLT(16)) ||
-          getTriple().isMusl() || getSanitizerArgs().requiresPIE();
+  return getTriple().isAndroid() || getTriple().isMusl() ||
+         getSanitizerArgs().requiresPIE();
 }
 
 bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
