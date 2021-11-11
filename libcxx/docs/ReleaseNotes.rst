@@ -82,6 +82,11 @@ API Changes
   ``std::chrono::file_clock::from_time_t``; neither libstdc++ nor MSVC STL
   had such methods.
 
+- The declarations of functions ``declare_reachable``, ``undeclare_reachable``, ``declare_no_pointers``,
+  ``undeclare_no_pointers``, and ``get_pointer_safety`` have been removed not only from C++2b but
+  from all modes. Their symbols are still provided by the dynamic library for the benefit of
+  existing compiled code. All of these functions have always behaved as no-ops.
+
 ABI Changes
 -----------
 
