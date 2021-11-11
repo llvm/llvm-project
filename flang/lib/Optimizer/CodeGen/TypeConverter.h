@@ -50,6 +50,10 @@ public:
 
     // Each conversion should return a value of type mlir::Type.
     addConversion([&](BoxType box) { return convertBoxType(box); });
+    addConversion([&](BoxCharType boxchar) {
+      LLVM_DEBUG(llvm::dbgs() << "type convert: " << boxchar << '\n');
+      return convertType(specifics->boxcharMemoryType(boxchar.getEleTy()));
+    });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion([&](fir::LogicalType boolTy) {
