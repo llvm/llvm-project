@@ -244,14 +244,14 @@ void unique_ptr_test() {
 
 void bitset_test() {
   std::bitset<258> i_am_empty(0);
-  ComparePrettyPrintToRegex(i_am_empty, "std::bitset<258(ul)?>");
+  ComparePrettyPrintToRegex(i_am_empty, "std::bitset<258(u|ul)?>");
 
   std::bitset<0> very_empty;
-  ComparePrettyPrintToRegex(very_empty, "std::bitset<0(ul)?>");
+  ComparePrettyPrintToRegex(very_empty, "std::bitset<0(u|ul)?>");
 
   std::bitset<15> b_000001111111100(1020);
   ComparePrettyPrintToRegex(b_000001111111100,
-      R"(std::bitset<15(ul)?> = {\[2\] = 1, \[3\] = 1, \[4\] = 1, \[5\] = 1, \[6\] = 1, )"
+      R"(std::bitset<15(u|ul)?> = {\[2\] = 1, \[3\] = 1, \[4\] = 1, \[5\] = 1, \[6\] = 1, )"
       R"(\[7\] = 1, \[8\] = 1, \[9\] = 1})");
 
   std::bitset<258> b_0_129_132(0);
@@ -259,7 +259,7 @@ void bitset_test() {
   b_0_129_132[129] = true;
   b_0_129_132[132] = true;
   ComparePrettyPrintToRegex(b_0_129_132,
-      R"(std::bitset<258(ul)?> = {\[0\] = 1, \[129\] = 1, \[132\] = 1})");
+      R"(std::bitset<258(u|ul)?> = {\[0\] = 1, \[129\] = 1, \[132\] = 1})");
 }
 
 void list_test() {
