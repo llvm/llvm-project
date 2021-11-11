@@ -774,20 +774,6 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
     return Builder.CreateICmp(Pred, Or, ConstantInt::get(X->getType(), *C2));
   }
 
-  // Special case: get the ordering right when the values wrap around zero.
-  // Ie, we assumed the constants were unsigned when swapping earlier.
-  if (C1->isZero() && C2->isAllOnes())
-    std::swap(C1, C2);
-
-  if (*C1 == *C2 - 1) {
-    // (X == 13 || X == 14) --> X - 13 <=u 1
-    // (X != 13 && X != 14) --> X - 13  >u 1
-    // An 'add' is the canonical IR form, so favor that over a 'sub'.
-    Value *Add = Builder.CreateAdd(X, ConstantInt::get(X->getType(), -(*C1)));
-    auto NewPred = JoinedByAnd ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
-    return Builder.CreateICmp(NewPred, Add, ConstantInt::get(X->getType(), 1));
-  }
-
   return nullptr;
 }
 
