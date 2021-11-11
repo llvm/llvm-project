@@ -94,7 +94,7 @@ static void emitOpTraitsDoc(Operator op, raw_ostream &os) {
   // Collect using set to sort effects, interfaces & traits.
   std::set<std::string> effects, interfaces, traits;
   for (auto &trait : op.getTraits()) {
-    if (auto *nt = dyn_cast<PredTrait>(&trait))
+    if (isa<PredTrait>(&trait))
       continue;
 
     std::string name = trait.getDef().getName().str();
@@ -104,7 +104,7 @@ static void emitOpTraitsDoc(Operator op, raw_ostream &os) {
     traitName.consume_back("::Impl");
     if (ref.startswith("anonymous_"))
       name = traitName.str();
-    if (auto *nt = dyn_cast<InterfaceTrait>(&trait)) {
+    if (isa<InterfaceTrait>(&trait)) {
       if (trait.getDef().isSubClassOf("SideEffectsTraitBase")) {
         auto effectName = trait.getDef().getValueAsString("baseEffectName");
         effectName.consume_front("::");
