@@ -162,7 +162,7 @@ public:
 ///
 /// $0: The attribute C++ class name.
 static const char *const attrParserDefn = R"(
-::mlir::Attribute $0::parse(::mlir::DialectAsmParser &$_parser,
+::mlir::Attribute $0::parse(::mlir::AsmParser &$_parser,
                              ::mlir::Type $_type) {
 )";
 
@@ -170,7 +170,7 @@ static const char *const attrParserDefn = R"(
 ///
 /// $0: The type C++ class name.
 static const char *const typeParserDefn = R"(
-::mlir::Type $0::parse(::mlir::DialectAsmParser &$_parser) {
+::mlir::Type $0::parse(::mlir::AsmParser &$_parser) {
 )";
 
 /// Default parser for attribute or type parameters.
@@ -190,7 +190,7 @@ static const char *const parseErrorStr =
 ///
 /// $0: The attribute or type C++ class name.
 static const char *const attrOrTypePrinterDefn = R"(
-void $0::print(::mlir::DialectAsmPrinter &$_printer) const {
+void $0::print(::mlir::AsmPrinter &$_printer) const {
 )";
 
 /// Loop declaration for struct parser.

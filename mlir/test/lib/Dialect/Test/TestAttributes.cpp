@@ -29,15 +29,14 @@ using namespace test;
 // AttrWithSelfTypeParamAttr
 //===----------------------------------------------------------------------===//
 
-Attribute AttrWithSelfTypeParamAttr::parse(DialectAsmParser &parser,
-                                           Type type) {
+Attribute AttrWithSelfTypeParamAttr::parse(AsmParser &parser, Type type) {
   Type selfType;
   if (parser.parseType(selfType))
     return Attribute();
   return get(parser.getContext(), selfType);
 }
 
-void AttrWithSelfTypeParamAttr::print(DialectAsmPrinter &printer) const {
+void AttrWithSelfTypeParamAttr::print(AsmPrinter &printer) const {
   printer << " " << getType();
 }
 
@@ -45,14 +44,14 @@ void AttrWithSelfTypeParamAttr::print(DialectAsmPrinter &printer) const {
 // AttrWithTypeBuilderAttr
 //===----------------------------------------------------------------------===//
 
-Attribute AttrWithTypeBuilderAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute AttrWithTypeBuilderAttr::parse(AsmParser &parser, Type type) {
   IntegerAttr element;
   if (parser.parseAttribute(element))
     return Attribute();
   return get(parser.getContext(), element);
 }
 
-void AttrWithTypeBuilderAttr::print(DialectAsmPrinter &printer) const {
+void AttrWithTypeBuilderAttr::print(AsmPrinter &printer) const {
   printer << " " << getAttr();
 }
 
@@ -60,7 +59,7 @@ void AttrWithTypeBuilderAttr::print(DialectAsmPrinter &printer) const {
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
 
-Attribute CompoundAAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute CompoundAAttr::parse(AsmParser &parser, Type type) {
   int widthOfSomething;
   Type oneType;
   SmallVector<int, 4> arrayOfInts;
@@ -81,7 +80,7 @@ Attribute CompoundAAttr::parse(DialectAsmParser &parser, Type type) {
   return get(parser.getContext(), widthOfSomething, oneType, arrayOfInts);
 }
 
-void CompoundAAttr::print(DialectAsmPrinter &printer) const {
+void CompoundAAttr::print(AsmPrinter &printer) const {
   printer << "<" << getWidthOfSomething() << ", " << getOneType() << ", [";
   llvm::interleaveComma(getArrayOfInts(), printer);
   printer << "]>";
@@ -91,7 +90,7 @@ void CompoundAAttr::print(DialectAsmPrinter &printer) const {
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
 
-Attribute TestI64ElementsAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   SmallVector<uint64_t> elements;
   if (parser.parseLess() || parser.parseLSquare())
     return Attribute();
@@ -108,7 +107,7 @@ Attribute TestI64ElementsAttr::parse(DialectAsmParser &parser, Type type) {
       parser.getContext(), type.cast<ShapedType>(), elements);
 }
 
-void TestI64ElementsAttr::print(DialectAsmPrinter &printer) const {
+void TestI64ElementsAttr::print(AsmPrinter &printer) const {
   printer << "<[";
   llvm::interleaveComma(getElements(), printer);
   printer << "] : " << getType() << ">";
@@ -141,7 +140,7 @@ TestAttrWithFormatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // Utility Functions for Generated Attributes
 //===----------------------------------------------------------------------===//
 
-static FailureOr<SmallVector<int>> parseIntArray(DialectAsmParser &parser) {
+static FailureOr<SmallVector<int>> parseIntArray(AsmParser &parser) {
   SmallVector<int> ints;
   if (parser.parseLSquare() || parser.parseCommaSeparatedList([&]() {
         ints.push_back(0);
@@ -152,7 +151,7 @@ static FailureOr<SmallVector<int>> parseIntArray(DialectAsmParser &parser) {
   return ints;
 }
 
-static void printIntArray(DialectAsmPrinter &printer, ArrayRef<int> ints) {
+static void printIntArray(AsmPrinter &printer, ArrayRef<int> ints) {
   printer << '[';
   llvm::interleaveComma(ints, printer);
   printer << ']';
@@ -162,7 +161,7 @@ static void printIntArray(DialectAsmPrinter &printer, ArrayRef<int> ints) {
 // TestSubElementsAccessAttr
 //===----------------------------------------------------------------------===//
 
-Attribute TestSubElementsAccessAttr::parse(::mlir::DialectAsmParser &parser,
+Attribute TestSubElementsAccessAttr::parse(::mlir::AsmParser &parser,
                                            ::mlir::Type type) {
   Attribute first, second, third;
   if (parser.parseLess() || parser.parseAttribute(first) ||
@@ -174,8 +173,7 @@ Attribute TestSubElementsAccessAttr::parse(::mlir::DialectAsmParser &parser,
   return get(parser.getContext(), first, second, third);
 }
 
-void TestSubElementsAccessAttr::print(
-    ::mlir::DialectAsmPrinter &printer) const {
+void TestSubElementsAccessAttr::print(::mlir::AsmPrinter &printer) const {
   printer << "<" << getFirst() << ", " << getSecond() << ", " << getThird()
           << ">";
 }

@@ -210,7 +210,9 @@ struct TypeDefGenerator : public DefGenerator {
 /// later on.
 static const char *const typeDefDeclHeader = R"(
 namespace mlir {
+class AsmParser;
 class DialectAsmParser;
+class AsmPrinter;
 class DialectAsmPrinter;
 } // namespace mlir
 )";
@@ -256,8 +258,8 @@ static const char *const defDeclParametricBeginStr = R"(
 /// {0}: The name of the base value type, e.g. Attribute or Type.
 /// {1}: Extra parser parameters.
 static const char *const defDeclParsePrintStr = R"(
-    static ::mlir::{0} parse(::mlir::DialectAsmParser &parser{1});
-    void print(::mlir::DialectAsmPrinter &printer) const;
+    static ::mlir::{0} parse(::mlir::AsmParser &parser{1});
+    void print(::mlir::AsmPrinter &printer) const;
 )";
 
 /// The code block for the verify method declaration.
@@ -495,7 +497,7 @@ void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
 /// {1}: Additional parser parameters.
 static const char *const defParserDispatchStartStr = R"(
 static ::mlir::OptionalParseResult generated{0}Parser(
-                                      ::mlir::DialectAsmParser &parser,
+                                      ::mlir::AsmParser &parser,
                                       ::llvm::StringRef mnemonic{1},
                                       ::mlir::{0} &value) {{
 )";
@@ -559,7 +561,7 @@ void {0}::printType(::mlir::Type type,
 /// {0}: The name of the base value type, e.g. Attribute or Type.
 static const char *const defPrinterDispatchStartStr = R"(
 static ::mlir::LogicalResult generated{0}Printer(
-                         ::mlir::{0} def, ::mlir::DialectAsmPrinter &printer) {{
+                         ::mlir::{0} def, ::mlir::AsmPrinter &printer) {{
   return ::llvm::TypeSwitch<::mlir::{0}, ::mlir::LogicalResult>(def)
 )";
 
@@ -794,7 +796,7 @@ void DefGenerator::emitParsePrint(const AttrOrTypeDef &def) {
     // Both the mnenomic and printerCode must be defined (for parity with
     // parserCode).
     os << "void " << def.getCppClassName()
-       << "::print(::mlir::DialectAsmPrinter &printer) const {\n";
+       << "::print(::mlir::AsmPrinter &printer) const {\n";
     if (printerCode->empty()) {
       // If no code specified, emit error.
       PrintFatalError(def.getLoc(),
@@ -813,7 +815,7 @@ void DefGenerator::emitParsePrint(const AttrOrTypeDef &def) {
 
     // The mnenomic must be defined so the dispatcher knows how to dispatch.
     os << llvm::formatv("::mlir::{0} {1}::parse("
-                        "::mlir::DialectAsmParser &parser",
+                        "::mlir::AsmParser &parser",
                         valueType, def.getCppClassName());
     if (isAttrGenerator) {
       // Attributes also accept a type parameter instead of a context.

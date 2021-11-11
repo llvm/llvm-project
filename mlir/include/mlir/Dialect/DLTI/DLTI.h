@@ -51,10 +51,10 @@ public:
   Attribute getValue() const;
 
   /// Parses an instance of this attribute.
-  static DataLayoutEntryAttr parse(DialectAsmParser &parser);
+  static DataLayoutEntryAttr parse(AsmParser &parser);
 
   /// Prints this attribute.
-  void print(DialectAsmPrinter &os) const;
+  void print(AsmPrinter &os) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -99,10 +99,10 @@ public:
   DataLayoutEntryListRef getEntries() const;
 
   /// Parses an instance of this attribute.
-  static DataLayoutSpecAttr parse(DialectAsmParser &parser);
+  static DataLayoutSpecAttr parse(AsmParser &parser);
 
   /// Prints this attribute.
-  void print(DialectAsmPrinter &os) const;
+  void print(AsmPrinter &os) const;
 };
 
 } // namespace mlir

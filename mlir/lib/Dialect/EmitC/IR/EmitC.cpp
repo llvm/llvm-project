@@ -166,7 +166,7 @@ static ParseResult parseIncludeOp(OpAsmParser &parser, OperationState &result) {
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCAttributes.cpp.inc"
 
-Attribute emitc::OpaqueAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseLess())
     return Attribute();
   std::string value;
@@ -200,7 +200,7 @@ void EmitCDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
     llvm_unreachable("unexpected 'EmitC' attribute kind");
 }
 
-void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
+void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
   printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
   printer << "\">";
@@ -213,7 +213,7 @@ void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
 
-Type emitc::OpaqueType::parse(DialectAsmParser &parser) {
+Type emitc::OpaqueType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return Type();
   std::string value;
@@ -227,7 +227,7 @@ Type emitc::OpaqueType::parse(DialectAsmParser &parser) {
   return get(parser.getContext(), value);
 }
 
-void emitc::OpaqueType::print(DialectAsmPrinter &printer) const {
+void emitc::OpaqueType::print(AsmPrinter &printer) const {
   printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
   printer << "\">";
