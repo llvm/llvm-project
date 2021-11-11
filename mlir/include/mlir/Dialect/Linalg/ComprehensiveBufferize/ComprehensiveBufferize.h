@@ -62,13 +62,20 @@ public:
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
-    // Return `false` if we have no information about `v1` or `v2`.
-    if (equivalentInfo.findValue(v1) == equivalentInfo.end() ||
-        equivalentInfo.findValue(v2) == equivalentInfo.end())
-      return false;
+    return equivalentInfo.isEquivalent(v1, v2);
+  }
 
-    return equivalentInfo.getLeaderValue(v1) ==
-           equivalentInfo.getLeaderValue(v2);
+  /// Return true if `v1` and `v2` bufferize to aliasing buffers.
+  bool areAliasingBufferizedValues(Value v1, Value v2) const {
+    return aliasInfo.isEquivalent(v1, v2);
+  }
+
+  /// Union the alias sets of `v1` and `v2`.
+  void unionAliasSets(Value v1, Value v2) { aliasInfo.unionSets(v1, v2); }
+
+  /// Union the equivalence classes of `v1` and `v2`.
+  void unionEquivalenceClasses(Value v1, Value v2) {
+    equivalentInfo.unionSets(v1, v2);
   }
 
   /// Apply `fun` to all the members of the equivalence class of `v`.
