@@ -323,24 +323,46 @@ public:
 
   /// Iterator for walking over APFloat values.
   class FloatElementIterator final
-      : public llvm::mapped_iterator<IntElementIterator,
-                                     std::function<APFloat(const APInt &)>> {
+      : public llvm::mapped_iterator_base<FloatElementIterator,
+                                          IntElementIterator, APFloat> {
+  public:
+    /// Map the element to the iterator result type.
+    APFloat mapElement(const APInt &value) const {
+      return APFloat(*smt, value);
+    }
+
+  private:
     friend DenseElementsAttr;
 
     /// Initializes the float element iterator to the specified iterator.
-    FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it);
+    FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it)
+        : BaseT(it), smt(&smt) {}
+
+    /// The float semantics to use when constructing the APFloat.
+    const llvm::fltSemantics *smt;
   };
 
   /// Iterator for walking over complex APFloat values.
   class ComplexFloatElementIterator final
-      : public llvm::mapped_iterator<
-            ComplexIntElementIterator,
-            std::function<std::complex<APFloat>(const std::complex<APInt> &)>> {
+      : public llvm::mapped_iterator_base<ComplexFloatElementIterator,
+                                          ComplexIntElementIterator,
+                                          std::complex<APFloat>> {
+  public:
+    /// Map the element to the iterator result type.
+    std::complex<APFloat> mapElement(const std::complex<APInt> &value) const {
+      return {APFloat(*smt, value.real()), APFloat(*smt, value.imag())};
+    }
+
+  private:
     friend DenseElementsAttr;
 
     /// Initializes the float element iterator to the specified iterator.
     ComplexFloatElementIterator(const llvm::fltSemantics &smt,
-                                ComplexIntElementIterator it);
+                                ComplexIntElementIterator it)
+        : BaseT(it), smt(&smt) {}
+
+    /// The float semantics to use when constructing the APFloat.
+    const llvm::fltSemantics *smt;
   };
 
   //===--------------------------------------------------------------------===//
@@ -478,24 +500,27 @@ public:
       typename std::enable_if<std::is_base_of<Attribute, T>::value &&
                               !std::is_same<Attribute, T>::value>::type;
   template <typename T>
-  using DerivedAttributeElementIterator =
-      llvm::mapped_iterator<AttributeElementIterator, T (*)(Attribute)>;
+  struct DerivedAttributeElementIterator
+      : public llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
+                                          AttributeElementIterator, T> {
+    using DerivedAttributeElementIterator::BaseT::BaseT;
+
+    /// Map the element to the iterator result type.
+    T mapElement(Attribute attr) const { return attr.cast<T>(); }
+  };
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   iterator_range_impl<DerivedAttributeElementIterator<T>> getValues() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {Attribute::getType(),
-            llvm::map_range(getValues<Attribute>(),
-                            static_cast<T (*)(Attribute)>(castFn))};
+    using DerivedIterT = DerivedAttributeElementIterator<T>;
+    return {Attribute::getType(), DerivedIterT(value_begin<Attribute>()),
+            DerivedIterT(value_end<Attribute>())};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   DerivedAttributeElementIterator<T> value_begin() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {value_begin<Attribute>(), static_cast<T (*)(Attribute)>(castFn)};
+    return {value_begin<Attribute>()};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   DerivedAttributeElementIterator<T> value_end() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {value_end<Attribute>(), static_cast<T (*)(Attribute)>(castFn)};
+    return {value_end<Attribute>()};
   }
 
   /// Return the held element values as a range of bool. The element type of

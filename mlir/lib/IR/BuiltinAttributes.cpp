@@ -668,27 +668,6 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
 }
 
 //===----------------------------------------------------------------------===//
-// FloatElementIterator
-
-DenseElementsAttr::FloatElementIterator::FloatElementIterator(
-    const llvm::fltSemantics &smt, IntElementIterator it)
-    : llvm::mapped_iterator<IntElementIterator,
-                            std::function<APFloat(const APInt &)>>(
-          it, [&](const APInt &val) { return APFloat(smt, val); }) {}
-
-//===----------------------------------------------------------------------===//
-// ComplexFloatElementIterator
-
-DenseElementsAttr::ComplexFloatElementIterator::ComplexFloatElementIterator(
-    const llvm::fltSemantics &smt, ComplexIntElementIterator it)
-    : llvm::mapped_iterator<
-          ComplexIntElementIterator,
-          std::function<std::complex<APFloat>(const std::complex<APInt> &)>>(
-          it, [&](const std::complex<APInt> &val) -> std::complex<APFloat> {
-            return {APFloat(smt, val.real()), APFloat(smt, val.imag())};
-          }) {}
-
-//===----------------------------------------------------------------------===//
 // DenseElementsAttr
 //===----------------------------------------------------------------------===//
 

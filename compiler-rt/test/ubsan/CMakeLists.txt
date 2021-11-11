@@ -109,7 +109,7 @@ if(APPLE)
   # "check-asan-iossim-x86_64" and similar. They also require that an extra env
   # variable to select which iOS device or simulator to use, e.g.:
   # SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
-  set(UBSAN_APPLE_PLATFORMS ${SANITIZER_COMMON_SUPPORTED_OS})
+  set(UBSAN_APPLE_PLATFORMS ${UBSAN_SUPPORTED_OS})
   foreach(platform ${UBSAN_APPLE_PLATFORMS})
     list_intersect(
       UBSAN_TEST_${platform}_ARCHS
