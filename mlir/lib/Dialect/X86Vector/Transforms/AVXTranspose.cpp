@@ -78,8 +78,8 @@ Value mlir::x86vector::avx2::mm256Permute2f128Ps(ImplicitLocOpBuilder &b,
 /// AVX2 4x8xf32-specific transpose lowering using a "C intrinsics" model.
 void mlir::x86vector::avx2::transpose4x8xf32(ImplicitLocOpBuilder &ib,
                                              MutableArrayRef<Value> vs) {
-  auto vt = VectorType::get({8}, Float32Type::get(ib.getContext()));
 #ifndef NDEBUG
+  auto vt = VectorType::get({8}, Float32Type::get(ib.getContext()));
   assert(vs.size() == 4 && "expects 4 vectors");
   assert(llvm::all_of(ValueRange{vs}.getTypes(),
                       [&](Type t) { return t == vt; }) &&
