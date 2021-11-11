@@ -28,12 +28,6 @@ exit:
     i32 %bf.load)
   ret i8 %call.i
 
-; CHECK-SCO-SHRK-LABEL: _ZNK5clang9NamedDecl23getLinkageAndVisibilityEv:
-; CHECK-SCO-SHRK: b LVComputationKind
-; CHECK-SCO-SHRK: #TC_RETURNd8
-; CHECK-SCO-SHRK: stdu 1, -{{[0-9]+}}(1)
-; CHECK-SCO-SHRK: bl __assert_fail
-;
 ; CHECK-SCO-ONLY-LABEL: _ZNK5clang9NamedDecl23getLinkageAndVisibilityEv:
 ; CHECK-SCO-ONLY: stdu 1, -{{[0-9]+}}(1)
 ; CHECK-SCO-ONLY: b LVComputationKind
