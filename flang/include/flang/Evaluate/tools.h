@@ -1035,6 +1035,10 @@ namespace Fortran::semantics {
 
 class Scope;
 
+// If a symbol represents an ENTRY, return the symbol of the main entry
+// point to its subprogram.
+const Symbol *GetMainEntry(const Symbol *);
+
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
 // All of these apply GetUltimate() or ResolveAssociations() to their arguments.
