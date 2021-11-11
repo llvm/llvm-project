@@ -1026,7 +1026,8 @@ public:
 
   /// Discards the plans queued on the plan stack of the current thread.  This
   /// is
-  /// arbitrated by the "Master" ThreadPlans, using the "OkayToDiscard" call.
+  /// arbitrated by the "Controlling" ThreadPlans, using the "OkayToDiscard"
+  /// call.
   //  But if \a force is true, all thread plans are discarded.
   void DiscardThreadPlans(bool force);
 

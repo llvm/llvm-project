@@ -31,7 +31,7 @@ ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name,
                  eVoteNoOpinion, eVoteNoOpinion),
       m_class_name(class_name), m_args_data(args_data), m_did_push(false),
       m_stop_others(false) {
-  SetIsMasterPlan(true);
+  SetIsControllingPlan(true);
   SetOkayToDiscard(true);
   SetPrivate(false);
 }
