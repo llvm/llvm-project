@@ -91,7 +91,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Args.hasArg(options::OPT_shared))
     CmdArgs.push_back("-shared");
 
-  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
 
   if (!Args.hasArg(options::OPT_shared)) {
     std::string Dyld = D.DyldPrefix;
@@ -256,8 +256,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   addMultilibFlag(
       Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true),
       "fexceptions", Flags);
-  addMultilibFlag(getSanitizerArgs().needsAsanRt(), "fsanitize=address", Flags);
-  addMultilibFlag(getSanitizerArgs().needsHwasanRt(), "fsanitize=hwaddress",
+  addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "fsanitize=address",
+                  Flags);
+  addMultilibFlag(getSanitizerArgs(Args).needsHwasanRt(), "fsanitize=hwaddress",
                   Flags);
 
   addMultilibFlag(
