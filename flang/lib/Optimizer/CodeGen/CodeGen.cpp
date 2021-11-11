@@ -32,6 +32,14 @@
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
+static mlir::LLVM::ConstantOp
+genConstantIndex(mlir::Location loc, mlir::Type ity,
+                 mlir::ConversionPatternRewriter &rewriter,
+                 std::int64_t offset) {
+  auto cattr = rewriter.getI64IntegerAttr(offset);
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+}
+
 namespace {
 /// FIR conversion pattern template
 template <typename FromOp>
@@ -145,6 +153,27 @@ protected:
     return rewriter.create<mlir::LLVM::GEPOp>(loc, ty, base, cv);
   }
 
+  /// Perform an extension or truncation as needed on an integer value. Lowering
+  /// to the specific target may involve some sign-extending or truncation of
+  /// values, particularly to fit them from abstract box types to the
+  /// appropriate reified structures.
+  mlir::Value integerCast(mlir::Location loc,
+                          mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Type ty, mlir::Value val) const {
+    auto valTy = val.getType();
+    // If the value was not yet lowered, lower its type so that it can
+    // be used in getPrimitiveTypeSizeInBits.
+    if (!valTy.isa<mlir::IntegerType>())
+      valTy = convertType(valTy);
+    auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
+    auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
+    if (toSize < fromSize)
+      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+    if (toSize > fromSize)
+      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+    return val;
+  }
+
   fir::LLVMTypeConverter &lowerTy() const {
     return *static_cast<fir::LLVMTypeConverter *>(this->getTypeConverter());
   }
@@ -179,6 +208,92 @@ struct AddrOfOpConversion : public FIROpConversion<fir::AddrOfOp> {
     auto ty = convertType(addr.getType());
     rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
         addr, ty, addr.symbol().getRootReference().getValue());
+    return success();
+  }
+};
+} // namespace
+
+/// Lookup the function to compute the memory size of this parametric derived
+/// type. The size of the object may depend on the LEN type parameters of the
+/// derived type.
+static mlir::LLVM::LLVMFuncOp
+getDependentTypeMemSizeFn(fir::RecordType recTy, fir::AllocaOp op,
+                          mlir::ConversionPatternRewriter &rewriter) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  std::string name = recTy.getName().str() + "P.mem.size";
+  return module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(name);
+}
+
+namespace {
+/// convert to LLVM IR dialect `alloca`
+struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::AllocaOp alloc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::ValueRange operands = adaptor.getOperands();
+    auto loc = alloc.getLoc();
+    mlir::Type ity = lowerTy().indexType();
+    unsigned i = 0;
+    mlir::Value size = genConstantIndex(loc, ity, rewriter, 1).getResult();
+    mlir::Type ty = convertType(alloc.getType());
+    mlir::Type resultTy = ty;
+    if (alloc.hasLenParams()) {
+      unsigned end = alloc.numLenParams();
+      llvm::SmallVector<mlir::Value> lenParams;
+      for (; i < end; ++i)
+        lenParams.push_back(operands[i]);
+      mlir::Type scalarType = fir::unwrapSequenceType(alloc.getInType());
+      if (auto chrTy = scalarType.dyn_cast<fir::CharacterType>()) {
+        fir::CharacterType rawCharTy = fir::CharacterType::getUnknownLen(
+            chrTy.getContext(), chrTy.getFKind());
+        ty = mlir::LLVM::LLVMPointerType::get(convertType(rawCharTy));
+        assert(end == 1);
+        size = integerCast(loc, rewriter, ity, lenParams[0]);
+      } else if (auto recTy = scalarType.dyn_cast<fir::RecordType>()) {
+        mlir::LLVM::LLVMFuncOp memSizeFn =
+            getDependentTypeMemSizeFn(recTy, alloc, rewriter);
+        if (!memSizeFn)
+          emitError(loc, "did not find allocation function");
+        mlir::NamedAttribute attr = rewriter.getNamedAttr(
+            "callee", mlir::SymbolRefAttr::get(memSizeFn));
+        auto call = rewriter.create<mlir::LLVM::CallOp>(
+            loc, ity, lenParams, llvm::ArrayRef<mlir::NamedAttribute>{attr});
+        size = call.getResult(0);
+        ty = mlir::LLVM::LLVMPointerType::get(
+            mlir::IntegerType::get(alloc.getContext(), 8));
+      } else {
+        return emitError(loc, "unexpected type ")
+               << scalarType << " with type parameters";
+      }
+    }
+    if (alloc.hasShapeOperands()) {
+      mlir::Type allocEleTy = fir::unwrapRefType(alloc.getType());
+      // Scale the size by constant factors encoded in the array type.
+      if (auto seqTy = allocEleTy.dyn_cast<fir::SequenceType>()) {
+        fir::SequenceType::Extent constSize = 1;
+        for (auto extent : seqTy.getShape())
+          if (extent != fir::SequenceType::getUnknownExtent())
+            constSize *= extent;
+        mlir::Value constVal{
+            genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+        size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, constVal);
+      }
+      unsigned end = operands.size();
+      for (; i < end; ++i)
+        size = rewriter.create<mlir::LLVM::MulOp>(
+            loc, ity, size, integerCast(loc, rewriter, ity, operands[i]));
+    }
+    if (ty == resultTy) {
+      // Do not emit the bitcast if ty and resultTy are the same.
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(alloc, ty, size,
+                                                        alloc->getAttrs());
+    } else {
+      auto al = rewriter.create<mlir::LLVM::AllocaOp>(loc, ty, size,
+                                                      alloc->getAttrs());
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(alloc, resultTy, al);
+    }
     return success();
   }
 };
@@ -1070,16 +1185,16 @@ public:
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<
-        AddcOpConversion, AddrOfOpConversion, BoxAddrOpConversion,
-        BoxDimsOpConversion, BoxEleSizeOpConversion, BoxIsAllocOpConversion,
-        BoxIsArrayOpConversion, BoxIsPtrOpConversion, BoxRankOpConversion,
-        CallOpConversion, ConvertOpConversion, DivcOpConversion,
-        ExtractValueOpConversion, HasValueOpConversion, GlobalOpConversion,
-        InsertOnRangeOpConversion, InsertValueOpConversion, LoadOpConversion,
-        NegcOpConversion, MulcOpConversion, SelectOpConversion,
-        SelectRankOpConversion, StoreOpConversion, SubcOpConversion,
-        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
-        typeConverter);
+        AddcOpConversion, AddrOfOpConversion, AllocaOpConversion,
+        BoxAddrOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
+        BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
+        BoxRankOpConversion, CallOpConversion, ConvertOpConversion,
+        DivcOpConversion, ExtractValueOpConversion, HasValueOpConversion,
+        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
+        LoadOpConversion, NegcOpConversion, MulcOpConversion,
+        SelectOpConversion, SelectRankOpConversion, StoreOpConversion,
+        SubcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
