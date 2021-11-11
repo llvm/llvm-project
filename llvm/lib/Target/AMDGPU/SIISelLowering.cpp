@@ -9484,7 +9484,8 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (CRHS) {
     if (SDValue Split
-          = splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::OR, LHS, CRHS))
+          = splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::OR,
+                                     N->getOperand(0), CRHS))
       return Split;
   }
 
