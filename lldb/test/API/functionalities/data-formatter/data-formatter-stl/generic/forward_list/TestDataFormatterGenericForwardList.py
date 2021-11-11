@@ -9,8 +9,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+USE_LIBSTDCPP = "USE_LIBSTDCPP"
+USE_LIBCPP = "USE_LIBCPP"
 
-class TestDataFormatterLibcxxForwardList(TestBase):
+class TestDataFormatterGenericForwardList(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -19,10 +21,10 @@ class TestDataFormatterLibcxxForwardList(TestBase):
         self.line = line_number('main.cpp', '// break here')
         self.namespace = 'std'
 
-    @add_test_categories(["libc++"])
-    def test(self):
+    
+    def do_test(self, stdlib_type):
         """Test that std::forward_list is displayed correctly"""
-        self.build()
+        self.build(dictionary={stdlib_type: "1"})
         lldbutil.run_to_source_breakpoint(self, '// break here',
                 lldb.SBFileSpec("main.cpp", False))
 
@@ -49,3 +51,12 @@ class TestDataFormatterLibcxxForwardList(TestBase):
                              '[3] = 4444',
                              '[4] = 55555',
                              '}'])
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcpp(self):
+        self.do_test(USE_LIBSTDCPP)
+
+    @add_test_categories(["libc++"])
+    def test_libcpp(self):
+         self.do_test(USE_LIBCPP)
+    

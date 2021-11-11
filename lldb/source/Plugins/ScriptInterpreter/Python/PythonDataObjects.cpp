@@ -998,20 +998,6 @@ bool PythonFile::Check(PyObject *py_obj) {
 #endif
 }
 
-namespace {
-class GIL {
-public:
-  GIL() {
-    m_state = PyGILState_Ensure();
-    assert(!PyErr_Occurred());
-  }
-  ~GIL() { PyGILState_Release(m_state); }
-
-protected:
-  PyGILState_STATE m_state;
-};
-} // namespace
-
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
     return "unknown exception";

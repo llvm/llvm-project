@@ -65,7 +65,7 @@ Attribute DataLayoutEntryAttr::getValue() const { return getImpl()->value; }
 
 /// Parses an attribute with syntax:
 ///   attr ::= `#target.` `dl_entry` `<` (type | quoted-string) `,` attr `>`
-DataLayoutEntryAttr DataLayoutEntryAttr::parse(DialectAsmParser &parser) {
+DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -92,7 +92,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(DialectAsmParser &parser) {
               : get(parser.getBuilder().getIdentifier(identifier), value);
 }
 
-void DataLayoutEntryAttr::print(DialectAsmPrinter &os) const {
+void DataLayoutEntryAttr::print(AsmPrinter &os) const {
   os << DataLayoutEntryAttr::kAttrKeyword << "<";
   if (auto type = getKey().dyn_cast<Type>())
     os << type;
@@ -154,7 +154,7 @@ DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     } else {
       auto id = entry.getKey().get<Identifier>();
       if (!ids.insert(id).second)
-        return emitError() << "repeated layout entry key: " << id;
+        return emitError() << "repeated layout entry key: " << id.getValue();
     }
   }
   return success();
@@ -221,7 +221,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
 
   for (const auto &kvp : newEntriesForID) {
     Identifier id = kvp.second.getKey().get<Identifier>();
-    Dialect *dialect = id.getDialect();
+    Dialect *dialect = id.getReferencedDialect();
     if (!entriesForID.count(id)) {
       entriesForID[id] = kvp.second;
       continue;
@@ -277,7 +277,7 @@ DataLayoutEntryListRef DataLayoutSpecAttr::getEntries() const {
 ///   attr ::= `#target.` `dl_spec` `<` attr-list? `>`
 ///   attr-list ::= attr
 ///               | attr `,` attr-list
-DataLayoutSpecAttr DataLayoutSpecAttr::parse(DialectAsmParser &parser) {
+DataLayoutSpecAttr DataLayoutSpecAttr::parse(AsmParser &parser) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -298,7 +298,7 @@ DataLayoutSpecAttr DataLayoutSpecAttr::parse(DialectAsmParser &parser) {
                     parser.getContext(), entries);
 }
 
-void DataLayoutSpecAttr::print(DialectAsmPrinter &os) const {
+void DataLayoutSpecAttr::print(AsmPrinter &os) const {
   os << DataLayoutSpecAttr::kAttrKeyword << "<";
   llvm::interleaveComma(getEntries(), os);
   os << ">";
@@ -377,6 +377,6 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
     return success();
   }
 
-  return op->emitError() << "attribute '" << attr.first
+  return op->emitError() << "attribute '" << attr.first.getValue()
                          << "' not supported by dialect";
 }

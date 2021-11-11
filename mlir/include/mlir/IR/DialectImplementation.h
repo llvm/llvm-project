@@ -62,7 +62,7 @@ template <typename AttributeT>
 struct FieldParser<
     AttributeT, std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
                                  AttributeT>> {
-  static FailureOr<AttributeT> parse(DialectAsmParser &parser) {
+  static FailureOr<AttributeT> parse(AsmParser &parser) {
     AttributeT value;
     if (parser.parseAttribute(value))
       return failure();
@@ -74,7 +74,7 @@ struct FieldParser<
 template <typename IntT>
 struct FieldParser<IntT,
                    std::enable_if_t<std::is_integral<IntT>::value, IntT>> {
-  static FailureOr<IntT> parse(DialectAsmParser &parser) {
+  static FailureOr<IntT> parse(AsmParser &parser) {
     IntT value;
     if (parser.parseInteger(value))
       return failure();
@@ -85,7 +85,7 @@ struct FieldParser<IntT,
 /// Parse a string.
 template <>
 struct FieldParser<std::string> {
-  static FailureOr<std::string> parse(DialectAsmParser &parser) {
+  static FailureOr<std::string> parse(AsmParser &parser) {
     std::string value;
     if (parser.parseString(&value))
       return failure();
@@ -100,7 +100,7 @@ struct FieldParser<
                                      decltype(&ContainerT::push_back)>::value,
                                  ContainerT>> {
   using ElementT = typename ContainerT::value_type;
-  static FailureOr<ContainerT> parse(DialectAsmParser &parser) {
+  static FailureOr<ContainerT> parse(AsmParser &parser) {
     ContainerT elements;
     auto elementParser = [&]() {
       auto element = FieldParser<ElementT>::parse(parser);

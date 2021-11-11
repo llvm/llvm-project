@@ -31,6 +31,18 @@ func private @foo1(%arg0: !fir.ref<!fir.array<10xf32>>)
 
 // -----
 
+// Test pointer types `!fir.ptr`
+
+func private @foo0(%arg0: !fir.ptr<i32>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<i32>
+
+func private @foo1(%arg0: !fir.ptr<!fir.array<10xf32>>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.ptr<array<10 x f32>>
+
+// -----
+
 // Test box types `!fir.box`
 
 func private @foo0(%arg0: !fir.box<!fir.array<?xf32>>)
@@ -48,6 +60,25 @@ func private @foo2(%arg0: !fir.box<!fir.ref<i64>>)
 func private @foo3(%arg0: !fir.box<!fir.type<derived{f:f32}>>)
 // CHECK-LABEL: foo3
 // CHECK-SAME: !llvm.ptr<struct<(ptr<struct<"derived", (f32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>>
+
+// -----
+
+// Test char types `!fir.char<k, n>`
+
+func private @foo0(%arg0: !fir.char<1, 4>, %arg1: !fir.char<1, ?>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.array<4 x i8>
+// CHECK-SAME: i8
+
+func private @foo1(%arg0: !fir.char<2, 12>, %arg1: !fir.char<2, ?>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.array<12 x i16>
+// CHECK-SAME: i16
+
+func private @foo2(%arg0: !fir.char<4, 8>, %arg1: !fir.char<4, ?>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: !llvm.array<8 x i32>
+// CHECK-SAME: i32
 
 // -----
 

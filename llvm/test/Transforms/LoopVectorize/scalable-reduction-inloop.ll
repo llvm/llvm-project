@@ -7,8 +7,8 @@ define i8 @reduction_add_trunc(i8* noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_add_trunc(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 0, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer), i32 255, i32 0), %vector.ph ], [ [[TMP34:%.*]], %vector.body ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x i32> [ shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 0, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer), %vector.ph ], [ [[TMP36:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> zeroinitializer, i32 255, i32 0), %vector.ph ], [ [[TMP34:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP36:%.*]], %vector.body ]
 ; CHECK:         [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, <vscale x 8 x i8>*

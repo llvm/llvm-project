@@ -264,6 +264,12 @@ StringAttr StringAttr::get(const Twine &twine, Type type) {
   return Base::get(type.getContext(), twine.toStringRef(tempStr), type);
 }
 
+StringRef StringAttr::getValue() const { return getImpl()->value; }
+
+Dialect *StringAttr::getReferencedDialect() const {
+  return getImpl()->referencedDialect;
+}
+
 //===----------------------------------------------------------------------===//
 // FloatAttr
 //===----------------------------------------------------------------------===//
@@ -660,27 +666,6 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
   return {readBits(getData(), offset, bitWidth),
           readBits(getData(), offset + storageWidth, bitWidth)};
 }
-
-//===----------------------------------------------------------------------===//
-// FloatElementIterator
-
-DenseElementsAttr::FloatElementIterator::FloatElementIterator(
-    const llvm::fltSemantics &smt, IntElementIterator it)
-    : llvm::mapped_iterator<IntElementIterator,
-                            std::function<APFloat(const APInt &)>>(
-          it, [&](const APInt &val) { return APFloat(smt, val); }) {}
-
-//===----------------------------------------------------------------------===//
-// ComplexFloatElementIterator
-
-DenseElementsAttr::ComplexFloatElementIterator::ComplexFloatElementIterator(
-    const llvm::fltSemantics &smt, ComplexIntElementIterator it)
-    : llvm::mapped_iterator<
-          ComplexIntElementIterator,
-          std::function<std::complex<APFloat>(const std::complex<APInt> &)>>(
-          it, [&](const std::complex<APInt> &val) -> std::complex<APFloat> {
-            return {APFloat(smt, val.real()), APFloat(smt, val.imag())};
-          }) {}
 
 //===----------------------------------------------------------------------===//
 // DenseElementsAttr
@@ -1250,7 +1235,7 @@ bool DenseIntElementsAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  Dialect *dialect = getDialect().getDialect();
+  Dialect *dialect = getContext()->getLoadedDialect(getDialect());
   if (!dialect)
     return true;
   auto *interface =

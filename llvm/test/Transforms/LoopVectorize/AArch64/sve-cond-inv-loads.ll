@@ -83,7 +83,7 @@ define void @invariant_load_cond(i32* noalias nocapture %a, i32* nocapture reado
 ; CHECK-NEXT: %[[SPLATINS:.*]] = insertelement <vscale x 4 x i32*> poison, i32* %[[GEP]], i32 0
 ; CHECK-NEXT: %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32*> %[[SPLATINS]], <vscale x 4 x i32*> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK: %[[LOAD:.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>*
-; CHECK-NEXT: %[[ICMP:.*]] = icmp ne <vscale x 4 x i32> %[[LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 0, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT: %[[ICMP:.*]] = icmp ne <vscale x 4 x i32> %[[LOAD]], zeroinitializer
 ; CHECK: %[[MASKED_LOAD:.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* %[[BITCAST:.*]], i32 4, <vscale x 4 x i1> %[[ICMP]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT: %[[MASKED_GATHER:.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> %[[SPLAT]], i32 4, <vscale x 4 x i1> %[[ICMP]], <vscale x 4 x i32> undef)
 ; CHECK-NEXT: %[[ADD:.*]] = add nsw <vscale x 4 x i32> %[[MASKED_GATHER]], %[[MASKED_LOAD]]

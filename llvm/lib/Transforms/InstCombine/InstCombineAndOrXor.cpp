@@ -1206,11 +1206,28 @@ static Value *foldAndOrOfICmpsUsingRanges(
     ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
     ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
     IRBuilderBase &Builder, bool IsAnd) {
+  // Look through add of a constant offset on V1, V2, or both operands. This
+  // allows us to interpret the V + C' < C'' range idiom into a proper range.
+  const APInt *Offset1 = nullptr, *Offset2 = nullptr;
+  if (V1 != V2) {
+    Value *X;
+    if (match(V1, m_Add(m_Value(X), m_APInt(Offset1))))
+      V1 = X;
+    if (match(V2, m_Add(m_Value(X), m_APInt(Offset2))))
+      V2 = X;
+  }
+
   if (V1 != V2)
     return nullptr;
 
   ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  if (Offset1)
+    CR1 = CR1.subtract(*Offset1);
+
   ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  if (Offset2)
+    CR2 = CR2.subtract(*Offset2);
+
   Optional<ConstantRange> CR =
       IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
   if (!CR)
@@ -1293,19 +1310,20 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
 
-  ConstantInt *LHSC, *RHSC;
-  if (!match(LHS->getOperand(1), m_ConstantInt(LHSC)) ||
-      !match(RHS->getOperand(1), m_ConstantInt(RHSC)))
+  const APInt *LHSC, *RHSC;
+  if (!match(LHS->getOperand(1), m_APInt(LHSC)) ||
+      !match(RHS->getOperand(1), m_APInt(RHSC)))
     return nullptr;
 
   if (LHSC == RHSC && PredL == PredR) {
     // (icmp ult A, C) & (icmp ult B, C) --> (icmp ult (A|B), C)
     // where C is a power of 2 or
     // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
-    if ((PredL == ICmpInst::ICMP_ULT && LHSC->getValue().isPowerOf2()) ||
+    if ((PredL == ICmpInst::ICMP_ULT && LHSC->isPowerOf2()) ||
         (PredL == ICmpInst::ICMP_EQ && LHSC->isZero())) {
       Value *NewOr = Builder.CreateOr(LHS0, RHS0);
-      return Builder.CreateICmp(PredL, NewOr, LHSC);
+      return Builder.CreateICmp(PredL, NewOr,
+                                ConstantInt::get(NewOr->getType(), *LHSC));
     }
   }
 
@@ -1315,38 +1333,36 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (PredL == ICmpInst::ICMP_EQ && PredL == PredR && LHS->hasOneUse() &&
       RHS->hasOneUse()) {
     Value *V;
-    ConstantInt *AndC, *SmallC = nullptr, *BigC = nullptr;
+    const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
 
     // (trunc x) == C1 & (and x, CA) == C2
     // (and x, CA) == C2 & (trunc x) == C1
     if (match(RHS0, m_Trunc(m_Value(V))) &&
-        match(LHS0, m_And(m_Specific(V), m_ConstantInt(AndC)))) {
+        match(LHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
       SmallC = RHSC;
       BigC = LHSC;
     } else if (match(LHS0, m_Trunc(m_Value(V))) &&
-               match(RHS0, m_And(m_Specific(V), m_ConstantInt(AndC)))) {
+               match(RHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
       SmallC = LHSC;
       BigC = RHSC;
     }
 
     if (SmallC && BigC) {
-      unsigned BigBitSize = BigC->getType()->getBitWidth();
-      unsigned SmallBitSize = SmallC->getType()->getBitWidth();
+      unsigned BigBitSize = BigC->getBitWidth();
+      unsigned SmallBitSize = SmallC->getBitWidth();
 
       // Check that the low bits are zero.
       APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & AndC->getValue()).isZero() &&
-          (Low & BigC->getValue()).isZero()) {
-        Value *NewAnd = Builder.CreateAnd(V, Low | AndC->getValue());
-        APInt N = SmallC->getValue().zext(BigBitSize) | BigC->getValue();
-        Value *NewVal = ConstantInt::get(AndC->getType()->getContext(), N);
+      if ((Low & *AndC).isZero() && (Low & *BigC).isZero()) {
+        Value *NewAnd = Builder.CreateAnd(V, Low | *AndC);
+        APInt N = SmallC->zext(BigBitSize) | *BigC;
+        Value *NewVal = ConstantInt::get(NewAnd->getType(), N);
         return Builder.CreateICmp(PredL, NewAnd, NewVal);
       }
     }
   }
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
-                                     PredR, RHS0, RHSC->getValue(),
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
                                      Builder, /* IsAnd */ true);
 }
 
@@ -2235,10 +2251,12 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
     // element. That could allow poison in lanes where it was not present in the
     // original code.
     A = peekThroughBitcast(A);
-    unsigned NumSignBits = ComputeNumSignBits(A);
-    if (NumSignBits == A->getType()->getScalarSizeInBits() &&
-        NumSignBits <= Ty->getScalarSizeInBits())
-      return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(A->getType()));
+    if (A->getType()->isIntOrIntVectorTy()) {
+      unsigned NumSignBits = ComputeNumSignBits(A);
+      if (NumSignBits == A->getType()->getScalarSizeInBits() &&
+          NumSignBits <= Ty->getScalarSizeInBits())
+        return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(A->getType()));
+    }
     return nullptr;
   }
 
@@ -2322,8 +2340,9 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
   Value *LHS1 = LHS->getOperand(1), *RHS1 = RHS->getOperand(1);
-  auto *LHSC = dyn_cast<ConstantInt>(LHS1);
-  auto *RHSC = dyn_cast<ConstantInt>(RHS1);
+  const APInt *LHSC = nullptr, *RHSC = nullptr;
+  match(LHS1, m_APInt(LHSC));
+  match(RHS1, m_APInt(RHSC));
 
   // Fold (icmp ult/ule (A + C1), C3) | (icmp ult/ule (A + C2), C3)
   //                   -->  (icmp ult/ule ((A & ~(C1 ^ C2)) + max(C1, C2)), C3)
@@ -2337,40 +2356,41 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // This implies all values in the two ranges differ by exactly one bit.
   if ((PredL == ICmpInst::ICMP_ULT || PredL == ICmpInst::ICMP_ULE) &&
       PredL == PredR && LHSC && RHSC && LHS->hasOneUse() && RHS->hasOneUse() &&
-      LHSC->getType() == RHSC->getType() &&
-      LHSC->getValue() == (RHSC->getValue())) {
+      LHSC->getBitWidth() == RHSC->getBitWidth() && *LHSC == *RHSC) {
 
     Value *AddOpnd;
-    ConstantInt *LAddC, *RAddC;
-    if (match(LHS0, m_Add(m_Value(AddOpnd), m_ConstantInt(LAddC))) &&
-        match(RHS0, m_Add(m_Specific(AddOpnd), m_ConstantInt(RAddC))) &&
-        LAddC->getValue().ugt(LHSC->getValue()) &&
-        RAddC->getValue().ugt(LHSC->getValue())) {
+    const APInt *LAddC, *RAddC;
+    if (match(LHS0, m_Add(m_Value(AddOpnd), m_APInt(LAddC))) &&
+        match(RHS0, m_Add(m_Specific(AddOpnd), m_APInt(RAddC))) &&
+        LAddC->ugt(*LHSC) && RAddC->ugt(*LHSC)) {
 
-      APInt DiffC = LAddC->getValue() ^ RAddC->getValue();
+      APInt DiffC = *LAddC ^ *RAddC;
       if (DiffC.isPowerOf2()) {
-        ConstantInt *MaxAddC = nullptr;
-        if (LAddC->getValue().ult(RAddC->getValue()))
+        const APInt *MaxAddC = nullptr;
+        if (LAddC->ult(*RAddC))
           MaxAddC = RAddC;
         else
           MaxAddC = LAddC;
 
-        APInt RRangeLow = -RAddC->getValue();
-        APInt RRangeHigh = RRangeLow + LHSC->getValue();
-        APInt LRangeLow = -LAddC->getValue();
-        APInt LRangeHigh = LRangeLow + LHSC->getValue();
+        APInt RRangeLow = -*RAddC;
+        APInt RRangeHigh = RRangeLow + *LHSC;
+        APInt LRangeLow = -*LAddC;
+        APInt LRangeHigh = LRangeLow + *LHSC;
         APInt LowRangeDiff = RRangeLow ^ LRangeLow;
         APInt HighRangeDiff = RRangeHigh ^ LRangeHigh;
         APInt RangeDiff = LRangeLow.sgt(RRangeLow) ? LRangeLow - RRangeLow
                                                    : RRangeLow - LRangeLow;
 
         if (LowRangeDiff.isPowerOf2() && LowRangeDiff == HighRangeDiff &&
-            RangeDiff.ugt(LHSC->getValue())) {
-          Value *MaskC = ConstantInt::get(LAddC->getType(), ~DiffC);
+            RangeDiff.ugt(*LHSC)) {
+          Type *Ty = AddOpnd->getType();
+          Value *MaskC = ConstantInt::get(Ty, ~DiffC);
 
           Value *NewAnd = Builder.CreateAnd(AddOpnd, MaskC);
-          Value *NewAdd = Builder.CreateAdd(NewAnd, MaxAddC);
-          return Builder.CreateICmp(LHS->getPredicate(), NewAdd, LHSC);
+          Value *NewAdd = Builder.CreateAdd(NewAnd,
+                                            ConstantInt::get(Ty, *MaxAddC));
+          return Builder.CreateICmp(LHS->getPredicate(), NewAdd,
+                                    ConstantInt::get(Ty, *LHSC));
         }
       }
     }
@@ -2462,17 +2482,7 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (!LHSC || !RHSC)
     return nullptr;
 
-  // (icmp ult (X + CA), C1) | (icmp eq X, C2) -> (icmp ule (X + CA), C1)
-  //   iff C2 + CA == C1.
-  if (PredL == ICmpInst::ICMP_ULT && PredR == ICmpInst::ICMP_EQ) {
-    ConstantInt *AddC;
-    if (match(LHS0, m_Add(m_Specific(RHS0), m_ConstantInt(AddC))))
-      if (RHSC->getValue() + AddC->getValue() == LHSC->getValue())
-        return Builder.CreateICmpULE(LHS0, LHSC);
-  }
-
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHSC->getValue(),
-                                     PredR, RHS0, RHSC->getValue(),
+  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
                                      Builder, /* IsAnd */ false);
 }
 
@@ -2638,8 +2648,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // TODO: One use checks are conservative. We just need to check that a total
   //       number of multiple used values does not exceed reduction
   //       in operations.
-  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Not(m_Or(m_Value(A), m_Value(B)))),
-                                  m_Value(C))))) {
+  if (match(Op0, m_c_And(m_Not(m_Or(m_Value(A), m_Value(B))), m_Value(C)))) {
     // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
     if (match(Op1, m_OneUse(m_c_And(
                        m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
@@ -2657,12 +2666,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
 
     // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
-    if (match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(C)))))
+    if (match(Op1,
+              m_OneUse(m_Not(m_OneUse(m_c_Or(m_Specific(A), m_Specific(C)))))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(B, C), A));
 
     // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
-    if (match(Op1, m_Not(m_c_Or(m_Specific(B), m_Specific(C)))))
+    if (match(Op1,
+              m_OneUse(m_Not(m_OneUse(m_c_Or(m_Specific(B), m_Specific(C)))))))
       return BinaryOperator::CreateNot(
           Builder.CreateOr(Builder.CreateAnd(A, C), B));
   }

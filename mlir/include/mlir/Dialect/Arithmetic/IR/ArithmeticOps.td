@@ -277,6 +277,30 @@ def Arith_DivSIOp : Arith_IntBinaryOp<"divsi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CeilDivUIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_CeilDivUIOp : Arith_IntBinaryOp<"ceildivui"> {
+  let summary = "unsigned ceil integer division operation";
+  let description = [{
+    Unsigned integer division. Rounds towards positive infinity. Treats the 
+    leading bit as the most significant, i.e. for `i16` given two's complement
+    representation, `6 / -2 = 6 / (2^16 - 2) = 1`.
+
+    Note: the semantics of division by zero is TBD; do NOT assume any specific
+    behavior.
+
+    Example:
+
+    ```mlir
+    // Scalar unsigned integer division.
+    %a = arith.ceildivui %b, %c : i64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // CeilDivSIOp
 //===----------------------------------------------------------------------===//
 

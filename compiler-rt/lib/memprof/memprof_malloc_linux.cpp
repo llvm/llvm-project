@@ -61,27 +61,6 @@ static void DeallocateFromLocalPool(const void *ptr) {
   }
 }
 
-static int PosixMemalignFromLocalPool(void **memptr, uptr alignment,
-                                      uptr size_in_bytes) {
-  if (UNLIKELY(!CheckPosixMemalignAlignment(alignment)))
-    return errno_EINVAL;
-
-  CHECK(alignment >= kWordSize);
-
-  uptr addr = (uptr)&alloc_memory_for_dlsym[allocated_for_dlsym];
-  uptr aligned_addr = RoundUpTo(addr, alignment);
-  uptr aligned_size = RoundUpTo(size_in_bytes, kWordSize);
-
-  uptr *end_mem = (uptr *)(aligned_addr + aligned_size);
-  uptr allocated = end_mem - alloc_memory_for_dlsym;
-  if (allocated >= kDlsymAllocPoolSize)
-    return errno_ENOMEM;
-
-  allocated_for_dlsym = allocated;
-  *memptr = (void *)aligned_addr;
-  return 0;
-}
-
 static inline bool MaybeInDlsym() { return memprof_init_is_running; }
 
 static inline bool UseLocalPool() { return MaybeInDlsym(); }
@@ -102,19 +81,19 @@ static void *ReallocFromLocalPool(void *ptr, uptr size) {
 }
 
 INTERCEPTOR(void, free, void *ptr) {
-  GET_STACK_TRACE_FREE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
     DeallocateFromLocalPool(ptr);
     return;
   }
+  GET_STACK_TRACE_FREE;
   memprof_free(ptr, &stack, FROM_MALLOC);
 }
 
 #if SANITIZER_INTERCEPT_CFREE
 INTERCEPTOR(void, cfree, void *ptr) {
-  GET_STACK_TRACE_FREE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
+  GET_STACK_TRACE_FREE;
   memprof_free(ptr, &stack, FROM_MALLOC);
 }
 #endif // SANITIZER_INTERCEPT_CFREE
@@ -201,8 +180,6 @@ INTERCEPTOR(int, mallopt, int cmd, int value) { return 0; }
 #endif // SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
-  if (UNLIKELY(UseLocalPool()))
-    return PosixMemalignFromLocalPool(memptr, alignment, size);
   GET_STACK_TRACE_MALLOC;
   return memprof_posix_memalign(memptr, alignment, size, &stack);
 }

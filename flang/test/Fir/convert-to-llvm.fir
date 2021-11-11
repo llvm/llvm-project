@@ -686,3 +686,80 @@ func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
 // CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(ptr<array<10 x f{{.*}}>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>)>>) {
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
+
+// -----
+
+// Test `fir.box_rank` conversion.
+
+func @extract_rank(%arg0: !fir.box<!fir.array<*:f64>>) -> i32 {
+  %0 = fir.box_rank %arg0 : (!fir.box<!fir.array<*:f64>>) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @extract_rank(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i32
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[CRANK:.*]] = llvm.mlir.constant(3 : i32) : i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CRANK]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i32>
+// CHECK:         %[[RANK:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i32>
+// CHECK:         llvm.return %[[RANK]] : i32
+
+// -----
+
+// Test `fir.box_addr` conversion.
+
+func @extract_addr(%arg0: !fir.box<!fir.array<*:f64>>) -> !fir.ref<f64> {
+  %0 = fir.box_addr %arg0 : (!fir.box<!fir.array<*:f64>>) -> !fir.ref<f64>
+  return %0 : !fir.ref<f64>
+}
+
+// CHECK-LABEL: llvm.func @extract_addr(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> !llvm.ptr<f64>
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[CADDR:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CADDR]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<ptr<f64>>
+// CHECK:         %[[ADDR:.*]] = llvm.load %[[GEP]] : !llvm.ptr<ptr<f64>>
+// CHECK:         llvm.return %[[ADDR]] : !llvm.ptr<f64>
+
+// -----
+
+// Test `fir.box_dims` conversion.
+
+func @extract_dims(%arg0: !fir.box<!fir.array<*:f64>>) -> index {
+  %c1 = arith.constant 0 : i32
+  %0:3 = fir.box_dims %arg0, %c1 : (!fir.box<!fir.array<*:f64>>, i32) -> (index, index, index)
+  return %0 : index
+}
+
+// CHECK-LABEL: llvm.func @extract_dims(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[CDIMS:.*]] = llvm.mlir.constant(7 : i32) : i32
+// CHECK:         %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[GEP0:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CDIMS]], %[[C0_1]], %[[C0_2]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOAD0:.*]] = llvm.load %[[GEP0]] : !llvm.ptr<i64>
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[GEP1:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CDIMS]], %[[C0_1]], %[[C1]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOAD1:.*]] = llvm.load %[[GEP1]] : !llvm.ptr<i64>
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK:         %[[GEP2:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CDIMS]], %[[C0_1]], %[[C2]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOAD2:.*]] = llvm.load %[[GEP2]] : !llvm.ptr<i64>
+// CHECK:         llvm.return %[[LOAD0]] : i64
+
+// -----
+
+// Test `fir.box_elesize` conversion.
+
+func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
+  %0 = fir.box_elesize %arg0 : (!fir.box<f32>) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @extract_elesize(
+// CHECK-SAME:                             %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i32
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[CELESIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CELESIZE]]] : (!llvm.ptr<struct<(ptr<f32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i32>
+// CHECK:         %[[ELE_SIZE:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i32>
+// CHECK:         llvm.return %[[ELE_SIZE]] : i32

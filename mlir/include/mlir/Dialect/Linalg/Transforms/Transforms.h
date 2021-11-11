@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
+#include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/Bufferize.h"
@@ -577,31 +578,6 @@ struct LinalgTilingOptions {
     return *this;
   }
 
-  /// Callback returning the padding value to use for a given OpOperand or
-  /// failure for no padding. Padding operations are introduced if
-  /// `paddingValueComputationFunction` is set and does not return failure.
-  /// Padding all operands guarantees the operation is statically shaped and
-  /// thus can be vectorized.
-  PaddingValueComputationFunction paddingValueComputationFunction = nullptr;
-
-  LinalgTilingOptions &
-  setPaddingValueComputationFunction(PaddingValueComputationFunction fun) {
-    paddingValueComputationFunction = std::move(fun);
-    return *this;
-  }
-
-  /// Callback returning true if the pad tensor operation defining the given
-  /// OpOperand shall be marked as nofold to enable packing. A padding operation
-  /// is only marked nofold if `paddingNoFoldComputationFunction` is set and
-  /// returns true. Otherwise, the nofold attribute is set to false.
-  PaddingNoFoldComputationFunction paddingNoFoldComputationFunction = nullptr;
-
-  LinalgTilingOptions &
-  setPaddingNoFoldComputationFunction(PaddingNoFoldComputationFunction fun) {
-    paddingNoFoldComputationFunction = std::move(fun);
-    return *this;
-  }
-
   /// Peel the specified loops.
   SmallVector<int64_t> peeledLoops;
 
@@ -1018,6 +994,12 @@ struct LinalgVectorLoweringOptions {
     transposeLowering = val;
     return *this;
   }
+  /// Enable AVX2-specific lowerings.
+  bool avx2Lowering = false;
+  LinalgVectorLoweringOptions &enableAVX2Lowering(bool val = true) {
+    avx2Lowering = val;
+    return *this;
+  }
 
   /// Configure the post staged-patterns late vector.transfer to scf
   /// conversion.
@@ -1032,6 +1014,13 @@ struct LinalgVectorLoweringOptions {
   LinalgVectorLoweringOptions &
   setVectorTransformsOptions(vector::VectorTransformsOptions options) {
     vectorTransformOptions = options;
+    return *this;
+  }
+  /// Configure specialized vector lowerings.
+  x86vector::avx2::LoweringOptions avx2LoweringOptions;
+  LinalgVectorLoweringOptions &
+  setAVX2LoweringOptions(x86vector::avx2::LoweringOptions options) {
+    avx2LoweringOptions = options;
     return *this;
   }
 };

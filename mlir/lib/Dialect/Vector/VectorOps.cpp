@@ -169,7 +169,7 @@ static constexpr const CombiningKind combiningKindsList[] = {
     // clang-format on
 };
 
-void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
+void CombiningKindAttr::print(AsmPrinter &printer) const {
   printer << "kind<";
   auto kinds = llvm::make_filter_range(combiningKindsList, [&](auto kind) {
     return bitEnumContains(this->getKind(), kind);
@@ -179,7 +179,7 @@ void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
   printer << ">";
 }
 
-Attribute CombiningKindAttr::parse(DialectAsmParser &parser) {
+Attribute CombiningKindAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -207,7 +207,7 @@ Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,
     return {};
 
   if (attrKind == "kind")
-    return CombiningKindAttr::parse(parser);
+    return CombiningKindAttr::parse(parser, {});
 
   parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
   return {};

@@ -38,10 +38,51 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       [&](UnrankedMemRefType type) { return convertUnrankedMemRefType(type); });
   addConversion([&](VectorType type) { return convertVectorType(type); });
 
-  // LLVM-compatible types are legal, so add a pass-through conversion.
+  // LLVM-compatible types are legal, so add a pass-through conversion. Do this
+  // before the conversions below since conversions are attempted in reverse
+  // order and those should take priority.
   addConversion([](Type type) {
     return LLVM::isCompatibleType(type) ? llvm::Optional<Type>(type)
                                         : llvm::None;
+  });
+
+  // LLVM container types may (recursively) contain other types that must be
+  // converted even when the outer type is compatible.
+  addConversion([&](LLVM::LLVMPointerType type) -> llvm::Optional<Type> {
+    if (auto pointee = convertType(type.getElementType()))
+      return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
+    return llvm::None;
+  });
+  addConversion([&](LLVM::LLVMStructType type) -> llvm::Optional<Type> {
+    // TODO: handle conversion of identified structs, which may be recursive.
+    if (type.isIdentified())
+      return type;
+
+    SmallVector<Type> convertedSubtypes;
+    convertedSubtypes.reserve(type.getBody().size());
+    if (failed(convertTypes(type.getBody(), convertedSubtypes)))
+      return llvm::None;
+
+    return LLVM::LLVMStructType::getLiteral(type.getContext(),
+                                            convertedSubtypes, type.isPacked());
+  });
+  addConversion([&](LLVM::LLVMArrayType type) -> llvm::Optional<Type> {
+    if (auto element = convertType(type.getElementType()))
+      return LLVM::LLVMArrayType::get(element, type.getNumElements());
+    return llvm::None;
+  });
+  addConversion([&](LLVM::LLVMFunctionType type) -> llvm::Optional<Type> {
+    Type convertedResType = convertType(type.getReturnType());
+    if (!convertedResType)
+      return llvm::None;
+
+    SmallVector<Type> convertedArgTypes;
+    convertedArgTypes.reserve(type.getNumParams());
+    if (failed(convertTypes(type.getParams(), convertedArgTypes)))
+      return llvm::None;
+
+    return LLVM::LLVMFunctionType::get(convertedResType, convertedArgTypes,
+                                       type.isVarArg());
   });
 
   // Materialization for memrefs creates descriptor structs from individual

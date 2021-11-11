@@ -10615,8 +10615,8 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     for (unsigned I = 0; I != N; ++I)
       if (!VisitCXXConstructExpr(E, ArrayElt, &Value->getArrayInitializedElt(I),
                                  CAT->getElementType()) ||
-          !HandleLValueArrayAdjustment(Info, E, ArrayElt,
-                                       CAT->getElementType(), 1))
+          !HandleLValueArrayAdjustment(Info, E, ArrayElt, CAT->getElementType(),
+                                       1))
         return false;
 
     return true;
