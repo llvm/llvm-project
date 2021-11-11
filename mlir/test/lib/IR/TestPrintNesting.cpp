@@ -37,8 +37,8 @@ struct TestPrintNestingPass
     if (!op->getAttrs().empty()) {
       printIndent() << op->getAttrs().size() << " attributes:\n";
       for (NamedAttribute attr : op->getAttrs())
-        printIndent() << " - '" << attr.first << "' : '" << attr.second
-                      << "'\n";
+        printIndent() << " - '" << attr.first.getValue() << "' : '"
+                      << attr.second << "'\n";
     }
 
     // Recurse into each of the regions attached to the operation.

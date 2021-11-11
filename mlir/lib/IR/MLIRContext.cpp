@@ -18,7 +18,6 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
@@ -33,6 +32,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
@@ -228,14 +228,6 @@ public:
   DebugActionManager debugActionManager;
 
   //===--------------------------------------------------------------------===//
-  // Identifier uniquing
-  //===--------------------------------------------------------------------===//
-
-  // Identifier allocator and mutex for thread safety.
-  llvm::BumpPtrAllocator identifierAllocator;
-  llvm::sys::SmartRWMutex<true> identifierMutex;
-
-  //===--------------------------------------------------------------------===//
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
@@ -288,12 +280,6 @@ public:
   /// This is a mapping from operation name to AbstractOperation for registered
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
-
-  /// Identifiers are uniqued by string value and use the internal string set
-  /// for storage.
-  llvm::StringMap<PointerUnion<Dialect *, MLIRContext *>,
-                  llvm::BumpPtrAllocator &>
-      identifiers;
 
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
@@ -349,10 +335,15 @@ public:
   DictionaryAttr emptyDictionaryAttr;
   StringAttr emptyStringAttr;
 
+  /// Map of string attributes that may reference a dialect, that are awaiting
+  /// that dialect to be loaded.
+  llvm::sys::SmartMutex<true> dialectRefStrAttrMutex;
+  DenseMap<StringRef, SmallVector<StringAttrStorage *>>
+      dialectReferencingStrAttrs;
+
 public:
   MLIRContextImpl(bool threadingIsEnabled)
-      : threadingIsEnabled(threadingIsEnabled),
-        identifiers(identifierAllocator) {
+      : threadingIsEnabled(threadingIsEnabled) {
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::ThreadPool>();
       threadPool = ownedThreadPool.get();
@@ -541,12 +532,12 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
     // Refresh all the identifiers dialect field, this catches cases where a
     // dialect may be loaded after identifier prefixed with this dialect name
     // were already created.
-    llvm::SmallString<32> dialectPrefix(dialectNamespace);
-    dialectPrefix.push_back('.');
-    for (auto &identifierEntry : impl.identifiers)
-      if (identifierEntry.second.is<MLIRContext *>() &&
-          identifierEntry.first().startswith(dialectPrefix))
-        identifierEntry.second = dialect.get();
+    auto stringAttrsIt = impl.dialectReferencingStrAttrs.find(dialectNamespace);
+    if (stringAttrsIt != impl.dialectReferencingStrAttrs.end()) {
+      for (StringAttrStorage *storage : stringAttrsIt->second)
+        storage->referencedDialect = dialect.get();
+      impl.dialectReferencingStrAttrs.erase(stringAttrsIt);
+    }
 
     // Actually register the interfaces with delayed registration.
     impl.dialectsRegistry.registerDelayedInterfaces(dialect.get());
@@ -784,7 +775,8 @@ void AbstractOperation::insert(
   MutableArrayRef<Identifier> cachedAttrNames;
   if (!attrNames.empty()) {
     cachedAttrNames = MutableArrayRef<Identifier>(
-        impl.identifierAllocator.Allocate<Identifier>(attrNames.size()),
+        impl.abstractDialectSymbolAllocator.Allocate<Identifier>(
+            attrNames.size()),
         attrNames.size());
     for (unsigned i : llvm::seq<unsigned>(0, attrNames.size()))
       new (&cachedAttrNames[i]) Identifier(Identifier::get(attrNames[i], ctx));
@@ -838,63 +830,6 @@ AbstractType *AbstractType::lookupMutable(TypeID typeID, MLIRContext *context) {
   if (it == impl.registeredTypes.end())
     return nullptr;
   return it->second;
-}
-
-//===----------------------------------------------------------------------===//
-// Identifier uniquing
-//===----------------------------------------------------------------------===//
-
-/// Return an identifier for the specified string.
-Identifier Identifier::get(const Twine &string, MLIRContext *context) {
-  SmallString<32> tempStr;
-  StringRef str = string.toStringRef(tempStr);
-
-  // Check invariants after seeing if we already have something in the
-  // identifier table - if we already had it in the table, then it already
-  // passed invariant checks.
-  assert(!str.empty() && "Cannot create an empty identifier");
-  assert(!str.contains('\0') &&
-         "Cannot create an identifier with a nul character");
-
-  auto getDialectOrContext = [&]() {
-    PointerUnion<Dialect *, MLIRContext *> dialectOrContext = context;
-    auto dialectNamePair = str.split('.');
-    if (!dialectNamePair.first.empty())
-      if (Dialect *dialect = context->getLoadedDialect(dialectNamePair.first))
-        dialectOrContext = dialect;
-    return dialectOrContext;
-  };
-
-  auto &impl = context->getImpl();
-  if (!context->isMultithreadingEnabled()) {
-    auto insertedIt = impl.identifiers.insert({str, nullptr});
-    if (insertedIt.second)
-      insertedIt.first->second = getDialectOrContext();
-    return Identifier(&*insertedIt.first);
-  }
-
-  // Check for an existing identifier in read-only mode.
-  {
-    llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
-    auto it = impl.identifiers.find(str);
-    if (it != impl.identifiers.end())
-      return Identifier(&*it);
-  }
-
-  // Acquire a writer-lock so that we can safely create the new instance.
-  llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
-  auto it = impl.identifiers.insert({str, getDialectOrContext()}).first;
-  return Identifier(&*it);
-}
-
-Dialect *Identifier::getDialect() {
-  return entry->second.dyn_cast<Dialect *>();
-}
-
-MLIRContext *Identifier::getContext() {
-  if (Dialect *dialect = getDialect())
-    return dialect->getContext();
-  return entry->second.get<MLIRContext *>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -995,7 +930,7 @@ StorageUniquer &MLIRContext::getAttributeUniquer() {
 void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
                                                   MLIRContext *ctx,
                                                   TypeID attrID) {
-  storage->initialize(AbstractAttribute::lookup(attrID, ctx));
+  storage->initializeAbstractAttribute(AbstractAttribute::lookup(attrID, ctx));
 
   // If the attribute did not provide a type, then default to NoneType.
   if (!storage->getType())
@@ -1017,6 +952,24 @@ UnknownLoc UnknownLoc::get(MLIRContext *context) {
 /// Return empty dictionary.
 DictionaryAttr DictionaryAttr::getEmpty(MLIRContext *context) {
   return context->getImpl().emptyDictionaryAttr;
+}
+
+void StringAttrStorage::initialize(MLIRContext *context) {
+  // Check for a dialect namespace prefix, if there isn't one we don't need to
+  // do any additional initialization.
+  auto dialectNamePair = value.split('.');
+  if (dialectNamePair.first.empty() || dialectNamePair.second.empty())
+    return;
+
+  // If one exists, we check to see if this dialect is loaded. If it is, we set
+  // the dialect now, if it isn't we record this storage for initialization
+  // later if the dialect ever gets loaded.
+  if ((referencedDialect = context->getLoadedDialect(dialectNamePair.first)))
+    return;
+
+  MLIRContextImpl &impl = context->getImpl();
+  llvm::sys::SmartScopedLock<true> lock(impl.dialectRefStrAttrMutex);
+  impl.dialectReferencingStrAttrs[dialectNamePair.first].push_back(this);
 }
 
 /// Return an empty string.

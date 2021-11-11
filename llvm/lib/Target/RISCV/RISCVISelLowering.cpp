@@ -337,6 +337,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
     for (auto Op : FPOpToExpand)
       setOperationAction(Op, MVT::f16, Expand);
+
+    setOperationAction(ISD::FREM, MVT::f16, Promote);
   }
 
   if (Subtarget.hasStdExtF()) {

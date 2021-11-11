@@ -860,7 +860,6 @@ func @buffer_forwarding_no_conflict(
   %f = linalg.fill(%f0, %a) : f32, tensor<?xf32> -> tensor<?xf32>
 
   // Self-copy canonicalizes away later.
-  // CHECK: linalg.copy(%[[T_SUBVIEW]], %[[T_SUBVIEW]])
   %r1 = tensor.insert_slice %f into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
   return %r1: tensor<?xf32>

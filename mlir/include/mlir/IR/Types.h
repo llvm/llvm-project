@@ -228,7 +228,7 @@ private:
 
 // Make Type hashable.
 inline ::llvm::hash_code hash_value(Type arg) {
-  return ::llvm::hash_value(arg.impl);
+  return DenseMapInfo<const Type::ImplType *>::getHashValue(arg.impl);
 }
 
 template <typename U> bool Type::isa() const {
