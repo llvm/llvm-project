@@ -68,7 +68,7 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
     SPV_AnySampledImage:$sampledimage,
     SPV_ScalarOrVectorOf<SPV_Float>:$coordinate,
     SPV_Float:$dref,
-    OptionalAttr<SPV_ImageOperandAttr>:$imageoperands,
+    OptionalAttr<SPV_ImageOperandsAttr>:$imageoperands,
     Variadic<SPV_Type>:$operand_arguments
   );
 
