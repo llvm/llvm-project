@@ -1582,47 +1582,55 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
   }
 
   if (AllUsesCopied) {
-    bool ReplacedAllUntiedUses = false;
-    if (!IsEarlyClobber) {
-      // Replace other (un-tied) uses of regB with LastCopiedReg.
-      ReplacedAllUntiedUses = true;
-      for (MachineOperand &MO : MI->operands()) {
-        if (MO.isReg() && MO.getReg() == RegB && MO.isUse()) {
-          if (MO.getSubReg() == SubRegB) {
-            if (MO.isKill()) {
-              MO.setIsKill(false);
-              RemovedKillFlag = true;
-            }
-            MO.setReg(LastCopiedReg);
-            MO.setSubReg(0);
-          } else {
-            ReplacedAllUntiedUses = false;
+    LaneBitmask RemainingUses = LaneBitmask::getNone();
+    // Replace other (un-tied) uses of regB with LastCopiedReg.
+    for (MachineOperand &MO : MI->operands()) {
+      if (MO.isReg() && MO.getReg() == RegB && MO.isUse()) {
+        if (MO.getSubReg() == SubRegB && !IsEarlyClobber) {
+          if (MO.isKill()) {
+            MO.setIsKill(false);
+            RemovedKillFlag = true;
           }
+          MO.setReg(LastCopiedReg);
+          MO.setSubReg(0);
+        } else {
+          RemainingUses |= TRI->getSubRegIndexLaneMask(MO.getSubReg());
         }
       }
     }
 
     // Update live variables for regB.
-    if (RemovedKillFlag && ReplacedAllUntiedUses &&
-        LV && LV->getVarInfo(RegB).removeKill(*MI)) {
+    if (RemovedKillFlag && RemainingUses.none() && LV &&
+        LV->getVarInfo(RegB).removeKill(*MI)) {
       MachineBasicBlock::iterator PrevMI = MI;
       --PrevMI;
       LV->addVirtualRegisterKilled(RegB, *PrevMI);
     }
 
-    if (RemovedKillFlag && ReplacedAllUntiedUses)
+    if (RemovedKillFlag && RemainingUses.none())
       SrcRegMap[LastCopiedReg] = RegB;
 
     // Update LiveIntervals.
     if (LIS) {
-      LiveInterval &LI = LIS->getInterval(RegB);
-      SlotIndex MIIdx = LIS->getInstructionIndex(*MI);
-      LiveInterval::const_iterator I = LI.find(MIIdx);
-      assert(I != LI.end() && "RegB must be live-in to use.");
+      SlotIndex UseIdx = LIS->getInstructionIndex(*MI);
+      auto Shrink = [=](LiveRange &LR, LaneBitmask LaneMask) {
+        LiveRange::Segment *S = LR.getSegmentContaining(LastCopyIdx);
+        if (!S)
+          return true;
+        if ((LaneMask & RemainingUses).any())
+          return false;
+        if (S->end.getBaseIndex() != UseIdx)
+          return false;
+        S->end = LastCopyIdx;
+        return true;
+      };
 
-      SlotIndex UseIdx = MIIdx.getRegSlot(IsEarlyClobber);
-      if (I->end == UseIdx)
-        LI.removeSegment(LastCopyIdx, UseIdx);
+      LiveInterval &LI = LIS->getInterval(RegB);
+      bool ShrinkLI = true;
+      for (auto &S : LI.subranges())
+        ShrinkLI &= Shrink(S, S.LaneMask);
+      if (ShrinkLI)
+        Shrink(LI, LaneBitmask::getAll());
     }
   } else if (RemovedKillFlag) {
     // Some tied uses of regB matched their destination registers, so
