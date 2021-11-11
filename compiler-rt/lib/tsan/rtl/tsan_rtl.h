@@ -440,7 +440,7 @@ void InitializeDynamicAnnotations();
 
 void ForkBefore(ThreadState *thr, uptr pc);
 void ForkParentAfter(ThreadState *thr, uptr pc);
-void ForkChildAfter(ThreadState *thr, uptr pc);
+void ForkChildAfter(ThreadState *thr, uptr pc, bool start_thread);
 
 void ReportRace(ThreadState *thr);
 bool OutputReport(ThreadState *thr, const ScopedReport &srep);

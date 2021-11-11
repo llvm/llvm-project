@@ -506,7 +506,8 @@ void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   ctx->thread_registry.Unlock();
 }
 
-void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
+void ForkChildAfter(ThreadState *thr, uptr pc,
+                    bool start_thread) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
   ScopedErrorReportLock::Unlock();
@@ -518,7 +519,8 @@ void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   VPrintf(1, "ThreadSanitizer: forked new process with pid %d,"
       " parent had %d threads\n", (int)internal_getpid(), (int)nthread);
   if (nthread == 1) {
-    StartBackgroundThread();
+    if (start_thread)
+      StartBackgroundThread();
   } else {
     // We've just forked a multi-threaded process. We cannot reasonably function
     // after that (some mutexes may be locked before fork). So just enable

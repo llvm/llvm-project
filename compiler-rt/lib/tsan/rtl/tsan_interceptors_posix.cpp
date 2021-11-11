@@ -2189,7 +2189,7 @@ void atfork_child() {
     return;
   ThreadState *thr = cur_thread();
   const uptr pc = StackTrace::GetCurrentPc();
-  ForkChildAfter(thr, pc);
+  ForkChildAfter(thr, pc, true);
   FdOnFork(thr, pc);
 }
 
@@ -2222,7 +2222,12 @@ TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
   auto wrapper = +[](void *p) -> int {
     auto *thr = cur_thread();
     uptr pc = GET_CURRENT_PC();
-    ForkChildAfter(thr, pc);
+    // Start the background thread for fork, but not for clone.
+    // For fork we did this always and it's known to work (or user code has
+    // adopted). But if we do this for the new clone interceptor some code
+    // (sandbox2) fails. So model we used to do for years and don't start the
+    // background thread after clone.
+    ForkChildAfter(thr, pc, false);
     FdOnFork(thr, pc);
     auto *arg = static_cast<Arg *>(p);
     return arg->fn(arg->arg);
@@ -2570,7 +2575,7 @@ static void syscall_post_fork(uptr pc, int pid) {
   ThreadState *thr = cur_thread();
   if (pid == 0) {
     // child
-    ForkChildAfter(thr, pc);
+    ForkChildAfter(thr, pc, true);
     FdOnFork(thr, pc);
   } else if (pid > 0) {
     // parent
