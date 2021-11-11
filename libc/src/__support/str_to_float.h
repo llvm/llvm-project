@@ -308,6 +308,10 @@ simpleDecimalConversion(const char *__restrict numStart,
     ++exp2;
   }
 
+  if (exp2 == 0) {
+    errno = ERANGE; // NOLINT
+  }
+
   *outputMantissa = finalMantissa;
   *outputExp2 = exp2;
 }
