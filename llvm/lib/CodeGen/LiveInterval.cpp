@@ -1020,7 +1020,7 @@ void LiveRange::print(raw_ostream &OS) const {
 
   // Print value number info.
   if (getNumValNums()) {
-    OS << "  ";
+    OS << ' ';
     unsigned vnum = 0;
     for (const_vni_iterator i = vni_begin(), e = vni_end(); i != e;
          ++i, ++vnum) {
@@ -1039,8 +1039,8 @@ void LiveRange::print(raw_ostream &OS) const {
 }
 
 void LiveInterval::SubRange::print(raw_ostream &OS) const {
-  OS << " L" << PrintLaneMask(LaneMask) << ' '
-     << static_cast<const LiveRange&>(*this);
+  OS << "  L" << PrintLaneMask(LaneMask) << ' '
+     << static_cast<const LiveRange &>(*this);
 }
 
 void LiveInterval::print(raw_ostream &OS) const {
@@ -1049,7 +1049,7 @@ void LiveInterval::print(raw_ostream &OS) const {
   // Print subranges
   for (const SubRange &SR : subranges())
     OS << SR;
-  OS << " weight:" << Weight;
+  OS << "  weight:" << Weight;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
