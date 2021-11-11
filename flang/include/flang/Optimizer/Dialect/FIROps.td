@@ -2870,7 +2870,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
   }];
 }
 
-def fir_DTEntryOp : fir_Op<"dt_entry", []> {
+def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"DispatchTableOp">]> {
   let summary = "map entry in a dispatch table";
 
   let description = [{

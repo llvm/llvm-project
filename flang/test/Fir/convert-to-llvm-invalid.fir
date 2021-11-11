@@ -93,3 +93,10 @@ func @gentypedesc() {
   %0 = fir.gentypedesc !fir.type<derived3>
   return
 }
+
+// -----
+
+// Verify that `fir.dt_entry` requires a parent op
+
+// expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.dispatch_table'}}
+fir.dt_entry "method", @method_impl
