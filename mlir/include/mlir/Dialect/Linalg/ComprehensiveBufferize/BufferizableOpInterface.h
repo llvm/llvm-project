@@ -166,4 +166,57 @@ BufferRelation bufferRelation(OpOperand &opOperand);
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h.inc"
 
+namespace mlir {
+namespace linalg {
+namespace comprehensive_bufferize {
+
+/// AllocationHoistingBarrierOnly is an external implementation of
+/// BufferizableOpInterface for ops that are (not yet) bufferizable, but are
+/// known to be allocation hoisting barriers. All interface methods (except for
+/// `isAllocationHoistingBarrier`) are implemented conservatively.
+template <typename OpTy>
+struct AllocationHoistingBarrierOnly
+    : public BufferizableOpInterface::ExternalModel<
+          AllocationHoistingBarrierOnly<OpTy>, OpTy> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand) const {
+    return false;
+  }
+
+  SmallVector<OpOperand *> getAliasingOpOperand(Operation *op,
+                                                OpResult opResult) const {
+    return {};
+  }
+
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand) const {
+    return OpResult();
+  }
+
+  BufferRelation bufferRelation(Operation *op, OpOperand &opOperand) const {
+    return BufferRelation::None;
+  }
+
+  bool isWritable(Operation *op, Value value) const { return false; }
+
+  LogicalResult bufferize(Operation *op, OpBuilder &b,
+                          BlockAndValueMapping &bvm,
+                          BufferizationAliasInfo &aliasInfo,
+                          AllocationCallbacks &allocationFn) const {
+    auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
+    if (any_of(op->getOperandTypes(), isaTensor) ||
+        any_of(op->getResultTypes(), isaTensor))
+      return op->emitError() << "unsupported op with tensors";
+    return success();
+  }
+
+  bool isAllocationHoistingBarrier(Operation *op) const { return true; }
+};
+
+} // namespace comprehensive_bufferize
+} // namespace linalg
+} // namespace mlir
+
 #endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
