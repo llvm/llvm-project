@@ -66,8 +66,13 @@ public:
         [&](fir::RealType real) { return convertRealType(real.getFKind()); });
     addConversion(
         [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
-    addConversion(
-        [&](SequenceType sequence) { return convertSequenceType(sequence); });
+    addConversion([&](fir::SequenceType sequence) {
+      return convertSequenceType(sequence);
+    });
+    addConversion([&](fir::VectorType vecTy) {
+      return mlir::VectorType::get(llvm::ArrayRef<int64_t>(vecTy.getLen()),
+                                   convertType(vecTy.getEleTy()));
+    });
     addConversion([&](mlir::TupleType tuple) {
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
       llvm::SmallVector<mlir::Type> inMembers;
