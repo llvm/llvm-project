@@ -14,13 +14,14 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/SetVector.h"
@@ -554,12 +555,6 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyDecomposeConvolutionPatterns(FuncOp funcOp) {
-  RewritePatternSet patterns(funcOp.getContext());
-  populateDecomposeConvolutionPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
 static void applyPadTensorToGenericPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<PadTensorOpTransformationPattern>(funcOp.getContext());
@@ -726,8 +721,13 @@ void TestLinalgTransforms::runOnFunction() {
   if (testTileScalarizeDynamicDims)
     return applyTilePattern(getFunction(), loopType, tileSizes,
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
-  if (testDecomposeConvolutionPattern)
-    return applyDecomposeConvolutionPatterns(getFunction());
+  if (testDecomposeConvolutionPattern) {
+    // TODO: thread all tests through LinalgStrategy passes.
+    OpPassManager dynamicPM("builtin.func");
+    dynamicPM.addPass(createLinalgStrategyDecomposePass());
+    if (failed(runPipeline(dynamicPM, getFunction())))
+      return signalPassFailure();
+  }
 }
 
 namespace mlir {
