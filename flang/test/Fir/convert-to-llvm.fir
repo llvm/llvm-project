@@ -329,6 +329,7 @@ func @insert_tuple(%a : tuple<i32, f32>) {
 // CHECK:         llvm.return
 
 // -----
+
 // Test `fir.call` -> `llvm.call` conversion for functions that take no arguments
 // and return nothing
 
@@ -829,3 +830,134 @@ func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
 // CHECK:         llvm.return %[[IS_ALLOC]] : i1
+
+// -----
+
+// Test fir.alloca of one element
+
+func @alloca_one() -> !fir.ref<i32> {
+  %1 = fir.alloca i32
+  return %1 : !fir.ref<i32>
+}
+
+// CHECK-LABEL: llvm.func @alloca_one() -> !llvm.ptr<i32>
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: [[A:%.*]] = llvm.alloca [[N]] x i32
+// CHECK: llvm.return [[A]] : !llvm.ptr<i32>
+
+// -----
+
+// Test fir.alloca of several elements
+
+func @alloca_several() -> !fir.ref<i32> {
+  %0 = arith.constant 100 : index
+  %1 = fir.alloca i32, %0
+  return %1 : !fir.ref<i32>
+}
+
+// CHECK-LABEL: llvm.func @alloca_several() -> !llvm.ptr<i32>
+// CHECK: [[N:%.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: [[TOTAL:%.*]] = llvm.mul [[ONE]], [[N]] : i64
+// CHECK: [[A:%.*]] = llvm.alloca [[TOTAL]] x i32
+// CHECK: llvm.return [[A]] : !llvm.ptr<i32>
+
+// -----
+
+// Test fir.alloca of pointer to array
+
+func @alloca_ptr_to_array() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
+  %1 = fir.alloca !fir.ptr<!fir.array<?xi32>>
+  return %1 : !fir.ref<!fir.ptr<!fir.array<?xi32>>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_ptr_to_array() -> !llvm.ptr<ptr<i32>>
+// CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: [[A:%.*]] = llvm.alloca [[ONE]] x !llvm.ptr<i32>
+// CHECK: llvm.return [[A]] : !llvm.ptr<ptr<i32>>
+
+// -----
+
+// Test fir.alloca of char array
+
+func @alloca_char_array(%l: i32, %e : index) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>> {
+  %a = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%l : i32), %e, %e
+  return %a :  !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_char_array
+// CHECK-SAME: ([[L:%.*]]: i32, [[E:%.*]]: i64) -> !llvm.ptr<i8>
+// CHECK-DAG: [[UNUSEDONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-DAG: [[LCAST:%.*]] = llvm.sext [[L]] : i32 to i64
+// CHECK-DAG: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: [[PROD1:%.*]] = llvm.mul [[LCAST]], [[ONE]] : i64
+// CHECK: [[PROD2:%.*]] = llvm.mul [[PROD1]], [[E]] : i64
+// CHECK: [[PROD3:%.*]] = llvm.mul [[PROD2]], [[E]] : i64
+// CHECK: [[A:%.*]] = llvm.alloca [[PROD3]] x i8 {in_type = !fir.array<?x?x!fir.char<1,?>>
+// CHECK: return [[A]] : !llvm.ptr<i8>
+
+// -----
+
+// Test fir.alloca of record type with LEN parameters
+//   type t(p1,p2)
+//      integer, len :: p1
+//      integer(kind=2), len :: p2
+//      integer f1
+//      real f2
+//   end type t
+
+func private @_QTtP.mem.size(%0 : i32, %1 : i16) -> index
+
+func @alloca_record(%arg0 : i32, %arg1 : i16) -> !fir.ref<!fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>> {
+  %0 = fir.alloca !fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>(%arg0, %arg1 : i32, i16) {name = "_QEvar"}
+  return %0 : !fir.ref<!fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_record
+// CHECK-SAME: ([[ARG0:%.*]]: i32, [[ARG1:%.*]]: i16)
+// CHECK-SAME: -> !llvm.ptr<struct<"_QTt", (i32, f32)>>
+// CHECK: [[SIZE:%.*]] = llvm.call @_QTtP.mem.size([[ARG0]], [[ARG1]]) : (i32, i16) -> i64
+// CHECK: [[ALLOC:%.*]] = llvm.alloca [[SIZE]] x i8
+// CHECK: [[A:%.*]] = llvm.bitcast [[ALLOC]] : !llvm.ptr<i8> to !llvm.ptr<struct<"_QTt", (i32, f32)>>
+// CHECK: llvm.return [[A]] : !llvm.ptr<struct<"_QTt", (i32, f32)>>
+
+// -----
+
+// Test fir.alloca of a multidimensional array, with operands
+
+func @alloca_multidim_array(%0 : index) -> !fir.ref<!fir.array<8x16x32xf32>> {
+  %1 = arith.constant 24 : index
+  %2 = fir.alloca !fir.array<8x16x32xf32>, %0, %1
+  return %2 : !fir.ref<!fir.array<8x16x32xf32>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_multidim_array
+// CHECK-SAME: ([[OP1:%.*]]: i64) -> !llvm.ptr<array<32 x array<16 x array<8 x f32>
+// CHECK: [[OP2:%.*]] = llvm.mlir.constant(24 : index) : i64
+// CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: [[ALL:%.*]] = llvm.mlir.constant(4096 : i64) : i64
+// CHECK: [[MUL1:%.*]] = llvm.mul [[ONE]], [[ALL]] : i64
+// CHECK: [[MUL2:%.*]] = llvm.mul [[MUL1]], [[OP1]] : i64
+// CHECK: [[TOTAL:%.*]] = llvm.mul [[MUL2]], [[OP2]] : i64
+// CHECK: [[A:%.*]] = llvm.alloca [[TOTAL]] x !llvm.array<32 x array<16 x array<8 x f32>
+// CHECK: llvm.return [[A]] : !llvm.ptr<array<32 x array<16 x array<8 x f32>
+
+// -----
+
+// Test alloca with an array with holes.
+// Constant factor of 60 (4*3*5) must be included.
+
+func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.array<4x?x3x?x5xi32>> {
+  %a = fir.alloca !fir.array<4x?x3x?x5xi32>, %0, %1
+  return %a : !fir.ref<!fir.array<4x?x3x?x5xi32>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_array_with_holes
+// CHECK-SAME: ([[A:%.*]]: i64, [[B:%.*]]: i64) -> !llvm.ptr<i32>
+// CHECK-DAG: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-DAG: [[FIXED:%.*]] = llvm.mlir.constant(60 : i64) : i64
+// CHECK: [[PROD1:%.*]] = llvm.mul [[ONE]], [[FIXED]] : i64
+// CHECK: [[PROD2:%.*]] = llvm.mul [[PROD1]], [[A]] : i64
+// CHECK: [[PROD3:%.*]] = llvm.mul [[PROD2]], [[B]] : i64
+// CHECK: [[RES:%.*]] = llvm.alloca [[PROD3]] x i32 {in_type = !fir.array<4x?x3x?x5xi32>
+// CHECK: llvm.return [[RES]] : !llvm.ptr<i32>

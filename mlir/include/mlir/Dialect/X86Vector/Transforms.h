@@ -26,16 +26,16 @@ struct MaskHelper {
   /// b01 captures the lower 2 bits, b67 captures the higher 2 bits.
   /// Meant to be used with instructions such as mm256ShufflePs.
   template <unsigned b67, unsigned b45, unsigned b23, unsigned b01>
-  static char shuffle() {
+  static int8_t shuffle() {
     static_assert(b01 <= 0x03, "overflow");
     static_assert(b23 <= 0x03, "overflow");
     static_assert(b45 <= 0x03, "overflow");
     static_assert(b67 <= 0x03, "overflow");
-    return (b67 << 6) + (b45 << 4) + (b23 << 2) + b01;
+    return static_cast<int8_t>((b67 << 6) | (b45 << 4) | (b23 << 2) | b01);
   }
   /// b01 captures the lower 2 bits, b67 captures the higher 2 bits.
-  static void extractShuffle(char mask, char &b01, char &b23, char &b45,
-                             char &b67) {
+  static void extractShuffle(int8_t mask, int8_t &b01, int8_t &b23, int8_t &b45,
+                             int8_t &b67) {
     b67 = (mask & (0x03 << 6)) >> 6;
     b45 = (mask & (0x03 << 4)) >> 4;
     b23 = (mask & (0x03 << 2)) >> 2;
@@ -44,13 +44,13 @@ struct MaskHelper {
   /// b03 captures the lower 4 bits, b47 captures the higher 4 bits.
   /// Meant to be used with instructions such as mm256Permute2f128Ps.
   template <unsigned b47, unsigned b03>
-  static char permute() {
+  static int8_t permute() {
     static_assert(b03 <= 0x0f, "overflow");
     static_assert(b47 <= 0x0f, "overflow");
-    return (b47 << 4) + b03;
+    return static_cast<int8_t>((b47 << 4) + b03);
   }
   /// b03 captures the lower 4 bits, b47 captures the higher 4 bits.
-  static void extractPermute(char mask, char &b03, char &b47) {
+  static void extractPermute(int8_t mask, int8_t &b03, int8_t &b47) {
     b47 = (mask & (0x0f << 4)) >> 4;
     b03 = mask & 0x0f;
   }
@@ -80,7 +80,7 @@ Value mm256UnpackHiPs(ImplicitLocOpBuilder &b, Value v1, Value v2);
 /// Take an 8 bit mask, 2 bit for each position of a[0, 3)  **and** b[0, 4):
 ///                                 0:127    |         128:255
 ///                            b01  b23  C8  D8  |  b01+4 b23+4 C8+4 D8+4
-Value mm256ShufflePs(ImplicitLocOpBuilder &b, Value v1, Value v2, char mask);
+Value mm256ShufflePs(ImplicitLocOpBuilder &b, Value v1, Value v2, int8_t mask);
 
 // imm[0:1] out of imm[0:3] is:
 //    0             1           2             3
@@ -89,7 +89,7 @@ Value mm256ShufflePs(ImplicitLocOpBuilder &b, Value v1, Value v2, char mask);
 //             0             1           2             3
 // imm[0:1] out of imm[4:7].
 Value mm256Permute2f128Ps(ImplicitLocOpBuilder &b, Value v1, Value v2,
-                          char mask);
+                          int8_t mask);
 
 /// 4x8xf32-specific AVX2 transpose lowering.
 void transpose4x8xf32(ImplicitLocOpBuilder &ib, MutableArrayRef<Value> vs);

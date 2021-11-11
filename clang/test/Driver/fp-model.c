@@ -99,7 +99,7 @@
 // RUN: %clang -### -nostdinc -ffp-model=precise -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-PRECISE %s
 // CHECK-FPM-PRECISE: "-cc1"
-// CHECK-FPM-PRECISE: "-ffp-contract=fast"
+// CHECK-FPM-PRECISE: "-ffp-contract=on"
 // CHECK-FPM-PRECISE: "-fno-rounding-math"
 
 // RUN: %clang -### -nostdinc -ffp-model=strict -c %s 2>&1 \
