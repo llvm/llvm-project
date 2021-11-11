@@ -182,17 +182,26 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return `true` if the given OpOperand can be written to in-place. This
-          is the case for most ops, but some ops such as ConstantOp may
-          bufferize to non-writable (read-only) memory locations. This method
-          will never be called on OpResults that do not have a tensor type.
+          Return `true` if the given Value can be written to in-place. Value is
+          either an OpResult of this operation or a BlockArgument of a block of
+          this operation.
+
+          Most OpResult buffers can be written to, but some ops such as
+          ConstantOp may bufferize to non-writable (read-only) memory locations.
+          Therefore, by default, this method returns `true` for OpResults. This
+          method will never be called on OpResults that do not have a tensor
+          type.
+
+          Whether a BlockArgument can be written to or not depends on the
+          operation. This method conservatively returns `false`. This method
+          will never be called on BlockArguments that do not have a tensor type.
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "OpResult":$opResult),
+        /*args=*/(ins "Value":$value),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return true;
+          return value.isa<OpResult>();
         }]
       >
   ];

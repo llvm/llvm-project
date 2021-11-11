@@ -91,6 +91,12 @@ public:
   /// Specify that the value is known to bufferize to writable memory.
   void setBufferizesToWritableMemory(Value v);
 
+  /// Mark a value as in-place bufferized.
+  void markInPlace(OpResult v) { inplaceBufferized.insert(v); }
+
+  /// Return `true` if a value was marked as in-place bufferized.
+  bool isInPlace(OpResult opResult) const;
+
   /// Print to `os`.
   void printAliases(raw_ostream &os) const;
   void printEquivalences(raw_ostream &os) const;
@@ -116,6 +122,9 @@ private:
 
   /// Set of tensors that are known to bufferize to writable memory.
   llvm::DenseSet<Value> bufferizeToWritableMemory;
+
+  /// Set of all OpResults that were decided to bufferize in-place.
+  llvm::DenseSet<OpResult> inplaceBufferized;
 
   /// Auxiliary structure to store all the values a given value may alias with.
   /// Alias information is "may be" conservative: In the presence of branches, a

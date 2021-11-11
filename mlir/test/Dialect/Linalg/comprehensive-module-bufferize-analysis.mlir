@@ -1066,7 +1066,7 @@ func @reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
     %v2 = vector.transfer_read %e[%s], %cst : tensor<?xf32>, vector<5xf32>
     scf.yield %e, %v2 : tensor<?xf32>, vector<5xf32>
   }
-  // CHECK: __inplace_results_attr__ = ["true", "none"]
+  // CHECK: __inplace_results_attr__ = ["true", "false"]
 
   // Use %t3 in some way without reading it, so that it does not get DCE'd.
   // CHECK:      linalg.generic
