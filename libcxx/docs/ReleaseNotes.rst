@@ -80,7 +80,9 @@ API Changes
 
 - Removed the nonstandard methods ``std::chrono::file_clock::to_time_t`` and
   ``std::chrono::file_clock::from_time_t``; neither libstdc++ nor MSVC STL
-  had such methods.
+  had such methods. Instead, in C++20, you can use ``std::chrono::file_clock::from_sys``
+  and ``std::chrono::file_clock::to_sys``, which are specified in the Standard.
+  If you are not using C++20, you should move to it.
 
 - The declarations of functions ``declare_reachable``, ``undeclare_reachable``, ``declare_no_pointers``,
   ``undeclare_no_pointers``, and ``get_pointer_safety`` have been removed not only from C++2b but
