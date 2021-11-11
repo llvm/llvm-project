@@ -145,7 +145,11 @@ struct LLVMInitRAII {
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
 
+#ifdef _AIX
+TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
+#else
 TEST(IncrementalProcessing, FindMangledNameSymbol) {
+#endif
 
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
@@ -201,7 +205,11 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
   return R.getFoundDecl();
 }
 
+#ifdef _AIX
+TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
+#else
 TEST(IncrementalProcessing, InstantiateTemplate) {
+#endif
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
