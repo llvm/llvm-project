@@ -228,9 +228,7 @@ define <8 x i16> @test_v8f16(<8 x half> %in) {
 ;
 ; CHECK-FP16-LABEL: test_v8f16:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    movi v1.8h, #68, lsl #8
-; CHECK-FP16-NEXT:    fmul v0.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h, #2
 ; CHECK-FP16-NEXT:    ret
   %scale = fmul <8 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0>
   %val = fptosi <8 x half> %scale to <8 x i16>
@@ -251,9 +249,7 @@ define <4 x i16> @test_v4f16(<4 x half> %in) {
 ;
 ; CHECK-FP16-LABEL: test_v4f16:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    movi v1.4h, #68, lsl #8
-; CHECK-FP16-NEXT:    fmul v0.4h, v0.4h, v1.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h, #2
 ; CHECK-FP16-NEXT:    ret
   %scale = fmul <4 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0>
   %val = fptoui <4 x half> %scale to <4 x i16>
@@ -580,9 +576,7 @@ define <8 x i16> @test_v8f16_sat(<8 x half> %in) {
 ;
 ; CHECK-FP16-LABEL: test_v8f16_sat:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    movi v1.8h, #68, lsl #8
-; CHECK-FP16-NEXT:    fmul v0.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h, #2
 ; CHECK-FP16-NEXT:    ret
   %mul.i = fmul <8 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0>
   %val = call <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half> %mul.i)
@@ -603,9 +597,7 @@ define <4 x i16> @test_v4f16_sat(<4 x half> %in) {
 ;
 ; CHECK-FP16-LABEL: test_v4f16_sat:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    movi v1.4h, #68, lsl #8
-; CHECK-FP16-NEXT:    fmul v0.4h, v0.4h, v1.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h, #2
 ; CHECK-FP16-NEXT:    ret
   %mul.i = fmul <4 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0>
   %val = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f16(<4 x half> %mul.i)
