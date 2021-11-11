@@ -263,12 +263,6 @@ OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-static LogicalResult verify(ReleaseOp op) {
-  if (!getSparseTensorEncoding(op.tensor().getType()))
-    return op.emitError("expected a sparse tensor to release");
-  return success();
-}
-
 static LogicalResult verify(ToPointersOp op) {
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
     if (failed(isInBounds(op.dim(), op.tensor())))
@@ -301,9 +295,25 @@ static LogicalResult verify(ToValuesOp op) {
   return success();
 }
 
-static LogicalResult verify(ToTensorOp op) {
-  if (!getSparseTensorEncoding(op.result().getType()))
-    return op.emitError("expected a sparse tensor result");
+//===----------------------------------------------------------------------===//
+// TensorDialect Management Operations.
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(LexInsertOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor for insertion");
+  return success();
+}
+
+static LogicalResult verify(LoadOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor to materialize");
+  return success();
+}
+
+static LogicalResult verify(ReleaseOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor to release");
   return success();
 }
 

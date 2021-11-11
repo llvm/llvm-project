@@ -839,32 +839,53 @@ public:
   }
 };
 
-/// Sparse conversion rule for tensor reconstruction.
-class SparseTensorToTensorConverter : public OpConversionPattern<ToTensorOp> {
+/// Sparse conversion rule for tensor rematerialization.
+class SparseTensorLoadConverter : public OpConversionPattern<LoadOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  // Simply fold the operator into the pointer to the sparse storage scheme.
-  matchAndRewrite(ToTensorOp op, OpAdaptor adaptor,
+  matchAndRewrite(LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Check that all arguments of the tensor reconstruction operators are calls
-    // into the support library that query exactly the same opaque pointer.
-    Value ptr;
-    for (Value op : adaptor.getOperands()) {
-      if (auto call = op.getDefiningOp<CallOp>()) {
-        Value arg = call.getOperand(0);
-        if (!arg.getType().isa<LLVM::LLVMPointerType>())
-          return failure();
-        if (!ptr)
-          ptr = arg;
-        else if (arg != ptr)
-          return failure();
-      }
+    if (op.hasInserts()) {
+      // Finalize any pending insertions.
+      StringRef name = "endInsert";
+      TypeRange noTp;
+      auto fn = getFunc(op, name, noTp, adaptor.getOperands());
+      rewriter.create<CallOp>(op.getLoc(), noTp, fn, adaptor.getOperands());
     }
-    // If a single opaque pointer is found, perform the folding.
-    if (!ptr)
-      return failure();
-    rewriter.replaceOp(op, ptr);
+    rewriter.replaceOp(op, adaptor.getOperands());
+    return success();
+  }
+};
+
+/// Sparse conversion rule for inserting in lexicographic index order.
+class SparseTensorLexInsertConverter : public OpConversionPattern<LexInsertOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(LexInsertOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.tensor().getType();
+    Type eltType = srcType.cast<ShapedType>().getElementType();
+    StringRef name;
+    if (eltType.isF64())
+      name = "lexInsertF64";
+    else if (eltType.isF32())
+      name = "lexInsertF32";
+    else if (eltType.isInteger(64))
+      name = "lexInsertI64";
+    else if (eltType.isInteger(32))
+      name = "lexInsertI32";
+    else if (eltType.isInteger(16))
+      name = "lexInsertI16";
+    else if (eltType.isInteger(8))
+      name = "lexInsertI8";
+    else
+      llvm_unreachable("Unknown element type");
+    TypeRange noTp;
+    auto fn =
+        getFunc(op, name, noTp, adaptor.getOperands(), /*emitCInterface=*/true);
+    rewriter.replaceOpWithNewOp<CallOp>(op, noTp, fn, adaptor.getOperands());
     return success();
   }
 };
@@ -884,6 +905,6 @@ void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                SparseTensorInitConverter, SparseTensorConvertConverter,
                SparseTensorReleaseConverter, SparseTensorToPointersConverter,
                SparseTensorToIndicesConverter, SparseTensorToValuesConverter,
-               SparseTensorToTensorConverter>(typeConverter,
-                                              patterns.getContext());
+               SparseTensorLoadConverter, SparseTensorLexInsertConverter>(
+      typeConverter, patterns.getContext());
 }

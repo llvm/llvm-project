@@ -25,10 +25,10 @@ class SparseTensor_Op<string mnemonic, list<OpTrait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
-// Operations.
+// Sparse Tensor Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_NewOp : SparseTensor_Op<"new", []>,
+def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
     Arguments<(ins AnyType:$source)>,
     Results<(outs TensorOf<[AnyType]>:$result)> {
   string summary = "Materializes a new sparse tensor from given source";
@@ -51,15 +51,15 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", []>,
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
-def SparseTensor_InitOp : SparseTensor_Op<"init", []>,
+def SparseTensor_InitOp : SparseTensor_Op<"init", [NoSideEffect]>,
     Arguments<(ins Variadic<Index>:$sizes)>,
     Results<(outs AnyTensor:$result)> {
-  string summary = "Materializes an empty sparse tensor";
+  string summary = "Materializes an unitialized sparse tensor";
   string description = [{
-    Materializes an empty sparse tensor with given shape (either static or dynamic).
-    The operation is provided as an anchor that materializes a properly typed sparse
-    tensor into the output clause of a subsequent operation that yields a sparse tensor
-    as the result.
+    Materializes an uninitialized sparse tensor with given shape (either static
+    or dynamic). The operation is provided as an anchor that materializes a
+    properly typed but uninitialized sparse tensor into the output clause of
+    a subsequent operation that yields a sparse tensor as the result.
 
     Example:
 
@@ -114,31 +114,12 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   let hasFolder = 1;
 }
 
-def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
-    Arguments<(ins AnyTensor:$tensor)> {
-  string description = [{
-    Releases the underlying sparse storage scheme for a tensor that
-    materialized earlier through a `new` operator, `init` operator, or a
-    non-trivial `convert` operator with an annotated tensor type as destination.
-    This operation should only be called once for any materialized tensor.
-    Also, after this operation, any subsequent `memref` querying operation
-    on the tensor returns undefined results.
-
-    Example:
-
-    ```mlir
-    sparse_tensor.release %tensor : tensor<1024x1024xf64, #CSR>
-    ```
-  }];
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
-}
-
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
-  let summary = "Extract pointers array at given dimension from a tensor";
+  let summary = "Extracts pointers array at given dimension from a tensor";
   let description = [{
-    Returns the pointers array of the sparse storage scheme at the
+    Returns the pointers array of the sparse storage format at the
     given dimension for the given sparse tensor. This is similar to the
     `memref.buffer_cast` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
@@ -160,9 +141,9 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
 def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
-  let summary = "Extract indices array at given dimension from a tensor";
+  let summary = "Extracts indices array at given dimension from a tensor";
   let description = [{
-    Returns the indices array of the sparse storage scheme at the
+    Returns the indices array of the sparse storage format at the
     given dimension for the given sparse tensor. This is similar to the
     `memref.buffer_cast` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
@@ -184,9 +165,9 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
 def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
-  let summary = "Extract numerical values array from a tensor";
+  let summary = "Extracts numerical values array from a tensor";
   let description = [{
-    Returns the values array of the sparse storage scheme for the given
+    Returns the values array of the sparse storage format for the given
     sparse tensor, independent of the actual dimension. This is similar to
     the `memref.buffer_cast` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
@@ -203,33 +184,94 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
 }
 
-def SparseTensor_ToTensorOp : SparseTensor_Op<"tensor", [NoSideEffect]>,
-    Arguments<(ins Variadic<AnyStridedMemRefOfRank<1>>:$memrefs)>,
-    Results<(outs AnyTensor:$result)> {
-  let summary = "Rematerializes tensor from arrays(s)";
-  let description = [{
-    Rematerializes the sparse tensor from the sparse storage scheme array(s).
-    This is similar to the `memref.load` operation in the sense that it
-    provides a bridge between a bufferized world view and a tensor world
-    view. Unlike the `memref.load` operation, however, this sparse operation
-    is used only temporarily to maintain a correctly typed intermediate
-    representation during progressive bufferization. Eventually the operation
-    is folded away.
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Management Operations. These operations are "impure" in the
+// sense that they do not properly operate on SSA values. Instead, the behavior
+// is solely defined by side-effects. These operations provide a bridge between
+// the code generator and the support library. The semantics of these operations
+// may be refined over time as our sparse abstractions evolve.
+//===----------------------------------------------------------------------===//
 
-    The input arrays are defined unambigously by the sparsity annotations
-    (pointers and indices for overhead storage in every compressed dimension,
-    followed by one final values array).
+def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
+    Arguments<(ins AnyTensor:$tensor,
+               StridedMemRefRankOf<[Index], [1]>:$indices,
+	       AnyType:$value)> {
+  string summary = "Inserts a value into given sparse tensor in lexicograph index order";
+  string description = [{
+    Inserts the given value at given indices into the underlying sparse
+    storage format of the given tensor with the given indices. This
+    operation can only be applied when a tensor materializes unintialized
+    with an `init` operation, the insertions occur in strict lexicographic
+    index order, and the final tensor is constructed with a `tensor`
+    operation that has the `hasInserts` attribute set.
 
-    Examples:
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
 
     ```mlir
-    %1 = sparse_tensor.tensor %0 : memref<?xf64> to tensor<64x64xf64, #Dense>
-
-    %3 = sparse_tensor.tensor %0, %1, %2 :
-       memref<?xindex>, memref<?xindex>, memref<?xf32> to tensor<10x10xf32, #CSR>
+    sparse_tensor.lex_insert %tensor, %indices, %val
+      : tensor<1024x1024xf64, #CSR>, memref<?xindex>, f64
     ```
   }];
-  let assemblyFormat = "$memrefs attr-dict `:` type($memrefs) `to` type($result)";
+  let assemblyFormat = "$tensor `,` $indices `,` $value attr-dict `:`"
+                       " type($tensor) `,` type($indices) `,` type($value)";
+}
+
+def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
+    Arguments<(ins AnyTensor:$tensor, UnitAttr:$hasInserts)>,
+    Results<(outs AnyTensor:$result)> {
+  let summary =
+    "Rematerializes tensor from underlying sparse storage format";
+  let description = [{
+    Rematerializes a tensor from the underlying sparse storage format of the
+    given tensor. This is similar to the `memref.load` operation in the sense
+    that it provides a bridge between a bufferized world view and a tensor
+    world view. Unlike the `memref.load` operation, however, this sparse
+    operation is used only temporarily to maintain a correctly typed
+    intermediate representation during progressive bufferization.
+
+    The `hasInserts` attribute denote whether insertions to the underlying
+    sparse storage format may have occurred, in which case the underlying
+    sparse storage format needs to be finalized. Otherwise, the operation
+    simply folds away.
+
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
+
+    Example:
+
+    ```mlir
+    %1 = sparse_tensor.load %0 : tensor<8xf64, #SV>
+    ```
+  }];
+  let assemblyFormat = "$tensor (`hasInserts` $hasInserts^)? attr-dict `:` type($tensor)";
+}
+
+def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
+    Arguments<(ins AnyTensor:$tensor)> {
+  string summary = "Releases underlying sparse storage format of given tensor";
+  string description = [{
+    Releases the underlying sparse storage format for a tensor that
+    materialized earlier through a `new` operator, `init` operator, or a
+    `convert` operator with an annotated tensor type as destination (unless
+    that convert is folded away since the source and destination types were
+    identical). This operation should only be called once for any materialized
+    tensor.  Also, after this operation, any subsequent `memref` querying
+    operation on the tensor returns undefined results.
+
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.release %tensor : tensor<1024x1024xf64, #CSR>
+    ```
+  }];
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
 #endif // SPARSETENSOR_OPS
