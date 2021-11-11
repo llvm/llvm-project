@@ -255,7 +255,8 @@ enum BindType {
 enum BindSpecialDylib {
   BIND_SPECIAL_DYLIB_SELF = 0,
   BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE = -1,
-  BIND_SPECIAL_DYLIB_FLAT_LOOKUP = -2
+  BIND_SPECIAL_DYLIB_FLAT_LOOKUP = -2,
+  BIND_SPECIAL_DYLIB_WEAK_LOOKUP = -3
 };
 
 enum {
@@ -999,6 +1000,19 @@ struct nlist_64 {
   uint8_t n_sect;
   uint16_t n_desc;
   uint64_t n_value;
+};
+
+/// Structs for dyld chained fixups.
+/// dyld_chained_fixups_header is the data pointed to by LC_DYLD_CHAINED_FIXUPS
+/// load command.
+struct dyld_chained_fixups_header {
+  uint32_t fixups_version; ///< 0
+  uint32_t starts_offset;  ///< Offset of dyld_chained_starts_in_image.
+  uint32_t imports_offset; ///< Offset of imports table in chain_data.
+  uint32_t symbols_offset; ///< Offset of symbol strings in chain_data.
+  uint32_t imports_count;  ///< Number of imported symbol names.
+  uint32_t imports_format; ///< DYLD_CHAINED_IMPORT*
+  uint32_t symbols_format; ///< 0 => uncompressed, 1 => zlib compressed
 };
 
 // Byte order swapping functions for MachO structs
@@ -2007,6 +2021,16 @@ union alignas(4) macho_load_command {
 #include "llvm/BinaryFormat/MachO.def"
 };
 LLVM_PACKED_END
+
+inline void swapStruct(dyld_chained_fixups_header &C) {
+  sys::swapByteOrder(C.fixups_version);
+  sys::swapByteOrder(C.starts_offset);
+  sys::swapByteOrder(C.imports_offset);
+  sys::swapByteOrder(C.symbols_offset);
+  sys::swapByteOrder(C.imports_count);
+  sys::swapByteOrder(C.imports_format);
+  sys::swapByteOrder(C.symbols_format);
+}
 
 /* code signing attributes of a process */
 
