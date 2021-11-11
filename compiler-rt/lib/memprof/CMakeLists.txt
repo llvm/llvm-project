@@ -8,6 +8,7 @@ set(MEMPROF_SOURCES
   memprof_interceptors_memintrinsics.cpp
   memprof_linux.cpp
   memprof_malloc_linux.cpp
+  memprof_mibmap.cpp
   memprof_posix.cpp
   memprof_rtl.cpp
   memprof_shadow_setup.cpp
@@ -36,6 +37,7 @@ SET(MEMPROF_HEADERS
   memprof_internal.h
   memprof_mapping.h
   memprof_meminfoblock.h
+  memprof_mibmap.h
   memprof_stack.h
   memprof_stats.h
   memprof_thread.h
