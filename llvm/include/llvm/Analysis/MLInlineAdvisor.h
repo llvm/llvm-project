@@ -38,6 +38,7 @@ public:
   bool isForcedToStop() const { return ForceStop; }
   int64_t getLocalCalls(Function &F);
   const MLModelRunner &getModelRunner() const { return *ModelRunner.get(); }
+  void onModuleInvalidated() override { Invalid = true; }
 
 protected:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
@@ -55,6 +56,7 @@ protected:
 private:
   int64_t getModuleIRSize() const;
 
+  bool Invalid = true;
   std::unique_ptr<CallGraph> CG;
 
   int64_t NodeCount = 0;
