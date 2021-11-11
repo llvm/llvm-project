@@ -37,6 +37,7 @@ struct GenericTarget : public CodeGenSpecifics {
 
   mlir::Type complexMemoryType(mlir::Type eleTy) const override {
     assert(fir::isa_real(eleTy));
+    // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 eleTy
     mlir::TypeRange range = {eleTy, eleTy};
     return mlir::TupleType::get(eleTy.getContext(), range);
@@ -45,6 +46,7 @@ struct GenericTarget : public CodeGenSpecifics {
   mlir::Type boxcharMemoryType(mlir::Type eleTy) const override {
     auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
+    // Use a type that will be translated into LLVM as:
     // { t*, index }
     mlir::TypeRange range = {ptrTy, idxTy};
     return mlir::TupleType::get(eleTy.getContext(), range);
@@ -80,6 +82,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
   complexArgumentType(mlir::Type eleTy) const override {
     assert(fir::isa_real(eleTy));
     CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 eleTy, byval, align 4
     mlir::TypeRange range = {eleTy, eleTy};
     auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
@@ -98,6 +101,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
       marshal.emplace_back(mlir::IntegerType::get(eleTy.getContext(), 64),
                            AT{});
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // Use a type that will be translated into LLVM as:
       // { t, t }   struct of 2 eleTy, sret, align 4
       mlir::TypeRange range = {eleTy, eleTy};
       auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
@@ -146,7 +150,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       // <2 x t>   vector of 2 eleTy
       marshal.emplace_back(fir::VectorType::get(2, eleTy), AT{});
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
-      // ( t, t )   tuple of 2 eleTy
+      // Use a type that will be translated into LLVM as:
+      // { double, double }   struct of 2 double
       mlir::TypeRange range = {eleTy, eleTy};
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
@@ -188,7 +193,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
         sem == &llvm::APFloat::IEEEdouble()) {
-      // ( t, t )   tuple of 2 eleTy
+      // Use a type that will be translated into LLVM as:
+      // { t, t }   struct of 2 eleTy
       mlir::TypeRange range = {eleTy, eleTy};
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
@@ -222,7 +228,8 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
   CodeGenSpecifics::Marshalling
   complexReturnType(mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
-    // ( t, t )   tuple of 2 element type
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 element type
     mlir::TypeRange range = {eleTy, eleTy};
     marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
     return marshal;
