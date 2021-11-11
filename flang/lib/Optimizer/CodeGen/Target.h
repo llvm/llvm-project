@@ -77,6 +77,9 @@ public:
   /// value may need to be converted to a hidden reference argument.
   virtual Marshalling complexReturnType(mlir::Type eleTy) const = 0;
 
+  /// Type presentation of a `boxchar<n>` type value in memory.
+  virtual mlir::Type boxcharMemoryType(mlir::Type eleTy) const = 0;
+
   /// Type representation of a `boxchar<n>` type argument when passed by value.
   /// An argument value may need to be passed as a (safe) reference argument.
   ///

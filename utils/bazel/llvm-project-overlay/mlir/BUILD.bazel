@@ -1716,6 +1716,7 @@ cc_library(
     deps = [
         ":Affine",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":IR",
         ":LLVMDialect",
         ":LinalgOps",
@@ -6303,6 +6304,7 @@ cc_library(
     deps = [
         ":Affine",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":CopyOpInterface",
         ":DialectUtils",
         ":IR",

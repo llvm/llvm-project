@@ -763,3 +763,69 @@ func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CELESIZE]]] : (!llvm.ptr<struct<(ptr<f32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i32>
 // CHECK:         %[[ELE_SIZE:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i32>
 // CHECK:         llvm.return %[[ELE_SIZE]] : i32
+
+// -----
+
+// Test `fir.box_isarray` conversion.
+// `rank` is extracted from `fir.box` and compare to 0.
+
+func @box_isarray(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
+  %0 = fir.box_isarray %arg0 : (!fir.box<!fir.array<*:f64>>) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: llvm.func @box_isarray(
+// CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i1
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[RANKPOS:.*]] = llvm.mlir.constant(3 : i32) : i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[RANKPOS]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i32> 
+// CHECK:         %[[RANK:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i32>
+// CHECK:         %[[C0_ISARRAY:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[IS_ARRAY:.*]] = llvm.icmp "ne" %[[RANK]], %[[C0_ISARRAY]] : i32
+// CHECK:         llvm.return %[[IS_ARRAY]] : i1
+
+// -----
+
+// Test `fir.box_isalloc` conversion.
+// `attribute` is extracted from `fir.box` and checked against a mask equal to
+// the value of `CFI_attribute_allocatable`.
+
+func @box_isalloc(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
+  %0 = fir.box_isalloc %arg0 : (!fir.box<!fir.array<*:f64>>) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: llvm.func @box_isalloc(
+// CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i1
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[ATTRPOS:.*]] = llvm.mlir.constant(5 : i32) : i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[ATTRPOS]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i32>
+// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i32>
+// CHECK:         %[[ATTR_ISALLOC:.*]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR]], %[[ATTR_ISALLOC]]  : i32
+// CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
+// CHECK:         llvm.return %[[IS_ALLOC]] : i1
+
+// -----
+
+// Test `fir.box_isptr` conversion.
+// `attribute` is extracted from `fir.box` and checked against a mask equal to
+// the value of `CFI_attribute_pointer`.
+
+func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
+  %0 = fir.box_isptr %arg0 : (!fir.box<!fir.array<*:f64>>) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: llvm.func @box_isptr(
+// CHECK-SAME:                         %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i1
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[ATTRPOS:.*]] = llvm.mlir.constant(5 : i32) : i32
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[ATTRPOS]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i32>
+// CHECK:         %[[ATTR:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i32>
+// CHECK:         %[[ATTR_ISALLOC:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[AND:.*]] = llvm.and %[[ATTR]], %[[ATTR_ISALLOC]]  : i32
+// CHECK:         %[[CMP_C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[IS_ALLOC:.*]] = llvm.icmp "ne" %[[AND]], %[[CMP_C0]] : i32
+// CHECK:         llvm.return %[[IS_ALLOC]] : i1
