@@ -64,6 +64,10 @@ public:
         [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
+    addConversion([&](fir::FieldType field) {
+      // Convert to i32 because of LLVM GEP indexing restriction.
+      return mlir::IntegerType::get(field.getContext(), 32);
+    });
     addConversion(
         [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
     addConversion(
