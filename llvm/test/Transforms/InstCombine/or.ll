@@ -248,10 +248,9 @@ define <2 x i1> @and_icmp_eq_0_vector(<2 x i32> %A, <2 x i32> %B) {
 
 define <2 x i1> @and_icmp_eq_0_vector_undef1(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @and_icmp_eq_0_vector_undef1(
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 0, i32 undef>
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq <2 x i32> [[B:%.*]], <i32 0, i32 undef>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[C1]], [[C2]]
-; CHECK-NEXT:    ret <2 x i1> [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %C1 = icmp eq <2 x i32> %A, <i32 0, i32 undef>
   %C2 = icmp eq <2 x i32> %B, <i32 0, i32 undef>
@@ -261,10 +260,9 @@ define <2 x i1> @and_icmp_eq_0_vector_undef1(<2 x i32> %A, <2 x i32> %B) {
 
 define <2 x i1> @and_icmp_eq_0_vector_undef2(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @and_icmp_eq_0_vector_undef2(
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 0, i32 undef>
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq <2 x i32> [[B:%.*]], <i32 undef, i32 0>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[C1]], [[C2]]
-; CHECK-NEXT:    ret <2 x i1> [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %C1 = icmp eq <2 x i32> %A, <i32 0, i32 undef>
   %C2 = icmp eq <2 x i32> %B, <i32 undef, i32 0>
