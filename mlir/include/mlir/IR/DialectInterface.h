@@ -115,7 +115,9 @@ protected:
       : public llvm::mapped_iterator_base<iterator<InterfaceT>,
                                           InterfaceVectorT::const_iterator,
                                           const InterfaceT &> {
-    using iterator::BaseT::BaseT;
+    using llvm::mapped_iterator_base<iterator<InterfaceT>,
+                                     InterfaceVectorT::const_iterator,
+                                     const InterfaceT &>::mapped_iterator_base;
 
     /// Map the element to the iterator result type.
     const InterfaceT &mapElement(const DialectInterface *interface) const {
