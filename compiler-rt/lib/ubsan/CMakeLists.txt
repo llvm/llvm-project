@@ -83,7 +83,7 @@ if(APPLE)
   if(COMPILER_RT_HAS_UBSAN)
     # Initializer of standalone UBSan runtime.
     add_compiler_rt_object_libraries(RTUbsan_standalone
-      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      OS ${UBSAN_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       SOURCES ${UBSAN_STANDALONE_SOURCES}
       ADDITIONAL_HEADERS ${UBSAN_HEADERS}
@@ -94,7 +94,7 @@ if(APPLE)
 
     add_compiler_rt_runtime(clang_rt.ubsan
       SHARED
-      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      OS ${UBSAN_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTUbsan
                   RTUbsan_standalone
@@ -108,7 +108,7 @@ if(APPLE)
 
     add_compiler_rt_runtime(clang_rt.ubsan
       STATIC
-      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      OS ${UBSAN_SUPPORTED_OS}
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTUbsan
                   RTUbsan_standalone
