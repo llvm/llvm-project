@@ -259,11 +259,11 @@ public:
   /// CxxModuleHandler to replace any missing or malformed declarations with
   /// their counterpart from a C++ module.
   struct ASTImporterDelegate : public clang::ASTImporter {
-    ASTImporterDelegate(ClangASTImporter &master, clang::ASTContext *target_ctx,
+    ASTImporterDelegate(ClangASTImporter &main, clang::ASTContext *target_ctx,
                         clang::ASTContext *source_ctx)
-        : clang::ASTImporter(*target_ctx, master.m_file_manager, *source_ctx,
-                             master.m_file_manager, true /*minimal*/),
-          m_master(master), m_source_ctx(source_ctx) {
+        : clang::ASTImporter(*target_ctx, main.m_file_manager, *source_ctx,
+                             main.m_file_manager, true /*minimal*/),
+          m_main(main), m_source_ctx(source_ctx) {
       // Target and source ASTContext shouldn't be identical. Importing AST
       // nodes within the same AST doesn't make any sense as the whole idea
       // is to import them to a different AST.
@@ -329,7 +329,7 @@ public:
     /// were created from the 'std' C++ module to prevent that the Importer
     /// tries to sync them with the broken equivalent in the debug info AST.
     llvm::SmallPtrSet<clang::Decl *, 16> m_decls_to_ignore;
-    ClangASTImporter &m_master;
+    ClangASTImporter &m_main;
     clang::ASTContext *m_source_ctx;
     CxxModuleHandler *m_std_handler = nullptr;
     /// The currently attached listener.
