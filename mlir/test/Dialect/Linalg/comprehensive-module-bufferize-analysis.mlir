@@ -213,6 +213,72 @@ func @extract_slice_matching_insert_slice(
 
 // -----
 
+// CHECK-LABEL: @read_of_matching_insert_slice_source
+func @read_of_matching_insert_slice_source(
+    %A : tensor<?xf32> {linalg.inplaceable = true}, %idx : index, %idx2 : index)
+  -> (tensor<?xf32>, vector<5xf32>)
+{
+  %cst = arith.constant 0.0 : f32
+  %cst2 = arith.constant 1.0 : f32
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %0 = tensor.extract_slice %A[%idx][%idx][1] : tensor<?xf32> to tensor<?xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %2 = tensor.insert_slice %1 into %A[%idx][%idx][1] : tensor<?xf32> into tensor<?xf32>
+
+  %3 = vector.transfer_read %1[%idx2], %cst2 : tensor<?xf32>, vector<5xf32>
+  return %2, %3 : tensor<?xf32>, vector<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @read_of_matching_insert_slice_source_interleaved
+func @read_of_matching_insert_slice_source_interleaved(
+    %A : tensor<?xf32> {linalg.inplaceable = true}, %idx : index, %idx2 : index,
+    %idx3 : index)
+  -> (tensor<?xf32>, vector<5xf32>)
+{
+  %cst = arith.constant 0.0 : f32
+  %cst2 = arith.constant 1.0 : f32
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
+  %0 = tensor.extract_slice %A[%idx][%idx][1] : tensor<?xf32> to tensor<?xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %1 = linalg.fill(%cst, %0) : f32, tensor<?xf32> -> tensor<?xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %2 = tensor.insert_slice %1 into %A[%idx][%idx][1] : tensor<?xf32> into tensor<?xf32>
+
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %4 = tensor.extract_slice %2[%idx3][%idx3][1] : tensor<?xf32> to tensor<?xf32>
+
+  //      CHECK: linalg.fill
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %5 = linalg.fill(%cst, %4) : f32, tensor<?xf32> -> tensor<?xf32>
+
+  %3 = vector.transfer_read %1[%idx2], %cst2 : tensor<?xf32>, vector<5xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
+  %6 = tensor.insert_slice %5 into %2[%idx3][%idx3][1] : tensor<?xf32> into tensor<?xf32>
+
+  return %6, %3 : tensor<?xf32>, vector<5xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_slice_linalg_readonly_use
 func @extract_slice_linalg_readonly_use(
     %A : tensor<?x?xf32>,
@@ -946,6 +1012,28 @@ func @interleaved_extract_insert_slice_chain_2(
 
 // -----
 
+// CHECK-LABEL: func @extract_once_insert_twice
+func @extract_once_insert_twice(
+    %arg2: tensor<62x90xf32> {linalg.inplaceable = true})
+  -> (tensor<62x90xf32>)
+{
+  //      CHECK: tensor.extract_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["false"]
+  %2 = tensor.extract_slice %arg2[0, 0] [32, 90] [1, 1] : tensor<62x90xf32> to tensor<32x90xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %8 = tensor.insert_slice %2 into %arg2[0, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
+
+  //      CHECK: tensor.insert_slice
+  // CHECK-SAME: {__inplace_results_attr__ = ["true"]
+  %15 = tensor.insert_slice %2 into %8[15, 0] [32, 90] [1, 1] : tensor<32x90xf32> into tensor<62x90xf32>
+
+  return %15 : tensor<62x90xf32>
+}
+
+// -----
+
 #accesses = [
   affine_map<(i) -> (i)>
 ]
@@ -978,7 +1066,7 @@ func @reading_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
     %v2 = vector.transfer_read %e[%s], %cst : tensor<?xf32>, vector<5xf32>
     scf.yield %e, %v2 : tensor<?xf32>, vector<5xf32>
   }
-  // CHECK: __inplace_results_attr__ = ["true", "none"]
+  // CHECK: __inplace_results_attr__ = ["true", "false"]
 
   // Use %t3 in some way without reading it, so that it does not get DCE'd.
   // CHECK:      linalg.generic

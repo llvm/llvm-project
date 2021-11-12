@@ -39,7 +39,7 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
-Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
+Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
   // Parse the data as a dictionary.
@@ -117,9 +117,9 @@ Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
                                                      map, ptr, ind);
 }
 
-void SparseTensorEncodingAttr::print(DialectAsmPrinter &printer) const {
+void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   // Print the struct-like storage in dictionary fashion.
-  printer << "encoding<{ dimLevelType = [ ";
+  printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
     switch (getDimLevelType()[i]) {
     case DimLevelType::Dense:

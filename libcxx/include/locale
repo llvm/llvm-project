@@ -1476,7 +1476,7 @@ num_put<_CharT, _OutputIterator>::__do_put_integral(iter_type __s, ios_base& __i
                                                     char const* __len) const
 {
     // Stage 1 - Get number in narrow char
-    char __fmt[6] = {'%', 0};
+    char __fmt[8] = {'%', 0};
     this->__format_int(__fmt+1, __len, is_signed<_Integral>::value, __iob.flags());
     // Worst case is octal, with showbase enabled. Note that octal is always
     // printed as an unsigned value.

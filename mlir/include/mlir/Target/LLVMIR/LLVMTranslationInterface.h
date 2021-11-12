@@ -82,7 +82,7 @@ public:
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const {
     if (const LLVMTranslationDialectInterface *iface =
-            getInterfaceFor(attribute.first.getDialect())) {
+            getInterfaceFor(attribute.first.getReferencedDialect())) {
       return iface->amendOperation(op, attribute, moduleTranslation);
     }
     return success();

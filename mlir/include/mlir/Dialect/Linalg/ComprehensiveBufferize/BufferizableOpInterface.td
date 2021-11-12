@@ -16,7 +16,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     An op interface for Comprehensive Bufferization. Ops that implement this
     interface can be bufferized using Comprehensive Bufferization.
   }];
-  let cppNamespace = "::mlir::linalg";
+  let cppNamespace = "::mlir::linalg::comprehensive_bufferize";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
@@ -59,6 +59,54 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           // Does not have to be implemented for ops without tensor OpOperands.
           llvm_unreachable("bufferizesToMemoryWrite not implemented");
          }]
+      >,
+      InterfaceMethod<
+          /*desc=*/[{
+            Return `true` if the given OpResult is a memory write. This is the
+            case if in the following cases:
+
+            * The corresponding aliasing OpOperand bufferizes to a memory write.
+            * Or: There is no corresponding aliasing OpOperand.
+
+            If the OpResult has multiple aliasing OpOperands, this method
+            returns `true` if at least one of them bufferizes to a memory write.
+          }],
+          /*retType=*/"bool",
+          /*methodName=*/"isMemoryWrite",
+          /*args=*/(ins "OpResult":$opResult),
+          /*methodBody=*/"",
+          /*defaultImplementation=*/[{
+            auto bufferizableOp =
+                cast<BufferizableOpInterface>($_op.getOperation());
+            SmallVector<OpOperand*> opOperands =
+              bufferizableOp.getAliasingOpOperand(opResult);
+            if (opOperands.empty())
+              return true;
+            return llvm::any_of(
+                opOperands,
+                [&](OpOperand *operand) {
+                  return bufferizableOp.bufferizesToMemoryWrite(*operand);
+                });
+          }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given OpResult must bufferize in-place with its
+          corresponding aliasing OpOperand. Alias sets and inplace attributes
+          will be set up accordingly before making any other bufferization
+          decisions. This method will never be called on OpResults that do not
+          have a tensor type.
+
+          Note: This method may not return `true` if the given OpResult does not
+          have an aliasing OpOperand.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"mustBufferizeInPlace",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
       >,
       InterfaceMethod<
         /*desc=*/[{
@@ -134,17 +182,42 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return `true` if the given OpOperand can be written to in-place. This
-          is the case for most ops, but some ops such as ConstantOp may
-          bufferize to non-writable (read-only) memory locations. This method
-          will never be called on OpResults that do not have a tensor type.
+          Return `true` if the given Value can be written to in-place. Value is
+          either an OpResult of this operation or a BlockArgument of a block of
+          this operation.
+
+          Most OpResult buffers can be written to, but some ops such as
+          ConstantOp may bufferize to non-writable (read-only) memory locations.
+          Therefore, by default, this method returns `true` for OpResults. This
+          method will never be called on OpResults that do not have a tensor
+          type.
+
+          Whether a BlockArgument can be written to or not depends on the
+          operation. This method conservatively returns `false`. This method
+          will never be called on BlockArguments that do not have a tensor type.
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "OpResult":$opResult),
+        /*args=*/(ins "Value":$value),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return true;
+          return value.isa<OpResult>();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the op is an allocation hoisting barrier. Buffer
+          allocations will never be beyond such ops. E.g., ops with certain
+          parallel semantics may be allocation hoisting barriers. The majority
+          of ops, however, is not a barrier. Therefore, this method returns
+          `false` by default.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isAllocationHoistingBarrier",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
         }]
       >
   ];

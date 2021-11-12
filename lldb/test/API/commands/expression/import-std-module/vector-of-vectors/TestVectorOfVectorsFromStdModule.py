@@ -23,7 +23,7 @@ class TestVectorOfVectors(TestBase):
         vector_type = "std::vector<int>"
         vector_of_vector_type = "std::vector<" + vector_type + " >"
         size_type = vector_of_vector_type + "::size_type"
-        value_type = "std::__vector_base<int, std::allocator<int> >::value_type"
+        value_type = "std::vector<int>::value_type"
 
         self.runCmd("settings set target.import-std-module true")
 

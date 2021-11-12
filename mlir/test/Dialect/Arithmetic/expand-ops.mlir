@@ -111,3 +111,37 @@ func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[CMP2:%.+]] = arith.ori [[TERM1]], [[TERM2]] : i1
 // CHECK:           [[RES:%.+]] = select [[CMP2]], [[TRUE3]], [[FALSE]] : index
 }
+
+// -----
+
+// Test ceil divide with unsigned integer
+// CHECK-LABEL:       func @ceildivui
+// CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
+func @ceildivui(%arg0: i32, %arg1: i32) -> (i32) {
+  %res = arith.ceildivui %arg0, %arg1 : i32
+  return %res : i32
+// CHECK:           [[ZERO:%.+]] = arith.constant 0 : i32
+// CHECK:           [[ISZERO:%.+]] = arith.cmpi eq, %arg0, [[ZERO]] : i32
+// CHECK:           [[ONE:%.+]] = arith.constant 1 : i32
+// CHECK:           [[SUB:%.+]] = arith.subi %arg0, [[ONE]] : i32
+// CHECK:           [[DIV:%.+]] = arith.divui [[SUB]], %arg1 : i32
+// CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : i32
+// CHECK:           [[RES:%.+]] = select [[ISZERO]], [[ZERO]], [[REM]] : i32
+}
+
+// -----
+
+// Test unsigned ceil divide with index
+// CHECK-LABEL:       func @ceildivui_index
+// CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
+func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
+  %res = arith.ceildivui %arg0, %arg1 : index
+  return %res : index
+// CHECK:           [[ZERO:%.+]] = arith.constant 0 : index
+// CHECK:           [[ISZERO:%.+]] = arith.cmpi eq, %arg0, [[ZERO]] : index
+// CHECK:           [[ONE:%.+]] = arith.constant 1 : index
+// CHECK:           [[SUB:%.+]] = arith.subi %arg0, [[ONE]] : index
+// CHECK:           [[DIV:%.+]] = arith.divui [[SUB]], %arg1 : index
+// CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : index
+// CHECK:           [[RES:%.+]] = select [[ISZERO]], [[ZERO]], [[REM]] : index
+}

@@ -42,6 +42,88 @@ protected:
     return lowerTy().convertType(ty);
   }
 
+  mlir::LLVM::ConstantOp
+  genConstantOffset(mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    int offset) const {
+    auto ity = lowerTy().offsetType();
+    auto cattr = rewriter.getI32IntegerAttr(offset);
+    return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+  }
+
+  /// Construct code sequence to get the rank from a box.
+  mlir::Value getRankFromBox(mlir::Location loc, mlir::Value box,
+                             mlir::Type resultTy,
+                             mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
+    mlir::LLVM::ConstantOp cRank =
+        genConstantOffset(loc, rewriter, kRankPosInBox);
+    auto pty = mlir::LLVM::LLVMPointerType::get(resultTy);
+    auto p = rewriter.create<mlir::LLVM::GEPOp>(
+        loc, pty, mlir::ValueRange{box, c0, cRank});
+    return rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
+  }
+
+  /// Method to construct code sequence to get the triple for dimension `dim`
+  /// from a box.
+  SmallVector<mlir::Value, 3>
+  getDimsFromBox(mlir::Location loc, ArrayRef<mlir::Type> retTys,
+                 mlir::Value box, mlir::Value dim,
+                 mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
+    mlir::LLVM::ConstantOp cDims =
+        genConstantOffset(loc, rewriter, kDimsPosInBox);
+    mlir::LLVM::LoadOp l0 =
+        loadFromOffset(loc, box, c0, cDims, dim, 0, retTys[0], rewriter);
+    mlir::LLVM::LoadOp l1 =
+        loadFromOffset(loc, box, c0, cDims, dim, 1, retTys[1], rewriter);
+    mlir::LLVM::LoadOp l2 =
+        loadFromOffset(loc, box, c0, cDims, dim, 2, retTys[2], rewriter);
+    return {l0.getResult(), l1.getResult(), l2.getResult()};
+  }
+
+  mlir::LLVM::LoadOp
+  loadFromOffset(mlir::Location loc, mlir::Value a, mlir::LLVM::ConstantOp c0,
+                 mlir::LLVM::ConstantOp cDims, mlir::Value dim, int off,
+                 mlir::Type ty,
+                 mlir::ConversionPatternRewriter &rewriter) const {
+    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
+    mlir::LLVM::ConstantOp c = genConstantOffset(loc, rewriter, off);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, a, c0, cDims, dim, c);
+    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  }
+
+  /// Read base address from a fir.box. Returned address has type ty.
+  mlir::Value
+  loadBaseAddrFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
+                      mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
+    mlir::LLVM::ConstantOp cAddr =
+        genConstantOffset(loc, rewriter, kAddrPosInBox);
+    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, c0, cAddr);
+    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  }
+
+  mlir::Value
+  loadElementSizeFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
+                         mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
+    mlir::LLVM::ConstantOp cElemLen =
+        genConstantOffset(loc, rewriter, kElemLenPosInBox);
+    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, c0, cElemLen);
+    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  }
+
+  template <typename... ARGS>
+  mlir::LLVM::GEPOp genGEP(mlir::Location loc, mlir::Type ty,
+                           mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Value base, ARGS... args) const {
+    SmallVector<mlir::Value> cv{args...};
+    return rewriter.create<mlir::LLVM::GEPOp>(loc, ty, base, cv);
+  }
+
   fir::LLVMTypeConverter &lowerTy() const {
     return *static_cast<fir::LLVMTypeConverter *>(this->getTypeConverter());
   }
@@ -76,6 +158,84 @@ struct AddrOfOpConversion : public FIROpConversion<fir::AddrOfOp> {
     auto ty = convertType(addr.getType());
     rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
         addr, ty, addr.symbol().getRootReference().getValue());
+    return success();
+  }
+};
+
+/// Lower `fir.box_addr` to the sequence of operations to extract the first
+/// element of the box.
+struct BoxAddrOpConversion : public FIROpConversion<fir::BoxAddrOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxAddrOp boxaddr, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value a = adaptor.getOperands()[0];
+    auto loc = boxaddr.getLoc();
+    mlir::Type ty = convertType(boxaddr.getType());
+    if (auto argty = boxaddr.val().getType().dyn_cast<fir::BoxType>()) {
+      rewriter.replaceOp(boxaddr, loadBaseAddrFromBox(loc, ty, a, rewriter));
+    } else {
+      auto c0attr = rewriter.getI32IntegerAttr(0);
+      auto c0 = mlir::ArrayAttr::get(boxaddr.getContext(), c0attr);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(boxaddr, ty, a,
+                                                              c0);
+    }
+    return success();
+  }
+};
+
+/// Lower `fir.box_dims` to a sequence of operations to extract the requested
+/// dimension infomartion from the boxed value.
+/// Result in a triple set of GEPs and loads.
+struct BoxDimsOpConversion : public FIROpConversion<fir::BoxDimsOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxDimsOp boxdims, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    SmallVector<mlir::Type, 3> resultTypes = {
+        convertType(boxdims.getResult(0).getType()),
+        convertType(boxdims.getResult(1).getType()),
+        convertType(boxdims.getResult(2).getType()),
+    };
+    auto results =
+        getDimsFromBox(boxdims.getLoc(), resultTypes, adaptor.getOperands()[0],
+                       adaptor.getOperands()[1], rewriter);
+    rewriter.replaceOp(boxdims, results);
+    return success();
+  }
+};
+
+/// Lower `fir.box_elesize` to a sequence of operations ro extract the size of
+/// an element in the boxed value.
+struct BoxEleSizeOpConversion : public FIROpConversion<fir::BoxEleSizeOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxEleSizeOp boxelesz, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value a = adaptor.getOperands()[0];
+    auto loc = boxelesz.getLoc();
+    auto ty = convertType(boxelesz.getType());
+    rewriter.replaceOp(boxelesz, loadElementSizeFromBox(loc, ty, a, rewriter));
+    return success();
+  }
+};
+
+/// Lower `fir.box_rank` to the sequence of operation to extract the rank from
+/// the box.
+struct BoxRankOpConversion : public FIROpConversion<fir::BoxRankOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxRankOp boxrank, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value a = adaptor.getOperands()[0];
+    auto loc = boxrank.getLoc();
+    mlir::Type ty = convertType(boxrank.getType());
+    auto result = getRankFromBox(loc, a, ty, rewriter);
+    rewriter.replaceOp(boxrank, result);
     return success();
   }
 };
@@ -835,14 +995,16 @@ public:
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::OwningRewritePatternList pattern(context);
-    pattern.insert<AddcOpConversion, AddrOfOpConversion, CallOpConversion,
-                   ConvertOpConversion, DivcOpConversion,
-                   ExtractValueOpConversion, HasValueOpConversion,
-                   GlobalOpConversion, InsertOnRangeOpConversion,
-                   InsertValueOpConversion, LoadOpConversion, NegcOpConversion,
-                   MulcOpConversion, SelectOpConversion, SelectRankOpConversion,
-                   StoreOpConversion, SubcOpConversion, UndefOpConversion,
-                   UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+    pattern.insert<
+        AddcOpConversion, AddrOfOpConversion, BoxAddrOpConversion,
+        BoxDimsOpConversion, BoxEleSizeOpConversion, BoxRankOpConversion,
+        CallOpConversion, ConvertOpConversion, DivcOpConversion,
+        ExtractValueOpConversion, HasValueOpConversion, GlobalOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion, LoadOpConversion,
+        NegcOpConversion, MulcOpConversion, SelectOpConversion,
+        SelectRankOpConversion, StoreOpConversion, SubcOpConversion,
+        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+        typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);

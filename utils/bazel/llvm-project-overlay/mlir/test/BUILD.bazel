@@ -155,7 +155,7 @@ gentbl_cc_library(
         ),
     ],
     tblgen = "//mlir:mlir-tblgen",
-    td_file = "lib/Dialect/Test/TestAttrDefs.td",
+    td_file = "lib/Dialect/Test/TestOps.td",
     test = True,
     deps = [
         ":TestOpTdFiles",
@@ -484,6 +484,7 @@ cc_library(
         "//mlir:Affine",
         "//mlir:Analysis",
         "//mlir:LinalgOps",
+        "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",

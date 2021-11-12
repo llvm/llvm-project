@@ -21,6 +21,18 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 
+// Position of the different values in a `fir.box`.
+static constexpr unsigned kAddrPosInBox = 0;
+static constexpr unsigned kElemLenPosInBox = 1;
+static constexpr unsigned kVersionPosInBox = 2;
+static constexpr unsigned kRankPosInBox = 3;
+static constexpr unsigned kTypePosInBox = 4;
+static constexpr unsigned kAttributePosInBox = 5;
+static constexpr unsigned kF18AddendumPosInBox = 6;
+static constexpr unsigned kDimsPosInBox = 7;
+static constexpr unsigned kOptTypePtrPosInBox = 8;
+static constexpr unsigned kOptRowTypePosInBox = 9;
+
 namespace fir {
 
 /// FIR type converter
@@ -37,10 +49,14 @@ public:
 
     // Each conversion should return a value of type mlir::Type.
     addConversion([&](BoxType box) { return convertBoxType(box); });
+    addConversion(
+        [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion([&](fir::LogicalType boolTy) {
       return mlir::IntegerType::get(
           &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
     });
+    addConversion(
+        [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
     addConversion(
@@ -62,6 +78,10 @@ public:
                                                     /*isPacked=*/false);
     });
   }
+
+  // i32 is used here because LLVM wants i32 constants when indexing into struct
+  // types. Indexing into other aggregate types is more flexible.
+  mlir::Type offsetType() { return mlir::IntegerType::get(&getContext(), 32); }
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
   mlir::Type convertRecordType(fir::RecordType derived) {
@@ -103,17 +123,23 @@ public:
     else
       dataDescFields.push_back(mlir::LLVM::LLVMPointerType::get(eleTy));
     // elem_len
-    dataDescFields.push_back(getDescFieldTypeModel<1>()(&getContext()));
+    dataDescFields.push_back(
+        getDescFieldTypeModel<kElemLenPosInBox>()(&getContext()));
     // version
-    dataDescFields.push_back(getDescFieldTypeModel<2>()(&getContext()));
+    dataDescFields.push_back(
+        getDescFieldTypeModel<kVersionPosInBox>()(&getContext()));
     // rank
-    dataDescFields.push_back(getDescFieldTypeModel<3>()(&getContext()));
+    dataDescFields.push_back(
+        getDescFieldTypeModel<kRankPosInBox>()(&getContext()));
     // type
-    dataDescFields.push_back(getDescFieldTypeModel<4>()(&getContext()));
+    dataDescFields.push_back(
+        getDescFieldTypeModel<kTypePosInBox>()(&getContext()));
     // attribute
-    dataDescFields.push_back(getDescFieldTypeModel<5>()(&getContext()));
+    dataDescFields.push_back(
+        getDescFieldTypeModel<kAttributePosInBox>()(&getContext()));
     // f18Addendum
-    dataDescFields.push_back(getDescFieldTypeModel<6>()(&getContext()));
+    dataDescFields.push_back(
+        getDescFieldTypeModel<kF18AddendumPosInBox>()(&getContext()));
     // [dims]
     if (rank == unknownRank()) {
       if (auto seqTy = ele.dyn_cast<SequenceType>())
@@ -122,14 +148,15 @@ public:
         rank = 0;
     }
     if (rank > 0) {
-      auto rowTy = getDescFieldTypeModel<7>()(&getContext());
+      auto rowTy = getDescFieldTypeModel<kDimsPosInBox>()(&getContext());
       dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, rank));
     }
     // opt-type-ptr: i8* (see fir.tdesc)
     if (requiresExtendedDesc(ele)) {
       dataDescFields.push_back(
-          getExtendedDescFieldTypeModel<8>()(&getContext()));
-      auto rowTy = getExtendedDescFieldTypeModel<9>()(&getContext());
+          getExtendedDescFieldTypeModel<kOptTypePtrPosInBox>()(&getContext()));
+      auto rowTy =
+          getExtendedDescFieldTypeModel<kOptRowTypePosInBox>()(&getContext());
       dataDescFields.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, 1));
       if (auto recTy = fir::unwrapSequenceType(ele).dyn_cast<fir::RecordType>())
         if (recTy.getNumLenParams() > 0) {
@@ -146,6 +173,19 @@ public:
     return mlir::LLVM::LLVMPointerType::get(
         mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
                                                /*isPacked=*/false));
+  }
+
+  unsigned characterBitsize(fir::CharacterType charTy) {
+    return kindMapping.getCharacterBitsize(charTy.getFKind());
+  }
+
+  // fir.char<k,?>  -->  llvm<"ix">          where ix is scaled by kind mapping
+  // fir.char<k,n>  -->  llvm.array<n x "ix">
+  mlir::Type convertCharType(fir::CharacterType charTy) {
+    auto iTy = mlir::IntegerType::get(&getContext(), characterBitsize(charTy));
+    if (charTy.getLen() == fir::CharacterType::unknownLen())
+      return iTy;
+    return mlir::LLVM::LLVMArrayType::get(iTy, charTy.getLen());
   }
 
   // Use the target specifics to figure out how to map complex to LLVM IR. The

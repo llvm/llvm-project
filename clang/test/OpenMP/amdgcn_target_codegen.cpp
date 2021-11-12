@@ -37,8 +37,8 @@ int test_amdgcn_target_tid_threads_simd() {
 // CHECK-SAME: ([1000 x i32]* nonnull align 4 dereferenceable(4000) [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR_ADDR:%.*]] = alloca [1000 x i32]*, align 8, addrspace(5)
-// CHECK-NEXT:    [[ARR_ADDR_ASCAST:%.*]] = addrspacecast [1000 x i32]* addrspace(5)* [[ARR_ADDR]] to [1000 x i32]**
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[ARR_ADDR_ASCAST:%.*]] = addrspacecast [1000 x i32]* addrspace(5)* [[ARR_ADDR]] to [1000 x i32]**
 // CHECK-NEXT:    [[I_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[I]] to i32*
 // CHECK-NEXT:    store [1000 x i32]* [[ARR]], [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
@@ -74,12 +74,12 @@ int test_amdgcn_target_tid_threads_simd() {
 // CHECK-SAME: ([1000 x i32]* nonnull align 4 dereferenceable(4000) [[ARR:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR_ADDR:%.*]] = alloca [1000 x i32]*, align 8, addrspace(5)
-// CHECK-NEXT:    [[ARR_ADDR_ASCAST:%.*]] = addrspacecast [1000 x i32]* addrspace(5)* [[ARR_ADDR]] to [1000 x i32]**
 // CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[TMP]] to i32*
 // CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[DOTOMP_IV]] to i32*
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[ARR_ADDR_ASCAST:%.*]] = addrspacecast [1000 x i32]* addrspace(5)* [[ARR_ADDR]] to [1000 x i32]**
+// CHECK-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[TMP]] to i32*
+// CHECK-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[DOTOMP_IV]] to i32*
 // CHECK-NEXT:    [[I_ASCAST:%.*]] = addrspacecast i32 addrspace(5)* [[I]] to i32*
 // CHECK-NEXT:    store [1000 x i32]* [[ARR]], [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load [1000 x i32]*, [1000 x i32]** [[ARR_ADDR_ASCAST]], align 8

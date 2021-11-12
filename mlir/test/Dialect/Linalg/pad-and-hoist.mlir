@@ -1,8 +1,10 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-pad-pattern pack-paddings=1,1,0 hoist-paddings=2,1,0" -cse -canonicalize -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-transform-patterns="test-pad-pattern pack-paddings=1,1,0 hoist-paddings=3,2,0" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-DOUBLE
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 hoist-paddings=2,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 hoist-paddings=3,2,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-DOUBLE
 
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (5, -d0 + 24)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0) -> (7, -d0 + 25)>
+// CHECK-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 5)>
+// CHECK-DAG: #[[MAP3:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
 // CHECK-DAG: #[[DIV6:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 6)>
 #map0 = affine_map<(d0) -> (5, -d0 + 24)>
 #map1 = affine_map<(d0) -> (7, -d0 + 25)>
@@ -37,7 +39,7 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
     //        CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
     //   CHECK-SAME:                                     %[[IV0]], %[[PIV0]]
     //   CHECK-SAME:                                     %[[TS0]], 6
-    //        CHECK:   %[[V0:.*]] = arith.subi %[[C5]], %[[TS0]]
+    //        CHECK:   %[[V0:.*]] = affine.apply #[[MAP2]](%[[TS0]])
     //        CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold {{.*}} high[%[[V0]]
     //        CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1:.*]] into %{{.*}}[%[[PIDX0]], 0, 0]
     //        CHECK:   scf.yield %[[T2:.*]]
@@ -53,7 +55,7 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
       //        CHECK:   %[[T3:.*]] = tensor.extract_slice %[[ARG1]]
       //   CHECK-SAME:                                     %[[PIV1]], %[[IV1]]
       //   CHECK-SAME:                                     6, %[[TS1]]
-      //        CHECK:   %[[V1:.*]] = arith.subi %[[C7]], %[[TS1]]
+      //        CHECK:   %[[V1:.*]] = affine.apply #[[MAP3]](%[[TS1]])
       //        CHECK:   %[[T4:.*]] = linalg.pad_tensor %[[T3]] nofold {{.*}} high[%[[C0]], %[[V1]]
       //        CHECK:   %[[T5:.*]] = tensor.insert_slice %[[T4:.*]] into %{{.*}}[%[[PIDX1]], 0, 0]
       //        CHECK:   scf.yield %[[T5:.*]]
@@ -77,7 +79,7 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
 
         // Check matmul uses the packed input operands and the padded output operand.
         //        CHECK:   = linalg.matmul ins(%[[T6]], %[[T7]]{{.*}} outs(%[[T9]]
-        %8 = linalg.matmul {__internal_linalg_transform__ = "pad"} ins(%4, %6 : tensor<?x6xf32>, tensor<6x?xf32>) outs(%7 : tensor<?x?xf32>) -> tensor<?x?xf32>
+        %8 = linalg.matmul ins(%4, %6 : tensor<?x6xf32>, tensor<6x?xf32>) outs(%7 : tensor<?x?xf32>) -> tensor<?x?xf32>
         %9 = tensor.insert_slice %8 into %arg8[%arg3, %arg5] [%3, %5] [1, 1] : tensor<?x?xf32> into tensor<24x25xf32>
         scf.yield %9 : tensor<24x25xf32>
       }
@@ -93,6 +95,9 @@ func @static_sizes(%arg0: tensor<24x12xf32>,
 // CHECK-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0)[s0] -> (5, -d0 + s0)>
 // CHECK-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<(d0)[s0] -> (6, -d0 + s0)>
 // CHECK-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<(d0)[s0] -> (7, -d0 + s0)>
+// CHECK-DAG: #[[MAP3:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 5)>
+// CHECK-DAG: #[[MAP4:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 6)>
+// CHECK-DAG: #[[MAP5:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 7)>
 // CHECK-DAG: #[[SDIV6:[0-9a-z]+]] = affine_map<()[s0] -> (s0 ceildiv 6)>
 // CHECK-DAG: #[[DDIV6:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 6)>
 #map0 = affine_map<(d0)[s0] -> (5, -d0 + s0)>
@@ -137,8 +142,8 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
     //        CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
     //   CHECK-SAME:                                     %[[IV0]], %[[PIV0]]
     //   CHECK-SAME:                                     %[[TS0]], %[[TS1]]
-    //        CHECK:   %[[V0:.*]] = arith.subi %[[C5]], %[[TS0]]
-    //        CHECK:   %[[V1:.*]] = arith.subi %[[C6]], %[[TS1]]
+    //        CHECK:   %[[V0:.*]] = affine.apply #[[MAP3]](%[[TS0]])
+    //        CHECK:   %[[V1:.*]] = affine.apply #[[MAP4]](%[[TS1]])
     //        CHECK:   %[[T1:.*]] = linalg.pad_tensor %[[T0]] nofold {{.*}} high[%[[V0]], %[[V1]]
     //        CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1:.*]] into %{{.*}}[%[[PIDX0]], 0, 0]
     //        CHECK:   scf.yield %[[T2:.*]]
@@ -155,8 +160,8 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
       //        CHECK:   %[[T3:.*]] = tensor.extract_slice %[[ARG1]]
       //   CHECK-SAME:                                     %[[PIV1]], %[[IV1]]
       //   CHECK-SAME:                                     %[[TS2]], %[[TS3]]
-      //        CHECK:   %[[V2:.*]] = arith.subi %[[C6]], %[[TS2]]
-      //        CHECK:   %[[V3:.*]] = arith.subi %[[C7]], %[[TS3]]
+      //        CHECK:   %[[V2:.*]] = affine.apply #[[MAP4]](%[[TS2]])
+      //        CHECK:   %[[V3:.*]] = affine.apply #[[MAP5]](%[[TS3]])
       //        CHECK:   %[[T4:.*]] = linalg.pad_tensor %[[T3]] nofold {{.*}} high[%[[V2]], %[[V3]]
       //        CHECK:   %[[T5:.*]] = tensor.insert_slice %[[T4:.*]] into %{{.*}}[%[[PIDX1]], 0, 0]
       //        CHECK:   scf.yield %[[T5:.*]]
@@ -177,7 +182,7 @@ func @dynamic_sizes(%arg0: tensor<?x?xf32>,
 
         // Check matmul uses the packed input operands.
         //        CHECK:   = linalg.matmul ins(%[[T6]], %[[T7]]
-        %12 = linalg.matmul {__internal_linalg_transform__ = "pad"} ins(%8, %10 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%11 : tensor<?x?xf32>) -> tensor<?x?xf32>
+        %12 = linalg.matmul ins(%8, %10 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%11 : tensor<?x?xf32>) -> tensor<?x?xf32>
         %13 = tensor.insert_slice %12 into %arg8[%arg3, %arg5] [%6, %9] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
         scf.yield %13 : tensor<?x?xf32>
       }
@@ -264,7 +269,7 @@ func @double_tiling(%arg0: tensor<24x12xf32>,
 
           // Check matmul uses the packed input operands.
           //    CHECK-DOUBLE:   = linalg.matmul ins(%[[T6]], %[[T7]]
-          %17 = linalg.matmul {__internal_linalg_transform__ = "pad"} ins(%10, %13 : tensor<?x12xf32>, tensor<12x?xf32>) outs(%16 : tensor<?x?xf32>) -> tensor<?x?xf32>
+          %17 = linalg.matmul ins(%10, %13 : tensor<?x12xf32>, tensor<12x?xf32>) outs(%16 : tensor<?x?xf32>) -> tensor<?x?xf32>
           %18 = tensor.insert_slice %17 into %arg10[%arg7, %arg9] [%14, %15] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
           scf.yield %18 : tensor<?x?xf32>
         }

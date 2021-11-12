@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Pass/Pass.h"
@@ -16,6 +17,7 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+using namespace mlir::linalg::comprehensive_bufferize;
 
 namespace {
 struct LinalgComprehensiveModuleBufferize
@@ -32,7 +34,7 @@ struct LinalgComprehensiveModuleBufferize
     registry
         .insert<linalg::LinalgDialect, memref::MemRefDialect,
                 tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
-                arith::ArithmeticDialect, StandardOpsDialect>();
+                arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
     registerBufferizableOpInterfaceExternalModels(registry);
   }
 };

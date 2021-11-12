@@ -332,14 +332,10 @@ static void replaceRegUsesAfterLoop(unsigned FromReg, unsigned ToReg,
                                     MachineBasicBlock *MBB,
                                     MachineRegisterInfo &MRI,
                                     LiveIntervals &LIS) {
-  for (MachineRegisterInfo::use_iterator I = MRI.use_begin(FromReg),
-                                         E = MRI.use_end();
-       I != E;) {
-    MachineOperand &O = *I;
-    ++I;
+  for (MachineOperand &O :
+       llvm::make_early_inc_range(MRI.use_operands(FromReg)))
     if (O.getParent()->getParent() != MBB)
       O.setReg(ToReg);
-  }
   if (!LIS.hasInterval(ToReg))
     LIS.createEmptyInterval(ToReg);
 }
@@ -1137,12 +1133,9 @@ void ModuloScheduleExpander::rewriteScheduledInstr(
   int StagePhi = Schedule.getStage(Phi) + PhiNum;
   // Rewrite uses that have been scheduled already to use the new
   // Phi register.
-  for (MachineRegisterInfo::use_iterator UI = MRI.use_begin(OldReg),
-                                         EI = MRI.use_end();
-       UI != EI;) {
-    MachineOperand &UseOp = *UI;
+  for (MachineOperand &UseOp :
+       llvm::make_early_inc_range(MRI.use_operands(OldReg))) {
     MachineInstr *UseMI = UseOp.getParent();
-    ++UI;
     if (UseMI->getParent() != BB)
       continue;
     if (UseMI->isPHI()) {

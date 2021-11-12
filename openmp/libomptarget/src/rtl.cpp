@@ -15,10 +15,6 @@
 #include "private.h"
 #include "llvm/OffloadArch/OffloadArch.h"
 
-#if OMPT_SUPPORT
-#include "ompt-target.h"
-#endif
-
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -262,19 +258,6 @@ void RTLsTy::LoadRTLs() {
       dlsym(dynlib_handle, "__tgt_rtl_query_coarse_grain_mem_region");
   }
   delete[] libomptarget_dir_name;
-
-#if OMPT_SUPPORT
-  DP("OMPT_SUPPORT is enabled in libomptarget\n");
-  DP("Init OMPT for libomptarget\n");
-  if (libomp_start_tool) {
-    DP("Retrieve libomp_start_tool successfully\n");
-    if (!libomp_start_tool(&ompt_target_enabled)) {
-      DP("Turn off OMPT in libomptarget because libomp_start_tool returns "
-         "false\n");
-      memset(&ompt_target_enabled, 0, sizeof(ompt_target_enabled));
-    }
-  }
-#endif
 
   DP("RTLs loaded!\n");
 

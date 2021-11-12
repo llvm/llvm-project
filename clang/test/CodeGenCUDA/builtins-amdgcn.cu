@@ -12,10 +12,10 @@
 // CHECK-LABEL: @_Z16use_dispatch_ptrPi(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT:%.*]] = alloca i32*, align 8, addrspace(5)
-// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[OUT]] to i32**
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca i32*, align 8, addrspace(5)
-// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[OUT_ADDR]] to i32**
 // CHECK-NEXT:    [[DISPATCH_PTR:%.*]] = alloca i32*, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[OUT]] to i32**
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[OUT_ADDR]] to i32**
 // CHECK-NEXT:    [[DISPATCH_PTR_ASCAST:%.*]] = addrspacecast i32* addrspace(5)* [[DISPATCH_PTR]] to i32**
 // CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast i32 addrspace(1)* [[OUT_COERCE:%.*]] to i32*
 // CHECK-NEXT:    store i32* [[TMP0]], i32** [[OUT_ASCAST]], align 8
@@ -36,19 +36,20 @@ __global__ void use_dispatch_ptr(int* out) {
 }
 
 __global__
-// CHECK-LABEL: @_Z12test_ds_fmaxf(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
-// CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[X]] to float*
-// CHECK-NEXT:    store float [[SRC:%.*]], float* [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
-// CHECK-NEXT:    store volatile float [[TMP1]], float* [[X_ASCAST]], align 4
-// CHECK-NEXT:    ret void
-//
-void test_ds_fmax(float src) {
+    // CHECK-LABEL: @_Z12test_ds_fmaxf(
+    // CHECK-NEXT:  entry:
+    // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+    // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
+    // CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
+    // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[X]] to float*
+    // CHECK-NEXT:    store float [[SRC:%.*]], float* [[SRC_ADDR_ASCAST]], align 4
+    // CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_ASCAST]], align 4
+    // CHECK-NEXT:    [[TMP1:%.*]] = call contract float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
+    // CHECK-NEXT:    store volatile float [[TMP1]], float* [[X_ASCAST]], align 4
+    // CHECK-NEXT:    ret void
+    //
+    void
+    test_ds_fmax(float src) {
   __shared__ float shared;
   volatile float x = __builtin_amdgcn_ds_fmaxf(&shared, src, 0, 0, false);
 }
@@ -56,8 +57,8 @@ void test_ds_fmax(float src) {
 // CHECK-LABEL: @_Z12test_ds_faddf(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[X]] to float*
 // CHECK-NEXT:    store float [[SRC:%.*]], float* [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_ASCAST]], align 4
@@ -73,12 +74,12 @@ __global__ void test_ds_fadd(float src) {
 // CHECK-LABEL: @_Z12test_ds_fminfPf(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SHARED:%.*]] = alloca float*, align 8, addrspace(5)
-// CHECK-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED]] to float**
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
 // CHECK-NEXT:    [[SHARED_ADDR:%.*]] = alloca float*, align 8, addrspace(5)
-// CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED_ADDR]] to float**
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED]] to float**
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
+// CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED_ADDR]] to float**
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[X]] to float*
 // CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast float addrspace(1)* [[SHARED_COERCE:%.*]] to float*
 // CHECK-NEXT:    store float* [[TMP0]], float** [[SHARED_ASCAST]], align 8
@@ -123,12 +124,12 @@ __global__ void endpgm() {
 // CHECK-LABEL: @_Z14test_uicmp_i64Pyyy(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT:%.*]] = alloca i64*, align 8, addrspace(5)
-// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT]] to i64**
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca i64*, align 8, addrspace(5)
-// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT_ADDR]] to i64**
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
-// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast i64 addrspace(5)* [[A_ADDR]] to i64*
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT]] to i64**
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT_ADDR]] to i64**
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast i64 addrspace(5)* [[A_ADDR]] to i64*
 // CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast i64 addrspace(5)* [[B_ADDR]] to i64*
 // CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast i64 addrspace(1)* [[OUT_COERCE:%.*]] to i64*
 // CHECK-NEXT:    store i64* [[TMP0]], i64** [[OUT_ASCAST]], align 8
@@ -153,8 +154,8 @@ __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, un
 // CHECK-LABEL: @_Z14test_s_memtimePy(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT:%.*]] = alloca i64*, align 8, addrspace(5)
-// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT]] to i64**
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca i64*, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT]] to i64**
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast i64* addrspace(5)* [[OUT_ADDR]] to i64**
 // CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast i64 addrspace(1)* [[OUT_COERCE:%.*]] to i64*
 // CHECK-NEXT:    store i64* [[TMP0]], i64** [[OUT_ASCAST]], align 8
@@ -176,12 +177,12 @@ __device__ void func(float *x);
 // CHECK-LABEL: @_Z17test_ds_fmin_funcfPf(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SHARED:%.*]] = alloca float*, align 8, addrspace(5)
-// CHECK-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED]] to float**
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
 // CHECK-NEXT:    [[SHARED_ADDR:%.*]] = alloca float*, align 8, addrspace(5)
-// CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED_ADDR]] to float**
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SHARED_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED]] to float**
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[SRC_ADDR]] to float*
+// CHECK-NEXT:    [[SHARED_ADDR_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[SHARED_ADDR]] to float**
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float addrspace(5)* [[X]] to float*
 // CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast float addrspace(1)* [[SHARED_COERCE:%.*]] to float*
 // CHECK-NEXT:    store float* [[TMP0]], float** [[SHARED_ASCAST]], align 8
@@ -202,14 +203,13 @@ __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
   func(shared);
 }
 
-
 // CHECK-LABEL: @_Z14test_is_sharedPf(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = alloca float*, align 8, addrspace(5)
-// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[X]] to float**
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca float*, align 8, addrspace(5)
-// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[X_ADDR]] to float**
 // CHECK-NEXT:    [[RET:%.*]] = alloca i8, align 1, addrspace(5)
+// CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[X]] to float**
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast float* addrspace(5)* [[X_ADDR]] to float**
 // CHECK-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast i8 addrspace(5)* [[RET]] to i8*
 // CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast float addrspace(1)* [[X_COERCE:%.*]] to float*
 // CHECK-NEXT:    store float* [[TMP0]], float** [[X_ASCAST]], align 8

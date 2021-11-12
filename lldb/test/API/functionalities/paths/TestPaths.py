@@ -5,6 +5,8 @@ Test some lldb command abbreviations.
 
 import lldb
 import os
+import sys
+import json
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -41,6 +43,21 @@ class TestPaths(TestBase):
             filenames = ['liblldb.so']
         self.assertTrue(any([os.path.exists(os.path.join(shlib_dir, f)) for f in
             filenames]), "shlib_dir = " + shlib_dir)
+
+    @no_debug_info_test
+    def test_interpreter_info(self):
+        info_sd = self.dbg.GetScriptInterpreterInfo(self.dbg.GetScriptingLanguage("python"))
+        self.assertTrue(info_sd.IsValid())
+        stream = lldb.SBStream()
+        self.assertTrue(info_sd.GetAsJSON(stream).Success())
+        info = json.loads(stream.GetData())
+        prefix = info['prefix']
+        self.assertEqual(os.path.realpath(sys.prefix), os.path.realpath(prefix))
+        self.assertEqual(
+            os.path.realpath(os.path.join(info['lldb-pythonpath'], 'lldb')),
+            os.path.realpath(os.path.dirname(lldb.__file__)))
+        self.assertTrue(os.path.exists(info['executable']))
+        self.assertEqual(info['language'], 'python')
 
 
     @no_debug_info_test
