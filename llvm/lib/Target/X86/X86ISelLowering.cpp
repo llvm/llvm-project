@@ -29031,7 +29031,9 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
   if (!(VT == MVT::v8i16 || VT == MVT::v4i32 ||
         (Subtarget.hasInt256() && VT == MVT::v16i16) ||
         (Subtarget.hasAVX512() && VT == MVT::v32i16) ||
-        (!Subtarget.hasAVX512() && VT == MVT::v16i8)))
+        (!Subtarget.hasAVX512() && VT == MVT::v16i8) ||
+        (Subtarget.hasInt256() && VT == MVT::v32i8) ||
+        (Subtarget.hasBWI() && VT == MVT::v64i8)))
     return SDValue();
 
   if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
@@ -29113,6 +29115,20 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (supportedVectorVarShift(VT, Subtarget, Opc))
     return Op;
 
+  // i64 vector arithmetic shift can be emulated with the transform:
+  // M = lshr(SIGN_MASK, Amt)
+  // ashr(R, Amt) === sub(xor(lshr(R, Amt), M), M)
+  if (((VT == MVT::v2i64 && !Subtarget.hasXOP()) ||
+       (VT == MVT::v4i64 && Subtarget.hasInt256())) &&
+      Opc == ISD::SRA) {
+    SDValue S = DAG.getConstant(APInt::getSignMask(64), dl, VT);
+    SDValue M = DAG.getNode(ISD::SRL, dl, VT, S, Amt);
+    R = DAG.getNode(ISD::SRL, dl, VT, R, Amt);
+    R = DAG.getNode(ISD::XOR, dl, VT, R, M);
+    R = DAG.getNode(ISD::SUB, dl, VT, R, M);
+    return R;
+  }
+
   // XOP has 128-bit variable logical/arithmetic shifts.
   // +ve/-ve Amt = shift left/right.
   if (Subtarget.hasXOP() && (VT == MVT::v2i64 || VT == MVT::v4i32 ||
@@ -29136,19 +29152,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     SDValue R0 = DAG.getNode(Opc, dl, VT, R, Amt0);
     SDValue R1 = DAG.getNode(Opc, dl, VT, R, Amt1);
     return DAG.getVectorShuffle(VT, dl, R0, R1, {0, 3});
-  }
-
-  // i64 vector arithmetic shift can be emulated with the transform:
-  // M = lshr(SIGN_MASK, Amt)
-  // ashr(R, Amt) === sub(xor(lshr(R, Amt), M), M)
-  if ((VT == MVT::v2i64 || (VT == MVT::v4i64 && Subtarget.hasInt256())) &&
-      Opc == ISD::SRA) {
-    SDValue S = DAG.getConstant(APInt::getSignMask(64), dl, VT);
-    SDValue M = DAG.getNode(ISD::SRL, dl, VT, S, Amt);
-    R = DAG.getNode(ISD::SRL, dl, VT, R, Amt);
-    R = DAG.getNode(ISD::XOR, dl, VT, R, M);
-    R = DAG.getNode(ISD::SUB, dl, VT, R, M);
-    return R;
   }
 
   // If possible, lower this shift as a sequence of two shifts by
@@ -29206,7 +29209,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 
   // If possible, lower this packed shift into a vector multiply instead of
   // expanding it into a sequence of scalar shifts.
-  if (Opc == ISD::SHL)
+  // For v32i8 cases, it might be quicker to split/extend to vXi16 shifts.
+  if (Opc == ISD::SHL && !(VT == MVT::v32i8 && (Subtarget.hasXOP() ||
+                                                Subtarget.canExtendTo512BW())))
     if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
       return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
 
