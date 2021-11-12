@@ -145,7 +145,7 @@ define hidden void @runtime(i32* nocapture %a, i32* nocapture readonly %b, i32* 
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_1]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ [[UNROLL_ITER]], [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NSUB_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[I_09]]
 ; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[C]], i32 [[I_09]]
@@ -162,8 +162,8 @@ define hidden void @runtime(i32* nocapture %a, i32* nocapture readonly %b, i32* 
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[MUL_1]], i32* [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[INC_1]] = add nuw i32 [[I_09]], 2
-; CHECK-NEXT:    [[NITER_NSUB_1]] = add i32 [[NITER]], -2
-; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NSUB_1]], 0
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
 entry:
