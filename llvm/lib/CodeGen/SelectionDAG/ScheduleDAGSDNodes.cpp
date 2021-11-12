@@ -384,13 +384,12 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
       // There are either zero or one users of the Glue result.
       bool HasGlueUse = false;
-      for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end();
-           UI != E; ++UI)
-        if (GlueVal.isOperandOf(*UI)) {
+      for (SDNode *U : N->uses())
+        if (GlueVal.isOperandOf(U)) {
           HasGlueUse = true;
           assert(N->getNodeId() == -1 && "Node already inserted!");
           N->setNodeId(NodeSUnit->NodeNum);
-          N = *UI;
+          N = U;
           if (N->isMachineOpcode() && TII->get(N->getMachineOpcode()).isCall())
             NodeSUnit->isCall = true;
           break;
