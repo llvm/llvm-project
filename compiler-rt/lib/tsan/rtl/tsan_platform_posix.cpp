@@ -119,10 +119,14 @@ void CheckAndProtect() {
   ProtectRange(ShadowEnd(), MetaShadowBeg());
   if (MidAppMemBeg()) {
     ProtectRange(MetaShadowEnd(), MidAppMemBeg());
-    ProtectRange(MidAppMemEnd(), HeapMemBeg());
+    ProtectRange(MidAppMemEnd(), TraceMemBeg());
   } else {
-    ProtectRange(MetaShadowEnd(), HeapMemBeg());
+    ProtectRange(MetaShadowEnd(), TraceMemBeg());
   }
+  // Memory for traces is mapped lazily in MapThreadTrace.
+  // Protect the whole range for now, so that user does not map something here.
+  ProtectRange(TraceMemBeg(), TraceMemEnd());
+  ProtectRange(TraceMemEnd(), HeapMemBeg());
   ProtectRange(HeapEnd(), HiAppMemBeg());
 #endif
 

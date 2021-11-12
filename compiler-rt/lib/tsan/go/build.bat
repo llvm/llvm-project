@@ -14,7 +14,6 @@ type ^
   ..\rtl\tsan_suppressions.cpp ^
   ..\rtl\tsan_sync.cpp ^
   ..\rtl\tsan_stack_trace.cpp ^
-  ..\rtl\tsan_vector_clock.cpp ^
   ..\..\sanitizer_common\sanitizer_allocator.cpp ^
   ..\..\sanitizer_common\sanitizer_common.cpp ^
   ..\..\sanitizer_common\sanitizer_flags.cpp ^

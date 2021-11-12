@@ -17,7 +17,6 @@ namespace __tsan {
 
 TEST(MetaMap, Basic) {
   ThreadState *thr = cur_thread();
-  SlotLocker locker(thr);
   MetaMap *m = &ctx->metamap;
   u64 block[1] = {};  // fake malloc block
   m->AllocBlock(thr, 0, (uptr)&block[0], 1 * sizeof(u64));
@@ -25,7 +24,7 @@ TEST(MetaMap, Basic) {
   CHECK_NE(mb, (MBlock *)0);
   CHECK_EQ(mb->siz, 1 * sizeof(u64));
   CHECK_EQ(mb->tid, thr->tid);
-  uptr sz = m->FreeBlock(thr->proc(), (uptr)&block[0], true);
+  uptr sz = m->FreeBlock(thr->proc(), (uptr)&block[0]);
   CHECK_EQ(sz, 1 * sizeof(u64));
   mb = m->GetBlock((uptr)&block[0]);
   CHECK_EQ(mb, (MBlock *)0);
@@ -33,7 +32,6 @@ TEST(MetaMap, Basic) {
 
 TEST(MetaMap, FreeRange) {
   ThreadState *thr = cur_thread();
-  SlotLocker locker(thr);
   MetaMap *m = &ctx->metamap;
   u64 block[4] = {};  // fake malloc block
   m->AllocBlock(thr, 0, (uptr)&block[0], 1 * sizeof(u64));
@@ -42,7 +40,7 @@ TEST(MetaMap, FreeRange) {
   CHECK_EQ(mb1->siz, 1 * sizeof(u64));
   MBlock *mb2 = m->GetBlock((uptr)&block[1]);
   CHECK_EQ(mb2->siz, 3 * sizeof(u64));
-  m->FreeRange(thr->proc(), (uptr)&block[0], 4 * sizeof(u64), true);
+  m->FreeRange(thr->proc(), (uptr)&block[0], 4 * sizeof(u64));
   mb1 = m->GetBlock((uptr)&block[0]);
   CHECK_EQ(mb1, (MBlock *)0);
   mb2 = m->GetBlock((uptr)&block[1]);
@@ -54,7 +52,6 @@ TEST(MetaMap, Sync) {
   // them from detecting that we exit runtime with mutexes held.
   ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
-  SlotLocker locker(thr);
   MetaMap *m = &ctx->metamap;
   u64 block[4] = {};  // fake malloc block
   m->AllocBlock(thr, 0, (uptr)&block[0], 4 * sizeof(u64));
@@ -66,7 +63,7 @@ TEST(MetaMap, Sync) {
   SyncVar *s2 = m->GetSyncOrCreate(thr, 0, (uptr)&block[1], false);
   CHECK_NE(s2, (SyncVar *)0);
   CHECK_EQ(s2->addr, (uptr)&block[1]);
-  m->FreeBlock(thr->proc(), (uptr)&block[0], true);
+  m->FreeBlock(thr->proc(), (uptr)&block[0]);
   s1 = m->GetSyncIfExists((uptr)&block[0]);
   CHECK_EQ(s1, (SyncVar *)0);
   s2 = m->GetSyncIfExists((uptr)&block[1]);
@@ -77,7 +74,6 @@ TEST(MetaMap, Sync) {
 TEST(MetaMap, MoveMemory) {
   ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
-  SlotLocker locker(thr);
   MetaMap *m = &ctx->metamap;
   u64 block1[4] = {};  // fake malloc block
   u64 block2[4] = {};  // fake malloc block
@@ -106,19 +102,18 @@ TEST(MetaMap, MoveMemory) {
   s2 = m->GetSyncIfExists((uptr)&block2[1]);
   CHECK_NE(s2, (SyncVar *)0);
   CHECK_EQ(s2->addr, (uptr)&block2[1]);
-  m->FreeRange(thr->proc(), (uptr)&block2[0], 4 * sizeof(u64), true);
+  m->FreeRange(thr->proc(), (uptr)&block2[0], 4 * sizeof(u64));
 }
 
 TEST(MetaMap, ResetSync) {
   ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
-  SlotLocker locker(thr);
   MetaMap *m = &ctx->metamap;
   u64 block[1] = {};  // fake malloc block
   m->AllocBlock(thr, 0, (uptr)&block[0], 1 * sizeof(u64));
   SyncVar *s = m->GetSyncOrCreate(thr, 0, (uptr)&block[0], false);
-  s->Reset();
-  uptr sz = m->FreeBlock(thr->proc(), (uptr)&block[0], true);
+  s->Reset(thr->proc());
+  uptr sz = m->FreeBlock(thr->proc(), (uptr)&block[0]);
   CHECK_EQ(sz, 1 * sizeof(u64));
 }
 
