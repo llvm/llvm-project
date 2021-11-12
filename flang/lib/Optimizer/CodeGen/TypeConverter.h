@@ -57,6 +57,10 @@ public:
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion([&](HeapType heap) { return convertPointerLike(heap); });
+    addConversion([&](fir::IntegerType intTy) {
+      return mlir::IntegerType::get(
+          &getContext(), kindMapping.getIntegerBitsize(intTy.getFKind()));
+    });
     addConversion([&](fir::LogicalType boolTy) {
       return mlir::IntegerType::get(
           &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));

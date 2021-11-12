@@ -128,6 +128,30 @@ func private @foo8(%arg0: !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>)
 
 // -----
 
+// Test `!fir.integer<KIND>` conversion.
+
+func private @foo0(%arg0: !fir.int<1>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: i8
+
+func private @foo1(%arg0: !fir.int<2>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: i16
+
+func private @foo2(%arg0: !fir.int<4>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: i32
+
+func private @foo3(%arg0: !fir.int<8>)
+// CHECK-LABEL: foo3
+// CHECK-SAME: i64
+
+func private @foo4(%arg0: !fir.int<16>)
+// CHECK-LABEL: foo4
+// CHECK-SAME: i128
+
+// -----
+
 // Test `!fir.logical<KIND>` conversion.
 
 func private @foo0(%arg0: !fir.logical<1>)
