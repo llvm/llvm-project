@@ -94,11 +94,22 @@ Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
 }
 
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
-  if (isa<ScalableVectorType>(DstType))
-    return CreateIntrinsic(Intrinsic::experimental_stepvector, {DstType}, {},
-                           nullptr, Name);
-
   Type *STy = DstType->getScalarType();
+  if (isa<ScalableVectorType>(DstType)) {
+    Type *StepVecType = DstType;
+    // TODO: We expect this special case (element type < 8 bits) to be
+    // temporary - once the intrinsic properly supports < 8 bits this code
+    // can be removed.
+    if (STy->getScalarSizeInBits() < 8)
+      StepVecType =
+          VectorType::get(getInt8Ty(), cast<ScalableVectorType>(DstType));
+    Value *Res = CreateIntrinsic(Intrinsic::experimental_stepvector,
+                                 {StepVecType}, {}, nullptr, Name);
+    if (StepVecType != DstType)
+      Res = CreateTrunc(Res, DstType);
+    return Res;
+  }
+
   unsigned NumEls = cast<FixedVectorType>(DstType)->getNumElements();
 
   // Create a vector of consecutive numbers from zero to VF.
