@@ -43,6 +43,11 @@ def CompoundAttrA : Test_Attr<"CompoundA"> {
       >: $arrayOfInts
   );
 }
+def CompoundAttrNested : Test_Attr<"CompoundAttrNested"> {
+  let mnemonic = "cmpnd_nested";
+  let parameters = (ins CompoundAttrA : $nested );
+  let assemblyFormat = "`<` `nested` `=` $nested `>`";
+}
 
 // An attribute testing AttributeSelfTypeParameter.
 def AttrWithSelfTypeParam : Test_Attr<"AttrWithSelfTypeParam"> {
