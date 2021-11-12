@@ -910,11 +910,11 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_SIMD | AArch64::AEK_RAS |
                              AArch64::AEK_LSE | AArch64::AEK_RDM |
                              AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_SVE2 | AArch64::AEK_BF16 |
-                             AArch64::AEK_I8MM | AArch64::AEK_SVE2BITPERM |
-                             AArch64::AEK_PAUTH | AArch64::AEK_MTE |
-                             AArch64::AEK_SSBS | AArch64::AEK_FP16FML |
-                             AArch64::AEK_SB,
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM |
+                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
+                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_PAUTH |
+                             AArch64::AEK_MTE | AArch64::AEK_SSBS |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SB,
                          "9-A"),
         ARMCPUTestParams("cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
@@ -1030,12 +1030,12 @@ INSTANTIATE_TEST_SUITE_P(
                          AArch64::AEK_CRC | AArch64::AEK_FP |
                              AArch64::AEK_SIMD | AArch64::AEK_RAS |
                              AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_RCPC | AArch64::AEK_SVE2 |
-                             AArch64::AEK_DOTPROD | AArch64::AEK_MTE |
-                             AArch64::AEK_PAUTH | AArch64::AEK_I8MM |
-                             AArch64::AEK_BF16 | AArch64::AEK_SVE2BITPERM |
-                             AArch64::AEK_SSBS | AArch64::AEK_SB |
-                             AArch64::AEK_FP16FML,
+                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_MTE | AArch64::AEK_PAUTH |
+                             AArch64::AEK_I8MM | AArch64::AEK_BF16 |
+                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
+                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_SSBS |
+                             AArch64::AEK_SB | AArch64::AEK_FP16FML,
                          "9-A"),
         ARMCPUTestParams("cyclone", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
