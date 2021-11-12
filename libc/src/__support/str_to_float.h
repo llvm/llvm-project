@@ -467,14 +467,15 @@ binaryExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp2,
 
   // This is the number of leading zeroes a properly normalized float of type T
   // should have.
-  constexpr uint32_t NORMALIZED_LEADING_ZEROES =
+  constexpr int32_t NORMALIZED_LEADING_ZEROES =
       (sizeof(BitsType) * 8) - fputil::FloatProperties<T>::mantissaWidth - 1;
   constexpr BitsType OVERFLOWED_MANTISSA =
       BitsType(1) << (fputil::FloatProperties<T>::mantissaWidth + 1);
 
   // Normalization
   int32_t amountToShift =
-      NORMALIZED_LEADING_ZEROES - leadingZeroes<BitsType>(mantissa);
+      NORMALIZED_LEADING_ZEROES -
+      static_cast<int32_t>(leadingZeroes<BitsType>(mantissa));
   if (amountToShift < 0) {
     mantissa <<= -amountToShift;
   } else {
@@ -569,58 +570,44 @@ decimalStringToFloat(const char *__restrict src, const char DECIMAL_POINT,
   // The goal for the first step of parsing is to convert the number in src to
   // the format mantissa * (base ^ exponent)
 
-  // The first loop fills the mantissa with as many digits as it can hold
+  // The loop fills the mantissa with as many digits as it can hold
   const BitsType BITSTYPE_MAX_DIV_BY_BASE =
       __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
-  while ((isdigit(*src) || *src == DECIMAL_POINT) &&
-         mantissa < BITSTYPE_MAX_DIV_BY_BASE) {
+  while (true) {
+    if (isdigit(*src)) {
+      uint32_t digit = *src - '0';
+      seenDigit = true;
+
+      if (mantissa < BITSTYPE_MAX_DIV_BY_BASE) {
+        mantissa = (mantissa * BASE) + digit;
+        if (afterDecimal) {
+          --exponent;
+        }
+      } else {
+        if (digit > 0)
+          truncated = true;
+        if (!afterDecimal)
+          ++exponent;
+      }
+
+      ++src;
+      continue;
+    }
     if (*src == DECIMAL_POINT) {
       if (afterDecimal) {
         break; // this means that *src points to a second decimal point, ending
                // the number.
-      } else {
-        afterDecimal = true;
-        ++src;
-        continue;
       }
+      afterDecimal = true;
+      ++src;
+      continue;
     }
-    uint32_t digit = *src - '0';
-
-    mantissa = (mantissa * BASE) + digit;
-    seenDigit = true;
-    if (afterDecimal) {
-      --exponent;
-    }
-
-    ++src;
+    // The character is neither a digit nor a decimal point.
+    break;
   }
 
   if (!seenDigit)
     return false;
-
-  // The second loop is to run through the remaining digits after we've filled
-  // the mantissa.
-  while (isdigit(*src) || *src == DECIMAL_POINT) {
-    if (*src == DECIMAL_POINT) {
-      if (afterDecimal) {
-        break; // this means that *src points to a second decimal point, ending
-               // the number.
-      } else {
-        afterDecimal = true;
-        ++src;
-        continue;
-      }
-    }
-    uint32_t digit = *src - '0';
-
-    if (digit > 0)
-      truncated = true;
-
-    if (!afterDecimal)
-      ++exponent;
-
-    ++src;
-  }
 
   if ((*src | 32) == EXPONENT_MARKER) {
     if (*(src + 1) == '+' || *(src + 1) == '-' || isdigit(*(src + 1))) {
@@ -673,61 +660,46 @@ hexadecimalStringToFloat(const char *__restrict src, const char DECIMAL_POINT,
   // The goal for the first step of parsing is to convert the number in src to
   // the format mantissa * (base ^ exponent)
 
-  // The first loop fills the mantissa with as many digits as it can hold
+  // The loop fills the mantissa with as many digits as it can hold
   const BitsType BITSTYPE_MAX_DIV_BY_BASE =
       __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
-  while ((isalnum(*src) || *src == DECIMAL_POINT) &&
-         mantissa < BITSTYPE_MAX_DIV_BY_BASE) {
+  while (true) {
+    if (isalnum(*src)) {
+      uint32_t digit = b36_char_to_int(*src);
+      if (digit >= BASE) {
+        seenDigit = false;
+        break;
+      }
+      seenDigit = true;
+
+      if (mantissa < BITSTYPE_MAX_DIV_BY_BASE) {
+        mantissa = (mantissa * BASE) + digit;
+        if (afterDecimal)
+          --exponent;
+      } else {
+        if (digit > 0)
+          truncated = true;
+        if (!afterDecimal)
+          ++exponent;
+      }
+      ++src;
+      continue;
+    }
     if (*src == DECIMAL_POINT) {
       if (afterDecimal) {
         break; // this means that *src points to a second decimal point, ending
                // the number.
-      } else {
-        afterDecimal = true;
-        ++src;
-        continue;
       }
+      afterDecimal = true;
+      ++src;
+      continue;
     }
-    uint32_t digit = b36_char_to_int(*src);
-    if (digit >= BASE)
-      break;
-
-    mantissa = (mantissa * BASE) + digit;
-    seenDigit = true;
-    if (afterDecimal)
-      --exponent;
-
-    ++src;
+    // The character is neither a hexadecimal digit nor a decimal point.
+    break;
   }
 
   if (!seenDigit)
     return false;
-
-  // The second loop is to run through the remaining digits after we've filled
-  // the mantissa.
-  while (isalnum(*src) || *src == DECIMAL_POINT) {
-    if (*src == DECIMAL_POINT) {
-      if (afterDecimal) {
-        break; // this means that *src points to a second decimal point, ending
-               // the number.
-      } else {
-        afterDecimal = true;
-        ++src;
-        continue;
-      }
-    }
-    uint32_t digit = b36_char_to_int(*src);
-    if (digit >= BASE)
-      break;
-
-    if (digit > 0)
-      truncated = true;
-
-    if (!afterDecimal)
-      ++exponent;
-
-    ++src;
-  }
 
   // Convert the exponent from having a base of 16 to having a base of 2.
   exponent *= 4;
