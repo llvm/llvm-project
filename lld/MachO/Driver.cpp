@@ -1157,7 +1157,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       // (ie., it has a slash suffix) whereas real_path() doesn't.
       // So we have to append '/' to be consistent.
       StringRef sep = sys::path::get_separator();
-      if (config->osoPrefix.equals(".") && !expanded.endswith(sep))
+      // real_path removes trailing slashes as part of the normalization, but
+      // these are meaningful for our text based stripping
+      if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
       config->osoPrefix = saver.save(expanded.str());
     }
