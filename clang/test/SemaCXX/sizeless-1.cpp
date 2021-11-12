@@ -581,7 +581,7 @@ void cxx_only(int sel) {
   auto auto_int8 = local_int8;
   auto auto_int16 = local_int16;
 #if __cplusplus >= 201703L
-  auto [auto_int8_a] = local_int8; // expected-error {{cannot decompose non-class, non-array type '__SVInt8_t'}}
+  auto [auto_int8_a] = local_int8; // expected-error {{cannot decompose non-class, non-array type 'svint8_t' (aka '__SVInt8_t')}}
 #endif
 #endif
 
@@ -600,7 +600,7 @@ void cxx_only(int sel) {
   auto fn1 = [&local_int8](svint8_t x) { local_int8 = x; };
   auto fn2 = [&local_int8](svint8_t *ptr) { *ptr = local_int8; };
 #if __cplusplus >= 201703L
-  auto fn3 = [a(return_int8())] {}; // expected-error {{field has sizeless type '__SVInt8_t'}}
+  auto fn3 = [a(return_int8())] {}; // expected-error {{field has sizeless type 'svint8_t' (aka '__SVInt8_t')}}
 #endif
   auto fn4 = [local_int8](svint8_t *ptr) { *ptr = local_int8; }; // expected-error {{by-copy capture of variable 'local_int8' with sizeless type 'svint8_t'}}
 

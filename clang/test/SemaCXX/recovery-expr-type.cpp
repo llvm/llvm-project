@@ -133,7 +133,7 @@ struct S { // expected-note {{candidate}}
 template <typename T> S(T t) -> S<void *>;
 
 void baz() {
-  bar(S(123)); // expected-error {{no matching conversion for functional-style cast from 'int' to 'test11::S<>'}}
+  bar(S(123)); // expected-error {{no matching conversion for functional-style cast from 'int' to 'S<void *>'}}
 }
 } // namespace test11
 
