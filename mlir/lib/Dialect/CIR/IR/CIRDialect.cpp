@@ -84,6 +84,13 @@ static void printConstantValue(OpAsmPrinter &p, cir::ConstantOp op,
   p.printAttribute(value);
 }
 
+/// Trivial folding of constants from the tutorial.
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
+  assert(adaptor.getOperands().size() == 1 &&
+         "ConstantOp::fold is only trivially implemented for single operands");
+  return getValue();
+}
+
 //===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
