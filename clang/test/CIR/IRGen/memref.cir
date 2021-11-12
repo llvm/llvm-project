@@ -5,6 +5,7 @@
 module {
   func.func @foo() {
     %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
+    %1 = cir.cst(1 : i32) : i32
     cir.return
   }
 }
@@ -12,6 +13,7 @@ module {
 //      CHECK: module  {
 // CHECK-NEXT:   func.func @foo() {
 // CHECK-NEXT:     %0 = memref.alloc() : memref<i32>
+// CHECK-NEXT:     {{.*}}arith.constant 1 : i32
 // CHECK-NEXT:     cir.return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
