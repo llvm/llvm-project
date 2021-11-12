@@ -121,9 +121,8 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::ConstantOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    auto result = rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
-        op, op.getType(), op.getValue());
-    (void)result;
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(op, op.getType(),
+                                                         op.getValue());
     return mlir::LogicalResult::success();
   }
 };
