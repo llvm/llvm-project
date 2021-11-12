@@ -1,4 +1,4 @@
-add_mlir_public_c_api_library(MLIRCAPIAsync
+add_mlir_upstream_c_api_library(MLIRCAPIAsync
   Async.cpp
   AsyncPasses.cpp
 
@@ -13,7 +13,7 @@ add_mlir_public_c_api_library(MLIRCAPIAsync
   MLIRPass
 )
 
-add_mlir_public_c_api_library(MLIRCAPIGPU
+add_mlir_upstream_c_api_library(MLIRCAPIGPU
   GPU.cpp
   GPUPasses.cpp
 
@@ -27,7 +27,7 @@ add_mlir_public_c_api_library(MLIRCAPIGPU
   MLIRPass
 )
 
-add_mlir_public_c_api_library(MLIRCAPILLVM
+add_mlir_upstream_c_api_library(MLIRCAPILLVM
   LLVM.cpp
 
   PARTIAL_SOURCES_INTENDED
@@ -36,7 +36,7 @@ add_mlir_public_c_api_library(MLIRCAPILLVM
   MLIRLLVMIR
 )
 
-add_mlir_public_c_api_library(MLIRCAPILinalg
+add_mlir_upstream_c_api_library(MLIRCAPILinalg
   Linalg.cpp
   LinalgPasses.cpp
 
@@ -51,7 +51,7 @@ add_mlir_public_c_api_library(MLIRCAPILinalg
   MLIRLinalgTransforms
 )
 
-add_mlir_public_c_api_library(MLIRCAPISCF
+add_mlir_upstream_c_api_library(MLIRCAPISCF
   SCF.cpp
 
   PARTIAL_SOURCES_INTENDED
@@ -60,7 +60,7 @@ add_mlir_public_c_api_library(MLIRCAPISCF
   MLIRSCF
 )
 
-add_mlir_public_c_api_library(MLIRCAPIShape
+add_mlir_upstream_c_api_library(MLIRCAPIShape
   Shape.cpp
 
   PARTIAL_SOURCES_INTENDED
@@ -69,7 +69,7 @@ add_mlir_public_c_api_library(MLIRCAPIShape
   MLIRShape
 )
 
-add_mlir_public_c_api_library(MLIRCAPISparseTensor
+add_mlir_upstream_c_api_library(MLIRCAPISparseTensor
   SparseTensor.cpp
   SparseTensorPasses.cpp
 
@@ -80,7 +80,7 @@ add_mlir_public_c_api_library(MLIRCAPISparseTensor
   MLIRSparseTensorTransforms
 )
 
-add_mlir_public_c_api_library(MLIRCAPIStandard
+add_mlir_upstream_c_api_library(MLIRCAPIStandard
   Standard.cpp
 
   PARTIAL_SOURCES_INTENDED
@@ -89,7 +89,7 @@ add_mlir_public_c_api_library(MLIRCAPIStandard
   MLIRStandard
 )
 
-add_mlir_public_c_api_library(MLIRCAPITensor
+add_mlir_upstream_c_api_library(MLIRCAPITensor
   Tensor.cpp
 
   PARTIAL_SOURCES_INTENDED

@@ -27,7 +27,8 @@
 #endif // mlir_c_runner_utils_EXPORTS
 #endif // MLIR_CRUNNERUTILS_EXPORT
 #else  // _WIN32
-#define MLIR_CRUNNERUTILS_EXPORT
+// Non-windows: use visibility attributes.
+#define MLIR_CRUNNERUTILS_EXPORT __attribute__((visibility("default")))
 #define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #endif // _WIN32
 
