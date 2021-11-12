@@ -34,11 +34,11 @@ define i1 @test_latch() {
 ; CHECK-NEXT:    [[LOAD2_1:%.*]] = load i64, i64* [[GEP2_1]], align 8
 ; CHECK-NEXT:    [[EXITCOND2_1:%.*]] = icmp eq i64 [[LOAD1_1]], [[LOAD2_1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2_1]], label [[LATCH_1:%.*]], label [[EXIT]]
+; CHECK:       latch.1:
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LOOP]] ], [ false, [[LATCH]] ], [ true, [[LATCH_1]] ]
 ; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
-; CHECK:       latch.1:
-; CHECK-NEXT:    br label [[EXIT]]
 ;
 start:
   %a1 = alloca [2 x i64], align 8
@@ -95,22 +95,22 @@ define i1 @test_non_latch() {
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]], align 8
 ; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp eq i64 [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[LOOP_1:%.*]], label [[EXIT:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_1:%.*]] ], [ true, [[LOOP_2:%.*]] ], [ false, [[LATCH_2:%.*]] ]
-; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
 ; CHECK:       loop.1:
-; CHECK-NEXT:    br label [[LATCH_1]]
+; CHECK-NEXT:    br label [[LATCH_1:%.*]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A1]], i64 0, i64 1
 ; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A2]], i64 0, i64 1
 ; CHECK-NEXT:    [[LOAD1_1:%.*]] = load i64, i64* [[GEP1_1]], align 8
 ; CHECK-NEXT:    [[LOAD2_1:%.*]] = load i64, i64* [[GEP2_1]], align 8
 ; CHECK-NEXT:    [[EXITCOND2_1:%.*]] = icmp eq i64 [[LOAD1_1]], [[LOAD2_1]]
-; CHECK-NEXT:    br i1 [[EXITCOND2_1]], label [[LOOP_2]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[EXITCOND2_1]], label [[LOOP_2:%.*]], label [[EXIT]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LATCH_2]]
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_1]] ], [ true, [[LOOP_2]] ], [ false, [[LATCH_2]] ]
+; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
 ;
 start:
   %a1 = alloca [2 x i64], align 8

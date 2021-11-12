@@ -120,8 +120,6 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP1]], i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_1:%.*]]
-; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.body4.us.1:
 ; CHECK-NEXT:    [[K_013_US_1:%.*]] = phi i32 [ 0, [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]] ], [ [[INC_US_1:%.*]], [[FOR_BODY4_US_1]] ]
 ; CHECK-NEXT:    [[NARROW:%.*]] = add nuw nsw i32 [[K_013_US_1]], 15
@@ -185,6 +183,8 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    [[INC_US_3]] = add nuw nsw i32 [[K_013_US_3]], 1
 ; CHECK-NEXT:    [[CMP2_US_3:%.*]] = icmp ult i32 [[INC_US_3]], [[I]]
 ; CHECK-NEXT:    br i1 [[CMP2_US_3]], label [[FOR_BODY4_US_3]], label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %i.addr = alloca i32, align 4

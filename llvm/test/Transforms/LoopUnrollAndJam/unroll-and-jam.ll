@@ -102,12 +102,6 @@ define void @test1(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_OUTER_EPIL_1:%.*]], label [[FOR_END_LOOPEXIT_EPILOG_LCSSA:%.*]]
-; CHECK:       for.end.loopexit.epilog-lcssa:
-; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
-; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    br label [[FOR_INNER_EPIL_1:%.*]]
 ; CHECK:       for.inner.epil.1:
@@ -143,6 +137,12 @@ define void @test1(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[ADD8_EPIL_1]]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_2]], i32* [[ARRAYIDX6_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT_EPILOG_LCSSA]]
+; CHECK:       for.end.loopexit.epilog-lcssa:
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ne i32 %E, 0
@@ -287,12 +287,6 @@ define void @test2(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_OUTER_EPIL_1:%.*]], label [[FOR_END10_LOOPEXIT_EPILOG_LCSSA:%.*]]
-; CHECK:       for.end10.loopexit.epilog-lcssa:
-; CHECK-NEXT:    br label [[FOR_END10_LOOPEXIT]]
-; CHECK:       for.end10.loopexit:
-; CHECK-NEXT:    br label [[FOR_END10]]
-; CHECK:       for.end10:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[ADD9_EPIL]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, i32* [[ARRAYIDX_EPIL_1]], align 4, !tbaa [[TBAA0]]
@@ -330,6 +324,12 @@ define void @test2(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[ADD_LCSSA_EPIL_2:%.*]] = phi i32 [ [[ADD_EPIL_2]], [[FOR_INNER_EPIL_2]] ]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_2]], i32* [[ARRAYIDX_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_END10_LOOPEXIT_EPILOG_LCSSA]]
+; CHECK:       for.end10.loopexit.epilog-lcssa:
+; CHECK-NEXT:    br label [[FOR_END10_LOOPEXIT]]
+; CHECK:       for.end10.loopexit:
+; CHECK-NEXT:    br label [[FOR_END10]]
+; CHECK:       for.end10:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ne i32 %E, 0
@@ -820,12 +820,6 @@ define void @test7(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_OUTER_EPIL_1:%.*]], label [[FOR_END_LOOPEXIT_EPILOG_LCSSA:%.*]]
-; CHECK:       for.end.loopexit.epilog-lcssa:
-; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
-; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[ADD_EPIL]]
 ; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX_EPIL_1]], align 4, !tbaa [[TBAA0]]
@@ -868,6 +862,12 @@ define void @test7(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[ADD9_LCSSA_EPIL_2:%.*]] = phi i32 [ [[ADD9_EPIL_2]], [[FOR_INNER_EPIL_2]] ]
 ; CHECK-NEXT:    store i32 [[ADD9_LCSSA_EPIL_2]], i32* [[ARRAYIDX_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT_EPILOG_LCSSA]]
+; CHECK:       for.end.loopexit.epilog-lcssa:
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ne i32 %E, 0
@@ -1023,16 +1023,6 @@ define void @test8(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_OUTER_EPIL_1:%.*]], label [[FOR_CLEANUP_EPILOG_LCSSA:%.*]]
-; CHECK:       for.cleanup.epilog-lcssa:
-; CHECK-NEXT:    br label [[FOR_CLEANUP]]
-; CHECK:       for.cleanup:
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[X_038]], 1
-; CHECK-NEXT:    [[EXITCOND41:%.*]] = icmp eq i32 [[INC]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND41]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_OUTEST]]
-; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[ADD_EPIL]]
 ; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX_EPIL_1]], align 4, !tbaa [[TBAA0]]
@@ -1075,6 +1065,16 @@ define void @test8(i32 %I, i32 %E, i32* noalias nocapture %A, i32* noalias nocap
 ; CHECK-NEXT:    [[ADD9_LCSSA_EPIL_2:%.*]] = phi i32 [ [[ADD9_EPIL_2]], [[FOR_INNER_EPIL_2]] ]
 ; CHECK-NEXT:    store i32 [[ADD9_LCSSA_EPIL_2]], i32* [[ARRAYIDX_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_CLEANUP_EPILOG_LCSSA]]
+; CHECK:       for.cleanup.epilog-lcssa:
+; CHECK-NEXT:    br label [[FOR_CLEANUP]]
+; CHECK:       for.cleanup:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[X_038]], 1
+; CHECK-NEXT:    [[EXITCOND41:%.*]] = icmp eq i32 [[INC]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND41]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_OUTEST]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp = icmp eq i32 %E, 0
@@ -1226,12 +1226,6 @@ define void @test9(i32 %I, i32 %E, i32* nocapture %A, i16* nocapture readonly %B
 ; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_OUTER_EPIL_1:%.*]], label [[FOR_END_LOOPEXIT_EPILOG_LCSSA:%.*]]
-; CHECK:       for.end.loopexit.epilog-lcssa:
-; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
-; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    br label [[FOR_INNER_EPIL_1:%.*]]
 ; CHECK:       for.inner.epil.1:
@@ -1269,6 +1263,12 @@ define void @test9(i32 %I, i32 %E, i32* nocapture %A, i16* nocapture readonly %B
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[ADD8_EPIL_1]]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_2]], i32* [[ARRAYIDX6_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT_EPILOG_LCSSA]]
+; CHECK:       for.end.loopexit.epilog-lcssa:
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp = icmp ne i32 %E, 0

@@ -67,8 +67,6 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 1
 ; CHECK-A55-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL_1:%.*]]
-; CHECK-A55:       for.end:
-; CHECK-A55-NEXT:    ret void
 ; CHECK-A55:       for.body6.epil.1:
 ; CHECK-A55-NEXT:    [[TMP14:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
 ; CHECK-A55-NEXT:    [[CONV_EPIL_1:%.*]] = sext i16 [[TMP14]] to i32
@@ -90,6 +88,8 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[ADD21_EPIL_2:%.*]] = add nsw i32 [[MUL16_EPIL_2]], [[TMP19]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_2]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    br label [[FOR_END]]
+; CHECK-A55:       for.end:
+; CHECK-A55-NEXT:    ret void
 ;
 ; CHECK-GENERIC-LABEL: @runtime_unroll_generic(
 ; CHECK-GENERIC-NEXT:  entry:
