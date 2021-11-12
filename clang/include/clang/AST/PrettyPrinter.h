@@ -74,10 +74,9 @@ struct PrintingPolicy {
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
-        SuppressImplicitBase(false), UseStdFunctionForLambda(false),
-        FullyQualifiedName(false), PrintCanonicalTypes(false),
-        PrintInjectedClassNameWithArguments(true), UsePreferredNames(true),
-        UseIntegerTypeSuffixesAlways(false) {}
+        SuppressImplicitBase(false), UseStdFunctionForLambda(false), FullyQualifiedName(false),
+        PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
+        UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -289,7 +288,7 @@ struct PrintingPolicy {
 
   /// Whether to use type suffixes (eg: 1U) on integral non-type template
   /// parameters.
-  unsigned UseIntegerTypeSuffixesAlways : 1;
+  unsigned AlwaysIncludeTypeForTemplateArgument : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;
