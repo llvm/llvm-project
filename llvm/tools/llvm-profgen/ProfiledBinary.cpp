@@ -285,12 +285,16 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, 
   // because we may build the tools on non-linux.
   uint32_t PageSize = 0x1000;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
-    if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_flags & ELF::PF_X)) {
+    if (Phdr.p_type == ELF::PT_LOAD) {
+      if (!FirstLoadableAddress)
+        FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+      if (Phdr.p_flags & ELF::PF_X) {
         // Segments will always be loaded at a page boundary.
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
                                                 ~(PageSize - 1U));
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
       }
+    }
   }
 
   if (PreferredTextSegmentAddresses.empty())

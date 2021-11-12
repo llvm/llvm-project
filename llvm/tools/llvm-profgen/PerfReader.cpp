@@ -27,6 +27,13 @@ static cl::opt<bool>
               cl::desc("Work with `--skip-symbolization` or "
                        "`--unsymbolized-profile` to write/read the "
                        "offset instead of virtual address."));
+
+static cl::opt<bool> UseLoadableSegmentAsBase(
+    "use-first-loadable-segment-as-base", cl::init(false), cl::ZeroOrMore,
+    cl::desc("Use first loadable segment address as base address "
+             "for offsets in unsymbolized profile. By default "
+             "first executable segment address is used"));
+
 static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
                        cl::desc("Ignore call stack samples for hybrid samples "
@@ -698,10 +705,19 @@ void PerfScriptReader::writeUnsymbolizedProfile(raw_fd_ostream &OS) {
     OS.indent(Indent);
     OS << Counter.size() << "\n";
     for (auto &I : Counter) {
-      uint64_t Start = UseOffset ? I.first.first
-                                 : Binary->offsetToVirtualAddr(I.first.first);
-      uint64_t End = UseOffset ? I.first.second
-                               : Binary->offsetToVirtualAddr(I.first.second);
+      uint64_t Start = I.first.first;
+      uint64_t End = I.first.second;
+
+      if (!UseOffset || (UseOffset && UseLoadableSegmentAsBase)) {
+        Start = Binary->offsetToVirtualAddr(Start);
+        End = Binary->offsetToVirtualAddr(End);
+      }
+
+      if (UseOffset && UseLoadableSegmentAsBase) {
+        Start -= Binary->getFirstLoadableAddress();
+        End -= Binary->getFirstLoadableAddress();
+      }
+
       OS.indent(Indent);
       OS << Twine::utohexstr(Start) << Separator << Twine::utohexstr(End) << ":"
          << I.second << "\n";
@@ -771,9 +787,13 @@ void UnsymbolizedProfileReader::readSampleCounters(TraceStream &TraceIt,
           Range.second.getAsInteger(16, Target))
         exitWithErrorForTraceLine(TraceIt);
 
-      if (!UseOffset) {
-        Source = Binary->virtualAddrToOffset(Source);
-        Target = Binary->virtualAddrToOffset(Target);
+      if (!UseOffset || (UseOffset && UseLoadableSegmentAsBase)) {
+        uint64_t BaseAddr = 0;
+        if (UseOffset && UseLoadableSegmentAsBase)
+          BaseAddr = Binary->getFirstLoadableAddress();
+
+        Source = Binary->virtualAddrToOffset(Source + BaseAddr);
+        Target = Binary->virtualAddrToOffset(Target + BaseAddr);
       }
 
       Counter[{Source, Target}] += Count;
