@@ -1595,11 +1595,13 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
-LogicalResult mlir::linalg::comprehensive_bufferize::initTensorElimination(
-    FuncOp funcOp, BufferizationAliasInfo &aliasInfo, DominanceInfo &domInfo,
-    std::function<bool(OpOperand &)> anchorMatchFunc,
-    std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
-    bool skipAnalysis) {
+LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
+    InitTensorEliminationStep::eliminateInitTensors(
+        FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
+        DominanceInfo &domInfo,
+        std::function<bool(OpOperand &)> anchorMatchFunc,
+        std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
+        SmallVector<Operation *> &newOps) {
   OpBuilder b(funcOp->getContext());
 
   WalkResult status = funcOp->walk([&](Operation *op) {
@@ -1647,14 +1649,9 @@ LogicalResult mlir::linalg::comprehensive_bufferize::initTensorElimination(
       aliasInfo.unionAliasSets(initTensor, replacement);
       aliasInfo.unionEquivalenceClasses(initTensor, replacement);
 
-      // Run analysis on the newly created op.
-      if (auto opResult = replacement.dyn_cast<OpResult>()) {
-        if (!skipAnalysis) {
-          SmallVector<Operation *> ops(1, replacement.getDefiningOp());
-          if (failed(inPlaceAnalysis(ops, aliasInfo, domInfo)))
-            return WalkResult::interrupt();
-        }
-      }
+      // Register replacement ops.
+      if (Operation *newOp = replacement.getDefiningOp())
+        newOps.push_back(newOp);
     }
 
     // Advance to the next operation.
@@ -1692,11 +1689,11 @@ LogicalResult mlir::linalg::comprehensive_bufferize::initTensorElimination(
 ///
 /// Note that the newly inserted ExtractSliceOp may have to bufferize
 /// out-of-place due to RaW conflicts.
-LogicalResult mlir::linalg::comprehensive_bufferize::
-    eliminateInsertSliceAnchoredInitTensorOps(FuncOp funcOp,
-                                              BufferizationAliasInfo &aliasInfo,
-                                              DominanceInfo &domInfo) {
-  return initTensorElimination(
+LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
+    InsertSliceAnchoredInitTensorEliminationStep::run(
+        FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
+        DominanceInfo &domInfo, SmallVector<Operation *> &newOps) {
+  return eliminateInitTensors(
       funcOp, aliasInfo, domInfo,
       [&](OpOperand &operand) {
         auto insertSliceOp = dyn_cast<InsertSliceOp>(operand.getOwner());
@@ -1713,7 +1710,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::
             loc, insertSliceOp.dest(), insertSliceOp.getMixedOffsets(),
             insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
         return extractOp.result();
-      });
+      },
+      newOps);
 }
 
 #ifndef NDEBUG
@@ -1793,11 +1791,15 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
                                          options.analysisFuzzerSeed)))
       return failure();
 
-    // Try to eliminate InitTensorOps to avoid new allocations during the
-    // bufferization phase.
-    if (failed(eliminateInsertSliceAnchoredInitTensorOps(funcOp, aliasInfo,
-                                                         domInfo)))
-      return failure();
+    for (const std::unique_ptr<PostAnalysisStep> &step :
+         options.postAnalysisSteps) {
+      SmallVector<Operation *> newOps;
+      if (failed(step->run(funcOp, aliasInfo, domInfo, newOps)))
+        return failure();
+      // Analyze ops that were created by the PostAnalysisStep.
+      if (failed(inPlaceAnalysis(newOps, aliasInfo, domInfo)))
+        return failure();
+    }
 
     // Bufferization phase.
     if (!options.testAnalysisOnly) {

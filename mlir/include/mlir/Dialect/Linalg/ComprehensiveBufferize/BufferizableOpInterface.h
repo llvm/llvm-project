@@ -18,6 +18,8 @@
 
 namespace mlir {
 class BlockAndValueMapping;
+class DominanceInfo;
+class FuncOp;
 
 namespace linalg {
 namespace comprehensive_bufferize {
@@ -265,6 +267,20 @@ struct BufferizationState {
 /// a new buffer and copy over data from the existing buffer if out-of-place
 /// bufferization is necessary.
 Value getResultBuffer(OpBuilder &b, OpResult result, BufferizationState &state);
+
+/// PostAnalysisSteps can be registered with `BufferizationOptions` and are
+/// executed after the analysis, but before bufferization. They can be used
+/// implement custom dialect-specific optimizations.
+struct PostAnalysisStep {
+  virtual ~PostAnalysisStep() {}
+
+  /// Run the post analysis step. This function may modify the IR, but must keep
+  /// `aliasInfo` consistent. Newly created operations and operations that
+  /// should be re-analyzed must be stored in `newOps`.
+  virtual LogicalResult run(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
+                            DominanceInfo &domInfo,
+                            SmallVector<Operation *> &newOps) = 0;
+};
 
 } // namespace comprehensive_bufferize
 } // namespace linalg
