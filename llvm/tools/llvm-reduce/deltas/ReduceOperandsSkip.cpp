@@ -217,20 +217,7 @@ static void extractOperandsFromModule(Oracle &O, Module &Program) {
   }
 }
 
-static int countOperands(Module &Program) {
-  int Count = 0;
-
-  for (Function &F : Program.functions()) {
-    opportunities(F, [&](Use &Op, ArrayRef<Value *> Candidates) {
-      Count += llvm::size(Candidates);
-    });
-  }
-
-  return Count;
-}
-
 void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing operands by skipping over instructions ...\n";
-  int Count = countOperands(Test.getProgram());
-  runDeltaPass(Test, Count, extractOperandsFromModule);
+  runDeltaPass(Test, extractOperandsFromModule);
 }
