@@ -11,7 +11,7 @@ class TestPty(GDBRemoteTestBase):
 
     def get_term_attrs(self):
         import termios
-        return termios.tcgetattr(self.server._socket._slave)
+        return termios.tcgetattr(self.server._socket._secondary)
 
     def setUp(self):
         super().setUp()
