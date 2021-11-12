@@ -9,6 +9,10 @@
 #if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
 
 int test__compiler_rt_logbl(fp_t x) {
+#if defined(__ve__)
+  if (fpclassify(x) == FP_SUBNORMAL)
+    return 0;
+#endif
   fp_t crt_value = __compiler_rt_logbl(x);
   fp_t libm_value = logbl(x);
   // Compare the values, considering all NaNs equivalent, as the spec doesn't
