@@ -130,6 +130,73 @@ exit:
   ret i32 0
 }
 
+; Make sure no information is lost for conditions on both %n and (zext %n).
+define void @rewrite_zext_and_base_1(i32 %n) {
+; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_and_base
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2305843009213693951
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
+; CHECK-NEXT:  Predicates:
+; CHECK:        Loop %loop: Trip multiple is 1
+;
+entry:
+  %ext = zext i32 %n to i64
+  %cmp5 = icmp ule i64 %ext, 48
+  br i1 %cmp5, label %check.1, label %exit
+
+check.1:
+  %cmp.2 = icmp ule i32 %n, 32
+  br i1 %cmp.2, label %check, label %exit
+
+
+check:                                 ; preds = %entry
+  %min.iters.check = icmp ult i64 %ext, 8
+  %n.vec = and i64 %ext, -8
+  br i1 %min.iters.check, label %exit, label %loop
+
+loop:
+  %index = phi i64 [ 0, %check ], [ %index.next, %loop ]
+  %index.next = add nuw nsw i64 %index, 8
+  %ec = icmp eq i64 %index.next, %n.vec
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Make sure no information is lost for conditions on both %n and (zext %n).
+define void @rewrite_zext_and_base_2(i32 %n) {
+; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_and_base
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2305843009213693951
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
+; CHECK-NEXT:  Predicates:
+; CHECK:        Loop %loop: Trip multiple is 1
+;
+entry:
+  %ext = zext i32 %n to i64
+  %cmp5 = icmp ule i64 %ext, 32
+  br i1 %cmp5, label %check.1, label %exit
+
+check.1:
+  %cmp.2 = icmp ule i32 %n, 48
+  br i1 %cmp.2, label %check, label %exit
+
+check:                                 ; preds = %entry
+  %min.iters.check = icmp ult i64 %ext, 8
+  %n.vec = and i64 %ext, -8
+  br i1 %min.iters.check, label %exit, label %loop
+
+loop:
+  %index = phi i64 [ 0, %check ], [ %index.next, %loop ]
+  %index.next = add nuw nsw i64 %index, 8
+  %ec = icmp eq i64 %index.next, %n.vec
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare void @use(i64)
 
 declare i32 @llvm.umin.i32(i32, i32)
