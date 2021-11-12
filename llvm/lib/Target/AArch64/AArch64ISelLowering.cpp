@@ -1015,10 +1015,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // elements smaller than i32, so promote the input to i32 first.
     setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v4i8, MVT::v4i32);
     setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i8, MVT::v4i32);
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i8, MVT::v8i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v8i8, MVT::v8i32);
-    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v16i8, MVT::v16i32);
-    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v16i8, MVT::v16i32);
 
     // Similarly, there is no direct i32 -> f64 vector conversion instruction.
     setOperationAction(ISD::SINT_TO_FP, MVT::v2i32, Custom);
@@ -1031,6 +1027,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::v4i32, Custom);
 
     if (Subtarget->hasFullFP16()) {
+      setOperationAction(ISD::SINT_TO_FP, MVT::v8i8, Custom);
+      setOperationAction(ISD::UINT_TO_FP, MVT::v8i8, Custom);
+      setOperationAction(ISD::SINT_TO_FP, MVT::v16i8, Custom);
+      setOperationAction(ISD::UINT_TO_FP, MVT::v16i8, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i16, Custom);
@@ -1038,6 +1038,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     } else {
       // when AArch64 doesn't have fullfp16 support, promote the input
       // to i32 first.
+      setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i8, MVT::v8i32);
+      setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v8i8, MVT::v8i32);
+      setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v16i8, MVT::v16i32);
+      setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v16i8, MVT::v16i32);
       setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v4i16, MVT::v4i32);
       setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i16, MVT::v4i32);
       setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i16, MVT::v8i32);

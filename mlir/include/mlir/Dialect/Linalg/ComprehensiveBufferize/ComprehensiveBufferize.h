@@ -27,6 +27,8 @@ namespace comprehensive_bufferize {
 // TODO: from some HW description.
 static constexpr int64_t kBufferAlignments = 128;
 
+struct BufferizationState;
+
 /// Analyze the `ops` to determine which OpResults are inplaceable.
 LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                               BufferizationAliasInfo &aliasInfo,
@@ -55,9 +57,7 @@ std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 /// `bufferizedFunctionTypes` (resp. `globalCreator`) are expected to be
 /// non-null if `op` is a CallOpInterface (resp. GlobalCreator).
 LogicalResult
-bufferizeOp(Operation *op, BlockAndValueMapping &bvm,
-            BufferizationAliasInfo &aliasInfo,
-            AllocationCallbacks allocationFns,
+bufferizeOp(Operation *op, BufferizationState &state,
             DenseMap<FuncOp, FunctionType> *bufferizedFunctionTypes = nullptr);
 
 /// Register external models implemented for the `BufferizableOpInterface`.

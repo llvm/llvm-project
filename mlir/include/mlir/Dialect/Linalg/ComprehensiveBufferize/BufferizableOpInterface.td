@@ -160,8 +160,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           llvm_unreachable("bufferRelation not implemented");
         }]
       >,
-      // TODO: Simplify method signature: Pass an OpBuilder and a
-      // BufferizationState object.
       InterfaceMethod<
         /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
@@ -171,9 +169,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
         /*args=*/(ins "OpBuilder &":$b,
-                      "BlockAndValueMapping &":$bvm,
-                      "BufferizationAliasInfo &":$aliasInfo,
-                      "AllocationCallbacks &":$allocationFn),
+                      "BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");
@@ -237,6 +233,18 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           && static_cast<bool>(
               bufferizableOp.getAliasingOpResult(opOperand));
     }
+
+    // TODO: The following two attributes should belong to the tensor dialect.
+    // The corresponding verifier should also be in the tensor dialect.
+    /// Attribute name used to mark region arguments that can be bufferized
+    /// in-place during linalg comprehensive bufferization.
+    constexpr const static ::llvm::StringLiteral
+      kInplaceableAttrName = "linalg.inplaceable";
+
+    /// Attribute name used to mark the bufferization layout for region
+    /// arguments during linalg comprehensive bufferization.
+    constexpr const static ::llvm::StringLiteral
+      kBufferLayoutAttrName = "linalg.buffer_layout";
   }];
 }
 

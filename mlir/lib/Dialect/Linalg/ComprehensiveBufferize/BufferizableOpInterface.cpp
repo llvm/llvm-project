@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -319,30 +322,28 @@ Value mlir::linalg::comprehensive_bufferize::findLastPrecedingWrite(
 /// a new buffer and copy over data from the existing buffer if out-of-place
 /// bufferization is necessary.
 Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
-    OpBuilder &b, OpResult result, const BlockAndValueMapping &bvm,
-    BufferizationAliasInfo &aliasInfo, AllocationCallbacks allocationFns) {
+    OpBuilder &b, OpResult result, BufferizationState &state) {
   OpBuilder::InsertionGuard guard(b);
   Operation *op = result.getOwner();
   SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
   assert(!aliasingOperands.empty() && "could not get aliasing OpOperand");
   OpOperand *opOperand = aliasingOperands.front();
   Value operand = opOperand->get();
-  Value operandBuffer = bvm.lookupOrNull(operand);
-  assert(operandBuffer && "operand buffer not found");
+  Value operandBuffer = state.lookupBuffer(operand);
   // Make sure that all OpOperands are the same buffer. If this is not the case,
   // we would have to materialize a memref value.
   // TODO: Should be looking for checking for "equivalent buffers" instead of
   // operator== here, but equivalent buffers for scf.if yield values are not
   // set up yet.
   if (!llvm::all_of(aliasingOperands, [&](OpOperand *o) {
-        return bvm.lookup(o->get()) == operandBuffer;
+        return state.lookupBuffer(o->get()) == operandBuffer;
       })) {
     op->emitError("result buffer is ambiguous");
     return Value();
   }
 
   // If bufferizing out-of-place, allocate a new buffer.
-  if (!aliasInfo.isInPlace(result)) {
+  if (!state.aliasInfo.isInPlace(result)) {
     // Ops with multiple aliasing operands can currently not bufferize
     // out-of-place.
     assert(
@@ -350,8 +351,8 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
         "ops with multiple aliasing OpOperands cannot bufferize out-of-place");
     Location loc = op->getLoc();
     // Allocate the result buffer.
-    Value resultBuffer = allocationFns.createAllocDeallocFn(
-        b, loc, operand, aliasInfo, allocationFns);
+    Value resultBuffer =
+        state.allocationFns.createAllocDeallocFn(b, loc, operand, state);
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -373,11 +374,47 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
     if (!skipCopy) {
       // Set insertion point now that potential alloc/dealloc are introduced.
       b.setInsertionPoint(op);
-      allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
+      state.allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
     }
     return resultBuffer;
   }
 
   // Bufferizing in-place. No need to allocate a new buffer.
   return operandBuffer;
+}
+
+//===----------------------------------------------------------------------===//
+// Bufferization-specific BlockAndValueMapping support with debugging.
+//===----------------------------------------------------------------------===//
+
+/// Wrapper for better debugging.
+void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
+    ValueRange tensors, ValueRange buffers) {
+  assert(!tensors.empty() && "unexpected empty tensors");
+  return tensorToBufferMap.map(tensors, buffers);
+}
+
+/// Wrapper for better debugging.
+void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
+    Value tensor, Value buffer) {
+  assert(tensor && "unexpected empty tensor");
+  assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
+  return tensorToBufferMap.map(tensor, buffer);
+}
+
+/// Wrapper for better debugging.
+Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
+    Value tensor) const {
+  // TODO: if key comes from bbArg, forward.
+  assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
+  Value v = tensorToBufferMap.lookupOrNull(tensor);
+
+  if (!v) {
+    // Dump tensor for easier debugging.
+    tensor.dump();
+    llvm_unreachable("tensor is not mapped");
+    return Value();
+  }
+
+  return v;
 }

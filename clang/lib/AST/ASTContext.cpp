@@ -11760,6 +11760,18 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
     Target->getCPUSpecificCPUDispatchFeatures(
         SD->getCPUName(GD.getMultiVersionIndex())->getName(), FeaturesTmp);
     std::vector<std::string> Features(FeaturesTmp.begin(), FeaturesTmp.end());
+    Features.insert(Features.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.end());
+    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+  } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
+    std::vector<std::string> Features;
+    StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+    if (VersionStr.startswith("arch="))
+      TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
+    else if (VersionStr != "default")
+      Features.push_back((StringRef{"+"} + VersionStr).str());
+
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;

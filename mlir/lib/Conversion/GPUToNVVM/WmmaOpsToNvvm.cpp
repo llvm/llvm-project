@@ -304,6 +304,8 @@ static Value createScalarOp(OpBuilder &builder, Location loc,
     return builder.create<LLVM::FAddOp>(loc, operands[0].getType(), operands);
   case gpu::MMAElementwiseOp::MULF:
     return builder.create<LLVM::FMulOp>(loc, operands[0].getType(), operands);
+  case gpu::MMAElementwiseOp::DIVF:
+    return builder.create<LLVM::FDivOp>(loc, operands[0].getType(), operands);
   case gpu::MMAElementwiseOp::MAXF:
     return createMinMaxF(builder, loc, operands[0], operands[1],
                          /*isMin=*/false);

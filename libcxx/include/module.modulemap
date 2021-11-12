@@ -620,7 +620,6 @@ module std [system] {
       module auto_ptr                 { private header "__memory/auto_ptr.h"                 }
       module compressed_pair          { private header "__memory/compressed_pair.h"          }
       module construct_at             { private header "__memory/construct_at.h"             }
-      module pointer_safety           { private header "__memory/pointer_safety.h"           }
       module pointer_traits           { private header "__memory/pointer_traits.h"           }
       module raw_storage_iterator     { private header "__memory/raw_storage_iterator.h"     }
       module shared_ptr               { private header "__memory/shared_ptr.h"               }
