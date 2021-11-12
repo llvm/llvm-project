@@ -112,6 +112,9 @@ void cur_thread_finalize() {
 }
 #endif
 
+void FlushShadowMemory() {
+}
+
 static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   vm_address_t address = start;
   vm_address_t end_address = end;
