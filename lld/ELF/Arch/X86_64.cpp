@@ -802,8 +802,8 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
   // with addend != -4. Such an instruction does not load the full GOT entry, so
   // we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip), %rax
   // (addend=0) loads the high 32 bits of the GOT entry.
-  if ((type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX) ||
-      addend != -4)
+  if (!config->relax || addend != -4 ||
+      (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
