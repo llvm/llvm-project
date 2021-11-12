@@ -376,10 +376,10 @@ static ClangTidyError createNolintError(const ClangTidyContext &Context,
                        Context.getCurrentBuildDirectory(), false);
   StringRef Message =
       IsNolintBegin
-          ? "unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINTEND' "
-            "comment"
-          : "unmatched 'NOLINTEND' comment without a previous 'NOLINTBEGIN' "
-            "comment";
+          ? ("unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINT"
+             "END' comment")
+          : ("unmatched 'NOLINTEND' comment without a previous 'NOLINT"
+             "BEGIN' comment");
   Error.Message = tooling::DiagnosticMessage(Message, SM, Loc);
   return Error;
 }
