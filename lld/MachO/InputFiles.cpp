@@ -904,16 +904,31 @@ void ObjFile::registerCompactUnwind() {
 
   for (SubsectionEntry &entry : *cuSubsecMap) {
     ConcatInputSection *isec = cast<ConcatInputSection>(entry.isec);
+    // Hack!! Since each CUE contains a different function address, if ICF
+    // operated naively and compared the entire contents of each CUE, entries
+    // with identical unwind info but belonging to different functions would
+    // never be considered equivalent. To work around this problem, we slice
+    // away the function address here. (Note that we do not adjust the offsets
+    // of the corresponding relocations.) We rely on `relocateCompactUnwind()`
+    // to correctly handle these truncated input sections.
+    isec->data = isec->data.slice(target->wordSize);
+
     ConcatInputSection *referentIsec;
-    for (const Reloc &r : isec->relocs) {
-      if (r.offset != 0)
+    for (auto it = isec->relocs.begin(); it != isec->relocs.end();) {
+      Reloc &r = *it;
+      // We only wish to handle the relocation for CUE::functionAddress.
+      if (r.offset != 0) {
+        ++it;
         continue;
+      }
       uint64_t add = r.addend;
       if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
-        if (sym->getFile() != this)
+        if (sym->getFile() != this) {
+          ++it;
           continue;
+        }
         add += sym->value;
         referentIsec = cast<ConcatInputSection>(sym->isec);
       } else {
@@ -926,16 +941,23 @@ void ObjFile::registerCompactUnwind() {
       // The functionAddress relocations are typically section relocations.
       // However, unwind info operates on a per-symbol basis, so we search for
       // the function symbol here.
-      auto it = llvm::lower_bound(
+      auto symIt = llvm::lower_bound(
           referentIsec->symbols, add,
           [](Defined *d, uint64_t add) { return d->value < add; });
       // The relocation should point at the exact address of a symbol (with no
       // addend).
-      if (it == referentIsec->symbols.end() || (*it)->value != add) {
+      if (symIt == referentIsec->symbols.end() || (*symIt)->value != add) {
         assert(referentIsec->wasCoalesced);
+        ++it;
         continue;
       }
-      (*it)->compactUnwind = isec;
+      (*symIt)->compactUnwind = isec;
+      // Since we've sliced away the functionAddress, we should remove the
+      // corresponding relocation too. Given that clang emits relocations in
+      // reverse order of address, this relocation should be at the end of the
+      // vector for most of our input object files, so this is typically an O(1)
+      // operation.
+      it = isec->relocs.erase(it);
     }
   }
 }

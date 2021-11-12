@@ -216,8 +216,27 @@ private:
   ConstraintMap regionConstraints;
 };
 
-// Escape a string using C++ encoding. E.g. foo"bar -> foo\x22bar.
+/// Escape a string using C++ encoding. E.g. foo"bar -> foo\x22bar.
 std::string escapeString(StringRef value);
+
+namespace detail {
+template <typename> struct stringifier {
+  template <typename T> static std::string apply(T &&t) {
+    return std::string(std::forward<T>(t));
+  }
+};
+template <> struct stringifier<Twine> {
+  static std::string apply(const Twine &twine) {
+    return twine.str();
+  }
+};
+} // end namespace detail
+
+/// Generically convert a value to a std::string.
+template <typename T> std::string stringify(T &&t) {
+  return detail::stringifier<std::remove_reference_t<std::remove_const_t<T>>>::
+      apply(std::forward<T>(t));
+}
 
 } // namespace tblgen
 } // namespace mlir

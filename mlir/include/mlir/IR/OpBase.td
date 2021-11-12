@@ -3005,7 +3005,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // be replaced with the required attribute type.
   string parser = ?;
   // The default parameter printer is `$_printer << $_self`. Overload the stream
-  // operator of `DialectAsmPrinter` as necessary to print your type. Or you can
+  // operator of `AsmPrinter` as necessary to print your type. Or you can
   // provide a custom printer.
   string printer = ?;
 }
