@@ -36,8 +36,8 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
   }
 
   // Delete out-of-chunk metadata attached to globals.
-  SmallVector<std::pair<unsigned, MDNode *>> MDs;
   for (GlobalVariable &GV : Program.globals()) {
+    SmallVector<std::pair<unsigned, MDNode *>> MDs;
     GV.getAllMetadata(MDs);
     for (std::pair<unsigned, MDNode *> &MD : MDs)
       if (!O.shouldKeep())
@@ -45,14 +45,18 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
   }
 
   for (Function &F : Program) {
-    // Delete out-of-chunk metadata attached to functions.
-    F.getAllMetadata(MDs);
-    for (std::pair<unsigned, MDNode *> &MD : MDs)
-      if (!O.shouldKeep())
-        F.setMetadata(MD.first, NULL);
+    {
+      SmallVector<std::pair<unsigned, MDNode *>> MDs;
+      // Delete out-of-chunk metadata attached to functions.
+      F.getAllMetadata(MDs);
+      for (std::pair<unsigned, MDNode *> &MD : MDs)
+        if (!O.shouldKeep())
+          F.setMetadata(MD.first, NULL);
+    }
 
     // Delete out-of-chunk metadata attached to instructions.
     for (Instruction &I : instructions(F)) {
+      SmallVector<std::pair<unsigned, MDNode *>> MDs;
       I.getAllMetadata(MDs);
       for (std::pair<unsigned, MDNode *> &MD : MDs)
         if (!O.shouldKeep())
