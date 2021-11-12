@@ -83,7 +83,6 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::AllocaOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    assert(false && "NYI");
     auto ty = mlir::MemRefType::get({}, op.getType());
     rewriter.replaceOpWithNewOp<mlir::memref::AllocOp>(op, ty);
     return mlir::LogicalResult::success();
