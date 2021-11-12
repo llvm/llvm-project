@@ -498,6 +498,8 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
     llvm::Optional<mlir::OperandRange> getCompareOperands(unsigned cond);
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
+    llvm::Optional<mlir::ValueRange> getCompareOperands(
+        mlir::ValueRange operands, unsigned cond);
 
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
@@ -1017,34 +1019,6 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
   let printer = "::print(p, *this);";
 
   let verifier = "return ::verify(*this);";
-}
-
-def fir_UnboxOp : fir_SimpleOp<"unbox", [NoSideEffect]> {
-  let summary = "unbox the boxed value into a tuple value";
-
-  let description = [{
-    Unbox a boxed value into a result of multiple values from the box's
-    component data.  The values are, minimally, a reference to the data of the
-    entity, the byte-size of one element, the rank, the type descriptor, a set
-    of flags (packed in an integer, and an array of dimension information (of
-    size rank).
-
-    ```mlir
-      %40   = ... : !fir.box<!fir.type<T>>
-      %41:6 = fir.unbox %40 : (!fir.box<!fir.type<T>>) -> (!fir.ref<!fir.type<T>>, i32, i32, !fir.tdesc<!fir.type<T>>, i32, !fir.array<? x index>)
-    ```
-  }];
-
-  let arguments = (ins fir_BoxType:$box);
-
-  let results = (outs
-    fir_ReferenceType,  // pointer to data
-    AnyIntegerLike,     // size of a data element
-    AnyIntegerLike,     // rank of data
-    fir_TypeDescType,   // abstract type descriptor
-    AnyIntegerLike,     // attribute flags (bitfields)
-    fir_SequenceType    // dimension information (if any)
-  );
 }
 
 def fir_UnboxCharOp : fir_SimpleOp<"unboxchar", [NoSideEffect]> {

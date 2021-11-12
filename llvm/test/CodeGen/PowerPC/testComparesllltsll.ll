@@ -65,7 +65,6 @@ define dso_local void @test_llltsll_store(i64 %a, i64 %b) {
 ; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    std r3, glob@toc@l(r5)
 ; CHECK-NEXT:    blr
-; CHECK-DIAG:    subfc [[REG3:r[0-9]+]], r4, r3
 entry:
   %cmp = icmp slt i64 %a, %b
   %conv1 = zext i1 %cmp to i64
@@ -86,7 +85,6 @@ define dso_local void @test_llltsll_sext_store(i64 %a, i64 %b) {
 ; CHECK-NEXT:    neg r3, r3
 ; CHECK-NEXT:    std r3, glob@toc@l(r5)
 ; CHECK-NEXT:    blr
-; CHECK-DIAG:    subfc [[REG3:r[0-9]+]], r4, r3
 entry:
   %cmp = icmp slt i64 %a, %b
   %conv1 = sext i1 %cmp to i64

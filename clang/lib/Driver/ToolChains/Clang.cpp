@@ -750,7 +750,7 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                    const Driver &D, const InputInfo &Output,
-                                   const ArgList &Args,
+                                   const ArgList &Args, SanitizerArgs &SanArgs,
                                    ArgStringList &CmdArgs) {
 
   auto *PGOGenerateArg = Args.getLastArg(options::OPT_fprofile_generate,
@@ -924,7 +924,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else if (Val != "single")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Val;
-  } else if (TC.getSanitizerArgs().needsTsanRt()) {
+  } else if (SanArgs.needsTsanRt()) {
     CmdArgs.push_back("-fprofile-update=atomic");
   }
 
@@ -2666,9 +2666,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   llvm::DenormalMode DenormalFPMath = DefaultDenormalFPMath;
   llvm::DenormalMode DenormalFP32Math = DefaultDenormalFP32Math;
-  StringRef FPContract = "";
+  // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
+  // If one wasn't given by the user, don't pass it here.
+  StringRef FPContract;
+  if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+      !JA.isOffloading(Action::OFK_HIP))
+    FPContract = "on";
   bool StrictFPModel = false;
-
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2691,7 +2695,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       // -fno_fast_math restores default denormal and fpcontract handling
-      FPContract = "";
+      FPContract = "on";
       DenormalFPMath = llvm::DenormalMode::getIEEE();
 
       // FIXME: The target may have picked a non-IEEE default mode here based on
@@ -2711,12 +2715,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // ffp-model= is a Driver option, it is entirely rewritten into more
       // granular options before being passed into cc1.
       // Use the gcc option in the switch below.
-      if (!FPModel.empty() && !FPModel.equals(Val)) {
+      if (!FPModel.empty() && !FPModel.equals(Val))
         D.Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Args.MakeArgString("-ffp-model=" + FPModel)
-          << Args.MakeArgString("-ffp-model=" + Val);
-        FPContract = "";
-      }
+            << Args.MakeArgString("-ffp-model=" + FPModel)
+            << Args.MakeArgString("-ffp-model=" + Val);
       if (Val.equals("fast")) {
         optID = options::OPT_ffast_math;
         FPModel = Val;
@@ -2724,7 +2726,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       } else if (Val.equals("precise")) {
         optID = options::OPT_ffp_contract;
         FPModel = Val;
-        FPContract = "fast";
+        FPContract = "on";
         PreciseFPModel = true;
       } else if (Val.equals("strict")) {
         StrictFPModel = true;
@@ -2812,9 +2814,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_ffp_contract: {
       StringRef Val = A->getValue();
       if (PreciseFPModel) {
-        // -ffp-model=precise enables ffp-contract=fast as a side effect
-        // the FPContract value has already been set to a string literal
-        // and the Val string isn't a pertinent value.
+        // -ffp-model=precise enables ffp-contract=on.
+        // -ffp-model=precise sets PreciseFPModel to on and Val to
+        // "precise". FPContract is set.
         ;
       } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off"))
         FPContract = Val;
@@ -2907,23 +2909,27 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
-      TrappingMath = false;
-      RoundingFPMath = false;
       // -fno_fast_math restores default denormal and fpcontract handling
       DenormalFPMath = DefaultDenormalFPMath;
       DenormalFP32Math = llvm::DenormalMode::getIEEE();
-      FPContract = "";
+      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+          !JA.isOffloading(Action::OFK_HIP))
+        if (FPContract == "fast") {
+          FPContract = "on";
+          D.Diag(clang::diag::warn_drv_overriding_flag_option)
+              << "-ffp-contract=fast"
+              << "-ffp-contract=on";
+        }
       break;
     }
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
-      if (HonorINFs && HonorNaNs &&
-        !AssociativeMath && !ReciprocalMath &&
-        SignedZeros && TrappingMath && RoundingFPMath &&
-        (FPContract.equals("off") || FPContract.empty()) &&
-        DenormalFPMath == llvm::DenormalMode::getIEEE() &&
-        DenormalFP32Math == llvm::DenormalMode::getIEEE())
+      if (HonorINFs && HonorNaNs && !AssociativeMath && !ReciprocalMath &&
+          SignedZeros && TrappingMath && RoundingFPMath &&
+          DenormalFPMath == llvm::DenormalMode::getIEEE() &&
+          DenormalFP32Math == llvm::DenormalMode::getIEEE() &&
+          FPContract.equals("off"))
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -5195,12 +5201,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // This is a coarse approximation of what llvm-gcc actually does, both
   // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
   // complicated ways.
-  bool AsyncUnwindTables =
-      Args.hasFlag(options::OPT_fasynchronous_unwind_tables,
-                   options::OPT_fno_asynchronous_unwind_tables,
-                   (TC.IsUnwindTablesDefault(Args) ||
-                    TC.getSanitizerArgs().needsUnwindTables()) &&
-                       !Freestanding);
+  auto SanitizeArgs = TC.getSanitizerArgs(Args);
+  bool AsyncUnwindTables = Args.hasFlag(
+      options::OPT_fasynchronous_unwind_tables,
+      options::OPT_fno_asynchronous_unwind_tables,
+      (TC.IsUnwindTablesDefault(Args) || SanitizeArgs.needsUnwindTables()) &&
+          !Freestanding);
   bool UnwindTables = Args.hasFlag(options::OPT_funwind_tables,
                                    options::OPT_fno_unwind_tables, false);
   if (AsyncUnwindTables)
@@ -5441,7 +5447,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // for sampling, overhead of call arc collection is way too high and there's
   // no way to collect the output.
   if (!Triple.isNVPTX() && !Triple.isAMDGCN())
-    addPGOAndCoverageFlags(TC, C, D, Output, Args, CmdArgs);
+    addPGOAndCoverageFlags(TC, C, D, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
@@ -5449,7 +5455,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (RawTriple.isPS4CPU() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     PS4cpu::addProfileRTArgs(TC, Args, CmdArgs);
-    PS4cpu::addSanitizerArgs(TC, CmdArgs);
+    PS4cpu::addSanitizerArgs(TC, Args, CmdArgs);
   }
 
   // Pass options for controlling the default header search paths.
@@ -5920,8 +5926,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fno-openmp-extensions");
   }
 
-  const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
-  Sanitize.addArgs(TC, Args, CmdArgs, InputType);
+  SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
 
   const XRayArgs &XRay = TC.getXRayArgs();
   XRay.addArgs(TC, Args, CmdArgs, InputType);
@@ -6865,12 +6870,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   bool DefaultsSplitLTOUnit =
-      (WholeProgramVTables || Sanitize.needsLTO()) &&
+      (WholeProgramVTables || SanitizeArgs.needsLTO()) &&
       (LTOMode == LTOK_Full || TC.canSplitThinLTOUnit());
   bool SplitLTOUnit =
       Args.hasFlag(options::OPT_fsplit_lto_unit,
                    options::OPT_fno_split_lto_unit, DefaultsSplitLTOUnit);
-  if (Sanitize.needsLTO() && !SplitLTOUnit)
+  if (SanitizeArgs.needsLTO() && !SplitLTOUnit)
     D.Diag(diag::err_drv_argument_not_allowed_with) << "-fno-split-lto-unit"
                                                     << "-fsanitize=cfi";
   if (SplitLTOUnit)

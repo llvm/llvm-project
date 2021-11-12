@@ -145,7 +145,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool IsPIE =
       !Args.hasArg(options::OPT_shared) &&
-      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault());
+      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault(Args));
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -467,7 +467,9 @@ bool FreeBSD::HasNativeLLVMSupport() const { return true; }
 
 bool FreeBSD::IsUnwindTablesDefault(const ArgList &Args) const { return true; }
 
-bool FreeBSD::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
+bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return getSanitizerArgs(Args).requiresPIE();
+}
 
 SanitizerMask FreeBSD::getSupportedSanitizers() const {
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;

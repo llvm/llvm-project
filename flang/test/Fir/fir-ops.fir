@@ -142,7 +142,6 @@ func @boxing_match() {
 // CHECK: [[VAL_40:%.*]] = fir.alloca !fir.char<1>
 // CHECK: [[VAL_41:%.*]] = fir.alloca tuple<i32, f64>
 // CHECK: [[VAL_42:%.*]] = fir.embox [[VAL_38]] : (!fir.ref<i32>) -> !fir.box<i32>
-// CHECK: [[VAL_43:%.*]]:6 = fir.unbox [[VAL_42]] : (!fir.box<i32>) -> (!fir.ref<i32>, i32, i32, !fir.tdesc<i32>, i32, !fir.array<3x?xindex>)
 // CHECK: [[VAL_44:%.*]] = arith.constant 8 : i32
 // CHECK: [[VAL_45:%.*]] = fir.undefined !fir.char<1>
 // CHECK: [[VAL_46:%.*]] = fir.emboxchar [[VAL_40]], [[VAL_44]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
@@ -168,7 +167,6 @@ func @boxing_match() {
   %d3 = fir.alloca !fir.char<1>
   %e6 = fir.alloca tuple<i32,f64>
   %1 = fir.embox %0 : (!fir.ref<i32>) -> !fir.box<i32>
-  %2:6 = fir.unbox %1 : (!fir.box<i32>) -> (!fir.ref<i32>,i32,i32,!fir.tdesc<i32>,i32,!fir.array<3x?xindex>)
   %c8 = arith.constant 8 : i32
   %3 = fir.undefined !fir.char<1>
   %4 = fir.emboxchar %d3, %c8 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>

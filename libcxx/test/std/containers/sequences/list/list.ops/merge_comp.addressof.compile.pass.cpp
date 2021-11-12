@@ -6,23 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// <list>
 
-// <memory>
+// template <class Compare> void merge(list& x, Compare comp);
+// If (addressof(x) == this) does nothing; otherwise ...
 
-// void declare_no_pointers(char* p, size_t n);
-// void undeclare_no_pointers(char* p, size_t n);
+// Validate whether the operation properly guards against ADL-hijacking operator&
 
-#include <memory>
+#include <list>
 
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
-int main(int, char**)
-{
-    char* p = new char[10];
-    std::declare_no_pointers(p, 10);
-    std::undeclare_no_pointers(p, 10);
-    delete [] p;
-
-  return 0;
+void test() {
+  std::list<operator_hijacker> l;
+  l.merge(l, std::less<operator_hijacker>());
 }

@@ -4214,9 +4214,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
     SDValue EVL =
         DAG.getVScale(DL, EVLVT, APInt(EVLVT.getScalarSizeInBits(), NumVTElts));
     const auto *MMO = LD->getMemOperand();
-    return DAG.getLoadVP(WideVT, DL, LD->getChain(), LD->getBasePtr(), Mask,
-                         EVL, MMO->getPointerInfo(), MMO->getAlign(),
-                         MMO->getFlags(), MMO->getAAInfo());
+    SDValue NewLoad =
+        DAG.getLoadVP(WideVT, DL, LD->getChain(), LD->getBasePtr(), Mask, EVL,
+                      MMO->getPointerInfo(), MMO->getAlign(), MMO->getFlags(),
+                      MMO->getAAInfo());
+
+    // Modified the chain - switch anything that used the old chain to use
+    // the new one.
+    ReplaceValueWith(SDValue(N, 1), NewLoad.getValue(1));
+
+    return NewLoad;
   }
 
   report_fatal_error("Unable to widen vector load");

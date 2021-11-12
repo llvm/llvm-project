@@ -33,7 +33,7 @@ void PDLDialect::registerTypes() {
       >();
 }
 
-static Type parsePDLType(DialectAsmParser &parser) {
+static Type parsePDLType(AsmParser &parser) {
   StringRef typeTag;
   if (parser.parseKeyword(&typeTag))
     return Type();
@@ -74,7 +74,7 @@ bool PDLType::classof(Type type) {
 // RangeType
 //===----------------------------------------------------------------------===//
 
-Type RangeType::parse(DialectAsmParser &parser) {
+Type RangeType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return Type();
 
@@ -92,7 +92,7 @@ Type RangeType::parse(DialectAsmParser &parser) {
   return RangeType::get(elementType);
 }
 
-void RangeType::print(DialectAsmPrinter &printer) const {
+void RangeType::print(AsmPrinter &printer) const {
   printer << "<";
   (void)generatedTypePrinter(getElementType(), printer);
   printer << ">";

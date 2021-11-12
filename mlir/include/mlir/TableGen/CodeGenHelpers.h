@@ -13,10 +13,10 @@
 #ifndef MLIR_TABLEGEN_CODEGENHELPERS_H
 #define MLIR_TABLEGEN_CODEGENHELPERS_H
 
-#include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/Dialect.h"
 #include "mlir/TableGen/Format.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -26,8 +26,8 @@ class RecordKeeper;
 
 namespace mlir {
 namespace tblgen {
-
 class Constraint;
+class DagLeaf;
 
 // Simple RAII helper for defining ifdef-undef-endif scopes.
 class IfDefScope {
@@ -92,68 +92,128 @@ private:
 ///
 class StaticVerifierFunctionEmitter {
 public:
-  StaticVerifierFunctionEmitter(const llvm::RecordKeeper &records);
+  StaticVerifierFunctionEmitter(raw_ostream &os,
+                                const llvm::RecordKeeper &records);
 
-  /// Emit the static verifier functions for `llvm::Record`s. The
-  /// `signatureFormat` describes the required arguments and it must have a
-  /// placeholder for function name.
-  /// Example,
-  ///   const char *typeVerifierSignature =
-  ///     "static ::mlir::LogicalResult {0}(::mlir::Operation *op, ::mlir::Type"
-  ///     " type, ::llvm::StringRef valueKind, unsigned valueGroupStartIndex)";
+  /// Collect and unique all compatible type, attribute, successor, and region
+  /// constraints from the operations in the file and emit them at the top of
+  /// the generated file.
   ///
-  /// `errorHandlerFormat` describes the error message to return. It may have a
-  /// placeholder for the summary of Constraint and bring more information for
-  /// the error message.
-  /// Example,
-  ///   const char *typeVerifierErrorHandler =
-  ///       " op->emitOpError(valueKind) << \" #\" << valueGroupStartIndex << "
-  ///       "\" must be {0}, but got \" << type";
+  /// Constraints that do not meet the restriction that they can only reference
+  /// `$_self` and `$_op` are not uniqued.
+  void emitOpConstraints(ArrayRef<llvm::Record *> opDefs, bool emitDecl);
+
+  /// Unique all compatible type and attribute constraints from a pattern file
+  /// and emit them at the top of the generated file.
   ///
-  /// `typeArgName` is used to identify the argument that needs to check its
-  /// type. The constraint template will replace `$_self` with it.
+  /// Constraints that do not meet the restriction that they can only reference
+  /// `$_self`, `$_op`, and `$_builder` are not uniqued.
+  void emitPatternConstraints(const DenseSet<DagLeaf> &constraints);
 
-  /// This is the helper to generate the constraint functions from op
-  /// definitions.
-  void emitConstraintMethodsInNamespace(StringRef signatureFormat,
-                                        StringRef errorHandlerFormat,
-                                        StringRef cppNamespace,
-                                        ArrayRef<const void *> constraints,
-                                        raw_ostream &rawOs, bool emitDecl);
-
-  /// Emit the static functions for the giving type constraints.
-  void emitConstraintMethods(StringRef signatureFormat,
-                             StringRef errorHandlerFormat,
-                             ArrayRef<const void *> constraints,
-                             raw_ostream &rawOs, bool emitDecl);
-
-  /// Get the name of the local function used for the given type constraint.
+  /// Get the name of the static function used for the given type constraint.
   /// These functions are used for operand and result constraints and have the
   /// form:
+  ///
   ///   LogicalResult(Operation *op, Type type, StringRef valueKind,
-  ///                 unsigned valueGroupStartIndex);
-  StringRef getConstraintFn(const Constraint &constraint) const;
+  ///                 unsigned valueIndex);
+  ///
+  /// Pattern constraints have the form:
+  ///
+  ///   LogicalResult(PatternRewriter &rewriter, Operation *op, Type type,
+  ///                 StringRef failureStr);
+  ///
+  StringRef getTypeConstraintFn(const Constraint &constraint) const;
 
-  /// The setter to set `self` in format context.
-  StaticVerifierFunctionEmitter &setSelf(StringRef str);
+  /// Get the name of the static function used for the given attribute
+  /// constraint. These functions are in the form:
+  ///
+  ///   LogicalResult(Operation *op, Attribute attr, StringRef attrName);
+  ///
+  /// If a uniqued constraint was not found, this function returns None. The
+  /// uniqued constraints cannot be used in the context of an OpAdaptor.
+  ///
+  /// Pattern constraints have the form:
+  ///
+  ///   LogicalResult(PatternRewriter &rewriter, Operation *op, Attribute attr,
+  ///                 StringRef failureStr);
+  ///
+  Optional<StringRef> getAttrConstraintFn(const Constraint &constraint) const;
 
-  /// The setter to set `builder` in format context.
-  StaticVerifierFunctionEmitter &setBuilder(StringRef str);
+  /// Get the name of the static function used for the given successor
+  /// constraint. These functions are in the form:
+  ///
+  ///   LogicalResult(Operation *op, Block *successor, StringRef successorName,
+  ///                 unsigned successorIndex);
+  ///
+  StringRef getSuccessorConstraintFn(const Constraint &constraint) const;
+
+  /// Get the name of the static function used for the given region constraint.
+  /// These functions are in the form:
+  ///
+  ///   LogicalResult(Operation *op, Region &region, StringRef regionName,
+  ///                 unsigned regionIndex);
+  ///
+  /// The region name may be empty.
+  StringRef getRegionConstraintFn(const Constraint &constraint) const;
 
 private:
-  /// Returns a unique name to use when generating local methods.
-  static std::string getUniqueName(const llvm::RecordKeeper &records);
+  /// Emit static type constraint functions.
+  void emitTypeConstraints();
+  /// Emit static attribute constraint functions.
+  void emitAttrConstraints();
+  /// Emit static successor constraint functions.
+  void emitSuccessorConstraints();
+  /// Emit static region constraint functions.
+  void emitRegionConstraints();
 
-  /// The format context used for building the verifier function.
-  FmtContext fctx;
+  /// Emit pattern constraints.
+  void emitPatternConstraints();
+
+  /// Collect and unique all the constraints used by operations.
+  void collectOpConstraints(ArrayRef<llvm::Record *> opDefs);
+  /// Collect and unique all pattern constraints.
+  void collectPatternConstraints(const DenseSet<DagLeaf> &constraints);
+
+  /// The output stream.
+  raw_ostream &os;
 
   /// A unique label for the file currently being generated. This is used to
-  /// ensure that the local functions have a unique name.
+  /// ensure that the static functions have a unique name.
   std::string uniqueOutputLabel;
 
-  /// A set of functions implementing type constraints, used for operand and
-  /// result verification.
-  llvm::DenseMap<const void *, std::string> localTypeConstraints;
+  /// Unique constraints by their predicate and summary. Constraints that share
+  /// the same predicate may have different descriptions; ensure that the
+  /// correct error message is reported when verification fails.
+  struct ConstraintUniquer {
+    static Constraint getEmptyKey();
+    static Constraint getTombstoneKey();
+    static unsigned getHashValue(Constraint constraint);
+    static bool isEqual(Constraint lhs, Constraint rhs);
+  };
+  /// Use a MapVector to ensure that functions are generated deterministically.
+  using ConstraintMap =
+      llvm::MapVector<Constraint, std::string,
+                      llvm::DenseMap<Constraint, unsigned, ConstraintUniquer>>;
+
+  /// A generic function to emit constraints
+  void emitConstraints(const ConstraintMap &constraints, StringRef selfName,
+                       const char *const codeTemplate);
+
+  /// Assign a unique name to a unique constraint.
+  std::string getUniqueName(StringRef kind, unsigned index);
+  /// Unique a constraint in the map.
+  void collectConstraint(ConstraintMap &map, StringRef kind,
+                         Constraint constraint);
+
+  /// The set of type constraints used for operand and result verification in
+  /// the current file.
+  ConstraintMap typeConstraints;
+  /// The set of attribute constraints used in the current file.
+  ConstraintMap attrConstraints;
+  /// The set of successor constraints used in the current file.
+  ConstraintMap successorConstraints;
+  /// The set of region constraints used in the current file.
+  ConstraintMap regionConstraints;
 };
 
 // Escape a string using C++ encoding. E.g. foo"bar -> foo\x22bar.

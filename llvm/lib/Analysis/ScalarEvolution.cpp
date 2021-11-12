@@ -9615,9 +9615,7 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
   //   N = Distance (as unsigned)
   if (StepC->getValue()->isOne() || StepC->getValue()->isMinusOne()) {
     APInt MaxBECount = getUnsignedRangeMax(applyLoopGuards(Distance, L));
-    APInt MaxBECountBase = getUnsignedRangeMax(Distance);
-    if (MaxBECountBase.ult(MaxBECount))
-      MaxBECount = MaxBECountBase;
+    MaxBECount = APIntOps::umin(MaxBECount, getUnsignedRangeMax(Distance));
 
     // When a loop like "for (int i = 0; i != n; ++i) { /* body */ }" is rotated,
     // we end up with a loop whose backedge-taken count is n - 1.  Detect this
@@ -9650,11 +9648,7 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
     const SCEV *Max = getCouldNotCompute();
     if (Exact != getCouldNotCompute()) {
       APInt MaxInt = getUnsignedRangeMax(applyLoopGuards(Exact, L));
-      APInt BaseMaxInt = getUnsignedRangeMax(Exact);
-      if (BaseMaxInt.ult(MaxInt))
-        Max = getConstant(BaseMaxInt);
-      else
-        Max = getConstant(MaxInt);
+      Max = getConstant(APIntOps::umin(MaxInt, getUnsignedRangeMax(Exact)));
     }
     return ExitLimit(Exact, Max, false, Predicates);
   }

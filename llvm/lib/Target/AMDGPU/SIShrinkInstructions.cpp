@@ -188,7 +188,7 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
     return;
 
   // eq/ne is special because the imm16 can be treated as signed or unsigned,
-  // and initially selectd to the unsigned versions.
+  // and initially selected to the unsigned versions.
   if (SOPKOpc == AMDGPU::S_CMPK_EQ_U32 || SOPKOpc == AMDGPU::S_CMPK_LG_U32) {
     bool HasUImm;
     if (isKImmOrKUImmOperand(TII, Src1, HasUImm)) {

@@ -416,6 +416,8 @@ TEST(LinkGraphTest, MergeSections) {
   G.addDefinedSymbol(B3, 0, "S3", B2.getSize(), Linkage::Strong, Scope::Default,
                      false, false);
 
+  EXPECT_EQ(&B1.getSection(), &Sec1);
+  EXPECT_EQ(&B2.getSection(), &Sec2);
   EXPECT_EQ(G.sections_size(), 3U) << "Expected three sections initially";
   EXPECT_EQ(Sec1.blocks_size(), 1U) << "Expected one block in Sec1 initially";
   EXPECT_EQ(Sec1.symbols_size(), 1U) << "Expected one symbol in Sec1 initially";
@@ -427,6 +429,8 @@ TEST(LinkGraphTest, MergeSections) {
   // Check that self-merge is a no-op.
   G.mergeSections(Sec1, Sec1);
 
+  EXPECT_EQ(&B1.getSection(), &Sec1)
+      << "Expected B1.getSection() to remain unchanged";
   EXPECT_EQ(G.sections_size(), 3U)
       << "Expected three sections after first merge";
   EXPECT_EQ(Sec1.blocks_size(), 1U)
@@ -445,6 +449,8 @@ TEST(LinkGraphTest, MergeSections) {
   // Merge Sec2 into Sec1, removing Sec2.
   G.mergeSections(Sec1, Sec2);
 
+  EXPECT_EQ(&B2.getSection(), &Sec1)
+      << "Expected B2.getSection() to have been changed to &Sec1";
   EXPECT_EQ(G.sections_size(), 2U)
       << "Expected two sections after section merge";
   EXPECT_EQ(Sec1.blocks_size(), 2U)

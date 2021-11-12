@@ -46,6 +46,7 @@ public:
       : ScriptInterpreter(debugger, lldb::eScriptLanguagePython),
         IOHandlerDelegateMultiline("DONE") {}
 
+  StructuredData::DictionarySP GetInterpreterInfo() override;
   static void Initialize();
   static void Terminate();
   static llvm::StringRef GetPluginNameStatic() { return "script-python"; }

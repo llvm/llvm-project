@@ -72,6 +72,24 @@ TEST(MangledTest, EmptyForInvalidRustV0Name) {
   EXPECT_STREQ("", the_demangled.GetCString());
 }
 
+TEST(MangledTest, ResultForValidDLangName) {
+  ConstString mangled_name("_Dmain");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  ConstString expected_result("D main");
+  EXPECT_STREQ(expected_result.GetCString(), the_demangled.GetCString());
+}
+
+TEST(MangledTest, EmptyForInvalidDLangName) {
+  ConstString mangled_name("_DDD");
+  Mangled the_mangled(mangled_name);
+  ConstString the_demangled = the_mangled.GetDemangledName();
+
+  EXPECT_STREQ("", the_demangled.GetCString());
+}
+
+
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
       subsystems;

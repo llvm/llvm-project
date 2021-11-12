@@ -323,24 +323,46 @@ public:
 
   /// Iterator for walking over APFloat values.
   class FloatElementIterator final
-      : public llvm::mapped_iterator<IntElementIterator,
-                                     std::function<APFloat(const APInt &)>> {
+      : public llvm::mapped_iterator_base<FloatElementIterator,
+                                          IntElementIterator, APFloat> {
+  public:
+    /// Map the element to the iterator result type.
+    APFloat mapElement(const APInt &value) const {
+      return APFloat(*smt, value);
+    }
+
+  private:
     friend DenseElementsAttr;
 
     /// Initializes the float element iterator to the specified iterator.
-    FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it);
+    FloatElementIterator(const llvm::fltSemantics &smt, IntElementIterator it)
+        : BaseT(it), smt(&smt) {}
+
+    /// The float semantics to use when constructing the APFloat.
+    const llvm::fltSemantics *smt;
   };
 
   /// Iterator for walking over complex APFloat values.
   class ComplexFloatElementIterator final
-      : public llvm::mapped_iterator<
-            ComplexIntElementIterator,
-            std::function<std::complex<APFloat>(const std::complex<APInt> &)>> {
+      : public llvm::mapped_iterator_base<ComplexFloatElementIterator,
+                                          ComplexIntElementIterator,
+                                          std::complex<APFloat>> {
+  public:
+    /// Map the element to the iterator result type.
+    std::complex<APFloat> mapElement(const std::complex<APInt> &value) const {
+      return {APFloat(*smt, value.real()), APFloat(*smt, value.imag())};
+    }
+
+  private:
     friend DenseElementsAttr;
 
     /// Initializes the float element iterator to the specified iterator.
     ComplexFloatElementIterator(const llvm::fltSemantics &smt,
-                                ComplexIntElementIterator it);
+                                ComplexIntElementIterator it)
+        : BaseT(it), smt(&smt) {}
+
+    /// The float semantics to use when constructing the APFloat.
+    const llvm::fltSemantics *smt;
   };
 
   //===--------------------------------------------------------------------===//
@@ -478,24 +500,29 @@ public:
       typename std::enable_if<std::is_base_of<Attribute, T>::value &&
                               !std::is_same<Attribute, T>::value>::type;
   template <typename T>
-  using DerivedAttributeElementIterator =
-      llvm::mapped_iterator<AttributeElementIterator, T (*)(Attribute)>;
+  struct DerivedAttributeElementIterator
+      : public llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
+                                          AttributeElementIterator, T> {
+    using llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
+                                     AttributeElementIterator,
+                                     T>::mapped_iterator_base;
+
+    /// Map the element to the iterator result type.
+    T mapElement(Attribute attr) const { return attr.cast<T>(); }
+  };
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   iterator_range_impl<DerivedAttributeElementIterator<T>> getValues() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {Attribute::getType(),
-            llvm::map_range(getValues<Attribute>(),
-                            static_cast<T (*)(Attribute)>(castFn))};
+    using DerivedIterT = DerivedAttributeElementIterator<T>;
+    return {Attribute::getType(), DerivedIterT(value_begin<Attribute>()),
+            DerivedIterT(value_end<Attribute>())};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   DerivedAttributeElementIterator<T> value_begin() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {value_begin<Attribute>(), static_cast<T (*)(Attribute)>(castFn)};
+    return {value_begin<Attribute>()};
   }
   template <typename T, typename = DerivedAttrValueTemplateCheckT<T>>
   DerivedAttributeElementIterator<T> value_end() const {
-    auto castFn = [](Attribute attr) { return attr.template cast<T>(); };
-    return {value_end<Attribute>(), static_cast<T (*)(Attribute)>(castFn)};
+    return {value_end<Attribute>()};
   }
 
   /// Return the held element values as a range of bool. The element type of
@@ -885,7 +912,35 @@ auto SparseElementsAttr::value_begin() const -> iterator<T> {
       };
   return iterator<T>(llvm::seq<ptrdiff_t>(0, getNumElements()).begin(), mapFn);
 }
-} // end namespace mlir.
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+//===----------------------------------------------------------------------===//
+
+/// Define comparisons for StringAttr against nullptr and itself to avoid the
+/// StringRef overloads from being chosen when not desirable.
+inline bool operator==(StringAttr lhs, std::nullptr_t) { return !lhs; }
+inline bool operator!=(StringAttr lhs, std::nullptr_t) {
+  return static_cast<bool>(lhs);
+}
+inline bool operator==(StringAttr lhs, StringAttr rhs) {
+  return (Attribute)lhs == (Attribute)rhs;
+}
+inline bool operator!=(StringAttr lhs, StringAttr rhs) { return !(lhs == rhs); }
+
+/// Allow direct comparison with StringRef.
+inline bool operator==(StringAttr lhs, StringRef rhs) {
+  return lhs.getValue() == rhs;
+}
+inline bool operator!=(StringAttr lhs, StringRef rhs) { return !(lhs == rhs); }
+inline bool operator==(StringRef lhs, StringAttr rhs) {
+  return rhs.getValue() == lhs;
+}
+inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
+
+inline Type StringAttr::getType() const { return Attribute::getType(); }
+
+} // end namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Attribute Utilities
@@ -894,11 +949,29 @@ auto SparseElementsAttr::value_begin() const -> iterator<T> {
 namespace llvm {
 
 template <>
+struct DenseMapInfo<mlir::StringAttr> : public DenseMapInfo<mlir::Attribute> {
+  static mlir::StringAttr getEmptyKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
+    return mlir::StringAttr::getFromOpaquePointer(pointer);
+  }
+  static mlir::StringAttr getTombstoneKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
+    return mlir::StringAttr::getFromOpaquePointer(pointer);
+  }
+};
+template <>
+struct PointerLikeTypeTraits<mlir::StringAttr>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::StringAttr getFromVoidPointer(void *p) {
+    return mlir::StringAttr::getFromOpaquePointer(p);
+  }
+};
+
+template <>
 struct PointerLikeTypeTraits<mlir::SymbolRefAttr>
     : public PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::SymbolRefAttr getFromVoidPointer(void *ptr) {
-    return PointerLikeTypeTraits<mlir::Attribute>::getFromVoidPointer(ptr)
-        .cast<mlir::SymbolRefAttr>();
+    return mlir::SymbolRefAttr::getFromOpaquePointer(ptr);
   }
 };
 

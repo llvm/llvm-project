@@ -3,23 +3,28 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/my-personality.s -o %t/x86_64-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/x86_64-main.o
 # RUN: %lld -arch x86_64 -lSystem -lc++ %t/x86_64-my-personality.o %t/x86_64-main.o -o %t/x86_64-personality-first
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000 -DSEG=__TEXT
 # RUN: %lld -dead_strip -arch x86_64 -lSystem -lc++ %t/x86_64-main.o %t/x86_64-my-personality.o -o %t/x86_64-personality-second
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000 -DSEG=__TEXT
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/my-personality.s -o %t/arm64-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/main.s -o %t/arm64-main.o
 # RUN: %lld -arch arm64 -lSystem -lc++ %t/arm64-my-personality.o %t/arm64-main.o -o %t/arm64-personality-first
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000 -DSEG=__TEXT
 # RUN: %lld -dead_strip -arch arm64 -lSystem -lc++ %t/arm64-main.o %t/arm64-my-personality.o -o %t/arm64-personality-second
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000 -DSEG=__TEXT
 
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/my-personality.s -o %t/arm64-32-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/main.s -o %t/arm64-32-main.o
 # RUN: %lld-watchos -lSystem -lc++ %t/arm64-32-my-personality.o %t/arm64-32-main.o -o %t/arm64-32-personality-first
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x4000
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x4000 -DSEG=__TEXT
 # RUN: %lld-watchos -dead_strip -lSystem -lc++ %t/arm64-32-main.o %t/arm64-32-my-personality.o -o %t/arm64-32-personality-second
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x4000
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x4000 -DSEG=__TEXT
+
+# RUN: %lld -arch x86_64 -rename_section __TEXT __gcc_except_tab __RODATA __gcc_except_tab -lSystem -lc++ %t/x86_64-my-personality.o %t/x86_64-main.o -o %t/x86_64-personality-first
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000 -DSEG=__RODATA
+# RUN: %lld -dead_strip -arch x86_64 -rename_section __TEXT __gcc_except_tab __RODATA __gcc_except_tab -lSystem -lc++ %t/x86_64-main.o %t/x86_64-my-personality.o -o %t/x86_64-personality-second
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000 -DSEG=__RODATA
 
 # FIRST:      Indirect symbols for (__DATA_CONST,__got)
 # FIRST-NEXT: address                    index name
@@ -36,8 +41,8 @@
 # CHECK-DAG:  [[#%x,QUUX:]]       g  F __TEXT,__text _quux
 # CHECK-DAG:  [[#%x,FOO:]]        l  F __TEXT,__text _foo
 # CHECK-DAG:  [[#%x,BAZ:]]        l  F __TEXT,__text _baz
-# CHECK-DAG:  [[#%x,EXCEPTION0:]] g  O __TEXT,__gcc_except_tab _exception0
-# CHECK-DAG:  [[#%x,EXCEPTION1:]] g  O __TEXT,__gcc_except_tab _exception1
+# CHECK-DAG:  [[#%x,EXCEPTION0:]] g  O [[SEG]],__gcc_except_tab _exception0
+# CHECK-DAG:  [[#%x,EXCEPTION1:]] g  O [[SEG]],__gcc_except_tab _exception1
 
 # CHECK:      Contents of __unwind_info section:
 # CHECK:        Personality functions: (count = 2)

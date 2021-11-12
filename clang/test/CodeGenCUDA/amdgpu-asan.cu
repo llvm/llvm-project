@@ -9,12 +9,12 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -target-cpu gfx906 -fsanitize=address \
 // RUN:   -mlink-bitcode-file %t.asanrtl.bc -x hip \
-// RUN:   | FileCheck -check-prefix=ASAN %s
+// RUN:   | FileCheck -check-prefixes=ASAN,MFCHECK %s
 
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -target-cpu gfx906 -fsanitize=address \
 // RUN:   -O3 -mlink-bitcode-file %t.asanrtl.bc -x hip \
-// RUN:   | FileCheck -check-prefix=ASAN %s
+// RUN:   | FileCheck -check-prefixes=ASAN,MFCHECK %s
 
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -target-cpu gfx906 -x hip \
@@ -26,6 +26,9 @@
 // ASAN-DAG: @__amdgpu_device_library_preserve_asan_functions_ptr = weak addrspace(1) constant void ()* @__amdgpu_device_library_preserve_asan_functions
 // ASAN-DAG: @llvm.compiler.used = {{.*}}@__amdgpu_device_library_preserve_asan_functions_ptr
 // ASAN-DAG: define weak void @__asan_report_load1(i64 %{{.*}})
+
+// MFCHECK: !llvm.module.flags = !{![[FLAG1:[0-9]+]], ![[FLAG2:[0-9]+]]}
+// MFCHECK: ![[FLAG1]] = !{i32 4, !"amdgpu_hostcall", i32 1}
 
 // CHECK-NOT: @__amdgpu_device_library_preserve_asan_functions
 // CHECK-NOT: @__asan_report_load1

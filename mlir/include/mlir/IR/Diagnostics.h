@@ -24,7 +24,6 @@ class SourceMgr;
 
 namespace mlir {
 class DiagnosticEngine;
-class Identifier;
 struct LogicalResult;
 class MLIRContext;
 class Operation;
@@ -156,20 +155,6 @@ inline raw_ostream &operator<<(raw_ostream &os, const DiagnosticArgument &arg) {
 class Diagnostic {
   using NoteVector = std::vector<std::unique_ptr<Diagnostic>>;
 
-  /// This class implements a wrapper iterator around NoteVector::iterator to
-  /// implicitly dereference the unique_ptr.
-  template <typename IteratorTy, typename NotePtrTy = decltype(*IteratorTy()),
-            typename ResultTy = decltype(**IteratorTy())>
-  class NoteIteratorImpl
-      : public llvm::mapped_iterator<IteratorTy, ResultTy (*)(NotePtrTy)> {
-    static ResultTy &unwrap(NotePtrTy note) { return *note; }
-
-  public:
-    NoteIteratorImpl(IteratorTy it)
-        : llvm::mapped_iterator<IteratorTy, ResultTy (*)(NotePtrTy)>(it,
-                                                                     &unwrap) {}
-  };
-
 public:
   Diagnostic(Location loc, DiagnosticSeverity severity)
       : loc(loc), severity(severity) {}
@@ -196,6 +181,7 @@ public:
     arguments.push_back(DiagnosticArgument(std::forward<Arg>(val)));
     return *this;
   }
+  Diagnostic &operator<<(StringAttr val);
 
   /// Stream in a string literal.
   Diagnostic &operator<<(const char *val) {
@@ -207,9 +193,6 @@ public:
   Diagnostic &operator<<(char val);
   Diagnostic &operator<<(const Twine &val);
   Diagnostic &operator<<(Twine &&val);
-
-  /// Stream in an Identifier.
-  Diagnostic &operator<<(Identifier val);
 
   /// Stream in an OperationName.
   Diagnostic &operator<<(OperationName val);
@@ -265,15 +248,16 @@ public:
   /// diagnostic. Notes may not be attached to other notes.
   Diagnostic &attachNote(Optional<Location> noteLoc = llvm::None);
 
-  using note_iterator = NoteIteratorImpl<NoteVector::iterator>;
-  using const_note_iterator = NoteIteratorImpl<NoteVector::const_iterator>;
+  using note_iterator = llvm::pointee_iterator<NoteVector::iterator>;
+  using const_note_iterator =
+      llvm::pointee_iterator<NoteVector::const_iterator>;
 
   /// Returns the notes held by this diagnostic.
   iterator_range<note_iterator> getNotes() {
-    return {notes.begin(), notes.end()};
+    return llvm::make_pointee_range(notes);
   }
   iterator_range<const_note_iterator> getNotes() const {
-    return {notes.begin(), notes.end()};
+    return llvm::make_pointee_range(notes);
   }
 
   /// Allow a diagnostic to be converted to 'failure'.

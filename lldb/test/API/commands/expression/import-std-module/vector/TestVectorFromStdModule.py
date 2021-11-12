@@ -24,7 +24,7 @@ class TestBasicVector(TestBase):
 
         vector_type = "std::vector<int>"
         size_type = vector_type + "::size_type"
-        value_type = "std::__vector_base<int, std::allocator<int> >::value_type"
+        value_type = "std::vector<int>::value_type"
         iterator = vector_type + "::iterator"
         # LLDB's formatter provides us with a artificial 'item' member.
         iterator_children = [ValueCheck(name="item")]

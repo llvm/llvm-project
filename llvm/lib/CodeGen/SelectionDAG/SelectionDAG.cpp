@@ -5302,19 +5302,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (TLI->isCommutativeBinOp(Opcode))
       if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ops[1]))
         return FoldSymbolOffset(Opcode, VT, GA, Ops[0].getNode());
-
-    // If this is a bitwise logic opcode see if we can fold bitcasted ops.
-    // TODO: Can we generalize this and fold any bitcasted constant data?
-    if (ISD::isBitwiseLogicOp(Opcode) && Ops[0].getOpcode() == ISD::BITCAST &&
-        Ops[1].getOpcode() == ISD::BITCAST) {
-      SDValue InnerN1 = peekThroughBitcasts(Ops[0].getOperand(0));
-      SDValue InnerN2 = peekThroughBitcasts(Ops[1].getOperand(0));
-      EVT InnerVT = InnerN1.getValueType();
-      if (InnerVT == InnerN2.getValueType() && InnerVT.isInteger())
-        if (SDValue C =
-                FoldConstantArithmetic(Opcode, DL, InnerVT, {InnerN1, InnerN2}))
-          return getBitcast(VT, C);
-    }
   }
 
   // This is for vector folding only from here on.
@@ -5322,6 +5309,54 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     return SDValue();
 
   ElementCount NumElts = VT.getVectorElementCount();
+
+  // See if we can fold through bitcasted integer ops.
+  // TODO: Can we handle undef elements?
+  if (NumOps == 2 && VT.isFixedLengthVector() && VT.isInteger() &&
+      Ops[0].getValueType() == VT && Ops[1].getValueType() == VT &&
+      Ops[0].getOpcode() == ISD::BITCAST &&
+      Ops[1].getOpcode() == ISD::BITCAST) {
+    SDValue N1 = peekThroughBitcasts(Ops[0]);
+    SDValue N2 = peekThroughBitcasts(Ops[1]);
+    auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
+    auto *BV2 = dyn_cast<BuildVectorSDNode>(N2);
+    EVT BVVT = N1.getValueType();
+    if (BV1 && BV2 && BVVT.isInteger() && BVVT == N2.getValueType()) {
+      bool IsLE = getDataLayout().isLittleEndian();
+      unsigned EltBits = VT.getScalarSizeInBits();
+      SmallVector<APInt> RawBits1, RawBits2;
+      BitVector UndefElts1, UndefElts2;
+      if (BV1->getConstantRawBits(IsLE, EltBits, RawBits1, UndefElts1) &&
+          BV2->getConstantRawBits(IsLE, EltBits, RawBits2, UndefElts2) &&
+          UndefElts1.none() && UndefElts2.none()) {
+        SmallVector<APInt> RawBits;
+        for (unsigned I = 0, E = NumElts.getFixedValue(); I != E; ++I) {
+          Optional<APInt> Fold = FoldValue(Opcode, RawBits1[I], RawBits2[I]);
+          if (!Fold)
+            break;
+          RawBits.push_back(Fold.getValue());
+        }
+        if (RawBits.size() == NumElts.getFixedValue()) {
+          // We have constant folded, but we need to cast this again back to
+          // the original (possibly legalized) type.
+          SmallVector<APInt> DstBits;
+          BitVector DstUndefs;
+          BuildVectorSDNode::recastRawBits(IsLE, BVVT.getScalarSizeInBits(),
+                                           DstBits, RawBits, DstUndefs,
+                                           BitVector(RawBits.size(), false));
+          EVT BVEltVT = BV1->getOperand(0).getValueType();
+          unsigned BVEltBits = BVEltVT.getSizeInBits();
+          SmallVector<SDValue> Ops(DstBits.size(), getUNDEF(BVEltVT));
+          for (unsigned I = 0, E = DstBits.size(); I != E; ++I) {
+            if (DstUndefs[I])
+              continue;
+            Ops[I] = getConstant(DstBits[I].sextOrSelf(BVEltBits), DL, BVEltVT);
+          }
+          return getBitcast(VT, getBuildVector(BVVT, DL, Ops));
+        }
+      }
+    }
+  }
 
   auto IsScalarOrSameVectorSize = [NumElts](const SDValue &Op) {
     return !Op.getValueType().isVector() ||

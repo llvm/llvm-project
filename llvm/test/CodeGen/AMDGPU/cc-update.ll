@@ -109,6 +109,7 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ;
 ; GFX1100-LABEL: test_kern_call:
 ; GFX1100:       ; %bb.0: ; %entry
+; GFX1100-NEXT:    s_mov_b32 s32, 0
 ; GFX1100-NEXT:    s_getpc_b64 s[0:1]
 ; GFX1100-NEXT:    s_add_u32 s0, s0, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s1, s1, ex@rel32@hi+12
@@ -175,6 +176,7 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1100-LABEL: test_kern_stack_and_call:
 ; GFX1100:       ; %bb.0: ; %entry
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1100-NEXT:    s_mov_b32 s32, 16
 ; GFX1100-NEXT:    s_getpc_b64 s[0:1]
 ; GFX1100-NEXT:    s_add_u32 s0, s0, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s1, s1, ex@rel32@hi+12
@@ -208,6 +210,7 @@ define amdgpu_kernel void @test_force_fp_kern_empty() local_unnamed_addr #2 {
 ;
 ; GFX1100-LABEL: test_force_fp_kern_empty:
 ; GFX1100:       ; %bb.0: ; %entry
+; GFX1100-NEXT:    s_mov_b32 s33, 0
 ; GFX1100-NEXT:    s_endpgm
 
 entry:
@@ -248,6 +251,7 @@ define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr #2 {
 ; GFX1100-LABEL: test_force_fp_kern_stack:
 ; GFX1100:       ; %bb.0: ; %entry
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1100-NEXT:    s_mov_b32 s33, 0
 ; GFX1100-NEXT:    scratch_store_b32 off, v0, s33 offset:4
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    s_endpgm
@@ -305,6 +309,8 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ;
 ; GFX1100-LABEL: test_force_fp_kern_call:
 ; GFX1100:       ; %bb.0: ; %entry
+; GFX1100-NEXT:    s_mov_b32 s32, 0
+; GFX1100-NEXT:    s_mov_b32 s33, 0
 ; GFX1100-NEXT:    s_getpc_b64 s[0:1]
 ; GFX1100-NEXT:    s_add_u32 s0, s0, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s1, s1, ex@rel32@hi+12
@@ -392,6 +398,8 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1100-LABEL: test_force_fp_kern_stack_and_call:
 ; GFX1100:       ; %bb.0: ; %entry
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1100-NEXT:    s_mov_b32 s33, 0
+; GFX1100-NEXT:    s_mov_b32 s32, 16
 ; GFX1100-NEXT:    s_getpc_b64 s[0:1]
 ; GFX1100-NEXT:    s_add_u32 s0, s0, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s1, s1, ex@rel32@hi+12

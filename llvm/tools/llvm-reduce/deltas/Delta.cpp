@@ -102,9 +102,18 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 /// given test.
 template <typename T>
 void runDeltaPassInt(
-    TestRunner &Test, int Targets,
+    TestRunner &Test,
     function_ref<void(Oracle &, T &)> ExtractChunksFromModule) {
-  assert(Targets >= 0);
+  int Targets;
+  {
+    // Count the number of targets by counting the number of calls to
+    // Oracle::shouldKeep() but always returning true so no changes are
+    // made.
+    std::vector<Chunk> AllChunks = {{0, INT_MAX}};
+    Oracle Counter(AllChunks);
+    ExtractChunksFromModule(Counter, Test.getProgram());
+    Targets = Counter.count();
+  }
   if (!Targets) {
     errs() << "\nNothing to reduce\n";
     return;
@@ -119,7 +128,7 @@ void runDeltaPassInt(
   assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
          "input module is broken before making changes");
 
-  std::vector<Chunk> ChunksStillConsideredInteresting = {{1, Targets}};
+  std::vector<Chunk> ChunksStillConsideredInteresting = {{0, Targets - 1}};
   std::unique_ptr<ReducerWorkItem> ReducedProgram;
 
   for (unsigned int Level = 0; Level < StartingGranularityLevel; Level++) {
@@ -198,13 +207,13 @@ void runDeltaPassInt(
 }
 
 void llvm::runDeltaPass(
-    TestRunner &Test, int Targets,
+    TestRunner &Test,
     function_ref<void(Oracle &, Module &)> ExtractChunksFromModule) {
-  runDeltaPassInt<Module>(Test, Targets, ExtractChunksFromModule);
+  runDeltaPassInt<Module>(Test, ExtractChunksFromModule);
 }
 
 void llvm::runDeltaPass(
-    TestRunner &Test, int Targets,
+    TestRunner &Test,
     function_ref<void(Oracle &, MachineFunction &)> ExtractChunksFromModule) {
-  runDeltaPassInt<MachineFunction>(Test, Targets, ExtractChunksFromModule);
+  runDeltaPassInt<MachineFunction>(Test, ExtractChunksFromModule);
 }

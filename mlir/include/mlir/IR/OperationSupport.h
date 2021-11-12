@@ -456,7 +456,7 @@ public:
   Dialect *getDialect() const {
     if (const auto *abstractOp = getAbstractOperation())
       return &abstractOp->dialect;
-    return representation.get<Identifier>().getDialect();
+    return representation.get<Identifier>().getReferencedDialect();
   }
 
   /// Return the operation name with dialect name stripped, if it has one.

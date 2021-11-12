@@ -8,7 +8,7 @@
 //
 /// \file
 /// This pass creates bundles of memory instructions to protect adjacent loads
-/// and stores from beeing rescheduled apart from each other post-RA.
+/// and stores from being rescheduled apart from each other post-RA.
 ///
 //===----------------------------------------------------------------------===//
 

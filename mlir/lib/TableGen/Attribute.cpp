@@ -31,12 +31,6 @@ static StringRef getValueAsString(const Init *init) {
   return {};
 }
 
-AttrConstraint::AttrConstraint(const Record *record)
-    : Constraint(Constraint::CK_Attr, record) {
-  assert(isSubClassOf("AttrConstraint") &&
-         "must be subclass of TableGen 'AttrConstraint' class");
-}
-
 bool AttrConstraint::isSubClassOf(StringRef className) const {
   return def->isSubClassOf(className);
 }

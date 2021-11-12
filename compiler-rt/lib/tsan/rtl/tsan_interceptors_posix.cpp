@@ -2189,7 +2189,7 @@ void atfork_child() {
     return;
   ThreadState *thr = cur_thread();
   const uptr pc = StackTrace::GetCurrentPc();
-  ForkChildAfter(thr, pc);
+  ForkChildAfter(thr, pc, true);
   FdOnFork(thr, pc);
 }
 
@@ -2209,6 +2209,37 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
   // Instead we simply turn vfork into fork.
   return WRAP(fork)(fake);
 }
+
+#if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
+                 void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
+  SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
+                         child_tid);
+  struct Arg {
+    int (*fn)(void *);
+    void *arg;
+  };
+  auto wrapper = +[](void *p) -> int {
+    auto *thr = cur_thread();
+    uptr pc = GET_CURRENT_PC();
+    // Start the background thread for fork, but not for clone.
+    // For fork we did this always and it's known to work (or user code has
+    // adopted). But if we do this for the new clone interceptor some code
+    // (sandbox2) fails. So model we used to do for years and don't start the
+    // background thread after clone.
+    ForkChildAfter(thr, pc, false);
+    FdOnFork(thr, pc);
+    auto *arg = static_cast<Arg *>(p);
+    return arg->fn(arg->arg);
+  };
+  ForkBefore(thr, pc);
+  Arg arg_wrapper = {fn, arg};
+  int pid = REAL(clone)(wrapper, stack, flags, &arg_wrapper, parent_tid, tls,
+                        child_tid);
+  ForkParentAfter(thr, pc);
+  return pid;
+}
+#endif
 
 #if !SANITIZER_MAC && !SANITIZER_ANDROID
 typedef int (*dl_iterate_phdr_cb_t)(__sanitizer_dl_phdr_info *info, SIZE_T size,
@@ -2544,7 +2575,7 @@ static void syscall_post_fork(uptr pc, int pid) {
   ThreadState *thr = cur_thread();
   if (pid == 0) {
     // child
-    ForkChildAfter(thr, pc);
+    ForkChildAfter(thr, pc, true);
     FdOnFork(thr, pc);
   } else if (pid > 0) {
     // parent
@@ -2841,6 +2872,9 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
+#if SANITIZER_LINUX
+  TSAN_INTERCEPT(clone);
+#endif
 #if !SANITIZER_ANDROID
   TSAN_INTERCEPT(dl_iterate_phdr);
 #endif

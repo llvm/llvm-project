@@ -484,6 +484,7 @@ cc_library(
         "//mlir:Affine",
         "//mlir:Analysis",
         "//mlir:LinalgOps",
+        "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",

@@ -1,15 +1,11 @@
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 supported_toolchains = []
 if (target_os == "linux" || target_os == "fuchsia") {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
-if (android_ndk_path != "") {
-  supported_toolchains += [
-    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
-    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
-  ]
-}
+supported_toolchains += supported_android_toolchains
 
 group("scudo") {
   deps = []

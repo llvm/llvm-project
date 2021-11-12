@@ -27,12 +27,15 @@ class Any;
 
 namespace mlir {
 class AnalysisManager;
-class Identifier;
 class MLIRContext;
 class Operation;
 class Pass;
 class PassInstrumentation;
 class PassInstrumentor;
+class StringAttr;
+
+// TODO: Remove this when all usages have been replaced with StringAttr.
+using Identifier = StringAttr;
 
 namespace detail {
 struct OpPassManagerImpl;

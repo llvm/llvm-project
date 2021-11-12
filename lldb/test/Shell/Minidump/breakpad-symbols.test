@@ -15,8 +15,8 @@ image list
 image dump symtab /tmp/test/linux-x86_64
 # CHECK-LABEL: image dump symtab /tmp/test/linux-x86_64
 # CHECK: Symtab, file = /tmp/test/linux-x86_64, num_symbols = 2:
-# CHECK: [    0]      0   X Code            0x00000000004003d0 0x00000000004003d0 0x0000000000000018 0x00000000 crash()
-# CHECK: [    1]      0   X Code            0x00000000004003f0 0x00000000004003f0 0x0000000000000010 0x00000000 _start
+# CHECK: [    0]      0   X Code            0x00000000004003d0 0x00000000004003d0 0x0000000000000020 0x00000000 crash()
+# CHECK: [    1]      0   X Code            0x00000000004003f0 0x00000000004003f0 0x0000000000000c10 0x00000000 _start
 
 image lookup -a 0x4003f3
 # CHECK-LABEL: image lookup -a 0x4003f3
