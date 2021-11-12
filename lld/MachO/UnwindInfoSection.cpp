@@ -295,7 +295,8 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
       return;
 
     // Write the rest of the CUE.
-    memcpy(buf, d->compactUnwind->data.data(), d->compactUnwind->data.size());
+    memcpy(buf + sizeof(Ptr), d->compactUnwind->data.data(),
+           d->compactUnwind->data.size());
     for (const Reloc &r : d->compactUnwind->relocs) {
       uint64_t referentVA = 0;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
@@ -309,9 +310,8 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
         }
       } else {
         auto *referentIsec = r.referent.get<InputSection *>();
-        ConcatInputSection *concatIsec = checkTextSegment(referentIsec);
-        if (!concatIsec->shouldOmitFromOutput())
-          referentVA = referentIsec->getVA(r.addend);
+        checkTextSegment(referentIsec);
+        referentVA = referentIsec->getVA(r.addend);
       }
       writeAddress(buf + r.offset, referentVA, r.length);
     }
