@@ -1926,3 +1926,32 @@ define void @load_store_v4f16(<4 x half>* %x, <4 x half>* %y, <4 x half>* %z) {
   store <4 x half> %c, <4 x half>* %z
   ret void
 }
+
+define <8 x half> @test21(half %a, half %b, half %c) nounwind {
+; X64-LABEL: test21:
+; X64:       # %bb.0:
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vmovsh %xmm2, %xmm3, %xmm2
+; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; X64-NEXT:    retq
+;
+; X86-LABEL: test21:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpbroadcastw %xmm1, %xmm1
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; X86-NEXT:    retl
+  %1 = insertelement <8 x half> <half poison, half poison, half poison, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000>, half %a, i32 0
+  %2 = insertelement <8 x half> %1, half %b, i32 1
+  %3 = insertelement <8 x half> %2, half %c, i32 2
+  ret <8 x half> %3
+}
