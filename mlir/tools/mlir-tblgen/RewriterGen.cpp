@@ -42,23 +42,6 @@ using llvm::RecordKeeper;
 
 #define DEBUG_TYPE "mlir-tblgen-rewritergen"
 
-// The signature of static type verification function
-static const char *typeVerifierSignature =
-    "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
-    "::mlir::Operation *op, ::mlir::Type typeOrAttr, "
-    "::llvm::StringRef failureStr)";
-
-// The signature of static attribute verification function
-static const char *attrVerifierSignature =
-    "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
-    "::mlir::Operation *op, ::mlir::Attribute typeOrAttr, "
-    "::llvm::StringRef failureStr)";
-
-// The template of error handler in static type/attribute verification function
-static const char *verifierErrorHandler =
-    "rewriter.notifyMatchFailure(op, [&](::mlir::Diagnostic &diag) {\n  diag "
-    "<< failureStr <<  \": {0}\";\n});";
-
 namespace llvm {
 template <>
 struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
@@ -273,7 +256,7 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(const RecordKeeper &recordKeeper,
+  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &recordKeeper,
                       RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
@@ -289,7 +272,7 @@ public:
   }
 
   // Get the name of static type/attribute verification function.
-  StringRef getVerifierName(Constraint constraint);
+  StringRef getVerifierName(DagLeaf leaf);
 
   // Collect the `Record`s, i.e., the DRR, so that we can get the information of
   // the duplicated DAGs.
@@ -541,7 +524,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       self = argName;
     else
       self = formatv("{0}.getType()", argName);
-    StringRef verifier = staticMatcherHelper.getVerifierName(constraint);
+    StringRef verifier = staticMatcherHelper.getVerifierName(leaf);
     emitStaticVerifierCall(
         verifier, opName, self,
         formatv("\"operand {0} of native code call '{1}' failed to satisfy "
@@ -684,7 +667,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
         PrintFatalError(loc, error);
       }
       auto self = formatv("(*{0}.begin()).getType()", operandName);
-      StringRef verifier = staticMatcherHelper.getVerifierName(constraint);
+      StringRef verifier = staticMatcherHelper.getVerifierName(operandMatcher);
       emitStaticVerifierCall(
           verifier, opName, self.str(),
           formatv(
@@ -809,8 +792,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
 
     // If a constraint is specified, we need to generate function call to its
     // static verifier.
-    StringRef verifier =
-        staticMatcherHelper.getVerifierName(matcher.getAsConstraint());
+    StringRef verifier = staticMatcherHelper.getVerifierName(matcher);
     emitStaticVerifierCall(
         verifier, opName, "tblgen_attr",
         formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
@@ -1690,9 +1672,10 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   }
 }
 
-StaticMatcherHelper::StaticMatcherHelper(const RecordKeeper &recordKeeper,
+StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
+                                         const RecordKeeper &recordKeeper,
                                          RecordOperatorMap &mapper)
-    : opMap(mapper), staticVerifierEmitter(recordKeeper) {}
+    : opMap(mapper), staticVerifierEmitter(os, recordKeeper) {}
 
 void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   // PatternEmitter will use the static matcher if there's one generated. To
@@ -1713,28 +1696,7 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
 }
 
 void StaticMatcherHelper::populateStaticConstraintFunctions(raw_ostream &os) {
-  llvm::SetVector<const void *> typeConstraints;
-  llvm::SetVector<const void *> attrConstraints;
-  for (DagLeaf leaf : constraints) {
-    if (leaf.isOperandMatcher()) {
-      typeConstraints.insert(leaf.getAsConstraint().getAsOpaquePointer());
-    } else {
-      assert(leaf.isAttrMatcher());
-      attrConstraints.insert(leaf.getAsConstraint().getAsOpaquePointer());
-    }
-  }
-
-  staticVerifierEmitter.setBuilder("rewriter").setSelf("typeOrAttr");
-
-  staticVerifierEmitter.emitConstraintMethods(typeVerifierSignature,
-                                              verifierErrorHandler,
-                                              typeConstraints.getArrayRef(), os,
-                                              /*emitDecl=*/false);
-
-  staticVerifierEmitter.emitConstraintMethods(attrVerifierSignature,
-                                              verifierErrorHandler,
-                                              attrConstraints.getArrayRef(), os,
-                                              /*emitDecl=*/false);
+  staticVerifierEmitter.emitPatternConstraints(constraints);
 }
 
 void StaticMatcherHelper::addPattern(Record *record) {
@@ -1765,8 +1727,15 @@ void StaticMatcherHelper::addPattern(Record *record) {
   dfs(pat.getSourcePattern());
 }
 
-StringRef StaticMatcherHelper::getVerifierName(Constraint constraint) {
-  return staticVerifierEmitter.getConstraintFn(constraint);
+StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
+  if (leaf.isAttrMatcher()) {
+    Optional<StringRef> constraint =
+        staticVerifierEmitter.getAttrConstraintFn(leaf.getAsConstraint());
+    assert(constraint.hasValue() && "attribute constraint was not uniqued");
+    return *constraint;
+  }
+  assert(leaf.isOperandMatcher());
+  return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
@@ -1779,7 +1748,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
-  StaticMatcherHelper staticMatcher(recordKeeper, recordOpMap);
+  StaticMatcherHelper staticMatcher(os, recordKeeper, recordOpMap);
   for (Record *p : patterns)
     staticMatcher.addPattern(p);
   staticMatcher.populateStaticConstraintFunctions(os);
