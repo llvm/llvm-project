@@ -20,8 +20,7 @@ include "VVPInstrInfo.td"
 multiclass VectorBinaryArith<
     SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT, ValueType MaskVT,
-    string OpBaseName,
-    SDPatternOperator ImmOp, SDNodeXForm ImmCast> {
+    string OpBaseName> {
   // No mask.
   def : Pat<(OpNode
                 (any_broadcast ScalarVT:$sx),
@@ -56,10 +55,10 @@ multiclass VectorBinaryArith_ShortLong<
     ValueType ShortScalarVT, ValueType ShortDataVT, string ShortOpBaseName> {
   defm : VectorBinaryArith<OpNode,
                            LongScalarVT, LongDataVT, v256i1,
-                           LongOpBaseName, simm7, LO7>;
+                           LongOpBaseName>;
   defm : VectorBinaryArith<OpNode,
                            ShortScalarVT, ShortDataVT, v256i1,
-                           ShortOpBaseName, simm7, LO7>;
+                           ShortOpBaseName>;
 }
 
 
