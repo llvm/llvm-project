@@ -1965,28 +1965,6 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  // Ensure we don't combine these with themselves, since that causes some
-  // confusing behavior.
-  if (AL.getParsedKind() == ParsedAttr::AT_CPUDispatch) {
-    if (checkAttrMutualExclusion<CPUSpecificAttr>(S, D, AL))
-      return;
-
-    if (const auto *Other = D->getAttr<CPUDispatchAttr>()) {
-      S.Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << AL;
-      S.Diag(Other->getLocation(), diag::note_conflicting_attribute);
-      return;
-    }
-  } else if (AL.getParsedKind() == ParsedAttr::AT_CPUSpecific) {
-    if (checkAttrMutualExclusion<CPUDispatchAttr>(S, D, AL))
-      return;
-
-    if (const auto *Other = D->getAttr<CPUSpecificAttr>()) {
-      S.Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << AL;
-      S.Diag(Other->getLocation(), diag::note_conflicting_attribute);
-      return;
-    }
-  }
-
   FunctionDecl *FD = cast<FunctionDecl>(D);
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
@@ -3233,41 +3211,40 @@ static void handleCodeSegAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, Architecture, Tune };
-  enum ThirdParam { Target, TargetClones };
   if (AttrStr.contains("fpmath="))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unsupported << None << "fpmath=" << Target;
+           << Unsupported << None << "fpmath=";
 
   // Diagnose use of tune if target doesn't support it.
   if (!Context.getTargetInfo().supportsTargetAttributeTune() &&
       AttrStr.contains("tune="))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unsupported << None << "tune=" << Target;
+           << Unsupported << None << "tune=";
 
   ParsedTargetAttr ParsedAttrs = TargetAttr::parse(AttrStr);
 
   if (!ParsedAttrs.Architecture.empty() &&
       !Context.getTargetInfo().isValidCPUName(ParsedAttrs.Architecture))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unknown << Architecture << ParsedAttrs.Architecture << Target;
+           << Unknown << Architecture << ParsedAttrs.Architecture;
 
   if (!ParsedAttrs.Tune.empty() &&
       !Context.getTargetInfo().isValidCPUName(ParsedAttrs.Tune))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unknown << Tune << ParsedAttrs.Tune << Target;
+           << Unknown << Tune << ParsedAttrs.Tune;
 
   if (ParsedAttrs.DuplicateArchitecture)
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Duplicate << None << "arch=" << Target;
+           << Duplicate << None << "arch=";
   if (ParsedAttrs.DuplicateTune)
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Duplicate << None << "tune=" << Target;
+           << Duplicate << None << "tune=";
 
   for (const auto &Feature : ParsedAttrs.Features) {
     auto CurFeature = StringRef(Feature).drop_front(); // remove + or -.
     if (!Context.getTargetInfo().isValidFeatureName(CurFeature))
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << CurFeature << Target;
+             << Unsupported << None << CurFeature;
   }
 
   TargetInfo::BranchProtectionInfo BPI;
@@ -3277,7 +3254,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
           ParsedAttrs.BranchProtection, BPI, Error)) {
     if (Error.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << "branch-protection" << Target;
+             << Unsupported << None << "branch-protection";
     else
       return Diag(LiteralLoc, diag::err_invalid_branch_protection_spec)
              << Error;
@@ -3287,14 +3264,6 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 }
 
 static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  // Ensure we don't combine these with themselves, since that causes some
-  // confusing behavior.
-  if (const auto *Other = D->getAttr<TargetAttr>()) {
-    S.Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << AL;
-    S.Diag(Other->getLocation(), diag::note_conflicting_attribute);
-    return;
-  }
-
   StringRef Str;
   SourceLocation LiteralLoc;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
@@ -3302,107 +3271,6 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   TargetAttr *NewAttr = ::new (S.Context) TargetAttr(S.Context, AL, Str);
-  D->addAttr(NewAttr);
-}
-
-bool Sema::checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
-                                       const StringLiteral *Literal,
-                                       bool &HasDefault, bool &HasCommas,
-                                       SmallVectorImpl<StringRef> &Strings) {
-  enum FirstParam { Unsupported, Duplicate, Unknown };
-  enum SecondParam { None, Architecture, Tune };
-  enum ThirdParam { Target, TargetClones };
-  HasCommas = HasCommas || Str.contains(',');
-  // Warn on empty at the beginning of a string.
-  if (Str.size() == 0)
-    return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unsupported << None << "" << TargetClones;
-
-  std::pair<StringRef, StringRef> Parts = {{}, Str};
-  while (!Parts.second.empty()) {
-    Parts = Parts.second.split(',');
-    StringRef Cur = Parts.first.trim();
-    SourceLocation CurLoc = Literal->getLocationOfByte(
-        Cur.data() - Literal->getString().data(), getSourceManager(),
-        getLangOpts(), Context.getTargetInfo());
-
-    bool DefaultIsDupe = false;
-    if (Cur.empty())
-      return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << "" << TargetClones;
-
-    if (Cur.startswith("arch=")) {
-      if (!Context.getTargetInfo().isValidCPUName(
-              Cur.drop_front(sizeof("arch=") - 1)))
-        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << Architecture
-               << Cur.drop_front(sizeof("arch=") - 1) << TargetClones;
-    } else if (Cur == "default") {
-      DefaultIsDupe = HasDefault;
-      HasDefault = true;
-    } else if (!Context.getTargetInfo().isValidFeatureName(Cur))
-      return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << Cur << TargetClones;
-
-    if (llvm::find(Strings, Cur) != Strings.end() || DefaultIsDupe)
-      Diag(CurLoc, diag::warn_target_clone_duplicate_options);
-    // Note: Add even if there are duplicates, since it changes name mangling.
-    Strings.push_back(Cur);
-  }
-
-  if (Str.rtrim().endswith(","))
-    return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unsupported << None << "" << TargetClones;
-  return false;
-}
-
-static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  // Ensure we don't combine these with themselves, since that causes some
-  // confusing behavior.
-  if (const auto *Other = D->getAttr<TargetClonesAttr>()) {
-    S.Diag(AL.getLoc(), diag::err_disallowed_duplicate_attribute) << AL;
-    S.Diag(Other->getLocation(), diag::note_conflicting_attribute);
-    return;
-  }
-  if (checkAttrMutualExclusion<TargetClonesAttr>(S, D, AL))
-    return;
-
-  SmallVector<StringRef, 2> Strings;
-  bool HasCommas = false, HasDefault = false;
-
-  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
-    StringRef CurStr;
-    SourceLocation LiteralLoc;
-    if (!S.checkStringLiteralArgumentAttr(AL, I, CurStr, &LiteralLoc) ||
-        S.checkTargetClonesAttrString(
-            LiteralLoc, CurStr,
-            cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()),
-            HasDefault, HasCommas, Strings))
-      return;
-  }
-
-  if (HasCommas && AL.getNumArgs() > 1)
-    S.Diag(AL.getLoc(), diag::warn_target_clone_mixed_values);
-
-  if (!HasDefault) {
-    S.Diag(AL.getLoc(), diag::err_target_clone_must_have_default);
-    return;
-  }
-
-  // FIXME: We could probably figure out how to get this to work for lambdas
-  // someday.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-    if (MD->getParent()->isLambda()) {
-      S.Diag(D->getLocation(), diag::err_multiversion_doesnt_support)
-          << static_cast<unsigned>(MultiVersionKind::TargetClones)
-          << /*Lambda*/ 9;
-      return;
-    }
-  }
-
-  cast<FunctionDecl>(D)->setIsMultiVersion();
-  TargetClonesAttr *NewAttr = ::new (S.Context)
-      TargetClonesAttr(S.Context, AL, Strings.data(), Strings.size());
   D->addAttr(NewAttr);
 }
 
@@ -8347,9 +8215,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_Target:
     handleTargetAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_TargetClones:
-    handleTargetClonesAttr(S, D, AL);
     break;
   case ParsedAttr::AT_MinVectorWidth:
     handleMinVectorWidthAttr(S, D, AL);
