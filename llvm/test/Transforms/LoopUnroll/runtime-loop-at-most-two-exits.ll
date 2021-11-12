@@ -53,7 +53,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[EXITCOND_EPIL:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_EPIL]], [[N]]
 ; ENABLED-NEXT:    [[EPIL_ITER_SUB]] = sub i64 [[EPIL_ITER]], 1
 ; ENABLED-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_SUB]], 0
-; ENABLED-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[HEADER_EPIL]], label [[FOR_END_EPILOG_LCSSA:%.*]], [[LOOP0:!llvm.loop !.*]]
+; ENABLED-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[HEADER_EPIL]], label [[FOR_END_EPILOG_LCSSA:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ENABLED:       for.end.epilog-lcssa:
 ; ENABLED-NEXT:    [[SUM_0_LCSSA_PH1:%.*]] = phi i32 [ [[ADD_EPIL]], [[FOR_BODY_EPIL]] ]
 ; ENABLED-NEXT:    br label [[FOR_END]]
