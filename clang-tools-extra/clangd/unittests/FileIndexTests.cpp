@@ -727,6 +727,20 @@ TEST(FileSymbolsTest, Profile) {
   EXPECT_THAT(MT.child("f3").children(), ElementsAre(Pair("relations", _)));
   EXPECT_THAT(MT.child("f3").total(), Gt(0U));
 }
+
+TEST(FileIndexTest, MacrosFromMainFile) {
+  FileIndex Idx;
+  TestTU TU;
+  TU.Code = "#pragma once\n#define FOO";
+  TU.Filename = "foo.h";
+  auto AST = TU.build();
+  Idx.updateMain(testPath(TU.Filename), AST);
+
+  auto Slab = runFuzzyFind(Idx, "");
+  auto &FooSymbol = findSymbol(Slab, "FOO");
+  EXPECT_TRUE(FooSymbol.Flags & Symbol::IndexedForCodeCompletion);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

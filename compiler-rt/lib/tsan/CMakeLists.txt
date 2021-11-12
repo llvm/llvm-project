@@ -107,7 +107,6 @@ set(TSAN_HEADERS
   rtl/tsan_symbolize.h
   rtl/tsan_sync.h
   rtl/tsan_trace.h
-  rtl/tsan_update_shadow_word.inc
   rtl/tsan_vector_clock.h
   )
 
