@@ -42,8 +42,7 @@ namespace llvm {
 ///   (All of the following methods)
 ///   - DerivedT &operator=(const DerivedT &R);
 ///   - bool operator==(const DerivedT &R) const;
-///   - const T &operator*() const;
-///   - T &operator*();
+///   - T &operator*() const;
 ///   - DerivedT &operator++();
 ///
 /// Bidirectional Iterators:
@@ -348,8 +347,7 @@ public:
   explicit pointer_iterator(WrappedIteratorT u)
       : pointer_iterator::iterator_adaptor_base(std::move(u)) {}
 
-  T &operator*() { return Ptr = &*this->I; }
-  const T &operator*() const { return Ptr = &*this->I; }
+  T &operator*() const { return Ptr = &*this->I; }
 };
 
 template <typename RangeT, typename WrappedIteratorT =
