@@ -882,11 +882,11 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsNestedDivsions) {
   }
 
   {
-    // (x) : (exists y = [x / 2], z = [x + y / 3], z = [z + 1 / 5]: y + z >= x).
+    // (x) : (exists y = [x / 2], z = [x + y / 3], w = [z + 1 / 5]: y + z >= x).
     FlatAffineConstraints fac1(1);
     fac1.addLocalFloorDiv({1, 0}, 2);       // y = [x / 2].
     fac1.addLocalFloorDiv({1, 1, 0}, 3);    // z = [x + y / 3].
-    fac1.addLocalFloorDiv({0, 0, 1, 1}, 5); // z = [z + 1 / 5].
+    fac1.addLocalFloorDiv({0, 0, 1, 1}, 5); // w = [z + 1 / 5].
     fac1.addInequality({-1, 1, 1, 0, 0});   // y + z >= x.
 
     // (x) : (exists y = [x / 2], z = [x + y / 3], w = [z + 1 / 5]: y + z <= x).
@@ -911,13 +911,13 @@ TEST(FlatAffineConstraintsTest, mergeDivisionsConstants) {
   {
     // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z >= x).
     FlatAffineConstraints fac1(1);
-    fac1.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 3].
+    fac1.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 2].
     fac1.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
     fac1.addInequality({-1, 1, 1, 0});   // y + z >= x.
 
     // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
     FlatAffineConstraints fac2(1);
-    fac2.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 3].
+    fac2.addLocalFloorDiv({1, 1}, 2);    // y = [x + 1 / 2].
     fac2.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
     fac2.addInequality({1, -1, -1, 0});  // y + z <= x.
 
