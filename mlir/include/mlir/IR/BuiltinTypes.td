@@ -542,7 +542,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.
-    /// Arguments that are passed into the builder must out-live the builder.
+    /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
     /// [deprecated] Returns the memory space in old raw integer representation.
@@ -703,7 +703,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.
-    /// Arguments that are passed into the builder must out-live the builder.
+    /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
   }];
   let skipDefaultBuilders = 1;
