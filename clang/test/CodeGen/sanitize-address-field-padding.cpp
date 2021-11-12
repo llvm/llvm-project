@@ -1,9 +1,9 @@
 // Test -fsanitize-address-field-padding
-// RUN: echo 'type:SomeNamespace::BlacklistedByName=field-padding' > %t.type.blacklist
-// RUN: echo 'src:*sanitize-address-field-padding.cpp=field-padding' > %t.file.blacklist
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsanitize=address -fsanitize-address-field-padding=1 -fsanitize-blacklist=%t.type.blacklist -Rsanitize-address -emit-llvm -o - %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsanitize=address -fsanitize-address-field-padding=1 -fsanitize-blacklist=%t.type.blacklist -Rsanitize-address -emit-llvm -o - %s -O1 -fno-experimental-new-pass-manager -mconstructor-aliases 2>&1 | FileCheck %s --check-prefix=WITH_CTOR_ALIASES
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsanitize=address -fsanitize-address-field-padding=1 -fsanitize-blacklist=%t.file.blacklist -Rsanitize-address -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefix=FILE_BLACKLIST
+// RUN: echo 'type:SomeNamespace::IgnorelistedByName=field-padding' > %t.type.ignorelist
+// RUN: echo 'src:*sanitize-address-field-padding.cpp=field-padding' > %t.file.ignorelist
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsanitize=address -fsanitize-address-field-padding=1 -fsanitize-ignorelist=%t.type.ignorelist -Rsanitize-address -emit-llvm -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsanitize=address -fsanitize-address-field-padding=1 -fsanitize-ignorelist=%t.type.ignorelist -Rsanitize-address -emit-llvm -o - %s -O1 -fno-experimental-new-pass-manager -mconstructor-aliases 2>&1 | FileCheck %s --check-prefix=WITH_CTOR_ALIASES
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsanitize=address -fsanitize-address-field-padding=1 -fsanitize-ignorelist=%t.file.ignorelist -Rsanitize-address -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefix=FILE_IGNORELIST
 // RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefix=NO_PADDING
 // Try to emulate -save-temps option and make sure -disable-llvm-passes will not run sanitize instrumentation.
 // RUN: %clang_cc1 -fsanitize=address -emit-llvm -disable-llvm-passes -o - %s | %clang_cc1 -fsanitize=address -emit-llvm -o - -x ir | FileCheck %s --check-prefix=NO_PADDING
@@ -17,11 +17,11 @@
 // CHECK: -fsanitize-address-field-padding ignored for Negative3 because it is a union
 // CHECK: -fsanitize-address-field-padding ignored for Negative4 because it is trivially copyable
 // CHECK: -fsanitize-address-field-padding ignored for Negative5 because it is packed
-// CHECK: -fsanitize-address-field-padding ignored for SomeNamespace::BlacklistedByName because it is blacklisted
+// CHECK: -fsanitize-address-field-padding ignored for SomeNamespace::IgnorelistedByName because it is ignorelisted
 // CHECK: -fsanitize-address-field-padding ignored for ExternCStruct because it is not C++
 //
-// FILE_BLACKLIST: -fsanitize-address-field-padding ignored for Positive1 because it is in a blacklisted file
-// FILE_BLACKLIST-NOT: __asan_poison_intra_object_redzone
+// FILE_IGNORELIST: -fsanitize-address-field-padding ignored for Positive1 because it is in a ignorelisted file
+// FILE_IGNORELIST-NOT: __asan_poison_intra_object_redzone
 // NO_PADDING-NOT: __asan_poison_intra_object_redzone
 
 
@@ -141,10 +141,10 @@ Negative5 negative5;
 
 
 namespace SomeNamespace {
-class BlacklistedByName {
+class IgnorelistedByName {
  public:
-  BlacklistedByName() {}
-  ~BlacklistedByName() {}
+  IgnorelistedByName() {}
+  ~IgnorelistedByName() {}
   int make_it_non_standard_layout;
  private:
   char private1;
@@ -152,7 +152,7 @@ class BlacklistedByName {
 };
 }  // SomeNamespace
 
-SomeNamespace::BlacklistedByName blacklisted_by_name;
+SomeNamespace::IgnorelistedByName ignorelisted_by_name;
 
 extern "C" {
 class ExternCStruct {

@@ -4621,7 +4621,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     // reject options that shouldn't be supported in bitcode
     // also reject kernel/kext
-    static const constexpr unsigned kBitcodeOptionBlacklist[] = {
+    static const constexpr unsigned kBitcodeOptionIgnorelist[] = {
         options::OPT_mkernel,
         options::OPT_fapple_kext,
         options::OPT_ffunction_sections,
@@ -4665,7 +4665,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_mllvm,
     };
     for (const auto &A : Args)
-      if (llvm::is_contained(kBitcodeOptionBlacklist, A->getOption().getID()))
+      if (llvm::is_contained(kBitcodeOptionIgnorelist, A->getOption().getID()))
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 
     // Render the CodeGen options that need to be passed.
