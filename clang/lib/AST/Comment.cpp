@@ -250,6 +250,7 @@ void DeclInfo::fill() {
       IsClassMethod = !IsInstanceMethod;
     }
     IsVariadic = FD->isVariadic();
+    assert(involvesFunctionType());
     break;
   }
   case Decl::ObjCMethod: {
@@ -261,6 +262,7 @@ void DeclInfo::fill() {
     IsInstanceMethod = MD->isInstanceMethod();
     IsClassMethod = !IsInstanceMethod;
     IsVariadic = MD->isVariadic();
+    assert(involvesFunctionType());
     break;
   }
   case Decl::FunctionTemplate: {
@@ -272,6 +274,7 @@ void DeclInfo::fill() {
     ReturnType = FD->getReturnType();
     TemplateParameters = FTD->getTemplateParameters();
     IsVariadic = FD->isVariadic();
+    assert(involvesFunctionType());
     break;
   }
   case Decl::ClassTemplate: {
@@ -352,11 +355,11 @@ void DeclInfo::fill() {
     TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
     FunctionTypeLoc FTL;
     if (getFunctionTypeLoc(TL, FTL)) {
-      Kind = FunctionKind;
       ParamVars = FTL.getParams();
       ReturnType = FTL.getReturnLoc().getType();
       if (const auto *FPT = dyn_cast<FunctionProtoType>(FTL.getTypePtr()))
         IsVariadic = FPT->isVariadic();
+      assert(involvesFunctionType());
     }
   }
 

@@ -1019,9 +1019,6 @@ struct DeclInfo {
     /// \li member function template,
     /// \li member function template specialization,
     /// \li ObjC method,
-    /// \li variable of function pointer, member function pointer or block type,
-    /// \li a typedef for a function pointer, member function pointer,
-    ///     ObjC block.
     FunctionKind,
 
     /// Something that we consider a "class":
@@ -1089,6 +1086,8 @@ struct DeclInfo {
   TemplateDeclKind getTemplateKind() const LLVM_READONLY {
     return static_cast<TemplateDeclKind>(TemplateKind);
   }
+
+  bool involvesFunctionType() const { return !ReturnType.isNull(); }
 };
 
 /// A full comment attached to a declaration, contains block content.

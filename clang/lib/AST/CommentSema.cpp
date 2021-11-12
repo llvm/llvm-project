@@ -86,7 +86,7 @@ ParamCommandComment *Sema::actOnParamCommandStart(
       new (Allocator) ParamCommandComment(LocBegin, LocEnd, CommandID,
                                           CommandMarker);
 
-  if (!isFunctionDecl())
+  if (!involvesFunctionType())
     Diag(Command->getLocation(),
          diag::warn_doc_param_not_attached_to_a_function_decl)
       << CommandMarker
@@ -588,7 +588,7 @@ void Sema::checkReturnsCommand(const BlockCommandComment *Command) {
   // to document the value that the property getter returns.
   if (isObjCPropertyDecl())
     return;
-  if (isFunctionDecl()) {
+  if (involvesFunctionType()) {
     assert(!ThisDeclInfo->ReturnType.isNull() &&
            "should have a valid return type");
     if (ThisDeclInfo->ReturnType->isVoidType()) {
@@ -728,7 +728,7 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
 }
 
 void Sema::resolveParamCommandIndexes(const FullComment *FC) {
-  if (!isFunctionDecl()) {
+  if (!involvesFunctionType()) {
     // We already warned that \\param commands are not attached to a function
     // decl.
     return;
@@ -814,6 +814,14 @@ void Sema::resolveParamCommandIndexes(const FullComment *FC) {
           << FixItHint::CreateReplacement(ArgRange, CorrectedII->getName());
     }
   }
+}
+
+bool Sema::involvesFunctionType() {
+  if (!ThisDeclInfo)
+    return false;
+  if (!ThisDeclInfo->IsFilled)
+    inspectThisDecl();
+  return ThisDeclInfo->involvesFunctionType();
 }
 
 bool Sema::isFunctionDecl() {
