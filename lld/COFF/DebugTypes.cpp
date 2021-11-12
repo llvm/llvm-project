@@ -325,7 +325,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
     m->tpiCounts.resize(m->getTypeTable().size());
     m->ipiCounts.resize(m->getIDTable().size());
     uint32_t srcIdx = nbHeadIndices;
-    for (CVType &ty : types) {
+    for (const CVType &ty : types) {
       TypeIndex dstIdx = tpiMap[srcIdx++];
       // Type merging may fail, so a complex source type may become the simple
       // NotTranslated type, which cannot be used as an array index.

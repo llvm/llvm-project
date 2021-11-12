@@ -975,7 +975,7 @@ void DebugSHandler::finish() {
   // size as the original. Otherwise, the file references in the line and
   // inlinee line tables will be incorrect.
   auto newChecksums = std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
-  for (FileChecksumEntry &fc : checksums) {
+  for (const FileChecksumEntry &fc : checksums) {
     SmallString<128> filename =
         exitOnErr(cvStrTab.getString(fc.FileNameOffset));
     pdbMakeAbsolute(filename);
@@ -1781,7 +1781,7 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
 
   Optional<uint32_t> nameIndex;
   Optional<uint32_t> lineNumber;
-  for (LineColumnEntry &entry : lines) {
+  for (const LineColumnEntry &entry : lines) {
     for (const LineNumberEntry &ln : entry.LineNumbers) {
       LineInfo li(ln.Flags);
       if (ln.Offset > offsetInLinetable) {
