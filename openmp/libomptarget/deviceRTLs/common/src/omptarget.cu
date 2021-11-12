@@ -225,7 +225,22 @@ int32_t __kmpc_target_init(ident_t *Ident, int8_t Mode,
    if (TId == GetMasterThreadID())
      return -1;
 
-  if (UseGenericStateMachine)
+  // Enter the generic state machine if enabled and if this thread can possibly
+  // be an active worker thread.
+  //
+  // The latter check is important for NVIDIA Pascal (but not Volta) and AMD
+  // GPU.  In those cases, a single thread can apparently satisfy a barrier on
+  // behalf of all threads in the same warp.  Thus, it would not be safe for
+  // other threads in the main thread's warp to reach the first
+  // __kmpc_barrier_simple_spmd call in __kmpc_target_region_state_machine
+  // before the main thread reaches its corresponding
+  // __kmpc_barrier_simple_spmd call: that would permit all active worker
+  // threads to proceed before the main thread has actually set
+  // omptarget_nvptx_workFn, and then they would immediately quit without
+  // doing any work.  GetNumberOfWorkersInTeam() does not include any of the
+  // main thread's warp, so none of its threads can ever be active worker
+  // threads.
+  if (UseGenericStateMachine && TId < GetNumberOfWorkersInTeam())
     __kmpc_target_region_state_machine(Ident);
 
   return TId;

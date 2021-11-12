@@ -3456,7 +3456,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // Create all the blocks:
     //
     //                       InitCB = __kmpc_target_init(...)
-    //                       bool IsWorker = InitCB >= 0;
+    //                       BlockHwSize =
+    //                         __kmpc_get_hardware_num_threads_in_block();
+    //                       WarpSize = __kmpc_get_warp_size();
+    //                       BlockSize = BlockHwSize - WarpSize;
+    //                       if (InitCB >= BlockSize) return;
+    // IsWorkerCheckBB:      bool IsWorker = InitCB >= 0;
     //                       if (IsWorker) {
     // SMBeginBB:               __kmpc_barrier_simple_generic(...);
     //                         void *WorkFn;
@@ -3484,6 +3489,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
     BasicBlock *InitBB = KernelInitCB->getParent();
     BasicBlock *UserCodeEntryBB = InitBB->splitBasicBlock(
         KernelInitCB->getNextNode(), "thread.user_code.check");
+    BasicBlock *IsWorkerCheckBB =
+        BasicBlock::Create(Ctx, "is_worker_check", Kernel, UserCodeEntryBB);
     BasicBlock *StateMachineBeginBB = BasicBlock::Create(
         Ctx, "worker_state_machine.begin", Kernel, UserCodeEntryBB);
     BasicBlock *StateMachineFinishedBB = BasicBlock::Create(
@@ -3500,6 +3507,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         Ctx, "worker_state_machine.done.barrier", Kernel, UserCodeEntryBB);
     A.registerManifestAddedBasicBlock(*InitBB);
     A.registerManifestAddedBasicBlock(*UserCodeEntryBB);
+    A.registerManifestAddedBasicBlock(*IsWorkerCheckBB);
     A.registerManifestAddedBasicBlock(*StateMachineBeginBB);
     A.registerManifestAddedBasicBlock(*StateMachineFinishedBB);
     A.registerManifestAddedBasicBlock(*StateMachineIsActiveCheckBB);
@@ -3509,16 +3517,38 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     const DebugLoc &DLoc = KernelInitCB->getDebugLoc();
     ReturnInst::Create(Ctx, StateMachineFinishedBB)->setDebugLoc(DLoc);
-
     InitBB->getTerminator()->eraseFromParent();
+
+    Module &M = *Kernel->getParent();
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    FunctionCallee BlockHwSizeFn =
+        OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
+            M, OMPRTL___kmpc_get_hardware_num_threads_in_block);
+    FunctionCallee WarpSizeFn =
+        OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
+            M, OMPRTL___kmpc_get_warp_size);
+    Instruction *BlockHwSize =
+        CallInst::Create(BlockHwSizeFn, "block.hw_size", InitBB);
+    BlockHwSize->setDebugLoc(DLoc);
+    Instruction *WarpSize = CallInst::Create(WarpSizeFn, "warp.size", InitBB);
+    WarpSize->setDebugLoc(DLoc);
+    Instruction *BlockSize =
+        BinaryOperator::CreateSub(BlockHwSize, WarpSize, "block.size", InitBB);
+    BlockSize->setDebugLoc(DLoc);
+    Instruction *IsMainOrWorker =
+        ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB,
+                         BlockSize, "thread.is_main_or_worker", InitBB);
+    IsMainOrWorker->setDebugLoc(DLoc);
+    BranchInst::Create(IsWorkerCheckBB, StateMachineFinishedBB, IsMainOrWorker,
+                       InitBB);
+
     Instruction *IsWorker =
         ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_NE, KernelInitCB,
                          ConstantInt::get(KernelInitCB->getType(), -1),
-                         "thread.is_worker", InitBB);
+                         "thread.is_worker", IsWorkerCheckBB);
     IsWorker->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineBeginBB, UserCodeEntryBB, IsWorker, InitBB);
-
-    Module &M = *Kernel->getParent();
+    BranchInst::Create(StateMachineBeginBB, UserCodeEntryBB, IsWorker,
+                       IsWorkerCheckBB);
 
     // Create local storage for the work function pointer.
     const DataLayout &DL = M.getDataLayout();
@@ -3528,7 +3558,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
                        "worker.work_fn.addr", &Kernel->getEntryBlock().front());
     WorkFnAI->setDebugLoc(DLoc);
 
-    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     OMPInfoCache.OMPBuilder.updateToLocation(
         OpenMPIRBuilder::LocationDescription(
             IRBuilder<>::InsertPoint(StateMachineBeginBB,
