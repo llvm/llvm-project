@@ -701,6 +701,11 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
       return $_get(elementType.getContext(), shape, elementType, encoding);
     }]>
   ];
+  let extraClassDeclaration = [{
+    /// This is a builder type that keeps local references to arguments.
+    /// Arguments that are passed into the builder must out-live the builder.
+    class Builder;
+  }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }

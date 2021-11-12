@@ -852,7 +852,6 @@ struct DownscaleSizeOneWindowed2DConvolution final
     auto filterType = filter.getType().dyn_cast<RankedTensorType>();
     auto outputType = output.getType().dyn_cast<RankedTensorType>();
 
-    auto inputShape = inputType.getShape();
     auto filterShape = filterType.getShape();
     auto outputShape = outputType.getShape();
 
@@ -860,52 +859,47 @@ struct DownscaleSizeOneWindowed2DConvolution final
     // of size 1. Other cases can rely on tiling to reduce to such cases.
     int64_t fhSize = filterShape[0], fwSize = filterShape[1];
     int64_t ohSize = outputShape[1], owSize = outputShape[2];
-    if (!(fhSize == 1 && ohSize == 1) && !(fwSize == 1 && owSize == 1))
+    bool removeH = (fhSize == 1 && ohSize == 1);
+    bool removeW = (fwSize == 1 && owSize == 1);
+    if (!removeH && !removeW)
       return failure();
-    bool removeH = ohSize == 1;
 
     // Get new shapes and types for all operands by removing the size-1
     // dimension.
+    using RTTBuilder = RankedTensorType::Builder;
+    auto newInputType = RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+    auto newFilterType = RTTBuilder(filterType).dropDim((removeH ? 0 : 1));
+    auto newOutputType = RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
 
-    SmallVector<int64_t, 3> newInputShape{
-        inputShape[0], inputShape[removeH ? 2 : 1], inputShape[3]};
-    auto newInputType = RankedTensorType::get(
-        newInputShape, inputType.getElementType(), inputType.getEncoding());
-
-    SmallVector<int64_t, 3> newFilterShape{filterShape[removeH ? 1 : 0],
-                                           filterShape[2], filterShape[3]};
-    auto newFilterType = RankedTensorType::get(
-        newFilterShape, filterType.getElementType(), filterType.getEncoding());
-
-    SmallVector<int64_t, 3> newOutputShape{
-        outputShape[0], outputShape[removeH ? 2 : 1], outputShape[3]};
-    auto newOutputType = RankedTensorType::get(
-        newOutputShape, outputType.getElementType(), outputType.getEncoding());
-
-    SmallVector<ReassociationIndices, 3> ioReshapeIndices = {{0}, {1, 2}, {3}};
-    SmallVector<ReassociationIndices, 3> fReshapeIndices = {{0, 1}, {2}, {3}};
-
-    // Reshape all operands for 1-D convolution.
+    // Rank-reduce operands.
     Location loc = convOp.getLoc();
-    Value newInput = rewriter.create<linalg::TensorCollapseShapeOp>(
-        loc, newInputType, input, ioReshapeIndices);
-    Value newFilter = rewriter.create<linalg::TensorCollapseShapeOp>(
-        loc, newFilterType, filter, fReshapeIndices);
-    Value newOutput = rewriter.create<linalg::TensorCollapseShapeOp>(
-        loc, newOutputType, output, ioReshapeIndices);
+    Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
+        rewriter, loc, input, newInputType);
+    Value newFilter = tensor::createCanonicalRankReducingExtractSliceOp(
+        rewriter, loc, filter, newFilterType);
+    Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
+        rewriter, loc, output, newOutputType);
 
-    // We need to shrink the strides and dilations too.
-    auto stride = convOp.strides().getValues<int64_t>()[removeH ? 1 : 0];
-    auto stridesAttr = rewriter.getI64VectorAttr(stride);
-    auto dilation = convOp.dilations().getValues<int64_t>()[removeH ? 1 : 0];
-    auto dilationsAttr = rewriter.getI64VectorAttr(dilation);
+    // Rank-reduce strides and dilations too.
+    // TODO: dropDim 1-liner helper.
+    auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+    strides.erase(strides.begin() + (removeH ? 0 : 1));
+    auto stridesAttr = rewriter.getI64VectorAttr(strides);
+
+    auto dilations =
+        llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+    dilations.erase(dilations.begin() + (removeH ? 0 : 1));
+    auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
     auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(
         loc, newOutputType, ValueRange{newInput, newFilter},
         ValueRange{newOutput}, stridesAttr, dilationsAttr);
 
-    rewriter.replaceOpWithNewOp<linalg::TensorExpandShapeOp>(
-        convOp, outputType, conv1DOp.getResult(0), ioReshapeIndices);
+    // Insert back.
+    Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
+        rewriter, loc, conv1DOp.getResult(0), output);
+    rewriter.replaceOp(convOp, inserted);
+
     return success();
   };
 };

@@ -85,6 +85,18 @@ bool canFoldIntoConsumerOp(CastOp castOp);
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
+
+/// Create a rank-reducing ExtractSliceOp @[0 .. 0] with strides [1 .. 1] and
+/// appropriate sizes to reduce the rank of `tensor` to `targetType`.
+Value createCanonicalRankReducingExtractSliceOp(OpBuilder &b, Location loc,
+                                                Value tensor,
+                                                RankedTensorType targetType);
+
+/// Create a rank-reducing InsertSliceOp @[0 .. 0] with strides [1 .. 1] and
+/// appropriate sizes to increase the rank of `tensor` to `dest`.
+Value createCanonicalRankReducingInsertSliceOp(OpBuilder &b, Location loc,
+                                               Value tensor, Value dest);
+
 } // namespace tensor
 } // namespace mlir
 
