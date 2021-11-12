@@ -2008,10 +2008,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
           PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
       PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
-      if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc,
-                                                 true, !IsInclusionDirective))
-        Sub =
-            loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
+      if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc, true,
+                                                 !IsInclusionDirective))
+        Sub = loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
       if (Sub) {
         MapPrivateSubModToTopLevel = true;
         if (!getDiagnostics().isIgnored(
@@ -2034,9 +2033,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       unsigned BestEditDistance = (std::numeric_limits<unsigned>::max)();
 
       for (class Module *SubModule : Module->submodules()) {
-        unsigned ED = Name.edit_distance(SubModule->Name,
-                                         /*AllowReplacements=*/true,
-                                         BestEditDistance);
+        unsigned ED =
+            Name.edit_distance(SubModule->Name,
+                               /*AllowReplacements=*/true, BestEditDistance);
         if (ED <= BestEditDistance) {
           if (ED < BestEditDistance) {
             Best.clear();
@@ -2049,12 +2048,11 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
       // If there was a clear winner, user it.
       if (Best.size() == 1) {
-        getDiagnostics().Report(Path[I].second,
-                                diag::err_no_submodule_suggest)
-          << Path[I].first << Module->getFullModuleName() << Best[0]
-          << SourceRange(Path[0].second, Path[I-1].second)
-          << FixItHint::CreateReplacement(SourceRange(Path[I].second),
-                                          Best[0]);
+        getDiagnostics().Report(Path[I].second, diag::err_no_submodule_suggest)
+            << Path[I].first << Module->getFullModuleName() << Best[0]
+            << SourceRange(Path[0].second, Path[I - 1].second)
+            << FixItHint::CreateReplacement(SourceRange(Path[I].second),
+                                            Best[0]);
 
         Sub = Module->findSubmodule(Best[0]);
       }
@@ -2064,8 +2062,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       // No submodule by this name. Complain, and don't look for further
       // submodules.
       getDiagnostics().Report(Path[I].second, diag::err_no_submodule)
-        << Path[I].first << Module->getFullModuleName()
-        << SourceRange(Path[0].second, Path[I-1].second);
+          << Path[I].first << Module->getFullModuleName()
+          << SourceRange(Path[0].second, Path[I - 1].second);
       break;
     }
 
