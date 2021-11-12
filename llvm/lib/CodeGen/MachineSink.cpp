@@ -1324,7 +1324,8 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   // "zombie" define of that preg. E.g., EFLAGS. (<rdar://problem/8030636>)
   for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
-    if (!MO.isReg()) continue;
+    if (!MO.isReg() || MO.isUse())
+      continue;
     Register Reg = MO.getReg();
     if (Reg == 0 || !Register::isPhysicalRegister(Reg))
       continue;

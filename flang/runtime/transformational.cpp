@@ -184,7 +184,7 @@ void RTNAME(CshiftVector)(Descriptor &result, const Descriptor &source,
   for (SubscriptValue j{0}; j < extent; ++j) {
     SubscriptValue resultAt{1 + j};
     SubscriptValue sourceAt{lb + (j + shift) % extent};
-    if (sourceAt < 0) {
+    if (sourceAt < lb) {
       sourceAt += extent;
     }
     CopyElement(result, &resultAt, source, &sourceAt, terminator);
