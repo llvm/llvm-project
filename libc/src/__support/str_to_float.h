@@ -775,16 +775,30 @@ static inline T strtofloatingpoint(const char *__restrict src,
       seenDigit = true;
       src += 3;
       BitsType NaNMantissa = 0;
+      // this handles the case of `NaN(n-character-sequence)`, where the
+      // n-character-sequence is made of 0 or more letters and numbers in any
+      // order.
       if (*src == '(') {
-        char *tempSrc = 0;
-        if (isdigit(*(src + 1)) || *(src + 1) == ')') {
-          NaNMantissa = strtointeger<BitsType>(src + 1, &tempSrc, 0);
-          if (*tempSrc != ')') {
-            NaNMantissa = 0;
-          } else {
-            src = tempSrc + 1;
+        const char *leftParen = src;
+        ++src;
+        while (isalnum(*src))
+          ++src;
+        if (*src == ')') {
+          ++src;
+          char *tempSrc = 0;
+          if (isdigit(*(leftParen + 1))) {
+            // This is to prevent errors when BitsType is larger than 64 bits,
+            // since strtointeger only supports up to 64 bits. This is actually
+            // more than is required by the specification, which says for the
+            // input type "NAN(n-char-sequence)" that "the meaning of
+            // the n-char sequence is implementation-defined."
+            NaNMantissa = static_cast<BitsType>(
+                strtointeger<uint64_t>(leftParen + 1, &tempSrc, 0));
+            if (*tempSrc != ')')
+              NaNMantissa = 0;
           }
-        }
+        } else
+          src = leftParen;
       }
       NaNMantissa |= fputil::FloatProperties<T>::quietNaNMask;
       if (result.getSign()) {

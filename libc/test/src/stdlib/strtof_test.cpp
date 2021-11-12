@@ -165,10 +165,39 @@ TEST_F(LlvmLibcStrToFTest, InfTests) {
   runTest("-iNfInItY", 9, 0xff800000);
 }
 
-TEST_F(LlvmLibcStrToFTest, NaNTests) {
+TEST_F(LlvmLibcStrToFTest, SimpleNaNTests) {
   runTest("NaN", 3, 0x7fc00000);
   runTest("-nAn", 4, 0xffc00000);
+}
+
+// These NaNs are of the form `NaN(n-character-sequence)` where the
+// n-character-sequence is 0 or more letters or numbers. If there is anything
+// other than a letter or a number, then the valid number is just `NaN`. If
+// the sequence is valid, then the interpretation of them is implementation
+// defined, in this case it's passed to strtoll with an automatic base, and
+// the result is put into the mantissa if it takes up the whole width of the
+// parentheses.
+TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesEmptyTest) {
   runTest("NaN()", 5, 0x7fc00000);
+}
+
+TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesValidNumberTests) {
   runTest("NaN(1234)", 9, 0x7fc004d2);
+  runTest("NaN(0x1234)", 11, 0x7fc01234);
+  runTest("NaN(01234)", 10, 0x7fc0029c);
+}
+
+TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesInvalidSequenceTests) {
   runTest("NaN( 1234)", 3, 0x7fc00000);
+  runTest("NaN(-1234)", 3, 0x7fc00000);
+  runTest("NaN(asd&f)", 3, 0x7fc00000);
+  runTest("NaN(123 )", 3, 0x7fc00000);
+  runTest("NaN(123+asdf)", 3, 0x7fc00000);
+  runTest("NaN(123", 3, 0x7fc00000);
+}
+
+TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesValidSequenceInvalidNumberTests) {
+  runTest("NaN(1a)", 7, 0x7fc00000);
+  runTest("NaN(asdf)", 9, 0x7fc00000);
+  runTest("NaN(1A1)", 8, 0x7fc00000);
 }
