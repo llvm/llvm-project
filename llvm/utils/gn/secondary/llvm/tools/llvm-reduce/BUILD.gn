@@ -30,6 +30,7 @@ executable("llvm-reduce") {
     "deltas/ReduceModuleData.cpp",
     "deltas/ReduceOperandBundles.cpp",
     "deltas/ReduceOperands.cpp",
+    "deltas/ReduceOperandsSkip.cpp",
     "deltas/ReduceOperandsToArgs.cpp",
     "deltas/ReduceSpecialGlobals.cpp",
     "llvm-reduce.cpp",
