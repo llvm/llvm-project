@@ -400,6 +400,8 @@ if config.host_os == 'Darwin':
     if osx_version >= (10, 11):
       config.available_features.add('osx-autointerception')
       config.available_features.add('osx-ld64-live_support')
+    if osx_version >= (10, 15):
+      config.available_features.add('osx-swift-runtime')
   except subprocess.CalledProcessError:
     pass
 
