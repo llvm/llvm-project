@@ -115,27 +115,7 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
   }
 }
 
-/// Counts the amount of arguments in functions and prints their respective
-/// name, index, and parent function name
-static int countArguments(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  outs() << "Param Index Reference:\n";
-  int ArgsCount = 0;
-  for (auto &F : Program)
-    if (shouldRemoveArguments(F)) {
-      outs() << "  " << F.getName() << "\n";
-      for (auto &A : F.args())
-        outs() << "\t" << ++ArgsCount << ": " << A.getName() << "\n";
-
-      outs() << "----------------------------\n";
-    }
-
-  return ArgsCount;
-}
-
 void llvm::reduceArgumentsDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Arguments...\n";
-  int ArgCount = countArguments(Test.getProgram());
-  runDeltaPass(Test, ArgCount, extractArgumentsFromModule);
+  runDeltaPass(Test, extractArgumentsFromModule);
 }

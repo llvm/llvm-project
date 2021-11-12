@@ -26,18 +26,7 @@ static void reduceGOs(Oracle &O, Module &Program) {
   }
 }
 
-static int countGOs(Module &Program) {
-  int SectionCount = count_if(Program.global_objects(), [](GlobalObject &GO) {
-    return shouldReduceSection(GO);
-  });
-  int AlignCount = count_if(Program.global_objects(), [](GlobalObject &GO) {
-    return shouldReduceAlign(GO);
-  });
-  return SectionCount + AlignCount;
-}
-
 void llvm::reduceGlobalObjectsDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing GlobalObjects...\n";
-  int GVCount = countGOs(Test.getProgram());
-  runDeltaPass(Test, GVCount, reduceGOs);
+  runDeltaPass(Test, reduceGOs);
 }

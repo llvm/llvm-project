@@ -180,20 +180,7 @@ static void extractAttributesFromModule(Oracle &O, Module &Program) {
     I.first->setAttributes(convertAttributeRefVecToAttributeList(C, I.second));
 }
 
-/// Counts the amount of attributes.
-static int countAttributes(Module &Program) {
-  AttributeCounter C;
-
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  C.visit(Program);
-  outs() << "Number of attributes: " << C.AttributeCount << "\n";
-
-  return C.AttributeCount;
-}
-
 void llvm::reduceAttributesDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Attributes...\n";
-  int AttributeCount = countAttributes(Test.getProgram());
-  runDeltaPass(Test, AttributeCount, extractAttributesFromModule);
+  runDeltaPass(Test, extractAttributesFromModule);
 }

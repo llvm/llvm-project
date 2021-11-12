@@ -139,24 +139,7 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   }
 }
 
-/// Counts the amount of basic blocks and prints their name & respective index
-static int countBasicBlocks(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  int BBCount = 0;
-  for (auto &F : Program)
-    for (auto &BB : F) {
-      if (BB.hasName())
-        outs() << "\t" << ++BBCount << ": " << BB.getName() << "\n";
-      else
-        outs() << "\t" << ++BBCount << ": Unnamed\n";
-    }
-
-  return BBCount;
-}
-
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Basic Blocks...\n";
-  int BBCount = countBasicBlocks(Test.getProgram());
-  runDeltaPass(Test, BBCount, extractBasicBlocksFromModule);
+  runDeltaPass(Test, extractBasicBlocksFromModule);
 }

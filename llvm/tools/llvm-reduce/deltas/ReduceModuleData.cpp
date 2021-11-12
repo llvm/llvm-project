@@ -28,23 +28,7 @@ static void clearModuleData(Oracle &O, Module &Program) {
     Program.setModuleInlineAsm("");
 }
 
-static int countModuleData(Module &M) {
-  int Count = 0;
-  if (!M.getModuleIdentifier().empty())
-    ++Count;
-  if (!M.getSourceFileName().empty())
-    ++Count;
-  if (!M.getDataLayoutStr().empty())
-    ++Count;
-  if (!M.getTargetTriple().empty())
-    ++Count;
-  if (!M.getModuleInlineAsm().empty())
-    ++Count;
-  return Count;
-}
-
 void llvm::reduceModuleDataDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Module Data...\n";
-  int Count = countModuleData(Test.getProgram());
-  runDeltaPass(Test, Count, clearModuleData);
+  runDeltaPass(Test, clearModuleData);
 }

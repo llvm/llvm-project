@@ -28,22 +28,7 @@ static void extractGVsFromModule(Oracle &O, Module &Program) {
     }
 }
 
-/// Counts the amount of initialized GVs and displays their
-/// respective name & index
-static int countGVs(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  outs() << "GlobalVariable Index Reference:\n";
-  int GVCount = 0;
-  for (auto &GV : Program.globals())
-    if (GV.hasInitializer())
-      outs() << "\t" << ++GVCount << ": " << GV.getName() << "\n";
-  outs() << "----------------------------\n";
-  return GVCount;
-}
-
 void llvm::reduceGlobalsInitializersDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing GVs initializers...\n";
-  int GVCount = countGVs(Test.getProgram());
-  runDeltaPass(Test, GVCount, extractGVsFromModule);
+  runDeltaPass(Test, extractGVsFromModule);
 }

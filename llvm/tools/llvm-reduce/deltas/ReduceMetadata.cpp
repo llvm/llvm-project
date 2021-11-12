@@ -61,37 +61,8 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
   }
 }
 
-static int countMetadataTargets(Module &Program) {
-  int NamedMetadataNodes = Program.named_metadata_size();
-
-  // Get metadata attached to globals.
-  int GlobalMetadataArgs = 0;
-  SmallVector<std::pair<unsigned, MDNode *>> MDs;
-  for (GlobalVariable &GV : Program.globals()) {
-    GV.getAllMetadata(MDs);
-    GlobalMetadataArgs += MDs.size();
-  }
-
-  // Get metadata attached to functions & instructions.
-  int FunctionMetadataArgs = 0;
-  int InstructionMetadataArgs = 0;
-  for (Function &F : Program) {
-    F.getAllMetadata(MDs);
-    FunctionMetadataArgs += MDs.size();
-
-    for (Instruction &I : instructions(F)) {
-      I.getAllMetadata(MDs);
-      InstructionMetadataArgs += MDs.size();
-    }
-  }
-
-  return NamedMetadataNodes + GlobalMetadataArgs + FunctionMetadataArgs +
-         InstructionMetadataArgs;
-}
-
 void llvm::reduceMetadataDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Metadata...\n";
-  int MDCount = countMetadataTargets(Test.getProgram());
-  runDeltaPass(Test, MDCount, extractMetadataFromModule);
+  runDeltaPass(Test, extractMetadataFromModule);
   outs() << "----------------------------\n";
 }

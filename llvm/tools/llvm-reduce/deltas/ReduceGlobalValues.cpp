@@ -57,28 +57,7 @@ static void reduceGVs(Oracle &O, Module &Program) {
   }
 }
 
-static int countGVs(Module &Program) {
-  int DSOLocalCount = count_if(Program.global_values(), [](GlobalValue &GV) {
-    return shouldReduceDSOLocal(GV);
-  });
-  int VisibilityCount = count_if(Program.global_values(), [](GlobalValue &GV) {
-    return shouldReduceVisibility(GV);
-  });
-  int UnnamedAddrCount = count_if(Program.global_values(), [](GlobalValue &GV) {
-    return shouldReduceUnnamedAddress(GV);
-  });
-  int DLLStorageClassCount =
-      count_if(Program.global_values(),
-               [](GlobalValue &GV) { return shouldReduceDLLStorageClass(GV); });
-  int ThreadLocalCount = count_if(Program.global_values(), [](GlobalValue &GV) {
-    return shouldReduceThreadLocal(GV);
-  });
-  return DSOLocalCount + VisibilityCount + UnnamedAddrCount +
-         DLLStorageClassCount + ThreadLocalCount;
-}
-
 void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing GlobalValues...\n";
-  int GVCount = countGVs(Test.getProgram());
-  runDeltaPass(Test, GVCount, reduceGVs);
+  runDeltaPass(Test, reduceGVs);
 }
