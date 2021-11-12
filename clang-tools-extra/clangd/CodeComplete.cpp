@@ -2113,8 +2113,12 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
   // compatible with most of the editors.
   LSP.insertText = LSP.textEdit->newText;
-  LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
-                                             : InsertTextFormat::PlainText;
+  // Some clients support snippets but work better with plaintext.
+  // So if the snippet is trivial, let the client know.
+  // https://github.com/clangd/clangd/issues/922
+  LSP.insertTextFormat = (Opts.EnableSnippets && !SnippetSuffix.empty())
+                             ? InsertTextFormat::Snippet
+                             : InsertTextFormat::PlainText;
   if (InsertInclude && InsertInclude->Insertion)
     LSP.additionalTextEdits.push_back(*InsertInclude->Insertion);
 
