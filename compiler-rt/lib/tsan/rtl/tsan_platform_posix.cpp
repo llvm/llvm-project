@@ -113,7 +113,6 @@ void CheckAndProtect() {
 #    if defined(__aarch64__) && defined(__APPLE__) && SANITIZER_IOS
   ProtectRange(HeapMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
-  ProtectRange(MetaShadowEnd(), TraceMemBeg());
 #else
   ProtectRange(LoAppMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
