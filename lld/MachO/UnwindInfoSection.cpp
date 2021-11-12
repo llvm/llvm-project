@@ -439,8 +439,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
         continue;
       if (lsda1 == nullptr || lsda2 == nullptr)
         break;
-      if (lsda1->referent.get<InputSection *>() !=
-          lsda2->referent.get<InputSection *>())
+      if (lsda1->referent != lsda2->referent)
         break;
       if (lsda1->addend != lsda2->addend)
         break;
@@ -536,9 +535,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   }
 
   for (size_t idx : cuIndices) {
-    const CompactUnwindEntry<Ptr> &cu = cuEntries[idx];
     lsdaIndex[idx] = entriesWithLsda.size();
-    if (cu.lsda != 0)
+    if (findLsdaReloc(symbolsVec[idx].second->compactUnwind))
       entriesWithLsda.push_back(idx);
   }
 
@@ -617,8 +615,14 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
     const CompactUnwindEntry<Ptr> &cu = cuEntries[idx];
     const Defined *d = symbolsVec[idx].second;
     if (Reloc *r = findLsdaReloc(d->compactUnwind)) {
-      auto *isec = r->referent.get<InputSection *>();
-      lep->lsdaOffset = isec->getVA(r->addend) - in.header->addr;
+      uint64_t va;
+      if (auto *isec = r->referent.dyn_cast<InputSection *>()) {
+        va = isec->getVA(r->addend);
+      } else {
+        auto *sym = r->referent.get<Symbol *>();
+        va = sym->getVA() + r->addend;
+      }
+      lep->lsdaOffset = va - in.header->addr;
     }
     lep->functionOffset = cu.functionAddress - in.header->addr;
     lep++;
