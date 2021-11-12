@@ -201,6 +201,10 @@ public:
   /// Emit diagnostics about unknown parametrs.
   void resolveParamCommandIndexes(const FullComment *FC);
 
+  /// \returns \c true if the declaration that this comment is attached to
+  /// is a pointer to function/method/block type or has such a type.
+  bool involvesFunctionType();
+
   bool isFunctionDecl();
   bool isAnyFunctionDecl();
 
