@@ -2068,10 +2068,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       SmallVector<StringRef, 2> Best;
       unsigned BestEditDistance = (std::numeric_limits<unsigned>::max)();
 
-      for (clang::Module::submodule_iterator J = Module->submodule_begin(),
-                                          JEnd = Module->submodule_end();
-           J != JEnd; ++J) {
-        unsigned ED = Name.edit_distance((*J)->Name,
+      for (class Module *SubModule : Module->submodules()) {
+        unsigned ED = Name.edit_distance(SubModule->Name,
                                          /*AllowReplacements=*/true,
                                          BestEditDistance);
         if (ED <= BestEditDistance) {
@@ -2080,7 +2078,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
             BestEditDistance = ED;
           }
 
-          Best.push_back((*J)->Name);
+          Best.push_back(SubModule->Name);
         }
       }
 
