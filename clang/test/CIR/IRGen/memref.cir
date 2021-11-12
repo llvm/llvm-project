@@ -8,6 +8,11 @@ module {
     %1 = cir.cst(1 : i32) : i32
     cir.return
   }
+
+  func.func @main() -> i32 {
+    %0 = cir.cst(1 : i32) : i32
+    cir.return %0 : i32
+  }
 }
 
 //      MLIR: module  {
@@ -16,9 +21,20 @@ module {
 // MLIR-NEXT:     {{.*}}arith.constant 1 : i32
 // MLIR-NEXT:     cir.return
 // MLIR-NEXT:   }
+// MLIR-NEXT:   func @main() -> i32 {
+// MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
+// MLIR-NEXT:     cir.return %c1_i32 : i32
+// MLIR-NEXT:   }
 // MLIR-NEXT: }
 
 //      LLVM: module  {
 // LLVM-NEXT:   llvm.func @malloc(i64)
 // LLVM-NEXT:   llvm.func @foo() {
 // LLVM-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
+//      LLVM:   llvm.func @main() -> i32 {
+// LLVM-NEXT:     %0 = llvm.mlir.constant(1 : i32) : i32
+// LLVM-NEXT:     llvm.return %0 : i32
+// LLVM-NEXT:   }
+// LLVM-NEXT: }
+
+
