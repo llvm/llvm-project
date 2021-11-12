@@ -29,20 +29,6 @@ extractOperandsFromModule(Oracle &O, Module &Program,
   }
 }
 
-static int countOperands(Module &Program,
-                         function_ref<Value *(Use &)> ReduceValue) {
-  int Count = 0;
-  for (auto &F : Program.functions()) {
-    for (auto &I : instructions(&F)) {
-      for (auto &Op : I.operands()) {
-        if (ReduceValue(Op))
-          Count++;
-      }
-    }
-  }
-  return Count;
-}
-
 static bool isOne(Use &Op) {
   auto *C = dyn_cast<Constant>(Op);
   return C && C->isOneValue();
@@ -76,8 +62,7 @@ void llvm::reduceOperandsUndefDeltaPass(TestRunner &Test) {
     // Don't replace existing ConstantData Uses.
     return isa<ConstantData>(*Op) ? nullptr : UndefValue::get(Op->getType());
   };
-  int Count = countOperands(Test.getProgram(), ReduceValue);
-  runDeltaPass(Test, Count, [ReduceValue](Oracle &O, Module &Program) {
+  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
     extractOperandsFromModule(O, Program, ReduceValue);
   });
 }
@@ -94,8 +79,7 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
     // Don't replace existing ones and zeroes.
     return (isOne(Op) || isZero(Op)) ? nullptr : ConstantInt::get(Ty, 1);
   };
-  int Count = countOperands(Test.getProgram(), ReduceValue);
-  runDeltaPass(Test, Count, [ReduceValue](Oracle &O, Module &Program) {
+  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
     extractOperandsFromModule(O, Program, ReduceValue);
   });
 }
@@ -108,8 +92,7 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
     // Don't replace existing zeroes.
     return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
   };
-  int Count = countOperands(Test.getProgram(), ReduceValue);
-  runDeltaPass(Test, Count, [ReduceValue](Oracle &O, Module &Program) {
+  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
     extractOperandsFromModule(O, Program, ReduceValue);
   });
 }

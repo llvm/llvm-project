@@ -49,22 +49,7 @@ static void extractInstrFromModule(Oracle &O, Module &Program) {
     I->eraseFromParent();
 }
 
-/// Counts the amount of basic blocks and prints their name & respective index
-static unsigned countInstructions(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  int InstCount = 0;
-  for (auto &F : Program)
-    for (auto &BB : F)
-      // Well-formed blocks have terminators, which we cannot remove.
-      InstCount += BB.getInstList().size() - 1;
-  outs() << "Number of instructions: " << InstCount << "\n";
-
-  return InstCount;
-}
-
 void llvm::reduceInstructionsDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Instructions...\n";
-  unsigned InstCount = countInstructions(Test.getProgram());
-  runDeltaPass(Test, InstCount, extractInstrFromModule);
+  runDeltaPass(Test, extractInstrFromModule);
 }
