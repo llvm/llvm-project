@@ -321,14 +321,14 @@ namespace p0962r1 {
 
   namespace NE {
     struct E {
-      void begin(); // expected-note {{member is not a candidate because range type 'p0962r1::NE::E' has no 'end' member}}
+      void begin(); // expected-note {{member is not a candidate because range type 'NE::E' has no 'end' member}}
     };
     int *end(E);
   }
 
   namespace NF {
     struct F {
-      void end(); // expected-note {{member is not a candidate because range type 'p0962r1::NF::F' has no 'begin' member}}
+      void end(); // expected-note {{member is not a candidate because range type 'NF::F' has no 'begin' member}}
     };
     int *begin(F);
   }
@@ -336,9 +336,9 @@ namespace p0962r1 {
   void use(NA::A a, NB::B b, NC::C c, ND::D d, NE::E e, NF::F f) {
     for (auto x : a) {}
     for (auto x : b) {}
-    for (auto x : c) {} // expected-error {{invalid range expression of type 'p0962r1::NC::C'; no viable 'end' function available}}
-    for (auto x : d) {} // expected-error {{invalid range expression of type 'p0962r1::ND::D'; no viable 'begin' function available}}
-    for (auto x : e) {} // expected-error {{invalid range expression of type 'p0962r1::NE::E'; no viable 'begin' function available}}
-    for (auto x : f) {} // expected-error {{invalid range expression of type 'p0962r1::NF::F'; no viable 'end' function available}}
+    for (auto x : c) {} // expected-error {{invalid range expression of type 'NC::C'; no viable 'end' function available}}
+    for (auto x : d) {} // expected-error {{invalid range expression of type 'ND::D'; no viable 'begin' function available}}
+    for (auto x : e) {} // expected-error {{invalid range expression of type 'NE::E'; no viable 'begin' function available}}
+    for (auto x : f) {} // expected-error {{invalid range expression of type 'NF::F'; no viable 'end' function available}}
   }
 }

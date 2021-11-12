@@ -284,7 +284,7 @@ namespace PR13386 {
     void g(U &&...u, T &&...t) {} // expected-note {{candidate}}
     template<typename...U>
     void h(tuple<T, U> &&...) {}
-    // expected-note@-1 {{candidate template ignored: could not match 'tuple<type-parameter-0-0, type-parameter-0-0>' against 'int'}}
+    // expected-note@-1 {{candidate template ignored: could not match 'tuple<T, U>' against 'int'}}
     // expected-note@-2 {{candidate template ignored: substitution failure: deduced incomplete pack <(no value)> for template parameter 'U'}}
 
     template<typename...U>
