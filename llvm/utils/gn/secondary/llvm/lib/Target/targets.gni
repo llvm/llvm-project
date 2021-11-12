@@ -1,3 +1,5 @@
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
 declare_args() {
   # The target archs LLVM should support. Defaults to the host arch.
   # Set to a list, e.g. `llvm_targets_to_build = [ "X86", "ARM" ]`,
@@ -96,4 +98,17 @@ if (host_cpu == "arm64") {
   native_target = "X86"
 } else {
   assert(false, "Unsuppored host_cpu '$host_cpu'.")
+}
+
+supported_android_toolchains = []
+
+if (android_ndk_path != "") {
+  if (llvm_build_AArch64) {
+    supported_android_toolchains +=
+        [ "//llvm/utils/gn/build/toolchain:stage2_android_aarch64" ]
+  }
+  if (llvm_build_ARM) {
+    supported_android_toolchains +=
+        [ "//llvm/utils/gn/build/toolchain:stage2_android_arm" ]
+  }
 }
