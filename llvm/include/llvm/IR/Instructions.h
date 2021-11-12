@@ -3350,14 +3350,14 @@ public:
     CaseHandle(SwitchInst *SI, ptrdiff_t Index) : CaseHandleImpl(SI, Index) {}
 
     /// Sets the new value for current case.
-    void setValue(ConstantInt *V) {
+    void setValue(ConstantInt *V) const {
       assert((unsigned)Index < SI->getNumCases() &&
              "Index out the number of cases.");
       SI->setOperand(2 + Index*2, reinterpret_cast<Value*>(V));
     }
 
     /// Sets the new successor for current case.
-    void setSuccessor(BasicBlock *S) {
+    void setSuccessor(BasicBlock *S) const {
       SI->setSuccessor(getSuccessorIndex(), S);
     }
   };
@@ -3366,7 +3366,7 @@ public:
   class CaseIteratorImpl
       : public iterator_facade_base<CaseIteratorImpl<CaseHandleT>,
                                     std::random_access_iterator_tag,
-                                    CaseHandleT> {
+                                    const CaseHandleT> {
     using SwitchInstT = typename CaseHandleT::SwitchInstType;
 
     CaseHandleT Case;
@@ -3425,7 +3425,6 @@ public:
       assert(Case.SI == RHS.Case.SI && "Incompatible operators.");
       return Case.Index < RHS.Case.Index;
     }
-    CaseHandleT &operator*() { return Case; }
     const CaseHandleT &operator*() const { return Case; }
   };
 
@@ -3520,7 +3519,7 @@ public:
         const_cast<const SwitchInst *>(this)->findCaseValue(C)->getCaseIndex());
   }
   ConstCaseIt findCaseValue(const ConstantInt *C) const {
-    ConstCaseIt I = llvm::find_if(cases(), [C](ConstCaseHandle &Case) {
+    ConstCaseIt I = llvm::find_if(cases(), [C](const ConstCaseHandle &Case) {
       return Case.getCaseValue() == C;
     });
     if (I != case_end())
