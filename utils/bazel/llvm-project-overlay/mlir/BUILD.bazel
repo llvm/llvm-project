@@ -6284,6 +6284,26 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "LinalgBufferizableOpInterfaceImpl",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizableOpInterface",
+        ":IR",
+        ":LinalgOps",
+        ":LinalgStructuredOpsIncGen",
+        ":Support",
+        ":TensorDialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "LinalgDocTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/LinalgDoc.td"],
@@ -6491,6 +6511,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":LinalgBufferizableOpInterfaceImpl",
         ":LinalgOps",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
@@ -6521,13 +6542,12 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":Affine",
         ":ArithmeticDialect",
         ":BufferizableOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":LinalgOps",
-        ":LinalgStructuredOpsIncGen",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",

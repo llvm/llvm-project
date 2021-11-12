@@ -1,6 +1,7 @@
 set(LLVM_OPTIONAL_SOURCES
   BufferizableOpInterface.cpp
   ComprehensiveBufferize.cpp
+  LinalgInterfaceImpl.cpp
 )
 
 add_mlir_dialect_library(MLIRBufferizableOpInterface
@@ -13,15 +14,25 @@ add_mlir_dialect_library(MLIRBufferizableOpInterface
   MLIRIR
 )
 
+add_mlir_dialect_library(MLIRLinalgBufferizableOpInterfaceImpl
+  LinalgInterfaceImpl.cpp
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizableOpInterface
+  MLIRIR
+  MLIRLinalg
+  MLIRTensor
+)
+
 add_mlir_dialect_library(MLIRComprehensiveBufferize
   ComprehensiveBufferize.cpp
 
   LINK_LIBS PUBLIC
+  MLIRAffine
   MLIRBufferizableOpInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRef
-  MLIRLinalg
   MLIRSCF
   MLIRStandard
   MLIRStandardOpsTransforms
