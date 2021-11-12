@@ -66,6 +66,12 @@ void Object::updateLoadCommandIndexes() {
     case MachO::LC_FUNCTION_STARTS:
       FunctionStartsCommandIndex = Index;
       break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      ChainedFixupsCommandIndex = Index;
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      ExportsTrieCommandIndex = Index;
+      break;
     }
   }
 }

@@ -174,6 +174,12 @@ Error MachOReader::readLoadCommands(Object &O) const {
     case MachO::LC_FUNCTION_STARTS:
       O.FunctionStartsCommandIndex = O.LoadCommands.size();
       break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      O.ExportsTrieCommandIndex = O.LoadCommands.size();
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      O.ChainedFixupsCommandIndex = O.LoadCommands.size();
+      break;
     }
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
   case MachO::LCName:                                                          \
@@ -301,6 +307,14 @@ void MachOReader::readFunctionStartsData(Object &O) const {
   return readLinkData(O, O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
 
+void MachOReader::readExportsTrie(Object &O) const {
+  return readLinkData(O, O.ExportsTrieCommandIndex, O.ExportsTrie);
+}
+
+void MachOReader::readChainedFixups(Object &O) const {
+  return readLinkData(O, O.ChainedFixupsCommandIndex, O.ChainedFixups);
+}
+
 void MachOReader::readIndirectSymbolTable(Object &O) const {
   MachO::dysymtab_command DySymTab = MachOObj.getDysymtabLoadCommand();
   constexpr uint32_t AbsOrLocalMask =
@@ -352,6 +366,8 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readDataInCodeData(*Obj);
   readLinkerOptimizationHint(*Obj);
   readFunctionStartsData(*Obj);
+  readExportsTrie(*Obj);
+  readChainedFixups(*Obj);
   readIndirectSymbolTable(*Obj);
   readSwiftVersion(*Obj);
   return std::move(Obj);
