@@ -181,6 +181,7 @@ public:
 
   FullComment *actOnFullComment(ArrayRef<BlockContentComment *> Blocks);
 
+private:
   void checkBlockCommandEmptyParagraph(BlockCommandComment *Command);
 
   void checkReturnsCommand(const BlockCommandComment *Command);
