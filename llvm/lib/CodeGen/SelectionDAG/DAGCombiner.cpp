@@ -22280,13 +22280,12 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG) {
 
 /// Visit a binary vector operation, like ADD.
 SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
-  assert(N->getValueType(0).isVector() &&
-         "SimplifyVBinOp only works on vectors!");
+  EVT VT = N->getValueType(0);
+  assert(VT.isVector() && "SimplifyVBinOp only works on vectors!");
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue Ops[] = {LHS, RHS};
-  EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
   SDNodeFlags Flags = N->getFlags();
 
