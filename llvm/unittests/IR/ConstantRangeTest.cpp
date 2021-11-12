@@ -29,6 +29,14 @@ protected:
 };
 
 template<typename Fn>
+static void EnumerateAPInts(unsigned Bits, Fn TestFn) {
+  APInt N(Bits, 0);
+  do {
+    TestFn(N);
+  } while (++N != 0);
+}
+
+template<typename Fn>
 static void EnumerateConstantRanges(unsigned Bits, Fn TestFn) {
   unsigned Max = 1 << Bits;
   for (unsigned Lo = 0; Lo < Max; Lo++) {
@@ -1824,8 +1832,7 @@ void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
 
     ConstantRange NoWrap =
         ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR, NoWrapKind);
-    ConstantRange Full = ConstantRange::getFull(Bits);
-    ForeachNumInConstantRange(Full, [&](const APInt &N1) {
+    EnumerateAPInts(Bits, [&](const APInt &N1) {
       bool NoOverflow = true;
       bool Overflow = true;
       ForeachNumInConstantRange(CR, [&](const APInt &N2) {
@@ -1986,17 +1993,18 @@ TEST(ConstantRange, GetEquivalentICmp) {
   EXPECT_EQ(Pred, CmpInst::ICMP_NE);
   EXPECT_EQ(RHS, APInt(32, -1));
 
-  EnumerateConstantRanges(4, [](const ConstantRange &CR) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [Bits](const ConstantRange &CR) {
     CmpInst::Predicate Pred;
     APInt RHS, Offset;
     CR.getEquivalentICmp(Pred, RHS, Offset);
-    ForeachNumInConstantRange(ConstantRange::getFull(4), [&](const APInt &N) {
+    EnumerateAPInts(Bits, [&](const APInt &N) {
       bool Result = ICmpInst::compare(N + Offset, RHS, Pred);
       EXPECT_EQ(CR.contains(N), Result);
     });
 
     if (CR.getEquivalentICmp(Pred, RHS)) {
-      ForeachNumInConstantRange(ConstantRange::getFull(4), [&](const APInt &N) {
+      EnumerateAPInts(Bits, [&](const APInt &N) {
         bool Result = ICmpInst::compare(N, RHS, Pred);
         EXPECT_EQ(CR.contains(N), Result);
       });
