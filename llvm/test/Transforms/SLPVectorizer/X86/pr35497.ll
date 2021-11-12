@@ -69,32 +69,27 @@ define void @pr35497() local_unnamed_addr #0 {
 ; SSE-LABEL: @pr35497(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[TMP0:%.*]] = load i64, i64* undef, align 1
-; SSE-NEXT:    [[AND:%.*]] = shl i64 [[TMP0]], 2
-; SSE-NEXT:    [[SHL:%.*]] = and i64 [[AND]], 20
 ; SSE-NEXT:    [[ADD:%.*]] = add i64 undef, undef
 ; SSE-NEXT:    store i64 [[ADD]], i64* undef, align 1
 ; SSE-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 5
-; SSE-NEXT:    [[AND_1:%.*]] = shl i64 undef, 2
-; SSE-NEXT:    [[SHL_1:%.*]] = and i64 [[AND_1]], 20
-; SSE-NEXT:    [[SHR_1:%.*]] = lshr i64 undef, 6
-; SSE-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[SHL]], [[SHR_1]]
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[TMP0]], i32 1
+; SSE-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
+; SSE-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; SSE-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
-; SSE-NEXT:    [[SHR_2:%.*]] = lshr i64 undef, 6
-; SSE-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[SHL_1]], [[SHR_2]]
-; SSE-NEXT:    [[AND_4:%.*]] = shl i64 [[ADD]], 2
-; SSE-NEXT:    [[SHL_4:%.*]] = and i64 [[AND_4]], 20
+; SSE-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
 ; SSE-NEXT:    [[ARRAYIDX2_5:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 1
-; SSE-NEXT:    store i64 [[ADD_1]], i64* [[ARRAYIDX2_5]], align 1
-; SSE-NEXT:    [[AND_5:%.*]] = shl nuw nsw i64 [[ADD_1]], 2
-; SSE-NEXT:    [[SHL_5:%.*]] = and i64 [[AND_5]], 20
-; SSE-NEXT:    [[SHR_5:%.*]] = lshr i64 [[ADD_1]], 6
-; SSE-NEXT:    [[ADD_5:%.*]] = add nuw nsw i64 [[SHL_4]], [[SHR_5]]
-; SSE-NEXT:    store i64 [[ADD_5]], i64* [[ARRAYIDX2_1]], align 1
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
+; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
+; SSE-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[ADD]], i32 1
+; SSE-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], <i64 2, i64 2>
+; SSE-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP8]], <i64 20, i64 20>
 ; SSE-NEXT:    [[ARRAYIDX2_6:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 0
-; SSE-NEXT:    store i64 [[ADD_2]], i64* [[ARRAYIDX2_6]], align 1
-; SSE-NEXT:    [[SHR_6:%.*]] = lshr i64 [[ADD_2]], 6
-; SSE-NEXT:    [[ADD_6:%.*]] = add nuw nsw i64 [[SHL_5]], [[SHR_6]]
-; SSE-NEXT:    store i64 [[ADD_6]], i64* [[ARRAYIDX2_2]], align 1
+; SSE-NEXT:    [[TMP10:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
+; SSE-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP10]], align 1
+; SSE-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
+; SSE-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i64> [[TMP9]], [[TMP11]]
+; SSE-NEXT:    [[TMP13:%.*]] = bitcast i64* [[ARRAYIDX2_2]] to <2 x i64>*
+; SSE-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* [[TMP13]], align 1
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @pr35497(
