@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=i386-apple-darwin -verify-machineinstrs -no-integrated-as | FileCheck %s
 
 ; There should be no stack manipulations between the inline asm and ret.
-define x86_fp80 @test1() {
+define x86_fp80 @test1() nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -13,7 +13,7 @@ define x86_fp80 @test1() {
   ret x86_fp80 %tmp85
 }
 
-define double @test2() {
+define double @test2() nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -26,7 +26,7 @@ define double @test2() {
 
 ; Setting up argument in st(0) should be a single fld.
 ; Asm consumes stack, nothing should be popped.
-define void @test3(x86_fp80 %X) {
+define void @test3(x86_fp80 %X) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
@@ -38,7 +38,7 @@ define void @test3(x86_fp80 %X) {
   ret void
 }
 
-define void @test4(double %X) {
+define void @test4(double %X) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -52,7 +52,7 @@ define void @test4(double %X) {
 
 ; Same as test3/4, but using value from fadd.
 ; The fadd can be done in xmm or x87 regs - we don't test that.
-define void @test5(double %X) {
+define void @test5(double %X) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -110,7 +110,7 @@ entry:
 ; asm kills st(0), so we shouldn't pop anything
 ; A valid alternative would be to remat the constant pool load before each
 ; inline asm.
-define void @testPR4185() {
+define void @testPR4185() nounwind {
 ; CHECK-LABEL: testPR4185:
 ; CHECK:       ## %bb.0: ## %return
 ; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
@@ -132,7 +132,7 @@ return:
 ; Make sure it is not duped before.
 ; Second asm kills st(0), so we shouldn't pop anything
 ; A valid alternative would be to remat the constant pool load before each inline asm.
-define void @testPR4185b() {
+define void @testPR4185b() nounwind {
 ; CHECK-LABEL: testPR4185b:
 ; CHECK:       ## %bb.0: ## %return
 ; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
@@ -151,11 +151,10 @@ return:
 
 ; PR4459
 ; The return value from ceil must be duped before being consumed by asm.
-define void @testPR4459(x86_fp80 %a) {
+define void @testPR4459(x86_fp80 %a) nounwind {
 ; CHECK-LABEL: testPR4459:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll _ceil
@@ -180,11 +179,10 @@ declare x86_fp80 @ceil(x86_fp80)
 ; test1 leaves a value on the stack that is needed after the asm.
 ; Load %a from stack after ceil
 ; Set up call to test.
-define void @testPR4484(x86_fp80 %a) {
+define void @testPR4484(x86_fp80 %a) nounwind {
 ; CHECK-LABEL: testPR4484:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
 ; CHECK-NEXT:    calll _test1
@@ -204,7 +202,7 @@ entry:
 }
 
 ; PR4485
-define void @testPR4485(x86_fp80* %a) {
+define void @testPR4485(x86_fp80* %a) nounwind {
 ; CHECK-LABEL: testPR4485:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -439,11 +437,10 @@ entry:
 @fpu = external global %struct.fpu_t, align 16
 
 ; Function Attrs: ssp
-define void @test_live_st(i32 %a1) {
+define void @test_live_st(i32 %a1) nounwind {
 ; CHECK-LABEL: test_live_st:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    fldt (%eax)
 ; CHECK-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jne LBB20_2
@@ -491,7 +488,7 @@ return:
 }
 
 ; Check that x87 stackifier is correctly rewriting FP registers to ST registers.
-define double @test_operand_rewrite() {
+define double @test_operand_rewrite() nounwind {
 ; CHECK-LABEL: test_operand_rewrite:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    ## InlineAsm Start
