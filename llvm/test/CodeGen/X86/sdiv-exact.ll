@@ -83,14 +83,12 @@ define <4 x i32> @test5(<4 x i32> %x) {
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psrad $3, %xmm1
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2863311531,2863311531,3264175145,3264175145]
-; X86-NEXT:    movaps %xmm1, %xmm0
-; X86-NEXT:    pmuludq %xmm2, %xmm0
+; X86-NEXT:    movdqa {{.*#+}} xmm0 = [2863311531,2863311531,3264175145,3264175145]
+; X86-NEXT:    pmuludq %xmm1, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;
@@ -110,14 +108,12 @@ define <4 x i32> @test6(<4 x i32> %x) {
 ; X86-NEXT:    psrad $3, %xmm1
 ; X86-NEXT:    psrad $1, %xmm0
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2863311531,2863311531,3303820997,3303820997]
-; X86-NEXT:    movapd %xmm0, %xmm1
-; X86-NEXT:    pmuludq %xmm2, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,2863311531,3303820997,3303820997]
+; X86-NEXT:    pmuludq %xmm0, %xmm1
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; X86-NEXT:    pmuludq %xmm0, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -134,12 +130,10 @@ define <4 x i32> @test6(<4 x i32> %x) {
 define <4 x i32> @test7(<4 x i32> %x) {
 ; X86-LABEL: test7:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [3264175145,3264175145,1749801491,1749801491]
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; X86-NEXT:    pmuludq %xmm1, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X86-NEXT:    pmuludq %xmm2, %xmm1
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
@@ -158,14 +152,12 @@ define <4 x i32> @test8(<4 x i32> %x) {
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psrad $3, %xmm1
 ; X86-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,2863311531,2863311531]
-; X86-NEXT:    movapd %xmm1, %xmm0
-; X86-NEXT:    pmuludq %xmm2, %xmm0
+; X86-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,2863311531,2863311531]
+; X86-NEXT:    pmuludq %xmm1, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;

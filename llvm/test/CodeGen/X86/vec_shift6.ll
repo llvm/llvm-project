@@ -118,7 +118,7 @@ define <8 x i32> @test6(<8 x i32> %a) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm2, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,8,8]
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
@@ -191,7 +191,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[1,1,3,3]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [2,2,8,8]
 ; SSE2-NEXT:    pmuludq %xmm6, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]

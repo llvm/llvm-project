@@ -37759,10 +37759,11 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
       return SDValue();
   }
 
-  // Only fold if at least one of the constants is only used once or
-  // the combined shuffle has included a variable mask shuffle, this
-  // is to avoid constant pool bloat.
-  if (!OneUseConstantOp && !HasVariableMask)
+  // If we're optimizing for size, only fold if at least one of the constants is
+  // only used once or the combined shuffle has included a variable mask
+  // shuffle, this is to avoid constant pool bloat.
+  bool IsOptimizingSize = DAG.shouldOptForSize();
+  if (IsOptimizingSize && !OneUseConstantOp && !HasVariableMask)
     return SDValue();
 
   // Shuffle the constant bits according to the mask.
