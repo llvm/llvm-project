@@ -174,26 +174,18 @@ set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 declare_mlir_python_extension(MLIRPythonExtension.Core
   MODULE_NAME _mlir
   ADD_TO_PARENT MLIRPythonSources.Core
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    DialectLinalg.cpp  # TODO: Break this out.
-    DialectSparseTensor.cpp  # TODO: Break this out.
-    MainModule.cpp
-    IRAffine.cpp
-    IRAttributes.cpp
-    IRCore.cpp
-    IRInterfaces.cpp
-    IRModule.cpp
-    IRTypes.cpp
-    PybindUtils.cpp
-    Pass.cpp
-
-    # Headers must be included explicitly so they are installed.
-    Dialects.h
-    Globals.h
-    IRModule.h
-    Pass.h
-    PybindUtils.h
+    ${PYTHON_SOURCE_DIR}/DialectLinalg.cpp  # TODO: Break this out.
+    ${PYTHON_SOURCE_DIR}/DialectSparseTensor.cpp  # TODO: Break this out.
+    ${PYTHON_SOURCE_DIR}/MainModule.cpp
+    ${PYTHON_SOURCE_DIR}/IRAffine.cpp
+    ${PYTHON_SOURCE_DIR}/IRAttributes.cpp
+    ${PYTHON_SOURCE_DIR}/IRCore.cpp
+    ${PYTHON_SOURCE_DIR}/IRInterfaces.cpp
+    ${PYTHON_SOURCE_DIR}/IRModule.cpp
+    ${PYTHON_SOURCE_DIR}/IRTypes.cpp
+    ${PYTHON_SOURCE_DIR}/PybindUtils.cpp
+    ${PYTHON_SOURCE_DIR}/Pass.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -210,9 +202,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
 
 declare_mlir_python_extension(MLIRPythonExtension.AllPassesRegistration
   MODULE_NAME _mlirAllPassesRegistration
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    AllPassesRegistration.cpp
+    ${PYTHON_SOURCE_DIR}/AllPassesRegistration.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -223,9 +214,8 @@ declare_mlir_python_extension(MLIRPythonExtension.AllPassesRegistration
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
   MODULE_NAME _mlirAsyncPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.async_dialect
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    AsyncPasses.cpp
+    ${PYTHON_SOURCE_DIR}/AsyncPasses.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -235,9 +225,8 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
 declare_mlir_python_extension(MLIRPythonExtension.Conversions
   MODULE_NAME _mlirConversions
   ADD_TO_PARENT MLIRPythonSources.Passes
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    Conversions/Conversions.cpp
+    ${PYTHON_SOURCE_DIR}/Conversions/Conversions.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -247,9 +236,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Conversions
 declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
   MODULE_NAME _mlirExecutionEngine
   ADD_TO_PARENT MLIRPythonSources.ExecutionEngine
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    ExecutionEngineModule.cpp
+    ${PYTHON_SOURCE_DIR}/ExecutionEngineModule.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -259,9 +247,8 @@ declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
 declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
   MODULE_NAME _mlirGPUPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.gpu
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    GPUPasses.cpp
+    ${PYTHON_SOURCE_DIR}/GPUPasses.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -271,9 +258,8 @@ declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
 declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
   MODULE_NAME _mlirLinalgPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.linalg
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    LinalgPasses.cpp
+    ${PYTHON_SOURCE_DIR}/LinalgPasses.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -283,9 +269,8 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
   MODULE_NAME _mlirSparseTensorPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.sparse_tensor
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    SparseTensorPasses.cpp
+    ${PYTHON_SOURCE_DIR}/SparseTensorPasses.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -295,9 +280,8 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
 declare_mlir_python_extension(MLIRPythonExtension.Transforms
   MODULE_NAME _mlirTransforms
   ADD_TO_PARENT MLIRPythonSources.Passes
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    Transforms/Transforms.cpp
+    ${PYTHON_SOURCE_DIR}/Transforms/Transforms.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
