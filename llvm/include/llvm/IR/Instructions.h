@@ -3515,12 +3515,9 @@ public:
   /// default case iterator to indicate that it is handled by the default
   /// handler.
   CaseIt findCaseValue(const ConstantInt *C) {
-    CaseIt I = llvm::find_if(
-        cases(), [C](CaseHandle &Case) { return Case.getCaseValue() == C; });
-    if (I != case_end())
-      return I;
-
-    return case_default();
+    return CaseIt(
+        this,
+        const_cast<const SwitchInst *>(this)->findCaseValue(C)->getCaseIndex());
   }
   ConstCaseIt findCaseValue(const ConstantInt *C) const {
     ConstCaseIt I = llvm::find_if(cases(), [C](ConstCaseHandle &Case) {

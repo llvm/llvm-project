@@ -620,20 +620,54 @@ cc_library(
     ],
 )
 
+MLIR_PYTHON_BINDINGS_SOURCES = [
+    "lib/Bindings/Python/DialectLinalg.cpp",
+    "lib/Bindings/Python/DialectSparseTensor.cpp",
+    "lib/Bindings/Python/IRAffine.cpp",
+    "lib/Bindings/Python/IRAttributes.cpp",
+    "lib/Bindings/Python/IRCore.cpp",
+    "lib/Bindings/Python/IRInterfaces.cpp",
+    "lib/Bindings/Python/IRModule.cpp",
+    "lib/Bindings/Python/IRTypes.cpp",
+    "lib/Bindings/Python/Pass.cpp",
+    "lib/Bindings/Python/PybindUtils.cpp",
+]
+
+cc_library(
+    name = "MLIRBindingsPythonCore",
+    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
+    # These flags are needed for pybind11 to work.
+    copts = [
+        "-fexceptions",
+        "-frtti",
+    ],
+    features = [
+        # Cannot use header_modules (parse_headers feature fails).
+        "-use_header_modules",
+    ],
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIAsync",
+        ":CAPIDebug",
+        ":CAPIGPU",
+        ":CAPIIR",
+        ":CAPIInterfaces",
+        ":CAPILinalg",
+        ":CAPIRegistration",
+        ":CAPISparseTensor",
+        ":MLIRBindingsPythonHeadersAndDeps",
+        "//llvm:Support",
+        "@pybind11",
+        "@python_runtime//:headers",
+    ],
+)
+
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
-    srcs = [
-        "lib/Bindings/Python/DialectLinalg.cpp",
-        "lib/Bindings/Python/DialectSparseTensor.cpp",
-        "lib/Bindings/Python/IRAffine.cpp",
-        "lib/Bindings/Python/IRAttributes.cpp",
-        "lib/Bindings/Python/IRCore.cpp",
-        "lib/Bindings/Python/IRInterfaces.cpp",
-        "lib/Bindings/Python/IRModule.cpp",
-        "lib/Bindings/Python/IRTypes.cpp",
-        "lib/Bindings/Python/Pass.cpp",
-        "lib/Bindings/Python/PybindUtils.cpp",
-    ],
+    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
     # These flags are needed for pybind11 to work.
     copts = [
         "-fexceptions",
@@ -662,24 +696,8 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "MLIRBindingsPythonCAPIDeps",
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
-    deps = [
-        ":CAPIAsync",
-        ":CAPIDebug",
-        ":CAPIGPU",
-        ":CAPIIR",
-        ":CAPIInterfaces",
-        ":CAPILinalg",
-        ":CAPIRegistration",
-        ":CAPISparseTensor",
-    ],
-)
-
+# Target that bundles together the CAPI objects needed for
+# MLIRBindingsPythonCoreNoCAPI.
 cc_library(
     name = "MLIRBindingsPythonCAPIObjects",
     tags = [
@@ -695,18 +713,6 @@ cc_library(
         ":CAPILinalgObjects",
         ":CAPIRegistrationObjects",
         ":CAPISparseTensorObjects",
-    ],
-)
-
-cc_library(
-    name = "MLIRBindingsPythonCore",
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
-    deps = [
-        ":MLIRBindingsPythonCAPIDeps",
-        ":MLIRBindingsPythonCoreNoCAPI",
     ],
 )
 

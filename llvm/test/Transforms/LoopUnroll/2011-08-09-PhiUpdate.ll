@@ -33,16 +33,13 @@ define i32 @foo() uwtable ssp align 2 {
 ; CHECK:       do.cond:
 ; CHECK-NEXT:    [[CMP18:%.*]] = icmp sgt i32 [[CALL2]], -1
 ; CHECK-NEXT:    br i1 [[CMP18]], label [[LAND_LHS_TRUE_I_1:%.*]], label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[TMP7_I]], [[LAND_LHS_TRUE]] ], [ 0, [[DO_COND]] ], [ [[TMP7_I_1:%.*]], [[LAND_LHS_TRUE_1:%.*]] ], [ 0, [[DO_COND_1:%.*]] ], [ [[TMP7_I_2:%.*]], [[LAND_LHS_TRUE_2:%.*]] ], [ 0, [[DO_COND_2:%.*]] ], [ [[TMP7_I_3:%.*]], [[LAND_LHS_TRUE_3:%.*]] ], [ 0, [[DO_COND_3:%.*]] ]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ; CHECK:       land.lhs.true.i.1:
 ; CHECK-NEXT:    [[CMP4_I_1:%.*]] = call zeroext i1 @check() #[[ATTR0]]
-; CHECK-NEXT:    br i1 [[CMP4_I_1]], label [[BAR_EXIT_1:%.*]], label [[DO_COND_1]]
+; CHECK-NEXT:    br i1 [[CMP4_I_1]], label [[BAR_EXIT_1:%.*]], label [[DO_COND_1:%.*]]
 ; CHECK:       bar.exit.1:
-; CHECK-NEXT:    [[TMP7_I_1]] = call i32 @getval() #[[ATTR0]]
+; CHECK-NEXT:    [[TMP7_I_1:%.*]] = call i32 @getval() #[[ATTR0]]
 ; CHECK-NEXT:    [[CMP_NOT_1:%.*]] = icmp eq i32 [[TMP7_I_1]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT_1]], label [[DO_COND_1]], label [[LAND_LHS_TRUE_1]]
+; CHECK-NEXT:    br i1 [[CMP_NOT_1]], label [[DO_COND_1]], label [[LAND_LHS_TRUE_1:%.*]]
 ; CHECK:       land.lhs.true.1:
 ; CHECK-NEXT:    [[CALL10_1:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    [[CMP11_1:%.*]] = icmp eq i32 [[CALL10_1]], 0
@@ -52,11 +49,11 @@ define i32 @foo() uwtable ssp align 2 {
 ; CHECK-NEXT:    br i1 [[CMP18_1]], label [[LAND_LHS_TRUE_I_2:%.*]], label [[RETURN]]
 ; CHECK:       land.lhs.true.i.2:
 ; CHECK-NEXT:    [[CMP4_I_2:%.*]] = call zeroext i1 @check() #[[ATTR0]]
-; CHECK-NEXT:    br i1 [[CMP4_I_2]], label [[BAR_EXIT_2:%.*]], label [[DO_COND_2]]
+; CHECK-NEXT:    br i1 [[CMP4_I_2]], label [[BAR_EXIT_2:%.*]], label [[DO_COND_2:%.*]]
 ; CHECK:       bar.exit.2:
-; CHECK-NEXT:    [[TMP7_I_2]] = call i32 @getval() #[[ATTR0]]
+; CHECK-NEXT:    [[TMP7_I_2:%.*]] = call i32 @getval() #[[ATTR0]]
 ; CHECK-NEXT:    [[CMP_NOT_2:%.*]] = icmp eq i32 [[TMP7_I_2]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT_2]], label [[DO_COND_2]], label [[LAND_LHS_TRUE_2]]
+; CHECK-NEXT:    br i1 [[CMP_NOT_2]], label [[DO_COND_2]], label [[LAND_LHS_TRUE_2:%.*]]
 ; CHECK:       land.lhs.true.2:
 ; CHECK-NEXT:    [[CALL10_2:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    [[CMP11_2:%.*]] = icmp eq i32 [[CALL10_2]], 0
@@ -66,11 +63,11 @@ define i32 @foo() uwtable ssp align 2 {
 ; CHECK-NEXT:    br i1 [[CMP18_2]], label [[LAND_LHS_TRUE_I_3:%.*]], label [[RETURN]]
 ; CHECK:       land.lhs.true.i.3:
 ; CHECK-NEXT:    [[CMP4_I_3:%.*]] = call zeroext i1 @check() #[[ATTR0]]
-; CHECK-NEXT:    br i1 [[CMP4_I_3]], label [[BAR_EXIT_3:%.*]], label [[DO_COND_3]]
+; CHECK-NEXT:    br i1 [[CMP4_I_3]], label [[BAR_EXIT_3:%.*]], label [[DO_COND_3:%.*]]
 ; CHECK:       bar.exit.3:
-; CHECK-NEXT:    [[TMP7_I_3]] = call i32 @getval() #[[ATTR0]]
+; CHECK-NEXT:    [[TMP7_I_3:%.*]] = call i32 @getval() #[[ATTR0]]
 ; CHECK-NEXT:    [[CMP_NOT_3:%.*]] = icmp eq i32 [[TMP7_I_3]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT_3]], label [[DO_COND_3]], label [[LAND_LHS_TRUE_3]]
+; CHECK-NEXT:    br i1 [[CMP_NOT_3]], label [[DO_COND_3]], label [[LAND_LHS_TRUE_3:%.*]]
 ; CHECK:       land.lhs.true.3:
 ; CHECK-NEXT:    [[CALL10_3:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    [[CMP11_3:%.*]] = icmp eq i32 [[CALL10_3]], 0
@@ -78,6 +75,9 @@ define i32 @foo() uwtable ssp align 2 {
 ; CHECK:       do.cond.3:
 ; CHECK-NEXT:    [[CMP18_3:%.*]] = icmp sgt i32 [[CALL2]], -1
 ; CHECK-NEXT:    br i1 [[CMP18_3]], label [[LAND_LHS_TRUE_I]], label [[RETURN]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[TMP7_I]], [[LAND_LHS_TRUE]] ], [ 0, [[DO_COND]] ], [ [[TMP7_I_1]], [[LAND_LHS_TRUE_1]] ], [ 0, [[DO_COND_1]] ], [ [[TMP7_I_2]], [[LAND_LHS_TRUE_2]] ], [ 0, [[DO_COND_2]] ], [ [[TMP7_I_3]], [[LAND_LHS_TRUE_3]] ], [ 0, [[DO_COND_3]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   br i1 undef, label %return, label %if.end

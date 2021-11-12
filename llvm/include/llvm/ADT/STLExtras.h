@@ -671,9 +671,7 @@ protected:
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
-  value_type operator*() { return deref(std::index_sequence_for<Iters...>{}); }
-
-  const value_type operator*() const {
+  value_type operator*() const {
     return deref(std::index_sequence_for<Iters...>{});
   }
 
@@ -843,8 +841,6 @@ public:
   zip_longest_iterator(std::pair<Iters &&, Iters &&>... ts)
       : iterators(std::forward<Iters>(ts.first)...),
         end_iterators(std::forward<Iters>(ts.second)...) {}
-
-  value_type operator*() { return deref(std::index_sequence_for<Iters...>{}); }
 
   value_type operator*() const {
     return deref(std::index_sequence_for<Iters...>{});
@@ -1939,8 +1935,7 @@ template <typename R> struct result_pair {
   }
 
   std::size_t index() const { return Index; }
-  const value_reference value() const { return *Iter; }
-  value_reference value() { return *Iter; }
+  value_reference value() const { return *Iter; }
 
 private:
   std::size_t Index = std::numeric_limits<std::size_t>::max();
@@ -1949,11 +1944,8 @@ private:
 
 template <typename R>
 class enumerator_iter
-    : public iterator_facade_base<
-          enumerator_iter<R>, std::forward_iterator_tag, result_pair<R>,
-          typename std::iterator_traits<IterOfRange<R>>::difference_type,
-          typename std::iterator_traits<IterOfRange<R>>::pointer,
-          typename std::iterator_traits<IterOfRange<R>>::reference> {
+    : public iterator_facade_base<enumerator_iter<R>, std::forward_iterator_tag,
+                                  const result_pair<R>> {
   using result_type = result_pair<R>;
 
 public:
@@ -1963,7 +1955,6 @@ public:
   enumerator_iter(std::size_t Index, IterOfRange<R> Iter)
       : Result(Index, Iter) {}
 
-  result_type &operator*() { return Result; }
   const result_type &operator*() const { return Result; }
 
   enumerator_iter &operator++() {

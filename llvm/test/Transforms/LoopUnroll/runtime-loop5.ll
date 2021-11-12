@@ -19,47 +19,47 @@ define i3 @test(i3* %a, i3 %n) {
 ; UNROLL-16-NEXT:    [[TMP0:%.*]] = load i3, i3* [[A:%.*]], align 1
 ; UNROLL-16-NEXT:    [[EXITCOND:%.*]] = icmp eq i3 1, [[N]]
 ; UNROLL-16-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY_1:%.*]]
+; UNROLL-16:       for.body.1:
+; UNROLL-16-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 1
+; UNROLL-16-NEXT:    [[TMP1:%.*]] = load i3, i3* [[ARRAYIDX_1]], align 1
+; UNROLL-16-NEXT:    [[ADD_1:%.*]] = add nsw i3 [[TMP1]], [[TMP0]]
+; UNROLL-16-NEXT:    [[EXITCOND_1:%.*]] = icmp eq i3 2, [[N]]
+; UNROLL-16-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_2:%.*]]
+; UNROLL-16:       for.body.2:
+; UNROLL-16-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 2
+; UNROLL-16-NEXT:    [[TMP2:%.*]] = load i3, i3* [[ARRAYIDX_2]], align 1
+; UNROLL-16-NEXT:    [[ADD_2:%.*]] = add nsw i3 [[TMP2]], [[ADD_1]]
+; UNROLL-16-NEXT:    [[EXITCOND_2:%.*]] = icmp eq i3 3, [[N]]
+; UNROLL-16-NEXT:    br i1 [[EXITCOND_2]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_3:%.*]]
+; UNROLL-16:       for.body.3:
+; UNROLL-16-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 3
+; UNROLL-16-NEXT:    [[TMP3:%.*]] = load i3, i3* [[ARRAYIDX_3]], align 1
+; UNROLL-16-NEXT:    [[ADD_3:%.*]] = add nsw i3 [[TMP3]], [[ADD_2]]
+; UNROLL-16-NEXT:    [[EXITCOND_3:%.*]] = icmp eq i3 -4, [[N]]
+; UNROLL-16-NEXT:    br i1 [[EXITCOND_3]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_4:%.*]]
+; UNROLL-16:       for.body.4:
+; UNROLL-16-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 4
+; UNROLL-16-NEXT:    [[TMP4:%.*]] = load i3, i3* [[ARRAYIDX_4]], align 1
+; UNROLL-16-NEXT:    [[ADD_4:%.*]] = add nsw i3 [[TMP4]], [[ADD_3]]
+; UNROLL-16-NEXT:    [[EXITCOND_4:%.*]] = icmp eq i3 -3, [[N]]
+; UNROLL-16-NEXT:    br i1 [[EXITCOND_4]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_5:%.*]]
+; UNROLL-16:       for.body.5:
+; UNROLL-16-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 5
+; UNROLL-16-NEXT:    [[TMP5:%.*]] = load i3, i3* [[ARRAYIDX_5]], align 1
+; UNROLL-16-NEXT:    [[ADD_5:%.*]] = add nsw i3 [[TMP5]], [[ADD_4]]
+; UNROLL-16-NEXT:    [[EXITCOND_5:%.*]] = icmp eq i3 -2, [[N]]
+; UNROLL-16-NEXT:    br i1 [[EXITCOND_5]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_6:%.*]]
+; UNROLL-16:       for.body.6:
+; UNROLL-16-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 6
+; UNROLL-16-NEXT:    [[TMP6:%.*]] = load i3, i3* [[ARRAYIDX_6]], align 1
+; UNROLL-16-NEXT:    [[ADD_6:%.*]] = add nsw i3 [[TMP6]], [[ADD_5]]
+; UNROLL-16-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ; UNROLL-16:       for.end.loopexit:
-; UNROLL-16-NEXT:    [[ADD_LCSSA:%.*]] = phi i3 [ [[TMP0]], [[FOR_BODY]] ], [ [[ADD_1:%.*]], [[FOR_BODY_1]] ], [ [[ADD_2:%.*]], [[FOR_BODY_2:%.*]] ], [ [[ADD_3:%.*]], [[FOR_BODY_3:%.*]] ], [ [[ADD_4:%.*]], [[FOR_BODY_4:%.*]] ], [ [[ADD_5:%.*]], [[FOR_BODY_5:%.*]] ], [ [[ADD_6:%.*]], [[FOR_BODY_6:%.*]] ]
+; UNROLL-16-NEXT:    [[ADD_LCSSA:%.*]] = phi i3 [ [[TMP0]], [[FOR_BODY]] ], [ [[ADD_1]], [[FOR_BODY_1]] ], [ [[ADD_2]], [[FOR_BODY_2]] ], [ [[ADD_3]], [[FOR_BODY_3]] ], [ [[ADD_4]], [[FOR_BODY_4]] ], [ [[ADD_5]], [[FOR_BODY_5]] ], [ [[ADD_6]], [[FOR_BODY_6]] ]
 ; UNROLL-16-NEXT:    br label [[FOR_END]]
 ; UNROLL-16:       for.end:
 ; UNROLL-16-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i3 [ 0, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_END_LOOPEXIT]] ]
 ; UNROLL-16-NEXT:    ret i3 [[SUM_0_LCSSA]]
-; UNROLL-16:       for.body.1:
-; UNROLL-16-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 1
-; UNROLL-16-NEXT:    [[TMP1:%.*]] = load i3, i3* [[ARRAYIDX_1]], align 1
-; UNROLL-16-NEXT:    [[ADD_1]] = add nsw i3 [[TMP1]], [[TMP0]]
-; UNROLL-16-NEXT:    [[EXITCOND_1:%.*]] = icmp eq i3 2, [[N]]
-; UNROLL-16-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_2]]
-; UNROLL-16:       for.body.2:
-; UNROLL-16-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 2
-; UNROLL-16-NEXT:    [[TMP2:%.*]] = load i3, i3* [[ARRAYIDX_2]], align 1
-; UNROLL-16-NEXT:    [[ADD_2]] = add nsw i3 [[TMP2]], [[ADD_1]]
-; UNROLL-16-NEXT:    [[EXITCOND_2:%.*]] = icmp eq i3 3, [[N]]
-; UNROLL-16-NEXT:    br i1 [[EXITCOND_2]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_3]]
-; UNROLL-16:       for.body.3:
-; UNROLL-16-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 3
-; UNROLL-16-NEXT:    [[TMP3:%.*]] = load i3, i3* [[ARRAYIDX_3]], align 1
-; UNROLL-16-NEXT:    [[ADD_3]] = add nsw i3 [[TMP3]], [[ADD_2]]
-; UNROLL-16-NEXT:    [[EXITCOND_3:%.*]] = icmp eq i3 -4, [[N]]
-; UNROLL-16-NEXT:    br i1 [[EXITCOND_3]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_4]]
-; UNROLL-16:       for.body.4:
-; UNROLL-16-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 4
-; UNROLL-16-NEXT:    [[TMP4:%.*]] = load i3, i3* [[ARRAYIDX_4]], align 1
-; UNROLL-16-NEXT:    [[ADD_4]] = add nsw i3 [[TMP4]], [[ADD_3]]
-; UNROLL-16-NEXT:    [[EXITCOND_4:%.*]] = icmp eq i3 -3, [[N]]
-; UNROLL-16-NEXT:    br i1 [[EXITCOND_4]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_5]]
-; UNROLL-16:       for.body.5:
-; UNROLL-16-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 5
-; UNROLL-16-NEXT:    [[TMP5:%.*]] = load i3, i3* [[ARRAYIDX_5]], align 1
-; UNROLL-16-NEXT:    [[ADD_5]] = add nsw i3 [[TMP5]], [[ADD_4]]
-; UNROLL-16-NEXT:    [[EXITCOND_5:%.*]] = icmp eq i3 -2, [[N]]
-; UNROLL-16-NEXT:    br i1 [[EXITCOND_5]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY_6]]
-; UNROLL-16:       for.body.6:
-; UNROLL-16-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 6
-; UNROLL-16-NEXT:    [[TMP6:%.*]] = load i3, i3* [[ARRAYIDX_6]], align 1
-; UNROLL-16-NEXT:    [[ADD_6]] = add nsw i3 [[TMP6]], [[ADD_5]]
-; UNROLL-16-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ;
 ; UNROLL-4-LABEL: @test(
 ; UNROLL-4-NEXT:  entry:

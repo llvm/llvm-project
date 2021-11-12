@@ -181,6 +181,7 @@ public:
 
   FullComment *actOnFullComment(ArrayRef<BlockContentComment *> Blocks);
 
+private:
   void checkBlockCommandEmptyParagraph(BlockCommandComment *Command);
 
   void checkReturnsCommand(const BlockCommandComment *Command);
@@ -200,6 +201,10 @@ public:
   /// Resolve parameter names to parameter indexes in function declaration.
   /// Emit diagnostics about unknown parametrs.
   void resolveParamCommandIndexes(const FullComment *FC);
+
+  /// \returns \c true if the declaration that this comment is attached to
+  /// is a pointer to function/method/block type or has such a type.
+  bool involvesFunctionType();
 
   bool isFunctionDecl();
   bool isAnyFunctionDecl();

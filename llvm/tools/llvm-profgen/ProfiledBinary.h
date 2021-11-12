@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 
 #include "CallContext.h"
+#include "ErrorHandling.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -260,6 +261,9 @@ class ProfiledBinary {
   // this to set whether start offset of a function is the real entry of the
   // function and also set false to the non-function label.
   void setIsFuncEntry(uint64_t Offset, StringRef RangeSymName);
+
+  // Warn if no entry range exists in the function.
+  void warnNoFuncEntry();
 
   /// Dissassemble the text section and build various address maps.
   void disassemble(const ELFObjectFileBase *O);
