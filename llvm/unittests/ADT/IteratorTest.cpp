@@ -55,7 +55,7 @@ using IsAdaptedIterCategorySame =
 // Check that dereferencing works correctly adapting pointers and proxies.
 template <class T>
 struct PointerWrapper : public iterator_adaptor_base<PointerWrapper<T>, T *> {
-  PointerWrapper(T *I) : iterator_adaptor_base<PointerWrapper, T *>(I) {}
+  PointerWrapper(T *I) : PointerWrapper::iterator_adaptor_base(I) {}
 };
 struct IntProxy {
   int &I;
@@ -71,10 +71,7 @@ struct PointerProxyWrapper
     : public iterator_adaptor_base<PointerProxyWrapper<T, ProxyT>, T *,
                                    std::random_access_iterator_tag, T,
                                    ptrdiff_t, T *, ProxyT> {
-  PointerProxyWrapper(T *I)
-      : iterator_adaptor_base<PointerProxyWrapper, T *,
-                              std::random_access_iterator_tag, T, ptrdiff_t,
-                              T *, ProxyT>(I) {}
+  PointerProxyWrapper(T *I) : PointerProxyWrapper::iterator_adaptor_base(I) {}
 };
 using IntIterator = PointerWrapper<int>;
 using ConstIntIterator = PointerWrapper<const int>;
@@ -318,10 +315,7 @@ TEST(FilterIteratorTest, Composition) {
 TEST(FilterIteratorTest, InputIterator) {
   struct InputIterator
       : iterator_adaptor_base<InputIterator, int *, std::input_iterator_tag> {
-    using BaseT =
-        iterator_adaptor_base<InputIterator, int *, std::input_iterator_tag>;
-
-    InputIterator(int *It) : BaseT(It) {}
+    InputIterator(int *It) : InputIterator::iterator_adaptor_base(It) {}
   };
 
   auto IsOdd = [](int N) { return N % 2 == 1; };
