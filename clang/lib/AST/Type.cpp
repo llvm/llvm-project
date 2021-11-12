@@ -4400,10 +4400,10 @@ void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
 }
 
 AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-                   TypeDependence ExtraDependence, QualType Canon,
+                   TypeDependence ExtraDependence,
                    ConceptDecl *TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
-    : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
+    : DeducedType(Auto, DeducedAsType, ExtraDependence) {
   AutoTypeBits.Keyword = (unsigned)Keyword;
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;

@@ -43,7 +43,7 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
               namespace ns1 { struct S {}; }
               ^auto v = ns1::S{};
           )cpp",
-          "ns1::S",
+          "struct ns1::S",
       },
       {
           R"cpp( // decltype on struct
@@ -63,7 +63,7 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
             ns1::S& j = i;
             ^decltype(auto) k = j;
           )cpp",
-          "ns1::S &",
+          "struct ns1::S &",
       },
       {
           R"cpp( // auto on template class
@@ -71,7 +71,7 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
               template<typename T> class Foo {};
               ^auto v = Foo<X>();
           )cpp",
-          "Foo<class X>",
+          "class Foo<class X>",
       },
       {
           R"cpp( // auto on initializer list.
@@ -177,7 +177,8 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
             using Bar = Foo;
             ^auto x = Bar();
           )cpp",
-          "Bar",
+          // FIXME: it'd be nice if this resolved to the alias instead
+          "struct Foo",
       },
   };
   for (Test T : Tests) {

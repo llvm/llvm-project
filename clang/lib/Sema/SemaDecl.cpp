@@ -3613,14 +3613,14 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       // defined, copy the deduced value from the old declaration.
       AutoType *OldAT = Old->getReturnType()->getContainedAutoType();
       if (OldAT && OldAT->isDeduced()) {
-        QualType DT = OldAT->getDeducedType();
-        if (DT.isNull()) {
-          New->setType(SubstAutoTypeDependent(New->getType()));
-          NewQType = Context.getCanonicalType(SubstAutoTypeDependent(NewQType));
-        } else {
-          New->setType(SubstAutoType(New->getType(), DT));
-          NewQType = Context.getCanonicalType(SubstAutoType(NewQType, DT));
-        }
+        New->setType(
+            SubstAutoType(New->getType(),
+                          OldAT->isDependentType() ? Context.DependentTy
+                                                   : OldAT->getDeducedType()));
+        NewQType = Context.getCanonicalType(
+            SubstAutoType(NewQType,
+                          OldAT->isDependentType() ? Context.DependentTy
+                                                   : OldAT->getDeducedType()));
       }
     }
 
@@ -9258,7 +9258,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // a friend yet, so 'isDependentContext' on the FD doesn't work.
       const FunctionProtoType *FPT =
           NewFD->getType()->castAs<FunctionProtoType>();
-      QualType Result = SubstAutoTypeDependent(FPT->getReturnType());
+      QualType Result =
+          SubstAutoType(FPT->getReturnType(), Context.DependentTy);
       NewFD->setType(Context.getFunctionType(Result, FPT->getParamTypes(),
                                              FPT->getExtProtoInfo()));
     }
@@ -12349,7 +12350,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
                                    /*TreatUnavailableAsInvalid=*/false);
     ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
     if (Result.isInvalid()) {
-      // If the provided initializer fails to initialize the var decl,
+      // If the provied initializer fails to initialize the var decl,
       // we attach a recovery expr for better recovery.
       auto RecoveryExpr =
           CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), Args);

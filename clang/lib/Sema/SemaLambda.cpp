@@ -373,7 +373,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
     const FunctionProtoType *FPT = MethodType->castAs<FunctionProtoType>();
     QualType Result = FPT->getReturnType();
     if (Result->isUndeducedType()) {
-      Result = SubstAutoTypeDependent(Result);
+      Result = SubstAutoType(Result, Context.DependentTy);
       MethodType = Context.getFunctionType(Result, FPT->getParamTypes(),
                                            FPT->getExtProtoInfo());
     }

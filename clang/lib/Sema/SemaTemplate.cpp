@@ -1259,15 +1259,15 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL, NonTypeTemplateParmDecl *NTTP,
       BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, NTTP->getLocation());
   if (!Ref)
     return true;
-  ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
-      *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
-      TL.getNamedConcept(), TL.getLAngleLoc(), TL.getRAngleLoc(),
-      BuildDecltypeType(Ref), NTTP->getLocation(),
-      [&](TemplateArgumentListInfo &ConstraintArgs) {
-        for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
-          ConstraintArgs.addArgument(TL.getArgLoc(I));
-      },
-      EllipsisLoc);
+  ExprResult ImmediatelyDeclaredConstraint =
+      formImmediatelyDeclaredConstraint(
+          *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
+          TL.getNamedConcept(), TL.getLAngleLoc(), TL.getRAngleLoc(),
+          BuildDecltypeType(Ref, NTTP->getLocation()), NTTP->getLocation(),
+          [&] (TemplateArgumentListInfo &ConstraintArgs) {
+            for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
+              ConstraintArgs.addArgument(TL.getArgLoc(I));
+          }, EllipsisLoc);
   if (ImmediatelyDeclaredConstraint.isInvalid() ||
      !ImmediatelyDeclaredConstraint.isUsable())
     return true;
@@ -1289,7 +1289,7 @@ QualType Sema::CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
     //    - an identifier associated by name lookup with a non-type
     //      template-parameter declared with a type that contains a
     //      placeholder type (7.1.7.4),
-    TSI = SubstAutoTypeSourceInfoDependent(TSI);
+    TSI = SubstAutoTypeSourceInfo(TSI, Context.DependentTy);
   }
 
   return CheckNonTypeTemplateParameterType(TSI->getType(), Loc);
@@ -10873,7 +10873,7 @@ bool Sema::RebuildTemplateParamsInCurrentInstantiation(
       //    - an identifier associated by name lookup with a non-type
       //      template-parameter declared with a type that contains a
       //      placeholder type (7.1.7.4),
-      NewTSI = SubstAutoTypeSourceInfoDependent(NewTSI);
+      NewTSI = SubstAutoTypeSourceInfo(NewTSI, Context.DependentTy);
     }
 
     if (NewTSI != NTTP->getTypeSourceInfo()) {

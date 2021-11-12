@@ -1531,12 +1531,6 @@ private:
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
                                    bool OnlyWantCanonical) const;
-  QualType
-  getAutoTypeInternal(QualType DeducedType, AutoTypeKeyword Keyword,
-                      bool IsDependent, bool IsPack = false,
-                      ConceptDecl *TypeConstraintConcept = nullptr,
-                      ArrayRef<TemplateArgument> TypeConstraintArgs = {},
-                      bool IsCanon = false) const;
 
 public:
   /// Return the unique reference to the type for the specified type
