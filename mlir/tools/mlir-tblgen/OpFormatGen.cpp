@@ -9,10 +9,10 @@
 #include "OpFormatGen.h"
 #include "FormatGen.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
-#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/MapVector.h"
@@ -140,8 +140,7 @@ using SuccessorVariable =
 
 namespace {
 /// This class implements single kind directives.
-template <Element::Kind type>
-class DirectiveElement : public Element {
+template <Element::Kind type> class DirectiveElement : public Element {
 public:
   DirectiveElement() : Element(type){};
   static bool classof(const Element *ele) { return ele->getKind() == type; }
@@ -422,23 +421,23 @@ struct OperationFormat {
   /// Generate the operation parser from this format.
   void genParser(Operator &op, OpClass &opClass);
   /// Generate the parser code for a specific format element.
-  void genElementParser(Element *element, OpMethodBody &body,
+  void genElementParser(Element *element, MethodBody &body,
                         FmtContext &attrTypeCtx);
   /// Generate the c++ to resolve the types of operands and results during
   /// parsing.
-  void genParserTypeResolution(Operator &op, OpMethodBody &body);
+  void genParserTypeResolution(Operator &op, MethodBody &body);
   /// Generate the c++ to resolve regions during parsing.
-  void genParserRegionResolution(Operator &op, OpMethodBody &body);
+  void genParserRegionResolution(Operator &op, MethodBody &body);
   /// Generate the c++ to resolve successors during parsing.
-  void genParserSuccessorResolution(Operator &op, OpMethodBody &body);
+  void genParserSuccessorResolution(Operator &op, MethodBody &body);
   /// Generate the c++ to handling variadic segment size traits.
-  void genParserVariadicSegmentResolution(Operator &op, OpMethodBody &body);
+  void genParserVariadicSegmentResolution(Operator &op, MethodBody &body);
 
   /// Generate the operation printer from this format.
   void genPrinter(Operator &op, OpClass &opClass);
 
   /// Generate the printer code for a specific format element.
-  void genElementPrinter(Element *element, OpMethodBody &body, Operator &op,
+  void genElementPrinter(Element *element, MethodBody &body, Operator &op,
                          bool &shouldEmitSpace, bool &lastWasPunctuation);
 
   /// The various elements in this format.
@@ -813,7 +812,7 @@ static StringRef getTypeListName(Element *arg, ArgumentLengthKind &lengthKind) {
 }
 
 /// Generate the parser for a literal value.
-static void genLiteralParser(StringRef value, OpMethodBody &body) {
+static void genLiteralParser(StringRef value, MethodBody &body) {
   // Handle the case of a keyword/identifier.
   if (value.front() == '_' || isalpha(value.front())) {
     body << "Keyword(\"" << value << "\")";
@@ -839,7 +838,7 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
 
 /// Generate the storage code required for parsing the given element.
 static void genElementParserStorage(Element *element, const Operator &op,
-                                    OpMethodBody &body) {
+                                    MethodBody &body) {
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
     auto elements = optional->getThenElements();
 
@@ -937,7 +936,7 @@ static void genElementParserStorage(Element *element, const Operator &op,
 }
 
 /// Generate the parser for a parameter to a custom directive.
-static void genCustomParameterParser(Element &param, OpMethodBody &body) {
+static void genCustomParameterParser(Element &param, MethodBody &body) {
   if (auto *attr = dyn_cast<AttributeVariable>(&param)) {
     body << attr->getVar()->name << "Attr";
   } else if (isa<AttrDictDirective>(&param)) {
@@ -988,7 +987,7 @@ static void genCustomParameterParser(Element &param, OpMethodBody &body) {
 }
 
 /// Generate the parser for a custom directive.
-static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
+static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
   body << "  {\n";
 
   // Preprocess the directive variables.
@@ -1098,7 +1097,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
 }
 
 /// Generate the parser for a enum attribute.
-static void genEnumAttrParser(const NamedAttribute *var, OpMethodBody &body,
+static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
@@ -1141,13 +1140,12 @@ static void genEnumAttrParser(const NamedAttribute *var, OpMethodBody &body,
 }
 
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
-  llvm::SmallVector<OpMethodParameter, 4> paramList;
+  SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
   paramList.emplace_back("::mlir::OperationState &", "result");
 
-  auto *method =
-      opClass.addMethodAndPrune("::mlir::ParseResult", "parse",
-                                OpMethod::MP_Static, std::move(paramList));
+  auto *method = opClass.addStaticMethod("::mlir::ParseResult", "parse",
+                                         std::move(paramList));
   auto &body = method->body();
 
   // Generate variables to store the operands and type within the format. This
@@ -1174,7 +1172,7 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   body << "  return ::mlir::success();\n";
 }
 
-void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
+void OperationFormat::genElementParser(Element *element, MethodBody &body,
                                        FmtContext &attrTypeCtx) {
   /// Optional Group.
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
@@ -1353,8 +1351,7 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
   }
 }
 
-void OperationFormat::genParserTypeResolution(Operator &op,
-                                              OpMethodBody &body) {
+void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
   // If any of type resolutions use transformed variables, make sure that the
   // types of those variables are resolved.
   SmallPtrSet<const NamedTypeConstraint *, 8> verifiedVariables;
@@ -1528,7 +1525,7 @@ void OperationFormat::genParserTypeResolution(Operator &op,
 }
 
 void OperationFormat::genParserRegionResolution(Operator &op,
-                                                OpMethodBody &body) {
+                                                MethodBody &body) {
   // Check for the case where all regions were parsed.
   bool hasAllRegions = llvm::any_of(
       elements, [](auto &elt) { return isa<RegionsDirective>(elt.get()); });
@@ -1547,7 +1544,7 @@ void OperationFormat::genParserRegionResolution(Operator &op,
 }
 
 void OperationFormat::genParserSuccessorResolution(Operator &op,
-                                                   OpMethodBody &body) {
+                                                   MethodBody &body) {
   // Check for the case where all successors were parsed.
   bool hasAllSuccessors = llvm::any_of(
       elements, [](auto &elt) { return isa<SuccessorsDirective>(elt.get()); });
@@ -1566,7 +1563,7 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
 }
 
 void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
-                                                         OpMethodBody &body) {
+                                                         MethodBody &body) {
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
       body << "  result.addAttribute(\"operand_segment_sizes\", "
@@ -1641,7 +1638,7 @@ const char *enumAttrBeginPrinterCode = R"(
 
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
-                               OpMethodBody &body, bool withKeyword) {
+                               MethodBody &body, bool withKeyword) {
   body << "  _odsPrinter.printOptionalAttrDict"
        << (withKeyword ? "WithKeyword" : "")
        << "((*this)->getAttrs(), /*elidedAttrs=*/{";
@@ -1665,7 +1662,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
 /// space should be emitted before this element. `lastWasPunctuation` is true if
 /// the previous element was a punctuation literal.
-static void genLiteralPrinter(StringRef value, OpMethodBody &body,
+static void genLiteralPrinter(StringRef value, MethodBody &body,
                               bool &shouldEmitSpace, bool &lastWasPunctuation) {
   body << "  _odsPrinter";
 
@@ -1682,8 +1679,8 @@ static void genLiteralPrinter(StringRef value, OpMethodBody &body,
 
 /// Generate the printer for a space. `shouldEmitSpace` and `lastWasPunctuation`
 /// are set to false.
-static void genSpacePrinter(bool value, OpMethodBody &body,
-                            bool &shouldEmitSpace, bool &lastWasPunctuation) {
+static void genSpacePrinter(bool value, MethodBody &body, bool &shouldEmitSpace,
+                            bool &lastWasPunctuation) {
   if (value) {
     body << "  _odsPrinter << ' ';\n";
     lastWasPunctuation = false;
@@ -1696,7 +1693,7 @@ static void genSpacePrinter(bool value, OpMethodBody &body,
 /// Generate the printer for a custom directive parameter.
 static void genCustomDirectiveParameterPrinter(Element *element,
                                                const Operator &op,
-                                               OpMethodBody &body) {
+                                               MethodBody &body) {
   if (auto *attr = dyn_cast<AttributeVariable>(element)) {
     body << op.getGetterName(attr->getVar()->name) << "Attr()";
 
@@ -1734,7 +1731,7 @@ static void genCustomDirectiveParameterPrinter(Element *element,
 
 /// Generate the printer for a custom directive.
 static void genCustomDirectivePrinter(CustomDirective *customDir,
-                                      const Operator &op, OpMethodBody &body) {
+                                      const Operator &op, MethodBody &body) {
   body << "  print" << customDir->getName() << "(_odsPrinter, *this";
   for (Element &param : customDir->getArguments()) {
     body << ", ";
@@ -1744,7 +1741,7 @@ static void genCustomDirectivePrinter(CustomDirective *customDir,
 }
 
 /// Generate the printer for a region with the given variable name.
-static void genRegionPrinter(const Twine &regionName, OpMethodBody &body,
+static void genRegionPrinter(const Twine &regionName, MethodBody &body,
                              bool hasImplicitTermTrait) {
   if (hasImplicitTermTrait)
     body << llvm::formatv(regionSingleBlockImplicitTerminatorPrinterCode,
@@ -1753,7 +1750,7 @@ static void genRegionPrinter(const Twine &regionName, OpMethodBody &body,
     body << "  _odsPrinter.printRegion(" << regionName << ");\n";
 }
 static void genVariadicRegionPrinter(const Twine &regionListName,
-                                     OpMethodBody &body,
+                                     MethodBody &body,
                                      bool hasImplicitTermTrait) {
   body << "    llvm::interleaveComma(" << regionListName
        << ", _odsPrinter, [&](::mlir::Region &region) {\n      ";
@@ -1762,8 +1759,8 @@ static void genVariadicRegionPrinter(const Twine &regionListName,
 }
 
 /// Generate the C++ for an operand to a (*-)type directive.
-static OpMethodBody &genTypeOperandPrinter(Element *arg, const Operator &op,
-                                           OpMethodBody &body) {
+static MethodBody &genTypeOperandPrinter(Element *arg, const Operator &op,
+                                         MethodBody &body) {
   if (isa<OperandsDirective>(arg))
     return body << "getOperation()->getOperandTypes()";
   if (isa<ResultsDirective>(arg))
@@ -1786,7 +1783,7 @@ static OpMethodBody &genTypeOperandPrinter(Element *arg, const Operator &op,
 
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               OpMethodBody &body) {
+                               MethodBody &body) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
   std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
@@ -1864,7 +1861,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
 
 /// Generate the check for the anchor of an optional group.
 static void genOptionalGroupPrinterAnchor(Element *anchor, const Operator &op,
-                                          OpMethodBody &body) {
+                                          MethodBody &body) {
   TypeSwitch<Element *>(anchor)
       .Case<OperandVariable, ResultVariable>([&](auto *element) {
         const NamedTypeConstraint *var = element->getVar();
@@ -1892,7 +1889,7 @@ static void genOptionalGroupPrinterAnchor(Element *anchor, const Operator &op,
       });
 }
 
-void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
+void OperationFormat::genElementPrinter(Element *element, MethodBody &body,
                                         Operator &op, bool &shouldEmitSpace,
                                         bool &lastWasPunctuation) {
   if (LiteralElement *literal = dyn_cast<LiteralElement>(element))
@@ -2047,8 +2044,9 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
-  auto *method = opClass.addMethodAndPrune("void", "print",
-                                           "::mlir::OpAsmPrinter &_odsPrinter");
+  auto *method = opClass.addMethod(
+      "void", "print",
+      MethodParameter("::mlir::OpAsmPrinter &", "_odsPrinter"));
   auto &body = method->body();
 
   // Flags for if we should emit a space, and if the last element was
@@ -2065,8 +2063,7 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
 
 /// Function to find an element within the given range that has the same name as
 /// 'name'.
-template <typename RangeT>
-static auto findArg(RangeT &&range, StringRef name) {
+template <typename RangeT> static auto findArg(RangeT &&range, StringRef name) {
   auto it = llvm::find_if(range, [=](auto &arg) { return arg.name == name; });
   return it != range.end() ? &*it : nullptr;
 }
