@@ -30,7 +30,6 @@
 #include "deltas/ReduceModuleData.h"
 #include "deltas/ReduceOperandBundles.h"
 #include "deltas/ReduceOperands.h"
-#include "deltas/ReduceOperandsSkip.h"
 #include "deltas/ReduceOperandsToArgs.h"
 #include "deltas/ReduceSpecialGlobals.h"
 #include "llvm/Support/CommandLine.h"
@@ -59,7 +58,6 @@ static cl::opt<std::string>
   DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                       \
   DELTA_PASS("operands-undef", reduceOperandsUndefDeltaPass)                   \
   DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)                \
-  DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                     \
   DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                  \
   DELTA_PASS("attributes", reduceAttributesDeltaPass)                          \
   DELTA_PASS("module-data", reduceModuleDataDeltaPass)
