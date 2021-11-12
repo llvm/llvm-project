@@ -71,6 +71,10 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   options.analysisFuzzerSeed = analysisFuzzerSeed;
   options.testAnalysisOnly = testAnalysisOnly;
 
+  // Enable InitTensorOp elimination.
+  options.addPostAnalysisStep<
+      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
+
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
 

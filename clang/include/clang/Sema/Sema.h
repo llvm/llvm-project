@@ -2359,11 +2359,13 @@ public:
                              const CXXScopeSpec &SS, QualType T,
                              TagDecl *OwnedTagDecl = nullptr);
 
-  QualType BuildTypeofExprType(Expr *E, SourceLocation Loc);
+  // Returns the underlying type of a decltype with the given expression.
+  QualType getDecltypeForExpr(Expr *E);
+
+  QualType BuildTypeofExprType(Expr *E);
   /// If AsUnevaluated is false, E is treated as though it were an evaluated
   /// context, such as when building a type for decltype(auto).
-  QualType BuildDecltypeType(Expr *E, SourceLocation Loc,
-                             bool AsUnevaluated = true);
+  QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
   QualType BuildUnaryTransformType(QualType BaseType,
                                    UnaryTransformType::UTTKind UKind,
                                    SourceLocation Loc);
@@ -3502,7 +3504,7 @@ public:
   bool IsFunctionConversion(QualType FromType, QualType ToType,
                             QualType &ResultTy);
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
-  bool isSameOrCompatibleFunctionType(CanQualType Param, CanQualType Arg);
+  bool isSameOrCompatibleFunctionType(QualType Param, QualType Arg);
 
   bool CanPerformAggregateInitializationForOverloadResolution(
       const InitializedEntity &Entity, InitListExpr *From);
@@ -8569,6 +8571,14 @@ public:
   /// Substitute Replacement for auto in TypeWithAuto
   TypeSourceInfo* SubstAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
                                           QualType Replacement);
+
+  // Substitute auto in TypeWithAuto for a Dependent auto type
+  QualType SubstAutoTypeDependent(QualType TypeWithAuto);
+
+  // Substitute auto in TypeWithAuto for a Dependent auto type
+  TypeSourceInfo *
+  SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto);
+
   /// Completely replace the \c auto in \p TypeWithAuto by
   /// \p Replacement. This does not retain any \c auto type sugar.
   QualType ReplaceAutoType(QualType TypeWithAuto, QualType Replacement);

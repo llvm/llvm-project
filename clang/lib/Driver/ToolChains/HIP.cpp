@@ -64,6 +64,7 @@ static bool shouldSkipSanitizeOption(const ToolChain &TC,
   auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
 
   assert(OptionalGpuArch && "Invalid Target ID");
+  (void)OptionalGpuArch;
   auto Loc = FeatureMap.find("xnack");
   if (Loc == FeatureMap.end() || !Loc->second) {
     Diags.Report(
