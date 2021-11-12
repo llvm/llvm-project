@@ -13690,21 +13690,23 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
   return getUMinFromMismatchedTypes(ExitCounts);
 }
 
-/// This rewriter is similar to SCEVParameterRewriter (it replaces SCEVUnknown
-/// components following the Map (Value -> SCEV)), but skips AddRecExpr because
-/// we cannot guarantee that the replacement is loop invariant in the loop of
-/// the AddRec.
+/// A rewriter to replace SCEV expressions in Map with the corresponding entry
+/// in the map. It skips AddRecExpr because we cannot guarantee that the
+/// replacement is loop invariant in the loop of the AddRec.
+///
+/// At the moment only rewriting SCEVUnknown is supported.
 class SCEVLoopGuardRewriter : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
-  ValueToSCEVMapTy &Map;
+  DenseMap<const SCEV *, const SCEV *> Map;
 
 public:
-  SCEVLoopGuardRewriter(ScalarEvolution &SE, ValueToSCEVMapTy &M)
+  SCEVLoopGuardRewriter(ScalarEvolution &SE,
+                        DenseMap<const SCEV *, const SCEV *> &M)
       : SCEVRewriteVisitor(SE), Map(M) {}
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-    auto I = Map.find(Expr->getValue());
+    auto I = Map.find(Expr);
     if (I == Map.end())
       return Expr;
     return I->second;
@@ -13713,7 +13715,9 @@ public:
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
-                              const SCEV *RHS, ValueToSCEVMapTy &RewriteMap) {
+                              const SCEV *RHS,
+                              DenseMap<const SCEV *, const SCEV *>
+                                  &RewriteMap) {
     // WARNING: It is generally unsound to apply any wrap flags to the proposed
     // replacement SCEV which isn't directly implied by the structure of that
     // SCEV.  In particular, using contextual facts to imply flags is *NOT*
@@ -13730,8 +13734,8 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       const SCEV *URemRHS = nullptr;
       if (matchURem(LHS, URemLHS, URemRHS)) {
         if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
-          Value *V = LHSUnknown->getValue();
-          RewriteMap[V] = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
+          auto Multiple = getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS);
+          RewriteMap[LHSUnknown] = Multiple;
           return;
         }
       }
@@ -13763,9 +13767,9 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       // Bail out, unless we have a non-wrapping, monotonic range.
       if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
         return false;
-      auto I = RewriteMap.find(LHSUnknown->getValue());
+      auto I = RewriteMap.find(LHSUnknown);
       const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHSUnknown;
-      RewriteMap[LHSUnknown->getValue()] = getUMaxExpr(
+      RewriteMap[LHSUnknown] = getUMaxExpr(
           getConstant(ExactRegion.getUnsignedMin()),
           getUMinExpr(RewrittenLHS, getConstant(ExactRegion.getUnsignedMax())));
       return true;
@@ -13781,7 +13785,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
 
     // Check whether LHS has already been rewritten. In that case we want to
     // chain further rewrites onto the already rewritten value.
-    auto I = RewriteMap.find(LHSUnknown->getValue());
+    auto I = RewriteMap.find(LHS);
     const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
     const SCEV *RewrittenRHS = nullptr;
     switch (Predicate) {
@@ -13827,13 +13831,13 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     }
 
     if (RewrittenRHS)
-      RewriteMap[LHSUnknown->getValue()] = RewrittenRHS;
+      RewriteMap[LHS] = RewrittenRHS;
   };
   // Starting at the loop predecessor, climb up the predecessor chain, as long
   // as there are predecessors that can be found that have unique successors
   // leading to the original header.
   // TODO: share this logic with isLoopEntryGuardedByCond.
-  ValueToSCEVMapTy RewriteMap;
+  DenseMap<const SCEV *, const SCEV *> RewriteMap;
   for (std::pair<const BasicBlock *, const BasicBlock *> Pair(
            L->getLoopPredecessor(), L->getHeader());
        Pair.first; Pair = getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
