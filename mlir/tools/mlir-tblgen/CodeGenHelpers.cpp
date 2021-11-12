@@ -195,7 +195,7 @@ void StaticVerifierFunctionEmitter::emitConstraints(
   for (auto &it : constraints) {
     os << formatv(codeTemplate, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  it.first.getSummary());
+                  escapeString(it.first.getSummary()));
   }
 }
 
@@ -221,13 +221,13 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
   for (auto &it : typeConstraints) {
     os << formatv(patternAttrOrTypeConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  it.first.getSummary(), "Type type");
+                  escapeString(it.first.getSummary()), "Type type");
   }
   ctx.withSelf("attr");
   for (auto &it : attrConstraints) {
     os << formatv(patternAttrOrTypeConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  it.first.getSummary(), "Attribute attr");
+                  escapeString(it.first.getSummary()), "Attribute attr");
   }
 }
 
