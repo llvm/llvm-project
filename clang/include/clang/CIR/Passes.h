@@ -23,6 +23,10 @@ namespace cir {
 /// to the LLVM dialect for codegen. We'll want to separate this eventually into
 /// different phases instead of doing it all at once.
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass();
+
+/// Create a pass that only lowers a subset of `CIR` memref-like operations to
+/// MemRef specific versions.
+std::unique_ptr<mlir::Pass> createConvertCIRToMemRefPass();
 } // end namespace cir
 
 #endif // CLANG_CIR_PASSES_H
