@@ -197,6 +197,40 @@ exit:
   ret void
 }
 
+define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
+; CHECK-LABEL: 'guard_pessimizes_analysis_step2'
+; CHECK:       Determining loop execution counts for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((14 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((14 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %N.ext = zext i32 %N to i64
+  br i1 %c, label %bb1, label %guard
+
+bb1:
+  br label %guard
+
+guard:
+  %init = phi i64 [ 2, %entry ], [ 4, %bb1 ]
+  %c.1 = icmp ult i64 %init, %N.ext
+  br i1 %c.1, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ %init, %loop.ph ]
+  %iv.next = add i64 %iv, 2
+  %exitcond = icmp eq i64 %iv.next, 16
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
 declare void @use(i64)
 
 declare i32 @llvm.umin.i32(i32, i32)
