@@ -228,7 +228,7 @@ static bool updateOperand(FoldCandidate &Fold,
       MachineOperand &Mod = MI->getOperand(ModIdx);
       unsigned Val = Mod.getImm();
       if (!(Val & SISrcMods::OP_SEL_0) && (Val & SISrcMods::OP_SEL_1)) {
-        // Only apply the following transformation if that operand requries
+        // Only apply the following transformation if that operand requires
         // a packed immediate.
         switch (TII.get(Opcode).OpInfo[OpNo].OperandType) {
         case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -688,7 +688,7 @@ void SIFoldOperands::foldOperand(
 
     // Don't fold into a copy to a physical register with the same class. Doing
     // so would interfere with the register coalescer's logic which would avoid
-    // redundant initalizations.
+    // redundant initializations.
     if (DestReg.isPhysical() && SrcRC->contains(DestReg))
       return;
 
@@ -902,7 +902,7 @@ void SIFoldOperands::foldOperand(
     tryAddToFoldList(FoldList, UseMI, UseOpIdx, &OpToFold, TII);
 
     // FIXME: We could try to change the instruction from 64-bit to 32-bit
-    // to enable more folding opportunites.  The shrink operands pass
+    // to enable more folding opportunities.  The shrink operands pass
     // already does this.
     return;
   }

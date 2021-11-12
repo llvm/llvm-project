@@ -48,7 +48,7 @@ Align getAlign(DataLayout const &DL, const GlobalVariable *GV);
 /// as an use within some instruction (either from kernel or from non-kernel).
 bool hasUserInstruction(const GlobalValue *GV);
 
-/// \returns true if an LDS global requres lowering to a module LDS structure
+/// \returns true if an LDS global requires lowering to a module LDS structure
 /// if \p F is not given. If \p F is given it must be a kernel and function
 /// \returns true if an LDS global is directly used from that kernel and it
 /// is safe to replace its uses with a kernel LDS structure member.
