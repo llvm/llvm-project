@@ -12,7 +12,7 @@ Note that using some thread-unsafe functions may be still valid in
 concurrent programming if only a single thread is used (e.g. setenv(3)),
 however, some functions may track a state in global variables which
 would be clobbered by subsequent (non-parallel, but concurrent) calls to
-a related function. E.g. the following code suffers from unprotected
+a related function. e.g. the following code suffers from unprotected
 accesses to a global state:
 
 .. code-block:: c++
