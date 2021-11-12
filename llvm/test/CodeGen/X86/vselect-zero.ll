@@ -793,23 +793,20 @@ define <16 x i8> @not_signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @not_signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: not_signbit_mask_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpgtw %xmm2, %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    psraw $15, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: not_signbit_mask_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpcmpgtw %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: not_signbit_mask_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtw %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %cond = icmp sgt <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> zeroinitializer
@@ -819,23 +816,20 @@ define <8 x i16> @not_signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: not_signbit_mask_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: not_signbit_mask_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: not_signbit_mask_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX512-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %cond = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %r = select <4 x i1> %cond, <4 x i32> %b, <4 x i32> zeroinitializer
@@ -867,9 +861,8 @@ define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX512-LABEL: not_signbit_mask_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsraq $63, %xmm0, %xmm0
+; AVX512-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %cond = icmp sgt <2 x i64> %a, <i64 -1, i64 -1>
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
@@ -917,11 +910,10 @@ define <32 x i8> @not_signbit_mask_v32i8(<32 x i8> %a, <32 x i8> %b) {
 define <16 x i16> @not_signbit_mask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE-LABEL: not_signbit_mask_v16i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE-NEXT:    pcmpgtw %xmm4, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtw %xmm4, %xmm1
-; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    psraw $15, %xmm0
+; SSE-NEXT:    pandn %xmm2, %xmm0
+; SSE-NEXT:    psraw $15, %xmm1
+; SSE-NEXT:    pandn %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: not_signbit_mask_v16i16:
@@ -935,16 +927,14 @@ define <16 x i16> @not_signbit_mask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX2-LABEL: not_signbit_mask_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: not_signbit_mask_v16i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cond = icmp sgt <16 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %r = select <16 x i1> %cond, <16 x i16> %b, <16 x i16> zeroinitializer
@@ -954,11 +944,10 @@ define <16 x i16> @not_signbit_mask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 define <8 x i32> @not_signbit_mask_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: not_signbit_mask_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm4, %xmm1
-; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    pandn %xmm2, %xmm0
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pandn %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: not_signbit_mask_v8i32:
@@ -972,16 +961,14 @@ define <8 x i32> @not_signbit_mask_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX2-LABEL: not_signbit_mask_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: not_signbit_mask_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsrad $31, %ymm0, %ymm0
+; AVX512-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cond = icmp sgt <8 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %r = select <8 x i1> %cond, <8 x i32> %b, <8 x i32> zeroinitializer
@@ -1028,9 +1015,8 @@ define <4 x i64> @not_signbit_mask_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: not_signbit_mask_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsraq $63, %ymm0, %ymm0
+; AVX512-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cond = icmp sgt <4 x i64> %a, <i64 -1, i64 -1, i64 -1, i64 -1>
   %r = select <4 x i1> %cond, <4 x i64> %b, <4 x i64> zeroinitializer
