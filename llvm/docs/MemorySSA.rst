@@ -399,6 +399,29 @@ have to query something to disambiguate further anyway.
 
 As a result, LLVM partitions to one variable.
 
+Precision in practice
+^^^^^^^^^^^^^^^^^^^^^
+
+In practice, there are implementation details in LLVM that also affect the
+results' precision provided by MemorySSA. For example, AliasAnalysis has various
+caps, or restrictions on looking through phis which can affect what MemorySSA
+can infer. Changes made by different passes may make MemorySSA either "overly
+optimized" (it can provide a more acccurate result than if it were recomputed
+from scratch), or "under optimized" (it could infer more if it were recomputed).
+This can lead to challenges to reproduced results in isolation with a single pass
+when the result relies on the state aquired by MemorySSA due to being updated by
+multiple subsequent passes.
+Passes that use and update MemorySSA should do so through the APIs provided by the
+MemorySSAUpdater, or through calls on the Walker.
+Direct optimizations to MemorySSA are not permitted.
+There is currently a single, narrowly scoped exception where DSE (DeadStoreElimination)
+updates an optimized access of a store, after a traversal that guarantees the
+optimization is correct. This is solely allowed due to the traversals and inferences
+being beyond what MemorySSA does and them being "free" (i.e. DSE does them anyway).
+This exception is set under a flag ("-dse-optimize-memoryssa") and can be disabled to
+help reproduce optimizations in isolation.
+
+
 Use Optimization
 ^^^^^^^^^^^^^^^^
 
