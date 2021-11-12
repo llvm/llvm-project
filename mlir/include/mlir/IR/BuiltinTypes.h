@@ -204,61 +204,11 @@ public:
 namespace mlir {
 
 //===----------------------------------------------------------------------===//
-// RankedTensorType
-//===----------------------------------------------------------------------===//
-
-/// This is a builder type that keeps local references to arguments. Arguments
-/// that are passed into the builder must out-live the builder.
-class RankedTensorType::Builder {
-public:
-  /// Build from another RankedTensorType.
-  explicit Builder(RankedTensorType other)
-      : shape(other.getShape()), elementType(other.getElementType()),
-        encoding(other.getEncoding()) {}
-
-  /// Build from scratch.
-  Builder(ArrayRef<int64_t> shape, Type elementType, Attribute encoding)
-      : shape(shape), elementType(elementType), encoding(encoding) {}
-
-  Builder &setShape(ArrayRef<int64_t> newShape) {
-    shape = newShape;
-    return *this;
-  }
-
-  Builder &setElementType(Type newElementType) {
-    elementType = newElementType;
-    return *this;
-  }
-
-  Builder &setEncoding(Attribute newEncoding) {
-    encoding = newEncoding;
-    return *this;
-  }
-
-  /// Create a new RankedTensor by erasing a dim from shape.
-  // Note: the newly created type has ownership of a new shape vector.
-  RankedTensorType dropDim(unsigned dim) {
-    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
-    newShape.erase(newShape.begin() + dim);
-    return setShape(newShape);
-  }
-
-  operator RankedTensorType() {
-    return RankedTensorType::get(shape, elementType, encoding);
-  }
-
-private:
-  ArrayRef<int64_t> shape;
-  Type elementType;
-  Attribute encoding;
-};
-
-//===----------------------------------------------------------------------===//
 // MemRefType
 //===----------------------------------------------------------------------===//
 
 /// This is a builder type that keeps local references to arguments. Arguments
-/// that are passed into the builder must out-live the builder.
+/// that are passed into the builder must outlive the builder.
 class MemRefType::Builder {
 public:
   // Build from another MemRefType.
@@ -302,6 +252,55 @@ private:
   Type elementType;
   MemRefLayoutAttrInterface layout;
   Attribute memorySpace;
+};
+
+//===----------------------------------------------------------------------===//
+// RankedTensorType
+//===----------------------------------------------------------------------===//
+
+/// This is a builder type that keeps local references to arguments. Arguments
+/// that are passed into the builder must outlive the builder.
+class RankedTensorType::Builder {
+public:
+  /// Build from another RankedTensorType.
+  explicit Builder(RankedTensorType other)
+      : shape(other.getShape()), elementType(other.getElementType()),
+        encoding(other.getEncoding()) {}
+
+  /// Build from scratch.
+  Builder(ArrayRef<int64_t> shape, Type elementType, Attribute encoding)
+      : shape(shape), elementType(elementType), encoding(encoding) {}
+
+  Builder &setShape(ArrayRef<int64_t> newShape) {
+    shape = newShape;
+    return *this;
+  }
+
+  Builder &setElementType(Type newElementType) {
+    elementType = newElementType;
+    return *this;
+  }
+
+  Builder &setEncoding(Attribute newEncoding) {
+    encoding = newEncoding;
+    return *this;
+  }
+
+  /// Create a new RankedTensorType by erasing a dim from shape.
+  RankedTensorType dropDim(unsigned dim) {
+    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
+    newShape.erase(newShape.begin() + dim);
+    return setShape(newShape);
+  }
+
+  operator RankedTensorType() {
+    return RankedTensorType::get(shape, elementType, encoding);
+  }
+
+private:
+  ArrayRef<int64_t> shape;
+  Type elementType;
+  Attribute encoding;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of
