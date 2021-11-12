@@ -54,336 +54,98 @@ Context *ctx;
 bool OnFinalize(bool failed);
 void OnInitialize();
 #else
+#include <dlfcn.h>
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 bool OnFinalize(bool failed) {
-#  if !SANITIZER_GO
+#if !SANITIZER_GO
   if (on_finalize)
     return on_finalize(failed);
-#  endif
+#endif
   return failed;
 }
-
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 void OnInitialize() {
-#  if !SANITIZER_GO
+#if !SANITIZER_GO
   if (on_initialize)
     on_initialize();
-#  endif
+#endif
 }
 #endif
 
-static TracePart* TracePartAlloc(ThreadState* thr) {
-  TracePart* part = nullptr;
-  {
-    Lock lock(&ctx->slot_mtx);
-    uptr max_parts = Trace::kMinParts + flags()->history_size;
-    Trace* trace = &thr->tctx->trace;
-    if (trace->parts_allocated == max_parts ||
-        ctx->trace_part_finished_excess) {
-      part = ctx->trace_part_recycle.PopFront();
-      DPrintf("#%d: TracePartAlloc: part=%p\n", thr->tid, part);
-      if (part && part->trace) {
-        Trace* trace1 = part->trace;
-        Lock trace_lock(&trace1->mtx);
-        part->trace = nullptr;
-        TracePart* part1 = trace1->parts.PopFront();
-        CHECK_EQ(part, part1);
-        if (trace1->parts_allocated > trace1->parts.Size()) {
-          ctx->trace_part_finished_excess +=
-              trace1->parts_allocated - trace1->parts.Size();
-          trace1->parts_allocated = trace1->parts.Size();
-        }
-      }
+static ThreadContextBase *CreateThreadContext(Tid tid) {
+  // Map thread trace when context is created.
+  char name[50];
+  internal_snprintf(name, sizeof(name), "trace %u", tid);
+  MapThreadTrace(GetThreadTrace(tid), TraceSize() * sizeof(Event), name);
+  const uptr hdr = GetThreadTraceHeader(tid);
+  internal_snprintf(name, sizeof(name), "trace header %u", tid);
+  MapThreadTrace(hdr, sizeof(Trace), name);
+  new((void*)hdr) Trace();
+  // We are going to use only a small part of the trace with the default
+  // value of history_size. However, the constructor writes to the whole trace.
+  // Release the unused part.
+  uptr hdr_end = hdr + sizeof(Trace);
+  hdr_end -= sizeof(TraceHeader) * (kTraceParts - TraceParts());
+  hdr_end = RoundUp(hdr_end, GetPageSizeCached());
+  if (hdr_end < hdr + sizeof(Trace)) {
+    ReleaseMemoryPagesToOS(hdr_end, hdr + sizeof(Trace));
+    uptr unused = hdr + sizeof(Trace) - hdr_end;
+    if (hdr_end != (uptr)MmapFixedNoAccess(hdr_end, unused)) {
+      Report("ThreadSanitizer: failed to mprotect [0x%zx-0x%zx) \n", hdr_end,
+             unused);
+      CHECK("unable to mprotect" && 0);
     }
-    if (trace->parts_allocated < max_parts) {
-      trace->parts_allocated++;
-      if (ctx->trace_part_finished_excess)
-        ctx->trace_part_finished_excess--;
-    }
-    if (!part)
-      ctx->trace_part_total_allocated++;
-    else if (ctx->trace_part_recycle_finished)
-      ctx->trace_part_recycle_finished--;
   }
-  if (!part)
-    part = new (MmapOrDie(sizeof(*part), "TracePart")) TracePart();
-  return part;
+  return New<ThreadContext>(tid);
 }
 
-static void TracePartFree(TracePart* part) REQUIRES(ctx->slot_mtx) {
-  DCHECK(part->trace);
-  part->trace = nullptr;
-  ctx->trace_part_recycle.PushFront(part);
-}
-
-void TraceResetForTesting() {
-  Lock lock(&ctx->slot_mtx);
-  while (auto* part = ctx->trace_part_recycle.PopFront()) {
-    if (auto trace = part->trace)
-      CHECK_EQ(trace->parts.PopFront(), part);
-    UnmapOrDie(part, sizeof(*part));
-  }
-  ctx->trace_part_total_allocated = 0;
-  ctx->trace_part_recycle_finished = 0;
-  ctx->trace_part_finished_excess = 0;
-}
-
-static void DoResetImpl(uptr epoch) {
-  ThreadRegistryLock lock0(&ctx->thread_registry);
-  Lock lock1(&ctx->slot_mtx);
-  CHECK_EQ(ctx->global_epoch, epoch);
-  ctx->global_epoch++;
-  CHECK(!ctx->resetting);
-  ctx->resetting = true;
-  for (u32 i = ctx->thread_registry.NumThreadsLocked(); i--;) {
-    ThreadContext* tctx = (ThreadContext*)ctx->thread_registry.GetThreadLocked(
-        static_cast<Tid>(i));
-    // Potentially we could purge all ThreadStatusDead threads from the
-    // registry. Since we reset all shadow, they can't race with anything
-    // anymore. However, their tid's can still be stored in some aux places
-    // (e.g. tid of thread that created something).
-    auto trace = &tctx->trace;
-    Lock lock(&trace->mtx);
-    bool attached = tctx->thr && tctx->thr->slot;
-    auto parts = &trace->parts;
-    bool local = false;
-    while (!parts->Empty()) {
-      auto part = parts->Front();
-      local = local || part == trace->local_head;
-      if (local)
-        CHECK(!ctx->trace_part_recycle.Queued(part));
-      else
-        ctx->trace_part_recycle.Remove(part);
-      if (attached && parts->Size() == 1) {
-        // The thread is running and this is the last/current part.
-        // Set the trace position to the end of the current part
-        // to force the thread to call SwitchTracePart and re-attach
-        // to a new slot and allocate a new trace part.
-        // Note: the thread is concurrently modifying the position as well,
-        // so this is only best-effort. The thread can only modify position
-        // within this part, because switching parts is protected by
-        // slot/trace mutexes that we hold here.
-        atomic_store_relaxed(
-            &tctx->thr->trace_pos,
-            reinterpret_cast<uptr>(&part->events[TracePart::kSize]));
-        break;
-      }
-      parts->Remove(part);
-      TracePartFree(part);
-    }
-    CHECK_LE(parts->Size(), 1);
-    trace->local_head = parts->Front();
-    if (tctx->thr && !tctx->thr->slot) {
-      atomic_store_relaxed(&tctx->thr->trace_pos, 0);
-      tctx->thr->trace_prev_pc = 0;
-    }
-    if (trace->parts_allocated > trace->parts.Size()) {
-      ctx->trace_part_finished_excess +=
-          trace->parts_allocated - trace->parts.Size();
-      trace->parts_allocated = trace->parts.Size();
-    }
-  }
-  while (ctx->slot_queue.PopFront()) {
-  }
-  for (auto& slot : ctx->slots) {
-    slot.SetEpoch(kEpochZero);
-    slot.journal.Reset();
-    slot.thr = nullptr;
-    ctx->slot_queue.PushBack(&slot);
-  }
-
-  DPrintf("Resetting shadow...\n");
-  if (!MmapFixedSuperNoReserve(ShadowBeg(), ShadowEnd() - ShadowBeg(),
-                               "shadow")) {
-    Printf("failed to reset shadow memory\n");
-    Die();
-  }
-  DPrintf("Resetting meta shadow...\n");
-  ctx->metamap.ResetClocks();
-  ctx->resetting = false;
-}
-
-// Clang does not understand locking all slots in the loop:
-// error: expecting mutex 'slot.mtx' to be held at start of each loop
-void DoReset(ThreadState* thr, uptr epoch) NO_THREAD_SAFETY_ANALYSIS {
-  {
-    Lock l(&ctx->multi_slot_mtx);
-    for (auto& slot : ctx->slots) {
-      slot.mtx.Lock();
-      if (UNLIKELY(epoch == 0))
-        epoch = ctx->global_epoch;
-      if (UNLIKELY(epoch != ctx->global_epoch)) {
-        // Epoch can't change once we've locked the first slot.
-        CHECK_EQ(slot.sid, 0);
-        slot.mtx.Unlock();
-        return;
-      }
-    }
-  }
-  DPrintf("#%d: DoReset epoch=%lu\n", thr ? thr->tid : -1, epoch);
-  DoResetImpl(epoch);
-  for (auto& slot : ctx->slots) slot.mtx.Unlock();
-}
-
-void FlushShadowMemory() { DoReset(nullptr, 0); }
-
-static TidSlot* FindSlotAndLock(ThreadState* thr)
-    ACQUIRE(thr->slot->mtx) NO_THREAD_SAFETY_ANALYSIS {
-  CHECK(!thr->slot);
-  TidSlot* slot = nullptr;
-  for (;;) {
-    uptr epoch;
-    {
-      Lock lock(&ctx->slot_mtx);
-      epoch = ctx->global_epoch;
-      if (slot) {
-        // This is an exhausted slot from the previous iteration.
-        if (ctx->slot_queue.Queued(slot))
-          ctx->slot_queue.Remove(slot);
-        thr->slot_locked = false;
-        slot->mtx.Unlock();
-      }
-      for (;;) {
-        slot = ctx->slot_queue.PopFront();
-        if (!slot)
-          break;
-        if (slot->epoch() != kEpochLast) {
-          ctx->slot_queue.PushBack(slot);
-          break;
-        }
-      }
-    }
-    if (!slot) {
-      DoReset(thr, epoch);
-      continue;
-    }
-    slot->mtx.Lock();
-    CHECK(!thr->slot_locked);
-    thr->slot_locked = true;
-    if (slot->thr) {
-      DPrintf("#%d: preempting sid=%d tid=%d\n", thr->tid, (u32)slot->sid,
-              slot->thr->tid);
-      slot->SetEpoch(slot->thr->fast_state.epoch());
-      slot->thr = nullptr;
-    }
-    if (slot->epoch() != kEpochLast)
-      return slot;
-  }
-}
-
-void SlotAttachAndLock(ThreadState* thr) {
-  TidSlot* slot = FindSlotAndLock(thr);
-  DPrintf("#%d: SlotAttach: slot=%u\n", thr->tid, static_cast<int>(slot->sid));
-  CHECK(!slot->thr);
-  CHECK(!thr->slot);
-  slot->thr = thr;
-  thr->slot = slot;
-  Epoch epoch = EpochInc(slot->epoch());
-  CHECK(!EpochOverflow(epoch));
-  slot->SetEpoch(epoch);
-  thr->fast_state.SetSid(slot->sid);
-  thr->fast_state.SetEpoch(epoch);
-  if (thr->slot_epoch != ctx->global_epoch) {
-    thr->slot_epoch = ctx->global_epoch;
-    thr->clock.Reset();
 #if !SANITIZER_GO
-    thr->last_sleep_stack_id = kInvalidStackID;
-    thr->last_sleep_clock.Reset();
+static const u32 kThreadQuarantineSize = 16;
+#else
+static const u32 kThreadQuarantineSize = 64;
 #endif
-  }
-  thr->clock.Set(slot->sid, epoch);
-  slot->journal.PushBack({thr->tid, epoch});
-}
-
-static void SlotDetachImpl(ThreadState* thr, bool exiting) {
-  TidSlot* slot = thr->slot;
-  thr->slot = nullptr;
-  if (thr != slot->thr) {
-    slot = nullptr;  // we don't own the slot anymore
-    if (thr->slot_epoch != ctx->global_epoch) {
-      TracePart* part = nullptr;
-      auto* trace = &thr->tctx->trace;
-      {
-        Lock l(&trace->mtx);
-        auto* parts = &trace->parts;
-        // The trace can be completely empty in an unlikely event
-        // the thread is preempted right after it acquired the slot
-        // in ThreadStart and did not trace any events yet.
-        CHECK_LE(parts->Size(), 1);
-        part = parts->PopFront();
-        thr->tctx->trace.local_head = nullptr;
-        atomic_store_relaxed(&thr->trace_pos, 0);
-        thr->trace_prev_pc = 0;
-      }
-      if (part) {
-        Lock l(&ctx->slot_mtx);
-        TracePartFree(part);
-      }
-    }
-    return;
-  }
-  CHECK(exiting || thr->fast_state.epoch() == kEpochLast);
-  slot->SetEpoch(thr->fast_state.epoch());
-  slot->thr = nullptr;
-}
-
-void SlotDetach(ThreadState* thr) {
-  Lock lock(&thr->slot->mtx);
-  SlotDetachImpl(thr, true);
-}
-
-void SlotLock(ThreadState* thr) NO_THREAD_SAFETY_ANALYSIS {
-  DCHECK(!thr->slot_locked);
-  TidSlot* slot = thr->slot;
-  slot->mtx.Lock();
-  thr->slot_locked = true;
-  if (LIKELY(thr == slot->thr && thr->fast_state.epoch() != kEpochLast))
-    return;
-  SlotDetachImpl(thr, false);
-  thr->slot_locked = false;
-  slot->mtx.Unlock();
-  SlotAttachAndLock(thr);
-}
-
-void SlotUnlock(ThreadState* thr) {
-  DCHECK(thr->slot_locked);
-  thr->slot_locked = false;
-  thr->slot->mtx.Unlock();
-}
 
 Context::Context()
     : initialized(),
       report_mtx(MutexTypeReport),
       nreported(),
-      thread_registry([](Tid tid) -> ThreadContextBase* {
-        return new (Alloc(sizeof(ThreadContext))) ThreadContext(tid);
-      }),
+      thread_registry(CreateThreadContext, kMaxTid, kThreadQuarantineSize,
+                      kMaxTidReuse),
       racy_mtx(MutexTypeRacy),
       racy_stacks(),
       racy_addresses(),
       fired_suppressions_mtx(MutexTypeFired),
-      clock_alloc(LINKER_INITIALIZED, "clock allocator"),
-      slot_mtx(MutexTypeSlots),
-      multi_slot_mtx(MutexTypeMultiSlot),
-      resetting() {
+      clock_alloc(LINKER_INITIALIZED, "clock allocator") {
   fired_suppressions.reserve(8);
-  for (uptr i = 0; i < ARRAY_SIZE(slots); i++) {
-    TidSlot* slot = &slots[i];
-    slot->sid = static_cast<Sid>(i);
-    slot_queue.PushBack(slot);
-  }
-  global_epoch = 1;
 }
 
-TidSlot::TidSlot() : mtx(MutexTypeSlot) {}
-
 // The objects are allocated in TLS, so one may rely on zero-initialization.
-ThreadState::ThreadState(Tid tid)
-    // Do not touch these, rely on zero initialization,
-    // they may be accessed before the ctor.
-    // ignore_reads_and_writes()
-    // ignore_interceptors()
-    : tid(tid) {
+ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
+                         unsigned reuse_count, uptr stk_addr, uptr stk_size,
+                         uptr tls_addr, uptr tls_size)
+    : fast_state(tid, epoch)
+      // Do not touch these, rely on zero initialization,
+      // they may be accessed before the ctor.
+      // , ignore_reads_and_writes()
+      // , ignore_interceptors()
+      ,
+      clock(tid, reuse_count)
+#if !SANITIZER_GO
+      ,
+      jmp_bufs()
+#endif
+      ,
+      tid(tid),
+      unique_id(unique_id),
+      stk_addr(stk_addr),
+      stk_size(stk_size),
+      tls_addr(tls_addr),
+      tls_size(tls_size)
+#if !SANITIZER_GO
+      ,
+      last_sleep_clock(tid)
+#endif
+{
   CHECK_EQ(reinterpret_cast<uptr>(this) % SANITIZER_CACHE_LINE_SIZE, 0);
 #if !SANITIZER_GO
   shadow_stack_pos = shadow_stack;
@@ -438,35 +200,32 @@ static void *BackgroundThread(void *arg) {
   const u64 kMs2Ns = 1000 * 1000;
   const u64 start = NanoTime();
 
-  u64 last_flush = start;
-  s64 last_rss = 0;
-  while (!atomic_load_relaxed(&ctx->stop_background_thread)) {
-    internal_usleep(1000 * 1000);
+  u64 last_flush = NanoTime();
+  uptr last_rss = 0;
+  for (int i = 0;
+      atomic_load(&ctx->stop_background_thread, memory_order_relaxed) == 0;
+      i++) {
+    SleepForMillis(100);
     u64 now = NanoTime();
 
     // Flush memory if requested.
     if (flags()->flush_memory_ms > 0) {
       if (last_flush + flags()->flush_memory_ms * kMs2Ns < now) {
-        VReport(1, "ThreadSanitizer: periodic memory flush\n");
+        VPrintf(1, "ThreadSanitizer: periodic memory flush\n");
         FlushShadowMemory();
-        now = last_flush = NanoTime();
+        last_flush = NanoTime();
       }
     }
     if (flags()->memory_limit_mb > 0) {
-      s64 limit = uptr(flags()->memory_limit_mb) << 20;
-      s64 rss = GetRSS();
-      s64 delta = rss - last_rss;
-      s64 projected = rss + 2 * delta;
-      bool flush = projected >= limit;
-      VReport(1,
-              "ThreadSanitizer: RSS(MB) check: %lld -> %lld(+%lld) [-> %lld] "
-              "%s %lld\n",
-              last_rss >> 20, rss >> 20, delta >> 20, projected >> 20,
-              flush ? ">=" : "<", limit >> 20);
-      if (flush) {
+      uptr rss = GetRSS();
+      uptr limit = uptr(flags()->memory_limit_mb) << 20;
+      VPrintf(1, "ThreadSanitizer: memory flush check"
+                 " RSS=%llu LAST=%llu LIMIT=%llu\n",
+              (u64)rss >> 20, (u64)last_rss >> 20, (u64)limit >> 20);
+      if (2 * rss > limit + last_rss) {
+        VPrintf(1, "ThreadSanitizer: flushing memory due to RSS\n");
         FlushShadowMemory();
         rss = GetRSS();
-        now = NanoTime();
         VPrintf(1, "ThreadSanitizer: memory flushed RSS=%llu\n", (u64)rss>>20);
       }
       last_rss = rss;
@@ -479,7 +238,8 @@ static void *BackgroundThread(void *arg) {
       u64 last = atomic_load(&ctx->last_symbolize_time_ns,
                              memory_order_relaxed);
       if (last != 0 && last + flags()->flush_symbolizer_ms * kMs2Ns < now) {
-        ScopedErrorReportLock lock;
+        Lock l(&ctx->report_mtx);
+        ScopedErrorReportLock l2;
         SymbolizeFlush();
         atomic_store(&ctx->last_symbolize_time_ns, 0, memory_order_relaxed);
       }
@@ -511,8 +271,7 @@ void UnmapShadow(ThreadState *thr, uptr addr, uptr size) {
   if (size == 0) return;
   DontNeedShadowFor(addr, size);
   ScopedGlobalProcessor sgp;
-  SlotLocker locker(thr, true);
-  ctx->metamap.ResetRange(thr->proc(), addr, size, true);
+  ctx->metamap.ResetRange(thr->proc(), addr, size);
 }
 #endif
 
@@ -558,6 +317,18 @@ void MapShadow(uptr addr, uptr size) {
           addr + size, meta_begin, meta_end);
 }
 
+void MapThreadTrace(uptr addr, uptr size, const char *name) {
+  DPrintf("#0: Mapping trace at 0x%zx-0x%zx(0x%zx)\n", addr, addr + size, size);
+  CHECK_GE(addr, TraceMemBeg());
+  CHECK_LE(addr + size, TraceMemEnd());
+  CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
+  if (!MmapFixedSuperNoReserve(addr, size, name)) {
+    Printf("FATAL: ThreadSanitizer can not mmap thread trace (0x%zx/0x%zx)\n",
+           addr, size);
+    Die();
+  }
+}
+
 #if !SANITIZER_GO
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
@@ -576,11 +347,8 @@ void CheckUnwind() {
   // since we are going to die soon.
   ScopedIgnoreInterceptors ignore;
 #if !SANITIZER_GO
-  ThreadState* thr = cur_thread();
-  thr->nomalloc = false;
-  thr->ignore_sync++;
-  thr->ignore_reads_and_writes++;
-  atomic_store_relaxed(&thr->in_signal_handler, 0);
+  cur_thread()->ignore_sync++;
+  cur_thread()->ignore_reads_and_writes++;
 #endif
   PrintCurrentStackSlow(StackTrace::GetCurrentPc());
 }
@@ -635,22 +403,22 @@ void Initialize(ThreadState *thr) {
   Symbolizer::GetOrInit()->AddHooks(EnterSymbolizer, ExitSymbolizer);
 #endif
 
-  VPrintf(1, "***** Running under ThreadSanitizer v3 (pid %d) *****\n",
+  VPrintf(1, "***** Running under ThreadSanitizer v2 (pid %d) *****\n",
           (int)internal_getpid());
 
   // Initialize thread 0.
-  Tid tid = ThreadCreate(nullptr, 0, 0, true);
+  Tid tid = ThreadCreate(thr, 0, 0, true);
   CHECK_EQ(tid, kMainTid);
   ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
 #if TSAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
 #endif
+  ctx->initialized = true;
 
 #if !SANITIZER_GO
   Symbolizer::LateInitialize();
   InitializeMemoryProfiler();
 #endif
-  ctx->initialized = true;
 
   if (flags()->stop_on_start) {
     Printf("ThreadSanitizer is suspended at startup (pid %d)."
@@ -676,6 +444,7 @@ void MaybeSpawnBackgroundThread() {
 #endif
 }
 
+
 int Finalize(ThreadState *thr) {
   bool failed = false;
 
@@ -683,12 +452,12 @@ int Finalize(ThreadState *thr) {
     DumpProcessMap();
 
   if (flags()->atexit_sleep_ms > 0 && ThreadCount(thr) > 1)
-    internal_usleep(u64(flags()->atexit_sleep_ms) * 1000);
+    SleepForMillis(flags()->atexit_sleep_ms);
 
-  {
-    // Wait for pending reports.
-    ScopedErrorReportLock lock;
-  }
+  // Wait for pending reports.
+  ctx->report_mtx.Lock();
+  { ScopedErrorReportLock l; }
+  ctx->report_mtx.Unlock();
 
 #if !SANITIZER_GO
   if (Verbosity()) AllocatorPrintStats();
@@ -715,10 +484,8 @@ int Finalize(ThreadState *thr) {
 
 #if !SANITIZER_GO
 void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
-  ctx->multi_slot_mtx.Lock();
-  for (auto& slot : ctx->slots) slot.mtx.Lock();
   ctx->thread_registry.Lock();
-  ctx->slot_mtx.Lock();
+  ctx->report_mtx.Lock();
   ScopedErrorReportLock::Lock();
   // Suppress all reports in the pthread_atfork callbacks.
   // Reports will deadlock on the report_mtx.
@@ -729,30 +496,28 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
   // we'll assert in CheckNoLocks() unless we ignore interceptors.
   thr->ignore_interceptors++;
-  // Disables memory write in OnUserFree.
-  thr->ignore_reads_and_writes++;
 }
 
-static void ForkAfter(ThreadState* thr) NO_THREAD_SAFETY_ANALYSIS {
+void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
-  thr->ignore_reads_and_writes--;
   ScopedErrorReportLock::Unlock();
-  ctx->slot_mtx.Unlock();
+  ctx->report_mtx.Unlock();
   ctx->thread_registry.Unlock();
-  for (auto& slot : ctx->slots) slot.mtx.Unlock();
-  ctx->multi_slot_mtx.Unlock();
 }
 
-void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr); }
+void ForkChildAfter(ThreadState *thr, uptr pc,
+                    bool start_thread) NO_THREAD_SAFETY_ANALYSIS {
+  thr->suppress_reports--;  // Enabled in ForkBefore.
+  thr->ignore_interceptors--;
+  ScopedErrorReportLock::Unlock();
+  ctx->report_mtx.Unlock();
+  ctx->thread_registry.Unlock();
 
-void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
-  ForkAfter(thr);
-  u32 nthread = ThreadCount(thr);
-  VPrintf(1,
-          "ThreadSanitizer: forked new process with pid %d,"
-          " parent had %d threads\n",
-          (int)internal_getpid(), (int)nthread);
+  uptr nthread = 0;
+  ctx->thread_registry.GetNumberOfThreads(0, 0, &nthread /* alive threads */);
+  VPrintf(1, "ThreadSanitizer: forked new process with pid %d,"
+      " parent had %d threads\n", (int)internal_getpid(), (int)nthread);
   if (nthread == 1) {
     if (start_thread)
       StartBackgroundThread();
@@ -762,7 +527,6 @@ void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
     // ignores for everything in the hope that we will exec soon.
     ctx->after_multithreaded_fork = true;
     thr->ignore_interceptors++;
-    thr->suppress_reports++;
     ThreadIgnoreBegin(thr, pc);
     ThreadIgnoreSyncBegin(thr, pc);
   }
@@ -784,10 +548,8 @@ void GrowShadowStack(ThreadState *thr) {
 #endif
 
 StackID CurrentStackId(ThreadState *thr, uptr pc) {
-#if !SANITIZER_GO
   if (!thr->is_inited)  // May happen during bootstrap.
     return kInvalidStackID;
-#endif
   if (pc != 0) {
 #if !SANITIZER_GO
     DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
@@ -805,72 +567,53 @@ StackID CurrentStackId(ThreadState *thr, uptr pc) {
   return id;
 }
 
-static bool TraceSkipGap(ThreadState* thr) {
+namespace v3 {
+
+NOINLINE
+void TraceSwitchPart(ThreadState *thr) {
   Trace *trace = &thr->tctx->trace;
   Event *pos = reinterpret_cast<Event *>(atomic_load_relaxed(&thr->trace_pos));
   DCHECK_EQ(reinterpret_cast<uptr>(pos + 1) & TracePart::kAlignment, 0);
   auto *part = trace->parts.Back();
-  DPrintf("#%d: TraceSwitchPart enter trace=%p parts=%p-%p pos=%p\n", thr->tid,
-          trace, trace->parts.Front(), part, pos);
-  if (!part)
-    return false;
-  // We can get here when we still have space in the current trace part.
-  // The fast-path check in TraceAcquire has false positives in the middle of
-  // the part. Check if we are indeed at the end of the current part or not,
-  // and fill any gaps with NopEvent's.
-  Event* end = &part->events[TracePart::kSize];
-  DCHECK_GE(pos, &part->events[0]);
-  DCHECK_LE(pos, end);
-  if (pos + 1 < end) {
-    if ((reinterpret_cast<uptr>(pos) & TracePart::kAlignment) ==
-        TracePart::kAlignment)
+  DPrintf("TraceSwitchPart part=%p pos=%p\n", part, pos);
+  if (part) {
+    // We can get here when we still have space in the current trace part.
+    // The fast-path check in TraceAcquire has false positives in the middle of
+    // the part. Check if we are indeed at the end of the current part or not,
+    // and fill any gaps with NopEvent's.
+    Event *end = &part->events[TracePart::kSize];
+    DCHECK_GE(pos, &part->events[0]);
+    DCHECK_LE(pos, end);
+    if (pos + 1 < end) {
+      if ((reinterpret_cast<uptr>(pos) & TracePart::kAlignment) ==
+          TracePart::kAlignment)
+        *pos++ = NopEvent;
       *pos++ = NopEvent;
-    *pos++ = NopEvent;
-    DCHECK_LE(pos + 2, end);
-    atomic_store_relaxed(&thr->trace_pos, reinterpret_cast<uptr>(pos));
-    return true;
+      DCHECK_LE(pos + 2, end);
+      atomic_store_relaxed(&thr->trace_pos, reinterpret_cast<uptr>(pos));
+      // Ensure we setup trace so that the next TraceAcquire
+      // won't detect trace part end.
+      Event *ev;
+      CHECK(TraceAcquire(thr, &ev));
+      return;
+    }
+    // We are indeed at the end.
+    for (; pos < end; pos++) *pos = NopEvent;
   }
-  // We are indeed at the end.
-  for (; pos < end; pos++) *pos = NopEvent;
-  return false;
-}
-
-NOINLINE
-void TraceSwitchPart(ThreadState* thr) {
-  if (TraceSkipGap(thr))
-    return;
 #if !SANITIZER_GO
   if (ctx->after_multithreaded_fork) {
     // We just need to survive till exec.
-    TracePart* part = thr->tctx->trace.parts.Back();
-    if (part) {
-      atomic_store_relaxed(&thr->trace_pos,
-                           reinterpret_cast<uptr>(&part->events[0]));
-      return;
-    }
+    CHECK(part);
+    atomic_store_relaxed(&thr->trace_pos,
+                         reinterpret_cast<uptr>(&part->events[0]));
+    return;
   }
 #endif
-  TraceSwitchPartImpl(thr);
-}
-
-void TraceSwitchPartImpl(ThreadState* thr) {
-  SlotLocker locker(thr, true);
-  Trace* trace = &thr->tctx->trace;
-  TracePart* part = TracePartAlloc(thr);
+  part = new (MmapOrDie(sizeof(TracePart), "TracePart")) TracePart();
   part->trace = trace;
   thr->trace_prev_pc = 0;
-  TracePart* recycle = nullptr;
-  // Keep roughly half of parts local to the thread
-  // (not queued into the recycle queue).
-  uptr local_parts = (Trace::kMinParts + flags()->history_size + 1) / 2;
   {
     Lock lock(&trace->mtx);
-    if (trace->parts.Empty())
-      trace->local_head = part;
-    if (trace->parts.Size() >= local_parts) {
-      recycle = trace->local_head;
-      trace->local_head = trace->parts.Next(recycle);
-    }
     trace->parts.PushBack(part);
     atomic_store_relaxed(&thr->trace_pos,
                          reinterpret_cast<uptr>(&part->events[0]));
@@ -878,45 +621,60 @@ void TraceSwitchPartImpl(ThreadState* thr) {
   // Make this part self-sufficient by restoring the current stack
   // and mutex set in the beginning of the trace.
   TraceTime(thr);
-  {
-    // Pathologically large stacks may not fit into the part.
-    // In these cases we log only fixed number of top frames.
-    const uptr kMaxFrames = 1000;
-    // Sanity check that kMaxFrames won't consume the whole part.
-    static_assert(kMaxFrames < TracePart::kSize / 2, "kMaxFrames is too big");
-    uptr* pos = Max(&thr->shadow_stack[0], thr->shadow_stack_pos - kMaxFrames);
-    for (; pos < thr->shadow_stack_pos; pos++) {
-      if (TryTraceFunc(thr, *pos))
-        continue;
-      CHECK(TraceSkipGap(thr));
-      CHECK(TryTraceFunc(thr, *pos));
-    }
-  }
+  for (uptr *pos = &thr->shadow_stack[0]; pos < thr->shadow_stack_pos; pos++)
+    CHECK(TryTraceFunc(thr, *pos));
   for (uptr i = 0; i < thr->mset.Size(); i++) {
     MutexSet::Desc d = thr->mset.Get(i);
-    for (uptr i = 0; i < d.count; i++)
-      TraceMutexLock(thr, d.write ? EventType::kLock : EventType::kRLock, 0,
-                     d.addr, d.stack_id);
+    TraceMutexLock(thr, d.write ? EventType::kLock : EventType::kRLock, 0,
+                   d.addr, d.stack_id);
   }
-  {
-    Lock lock(&ctx->slot_mtx);
-    ctx->slot_queue.Remove(thr->slot);
-    ctx->slot_queue.PushBack(thr->slot);
-    if (recycle)
-      ctx->trace_part_recycle.PushBack(recycle);
-  }
-  DPrintf("#%d: TraceSwitchPart exit parts=%p-%p pos=0x%zx\n", thr->tid,
-          trace->parts.Front(), trace->parts.Back(),
-          atomic_load_relaxed(&thr->trace_pos));
+}
+
+}  // namespace v3
+
+void TraceSwitch(ThreadState *thr) {
+#if !SANITIZER_GO
+  if (ctx->after_multithreaded_fork)
+    return;
+#endif
+  thr->nomalloc++;
+  Trace *thr_trace = ThreadTrace(thr->tid);
+  Lock l(&thr_trace->mtx);
+  unsigned trace = (thr->fast_state.epoch() / kTracePartSize) % TraceParts();
+  TraceHeader *hdr = &thr_trace->headers[trace];
+  hdr->epoch0 = thr->fast_state.epoch();
+  ObtainCurrentStack(thr, 0, &hdr->stack0);
+  hdr->mset0 = thr->mset;
+  thr->nomalloc--;
+}
+
+Trace *ThreadTrace(Tid tid) { return (Trace *)GetThreadTraceHeader(tid); }
+
+uptr TraceTopPC(ThreadState *thr) {
+  Event *events = (Event*)GetThreadTrace(thr->tid);
+  uptr pc = events[thr->fast_state.GetTracePos()];
+  return pc;
+}
+
+uptr TraceSize() {
+  return (uptr)(1ull << (kTracePartSizeBits + flags()->history_size + 1));
+}
+
+uptr TraceParts() {
+  return TraceSize() / kTracePartSize;
 }
 
 #if !SANITIZER_GO
-extern "C" void __tsan_trace_switch() {}
+extern "C" void __tsan_trace_switch() {
+  TraceSwitch(cur_thread());
+}
 
-extern "C" void __tsan_report_race() {}
+extern "C" void __tsan_report_race() {
+  ReportRace(cur_thread());
+}
 #endif
 
-void ThreadIgnoreBegin(ThreadState* thr, uptr pc) {
+void ThreadIgnoreBegin(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreBegin\n", thr->tid);
   thr->ignore_reads_and_writes++;
   CHECK_GT(thr->ignore_reads_and_writes, 0);
@@ -976,6 +734,7 @@ void build_consistency_debug() {}
 #else
 void build_consistency_release() {}
 #endif
+
 }  // namespace __tsan
 
 #if SANITIZER_CHECK_DEADLOCKS
@@ -983,27 +742,18 @@ namespace __sanitizer {
 using namespace __tsan;
 MutexMeta mutex_meta[] = {
     {MutexInvalid, "Invalid", {}},
-    {MutexThreadRegistry,
-     "ThreadRegistry",
-     {MutexTypeSlots, MutexTypeTrace, MutexTypeReport}},
-    {MutexTypeReport, "Report", {MutexTypeTrace}},
-    {MutexTypeSyncVar, "SyncVar", {MutexTypeReport, MutexTypeTrace}},
-    {MutexTypeAnnotations, "Annotations", {MutexLeaf}},
-    {MutexTypeAtExit, "AtExit", {}},
+    {MutexThreadRegistry, "ThreadRegistry", {}},
+    {MutexTypeTrace, "Trace", {MutexLeaf}},
+    {MutexTypeReport, "Report", {MutexTypeSyncVar}},
+    {MutexTypeSyncVar, "SyncVar", {}},
+    {MutexTypeAnnotations, "Annotations", {}},
+    {MutexTypeAtExit, "AtExit", {MutexTypeSyncVar}},
     {MutexTypeFired, "Fired", {MutexLeaf}},
     {MutexTypeRacy, "Racy", {MutexLeaf}},
-    {MutexTypeGlobalProc, "GlobalProc", {MutexTypeSlot, MutexTypeSlots}},
-    {MutexTypeTrace, "Trace", {}},
-    {MutexTypeSlot,
-     "Slot",
-     {MutexMulti, MutexTypeTrace, MutexTypeSyncVar, MutexThreadRegistry,
-      MutexTypeSlots}},
-    {MutexTypeSlots, "Slots", {MutexTypeTrace, MutexTypeReport}},
-    {MutexTypeMultiSlot, "MultiSlot", {MutexTypeSlot, MutexTypeSlots}},
+    {MutexTypeGlobalProc, "GlobalProc", {}},
     {},
 };
 
 void PrintMutexPC(uptr pc) { StackTrace(&pc, 1).Print(); }
-
 }  // namespace __sanitizer
 #endif
