@@ -1448,6 +1448,17 @@ typedef void (*VariadicFnType)(int a, ...);
  */
 using VariadicFnType2 = void (*)(int a, ...);
 
+/*!
+ * Function pointer type variable.
+ *
+ * @param a
+ * works
+ *
+ * @param ...
+ * now should work too.
+ */
+void (*variadicFnVar)(int a, ...);
+
 // expected-warning@+2 {{empty paragraph passed to '@note' command}}
 /**
 @note
