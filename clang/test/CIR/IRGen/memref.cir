@@ -19,11 +19,11 @@ module {
 // MLIR-NEXT:   func.func @foo() {
 // MLIR-NEXT:     %0 = memref.alloc() : memref<i32>
 // MLIR-NEXT:     {{.*}}arith.constant 1 : i32
-// MLIR-NEXT:     cir.return
+// MLIR-NEXT:     return
 // MLIR-NEXT:   }
 // MLIR-NEXT:   func @main() -> i32 {
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
-// MLIR-NEXT:     cir.return %c1_i32 : i32
+// MLIR-NEXT:     return %c1_i32 : i32
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
 
