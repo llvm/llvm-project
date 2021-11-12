@@ -81,10 +81,7 @@ void ModuloScheduleExpander::expand() {
       Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
-      for (MachineRegisterInfo::use_iterator UI = MRI.use_begin(Reg),
-                                             EI = MRI.use_end();
-           UI != EI; ++UI) {
-        MachineOperand &UseOp = *UI;
+      for (MachineOperand &UseOp : MRI.use_operands(Reg)) {
         MachineInstr *UseMI = UseOp.getParent();
         int UseStage = Schedule.getStage(UseMI);
         unsigned Diff = 0;
@@ -344,10 +341,8 @@ static void replaceRegUsesAfterLoop(unsigned FromReg, unsigned ToReg,
 /// specified loop.
 static bool hasUseAfterLoop(unsigned Reg, MachineBasicBlock *BB,
                             MachineRegisterInfo &MRI) {
-  for (MachineRegisterInfo::use_iterator I = MRI.use_begin(Reg),
-                                         E = MRI.use_end();
-       I != E; ++I)
-    if (I->getParent()->getParent() != BB)
+  for (const MachineOperand &MO : MRI.use_operands(Reg))
+    if (MO.getParent()->getParent() != BB)
       return true;
   return false;
 }
@@ -725,12 +720,10 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         }
         unsigned realUses = 0;
-        for (MachineRegisterInfo::use_iterator UI = MRI.use_begin(reg),
-                                               EI = MRI.use_end();
-             UI != EI; ++UI) {
+        for (const MachineOperand &U : MRI.use_operands(reg)) {
           // Check if there are any uses that occur only in the original
           // loop.  If so, that's not a real use.
-          if (UI->getParent()->getParent() != BB) {
+          if (U.getParent()->getParent() != BB) {
             realUses++;
             used = true;
             break;

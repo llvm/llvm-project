@@ -972,8 +972,8 @@ namespace {
 } // end anonymous namespace
 
 bool DeadCodeElimination::isDead(unsigned R) const {
-  for (auto I = MRI.use_begin(R), E = MRI.use_end(); I != E; ++I) {
-    MachineInstr *UseI = I->getParent();
+  for (const MachineOperand &MO : MRI.use_operands(R)) {
+    const MachineInstr *UseI = MO.getParent();
     if (UseI->isDebugValue())
       continue;
     if (UseI->isPHI()) {
@@ -3120,8 +3120,8 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     if (isConst(PR))
       continue;
     bool BadUse = false, GoodUse = false;
-    for (auto UI = MRI->use_begin(PR), UE = MRI->use_end(); UI != UE; ++UI) {
-      MachineInstr *UseI = UI->getParent();
+    for (const MachineOperand &MO : MRI->use_operands(PR)) {
+      const MachineInstr *UseI = MO.getParent();
       if (UseI->getParent() != C.LB) {
         BadUse = true;
         break;
