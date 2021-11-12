@@ -78,12 +78,10 @@ define i32 @udiv_constant(i32 %a) nounwind {
 ; RV64IM-LABEL: udiv_constant:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a0, a0, 32
-; RV64IM-NEXT:    srli a0, a0, 32
-; RV64IM-NEXT:    lui a1, 205
+; RV64IM-NEXT:    lui a1, 838861
 ; RV64IM-NEXT:    addiw a1, a1, -819
-; RV64IM-NEXT:    slli a1, a1, 12
-; RV64IM-NEXT:    addi a1, a1, -819
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    slli a1, a1, 32
+; RV64IM-NEXT:    mulhu a0, a0, a1
 ; RV64IM-NEXT:    srli a0, a0, 34
 ; RV64IM-NEXT:    ret
   %1 = udiv i32 %a, 5
