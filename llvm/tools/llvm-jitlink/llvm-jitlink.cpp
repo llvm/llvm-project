@@ -1643,6 +1643,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Destroy the session.
+  ExitOnErr(S->ES.endSession());
   S.reset();
 
   // If the executing code set a test result override then use that.

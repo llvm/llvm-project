@@ -406,7 +406,7 @@ void RTNAME(Reshape)(Descriptor &result, const Descriptor &source,
       RUNTIME_CHECK(
           terminator, k >= 1 && k <= resultRank && !((values >> k) & 1));
       values |= std::uint64_t{1} << k;
-      dimOrder[k - 1] = j;
+      dimOrder[j] = k - 1;
     }
   } else {
     for (int j{0}; j < resultRank; ++j) {

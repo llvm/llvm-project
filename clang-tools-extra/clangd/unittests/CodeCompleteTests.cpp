@@ -1887,6 +1887,11 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertText, "Foo::x(${0:bool})");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
 
+  C.SnippetSuffix = "";
+  R = C.render(Opts);
+  EXPECT_EQ(R.insertText, "Foo::x");
+  EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
+
   Include.Insertion.emplace();
   R = C.render(Opts);
   EXPECT_EQ(R.label, "^Foo::x(bool) const");
