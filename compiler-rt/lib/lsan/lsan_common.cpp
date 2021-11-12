@@ -131,18 +131,13 @@ static LeakSuppressionContext *GetSuppressionContext() {
   return suppression_ctx;
 }
 
-static InternalMmapVector<RootRegion> *root_regions;
+static InternalMmapVectorNoCtor<RootRegion> root_regions;
 
-InternalMmapVector<RootRegion> const *GetRootRegions() { return root_regions; }
-
-void InitializeRootRegions() {
-  CHECK(!root_regions);
-  ALIGNED(64) static char placeholder[sizeof(InternalMmapVector<RootRegion>)];
-  root_regions = new (placeholder) InternalMmapVector<RootRegion>();
+InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions() {
+  return &root_regions;
 }
 
 void InitCommonLsan() {
-  InitializeRootRegions();
   if (common_flags()->detect_leaks) {
     // Initialization which can fail or print warnings should only be done if
     // LSan is actually enabled.
@@ -426,10 +421,8 @@ static void ProcessRootRegion(Frontier *frontier,
 // Scans root regions for heap pointers.
 static void ProcessRootRegions(Frontier *frontier) {
   if (!flags()->use_root_regions) return;
-  CHECK(root_regions);
-  for (uptr i = 0; i < root_regions->size(); i++) {
-    ProcessRootRegion(frontier, (*root_regions)[i]);
-  }
+  for (uptr i = 0; i < root_regions.size(); i++)
+    ProcessRootRegion(frontier, root_regions[i]);
 }
 
 static void FloodFillTag(Frontier *frontier, ChunkTag tag) {
@@ -966,9 +959,8 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_register_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
   Lock l(&global_mutex);
-  CHECK(root_regions);
   RootRegion region = {reinterpret_cast<uptr>(begin), size};
-  root_regions->push_back(region);
+  root_regions.push_back(region);
   VReport(1, "Registered root region at %p of size %zu\n", begin, size);
 #endif // CAN_SANITIZE_LEAKS
 }
@@ -977,15 +969,14 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_unregister_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
   Lock l(&global_mutex);
-  CHECK(root_regions);
   bool removed = false;
-  for (uptr i = 0; i < root_regions->size(); i++) {
-    RootRegion region = (*root_regions)[i];
+  for (uptr i = 0; i < root_regions.size(); i++) {
+    RootRegion region = root_regions[i];
     if (region.begin == reinterpret_cast<uptr>(begin) && region.size == size) {
       removed = true;
-      uptr last_index = root_regions->size() - 1;
-      (*root_regions)[i] = (*root_regions)[last_index];
-      root_regions->pop_back();
+      uptr last_index = root_regions.size() - 1;
+      root_regions[i] = root_regions[last_index];
+      root_regions.pop_back();
       VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
       break;
     }

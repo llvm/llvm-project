@@ -140,7 +140,7 @@ struct CheckForLeaksParam {
   bool success = false;
 };
 
-InternalMmapVector<RootRegion> const *GetRootRegions();
+InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
 void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg);
