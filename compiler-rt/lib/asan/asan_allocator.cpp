@@ -102,19 +102,18 @@ class ChunkHeader {
 
  public:
   uptr UsedSize() const {
-    uptr R = user_requested_size_lo;
-    if (sizeof(uptr) > sizeof(user_requested_size_lo))
-      R += (uptr)user_requested_size_hi << (8 * sizeof(user_requested_size_lo));
-    return R;
+    static_assert(sizeof(user_requested_size_lo) == 4,
+                  "Expression below requires this");
+    return FIRST_32_SECOND_64(0, ((uptr)user_requested_size_hi << 32)) +
+           user_requested_size_lo;
   }
 
   void SetUsedSize(uptr size) {
     user_requested_size_lo = size;
-    if (sizeof(uptr) > sizeof(user_requested_size_lo)) {
-      size >>= (8 * sizeof(user_requested_size_lo));
-      user_requested_size_hi = size;
-      CHECK_EQ(user_requested_size_hi, size);
-    }
+    static_assert(sizeof(user_requested_size_lo) == 4,
+                  "Expression below requires this");
+    user_requested_size_hi = FIRST_32_SECOND_64(0, size >> 32);
+    CHECK_EQ(UsedSize(), size);
   }
 
   void SetAllocContext(u32 tid, u32 stack) {
