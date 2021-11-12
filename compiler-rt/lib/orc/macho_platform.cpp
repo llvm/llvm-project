@@ -308,7 +308,7 @@ Error MachOPlatformRuntimeState::registerThreadDataSection(
 Error MachOPlatformRuntimeState::deregisterThreadDataSection(
     span<const char> ThreadDataSection) {
   std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
-  auto I = ThreadDataSections.find(ThreadDataSection.end());
+  auto I = ThreadDataSections.find(ThreadDataSection.data());
   if (I == ThreadDataSections.end())
     return make_error<StringError>("Attempt to deregister unknown thread data "
                                    "section");
