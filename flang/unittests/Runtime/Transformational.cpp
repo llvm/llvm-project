@@ -96,8 +96,7 @@ TEST(Transformational, Shifts) {
   // VECTOR  1 3 5 2 4 6 WITH non zero lower bound in a negative cshift.
   auto vectorWithLowerBounds{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{6}, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
-  vector->GetDimension(0).SetLowerBound(2);
-  StaticDescriptor<1, true> vectorDesc2;
+  vectorWithLowerBounds->GetDimension(0).SetLowerBound(2);
 
   RTNAME(CshiftVector)
   (vectorResult, *vectorWithLowerBounds, -2, __FILE__, __LINE__);
