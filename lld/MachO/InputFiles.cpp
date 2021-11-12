@@ -910,12 +910,6 @@ void ObjFile::registerCompactUnwind() {
         continue;
       uint64_t add = r.addend;
       if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
-        // Check whether the symbol defined in this file is the prevailing one.
-        // Skip if it is e.g. a weak def that didn't prevail.
-        if (sym->getFile() != this) {
-          ++it;
-          continue;
-        }
         add += sym->value;
         referentIsec = cast<ConcatInputSection>(sym->isec);
       } else {
