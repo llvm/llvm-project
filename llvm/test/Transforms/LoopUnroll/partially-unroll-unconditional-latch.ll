@@ -23,8 +23,6 @@ define i32 @test_partial_unroll_with_breakout_at_iter0() {
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds [344 x i32], [344 x i32]* @table, i64 0, i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    store i32 [[RED_NEXT_1]], i32* [[PTR_1]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH_1:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret i32 0
 ; CHECK:       for.latch.1:
 ; CHECK-NEXT:    [[RED_NEXT_2:%.*]] = add nuw nsw i32 10, [[RED_NEXT_1]]
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV_NEXT_1]], 2
@@ -40,6 +38,8 @@ define i32 @test_partial_unroll_with_breakout_at_iter0() {
 ; CHECK-NEXT:    br i1 [[EXITCOND_1_I_3]], label [[EXIT:%.*]], label [[FOR_LATCH_3]]
 ; CHECK:       for.latch.3:
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br label %for.header

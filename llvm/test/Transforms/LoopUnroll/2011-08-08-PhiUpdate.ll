@@ -17,24 +17,24 @@ define void @test1(i32 %i, i32 %j) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 [[SUB]], [[J:%.*]]
 ; CHECK-NEXT:    [[COND2:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2]], label [[IF_THEN_LOOPEXIT:%.*]], label [[IF_ELSE_1:%.*]]
-; CHECK:       if.then.loopexit:
-; CHECK-NEXT:    [[SUB5_LCSSA:%.*]] = phi i32 [ [[SUB5]], [[IF_ELSE]] ], [ [[SUB5_1:%.*]], [[IF_ELSE_1]] ], [ [[SUB5_2:%.*]], [[IF_ELSE_2:%.*]] ], [ [[SUB5_3]], [[IF_ELSE_3]] ]
-; CHECK-NEXT:    br label [[IF_THEN]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[I_TR:%.*]] = phi i32 [ [[I]], [[ENTRY:%.*]] ], [ [[SUB5_LCSSA]], [[IF_THEN_LOOPEXIT]] ]
-; CHECK-NEXT:    ret void
 ; CHECK:       if.else.1:
-; CHECK-NEXT:    [[SUB5_1]] = sub i32 [[SUB5]], [[J]]
+; CHECK-NEXT:    [[SUB5_1:%.*]] = sub i32 [[SUB5]], [[J]]
 ; CHECK-NEXT:    [[COND2_1:%.*]] = call zeroext i1 @check()
-; CHECK-NEXT:    br i1 [[COND2_1]], label [[IF_THEN_LOOPEXIT]], label [[IF_ELSE_2]]
+; CHECK-NEXT:    br i1 [[COND2_1]], label [[IF_THEN_LOOPEXIT]], label [[IF_ELSE_2:%.*]]
 ; CHECK:       if.else.2:
-; CHECK-NEXT:    [[SUB5_2]] = sub i32 [[SUB5_1]], [[J]]
+; CHECK-NEXT:    [[SUB5_2:%.*]] = sub i32 [[SUB5_1]], [[J]]
 ; CHECK-NEXT:    [[COND2_2:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_2]], label [[IF_THEN_LOOPEXIT]], label [[IF_ELSE_3]]
 ; CHECK:       if.else.3:
 ; CHECK-NEXT:    [[SUB5_3]] = sub i32 [[SUB5_2]], [[J]]
 ; CHECK-NEXT:    [[COND2_3:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_3]], label [[IF_THEN_LOOPEXIT]], label [[IF_ELSE]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       if.then.loopexit:
+; CHECK-NEXT:    [[SUB5_LCSSA:%.*]] = phi i32 [ [[SUB5]], [[IF_ELSE]] ], [ [[SUB5_1]], [[IF_ELSE_1]] ], [ [[SUB5_2]], [[IF_ELSE_2]] ], [ [[SUB5_3]], [[IF_ELSE_3]] ]
+; CHECK-NEXT:    br label [[IF_THEN]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[I_TR:%.*]] = phi i32 [ [[I]], [[ENTRY:%.*]] ], [ [[SUB5_LCSSA]], [[IF_THEN_LOOPEXIT]] ]
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cond1 = call zeroext i1 @check()
@@ -77,17 +77,11 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add nuw nsw i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVAR_NEXT]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB_1:%.*]], label [[BB1_BB2_CRIT_EDGE:%.*]]
-; CHECK:       bb1.bb2_crit_edge:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP2]], [[BB1]] ], [ [[TMP4:%.*]], [[BB1_1:%.*]] ], [ [[TMP6:%.*]], [[BB1_2:%.*]] ], [ [[TMP8]], [[BB1_3]] ]
-; CHECK-NEXT:    br label [[BB2]]
-; CHECK:       bb2:
-; CHECK-NEXT:    [[S_0_LCSSA:%.*]] = phi i32 [ [[DOTLCSSA]], [[BB1_BB2_CRIT_EDGE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[S_0_LCSSA]]
 ; CHECK:       bb.1:
 ; CHECK-NEXT:    [[SCEVGEP_1:%.*]] = getelementptr i32, i32* [[P]], i64 [[INDVAR_NEXT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[SCEVGEP_1]], align 1
-; CHECK-NEXT:    [[TMP4]] = add nsw i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    br label [[BB1_1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    br label [[BB1_1:%.*]]
 ; CHECK:       bb1.1:
 ; CHECK-NEXT:    [[INDVAR_NEXT_1:%.*]] = add nuw nsw i64 [[INDVAR_NEXT]], 1
 ; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp ne i64 [[INDVAR_NEXT_1]], [[TMP]]
@@ -95,8 +89,8 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    [[SCEVGEP_2:%.*]] = getelementptr i32, i32* [[P]], i64 [[INDVAR_NEXT_1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[SCEVGEP_2]], align 1
-; CHECK-NEXT:    [[TMP6]] = add nsw i32 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    br label [[BB1_2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    br label [[BB1_2:%.*]]
 ; CHECK:       bb1.2:
 ; CHECK-NEXT:    [[INDVAR_NEXT_2:%.*]] = add nuw nsw i64 [[INDVAR_NEXT_1]], 1
 ; CHECK-NEXT:    [[EXITCOND_2:%.*]] = icmp ne i64 [[INDVAR_NEXT_2]], [[TMP]]
@@ -110,6 +104,12 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[INDVAR_NEXT_3]] = add i64 [[INDVAR_NEXT_2]], 1
 ; CHECK-NEXT:    [[EXITCOND_3:%.*]] = icmp ne i64 [[INDVAR_NEXT_3]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_3]], label [[BB]], label [[BB1_BB2_CRIT_EDGE]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       bb1.bb2_crit_edge:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP2]], [[BB1]] ], [ [[TMP4]], [[BB1_1]] ], [ [[TMP6]], [[BB1_2]] ], [ [[TMP8]], [[BB1_3]] ]
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[S_0_LCSSA:%.*]] = phi i32 [ [[DOTLCSSA]], [[BB1_BB2_CRIT_EDGE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[S_0_LCSSA]]
 ;
 entry:
   %0 = icmp sgt i32 %n, 0                         ; <i1> [#uses=1]
@@ -162,20 +162,12 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK:       do.cond:
 ; CHECK-NEXT:    [[COND3:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND3]], label [[DO_END:%.*]], label [[DO_BODY_1:%.*]]
-; CHECK:       do.end:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return.loopexit:
-; CHECK-NEXT:    [[TMP7_I_LCSSA:%.*]] = phi i32 [ [[TMP7_I]], [[LAND_LHS_TRUE]] ], [ [[TMP7_I_1:%.*]], [[LAND_LHS_TRUE_1:%.*]] ], [ [[TMP7_I_2:%.*]], [[LAND_LHS_TRUE_2:%.*]] ], [ [[TMP7_I_3:%.*]], [[LAND_LHS_TRUE_3:%.*]] ]
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[DO_END]] ], [ 0, [[ENTRY:%.*]] ], [ [[TMP7_I_LCSSA]], [[RETURN_LOOPEXIT]] ]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[COND2_1:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_1]], label [[EXIT_1:%.*]], label [[DO_COND_1:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[TMP7_I_1]] = load i32, i32* undef, align 8
-; CHECK-NEXT:    br i1 undef, label [[DO_COND_1]], label [[LAND_LHS_TRUE_1]]
+; CHECK-NEXT:    [[TMP7_I_1:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    br i1 undef, label [[DO_COND_1]], label [[LAND_LHS_TRUE_1:%.*]]
 ; CHECK:       land.lhs.true.1:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT]], label [[DO_COND_1]]
 ; CHECK:       do.cond.1:
@@ -185,8 +177,8 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK-NEXT:    [[COND2_2:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_2]], label [[EXIT_2:%.*]], label [[DO_COND_2:%.*]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[TMP7_I_2]] = load i32, i32* undef, align 8
-; CHECK-NEXT:    br i1 undef, label [[DO_COND_2]], label [[LAND_LHS_TRUE_2]]
+; CHECK-NEXT:    [[TMP7_I_2:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    br i1 undef, label [[DO_COND_2]], label [[LAND_LHS_TRUE_2:%.*]]
 ; CHECK:       land.lhs.true.2:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT]], label [[DO_COND_2]]
 ; CHECK:       do.cond.2:
@@ -196,13 +188,21 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK-NEXT:    [[COND2_3:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_3]], label [[EXIT_3:%.*]], label [[DO_COND_3:%.*]]
 ; CHECK:       exit.3:
-; CHECK-NEXT:    [[TMP7_I_3]] = load i32, i32* undef, align 8
-; CHECK-NEXT:    br i1 undef, label [[DO_COND_3]], label [[LAND_LHS_TRUE_3]]
+; CHECK-NEXT:    [[TMP7_I_3:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    br i1 undef, label [[DO_COND_3]], label [[LAND_LHS_TRUE_3:%.*]]
 ; CHECK:       land.lhs.true.3:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT]], label [[DO_COND_3]]
 ; CHECK:       do.cond.3:
 ; CHECK-NEXT:    [[COND3_3:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND3_3]], label [[DO_END]], label [[DO_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       do.end:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return.loopexit:
+; CHECK-NEXT:    [[TMP7_I_LCSSA:%.*]] = phi i32 [ [[TMP7_I]], [[LAND_LHS_TRUE]] ], [ [[TMP7_I_1]], [[LAND_LHS_TRUE_1]] ], [ [[TMP7_I_2]], [[LAND_LHS_TRUE_2]] ], [ [[TMP7_I_3]], [[LAND_LHS_TRUE_3]] ]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[DO_END]] ], [ 0, [[ENTRY:%.*]] ], [ [[TMP7_I_LCSSA]], [[RETURN_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   %cond1 = call zeroext i1 @check()

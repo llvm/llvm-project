@@ -71,35 +71,35 @@ define i64 @earlyLoopTest(i64* %base) nounwind {
 ; CHECK:       tail:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[VAL]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_1:%.*]], label [[EXIT2:%.*]]
-; CHECK:       exit1:
-; CHECK-NEXT:    [[S_LCSSA:%.*]] = phi i64 [ [[S_NEXT_2:%.*]], [[LOOP_3:%.*]] ]
-; CHECK-NEXT:    ret i64 [[S_LCSSA]]
-; CHECK:       exit2:
-; CHECK-NEXT:    [[S_NEXT_LCSSA1:%.*]] = phi i64 [ [[VAL]], [[TAIL]] ], [ [[S_NEXT_1:%.*]], [[TAIL_1:%.*]] ], [ [[S_NEXT_2]], [[TAIL_2:%.*]] ], [ [[S_NEXT_3:%.*]], [[TAIL_3:%.*]] ]
-; CHECK-NEXT:    ret i64 [[S_NEXT_LCSSA1]]
 ; CHECK:       loop.1:
 ; CHECK-NEXT:    [[ADR_1:%.*]] = getelementptr i64, i64* [[BASE]], i64 1
 ; CHECK-NEXT:    [[VAL_1:%.*]] = load i64, i64* [[ADR_1]], align 4
-; CHECK-NEXT:    [[S_NEXT_1]] = add i64 [[VAL]], [[VAL_1]]
-; CHECK-NEXT:    br label [[TAIL_1]]
+; CHECK-NEXT:    [[S_NEXT_1:%.*]] = add i64 [[VAL]], [[VAL_1]]
+; CHECK-NEXT:    br label [[TAIL_1:%.*]]
 ; CHECK:       tail.1:
 ; CHECK-NEXT:    [[CMP2_1:%.*]] = icmp ne i64 [[VAL_1]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_1]], label [[LOOP_2:%.*]], label [[EXIT2]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    [[ADR_2:%.*]] = getelementptr i64, i64* [[BASE]], i64 2
 ; CHECK-NEXT:    [[VAL_2:%.*]] = load i64, i64* [[ADR_2]], align 4
-; CHECK-NEXT:    [[S_NEXT_2]] = add i64 [[S_NEXT_1]], [[VAL_2]]
-; CHECK-NEXT:    br label [[TAIL_2]]
+; CHECK-NEXT:    [[S_NEXT_2:%.*]] = add i64 [[S_NEXT_1]], [[VAL_2]]
+; CHECK-NEXT:    br label [[TAIL_2:%.*]]
 ; CHECK:       tail.2:
 ; CHECK-NEXT:    [[CMP2_2:%.*]] = icmp ne i64 [[VAL_2]], 0
-; CHECK-NEXT:    br i1 [[CMP2_2]], label [[LOOP_3]], label [[EXIT2]]
+; CHECK-NEXT:    br i1 [[CMP2_2]], label [[LOOP_3:%.*]], label [[EXIT2]]
 ; CHECK:       loop.3:
 ; CHECK-NEXT:    [[ADR_3:%.*]] = getelementptr i64, i64* [[BASE]], i64 3
 ; CHECK-NEXT:    [[VAL_3:%.*]] = load i64, i64* [[ADR_3]], align 4
-; CHECK-NEXT:    [[S_NEXT_3]] = add i64 [[S_NEXT_2]], [[VAL_3]]
-; CHECK-NEXT:    br i1 false, label [[TAIL_3]], label [[EXIT1:%.*]]
+; CHECK-NEXT:    [[S_NEXT_3:%.*]] = add i64 [[S_NEXT_2]], [[VAL_3]]
+; CHECK-NEXT:    br i1 false, label [[TAIL_3:%.*]], label [[EXIT1:%.*]]
 ; CHECK:       tail.3:
 ; CHECK-NEXT:    br label [[EXIT2]]
+; CHECK:       exit1:
+; CHECK-NEXT:    [[S_LCSSA:%.*]] = phi i64 [ [[S_NEXT_2]], [[LOOP_3]] ]
+; CHECK-NEXT:    ret i64 [[S_LCSSA]]
+; CHECK:       exit2:
+; CHECK-NEXT:    [[S_NEXT_LCSSA1:%.*]] = phi i64 [ [[VAL]], [[TAIL]] ], [ [[S_NEXT_1]], [[TAIL_1]] ], [ [[S_NEXT_2]], [[TAIL_2]] ], [ [[S_NEXT_3]], [[TAIL_3]] ]
+; CHECK-NEXT:    ret i64 [[S_NEXT_LCSSA1]]
 ;
 entry:
   br label %loop
@@ -174,12 +174,6 @@ define i32 @multiExitIncomplete(i32* %base) nounwind {
 ; CHECK:       l3:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[VAL]], 0
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[L1_1:%.*]], label [[EXIT3:%.*]]
-; CHECK:       exit1:
-; CHECK-NEXT:    ret i32 1
-; CHECK:       exit2:
-; CHECK-NEXT:    ret i32 2
-; CHECK:       exit3:
-; CHECK-NEXT:    ret i32 3
 ; CHECK:       l1.1:
 ; CHECK-NEXT:    [[ADR_1:%.*]] = getelementptr i32, i32* [[BASE]], i32 1
 ; CHECK-NEXT:    [[VAL_1:%.*]] = load i32, i32* [[ADR_1]], align 4
@@ -222,6 +216,12 @@ define i32 @multiExitIncomplete(i32* %base) nounwind {
 ; CHECK-NEXT:    br i1 true, label [[L3_5:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       l3.5:
 ; CHECK-NEXT:    br label [[EXIT3]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i32 2
+; CHECK:       exit3:
+; CHECK-NEXT:    ret i32 3
 ;
 entry:
   br label %l1
@@ -313,15 +313,15 @@ define void @nsw_latch(i32* %a) nounwind {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 false, label [[RETURN:%.*]], label [[FOR_BODY_1:%.*]]
+; CHECK:       for.body.1:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND_1:%.*]], label [[RETURN]]
+; CHECK:       for.cond.1:
+; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1:%.*]] ]
+; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
 ; CHECK-NEXT:    store i32 [[B_03_LCSSA]], i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
-; CHECK:       for.body.1:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_1]], label [[RETURN]]
-; CHECK:       for.cond.1:
-; CHECK-NEXT:    br label [[RETURN]]
 ;
 entry:
   br label %for.body

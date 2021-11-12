@@ -15,8 +15,6 @@ define void @test2(i32* %arg, i64* %out)  {
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
 ; CHECK-NEXT:    store i32 0, i32* [[PTR_1]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH_1:%.*]]
-; CHECK:       if.end.loopexit:
-; CHECK-NEXT:    ret void
 ; CHECK:       for.latch.1:
 ; CHECK-NEXT:    store volatile i64 1, i64* [[OUT]], align 4
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 2
@@ -30,6 +28,8 @@ define void @test2(i32* %arg, i64* %out)  {
 ; CHECK:       for.latch.3:
 ; CHECK-NEXT:    store volatile i64 3, i64* [[OUT]], align 4
 ; CHECK-NEXT:    unreachable
+; CHECK:       if.end.loopexit:
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -63,11 +63,11 @@ define double @test_with_lcssa(double %arg1, double* %arg2) {
 ; CHECK-NEXT:    [[LV:%.*]] = load double, double* [[PTR]], align 8
 ; CHECK-NEXT:    [[RES_1:%.*]] = fsub double [[LV]], [[RES]]
 ; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[LOOP_LATCH_1:%.*]]
+; CHECK:       loop.latch.1:
+; CHECK-NEXT:    unreachable
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi double [ [[RES_1]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret double [[RES_LCSSA]]
-; CHECK:       loop.latch.1:
-; CHECK-NEXT:    unreachable
 ;
 
 entry:
@@ -110,8 +110,6 @@ define void @test_with_nested_loop(i32* %arg)  {
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[OUTER_LATCH:%.*]], label [[INNER_BODY]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br label [[INNER_BODY_PREHEADER_1:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret void
 ; CHECK:       inner.body.preheader.1:
 ; CHECK-NEXT:    br label [[INNER_BODY_1:%.*]]
 ; CHECK:       inner.body.1:
@@ -136,6 +134,8 @@ define void @test_with_nested_loop(i32* %arg)  {
 ; CHECK-NEXT:    br i1 [[INNER_COND_2]], label [[OUTER_LATCH_2:%.*]], label [[INNER_BODY_2]]
 ; CHECK:       outer.latch.2:
 ; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
 
 entry:

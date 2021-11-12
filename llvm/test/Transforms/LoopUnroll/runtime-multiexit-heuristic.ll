@@ -30,10 +30,75 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[SUM_02]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_1:%.*]]
+; CHECK:       for.exiting_block.1:
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_1]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_1:%.*]]
+; CHECK:       latch.1:
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP3]], [[ADD]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_2:%.*]]
+; CHECK:       for.exiting_block.2:
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_2]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_2:%.*]]
+; CHECK:       latch.2:
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP4]], [[ADD_1]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_3:%.*]]
+; CHECK:       for.exiting_block.3:
+; CHECK-NEXT:    [[CMP_3:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_3]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_3:%.*]]
+; CHECK:       latch.3:
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP5]], [[ADD_2]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = or i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_4:%.*]]
+; CHECK:       for.exiting_block.4:
+; CHECK-NEXT:    [[CMP_4:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_4]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_4:%.*]]
+; CHECK:       latch.4:
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
+; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP6]], [[ADD_3]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = or i64 [[INDVARS_IV]], 5
+; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_5:%.*]]
+; CHECK:       for.exiting_block.5:
+; CHECK-NEXT:    [[CMP_5:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_5]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_5:%.*]]
+; CHECK:       latch.5:
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
+; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP7]], [[ADD_4]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = or i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_6:%.*]]
+; CHECK:       for.exiting_block.6:
+; CHECK-NEXT:    [[CMP_6:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_6]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_6:%.*]]
+; CHECK:       latch.6:
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
+; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP8]], [[ADD_5]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = or i64 [[INDVARS_IV]], 7
+; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_7:%.*]]
+; CHECK:       for.exiting_block.7:
+; CHECK-NEXT:    [[CMP_7:%.*]] = icmp eq i64 [[N]], 42
+; CHECK-NEXT:    br i1 [[CMP_7]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_7]]
+; CHECK:       latch.7:
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
+; CHECK-NEXT:    [[ADD_7]] = add nsw i32 [[TMP9]], [[ADD_6]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8
+; CHECK-NEXT:    [[NITER_NSUB_7]] = add i64 [[NITER]], -8
+; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[LATCHEXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[HEADER]]
 ; CHECK:       latchexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
 ; CHECK:       latchexit.unr-lcssa:
-; CHECK-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
@@ -50,8 +115,8 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_EPIL]], label [[OTHEREXIT_LOOPEXIT3:%.*]], label [[LATCH_EPIL]]
 ; CHECK:       latch.epil:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
-; CHECK-NEXT:    [[ADD_EPIL]] = add nsw i32 [[TMP3]], [[SUM_02_EPIL]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
+; CHECK-NEXT:    [[ADD_EPIL]] = add nsw i32 [[TMP10]], [[SUM_02_EPIL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_EPIL]] = add i64 [[INDVARS_IV_EPIL]], 1
 ; CHECK-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_SUB]], 0
@@ -62,7 +127,7 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA_PH]], [[LATCHEXIT_UNR_LCSSA]] ], [ [[ADD_EPIL]], [[LATCHEXIT_EPILOG_LCSSA]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ; CHECK:       otherexit.loopexit:
-; CHECK-NEXT:    [[SUM_02_LCSSA_PH:%.*]] = phi i32 [ [[SUM_02]], [[FOR_EXITING_BLOCK]] ], [ [[ADD]], [[FOR_EXITING_BLOCK_1]] ], [ [[ADD_1:%.*]], [[FOR_EXITING_BLOCK_2:%.*]] ], [ [[ADD_2:%.*]], [[FOR_EXITING_BLOCK_3:%.*]] ], [ [[ADD_3:%.*]], [[FOR_EXITING_BLOCK_4:%.*]] ], [ [[ADD_4:%.*]], [[FOR_EXITING_BLOCK_5:%.*]] ], [ [[ADD_5:%.*]], [[FOR_EXITING_BLOCK_6:%.*]] ], [ [[ADD_6:%.*]], [[FOR_EXITING_BLOCK_7:%.*]] ]
+; CHECK-NEXT:    [[SUM_02_LCSSA_PH:%.*]] = phi i32 [ [[SUM_02]], [[FOR_EXITING_BLOCK]] ], [ [[ADD]], [[FOR_EXITING_BLOCK_1]] ], [ [[ADD_1]], [[FOR_EXITING_BLOCK_2]] ], [ [[ADD_2]], [[FOR_EXITING_BLOCK_3]] ], [ [[ADD_3]], [[FOR_EXITING_BLOCK_4]] ], [ [[ADD_4]], [[FOR_EXITING_BLOCK_5]] ], [ [[ADD_5]], [[FOR_EXITING_BLOCK_6]] ], [ [[ADD_6]], [[FOR_EXITING_BLOCK_7]] ]
 ; CHECK-NEXT:    br label [[OTHEREXIT:%.*]]
 ; CHECK:       otherexit.loopexit3:
 ; CHECK-NEXT:    br label [[OTHEREXIT]]
@@ -70,71 +135,6 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[SUM_02_LCSSA:%.*]] = phi i32 [ [[SUM_02_LCSSA_PH]], [[OTHEREXIT_LOOPEXIT]] ], [ [[SUM_02_EPIL]], [[OTHEREXIT_LOOPEXIT3]] ]
 ; CHECK-NEXT:    [[RVAL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[SUM_02_LCSSA]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL]]
-; CHECK:       for.exiting_block.1:
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_1:%.*]]
-; CHECK:       latch.1:
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[ADD_1]] = add nsw i32 [[TMP4]], [[ADD]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_2]]
-; CHECK:       for.exiting_block.2:
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_2]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_2:%.*]]
-; CHECK:       latch.2:
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[ADD_2]] = add nsw i32 [[TMP5]], [[ADD_1]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_3]]
-; CHECK:       for.exiting_block.3:
-; CHECK-NEXT:    [[CMP_3:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_3]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_3:%.*]]
-; CHECK:       latch.3:
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[ADD_3]] = add nsw i32 [[TMP6]], [[ADD_2]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = or i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_4]]
-; CHECK:       for.exiting_block.4:
-; CHECK-NEXT:    [[CMP_4:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_4]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_4:%.*]]
-; CHECK:       latch.4:
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
-; CHECK-NEXT:    [[ADD_4]] = add nsw i32 [[TMP7]], [[ADD_3]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = or i64 [[INDVARS_IV]], 5
-; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_5]]
-; CHECK:       for.exiting_block.5:
-; CHECK-NEXT:    [[CMP_5:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_5]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_5:%.*]]
-; CHECK:       latch.5:
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
-; CHECK-NEXT:    [[ADD_5]] = add nsw i32 [[TMP8]], [[ADD_4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = or i64 [[INDVARS_IV]], 6
-; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_6]]
-; CHECK:       for.exiting_block.6:
-; CHECK-NEXT:    [[CMP_6:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_6]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_6:%.*]]
-; CHECK:       latch.6:
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
-; CHECK-NEXT:    [[ADD_6]] = add nsw i32 [[TMP9]], [[ADD_5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = or i64 [[INDVARS_IV]], 7
-; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_7]]
-; CHECK:       for.exiting_block.7:
-; CHECK-NEXT:    [[CMP_7:%.*]] = icmp eq i64 [[N]], 42
-; CHECK-NEXT:    br i1 [[CMP_7]], label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_7]]
-; CHECK:       latch.7:
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
-; CHECK-NEXT:    [[ADD_7]] = add nsw i32 [[TMP10]], [[ADD_6]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[NITER_NSUB_7]] = add i64 [[NITER]], -8
-; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[LATCHEXIT_UNR_LCSSA_LOOPEXIT]], label [[HEADER]]
 ;
 ; NOUNROLL-LABEL: @test1(
 ; NOUNROLL-NEXT:  entry:

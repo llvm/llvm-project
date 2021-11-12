@@ -15,12 +15,12 @@ define void @s32_max1(i32 %n, i32* %p) {
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[N]], [[ADD]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_BODY_1:%.*]], label [[DO_END:%.*]]
-; CHECK:       do.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, i32* [[P]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    br label [[DO_END]]
+; CHECK:       do.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add = add i32 %n, 1
@@ -51,8 +51,6 @@ define void @s32_max2(i32 %n, i32* %p) {
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[N]], [[ADD]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_BODY_1:%.*]], label [[DO_END:%.*]]
-; CHECK:       do.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, i32* [[P]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX_1]], align 4
@@ -60,6 +58,8 @@ define void @s32_max2(i32 %n, i32* %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i32, i32* [[P]], i32 [[INC_1]]
 ; CHECK-NEXT:    store i32 [[INC_1]], i32* [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    br label [[DO_END]]
+; CHECK:       do.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add = add i32 %n, 2
@@ -163,12 +163,12 @@ define void @u32_max1(i32 %n, i32* %p) {
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[N]], [[ADD]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_BODY_1:%.*]], label [[DO_END:%.*]]
-; CHECK:       do.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, i32* [[P]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    br label [[DO_END]]
+; CHECK:       do.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add = add i32 %n, 1
@@ -199,8 +199,6 @@ define void @u32_max2(i32 %n, i32* %p) {
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[N]], [[ADD]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_BODY_1:%.*]], label [[DO_END:%.*]]
-; CHECK:       do.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, i32* [[P]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX_1]], align 4
@@ -208,6 +206,8 @@ define void @u32_max2(i32 %n, i32* %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i32, i32* [[P]], i32 [[INC_1]]
 ; CHECK-NEXT:    store i32 [[INC_1]], i32* [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    br label [[DO_END]]
+; CHECK:       do.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add = add i32 %n, 2
