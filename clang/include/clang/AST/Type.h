@@ -4944,29 +4944,29 @@ public:
 /// type-dependent, there is no deduced type and the type is canonical. In
 /// the latter case, it is also a dependent type.
 class DeducedType : public Type {
-  QualType DeducedAsType;
-
 protected:
   DeducedType(TypeClass TC, QualType DeducedAsType,
-              TypeDependence ExtraDependence, QualType Canon)
-      : Type(TC, Canon,
+              TypeDependence ExtraDependence)
+      : Type(TC,
+             // FIXME: Retain the sugared deduced type?
+             DeducedAsType.isNull() ? QualType(this, 0)
+                                    : DeducedAsType.getCanonicalType(),
              ExtraDependence | (DeducedAsType.isNull()
                                     ? TypeDependence::None
                                     : DeducedAsType->getDependence() &
-                                          ~TypeDependence::VariablyModified)),
-        DeducedAsType(DeducedAsType) {}
+                                          ~TypeDependence::VariablyModified)) {}
 
 public:
-  bool isSugared() const { return !DeducedAsType.isNull(); }
-  QualType desugar() const {
-    return isSugared() ? DeducedAsType : QualType(this, 0);
-  }
+  bool isSugared() const { return !isCanonicalUnqualified(); }
+  QualType desugar() const { return getCanonicalTypeInternal(); }
 
-  /// Get the type deduced for this placeholder type, or null if it
-  /// has not been deduced.
-  QualType getDeducedType() const { return DeducedAsType; }
+  /// Get the type deduced for this placeholder type, or null if it's
+  /// either not been deduced or was deduced to a dependent type.
+  QualType getDeducedType() const {
+    return !isCanonicalUnqualified() ? getCanonicalTypeInternal() : QualType();
+  }
   bool isDeduced() const {
-    return !DeducedAsType.isNull() || isDependentType();
+    return !isCanonicalUnqualified() || isDependentType();
   }
 
   static bool classof(const Type *T) {
@@ -4983,7 +4983,7 @@ class alignas(8) AutoType : public DeducedType, public llvm::FoldingSetNode {
   ConceptDecl *TypeConstraintConcept;
 
   AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           TypeDependence ExtraDependence, QualType Canon, ConceptDecl *CD,
+           TypeDependence ExtraDependence, ConceptDecl *CD,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
   const TemplateArgument *getArgBuffer() const {
@@ -5057,9 +5057,7 @@ class DeducedTemplateSpecializationType : public DeducedType,
                     toTypeDependence(Template.getDependence()) |
                         (IsDeducedAsDependent
                              ? TypeDependence::DependentInstantiation
-                             : TypeDependence::None),
-                    DeducedAsType.isNull() ? QualType(this, 0)
-                                           : DeducedAsType.getCanonicalType()),
+                             : TypeDependence::None)),
         Template(Template) {}
 
 public:

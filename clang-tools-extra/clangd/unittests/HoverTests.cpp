@@ -461,7 +461,7 @@ class Foo {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "auto";
          HI.Kind = index::SymbolKind::TypeAlias;
-         HI.Definition = "Foo<int>";
+         HI.Definition = "class Foo<int>";
        }},
       // auto on specialized template
       {R"cpp(
@@ -474,7 +474,7 @@ class Foo {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "auto";
          HI.Kind = index::SymbolKind::TypeAlias;
-         HI.Definition = "Foo<int>";
+         HI.Definition = "class Foo<int>";
        }},
 
       // macro
@@ -648,7 +648,7 @@ class Foo {})cpp";
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "Foo<X>";
+            HI.Definition = "class Foo<X>";
           }},
       {// Falls back to primary template, when the type is not instantiated.
        R"cpp(
@@ -2024,7 +2024,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "int_type";
+            HI.Definition = "int";
           }},
       {
           R"cpp(// auto on alias
@@ -2035,7 +2035,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "cls_type";
+            HI.Definition = "struct cls";
             HI.Documentation = "auto on alias";
           }},
       {
@@ -2047,7 +2047,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "templ<int>";
+            HI.Definition = "struct templ<int>";
             HI.Documentation = "auto on alias";
           }},
       {
