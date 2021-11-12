@@ -135,10 +135,18 @@ std::unique_ptr<Module> llvm::CloneModule(
   // Similarly, copy over function bodies now...
   //
   for (const Function &I : M) {
-    if (I.isDeclaration())
-      continue;
-
     Function *F = cast<Function>(VMap[&I]);
+
+    if (I.isDeclaration()) {
+      // Copy over metadata for declarations since we're not doing it below in
+      // CloneFunctionInto().
+      SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+      I.getAllMetadata(MDs);
+      for (auto MD : MDs)
+        F->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+      continue;
+    }
+
     if (!ShouldCloneDefinition(&I)) {
       // Skip after setting the correct linkage for an external reference.
       F->setLinkage(GlobalValue::ExternalLinkage);
