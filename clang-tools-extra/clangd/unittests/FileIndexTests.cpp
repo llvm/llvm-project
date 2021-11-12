@@ -736,7 +736,8 @@ TEST(FileIndexTest, MacrosFromMainFile) {
   auto AST = TU.build();
   Idx.updateMain(testPath(TU.Filename), AST);
 
-  auto &FooSymbol = findSymbol(runFuzzyFind(Idx, ""), "FOO");
+  auto Slab = runFuzzyFind(Idx, "");
+  auto &FooSymbol = findSymbol(Slab, "FOO");
   EXPECT_TRUE(FooSymbol.Flags & Symbol::IndexedForCodeCompletion);
 }
 
