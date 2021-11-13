@@ -100,6 +100,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
+  sanitizer_allocator_dlsym.h
   sanitizer_allocator_interface.h
   sanitizer_allocator_internal.h
   sanitizer_allocator_local_cache.h
