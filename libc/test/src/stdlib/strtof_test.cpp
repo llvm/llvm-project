@@ -102,10 +102,10 @@ TEST_F(LlvmLibcStrToFTest, BasicHexadecimalTests) {
 }
 
 TEST_F(LlvmLibcStrToFTest, HexadecimalSubnormalTests) {
-  runTest("0x0.0000000000000000000000000000000002", 38, 0x4000);
+  runTest("0x0.0000000000000000000000000000000002", 38, 0x4000, ERANGE);
 
   // This is the largest subnormal number as represented in hex
-  runTest("0x0.00000000000000000000000000000003fffff8", 42, 0x7fffff);
+  runTest("0x0.00000000000000000000000000000003fffff8", 42, 0x7fffff, ERANGE);
 }
 
 TEST_F(LlvmLibcStrToFTest, HexadecimalSubnormalRoundingTests) {
@@ -120,6 +120,14 @@ TEST_F(LlvmLibcStrToFTest, HexadecimalSubnormalRoundingTests) {
   // These check that we're rounding to even properly
   runTest("0x0.0000000000000000000000000000000000000b", 42, 0x00000001, ERANGE);
   runTest("0x0.0000000000000000000000000000000000000c", 42, 0x00000002, ERANGE);
+
+  // These check that we're rounding to even properly even when the input bits
+  // are longer than the bit fields can contain.
+  runTest("0x1.000000000000000000000p-150", 30, 0x00000000, ERANGE);
+  runTest("0x1.000010000000000001000p-150", 30, 0x00000001, ERANGE);
+  runTest("0x1.000100000000000001000p-134", 30, 0x00008001, ERANGE);
+  runTest("0x1.FFFFFC000000000001000p-127", 30, 0x007FFFFF, ERANGE);
+  runTest("0x1.FFFFFE000000000000000p-127", 30, 0x00800000);
 }
 
 TEST_F(LlvmLibcStrToFTest, HexadecimalNormalRoundingTests) {
@@ -131,6 +139,9 @@ TEST_F(LlvmLibcStrToFTest, HexadecimalNormalRoundingTests) {
   runTest("0x123456600", 11, 0x4f91a2b3);
   // This gets rounded up to even
   runTest("0x123456700", 11, 0x4f91a2b4);
+  // Correct rounding for long input
+  runTest("0x1.000001000000000000000", 25, 0x3f800000);
+  runTest("0x1.000001000000000000100", 25, 0x3f800001);
 }
 
 TEST_F(LlvmLibcStrToFTest, HexadecimalsWithRoundingProblems) {
