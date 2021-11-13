@@ -417,7 +417,7 @@ def : Pat<(P2CALL (i32 P2GPR:$d)), (CALLAr P2GPR:$d, always, noeff)>;
 /* I/O and hardware control       */
 /*--------------------------------*/
 
-let DecoderMethod = "DecodeIOInstruction" in {
+let DecoderMethod = "DecodeIOInstruction", hasSideEffects = 1 in {
 
     defm DIRL       : P2InstCZLDm<0b1101011, 0b001000000, "dirl">;
     defm DIRH       : P2InstCZLDm<0b1101011, 0b001000001, "dirh">;

@@ -1,4 +1,4 @@
-//===-- Cpu0DelUselessJMP.cpp - Cpu0 DelJmp -------------------------------===//
+//===-- P2DelJmp0.cpp - P2 DelJmp -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Simple pass to fills delay slots with useful instructions.
+// Simple pass to remove jumps that will result in jmp #0
 //
 //===----------------------------------------------------------------------===//
 

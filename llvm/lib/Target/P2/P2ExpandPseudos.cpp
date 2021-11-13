@@ -85,11 +85,6 @@ void P2ExpandPseudos::expand_QUREM(MachineFunction &MF, MachineBasicBlock::itera
     SI.eraseFromParent();
 }
 
-/*
- * eventually we should have an operand in InstrInfo that will automatically convert any immediate to
- * aug the top 23 bits, then mov the lower 9. TBD how to do that. we will still need something like this
- * for global symbols where we don't know the value until linking, so we should always have an AUG instruction
- */
 void P2ExpandPseudos::expand_MOVri32(MachineFunction &MF, MachineBasicBlock::iterator SII) {
     MachineInstr &SI = *SII;
 
@@ -117,6 +112,7 @@ void P2ExpandPseudos::expand_MOVri32(MachineFunction &MF, MachineBasicBlock::ite
             .addImm(P2::ALWAYS).addImm(P2::NOEFF);
 
     } else {
+        // TODO: only do this replacement if the target operand is used only once. 
         uint32_t imm = SI.getOperand(1).getImm();
 
         // expand into an AUGS for the top 23 bits of the immediate and MOVri for the lower 9 bits
