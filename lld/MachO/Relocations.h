@@ -56,12 +56,15 @@ struct Reloc {
   uint8_t length = 0;
   // The offset from the start of the subsection that this relocation belongs
   // to.
-  uint64_t offset = 0;
+  uint32_t offset = 0;
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
   int64_t addend = 0;
   llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
 };
+
+static_assert(sizeof(void *) != 8 || sizeof(Reloc) == 24,
+              "Try to minimize Reloc's size; we create many instances");
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,
                               const Reloc &);
