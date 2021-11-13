@@ -1263,9 +1263,9 @@ define amdgpu_gfx void @call_512xi32() #0 {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_add_i32 s33, s32, 0xffe0
-; GFX10-NEXT:    s_mov_b64 s[36:37], s[30:31]
-; GFX10-NEXT:    s_and_b32 s33, s33, 0xffff0000
 ; GFX10-NEXT:    s_add_i32 s32, s32, 0x30000
+; GFX10-NEXT:    s_and_b32 s33, s33, 0xffff0000
+; GFX10-NEXT:    s_mov_b64 s[36:37], s[30:31]
 ; GFX10-NEXT:    s_getpc_b64 s[30:31]
 ; GFX10-NEXT:    s_add_u32 s30, s30, return_512xi32@gotpcrel32@lo+4
 ; GFX10-NEXT:    s_addc_u32 s31, s31, return_512xi32@gotpcrel32@hi+12

@@ -453,7 +453,7 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr30 = S_MOV_B32 4294967295, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr31 = S_MOV_B32 14680064, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr28 = S_ADD_U32 $sgpr28, $sgpr11, implicit-def $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
-    ; GCN64-MUBUF-NEXT: $sgpr29 = S_ADDC_U32 $sgpr29, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
+    ; GCN64-MUBUF-NEXT: $sgpr29 = S_ADDC_U32 $sgpr29, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
@@ -616,7 +616,7 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr98 = S_MOV_B32 4294967295, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr99 = S_MOV_B32 834756608, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr96 = S_ADD_U32 $sgpr96, $sgpr11, implicit-def $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
-    ; GCN32-MUBUF-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
+    ; GCN32-MUBUF-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
@@ -775,7 +775,7 @@ body:             |
     ; GCN64-FLATSCR-NEXT: {{  $}}
     ; GCN64-FLATSCR-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN64-FLATSCR-NEXT: $flat_scr_lo = S_ADD_U32 $sgpr0, $sgpr11, implicit-def $scc
-    ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def $scc, implicit $scc
+    ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr2_sgpr3 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
@@ -1010,7 +1010,7 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr30 = S_MOV_B32 4294967295, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr31 = S_MOV_B32 14680064, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr28 = S_ADD_U32 $sgpr28, $sgpr11, implicit-def $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
-    ; GCN64-MUBUF-NEXT: $sgpr29 = S_ADDC_U32 $sgpr29, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
+    ; GCN64-MUBUF-NEXT: $sgpr29 = S_ADDC_U32 $sgpr29, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
@@ -1147,7 +1147,7 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr98 = S_MOV_B32 4294967295, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr99 = S_MOV_B32 834756608, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr96 = S_ADD_U32 $sgpr96, $sgpr11, implicit-def $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
-    ; GCN32-MUBUF-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
+    ; GCN32-MUBUF-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
@@ -1280,7 +1280,7 @@ body:             |
     ; GCN64-FLATSCR-NEXT: {{  $}}
     ; GCN64-FLATSCR-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN64-FLATSCR-NEXT: $flat_scr_lo = S_ADD_U32 $sgpr0, $sgpr11, implicit-def $scc
-    ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def $scc, implicit $scc
+    ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc
     ; GCN64-FLATSCR-NEXT: $sgpr2_sgpr3 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
