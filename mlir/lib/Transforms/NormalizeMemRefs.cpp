@@ -460,7 +460,6 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
       MemRefType newMemRefType = normalizeMemRefType(memrefType, b,
                                                      /*numSymbolicOperands=*/0);
       resultTypes.push_back(newMemRefType);
-      continue;
     }
 
     FunctionType newFuncType =

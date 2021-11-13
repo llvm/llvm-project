@@ -28,11 +28,11 @@ struct ParallelLoopCollapsing
       // The common case for GPU dialect will be simplifying the ParallelOp to 3
       // arguments, so we do that here to simplify things.
       llvm::SmallVector<std::vector<unsigned>, 3> combinedLoops;
-      if (clCollapsedIndices0.size())
+      if (!clCollapsedIndices0.empty())
         combinedLoops.push_back(clCollapsedIndices0);
-      if (clCollapsedIndices1.size())
+      if (!clCollapsedIndices1.empty())
         combinedLoops.push_back(clCollapsedIndices1);
-      if (clCollapsedIndices2.size())
+      if (!clCollapsedIndices2.empty())
         combinedLoops.push_back(clCollapsedIndices2);
       collapseParallelLoops(op, combinedLoops);
     });
