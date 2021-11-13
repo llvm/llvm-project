@@ -353,20 +353,22 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
     if (Latch == *BB) {
       // For the last block, create a loop back to cloned head.
       VMap.erase((*BB)->getTerminator());
+      // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.
+      // Subtle: NewIter can be 0 if we wrapped when computing the trip count,
+      // thus we must compare the post-increment (wrapping) value.
       BasicBlock *FirstLoopBB = cast<BasicBlock>(VMap[Header]);
       BranchInst *LatchBR = cast<BranchInst>(NewBB->getTerminator());
       IRBuilder<> Builder(LatchBR);
       PHINode *NewIdx = PHINode::Create(NewIter->getType(), 2,
                                         suffix + ".iter",
                                         FirstLoopBB->getFirstNonPHI());
-      Value *IdxSub =
-        Builder.CreateSub(NewIdx, ConstantInt::get(NewIdx->getType(), 1),
-                          NewIdx->getName() + ".sub");
-      Value *IdxCmp =
-        Builder.CreateIsNotNull(IdxSub, NewIdx->getName() + ".cmp");
+      auto *Zero = ConstantInt::get(NewIdx->getType(), 0);
+      auto *One = ConstantInt::get(NewIdx->getType(), 1);
+      Value *IdxNext = Builder.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
+      Value *IdxCmp = Builder.CreateICmpNE(IdxNext, NewIter, NewIdx->getName() + ".cmp");
       Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot);
-      NewIdx->addIncoming(NewIter, InsertTop);
-      NewIdx->addIncoming(IdxSub, NewBB);
+      NewIdx->addIncoming(Zero, InsertTop);
+      NewIdx->addIncoming(IdxNext, NewBB);
       LatchBR->eraseFromParent();
     }
   }
@@ -920,23 +922,22 @@ bool llvm::UnrollRuntimeLoopRemainder(
                   PreserveLCSSA);
 
     // Update counter in loop for unrolling.
-    // I should be multiply of Count.
+    // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.
+    // Subtle: TestVal can be 0 if we wrapped when computing the trip count,
+    // thus we must compare the post-increment (wrapping) value.
     IRBuilder<> B2(NewPreHeader->getTerminator());
     Value *TestVal = B2.CreateSub(TripCount, ModVal, "unroll_iter");
     BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
-    B2.SetInsertPoint(LatchBR);
     PHINode *NewIdx = PHINode::Create(TestVal->getType(), 2, "niter",
                                       Header->getFirstNonPHI());
-    Value *IdxSub =
-        B2.CreateSub(NewIdx, ConstantInt::get(NewIdx->getType(), 1),
-                     NewIdx->getName() + ".nsub");
-    Value *IdxCmp;
-    if (LatchBR->getSuccessor(0) == Header)
-      IdxCmp = B2.CreateIsNotNull(IdxSub, NewIdx->getName() + ".ncmp");
-    else
-      IdxCmp = B2.CreateIsNull(IdxSub, NewIdx->getName() + ".ncmp");
-    NewIdx->addIncoming(TestVal, NewPreHeader);
-    NewIdx->addIncoming(IdxSub, Latch);
+    B2.SetInsertPoint(LatchBR);
+    auto *Zero = ConstantInt::get(NewIdx->getType(), 0);
+    auto *One = ConstantInt::get(NewIdx->getType(), 1);
+    Value *IdxNext = B2.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
+    auto Pred = LatchBR->getSuccessor(0) == Header ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+    Value *IdxCmp = B2.CreateICmp(Pred, IdxNext, TestVal, NewIdx->getName() + ".ncmp");
+    NewIdx->addIncoming(Zero, NewPreHeader);
+    NewIdx->addIncoming(IdxNext, Latch);
     LatchBR->setCondition(IdxCmp);
   } else {
     // Connect the prolog code to the original loop and update the

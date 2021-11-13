@@ -15,7 +15,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED:       header:
 ; ENABLED-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY_7:%.*]] ]
 ; ENABLED-NEXT:    [[SUM_02:%.*]] = phi i32 [ 0, [[ENTRY_NEW]] ], [ [[ADD_7:%.*]], [[FOR_BODY_7]] ]
-; ENABLED-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[ENTRY_NEW]] ], [ [[NITER_NSUB_7:%.*]], [[FOR_BODY_7]] ]
+; ENABLED-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[FOR_BODY_7]] ]
 ; ENABLED-NEXT:    [[CMP:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP]], label [[FOR_EXIT2_LOOPEXIT:%.*]], label [[FOR_BODY:%.*]]
 ; ENABLED:       for.body:
@@ -23,7 +23,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; ENABLED-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[SUM_02]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; ENABLED-NEXT:    [[NITER_NSUB:%.*]] = sub i64 [[NITER]], 1
+; ENABLED-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i64 [[NITER]], 1
 ; ENABLED-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_1]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_1:%.*]]
 ; ENABLED:       for.body.1:
@@ -31,7 +31,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
 ; ENABLED-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP3]], [[ADD]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_1:%.*]] = sub i64 [[NITER_NSUB]], 1
+; ENABLED-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i64 [[NITER_NEXT]], 1
 ; ENABLED-NEXT:    [[CMP_2:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_2]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_2:%.*]]
 ; ENABLED:       for.body.2:
@@ -39,7 +39,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
 ; ENABLED-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP4]], [[ADD_1]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_1]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_2:%.*]] = sub i64 [[NITER_NSUB_1]], 1
+; ENABLED-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i64 [[NITER_NEXT_1]], 1
 ; ENABLED-NEXT:    [[CMP_3:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_3]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_3:%.*]]
 ; ENABLED:       for.body.3:
@@ -47,7 +47,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
 ; ENABLED-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP5]], [[ADD_2]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_3:%.*]] = sub i64 [[NITER_NSUB_2]], 1
+; ENABLED-NEXT:    [[NITER_NEXT_3:%.*]] = add nuw nsw i64 [[NITER_NEXT_2]], 1
 ; ENABLED-NEXT:    [[CMP_4:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_4]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_4:%.*]]
 ; ENABLED:       for.body.4:
@@ -55,7 +55,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
 ; ENABLED-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP6]], [[ADD_3]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_3]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_4:%.*]] = sub i64 [[NITER_NSUB_3]], 1
+; ENABLED-NEXT:    [[NITER_NEXT_4:%.*]] = add nuw nsw i64 [[NITER_NEXT_3]], 1
 ; ENABLED-NEXT:    [[CMP_5:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_5]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_5:%.*]]
 ; ENABLED:       for.body.5:
@@ -63,7 +63,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
 ; ENABLED-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP7]], [[ADD_4]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_4]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_5:%.*]] = sub i64 [[NITER_NSUB_4]], 1
+; ENABLED-NEXT:    [[NITER_NEXT_5:%.*]] = add nuw nsw i64 [[NITER_NEXT_4]], 1
 ; ENABLED-NEXT:    [[CMP_6:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_6]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_6:%.*]]
 ; ENABLED:       for.body.6:
@@ -71,7 +71,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
 ; ENABLED-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP8]], [[ADD_5]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_5]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_6:%.*]] = sub i64 [[NITER_NSUB_5]], 1
+; ENABLED-NEXT:    [[NITER_NEXT_6:%.*]] = add nuw nsw i64 [[NITER_NEXT_5]], 1
 ; ENABLED-NEXT:    [[CMP_7:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_7]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_7]]
 ; ENABLED:       for.body.7:
@@ -79,8 +79,8 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
 ; ENABLED-NEXT:    [[ADD_7]] = add nsw i32 [[TMP9]], [[ADD_6]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV_NEXT_6]], 1
-; ENABLED-NEXT:    [[NITER_NSUB_7]] = sub i64 [[NITER_NSUB_6]], 1
-; ENABLED-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
+; ENABLED-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER_NEXT_6]], 1
+; ENABLED-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; ENABLED-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA_LOOPEXIT:%.*]], label [[HEADER]]
 ; ENABLED:       for.end.unr-lcssa.loopexit:
 ; ENABLED-NEXT:    [[SUM_0_LCSSA_PH_PH:%.*]] = phi i32 [ [[ADD_7]], [[FOR_BODY_7]] ]
@@ -98,7 +98,7 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED:       header.epil:
 ; ENABLED-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[FOR_BODY_EPIL:%.*]] ], [ [[INDVARS_IV_UNR]], [[HEADER_EPIL_PREHEADER]] ]
 ; ENABLED-NEXT:    [[SUM_02_EPIL:%.*]] = phi i32 [ [[ADD_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[SUM_02_UNR]], [[HEADER_EPIL_PREHEADER]] ]
-; ENABLED-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[XTRAITER]], [[HEADER_EPIL_PREHEADER]] ], [ [[EPIL_ITER_SUB:%.*]], [[FOR_BODY_EPIL]] ]
+; ENABLED-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, [[HEADER_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[FOR_BODY_EPIL]] ]
 ; ENABLED-NEXT:    [[CMP_EPIL:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_EPIL]], label [[FOR_EXIT2_LOOPEXIT2:%.*]], label [[FOR_BODY_EPIL]]
 ; ENABLED:       for.body.epil:
@@ -107,8 +107,8 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[ADD_EPIL]] = add nsw i32 [[TMP10]], [[SUM_02_EPIL]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_EPIL]] = add i64 [[INDVARS_IV_EPIL]], 1
 ; ENABLED-NEXT:    [[EXITCOND_EPIL:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_EPIL]], [[N]]
-; ENABLED-NEXT:    [[EPIL_ITER_SUB]] = sub i64 [[EPIL_ITER]], 1
-; ENABLED-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_SUB]], 0
+; ENABLED-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
+; ENABLED-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
 ; ENABLED-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[HEADER_EPIL]], label [[FOR_END_EPILOG_LCSSA:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ENABLED:       for.end.epilog-lcssa:
 ; ENABLED-NEXT:    [[SUM_0_LCSSA_PH1:%.*]] = phi i32 [ [[ADD_EPIL]], [[FOR_BODY_EPIL]] ]
