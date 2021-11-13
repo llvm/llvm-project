@@ -90,28 +90,21 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
-  std::vector<BasicBlock *> InitBBsToKeep;
+  DenseSet<BasicBlock *> BBsToKeep;
 
-  for (auto &F : Program)
-    for (auto &BB : F)
-      if (O.shouldKeep())
-        InitBBsToKeep.push_back(&BB);
-
-  // We create a vector first, then convert it to a set, so that we don't have
-  // to pay the cost of rebalancing the set frequently if the order we insert
-  // the elements doesn't match the order they should appear inside the set.
-  DenseSet<BasicBlock *> BBsToKeep(InitBBsToKeep.begin(), InitBBsToKeep.end());
-
-  std::vector<BasicBlock *> BBsToDelete;
-  for (auto &F : Program)
+  SmallVector<BasicBlock *> BBsToDelete;
+  for (auto &F : Program) {
     for (auto &BB : F) {
-      if (!BBsToKeep.count(&BB)) {
+      if (O.shouldKeep())
+        BBsToKeep.insert(&BB);
+      else {
         BBsToDelete.push_back(&BB);
         // Remove out-of-chunk BB from successor phi nodes
         for (auto *Succ : successors(&BB))
           Succ->removePredecessor(&BB);
       }
     }
+  }
 
   // Replace terminators that reference out-of-chunk BBs
   for (auto &F : Program)
