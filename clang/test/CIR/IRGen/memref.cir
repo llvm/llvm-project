@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-memref -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-memref -cir-to-llvm -o - | FileCheck %s -check-prefix=LLVM
 // XFAIL: *
 
 module {
