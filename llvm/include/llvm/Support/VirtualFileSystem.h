@@ -121,6 +121,14 @@ public:
 
   /// Closes the file.
   virtual std::error_code close() = 0;
+
+  // Get the same file with a different path.
+  static ErrorOr<std::unique_ptr<File>>
+  getWithPath(ErrorOr<std::unique_ptr<File>> Result, const Twine &P);
+
+protected:
+  // Set the file's underlying path.
+  virtual void setPath(const Twine &Path) {}
 };
 
 /// A member of a directory, yielded by a directory_iterator.
@@ -757,6 +765,12 @@ private:
   /// with the given error code on a path associated with the provided Entry.
   bool shouldFallBackToExternalFS(std::error_code EC, Entry *E = nullptr) const;
 
+  /// Get the File status, or error, from the underlying external file system.
+  /// This returns the status with the originally requested name, while looking
+  /// up the entry using the canonical path.
+  ErrorOr<Status> getExternalStatus(const Twine &CanonicalPath,
+                                    const Twine &OriginalPath) const;
+
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
   // slashes (representing a root) to match backslashes (and vice versa).  Note
@@ -814,7 +828,8 @@ private:
                                        Entry *From) const;
 
   /// Get the status for a path with the provided \c LookupResult.
-  ErrorOr<Status> status(const Twine &Path, const LookupResult &Result);
+  ErrorOr<Status> status(const Twine &CanonicalPath, const Twine &OriginalPath,
+                         const LookupResult &Result);
 
 public:
   /// Looks up \p Path in \c Roots and returns a LookupResult giving the
