@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not=DW_TAG
 
 ; typedef struct __attribute__((aligned (128))) {
 ;   char c;
@@ -15,27 +15,29 @@
 ;   __attribute__((aligned (32))) int i;
 ; }
 
-; CHECK: DW_TAG_typedef
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}"S0"
-; CHECK: DW_TAG_structure_type
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_alignment{{.*}}128
+; CHECK: DW_TAG_compile_unit
+; CHECK:   DW_TAG_variable
+; CHECK:   DW_TAG_typedef
+; CHECK:     DW_AT_name{{.*}}"S0"
 
-; CHECK: DW_TAG_variable
-; CHECK: DW_AT_name{{.*}}"i"
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_alignment{{.*}}32
+; CHECK:   DW_TAG_structure_type
+; CHECK:     DW_AT_alignment{{.*}}128
+; CHECK:     DW_TAG_member
+; CHECK:   DW_TAG_base_type
 
-; CHECK: DW_TAG_typedef
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}"S1"
-; CHECK: DW_TAG_structure_type
-; CHECK: DW_TAG_member
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}"c"
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_alignment{{.*}}64
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_TAG_variable
+; CHECK:     DW_TAG_variable
+; CHECK:       DW_AT_name{{.*}}"i"
+; CHECK:       DW_AT_alignment{{.*}}32
+
+; CHECK:   DW_TAG_typedef
+; CHECK:     DW_AT_name{{.*}}"S1"
+; CHECK:   DW_TAG_structure_type
+; CHECK:     DW_TAG_member
+; CHECK:       DW_AT_name{{.*}}"c"
+; CHECK:       DW_AT_alignment{{.*}}64
+; CHECK:   DW_TAG_base_type
 
 ; ModuleID = 'test.m'
 source_filename = "test.m"
