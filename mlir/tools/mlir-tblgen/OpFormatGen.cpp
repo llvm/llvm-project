@@ -188,7 +188,7 @@ public:
     return element->getKind() == Kind::CustomDirective;
   }
 
-  /// Return the name of this optional element.
+  /// Return the name of the custom directive.
   StringRef getName() const { return name; }
 
   /// Return the arguments to the custom directive.
