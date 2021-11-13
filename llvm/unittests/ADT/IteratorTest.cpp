@@ -78,6 +78,14 @@ using ConstIntIterator = PointerWrapper<const int>;
 using IntProxyIterator = PointerProxyWrapper<int, IntProxy>;
 using ConstIntProxyIterator = PointerProxyWrapper<const int, ConstIntProxy>;
 
+// There should only be a single (const-qualified) operator*, operator->, and
+// operator[]. This test confirms that there isn't a non-const overload. Rather
+// than adding those, users should double-check that T, PointerT, and ReferenceT
+// have the right constness, and/or make fields mutable.
+static_assert(&IntIterator::operator* == &IntIterator::operator*, "");
+static_assert(&IntIterator::operator-> == &IntIterator::operator->, "");
+static_assert(&IntIterator::operator[] == &IntIterator::operator[], "");
+
 template <class T,
           std::enable_if_t<std::is_assignable<T, int>::value, bool> = false>
 constexpr bool canAssignFromInt(T &&) {
