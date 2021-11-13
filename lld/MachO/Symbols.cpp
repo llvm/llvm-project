@@ -40,8 +40,8 @@ Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
       overridesWeakDef(canOverrideWeakDef), privateExtern(isPrivateExtern),
       includeInSymtab(true), thumb(isThumb),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
-      weakDef(isWeakDef), external(isExternal),
-      weakDefCanBeHidden(isWeakDefCanBeHidden) {
+      weakDefCanBeHidden(isWeakDefCanBeHidden), weakDef(isWeakDef),
+      external(isExternal) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.
