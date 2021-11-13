@@ -1314,5 +1314,60 @@ TEST_F(FormatTestCSharp, CSharpAfterClass) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, NamespaceIndentation) {
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  Style.NamespaceIndentation = FormatStyle::NI_None;
+
+  verifyFormat("namespace A\n"
+               "{\n"
+               "public interface Name1\n"
+               "{\n"
+               "}\n"
+               "}\n",
+               Style);
+
+  verifyFormat("namespace A.B\n"
+               "{\n"
+               "public interface Name1\n"
+               "{\n"
+               "}\n"
+               "}\n",
+               Style);
+
+  Style.NamespaceIndentation = FormatStyle::NI_Inner;
+
+  verifyFormat("namespace A\n"
+               "{\n"
+               "namespace B\n"
+               "{\n"
+               "    public interface Name1\n"
+               "    {\n"
+               "    }\n"
+               "}\n"
+               "}\n",
+               Style);
+
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+
+  verifyFormat("namespace A.B\n"
+               "{\n"
+               "    public interface Name1\n"
+               "    {\n"
+               "    }\n"
+               "}\n",
+               Style);
+
+  verifyFormat("namespace A\n"
+               "{\n"
+               "    namespace B\n"
+               "    {\n"
+               "        public interface Name1\n"
+               "        {\n"
+               "        }\n"
+               "    }\n"
+               "}\n",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang
