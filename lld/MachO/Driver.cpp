@@ -1467,8 +1467,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           StringRef symbolName = defined->getName();
           if (config->exportedSymbols.match(symbolName)) {
             if (defined->privateExtern) {
-              warn("cannot export hidden symbol " + symbolName +
-                   "\n>>> defined in " + toString(defined->getFile()));
+              if (defined->weakDefCanBeHidden) {
+                // weak_def_can_be_hidden symbols behave similarly to
+                // private_extern symbols in most cases, except for when
+                // it is explicitly exported.
+                // The former can be exported but the latter cannot.
+                defined->privateExtern = false;
+              } else {
+                warn("cannot export hidden symbol " + symbolName +
+                     "\n>>> defined in " + toString(defined->getFile()));
+              }
             }
           } else {
             defined->privateExtern = true;
