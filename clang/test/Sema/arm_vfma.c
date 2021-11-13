@@ -1,6 +1,6 @@
+// RUN: %clang_cc1 -triple thumbv7-none-eabi -target-feature +neon -target-feature +vfp4 -fsyntax-only -verify %s
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN: %clang_cc1 -triple thumbv7-none-eabi -target-feature +neon -target-feature +vfp4 -fsyntax-only -verify %s
 #include <arm_neon.h>
 
 // expected-no-diagnostics
