@@ -1961,7 +1961,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSETCC,        MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FSETCCS,       MVT::f16, Custom);
     setOperationAction(ISD::FROUND,               MVT::f16, Custom);
-    setOperationAction(ISD::STRICT_FROUND,        MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FROUND,        MVT::f16, Promote);
     setOperationAction(ISD::FROUNDEVEN,           MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
     setOperationAction(ISD::FP_ROUND,             MVT::f16, Custom);
@@ -3109,16 +3109,15 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   bool HasRet = false;
-  for (SDNode::use_iterator UI = Copy->use_begin(), UE = Copy->use_end();
-       UI != UE; ++UI) {
-    if (UI->getOpcode() != X86ISD::RET_FLAG)
+  for (const SDNode *U : Copy->uses()) {
+    if (U->getOpcode() != X86ISD::RET_FLAG)
       return false;
     // If we are returning more than one value, we can definitely
     // not make a tail call see PR19530
-    if (UI->getNumOperands() > 4)
+    if (U->getNumOperands() > 4)
       return false;
-    if (UI->getNumOperands() == 4 &&
-        UI->getOperand(UI->getNumOperands()-1).getValueType() != MVT::Glue)
+    if (U->getNumOperands() == 4 &&
+        U->getOperand(U->getNumOperands() - 1).getValueType() != MVT::Glue)
       return false;
     HasRet = true;
   }
@@ -22443,10 +22442,6 @@ SDValue X86TargetLowering::lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const {
 /// compiling with trapping math, we can emulate this with
 /// floor(X + copysign(nextafter(0.5, 0.0), X)).
 static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
-  if (Op.getOpcode() == ISD::STRICT_FROUND &&
-      Op.getSimpleValueType() == MVT::f16)
-    report_fatal_error("For now cannot emit strict round(fp16) at backend for "
-                       "lacking library support.");
   SDValue N0 = Op.getOperand(0);
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
@@ -31245,7 +31240,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FADD:
   case ISD::FSUB:               return lowerFaddFsub(Op, DAG);
-  case ISD::STRICT_FROUND:
   case ISD::FROUND:             return LowerFROUND(Op, DAG);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
@@ -45484,9 +45478,11 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
         (VT == MVT::f16 && Subtarget.hasFP16())) {
       bool ExpectingFlags = false;
       // Check for any users that want flags:
-      for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
-           !ExpectingFlags && UI != UE; ++UI)
-        switch (UI->getOpcode()) {
+      for (const SDNode *U : N->uses()) {
+        if (ExpectingFlags)
+          break;
+
+        switch (U->getOpcode()) {
         default:
         case ISD::BR_CC:
         case ISD::BRCOND:
@@ -45499,6 +45495,7 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
         case ISD::ANY_EXTEND:
           break;
         }
+      }
 
       if (!ExpectingFlags) {
         enum X86::CondCode cc0 = (enum X86::CondCode)N0.getConstantOperandVal(0);
@@ -50749,10 +50746,7 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
 static bool needCarryOrOverflowFlag(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
-         UI != UE; ++UI) {
-    SDNode *User = *UI;
-
+  for (const SDNode *User : Flags->uses()) {
     X86::CondCode CC;
     switch (User->getOpcode()) {
     default:
@@ -50787,10 +50781,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
 static bool onlyZeroFlagUsed(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
-         UI != UE; ++UI) {
-    SDNode *User = *UI;
-
+  for (const SDNode *User : Flags->uses()) {
     unsigned CCOpNo;
     switch (User->getOpcode()) {
     default:
