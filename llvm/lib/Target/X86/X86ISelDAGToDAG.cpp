@@ -338,10 +338,9 @@ namespace {
         return false;
 
       // Walk all the users of the immediate.
-      for (SDNode::use_iterator UI = N->use_begin(),
-           UE = N->use_end(); (UI != UE) && (UseCount < 2); ++UI) {
-
-        SDNode *User = *UI;
+      for (const SDNode *User : N->uses()) {
+        if (UseCount >= 2)
+          break;
 
         // This user is already selected. Count it as a legitimate use and
         // move on.

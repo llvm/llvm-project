@@ -1206,10 +1206,8 @@ SDValue AMDGPUTargetLowering::addTokenForArgument(SDValue Chain,
   ArgChains.push_back(Chain);
 
   // Add a chain value for each stack argument corresponding
-  for (SDNode::use_iterator U = DAG.getEntryNode().getNode()->use_begin(),
-                            UE = DAG.getEntryNode().getNode()->use_end();
-       U != UE; ++U) {
-    if (LoadSDNode *L = dyn_cast<LoadSDNode>(*U)) {
+  for (SDNode *U : DAG.getEntryNode().getNode()->uses()) {
+    if (LoadSDNode *L = dyn_cast<LoadSDNode>(U)) {
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr())) {
         if (FI->getIndex() < 0) {
           int64_t InFirstByte = MFI.getObjectOffset(FI->getIndex());
