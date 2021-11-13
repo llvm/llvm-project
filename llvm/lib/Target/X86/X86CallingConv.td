@@ -862,8 +862,8 @@ def CC_X86_32_Common : CallingConv<[
   // Doubles get 8-byte slots that are 4-byte aligned.
   CCIfType<[f64], CCAssignToStack<8, 4>>,
 
-  // Long doubles get slots whose size depends on the subtarget.
-  CCIfType<[f80], CCAssignToStack<0, 4>>,
+  // Long doubles get slots whose size and alignment depends on the subtarget.
+  CCIfType<[f80], CCAssignToStack<0, 0>>,
 
   // Boolean vectors of AVX-512 are passed in SIMD registers.
   // The call from AVX to AVX-512 function should work,
