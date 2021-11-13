@@ -35,8 +35,7 @@ define i32 @func_c() local_unnamed_addr #0 !dbg !14 {
 ; CHECK-NEXT:    [[CONV_PROL:%.*]] = sext i32 [[TMP5]] to i64, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[CONV_PROL]] to i32*, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_PROL:%.*]] = add nsw i32 [[DOTPR]], 2, !dbg [[DBG29:![0-9]+]]
-; CHECK-NEXT:    [[PROL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1, !dbg [[DBG24]]
-; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i32 [[PROL_ITER_SUB]], 0, !dbg [[DBG24]]
+; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i32 1, [[XTRAITER]], !dbg [[DBG24]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[FOR_BODY_PROL_1:%.*]], label [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol.1:
 ; CHECK-NEXT:    [[ARRAYIDX_PROL_1:%.*]] = getelementptr inbounds i32, i32* [[TMP6]], i64 1, !dbg [[DBG28]]
@@ -44,8 +43,7 @@ define i32 @func_c() local_unnamed_addr #0 !dbg !14 {
 ; CHECK-NEXT:    [[CONV_PROL_1:%.*]] = sext i32 [[TMP7]] to i64, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[CONV_PROL_1]] to i32*, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_PROL_1:%.*]] = add nsw i32 [[ADD_PROL]], 2, !dbg [[DBG29]]
-; CHECK-NEXT:    [[PROL_ITER_SUB_1:%.*]] = sub i32 [[PROL_ITER_SUB]], 1, !dbg [[DBG24]]
-; CHECK-NEXT:    [[PROL_ITER_CMP_1:%.*]] = icmp ne i32 [[PROL_ITER_SUB_1]], 0, !dbg [[DBG24]]
+; CHECK-NEXT:    [[PROL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]], !dbg [[DBG24]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP_1]], label [[FOR_BODY_PROL_2:%.*]], label [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol.2:
 ; CHECK-NEXT:    [[ARRAYIDX_PROL_2:%.*]] = getelementptr inbounds i32, i32* [[TMP8]], i64 1, !dbg [[DBG28]]

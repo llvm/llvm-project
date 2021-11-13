@@ -19,7 +19,7 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK:       header:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[LATCH_7:%.*]] ]
 ; CHECK-NEXT:    [[SUM_02:%.*]] = phi i32 [ 0, [[ENTRY_NEW]] ], [ [[ADD_7:%.*]], [[LATCH_7]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[ENTRY_NEW]] ], [ [[NITER_NSUB_7:%.*]], [[LATCH_7]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[LATCH_7]] ]
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK:%.*]]
 ; CHECK:       for.exiting_block:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[N]], 42
@@ -92,8 +92,8 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
 ; CHECK-NEXT:    [[ADD_7]] = add nsw i32 [[TMP9]], [[ADD_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[NITER_NSUB_7]] = add i64 [[NITER]], -8
-; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[LATCHEXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[HEADER]]
 ; CHECK:       latchexit.unr-lcssa.loopexit:
 ; CHECK-NEXT:    br label [[LATCHEXIT_UNR_LCSSA]]
@@ -108,7 +108,7 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK:       header.epil:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[LATCH_EPIL:%.*]] ], [ [[INDVARS_IV_UNR]], [[HEADER_EPIL_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_02_EPIL:%.*]] = phi i32 [ [[ADD_EPIL:%.*]], [[LATCH_EPIL]] ], [ [[SUM_02_UNR]], [[HEADER_EPIL_PREHEADER]] ]
-; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_SUB:%.*]], [[LATCH_EPIL]] ], [ [[XTRAITER]], [[HEADER_EPIL_PREHEADER]] ]
+; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_NEXT:%.*]], [[LATCH_EPIL]] ], [ 0, [[HEADER_EPIL_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_EPIL:%.*]]
 ; CHECK:       for.exiting_block.epil:
 ; CHECK-NEXT:    [[CMP_EPIL:%.*]] = icmp eq i64 [[N]], 42
@@ -118,8 +118,8 @@ define i32 @test1(i32* nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
 ; CHECK-NEXT:    [[ADD_EPIL]] = add nsw i32 [[TMP10]], [[SUM_02_EPIL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_EPIL]] = add i64 [[INDVARS_IV_EPIL]], 1
-; CHECK-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
-; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_SUB]], 0
+; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
+; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[LATCHEXIT_EPILOG_LCSSA:%.*]], label [[HEADER_EPIL]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       latchexit.epilog-lcssa:
 ; CHECK-NEXT:    br label [[LATCHEXIT]]

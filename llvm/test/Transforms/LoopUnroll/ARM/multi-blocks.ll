@@ -42,8 +42,7 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.epil:
 ; CHECK-NEXT:    [[TEMP_1_EPIL:%.*]] = phi i32 [ [[ADD_EPIL]], [[IF_THEN_EPIL]] ], [ [[TEMP_09_UNR]], [[FOR_BODY_EPIL]] ]
 ; CHECK-NEXT:    [[INC_EPIL:%.*]] = add nuw i32 [[J_010_UNR]], 1
-; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
-; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
+; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 1, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_BODY_EPIL_1:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA:%.*]]
 ; CHECK:       for.body.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL]]
@@ -58,8 +57,7 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.epil.1:
 ; CHECK-NEXT:    [[TEMP_1_EPIL_1:%.*]] = phi i32 [ [[ADD_EPIL_1]], [[IF_THEN_EPIL_1]] ], [ [[TEMP_1_EPIL]], [[FOR_BODY_EPIL_1]] ]
 ; CHECK-NEXT:    [[INC_EPIL_1:%.*]] = add nuw i32 [[INC_EPIL]], 1
-; CHECK-NEXT:    [[EPIL_ITER_SUB_1:%.*]] = sub i32 [[EPIL_ITER_SUB]], 1
-; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 [[EPIL_ITER_SUB_1]], 0
+; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_BODY_EPIL_2:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.body.epil.2:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL_1]]
@@ -87,7 +85,7 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[J_010:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[TEMP_09:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[TEMP_1_3]], [[FOR_INC_3]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ [[UNROLL_ITER]], [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NSUB_3:%.*]], [[FOR_INC_3]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[J_010]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP8]], 0
@@ -100,7 +98,7 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TEMP_1:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ [[TEMP_09]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[J_010]], 1
-; CHECK-NEXT:    [[NITER_NSUB:%.*]] = sub i32 [[NITER]], 1
+; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[TOBOOL_1:%.*]] = icmp eq i32 [[TMP10]], 0
@@ -113,7 +111,7 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.1:
 ; CHECK-NEXT:    [[TEMP_1_1:%.*]] = phi i32 [ [[ADD_1]], [[IF_THEN_1]] ], [ [[TEMP_1]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 [[INC]], 1
-; CHECK-NEXT:    [[NITER_NSUB_1:%.*]] = sub i32 [[NITER_NSUB]], 1
+; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[TOBOOL_2:%.*]] = icmp eq i32 [[TMP12]], 0
@@ -126,7 +124,7 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.2:
 ; CHECK-NEXT:    [[TEMP_1_2:%.*]] = phi i32 [ [[ADD_2]], [[IF_THEN_2]] ], [ [[TEMP_1_1]], [[FOR_INC_1]] ]
 ; CHECK-NEXT:    [[INC_2:%.*]] = add nuw nsw i32 [[INC_1]], 1
-; CHECK-NEXT:    [[NITER_NSUB_2:%.*]] = sub i32 [[NITER_NSUB_1]], 1
+; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_2]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq i32 [[TMP14]], 0
@@ -139,8 +137,8 @@ define void @test_three_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.3:
 ; CHECK-NEXT:    [[TEMP_1_3]] = phi i32 [ [[ADD_3]], [[IF_THEN_3]] ], [ [[TEMP_1_2]], [[FOR_INC_2]] ]
 ; CHECK-NEXT:    [[INC_3]] = add nuw i32 [[INC_2]], 1
-; CHECK-NEXT:    [[NITER_NSUB_3]] = sub i32 [[NITER_NSUB_2]], 1
-; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NSUB_3]], 0
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]], label [[FOR_BODY]]
 ;
   i32* nocapture readonly %Condition,
@@ -414,8 +412,7 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.epil:
 ; CHECK-NEXT:    [[TEMP_1_EPIL:%.*]] = phi i32 [ [[ADD_EPIL]], [[IF_THEN_EPIL]] ], [ [[SUB13_EPIL]], [[IF_ELSE_EPIL]] ]
 ; CHECK-NEXT:    [[INC_EPIL:%.*]] = add nuw i32 [[J_027_UNR]], 1
-; CHECK-NEXT:    [[EPIL_ITER_SUB:%.*]] = sub i32 [[XTRAITER]], 1
-; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 [[EPIL_ITER_SUB]], 0
+; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i32 1, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_BODY_EPIL_1:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA:%.*]]
 ; CHECK:       for.body.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL]]
@@ -440,8 +437,7 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.epil.1:
 ; CHECK-NEXT:    [[TEMP_1_EPIL_1:%.*]] = phi i32 [ [[ADD_EPIL_1]], [[IF_THEN_EPIL_1]] ], [ [[SUB13_EPIL_1]], [[IF_ELSE_EPIL_1]] ]
 ; CHECK-NEXT:    [[INC_EPIL_1:%.*]] = add nuw i32 [[INC_EPIL]], 1
-; CHECK-NEXT:    [[EPIL_ITER_SUB_1:%.*]] = sub i32 [[EPIL_ITER_SUB]], 1
-; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 [[EPIL_ITER_SUB_1]], 0
+; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_BODY_EPIL_2:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.body.epil.2:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_EPIL_1]]
@@ -480,7 +476,7 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY_LR_PH_NEW]] ], [ [[TMP23]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[J_027:%.*]] = phi i32 [ 1, [[FOR_BODY_LR_PH_NEW]] ], [ [[INC_3]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[TEMP_026:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH_NEW]] ], [ [[TEMP_1_3]], [[FOR_INC_3]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ [[UNROLL_ITER]], [[FOR_BODY_LR_PH_NEW]] ], [ [[NITER_NSUB_3:%.*]], [[FOR_INC_3]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[J_027]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[TMP13]], 65535
@@ -503,7 +499,7 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TEMP_1:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ [[SUB13]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[J_027]], 1
-; CHECK-NEXT:    [[NITER_NSUB:%.*]] = sub i32 [[NITER]], 1
+; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp ugt i32 [[TMP16]], 65535
@@ -526,7 +522,7 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.1:
 ; CHECK-NEXT:    [[TEMP_1_1:%.*]] = phi i32 [ [[ADD_1]], [[IF_THEN_1]] ], [ [[SUB13_1]], [[IF_ELSE_1]] ]
 ; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 [[INC]], 1
-; CHECK-NEXT:    [[NITER_NSUB_1:%.*]] = sub i32 [[NITER_NSUB]], 1
+; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ugt i32 [[TMP19]], 65535
@@ -549,7 +545,7 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.2:
 ; CHECK-NEXT:    [[TEMP_1_2:%.*]] = phi i32 [ [[ADD_2]], [[IF_THEN_2]] ], [ [[SUB13_2]], [[IF_ELSE_2]] ]
 ; CHECK-NEXT:    [[INC_2:%.*]] = add nuw i32 [[INC_1]], 1
-; CHECK-NEXT:    [[NITER_NSUB_2:%.*]] = sub i32 [[NITER_NSUB_1]], 1
+; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[CONDITION]], i32 [[INC_2]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ugt i32 [[TMP22]], 65535
@@ -572,8 +568,8 @@ define void @test_four_blocks(i32* nocapture %Output,
 ; CHECK:       for.inc.3:
 ; CHECK-NEXT:    [[TEMP_1_3]] = phi i32 [ [[ADD_3]], [[IF_THEN_3]] ], [ [[SUB13_3]], [[IF_ELSE_3]] ]
 ; CHECK-NEXT:    [[INC_3]] = add nuw nsw i32 [[INC_2]], 1
-; CHECK-NEXT:    [[NITER_NSUB_3]] = sub i32 [[NITER_NSUB_2]], 1
-; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NSUB_3]], 0
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]], label [[FOR_BODY]]
 ;
   i32* nocapture readonly %Condition,
