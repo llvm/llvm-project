@@ -1,11 +1,11 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
-
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
 // RUN:  -target-feature +sm4 -S -emit-llvm -o - %s \
 // RUN:  | FileCheck %s
 
 // RUN: not %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
 // RUN: -S -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CRYPTO %s
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 

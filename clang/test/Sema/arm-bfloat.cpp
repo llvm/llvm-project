@@ -1,11 +1,11 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
-
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 \
 // RUN: -triple aarch64-arm-none-eabi -target-cpu cortex-a75 \
 // RUN: -target-feature +bf16 -target-feature +neon %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 \
 // RUN: -triple arm-arm-none-eabi -target-cpu cortex-a53 \
 // RUN: -target-feature +bf16 -target-feature +neon %s
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 void test(bool b) {
   __bf16 bf16;

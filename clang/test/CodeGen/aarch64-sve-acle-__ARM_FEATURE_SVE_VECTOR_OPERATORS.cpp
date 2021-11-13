@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
 // RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
 // RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
+
 // REQUIRES: aarch64-registered-target
 
 // Examples taken from section "3.7.3.3 Behavior specific to SVE

@@ -1,10 +1,8 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
-
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -ffp-contract=fast -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg \
 // RUN:  | FileCheck %s
 
-// Test new aarch64 intrinsics with poly64
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 

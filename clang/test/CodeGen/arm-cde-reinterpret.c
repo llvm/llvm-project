@@ -1,5 +1,3 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
-
 // RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi \
 // RUN:   -target-feature +cdecp0 -target-feature +mve.fp \
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
@@ -8,6 +6,8 @@
 // RUN:   -target-feature +cdecp0 -target-feature +mve.fp \
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
 // RUN:   -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_cde.h>
 
