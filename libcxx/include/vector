@@ -366,7 +366,7 @@ public:
     typedef __wrap_iter<pointer>                                     iterator;
     typedef __wrap_iter<const_pointer>                               const_iterator;
     typedef _VSTD::reverse_iterator<iterator>                        reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator>  const_reverse_iterator;
+    typedef _VSTD::reverse_iterator<const_iterator>                  const_reverse_iterator;
 
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
