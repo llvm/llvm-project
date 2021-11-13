@@ -89,14 +89,16 @@ public:
   }
 };
 
-class CIRLoadLowering : public mlir::OpRewritePattern<mlir::cir::LoadOp> {
+class CIRLoadLowering : public mlir::ConversionPattern {
 public:
-  using OpRewritePattern<mlir::cir::LoadOp>::OpRewritePattern;
+  CIRLoadLowering(mlir::MLIRContext *ctx)
+      : mlir::ConversionPattern(mlir::cir::LoadOp::getOperationName(), 1, ctx) {
+  }
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::LoadOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    assert(false && "NYI");
+  matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(op, operands[0]);
     return mlir::LogicalResult::success();
   }
 };

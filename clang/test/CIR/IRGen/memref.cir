@@ -1,5 +1,4 @@
 // RUN: cir-tool %s -cir-to-memref -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-memref -cir-to-llvm -o - | FileCheck %s -check-prefix=LLVM
 // XFAIL: *
 
 module {
@@ -7,7 +6,8 @@ module {
     %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
     %1 = cir.cst(1 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
-    cir.return %1 : i32
+    %2 = cir.load %0 lvalue_to_rvalue : cir.ptr <i32>, i32
+    cir.return %2 : i32
   }
 }
 
@@ -16,12 +16,7 @@ module {
 // MLIR-NEXT:     %0 = memref.alloc() : memref<i32>
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
 // MLIR-NEXT:     memref.store %c1_i32, %0[] : memref<i32>
-// MLIR-NEXT:     return %c1_i32 : i32
+// MLIR-NEXT:     %1 = memref.load %0[] : memref<i32>
+// MLIR-NEXT:     return %1 : i32
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
-
-//      LLVM: module  {
-// LLVM-NEXT:   llvm.func @malloc(i64) -> !llvm.ptr<i8>
-// LLVM-NEXT:   llvm.func @foo() -> i32 {
-// LLVM-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
-
