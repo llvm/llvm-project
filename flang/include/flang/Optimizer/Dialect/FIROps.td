@@ -1661,7 +1661,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
     TypeAttr:$baseType
   );
 
-  let results = (outs fir_ReferenceType);
+  let results = (outs RefOrLLVMPtr);
 
   let parser =  "return parseCoordinateCustom(parser, result);";
   let printer = "::print(p, *this);";

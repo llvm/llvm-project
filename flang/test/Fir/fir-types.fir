@@ -55,10 +55,14 @@ func private @arr7() -> !fir.array<1x2x?x4x5x6x7x8x9xf32>
 // CHECK-LABEL: func private @mem2() -> !fir.ptr<i32>
 // CHECK-LABEL: func private @mem3() -> !fir.heap<i32>
 // CHECK-LABEL: func private @mem4() -> !fir.ref<() -> ()>
+// CHECK-LABEL: func private @mem5() -> !fir.llvm_ptr<!fir.ref<f32>>
+// CHECK-LABEL: func private @mem6() -> !fir.llvm_ptr<i8>
 func private @mem1() -> !fir.ref<i32>
 func private @mem2() -> !fir.ptr<i32>
 func private @mem3() -> !fir.heap<i32>
 func private @mem4() -> !fir.ref<() -> ()>
+func private @mem5() -> !fir.llvm_ptr<!fir.ref<f32>>
+func private @mem6() -> !fir.llvm_ptr<i8>
 
 // FIR box types (descriptors)
 // CHECK-LABEL: func private @box1() -> !fir.box<!fir.array<?xf32>>
