@@ -1,5 +1,5 @@
-// RUN: %clangxx -O1 -pthread %s -o %t && %run %t
-// RUN: %clangxx -O1 -pthread -DUSE_GLIBC %s -o %t && %run %t
+// RUN: %clangxx -O1 %s -o %t && %run %t
+// RUN: %clangxx -O1 -DUSE_GLIBC %s -o %t && %run %t
 // UNSUPPORTED: android
 
 #include <pthread.h>
