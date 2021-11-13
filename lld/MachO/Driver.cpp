@@ -1462,7 +1462,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     createSyntheticSymbols();
 
     if (!config->exportedSymbols.empty()) {
-      for (Symbol *sym : symtab->getSymbols()) {
+      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym)) {
           StringRef symbolName = defined->getName();
           if (config->exportedSymbols.match(symbolName)) {
@@ -1474,12 +1474,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             defined->privateExtern = true;
           }
         }
-      }
+      });
     } else if (!config->unexportedSymbols.empty()) {
-      for (Symbol *sym : symtab->getSymbols())
+      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym))
           if (config->unexportedSymbols.match(defined->getName()))
             defined->privateExtern = true;
+      });
     }
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
