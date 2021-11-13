@@ -13696,7 +13696,7 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
 ///
 /// At the moment only rewriting SCEVUnknown is supported.
 class SCEVLoopGuardRewriter : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
-  DenseMap<const SCEV *, const SCEV *> Map;
+  const DenseMap<const SCEV *, const SCEV *> &Map;
 
 public:
   SCEVLoopGuardRewriter(ScalarEvolution &SE,
