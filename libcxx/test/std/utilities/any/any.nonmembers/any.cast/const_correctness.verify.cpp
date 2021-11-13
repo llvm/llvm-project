@@ -18,6 +18,13 @@
 
 // Try and cast away const.
 
+// This test only checks that we static_assert in any_cast when the
+// constraints are not respected, however Clang will sometimes emit
+// additional errors while trying to instantiate the rest of any_cast
+// following the static_assert. We ignore unexpected errors in
+// clang-verify to make the test more robust to changes in Clang.
+// ADDITIONAL_COMPILE_FLAGS: -Xclang -verify-ignore-unexpected=error
+
 #include <any>
 
 struct TestType {};
@@ -30,19 +37,15 @@ int main(int, char**)
 
     any a;
 
-    // expected-error@any:* {{drops 'const' qualifier}}
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType &>(static_cast<any const&>(a)); // expected-note {{requested here}}
 
-    // expected-error@any:* {{cannot cast from lvalue of type 'const TestType' to rvalue reference type 'TestType &&'; types are not compatible}}
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType &&>(static_cast<any const&>(a)); // expected-note {{requested here}}
 
-    // expected-error@any:* {{drops 'const' qualifier}}
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType2 &>(static_cast<any const&&>(a)); // expected-note {{requested here}}
 
-    // expected-error@any:* {{cannot cast from lvalue of type 'const TestType2' to rvalue reference type 'TestType2 &&'; types are not compatible}}
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType2 &&>(static_cast<any const&&>(a)); // expected-note {{requested here}}
 
