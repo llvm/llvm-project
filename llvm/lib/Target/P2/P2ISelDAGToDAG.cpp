@@ -110,15 +110,9 @@ bool P2DAGToDAGISel::selectAddr(SDValue addr, SDValue &addr_result) {
 
         LLVM_DEBUG(errs() << "Address node is ");
         LLVM_DEBUG(addr.dump());
-
-        if (!isInt<9>(CN->getSExtValue())) {
-            SDValue mov = SDValue(CurDAG->getMachineNode(P2::MOVri32, DL, MVT::i32, off), 0);
-            SDValue ops[] = {base, mov, cond, eff};
-            add = CurDAG->getMachineNode(P2::ADDrr, DL, vt, ops);
-        } else {    
-            SDValue ops[] = {base, off, cond, eff};
-            add = CurDAG->getMachineNode(P2::ADDri, DL, vt, ops);
-        }
+   
+        SDValue ops[] = {base, off, cond, eff};
+        add = CurDAG->getMachineNode(P2::ADDri, DL, vt, ops);
 
         LLVM_DEBUG(errs() << "...base is: ");
         LLVM_DEBUG(base.dump());

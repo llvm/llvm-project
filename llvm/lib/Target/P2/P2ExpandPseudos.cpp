@@ -259,9 +259,6 @@ bool P2ExpandPseudos::runOnMachineFunction(MachineFunction &MF) {
                 case P2::QUREM:
                     expand_QUREM(MF, MBBI);
                     break;
-                case P2::MOVri32:
-                    expand_MOVri32(MF, MBBI);
-                    break;
                 case P2::SELECTCC:
                     expand_SELECTCC(MF, MBBI);
                     break;

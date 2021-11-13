@@ -31,7 +31,6 @@ add_llvm_target(P2CodeGen
     P2TargetMachine.cpp
     P2FrameLowering.cpp
     P2MachineFunctionInfo.cpp
-    P2MCInstLower.cpp
     P2ISelDAGToDAG.cpp
 
     DEPENDS

@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMP2Desc
     P2AsmBackend.cpp
     P2MCCodeEmitter.cpp
     P2MCTargetDesc.cpp
+    P2MCInstLower.cpp
     P2TargetStreamer.cpp
     P2ELFStreamer.cpp
 

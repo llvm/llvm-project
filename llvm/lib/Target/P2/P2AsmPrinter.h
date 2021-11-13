@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_P2_P2ASMPRINTER_H
 
 #include "P2MachineFunctionInfo.h"
-#include "P2MCInstLower.h"
+#include "MCTargetDesc/P2MCInstLower.h"
 
 #include "P2TargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"

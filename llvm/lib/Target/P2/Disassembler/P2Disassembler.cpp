@@ -304,8 +304,6 @@ DecodeStatus P2Disassembler::getInstruction(MCInst &Instr, uint64_t &Size, Array
 	if (Result == MCDisassembler::Fail) return MCDisassembler::Fail;
     // set the TSFlags for the instruction printer
     // FIXME: add writing the C/Z flags to TSFlags for printing
-    unsigned cond = fieldFromInstruction(Insn, 28, 4);
-    Instr.setFlags((Instr.getFlags() & 0xf) | cond);
 
     LLVM_DEBUG(errs() << "get instruction: " << Insn << "\n");
 

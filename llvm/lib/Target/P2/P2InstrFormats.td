@@ -84,8 +84,6 @@ def P2Effect : Operand<i8> {
     let ParserMatchClass = P2EffectOperand;
 }
 
-def s9imm : Operand<i32>; // 9 bit immediate
-
 defvar _ret_ = 0x0;
 defvar if_nc_and_nz = 0x1;
 defvar if_nc_and_z = 0x2;
@@ -131,7 +129,12 @@ class P2Inst<bits<5> type, dag outs, dag inputs, string asmstr>: Instruction {
     let AsmString = asmstr;
 
     // TSFlags layout should be kept in sync with P2InstrInfo.h.
-    let TSFlags{8-4} = type; // the style of instruction (i.e subclass below) for the code emitter to know the operand positions and such
+    // TSFlags 4-0: the type of the instruction
+    // TSFlags 5: this instruction has an s field
+    // TSFlags 6: this instruction has a d field
+    // TSFlags 9-7: operand number for the s field (0 if no s field)
+    // TSFlags 12-10: operand number for the d field (0 if no d field)
+    let TSFlags{4-0} = type; // the style of instruction (i.e subclass below) for the code emitter to know the operand positions and such
 
     let DecoderNamespace = "P2";
 
@@ -153,11 +156,20 @@ class P2InstCZIDS<bits<7> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{18} = i;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    bits<3> s_num = 1;
+    bits<3> d_num = 0;
+
+    let TSFlags{9-7} = s_num; // should get overriden if s is not operand 1
+    let TSFlags{12-10} = d_num;
 }
 
 multiclass P2InstCZIDSm<bits<7> op, dag in_extra, string asmstr> {
     def rr : P2InstCZIDS<op, 0b0, (outs P2GPR:$d), !con(in_extra, (ins P2GPR:$s)), !strconcat(asmstr, " $d, $s")>;
-    def ri : P2InstCZIDS<op, 0b1, (outs P2GPR:$d), !con(in_extra, (ins s9imm:$s)), !strconcat(asmstr, " $d, #$s")>;
+    def ri : P2InstCZIDS<op, 0b1, (outs P2GPR:$d), !con(in_extra, (ins i32imm:$s)), !strconcat(asmstr, " $d, #$s")>;
 }
 
 // 6 bit opcode, a 3-bit N value for nib-based instructions, I flag, and two operands (D/S). S can be imm
@@ -175,11 +187,17 @@ class P2Inst3NIDS<bits<6> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{18} = i;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    let TSFlags{9-7} = 1; // s is always operand 1
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2Inst3NIDSm<bits<6> op, string asmstr> {
-    def rr : P2Inst3NIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s, s9imm:$n), !strconcat(asmstr, " $d, $s, #$n")>;
-    def ri : P2Inst3NIDS<op, 0b1, (outs P2GPR:$d), (ins s9imm:$s, s9imm:$n), !strconcat(asmstr, " $d, #$s, #$n")>;
+    def rr : P2Inst3NIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s, i32imm:$n), !strconcat(asmstr, " $d, $s, #$n")>;
+    def ri : P2Inst3NIDS<op, 0b1, (outs P2GPR:$d), (ins i32imm:$s, i32imm:$n), !strconcat(asmstr, " $d, #$s, #$n")>;
 }
 
 // 7 bit opcode, a 2-bit N value for byte-based instructios, I flag, and two operands (D/S). S can be imm
@@ -197,11 +215,17 @@ class P2Inst2NIDS<bits<7> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{18} = i;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    let TSFlags{9-7} = 1; // s is always operand 1
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2Inst2NIDSm<bits<7> op, string asmstr> {
-    def rr : P2Inst2NIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s, s9imm:$n), !strconcat(asmstr, " $d, $s, #$n")>;
-    def ri : P2Inst2NIDS<op, 0b1, (outs P2GPR:$d), (ins s9imm:$s, s9imm:$n), !strconcat(asmstr, " $d, #$s, #$n")>;
+    def rr : P2Inst2NIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s, i32imm:$n), !strconcat(asmstr, " $d, $s, #$n")>;
+    def ri : P2Inst2NIDS<op, 0b1, (outs P2GPR:$d), (ins i32imm:$s, i32imm:$n), !strconcat(asmstr, " $d, #$s, #$n")>;
 }
 
 // 8 bit opcode, a 1-bit N value for short (2-byte) based, instructions, I flag, and two operands (D/S). S can be imm
@@ -219,11 +243,17 @@ class P2Inst1NIDS<bits<8> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{18} = i;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+    
+    let TSFlags{9-7} = 1; // s is always operand 1
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2Inst1NIDSm<bits<8> op, string asmstr> {
-    def rr : P2Inst1NIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s, s9imm:$n), !strconcat(asmstr, " $d, $s, #$n")>;
-    def ri : P2Inst1NIDS<op, 0b1, (outs P2GPR:$d), (ins s9imm:$s, s9imm:$n), !strconcat(asmstr, " $d, #$s, #$n")>;
+    def rr : P2Inst1NIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s, i32imm:$n), !strconcat(asmstr, " $d, $s, #$n")>;
+    def ri : P2Inst1NIDS<op, 0b1, (outs P2GPR:$d), (ins i32imm:$s, i32imm:$n), !strconcat(asmstr, " $d, #$s, #$n")>;
 }
 
 // 9 bit opcode, I flag, and two operands (D/S). S can be imm.
@@ -239,11 +269,19 @@ class P2InstIDS<bits<9> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{18} = i;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    bits<3> s_num = 1;
+
+    let TSFlags{9-7} = s_num;
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstIDSm<bits<9> op, string asmstr> {
     def rr : P2InstIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), !strconcat(asmstr, " $d, $s")>;
-    def ri : P2InstIDS<op, 0b1, (outs P2GPR:$d), (ins s9imm:$s), !strconcat(asmstr, " $d, #$s")>;
+    def ri : P2InstIDS<op, 0b1, (outs P2GPR:$d), (ins i32imm:$s), !strconcat(asmstr, " $d, #$s")>;
 }
 
 // 8 bit opcode, ZI flags, and two operands (D/S). S can be imm.
@@ -262,11 +300,18 @@ class P2InstZIDS<bits<8> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{17-9} = d;
     let Inst{8-0} = s;
 
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    bits<3> s_num = 1;
+
+    let TSFlags{9-7} = s_num; // s is default operand 1, override if there are extra
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstZIDSm<bits<8> op, dag in_extra, string asmstr> {
     def rr : P2InstZIDS<op, 0b0, (outs P2GPR:$d), !con(in_extra, (ins P2GPR:$s)), !strconcat(asmstr, " $d, $s")>;
-    def ri : P2InstZIDS<op, 0b1, (outs P2GPR:$d), !con(in_extra, (ins s9imm:$s)), !strconcat(asmstr, " $d, #$s")>;
+    def ri : P2InstZIDS<op, 0b1, (outs P2GPR:$d), !con(in_extra, (ins i32imm:$s)), !strconcat(asmstr, " $d, #$s")>;
 }
 
 // 8 bit opcode, CI flags, and two operands (D/S). S can be imm.
@@ -288,11 +333,16 @@ class P2InstCIDS<bits<8> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     let Inst{17-9} = d;
     let Inst{8-0} = s;
 
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    let TSFlags{9-7} = 1; // s is always operand 1
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstCIDSm<bits<8> op, string asmstr> {
     def rr : P2InstCIDS<op, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), !strconcat(asmstr, " $d, $s")>;
-    def ri : P2InstCIDS<op, 0b1, (outs P2GPR:$d), (ins s9imm:$s), !strconcat(asmstr, " $d, #$s")>;
+    def ri : P2InstCIDS<op, 0b1, (outs P2GPR:$d), (ins i32imm:$s), !strconcat(asmstr, " $d, #$s")>;
 }
 
 // 8 bit opcode, LI flags, and two operands (D/S). D and S can be imm.
@@ -308,13 +358,19 @@ class P2InstLIDS<bits<8> op, bits<2> li, dag outs, dag inputs, string asmstr> :
     let Inst{19-18} = li;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    let TSFlags{9-7} = 1; // s is always operand 1
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstLIDSm<bits<8> op, string asmstr> {
     def rr : P2InstLIDS<op, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), !strconcat(asmstr, " $d, $s")>;
-    def ri : P2InstLIDS<op, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), !strconcat(asmstr, " $d, #$s")>;
-    def ir : P2InstLIDS<op, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), !strconcat(asmstr, " #$d, $s")>;
-    def ii : P2InstLIDS<op, 0b11, (outs), (ins s9imm:$d, s9imm:$s), !strconcat(asmstr, " #$d, #$s")>;
+    def ri : P2InstLIDS<op, 0b01, (outs), (ins P2GPR:$d, i32imm:$s), !strconcat(asmstr, " $d, #$s")>;
+    def ir : P2InstLIDS<op, 0b10, (outs), (ins i32imm:$d, P2GPR:$s), !strconcat(asmstr, " #$d, $s")>;
+    def ii : P2InstLIDS<op, 0b11, (outs), (ins i32imm:$d, i32imm:$s), !strconcat(asmstr, " #$d, #$s")>;
 }
 
 // 9 bit opcode, I flags, and one operand (S). S can be imm. D field serves as a sub-opcode.
@@ -329,11 +385,16 @@ class P2InstIS<bits<9> op, bits<9> d, bits<1> i, dag outs, dag inputs, string as
     let Inst{18} = i;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 0;
+
+    let TSFlags{9-7} = 0; // s is always operand 0
 }
 
 multiclass P2InstISm<bits<9> op, bits<9> d, string asmstr> {
     def r : P2InstIS<op, d, 0b0, (outs), (ins P2GPR:$s), !strconcat(asmstr, " $s")>;
-    def i : P2InstIS<op, d, 0b1, (outs), (ins s9imm:$s), !strconcat(asmstr, " #$s")>;
+    def i : P2InstIS<op, d, 0b1, (outs), (ins i32imm:$s), !strconcat(asmstr, " #$s")>;
 }
 
 // 7 bit opcode, CLI flags, and two operands (D/S). D and S can be imm.
@@ -351,13 +412,19 @@ class P2InstCLIDS<bits<7> op, bits<2> li, dag outs, dag inputs, string asmstr> :
     let Inst{19-18} = li;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 1;
+    let TSFlags{6} = 1;
+
+    let TSFlags{9-7} = 1; // s is always operand 1
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstCLIDSm<bits<7> op, string asmstr> {
     def rr : P2InstCLIDS<op, 0b00, (outs P2GPR:$d), (ins P2GPR:$s), !strconcat(asmstr, " $d, $s")>;
-    def ri : P2InstCLIDS<op, 0b01, (outs P2GPR:$d), (ins s9imm:$s), !strconcat(asmstr, " $d, #$s")>;
-    def ir : P2InstCLIDS<op, 0b10, (outs s9imm:$d), (ins P2GPR:$s), !strconcat(asmstr, " #$d, $s")>;
-    def ii : P2InstCLIDS<op, 0b11, (outs s9imm:$d), (ins s9imm:$s), !strconcat(asmstr, " #$d, #$s")>;
+    def ri : P2InstCLIDS<op, 0b01, (outs P2GPR:$d), (ins i32imm:$s), !strconcat(asmstr, " $d, #$s")>;
+    def ir : P2InstCLIDS<op, 0b10, (outs i32imm:$d), (ins P2GPR:$s), !strconcat(asmstr, " #$d, $s")>;
+    def ii : P2InstCLIDS<op, 0b11, (outs i32imm:$d), (ins i32imm:$s), !strconcat(asmstr, " #$d, #$s")>;
 }
 
 // 7 bit opcode, L flag, and one operand (D). D can be imm. S field serves as a sub-opcode.
@@ -373,11 +440,16 @@ class P2InstLD<bits<7> op, bits<9> s, bits<1> l, dag outs, dag inputs, string as
     let Inst{18} = l;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 1;
+
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstLDm<bits<7> op, bits<9> s, string asmstr> {
     def r : P2InstLD<op, s, 0b0, (outs), (ins P2GPR:$d), !strconcat(asmstr, " $d")>;
-    def i : P2InstLD<op, s, 0b1, (outs), (ins s9imm:$d), !strconcat(asmstr, " #$d")>;
+    def i : P2InstLD<op, s, 0b1, (outs), (ins i32imm:$d), !strconcat(asmstr, " #$d")>;
 }
 
 // 7 bit opcode, CL flags, and one operand (D). D can be imm. S field serves as a sub-opcode.
@@ -395,11 +467,16 @@ class P2InstCLD<bits<7> op, bits<9> s, bits<1> l, dag outs, dag inputs, string a
     let Inst{18} = l;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 1;
+
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstCLDm<bits<7> op, bits<9> s, string asmstr> {
     def r : P2InstCLD<op, s, 0b0, (outs), (ins P2GPR:$d), !strconcat(asmstr, " $d")>;
-    def i : P2InstCLD<op, s, 0b1, (outs), (ins s9imm:$d), !strconcat(asmstr, " #$d")>;
+    def i : P2InstCLD<op, s, 0b1, (outs), (ins i32imm:$d), !strconcat(asmstr, " #$d")>;
 }
 
 // 7 bit opcode, CZ flags, and one operand (D). S field serves as a sub-opcode.
@@ -416,6 +493,11 @@ class P2InstCZD<bits<7> op, bits<9> s, dag outs, dag inputs, string asmstr> :
     let Inst{18} = 0b0;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 1;
+
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 // No multiclass for P2InstCZD
@@ -434,6 +516,9 @@ class P2InstCZ<bits<8> op, bits<9> d, bits<9> s, dag outs, dag inputs, string as
     let Inst{18} = op{0};
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 0;
 }
 
 // No multiclass for P2InstCZ
@@ -452,11 +537,16 @@ class P2InstCZLD<bits<7> op, bits<9> s, bits<1> l, dag outs, dag inputs, string 
     let Inst{18} = l;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 1;
+
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 multiclass P2InstCZLDm<bits<7> op, bits<9> s, string asmstr> {
     def r : P2InstCZLD<op, s, 0b0, (outs), (ins P2GPR:$d), !strconcat(asmstr, " $d")>;
-    def i : P2InstCZLD<op, s, 0b1, (outs), (ins s9imm:$d), !strconcat(asmstr, " #$d")>;
+    def i : P2InstCZLD<op, s, 0b1, (outs), (ins i32imm:$d), !strconcat(asmstr, " #$d")>;
 }
 
 // 10 bit opcode, (7 bits + 000) and one D operand. S field serves as a sub-opcode.
@@ -471,6 +561,11 @@ class P2InstD<bits<7> op, bits<9> s, dag outs, dag inputs, string asmstr> :
     let Inst{20-18} = 0b000;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 1;
+    
+    let TSFlags{12-10} = 0; // d is always operand 0
 }
 
 // No multiclass for P2InstD
@@ -486,6 +581,9 @@ class P2InstRA<bits<7> op, bits<1> r, dag outs, dag inputs, string asmstr> :
     let Inst{27-21} = op;
     let Inst{20} = r;
     let Inst{19-0} = a;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 0;
 }
 
 // No multiclass for P2InstRA (yet)
@@ -503,6 +601,9 @@ class P2InstWRA<bits<5> op, bits<1> r, dag outs, dag inputs, string asmstr> :
     let Inst{22-21} = w;
     let Inst{20} = r;
     let Inst{19-0} = a;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 0;
 }
 
 // No multiclass for P2InstWRA (yet)
@@ -517,12 +618,18 @@ class P2InstN<bits<5> op, dag outs, dag inputs, string asmstr> :
     let Inst{31-28} = cc;
     let Inst{27-23} = op;
     let Inst{22-0} = n;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 0;
 }
 
 // No multiclass for P2InstN
 
 class P2InstNOP : P2Inst<0, (outs), (ins), "nop"> {
     let Inst{31-0} = 0b00000000000000000000000000000000;
+
+    let TSFlags{5} = 0;
+    let TSFlags{6} = 0;
 }
 
 class Pseudo<dag outs, dag ins, string asmstr> : P2Inst<0, outs, ins, !strconcat("PSEUDO ", asmstr)> {
