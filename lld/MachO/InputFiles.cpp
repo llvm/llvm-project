@@ -567,16 +567,22 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     // with ld64's semantics, because it means the non-private-extern
     // definition will continue to take priority if more private extern
     // definitions are encountered. With lld's semantics there's no observable
-    // difference between a symbol that's isWeakDefCanBeHidden or one that's
-    // privateExtern -- neither makes it into the dynamic symbol table. So just
-    // promote isWeakDefCanBeHidden to isPrivateExtern here.
-    if (isWeakDefCanBeHidden)
+    // difference between a symbol that's isWeakDefCanBeHidden(autohide) or one
+    // that's privateExtern -- neither makes it into the dynamic symbol table,
+    // unless the autohide symbol is explicitly exported.
+    // But if a symbol is both privateExtern and autohide then it can't
+    // be exported.
+    // So we nullify the autohide flag when privateExtern is present
+    // and promote the symbol to privateExtern when it is not already.
+    if (isWeakDefCanBeHidden && isPrivateExtern)
+      isWeakDefCanBeHidden = false;
+    else if (isWeakDefCanBeHidden)
       isPrivateExtern = true;
-
     return symtab->addDefined(
         name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
         isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
-        sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
+        sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP,
+        isWeakDefCanBeHidden);
   }
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
@@ -596,7 +602,8 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
     return symtab->addDefined(
         name, file, nullptr, sym.n_value, /*size=*/0,
         /*isWeakDef=*/false, sym.n_type & N_PEXT, sym.n_desc & N_ARM_THUMB_DEF,
-        /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP);
+        /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP,
+        /*isWeakDefCanBeHidden=*/false);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
@@ -1448,7 +1455,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
                             /*size=*/0, objSym.isWeak(), isPrivateExtern,
                             /*isThumb=*/false,
                             /*isReferencedDynamically=*/false,
-                            /*noDeadStrip=*/false);
+                            /*noDeadStrip=*/false,
+                            /*isWeakDefCanBeHidden=*/false);
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
