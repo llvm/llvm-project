@@ -136,7 +136,7 @@ void *threadFun(void *AltStack) {
 int main() {
   size_t const PageSize = sysconf(_SC_PAGESIZE);
   // The Solaris defaults of 4k (32-bit) and 8k (64-bit) are too small.
-  size_t const MinStackSize = std::max(PTHREAD_STACK_MIN, 16 * 1024);
+  size_t const MinStackSize = std::max<size_t>(PTHREAD_STACK_MIN, 16 * 1024);
   // To align the alternate stack, we round this up to page_size.
   size_t const DefaultStackSize =
       (MinStackSize - 1 + PageSize) & ~(PageSize - 1);
