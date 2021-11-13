@@ -2216,7 +2216,7 @@ void UnwrappedLineParser::parseNamespace() {
     parseParens();
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
-                              tok::l_square)) {
+                              tok::l_square, tok::period)) {
       if (FormatTok->is(tok::l_square))
         parseSquare();
       else
