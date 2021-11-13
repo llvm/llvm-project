@@ -101,14 +101,17 @@ public:
   }
 };
 
-class CIRStoreLowering : public mlir::OpRewritePattern<mlir::cir::StoreOp> {
+class CIRStoreLowering : public mlir::ConversionPattern {
 public:
-  using OpRewritePattern<mlir::cir::StoreOp>::OpRewritePattern;
+  CIRStoreLowering(mlir::MLIRContext *ctx)
+      : mlir::ConversionPattern(mlir::cir::StoreOp::getOperationName(), 1,
+                                ctx) {}
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::StoreOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    assert(false && "NYI");
+  matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(op, operands[0],
+                                                       operands[1]);
     return mlir::LogicalResult::success();
   }
 };

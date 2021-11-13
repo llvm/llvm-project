@@ -3,38 +3,25 @@
 // XFAIL: *
 
 module {
-  func.func @foo() {
+  func.func @foo() -> i32 {
     %0 = cir.alloca i32, cir.ptr <i32>, [cinit]
     %1 = cir.cst(1 : i32) : i32
-    cir.return
-  }
-
-  func.func @main() -> i32 {
-    %0 = cir.cst(1 : i32) : i32
-    cir.return %0 : i32
+    cir.store %1, %0 : i32, cir.ptr <i32>
+    cir.return %1 : i32
   }
 }
 
 //      MLIR: module  {
-// MLIR-NEXT:   func.func @foo() {
+// MLIR-NEXT:   func.func @foo() -> i32 {
 // MLIR-NEXT:     %0 = memref.alloc() : memref<i32>
-// MLIR-NEXT:     {{.*}}arith.constant 1 : i32
-// MLIR-NEXT:     return
-// MLIR-NEXT:   }
-// MLIR-NEXT:   func @main() -> i32 {
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
+// MLIR-NEXT:     memref.store %c1_i32, %0[] : memref<i32>
 // MLIR-NEXT:     return %c1_i32 : i32
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
 
 //      LLVM: module  {
-// LLVM-NEXT:   llvm.func @malloc(i64)
-// LLVM-NEXT:   llvm.func @foo() {
+// LLVM-NEXT:   llvm.func @malloc(i64) -> !llvm.ptr<i8>
+// LLVM-NEXT:   llvm.func @foo() -> i32 {
 // LLVM-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
-//      LLVM:   llvm.func @main() -> i32 {
-// LLVM-NEXT:     %0 = llvm.mlir.constant(1 : i32) : i32
-// LLVM-NEXT:     llvm.return %0 : i32
-// LLVM-NEXT:   }
-// LLVM-NEXT: }
-
 
