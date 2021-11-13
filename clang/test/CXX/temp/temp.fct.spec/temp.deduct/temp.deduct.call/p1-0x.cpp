@@ -53,9 +53,8 @@ void test_simple_ref_deduction(int *ip, float *fp, double *dp) {
 }
 
 
-// FIXME: Use the template parameter names in this diagnostic.
 template<typename ...Args1, typename ...Args2>
-typename get_nth_type<0, Args1...>::type first_arg_pair(pair<Args1, Args2>...); // expected-note{{candidate template ignored: could not match 'pair<type-parameter-0-0, type-parameter-0-1>' against 'int'}}
+typename get_nth_type<0, Args1...>::type first_arg_pair(pair<Args1, Args2>...); // expected-note{{candidate template ignored: could not match 'pair<Args1, Args2>' against 'int'}}
 
 template<typename ...Args1, typename ...Args2>
 typename get_nth_type<1, Args1...>::type second_arg_pair(pair<Args1, Args2>...);
