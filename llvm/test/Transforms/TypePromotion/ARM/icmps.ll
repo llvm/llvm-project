@@ -65,8 +65,8 @@ define i32 @test_ugt_1_dec_imm(i8 zeroext %x) {
 ; CHECK-LABEL: @test_ugt_1_dec_imm(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 35, i32 47
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -193,8 +193,8 @@ define i32 @ugt_1_dec_imm(i8 zeroext %x) {
 ; CHECK-LABEL: @ugt_1_dec_imm(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 35, i32 47
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -305,8 +305,9 @@ define i32 @icmp_minus_imm(i8* %a) {
 ; CHECK-LABEL: @icmp_minus_imm(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[A:%.*]], align 1
-; CHECK-NEXT:    [[ADD_I:%.*]] = add i8 [[TMP0]], -7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD_I]], -5
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[ADD_I:%.*]] = add i32 [[TMP1]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD_I]], -5
 ; CHECK-NEXT:    [[CONV1:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV1]]
 ;
