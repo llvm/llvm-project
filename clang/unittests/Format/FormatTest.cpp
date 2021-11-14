@@ -22566,6 +22566,30 @@ TEST_F(FormatTest, LimitlessStringsAndComments) {
   EXPECT_EQ(Code, format(Code, Style));
 }
 
+TEST_F(FormatTest, FormatDecayCopy) {
+  // error cases from unit tests
+  verifyFormat("foo(auto())");
+  verifyFormat("foo(auto{})");
+  verifyFormat("foo(auto({}))");
+  verifyFormat("foo(auto{{}})");
+
+  verifyFormat("foo(auto(1))");
+  verifyFormat("foo(auto{1})");
+  verifyFormat("foo(new auto(1))");
+  verifyFormat("foo(new auto{1})");
+  verifyFormat("decltype(auto(1)) x;");
+  verifyFormat("decltype(auto{1}) x;");
+  verifyFormat("auto(x);");
+  verifyFormat("auto{x};");
+  verifyFormat("new auto{x};");
+  verifyFormat("auto{x} = y;");
+  verifyFormat("auto(x) = y;"); // actually a declaration, but this is clearly
+                                // the user's own fault
+  verifyFormat("integral auto(x) = y;"); // actually a declaration, but this is
+                                         // clearly the user's own fault
+  verifyFormat("auto(*p)() = f;");       // actually a declaration; TODO FIXME
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
