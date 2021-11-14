@@ -209,9 +209,8 @@ define <16 x i8> @signbit_mask_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <16 x i8> @signbit_mask_swap_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: signbit_mask_swap_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmgt v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    sshr v0.16b, v0.16b, #7
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp sgt <16 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %r = select <16 x i1> %cond, <16 x i8> zeroinitializer, <16 x i8> %b
@@ -278,10 +277,8 @@ define <8 x i16> @signbit_setmask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <8 x i16> @signbit_setmask_swap_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: signbit_setmask_swap_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmgt v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    and v1.16b, v1.16b, v0.16b
-; CHECK-NEXT:    orn v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #15
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp sgt <8 x i16> %a, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
@@ -348,8 +345,8 @@ define <4 x i32> @not_signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @not_signbit_mask_swap_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: not_signbit_mask_swap_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cond = icmp slt <4 x i32> %a, zeroinitializer
   %r = select <4 x i1> %cond, <4 x i32> zeroinitializer, <4 x i32> %b
