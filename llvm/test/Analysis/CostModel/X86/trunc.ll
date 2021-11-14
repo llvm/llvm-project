@@ -441,26 +441,26 @@ define i32 @trunc_vXi16() {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V12i32 = trunc <12 x i32> undef to <12 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V14i32 = trunc <14 x i32> undef to <14 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V20i32 = trunc <20 x i32> undef to <20 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %V24i32 = trunc <24 x i32> undef to <24 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %V28i32 = trunc <28 x i32> undef to <28 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32i32 = trunc <32 x i32> undef to <32 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 109 for instruction: %V40i32 = trunc <40 x i32> undef to <40 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %V48i32 = trunc <48 x i32> undef to <48 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 159 for instruction: %V56i32 = trunc <56 x i32> undef to <56 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64i32 = trunc <64 x i32> undef to <64 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 226 for instruction: %V80i32 = trunc <80 x i32> undef to <80 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 276 for instruction: %V96i32 = trunc <96 x i32> undef to <96 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 318 for instruction: %V112i32 = trunc <112 x i32> undef to <112 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V128i32 = trunc <128 x i32> undef to <128 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 460 for instruction: %V160i32 = trunc <160 x i32> undef to <160 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 552 for instruction: %V192i32 = trunc <192 x i32> undef to <192 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 644 for instruction: %V224i32 = trunc <224 x i32> undef to <224 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V256i32 = trunc <256 x i32> undef to <256 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 920 for instruction: %V320i32 = trunc <320 x i32> undef to <320 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1104 for instruction: %V384i32 = trunc <384 x i32> undef to <384 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1288 for instruction: %V448i32 = trunc <448 x i32> undef to <448 x i16>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V512i32 = trunc <512 x i32> undef to <512 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V20i32 = trunc <20 x i32> undef to <20 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V24i32 = trunc <24 x i32> undef to <24 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V28i32 = trunc <28 x i32> undef to <28 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i32 = trunc <32 x i32> undef to <32 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V40i32 = trunc <40 x i32> undef to <40 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V48i32 = trunc <48 x i32> undef to <48 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V56i32 = trunc <56 x i32> undef to <56 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64i32 = trunc <64 x i32> undef to <64 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V80i32 = trunc <80 x i32> undef to <80 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V96i32 = trunc <96 x i32> undef to <96 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V112i32 = trunc <112 x i32> undef to <112 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128i32 = trunc <128 x i32> undef to <128 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V160i32 = trunc <160 x i32> undef to <160 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V192i32 = trunc <192 x i32> undef to <192 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V224i32 = trunc <224 x i32> undef to <224 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V256i32 = trunc <256 x i32> undef to <256 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V320i32 = trunc <320 x i32> undef to <320 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V384i32 = trunc <384 x i32> undef to <384 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V448i32 = trunc <448 x i32> undef to <448 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V512i32 = trunc <512 x i32> undef to <512 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'trunc_vXi16'
