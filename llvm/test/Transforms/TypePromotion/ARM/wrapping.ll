@@ -102,8 +102,9 @@ define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 
 define i32 @unsafe_add_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: @unsafe_add_underflow(
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[A:%.*]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], -2
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -116,8 +117,8 @@ define i32 @unsafe_add_underflow(i8 zeroext %a) {
 define i32 @safe_add_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: @safe_add_underflow(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP2]], 254
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], 254
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -130,8 +131,8 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: @safe_add_underflow_neg(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[TMP2]], 250
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[ADD]], 250
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -154,10 +155,12 @@ define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
   ret i32 %res
 }
 
-define i32 @unsafe_sub_underflow(i8 zeroext %a) {
-; CHECK-LABEL: @unsafe_sub_underflow(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A:%.*]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SUB]], -6
+; This is valid so long as the icmp immediate is sext.
+define i32 @sext_sub_underflow(i8 zeroext %a) {
+; CHECK-LABEL: @sext_sub_underflow(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[TMP1]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUB]], -6
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -195,10 +198,12 @@ define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
   ret i32 %res
 }
 
-define i32 @unsafe_sub_underflow_neg(i8 zeroext %a) {
-; CHECK-LABEL: @unsafe_sub_underflow_neg(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SUB]], -3
+; This is valid so long as the icmp immediate is sext.
+define i32 @sext_sub_underflow_neg(i8 zeroext %a) {
+; CHECK-LABEL: @sext_sub_underflow_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[TMP1]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SUB]], -3
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -288,12 +293,12 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; CHECK-NEXT:    [[SHL:%.*]] = or i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[SHL]], 10
 ; CHECK-NEXT:    [[CMP_0:%.*]] = icmp ult i32 [[ADD]], 60
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 [[SHL]], 40
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[TMP2]], 20
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[SHL]], -40
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[SUB]], 20
 ; CHECK-NEXT:    [[MASK_SEL:%.*]] = select i1 [[CMP_1]], i32 [[MASK_0]], i32 [[MASK_1]]
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_0]], i32 [[MASK_SEL]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[RES]] to i8
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[RES]] to i8
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %mask.0 = and i8 %arg, 1
   %mask.1 = and i8 %arg, 2
