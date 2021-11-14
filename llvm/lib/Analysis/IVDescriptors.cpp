@@ -43,8 +43,8 @@ using namespace llvm::PatternMatch;
 
 bool RecurrenceDescriptor::areAllUsesIn(Instruction *I,
                                         SmallPtrSetImpl<Instruction *> &Set) {
-  for (User::op_iterator Use = I->op_begin(), E = I->op_end(); Use != E; ++Use)
-    if (!Set.count(dyn_cast<Instruction>(*Use)))
+  for (const Use &Use : I->operands())
+    if (!Set.count(dyn_cast<Instruction>(Use)))
       return false;
   return true;
 }

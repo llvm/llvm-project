@@ -746,9 +746,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
         // Add filters in a list.
         auto *CVal = cast<Constant>(Val);
         SmallVector<const GlobalValue *, 4> FilterList;
-        for (User::op_iterator II = CVal->op_begin(), IE = CVal->op_end();
-             II != IE; ++II)
-          FilterList.push_back(cast<GlobalValue>((*II)->stripPointerCasts()));
+        for (const Use &U : CVal->operands())
+          FilterList.push_back(cast<GlobalValue>(U->stripPointerCasts()));
 
         addFilterTypeInfo(LandingPad, FilterList);
       }
