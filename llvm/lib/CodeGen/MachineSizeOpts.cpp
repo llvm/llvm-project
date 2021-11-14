@@ -82,7 +82,7 @@ bool isFunctionColdInCallGraph(
     ProfileSummaryInfo *PSI,
     const MachineBlockFrequencyInfo &MBFI) {
   if (auto FunctionCount = MF->getFunction().getEntryCount())
-    if (!PSI->isColdCount(FunctionCount.getCount()))
+    if (!PSI->isColdCount(FunctionCount->getCount()))
       return false;
   for (const auto &MBB : *MF)
     if (!isColdBlock(&MBB, PSI, &MBFI))
@@ -99,7 +99,7 @@ bool isFunctionHotInCallGraphNthPercentile(
     const MachineBlockFrequencyInfo &MBFI) {
   if (auto FunctionCount = MF->getFunction().getEntryCount())
     if (PSI->isHotCountNthPercentile(PercentileCutoff,
-                                     FunctionCount.getCount()))
+                                     FunctionCount->getCount()))
       return true;
   for (const auto &MBB : *MF)
     if (isHotBlockNthPercentile(PercentileCutoff, &MBB, PSI, &MBFI))
@@ -112,7 +112,7 @@ bool isFunctionColdInCallGraphNthPercentile(
     const MachineBlockFrequencyInfo &MBFI) {
   if (auto FunctionCount = MF->getFunction().getEntryCount())
     if (!PSI->isColdCountNthPercentile(PercentileCutoff,
-                                       FunctionCount.getCount()))
+                                       FunctionCount->getCount()))
       return false;
   for (const auto &MBB : *MF)
     if (!isColdBlockNthPercentile(PercentileCutoff, &MBB, PSI, &MBFI))
