@@ -2521,11 +2521,11 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwi
 ;
 ; AVX512F-LABEL: splatconstant_funnnel_v32i8:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm0
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatconstant_funnnel_v32i8:
@@ -2537,20 +2537,20 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwi
 ;
 ; AVX512BW-LABEL: splatconstant_funnnel_v32i8:
 ; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512BW-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpsllw $4, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm0
+; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VBMI2-LABEL: splatconstant_funnnel_v32i8:
 ; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512VBMI2-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; AVX512VBMI2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512VBMI2-NEXT:    vpsllw $4, %ymm0, %ymm0
-; AVX512VBMI2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512VBMI2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm0
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: splatconstant_funnnel_v32i8:
