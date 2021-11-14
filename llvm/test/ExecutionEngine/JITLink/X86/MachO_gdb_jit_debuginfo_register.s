@@ -1,6 +1,7 @@
 # REQUIRES: system-darwin && asserts
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t %s
-# RUN: llvm-jitlink -debug-only=orc -noexec %t 2>&1 | FileCheck %s
+# RUN: llvm-jitlink -debug-only=orc -debugger-support -noexec %t 2>&1 \
+# RUN:    | FileCheck %s
 #
 # Check that presence of a "__DWARF" section triggers the
 # GDBJITDebugInfoRegistrationPlugin.

@@ -102,6 +102,11 @@ static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::cat(JITLinkCategory));
 
 static cl::opt<bool>
+    DebuggerSupport("debugger-support",
+                    cl::desc("Enable debugger suppport (default = !-noexec)"),
+                    cl::init(true), cl::Hidden, cl::cat(JITLinkCategory));
+
+static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
                      cl::init(false), cl::cat(JITLinkCategory));
@@ -990,7 +995,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   auto &TT = ES.getExecutorProcessControl().getTargetTriple();
 
-  if (TT.isOSBinFormatMachO())
+  if (DebuggerSupport && TT.isOSBinFormatMachO())
     ObjLayer.addPlugin(ExitOnErr(
         GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
 
@@ -1011,11 +1016,13 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       Err = P.takeError();
       return;
     }
-  } else if (!NoExec && !TT.isOSWindows() && !TT.isOSBinFormatMachO()) {
-    ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-        ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
-    ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-        ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES))));
+  } else if (!TT.isOSWindows() && !TT.isOSBinFormatMachO()) {
+    if (!NoExec)
+      ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+          ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
+    if (DebuggerSupport)
+      ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
+          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES))));
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -1205,6 +1212,10 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
   // Set the entry point name if not specified.
   if (EntryPointName.empty())
     EntryPointName = TT.getObjectFormat() == Triple::MachO ? "_main" : "main";
+
+  // Disable debugger support by default in noexec tests.
+  if (DebuggerSupport.getNumOccurrences() == 0 && NoExec)
+    DebuggerSupport = false;
 
   // If -slab-allocate is passed, check that we're not trying to use it in
   // -oop-executor or -oop-executor-connect mode.
