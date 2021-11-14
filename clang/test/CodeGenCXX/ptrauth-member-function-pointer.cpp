@@ -114,22 +114,22 @@ typedef void (Derived0::*MethodTy1)();
 // CHECK-NEXT: %[[V1:.*]] = bitcast %[[STRUCT_BASE0]]* %[[THIS1]] to void (%[[STRUCT_BASE0]]*)***
 // CHECK-NEXT: %[[VTABLE:.*]] = load void (%[[STRUCT_BASE0]]*)**, void (%[[STRUCT_BASE0]]*)*** %[[V1]], align 8
 // CHECK-NEXT: %[[V2:.*]] = ptrtoint void (%[[STRUCT_BASE0]]*)** %[[VTABLE]] to i64
-// CHECK-NEXT: %[[V3:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V2]], i32 2, i64 0)
+// CHECK-NEXT: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
 // CHECK-NEXT: %[[V4:.*]] = inttoptr i64 %[[V3]] to void (%[[STRUCT_BASE0]]*)**
 // CHECK-NEXT: %[[VFN:.*]] = getelementptr inbounds void (%[[STRUCT_BASE0]]*)*, void (%[[STRUCT_BASE0]]*)** %[[V4]], i64 0
 // CHECK-NEXT: %[[V5:.*]] = load void (%[[STRUCT_BASE0]]*)*, void (%[[STRUCT_BASE0]]*)** %[[VFN]], align 8
 // CHECK-NEXT: %[[V6:.*]] = ptrtoint void (%[[STRUCT_BASE0]]*)** %[[VFN]] to i64
-// CHECK-NEXT: %[[V7:.*]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[V6]], i64 55600)
+// CHECK-NEXT: %[[V7:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V6]], i64 55600)
 // CHECK-NEXT: musttail call void %[[V5]](%[[STRUCT_BASE0]]* nonnull align {{[0-9]+}} dereferenceable(8) %[[V0]]) [ "ptrauth"(i32 0, i64 %[[V7]]) ]
 // CHECK-NEXT: ret void
 
 // CHECK: define linkonce_odr hidden void @_ZN5Base08virtual3Ev_vfpthunk_(%[[STRUCT_BASE0]]* %{{.*}}) {{.*}}align 2
 // CHECK: %[[VTABLE:.*]] = load void (%[[STRUCT_BASE0]]*)**, void (%[[STRUCT_BASE0]]*)*** %{{.*}}, align 8
 // CHECK: %[[V2:.*]] = ptrtoint void (%[[STRUCT_BASE0]]*)** %[[VTABLE]] to i64
-// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V2]], i32 2, i64 0)
+// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
 // CHECK: %[[V4:.*]] = inttoptr i64 %[[V3]] to void (%[[STRUCT_BASE0]]*)**
 // CHECK: getelementptr inbounds void (%[[STRUCT_BASE0]]*)*, void (%[[STRUCT_BASE0]]*)** %[[V4]], i64 1
-// CHECK: call i64 @llvm.ptrauth.blend.i64(i64 %{{.*}}, i64 53007)
+// CHECK: call i64 @llvm.ptrauth.blend(i64 %{{.*}}, i64 53007)
 
 // CHECK: define linkonce_odr hidden void @_ZN5Base016virtual_variadicEiz_vfpthunk_(%[[STRUCT_BASE0]]* %[[THIS:.*]], i32 %0, ...){{.*}} align 2
 // CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_BASE0]]*, align 8
@@ -142,22 +142,22 @@ typedef void (Derived0::*MethodTy1)();
 // CHECK-NEXT: %[[V3:.*]] = bitcast %[[STRUCT_BASE0]]* %[[THIS1]] to void (%[[STRUCT_BASE0]]*, i32, ...)***
 // CHECK-NEXT: %[[VTABLE:.*]] = load void (%[[STRUCT_BASE0]]*, i32, ...)**, void (%[[STRUCT_BASE0]]*, i32, ...)*** %[[V3]], align 8
 // CHECK-NEXT: %[[V4:.*]] = ptrtoint void (%[[STRUCT_BASE0]]*, i32, ...)** %[[VTABLE]] to i64
-// CHECK-NEXT: %[[V5:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V4]], i32 2, i64 0)
+// CHECK-NEXT: %[[V5:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V4]], i32 2, i64 0)
 // CHECK-NEXT: %[[V6:.*]] = inttoptr i64 %[[V5]] to void (%[[STRUCT_BASE0]]*, i32, ...)**
 // CHECK-NEXT: %[[VFN:.*]] = getelementptr inbounds void (%[[STRUCT_BASE0]]*, i32, ...)*, void (%[[STRUCT_BASE0]]*, i32, ...)** %[[V6]], i64 2
 // CHECK-NEXT: %[[V7:.*]] = load void (%[[STRUCT_BASE0]]*, i32, ...)*, void (%[[STRUCT_BASE0]]*, i32, ...)** %[[VFN]], align 8
 // CHECK-NEXT: %[[V8:.*]] = ptrtoint void (%[[STRUCT_BASE0]]*, i32, ...)** %[[VFN]] to i64
-// CHECK-NEXT: %[[V9:.*]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[V8]], i64 7464)
+// CHECK-NEXT: %[[V9:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V8]], i64 7464)
 // CHECK-NEXT: musttail call void (%[[STRUCT_BASE0]]*, i32, ...) %[[V7]](%[[STRUCT_BASE0]]* nonnull align {{[0-9]+}} dereferenceable(8) %[[V1]], i32 %[[V2]], ...) [ "ptrauth"(i32 0, i64 %[[V9]]) ]
 // CHECK-NEXT: ret void
 
 // CHECK: define linkonce_odr hidden void @_ZN8Derived08virtual6Ev_vfpthunk_(%[[STRUCT_DERIVED0]]* %{{.*}}){{.*}} align 2
 // CHECK: %[[VTABLE:.*]] = load void (%[[STRUCT_DERIVED0]]*)**, void (%[[STRUCT_DERIVED0]]*)*** %[[V1]], align 8
 // CHECK: %[[V2:.*]] = ptrtoint void (%[[STRUCT_DERIVED0]]*)** %[[VTABLE]] to i64
-// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V2]], i32 2, i64 0)
+// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
 // CHECK: %[[V4:.*]] = inttoptr i64 %[[V3]] to void (%[[STRUCT_DERIVED0]]*)**
 // CHECK: getelementptr inbounds void (%[[STRUCT_DERIVED0]]*)*, void (%[[STRUCT_DERIVED0]]*)** %[[V4]], i64 3
-// CHECK: call i64 @llvm.ptrauth.blend.i64(i64 %{{.*}}, i64 55535)
+// CHECK: call i64 @llvm.ptrauth.blend(i64 %{{.*}}, i64 55535)
 
 // Check that the return value of the musttail call isn't copied to a temporary.
 
@@ -176,9 +176,9 @@ typedef void (Derived0::*MethodTy1)();
 
 // CHECK: define linkonce_odr hidden void @_ZN8Derived011trivial_abiE8TrivialS_vfpthunk_(%[[STRUCT_DERIVED0]]* %{{.*}}, [2 x i64] %{{.*}})
 // NODEBUG-NOT: call
-// CHECK: call i64 @llvm.ptrauth.auth.i64(
+// CHECK: call i64 @llvm.ptrauth.auth(
 // NODEBUG-NOT: call
-// CHECK: call i64 @llvm.ptrauth.blend.i64(
+// CHECK: call i64 @llvm.ptrauth.blend(
 // NODEBUG-NOT: call
 // CHECK: musttail call void
 // CHECK-NEXT: ret void
@@ -186,14 +186,14 @@ typedef void (Derived0::*MethodTy1)();
 // CHECK: define linkonce_odr hidden void @_ZN5Base18virtual7Ev_vfpthunk_(%[[STRUCT_BASE1]]* %{{.*}})
 // CHECK: %[[VTABLE:.*]] = load void (%[[STRUCT_BASE1]]*)**, void (%[[STRUCT_BASE1]]*)*** %{{.*}}, align 8
 // CHECK: %[[V2:.*]] = ptrtoint void (%[[STRUCT_BASE1]]*)** %[[VTABLE]] to i64
-// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V2]], i32 2, i64 0)
+// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
 // CHECK: %[[V4:.*]] = inttoptr i64 %[[V3]] to void (%[[STRUCT_BASE1]]*)**
 // CHECK: getelementptr inbounds void (%[[STRUCT_BASE1]]*)*, void (%[[STRUCT_BASE1]]*)** %[[V4]], i64 0
 
 // CHECK: define linkonce_odr hidden void @_ZN8Derived18virtual7Ev_vfpthunk_(%[[STRUCT_DERIVED1]]* %{{.*}})
 // CHECK: %[[VTABLE:.*]] = load void (%[[STRUCT_DERIVED1]]*)**, void (%[[STRUCT_DERIVED1]]*)*** %[[V1]], align 8
 // CHECK: %[[V2:.*]] = ptrtoint void (%[[STRUCT_DERIVED1]]*)** %[[VTABLE]] to i64
-// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V2]], i32 2, i64 0)
+// CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
 // CHECK: %[[V4:.*]] = inttoptr i64 %[[V3]] to void (%[[STRUCT_DERIVED1]]*)**
 // CHECK: getelementptr inbounds void (%[[STRUCT_DERIVED1]]*)*, void (%[[STRUCT_DERIVED1]]*)** %[[V4]], i64 3
 
@@ -256,7 +256,7 @@ void test0() {
 // CHECK: %[[V6:.*]] = bitcast %[[STRUCT_BASE0]]* %[[THIS_ADJUSTED]] to i8**
 // CHECK: %[[VTABLE:.*]] = load i8*, i8** %[[V6]], align 8
 // CHECK: %[[V7:.*]] = ptrtoint i8* %[[VTABLE]] to i64
-// CHECK: %[[V8:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[V7]], i32 2, i64 0)
+// CHECK: %[[V8:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V7]], i32 2, i64 0)
 // CHECK: %[[V9:.*]] = inttoptr i64 %[[V8]] to i8*
 // CHECK: %[[V10:.*]] = trunc i64 %[[MEMPTR_PTR]] to i32
 // CHECK: %[[V11:.*]] = zext i32 %[[V10]] to i64
@@ -302,7 +302,7 @@ void test1(Base0 *a0, MethodTy0 a1) {
 // CHECK: br i1 %[[V5]]
 
 // CHECK: %[[V6:.*]] = ptrtoint i8* %[[V4]] to i64
-// CHECK: %[[V7:.*]] = call i64 @llvm.ptrauth.resign.i64(i64 %[[V6]], i32 0, i64 [[TYPEDISC0]], i32 0, i64 [[TYPEDISC1]])
+// CHECK: %[[V7:.*]] = call i64 @llvm.ptrauth.resign(i64 %[[V6]], i32 0, i64 [[TYPEDISC0]], i32 0, i64 [[TYPEDISC1]])
 // CHECK: %[[V8:.*]] = inttoptr i64 %[[V7]] to i8*
 // CHECK: br
 
@@ -320,27 +320,27 @@ void testConversion0(MethodTy0 method0, MethodTy1 method1) {
 }
 
 // CHECK: define void @_Z15testConversion1M5Base0FvvE(
-// CHECK: call i64 @llvm.ptrauth.resign.i64(i64 %{{.*}}, i32 0, i64 [[TYPEDISC0]], i32 0, i64 [[TYPEDISC1]])
+// CHECK: call i64 @llvm.ptrauth.resign(i64 %{{.*}}, i32 0, i64 [[TYPEDISC0]], i32 0, i64 [[TYPEDISC1]])
 
 void testConversion1(MethodTy0 method0) {
   MethodTy1 method1 = reinterpret_cast<MethodTy1>(method0);
 }
 
 // CHECK: define void @_Z15testConversion2M8Derived0FvvE(
-// CHECK: call i64 @llvm.ptrauth.resign.i64(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
+// CHECK: call i64 @llvm.ptrauth.resign(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
 
 void testConversion2(MethodTy1 method1) {
   MethodTy0 method0 = static_cast<MethodTy0>(method1);
 }
 
 // CHECK: define void @_Z15testConversion3M8Derived0FvvE(
-// CHECK: call i64 @llvm.ptrauth.resign.i64(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
+// CHECK: call i64 @llvm.ptrauth.resign(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
 
 void testConversion3(MethodTy1 method1) {
   MethodTy0 method0 = reinterpret_cast<MethodTy0>(method1);
 }
 
-// No need to call @llvm.ptrauth.resign.i64 if the source member function
+// No need to call @llvm.ptrauth.resign if the source member function
 // pointer is a constant.
 
 // CHECK: define void @_Z15testConversion4v(

@@ -45,11 +45,11 @@ void calleeSA(SA);
 // CHECK: %[[V10:.*]] = bitcast i8* %[[V9]] to i8**
 // CHECK: %[[V11:.*]] = load i8*, i8** %[[V10]], align 8
 // CHECK: %[[V12:.*]] = ptrtoint i8** %[[V10]] to i64
-// CHECK: %[[V13:.*]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[V12]], i64 50)
+// CHECK: %[[V13:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V12]], i64 50)
 // CHECK: %[[V14:.*]] = ptrtoint i8** %[[V7]] to i64
-// CHECK: %[[V15:.*]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[V14]], i64 50)
+// CHECK: %[[V15:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V14]], i64 50)
 // CHECK: %[[V17:.*]] = ptrtoint i8* %[[V11]] to i64
-// CHECK: %[[V18:.*]] = call i64 @llvm.ptrauth.resign.i64(i64 %[[V17]], i32 1, i64 %[[V13]], i32 1, i64 %[[V15]])
+// CHECK: %[[V18:.*]] = call i64 @llvm.ptrauth.resign(i64 %[[V17]], i32 1, i64 %[[V13]], i32 1, i64 %[[V15]])
 
 void test_copy_constructor_SA(SA *s) {
   SA t = *s;
@@ -73,11 +73,11 @@ void test_copy_constructor_SA(SA *s) {
 // CHECK: %[[V10:.*]] = bitcast i8* %[[V9]] to i8**
 // CHECK: %[[V11:.*]] = load i8*, i8** %[[V10]], align 8
 // CHECK: %[[V12:.*]] = ptrtoint i8** %[[V10]] to i64
-// CHECK: %[[V13:.*]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[V12]], i64 30)
+// CHECK: %[[V13:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V12]], i64 30)
 // CHECK: %[[V14:.*]] = ptrtoint i8** %[[V7]] to i64
-// CHECK: %[[V15:.*]] = call i64 @llvm.ptrauth.blend.i64(i64 %[[V14]], i64 30)
+// CHECK: %[[V15:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V14]], i64 30)
 // CHECK: %[[V17:.*]] = ptrtoint i8* %[[V11]] to i64
-// CHECK: %[[V18:.*]] = call i64 @llvm.ptrauth.resign.i64(i64 %[[V17]], i32 2, i64 %[[V13]], i32 2, i64 %[[V15]])
+// CHECK: %[[V18:.*]] = call i64 @llvm.ptrauth.resign(i64 %[[V17]], i32 2, i64 %[[V13]], i32 2, i64 %[[V15]])
 
 void test_copy_constructor_SA2(SA2 *s) {
   SA2 t = *s;

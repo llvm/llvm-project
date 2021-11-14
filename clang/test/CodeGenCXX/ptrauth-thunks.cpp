@@ -27,4 +27,4 @@ namespace Test1 {
 // CHECK: %[[BitcastThis2:.*]] = bitcast i8* %[[BitcastThis]] to i8**
 // CHECK: %[[SignedVTable:.*]] = load i8*, i8** %[[BitcastThis2]], align 8
 // CHECK: %[[SignedVTableAsInt:.*]] = ptrtoint i8* %[[SignedVTable]] to i64
-// CHECK: %[[VTable:.*]] = call i64 @llvm.ptrauth.auth.i64(i64 %[[SignedVTableAsInt]], i32 2, i64 0)
+// CHECK: %[[VTable:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[SignedVTableAsInt]], i32 2, i64 0)

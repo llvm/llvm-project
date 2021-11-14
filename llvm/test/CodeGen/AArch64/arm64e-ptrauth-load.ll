@@ -9,7 +9,7 @@ define i64 @test_load_auth_da(i64* %ptr) {
 ; CHECK-NEXT:    ldraa x0, [x0]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = inttoptr i64 %tmp1 to i64*
   %tmp3 = load i64, i64* %tmp2
   ret i64 %tmp3
@@ -21,7 +21,7 @@ define i64 @test_load_auth_db(i64* %ptr) {
 ; CHECK-NEXT:    ldrab x0, [x0]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = inttoptr i64 %tmp1 to i64*
   %tmp3 = load i64, i64* %tmp2
   ret i64 %tmp3
@@ -35,7 +35,7 @@ define i64 @test_load_auth_da_8(i64* %ptr) {
 ; CHECK-NEXT:    ldraa x0, [x0, #8]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, 8
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -48,7 +48,7 @@ define i64 @test_load_auth_da_m8(i64* %ptr) {
 ; CHECK-NEXT:    ldraa x0, [x0, #-8]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, -8
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -61,7 +61,7 @@ define i64 @test_load_auth_db_4088(i64* %ptr) {
 ; CHECK-NEXT:    ldrab x0, [x0, #4088]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, 4088
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -78,7 +78,7 @@ define i64 @test_load_auth_da_4(i64* %ptr) {
 ; CHECK-NEXT:    ldur x0, [x16, #4]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, 4
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -93,7 +93,7 @@ define i64 @test_load_auth_da_4096(i64* %ptr) {
 ; CHECK-NEXT:    ldr x0, [x16, #4096]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, 4096
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -109,7 +109,7 @@ define i64* @test_load_auth_da_8_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, 8
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -124,7 +124,7 @@ define i64* @test_load_auth_db_248_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, 248
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -139,7 +139,7 @@ define i64* @test_load_auth_db_m256_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, -256
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -156,7 +156,7 @@ define i64* @test_load_auth_da_0_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = inttoptr i64 %tmp1 to i64*
   %tmp3 = load i64, i64* %tmp2
   store i64 %tmp3, i64* %dst
@@ -175,7 +175,7 @@ define void @test_load_auth_da_0_pre_cycle(i64* %ptr, i64* %dst, i64* %dst2, i64
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = inttoptr i64 %tmp1 to i64*
   store i64 %tmp1, i64* %dst2
   %tmp3 = load i64, i64* %tmp2
@@ -195,7 +195,7 @@ define i64* @test_load_auth_db_4_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, 4
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -213,7 +213,7 @@ define i64* @test_load_auth_db_4096_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, 4096
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -228,7 +228,7 @@ define i64* @test_load_auth_db_256_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, 256
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -243,7 +243,7 @@ define i64* @test_load_auth_db_m264_pre(i64* %ptr, i64* %dst) {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 3, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
   %tmp2 = add i64 %tmp1, -264
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -264,7 +264,7 @@ define i64* @test_load_auth_da_8_pre_use(i64* %ptr, i64* %dst, i64* %dst2) {
 ; CHECK-NEXT:    str x16, [x2]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, 8
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -286,7 +286,7 @@ define i64* @test_load_auth_da_256_pre_use(i64* %ptr, i64* %dst, i64* %dst2) {
 ; CHECK-NEXT:    str x16, [x2]
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 0)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
   %tmp2 = add i64 %tmp1, 256
   %tmp3 = inttoptr i64 %tmp2 to i64*
   %tmp4 = load i64, i64* %tmp3
@@ -295,4 +295,4 @@ define i64* @test_load_auth_da_256_pre_use(i64* %ptr, i64* %dst, i64* %dst2) {
   ret i64* %tmp3
 }
 
-declare i64 @llvm.ptrauth.auth.i64(i64, i32, i64)
+declare i64 @llvm.ptrauth.auth(i64, i32, i64)

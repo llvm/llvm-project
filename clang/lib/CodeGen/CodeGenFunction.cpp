@@ -2764,9 +2764,8 @@ static llvm::Value *EmitPointerAuthCommon(CodeGenFunction &CGF,
   auto origType = pointer->getType();
   pointer = CGF.Builder.CreatePtrToInt(pointer, CGF.IntPtrTy);
 
-  // call i64 @llvm.ptrauth.sign.i64(i64 %pointer, i32 %key, i64 %discriminator)
-  auto intrinsic =
-    CGF.CGM.getIntrinsic(intrinsicID, { CGF.IntPtrTy });
+  // call i64 @llvm.ptrauth.sign(i64 %pointer, i32 %key, i64 %discriminator)
+  auto intrinsic = CGF.CGM.getIntrinsic(intrinsicID);
   pointer = CGF.EmitRuntimeCall(intrinsic, { pointer, key, discriminator });
 
   // Convert back to the original type.
@@ -2807,11 +2806,10 @@ CodeGenFunction::EmitPointerAuthResignCall(llvm::Value *value,
   llvm::Value *newDiscriminator = newAuth.getDiscriminator();
   if (!newDiscriminator) newDiscriminator = Builder.getSize(0);
 
-  // call i64 @llvm.ptrauth.resign.i64(i64 %pointer,
-  //                                   i32 %curKey, i64 %curDiscriminator,
-  //                                   i32 %newKey, i64 %newDiscriminator)
-  auto intrinsic =
-    CGM.getIntrinsic(llvm::Intrinsic::ptrauth_resign, { IntPtrTy });
+  // call i64 @llvm.ptrauth.resign(i64 %pointer,
+  //                               i32 %curKey, i64 %curDiscriminator,
+  //                               i32 %newKey, i64 %newDiscriminator)
+  auto intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_resign);
   value = EmitRuntimeCall(intrinsic,
                           { value, curKey, curDiscriminator,
                             newKey, newDiscriminator });

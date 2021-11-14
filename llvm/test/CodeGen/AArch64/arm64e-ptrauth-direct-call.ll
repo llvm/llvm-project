@@ -69,7 +69,7 @@ define i32 @test_direct_call_addr() #0 {
 ; CHECK-NEXT:   ldp x29, x30, [sp], #16
 ; CHECK-NEXT:   retab
 define i32 @test_direct_call_addr_blend() #0 {
-  %tmp0 = call i64 @llvm.ptrauth.blend.i64(i64 ptrtoint (i8** @f.ref.ib.42.addr to i64), i64 42)
+  %tmp0 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (i8** @f.ref.ib.42.addr to i64), i64 42)
   %tmp1 = call i32 bitcast ({ i8*, i32, i64, i64 }* @f.ptrauth.ib.42.addr to i32 ()*)() [ "ptrauth"(i32 1, i64 %tmp0) ]
   ret i32 %tmp1
 }
@@ -94,13 +94,13 @@ define i32 @test_direct_call_addr_gep_different_index_types() #0 {
 ; CHECK-NEXT:   ldp x29, x30, [sp], #16
 ; CHECK-NEXT:   retab
 define i32 @test_direct_call_addr_blend_gep_different_index_types() #0 {
-  %tmp0 = call i64 @llvm.ptrauth.blend.i64(i64 ptrtoint (i8** getelementptr ({ i8* }, { i8* }* @f_struct.ref.ib.123.addr, i32 0, i32 0) to i64), i64 123)
+  %tmp0 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (i8** getelementptr ({ i8* }, { i8* }* @f_struct.ref.ib.123.addr, i32 0, i32 0) to i64), i64 123)
   %tmp1 = call i32 bitcast ({ i8*, i32, i64, i64 }* @f_struct.ptrauth.ib.123.addr to i32 ()*)() [ "ptrauth"(i32 1, i64 %tmp0) ]
   ret i32 %tmp1
 }
 
-declare i64 @llvm.ptrauth.auth.i64(i64, i32, i64) #0
-declare i64 @llvm.ptrauth.blend.i64(i64, i64) #0
+declare i64 @llvm.ptrauth.auth(i64, i32, i64) #0
+declare i64 @llvm.ptrauth.blend(i64, i64) #0
 
 attributes #0 = { nounwind "ptrauth-returns" }
 

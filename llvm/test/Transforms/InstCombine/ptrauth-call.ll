@@ -8,7 +8,7 @@ define i32 @test_ptrauth_call_resign(i8* %p) {
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %tmp0 = ptrtoint i8* %p to i64
-  %tmp1 = call i64 @llvm.ptrauth.resign.i64(i64 %tmp0, i32 0, i64 1234, i32 2, i64 5678)
+  %tmp1 = call i64 @llvm.ptrauth.resign(i64 %tmp0, i32 0, i64 1234, i32 2, i64 5678)
   %tmp2 = inttoptr i64 %tmp1 to i32()*
   %tmp3 = call i32 %tmp2() [ "ptrauth"(i32 2, i64 5678) ]
   ret i32 %tmp3
@@ -24,8 +24,8 @@ define i32 @test_ptrauth_call_resign_blend(i8** %pp) {
   %tmp0 = load i8*, i8** %pp, align 8
   %tmp1 = ptrtoint i8** %pp to i64
   %tmp2 = ptrtoint i8* %tmp0 to i64
-  %tmp3 = call i64 @llvm.ptrauth.blend.i64(i64 %tmp1, i64 5678)
-  %tmp4 = call i64 @llvm.ptrauth.resign.i64(i64 %tmp2, i32 0, i64 1234, i32 1, i64 %tmp3)
+  %tmp3 = call i64 @llvm.ptrauth.blend(i64 %tmp1, i64 5678)
+  %tmp4 = call i64 @llvm.ptrauth.resign(i64 %tmp2, i32 0, i64 1234, i32 1, i64 %tmp3)
   %tmp5 = inttoptr i64 %tmp4 to i32()*
   %tmp6 = call i32 %tmp5() [ "ptrauth"(i32 1, i64 %tmp3) ]
   ret i32 %tmp6
@@ -36,15 +36,15 @@ define i32 @test_ptrauth_call_resign_blend_2(i8** %pp) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8** [[PP:%.*]] to i32 ()**
 ; CHECK-NEXT:    [[TMP012:%.*]] = load i32 ()*, i32 ()** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8** [[PP]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.ptrauth.blend.i64(i64 [[TMP1]], i64 5678)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[TMP1]], i64 5678)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 [[TMP012]]() [ "ptrauth"(i32 1, i64 [[TMP3]]) ]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
   %tmp0 = load i8*, i8** %pp, align 8
   %tmp1 = ptrtoint i8** %pp to i64
   %tmp2 = ptrtoint i8* %tmp0 to i64
-  %tmp3 = call i64 @llvm.ptrauth.blend.i64(i64 %tmp1, i64 5678)
-  %tmp4 = call i64 @llvm.ptrauth.resign.i64(i64 %tmp2, i32 1, i64 %tmp3, i32 0, i64 1234)
+  %tmp3 = call i64 @llvm.ptrauth.blend(i64 %tmp1, i64 5678)
+  %tmp4 = call i64 @llvm.ptrauth.resign(i64 %tmp2, i32 1, i64 %tmp3, i32 0, i64 1234)
   %tmp5 = inttoptr i64 %tmp4 to i32()*
   %tmp6 = call i32 %tmp5() [ "ptrauth"(i32 0, i64 1234) ]
   ret i32 %tmp6
@@ -57,7 +57,7 @@ define i32 @test_ptrauth_call_auth(i8* %p) {
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %tmp0 = ptrtoint i8* %p to i64
-  %tmp1 = call i64 @llvm.ptrauth.auth.i64(i64 %tmp0, i32 2, i64 5678)
+  %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 5678)
   %tmp2 = inttoptr i64 %tmp1 to i32()*
   %tmp3 = call i32 %tmp2()
   ret i32 %tmp3
@@ -70,13 +70,13 @@ define i32 @test_ptrauth_call_sign(i8* %p) {
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %tmp0 = ptrtoint i8* %p to i64
-  %tmp1 = call i64 @llvm.ptrauth.sign.i64(i64 %tmp0, i32 2, i64 5678)
+  %tmp1 = call i64 @llvm.ptrauth.sign(i64 %tmp0, i32 2, i64 5678)
   %tmp2 = inttoptr i64 %tmp1 to i32()*
   %tmp3 = call i32 %tmp2() [ "ptrauth"(i32 2, i64 5678) ]
   ret i32 %tmp3
 }
 
-declare i64 @llvm.ptrauth.auth.i64(i64, i32, i64)
-declare i64 @llvm.ptrauth.sign.i64(i64, i32, i64)
-declare i64 @llvm.ptrauth.resign.i64(i64, i32, i64, i32, i64)
-declare i64 @llvm.ptrauth.blend.i64(i64, i64)
+declare i64 @llvm.ptrauth.auth(i64, i32, i64)
+declare i64 @llvm.ptrauth.sign(i64, i32, i64)
+declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)
+declare i64 @llvm.ptrauth.blend(i64, i64)

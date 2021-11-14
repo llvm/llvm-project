@@ -138,8 +138,7 @@ static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
 llvm::Value *CodeGenFunction::EmitPointerAuthBlendDiscriminator(
     llvm::Value *storageAddress, llvm::Value *discriminator) {
   storageAddress = Builder.CreatePtrToInt(storageAddress, IntPtrTy);
-  auto intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_blend,
-                                    { CGM.IntPtrTy });
+  auto intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_blend);
   return Builder.CreateCall(intrinsic, {storageAddress, discriminator});
 }
 

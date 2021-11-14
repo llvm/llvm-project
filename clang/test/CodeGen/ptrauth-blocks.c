@@ -27,7 +27,7 @@ void test_block_literal(int i) {
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align
   // CHECK:      [[FNPTRADDR:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 3
   // CHECK-NEXT: [[DISCRIMINATOR:%.*]] = ptrtoint i8** [[FNPTRADDR]] to i64
-  // CHECK-NEXT: [[SIGNED:%.*]] = call i64 @llvm.ptrauth.sign.i64(i64 ptrtoint (i32 (i8*)* {{@.*}} to i64), i32 0, i64 [[DISCRIMINATOR]])
+  // CHECK-NEXT: [[SIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i32 (i8*)* {{@.*}} to i64), i32 0, i64 [[DISCRIMINATOR]])
   // CHECK-NEXT: [[T0:%.*]] = inttoptr i64 [[SIGNED]] to i8*
   // CHECK-NEXT: store i8* [[T0]], i8** [[FNPTRADDR]]
   use_block(^{return i;});
