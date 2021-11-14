@@ -9557,11 +9557,17 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
   if (VT != Cond0.getValueType())
     return SDValue();
 
-  // TODO: Check for the swapped variants of the following patterns. We can't
-  //       be sure what form is chosen as canonical in IR.
+  // Match a signbit check of Cond0 as "Cond0 s<0". Swap select operands if the
+  // compare is inverted from that pattern ("Cond0 s> -1").
+  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1))
+    ; // This is the pattern we are looking for.
+  else if (CC == ISD::SETGT && isAllOnesOrAllOnesSplat(Cond1))
+    std::swap(N1, N2);
+  else
+    return SDValue();
 
   // (Cond0 s< 0) ? N1 : 0 --> (Cond0 s>> BW-1) & N1
-  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1) && isNullOrNullSplat(N2)) {
+  if (isNullOrNullSplat(N2)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
@@ -9569,26 +9575,23 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
   }
 
   // (Cond0 s< 0) ? -1 : N2 --> (Cond0 s>> BW-1) | N2
-  if (CC == ISD::SETLT && isNullOrNullSplat(Cond1) &&
-      isAllOnesOrAllOnesSplat(N1)) {
+  if (isAllOnesOrAllOnesSplat(N1)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
     return DAG.getNode(ISD::OR, DL, VT, Sra, N2);
   }
 
-  // If the comparison is testing for a positive value, we have to invert
-  // the sign bit mask, so only do that transform if the target has a bitwise
-  // 'and not' instruction (the invert is free).
-  // (Cond0 s> -1) ? N1 : 0 --> ~(Cond0 s>> BW-1) & N1
+  // If we have to invert the sign bit mask, only do that transform if the
+  // target has a bitwise 'and not' instruction (the invert is free).
+  // (Cond0 s< -0) ? 0 : N2 --> ~(Cond0 s>> BW-1) & N2
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (CC == ISD::SETGT && isAllOnesOrAllOnesSplat(Cond1) &&
-      isNullOrNullSplat(N2) && TLI.hasAndNot(N2)) {
+  if (isNullOrNullSplat(N1) && TLI.hasAndNot(N1)) {
     SDLoc DL(N);
     SDValue ShiftAmt = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, VT);
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
     SDValue Not = DAG.getNOT(DL, Sra, VT);
-    return DAG.getNode(ISD::AND, DL, VT, Not, N1);
+    return DAG.getNode(ISD::AND, DL, VT, Not, N2);
   }
 
   // TODO: There's another pattern in this family, but it may require
