@@ -70,6 +70,18 @@ struct FieldParser<
   }
 };
 
+/// Parse a type.
+template <typename TypeT>
+struct FieldParser<
+    TypeT, std::enable_if_t<std::is_base_of<Type, TypeT>::value, TypeT>> {
+  static FailureOr<TypeT> parse(AsmParser &parser) {
+    TypeT value;
+    if (parser.parseType(value))
+      return failure();
+    return value;
+  }
+};
+
 /// Parse any integer.
 template <typename IntT>
 struct FieldParser<IntT,
