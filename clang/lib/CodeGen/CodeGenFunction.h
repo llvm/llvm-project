@@ -499,7 +499,7 @@ public:
     AbstractCallee(const FunctionDecl *FD) : CalleeDecl(FD) {}
     AbstractCallee(const ObjCMethodDecl *OMD) : CalleeDecl(OMD) {}
     bool hasFunctionDecl() const {
-      return dyn_cast_or_null<FunctionDecl>(CalleeDecl);
+      return isa_and_nonnull<FunctionDecl>(CalleeDecl);
     }
     const Decl *getDecl() const { return CalleeDecl; }
     unsigned getNumParams() const {

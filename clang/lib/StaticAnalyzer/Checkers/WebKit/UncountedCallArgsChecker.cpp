@@ -68,8 +68,7 @@ public:
     if (auto *F = CE->getDirectCallee()) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && dyn_cast_or_null<CXXMethodDecl>(F);
+      unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
       for (auto P = F->param_begin();
            // FIXME: Also check variadic function parameters.

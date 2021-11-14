@@ -384,7 +384,7 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
         // FIXME: Instead of relying on the ParentMap, we should have the
         // trigger-statement (InitListExpr in this case) available in this
         // callback, ideally as part of CallEvent.
-        if (dyn_cast_or_null<InitListExpr>(
+        if (isa_and_nonnull<InitListExpr>(
                 LCtx->getParentMap().getParent(Ctor->getOriginExpr())))
           return;
 

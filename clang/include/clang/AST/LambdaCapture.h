@@ -86,7 +86,7 @@ public:
 
   /// Determine whether this capture handles a variable.
   bool capturesVariable() const {
-    return dyn_cast_or_null<VarDecl>(DeclAndBits.getPointer());
+    return isa_and_nonnull<VarDecl>(DeclAndBits.getPointer());
   }
 
   /// Determine whether this captures a variable length array bound

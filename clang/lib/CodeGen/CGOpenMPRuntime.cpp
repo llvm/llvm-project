@@ -3913,7 +3913,7 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
               SharedRefLValue.getTBAAInfo());
         } else if (CGF.LambdaCaptureFields.count(
                        Pair.second.Original->getCanonicalDecl()) > 0 ||
-                   dyn_cast_or_null<BlockDecl>(CGF.CurCodeDecl)) {
+                   isa_and_nonnull<BlockDecl>(CGF.CurCodeDecl)) {
           SharedRefLValue = CGF.EmitLValue(Pair.second.OriginalRef);
         } else {
           // Processing for implicitly captured variables.
