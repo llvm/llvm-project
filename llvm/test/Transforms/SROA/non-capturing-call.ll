@@ -802,41 +802,116 @@ define i64 @do_schedule_instrs_for_dce_after_fixups() {
 ; CHECK-NEXT:    [[C:%.*]] = alloca i64, align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[C]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP0]])
+; CHECK-NEXT:    store i64 0, i64* [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = bitcast i64* [[C]] to i32*
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAYDECAY]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(i32* [[ADD_PTR]])
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[LD:%.*]] = load i64, i64* [[C]], align 4
+; CHECK-NEXT:    ret i64 [[LD]]
 ;
 ; CHECK-OPAQUE-LABEL: @do_schedule_instrs_for_dce_after_fixups(
 ; CHECK-OPAQUE-NEXT:  entry:
 ; CHECK-OPAQUE-NEXT:    [[C:%.*]] = alloca i64, align 2
 ; CHECK-OPAQUE-NEXT:    [[TMP0:%.*]] = bitcast ptr [[C]] to ptr
 ; CHECK-OPAQUE-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP0]])
+; CHECK-OPAQUE-NEXT:    store i64 0, ptr [[C]], align 4
 ; CHECK-OPAQUE-NEXT:    [[ARRAYDECAY:%.*]] = bitcast ptr [[C]] to ptr
 ; CHECK-OPAQUE-NEXT:    br label [[IF_END:%.*]]
 ; CHECK-OPAQUE:       if.end:
 ; CHECK-OPAQUE-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY]], i64 1
 ; CHECK-OPAQUE-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(ptr [[ADD_PTR]])
-; CHECK-OPAQUE-NEXT:    ret i64 0
+; CHECK-OPAQUE-NEXT:    [[LD:%.*]] = load i64, ptr [[C]], align 4
+; CHECK-OPAQUE-NEXT:    ret i64 [[LD]]
 ;
 entry:
   %c = alloca i64, align 2
   %0 = bitcast i64* %c to i8*
   call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
+  store i64 0, i64* %c
   %arraydecay = bitcast i64* %c to i32*
   br label %if.end
 
 if.end:                                           ; preds = %entry
   %add.ptr = getelementptr inbounds i32, i32* %arraydecay, i64 1
   call i32 @user_of_alloca(i32* %add.ptr)
-  ret i64 0
+  %ld = load i64, i64* %c
+  ret i64 %ld
+}
+
+define void @dont_transform_store_only() {
+; CHECK-LABEL: @dont_transform_store_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 0, i8* [[A]], align 1
+; CHECK-NEXT:    call void @byte_user_of_alloca(i8* [[A]])
+; CHECK-NEXT:    ret void
+;
+; CHECK-OPAQUE-LABEL: @dont_transform_store_only(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-OPAQUE-NEXT:    store i8 0, ptr [[A]], align 1
+; CHECK-OPAQUE-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
+; CHECK-OPAQUE-NEXT:    ret void
+;
+entry:
+  %a = alloca i8
+  store i8 0, i8* %a
+  call void @byte_user_of_alloca(i8* %a)
+  ret void
+}
+define i8 @dont_transform_load_only() {
+; CHECK-LABEL: @dont_transform_load_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    call void @byte_user_of_alloca(i8* [[A]])
+; CHECK-NEXT:    [[R:%.*]] = load i8, i8* [[A]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+; CHECK-OPAQUE-LABEL: @dont_transform_load_only(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-OPAQUE-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
+; CHECK-OPAQUE-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-OPAQUE-NEXT:    ret i8 [[R]]
+;
+entry:
+  %a = alloca i8
+  call void @byte_user_of_alloca(i8* %a)
+  %r = load i8, i8* %a
+  ret i8 %r
+}
+define i8 @transform_load_and_store() {
+; CHECK-LABEL: @transform_load_and_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 0, i8* [[A]], align 1
+; CHECK-NEXT:    call void @byte_user_of_alloca(i8* [[A]])
+; CHECK-NEXT:    [[R:%.*]] = load i8, i8* [[A]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+; CHECK-OPAQUE-LABEL: @transform_load_and_store(
+; CHECK-OPAQUE-NEXT:  entry:
+; CHECK-OPAQUE-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-OPAQUE-NEXT:    store i8 0, ptr [[A]], align 1
+; CHECK-OPAQUE-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
+; CHECK-OPAQUE-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-OPAQUE-NEXT:    ret i8 [[R]]
+;
+entry:
+  %a = alloca i8
+  store i8 0, i8* %a
+  call void @byte_user_of_alloca(i8* %a)
+  %r = load i8, i8* %a
+  ret i8 %r
 }
 
 declare dso_local i32 @user_of_alloca(i32* nocapture nonnull)
 declare dso_local i32 @user_of_alloca_with_multiple_args(i32* nocapture nonnull, i32* nocapture nonnull)
 declare dso_local i32 @capture_of_alloca(i32 *nonnull)
 declare dso_local i32 @capture_with_multiple_args(i32* nocapture nonnull, i32* nonnull)
+
+declare dso_local void @byte_user_of_alloca(i8* nocapture nonnull)
 
 declare dso_local i32 @__gxx_personality_v0(...)
