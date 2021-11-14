@@ -18,12 +18,6 @@ namespace PR12132 {
   void foo() {
     fun(&A::x);
   }
-  struct B { char* x; };
-  void bar() {
-    fun(&B::x);
-    // expected-error@-1 {{no matching function for call to 'fun'}}
-    // expected-note@-9  {{candidate template ignored: could not match 'const int' against 'char'}}
-  }
 }
 
 #if __cplusplus > 201402L
@@ -58,4 +52,6 @@ namespace noexcept_conversion {
   int i1 = i(g1);
   int i2 = i(g2);
 }
+#else
+// expected-no-diagnostics
 #endif

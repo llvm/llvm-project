@@ -9972,7 +9972,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   auto TemplateName = DeducedTST->getTemplateName();
   if (TemplateName.isDependent())
-    return SubstAutoTypeDependent(TSInfo->getType());
+    return SubstAutoType(TSInfo->getType(), Context.DependentTy);
 
   // We can only perform deduction for class templates.
   auto *Template =
@@ -9991,7 +9991,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     Diag(TSInfo->getTypeLoc().getBeginLoc(),
          diag::warn_cxx14_compat_class_template_argument_deduction)
         << TSInfo->getTypeLoc().getSourceRange() << 0;
-    return SubstAutoTypeDependent(TSInfo->getType());
+    return SubstAutoType(TSInfo->getType(), Context.DependentTy);
   }
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?

@@ -6586,7 +6586,7 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
       T->isDependentType() || T->isConstrained()) {
     // FIXME: Maybe don't rebuild if all template arguments are the same.
     llvm::SmallVector<TemplateArgument, 4> NewArgList;
-    NewArgList.reserve(NewTemplateArgs.size());
+    NewArgList.reserve(NewArgList.size());
     for (const auto &ArgLoc : NewTemplateArgs.arguments())
       NewArgList.push_back(ArgLoc.getArgument());
     Result = getDerived().RebuildAutoType(NewDeduced, T->getKeyword(), NewCD,
@@ -14501,10 +14501,10 @@ QualType TreeTransform<Derived>::RebuildUnresolvedUsingType(SourceLocation Loc,
   return SemaRef.Context.getTypeDeclType(Ty);
 }
 
-template <typename Derived>
+template<typename Derived>
 QualType TreeTransform<Derived>::RebuildTypeOfExprType(Expr *E,
-                                                       SourceLocation) {
-  return SemaRef.BuildTypeofExprType(E);
+                                                       SourceLocation Loc) {
+  return SemaRef.BuildTypeofExprType(E, Loc);
 }
 
 template<typename Derived>
@@ -14512,9 +14512,10 @@ QualType TreeTransform<Derived>::RebuildTypeOfType(QualType Underlying) {
   return SemaRef.Context.getTypeOfType(Underlying);
 }
 
-template <typename Derived>
-QualType TreeTransform<Derived>::RebuildDecltypeType(Expr *E, SourceLocation) {
-  return SemaRef.BuildDecltypeType(E);
+template<typename Derived>
+QualType TreeTransform<Derived>::RebuildDecltypeType(Expr *E,
+                                                     SourceLocation Loc) {
+  return SemaRef.BuildDecltypeType(E, Loc);
 }
 
 template<typename Derived>
