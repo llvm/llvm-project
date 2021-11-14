@@ -5365,7 +5365,8 @@ static bool hasFPCMov(unsigned X86CC) {
 }
 
 static bool useVPTERNLOG(const X86Subtarget &Subtarget, MVT VT) {
-  return Subtarget.hasVLX() || (Subtarget.hasAVX512() && VT.is512BitVector());
+  return Subtarget.hasVLX() || Subtarget.canExtendTo512DQ() ||
+         VT.is512BitVector();
 }
 
 bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -46230,7 +46231,8 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
     SDValue B = DAG.getBitcast(VT, N0.getOperand(0));
     SDValue C = DAG.getBitcast(VT, N1.getOperand(0));
     SDValue Imm = DAG.getTargetConstant(0xCA, DL, MVT::i8);
-    return DAG.getNode(X86ISD::VPTERNLOG, DL, VT, A, B, C, Imm);
+    return getAVX512Node(X86ISD::VPTERNLOG, DL, VT, {A, B, C, Imm}, DAG,
+                         Subtarget);
   }
 
   SDValue X = N->getOperand(0);
