@@ -3624,14 +3624,15 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
   return Cost;
 }
 
-InstructionCost X86TTIImpl::getReplicationShuffleCost(
-    Type *EltTy, int ReplicationFactor, int VF,
-    const APInt &DemandedReplicatedElts, TTI::TargetCostKind CostKind) {
+InstructionCost
+X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
+                                      int VF, const APInt &DemandedDstElts,
+                                      TTI::TargetCostKind CostKind) {
   const unsigned EltTyBits = DL.getTypeSizeInBits(EltTy);
 
   auto bailout = [&]() {
     return BaseT::getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
-                                            DemandedReplicatedElts, CostKind);
+                                            DemandedDstElts, CostKind);
   };
 
   // For now, only deal with AVX512 cases.
@@ -3655,43 +3656,37 @@ InstructionCost X86TTIImpl::getReplicationShuffleCost(
   }
 
   auto *SrcVecTy = FixedVectorType::get(EltTy, VF);
-  int NumReplicatedElements = VF * ReplicationFactor;
-  auto *ReplicatedVecTy = FixedVectorType::get(EltTy, NumReplicatedElements);
+  int NumDstElements = VF * ReplicationFactor;
+  auto *DstVecTy = FixedVectorType::get(EltTy, NumDstElements);
 
   // Legalize the types.
   MVT LegalSrcVecTy = TLI->getTypeLegalizationCost(DL, SrcVecTy).second;
-  MVT LegalReplicatedVecTy =
-      TLI->getTypeLegalizationCost(DL, ReplicatedVecTy).second;
+  MVT LegalDstVecTy = TLI->getTypeLegalizationCost(DL, DstVecTy).second;
 
   // They both should have legalized into vector types.
-  if (!LegalSrcVecTy.isVector() || !LegalReplicatedVecTy.isVector())
+  if (!LegalSrcVecTy.isVector() || !LegalDstVecTy.isVector())
     return bailout();
 
   assert(LegalSrcVecTy.getScalarSizeInBits() == EltTyBits &&
-         LegalSrcVecTy.getScalarType() ==
-             LegalReplicatedVecTy.getScalarType() &&
+         LegalSrcVecTy.getScalarType() == LegalDstVecTy.getScalarType() &&
          "We expect that the legalization doesn't affect the element width, "
          "doesn't coalesce/split elements.");
 
-  unsigned NumEltsPerReplicatedVec =
-      LegalReplicatedVecTy.getVectorNumElements();
-  unsigned NumReplicatedVectors =
-      divideCeil(ReplicatedVecTy->getNumElements(), NumEltsPerReplicatedVec);
+  unsigned NumEltsPerDstVec = LegalDstVecTy.getVectorNumElements();
+  unsigned NumDstVectors =
+      divideCeil(DstVecTy->getNumElements(), NumEltsPerDstVec);
 
-  auto *SingleReplicatedVecTy =
-      FixedVectorType::get(EltTy, NumEltsPerReplicatedVec);
+  auto *SingleDstVecTy = FixedVectorType::get(EltTy, NumEltsPerDstVec);
 
-  APInt DemandedReplicatedVectors = APIntOps::ScaleBitMask(
-      DemandedReplicatedElts.zextOrSelf(NumReplicatedVectors *
-                                        NumEltsPerReplicatedVec),
-      NumReplicatedVectors);
-  unsigned NumReplicatedVectorsDemanded =
-      DemandedReplicatedVectors.countPopulation();
+  APInt DemandedDstVectors = APIntOps::ScaleBitMask(
+      DemandedDstElts.zextOrSelf(NumDstVectors * NumEltsPerDstVec),
+      NumDstVectors);
+  unsigned NumDstVectorsDemanded = DemandedDstVectors.countPopulation();
 
   InstructionCost SingleShuffleCost =
-      getShuffleCost(TTI::SK_PermuteSingleSrc, SingleReplicatedVecTy,
+      getShuffleCost(TTI::SK_PermuteSingleSrc, SingleDstVecTy,
                      /*Mask=*/None, /*Index=*/0, /*SubTp=*/nullptr);
-  return NumReplicatedVectorsDemanded * SingleShuffleCost;
+  return NumDstVectorsDemanded * SingleShuffleCost;
 }
 
 InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
