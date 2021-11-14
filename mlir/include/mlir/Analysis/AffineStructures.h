@@ -1071,6 +1071,13 @@ LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
                                  FlatAffineRelation &rel);
 
+/// This parses a single IntegerSet to an MLIR context and transforms it to
+/// FlatAffineConstraints if it was valid. If not, a failure is returned. If the
+/// passed `str` has additional tokens that were not part of the IntegerSet, a
+/// failure is returned.
+FailureOr<FlatAffineConstraints> parseIntegerSetToFAC(llvm::StringRef,
+                                                      MLIRContext *context);
+
 } // end namespace mlir.
 
 #endif // MLIR_ANALYSIS_AFFINESTRUCTURES_H
