@@ -1197,10 +1197,10 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
   // a declaration, maybe we can constant fold it.
   if (F && F->isDeclaration() && canConstantFoldCallTo(&CB, F)) {
     SmallVector<Constant *, 8> Operands;
-    for (auto AI = CB.arg_begin(), E = CB.arg_end(); AI != E; ++AI) {
-      if (AI->get()->getType()->isStructTy())
+    for (const Use &A : CB.args()) {
+      if (A.get()->getType()->isStructTy())
         return markOverdefined(&CB); // Can't handle struct args.
-      ValueLatticeElement State = getValueState(*AI);
+      ValueLatticeElement State = getValueState(A);
 
       if (State.isUnknownOrUndef())
         return; // Operands are not resolved yet.

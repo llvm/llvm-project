@@ -181,8 +181,8 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (auto CI = Call->arg_begin(), CE = Call->arg_end(); CI != CE; ++CI) {
-        Value *Arg = *CI;
+      for (const Use &U : Call->args()) {
+        const Value *Arg = U;
         if (!Arg->getType()->isPtrOrPtrVectorTy())
           continue;
 
