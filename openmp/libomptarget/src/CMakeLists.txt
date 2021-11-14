@@ -39,10 +39,14 @@ if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   target_compile_definitions(omptarget PUBLIC OMPTARGET_PROFILE_ENABLED)
   target_link_libraries(omptarget PRIVATE LLVMSupport)
 endif()
+
+find_library(LLVM_OFFLOAD_ARCH LLVMOffloadArch HINTS ${LLVM_LIBRARY_DIR} REQUIRED)
+find_library(CLANG_CPP clang-cpp HINTS ${LLVM_LIBRARY_DIR} REQUIRED)
+
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
-  -lLLVMOffloadArch
-  -lclang-cpp
+  ${LLVM_OFFLOAD_ARCH}
+  ${CLANG_CPP}
   "-Wl,--no-allow-shlib-undefined"
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 
