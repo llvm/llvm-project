@@ -226,7 +226,7 @@ OpPassManager::OpPassManager(StringRef name, Nesting nesting)
 OpPassManager::OpPassManager(OpPassManager &&rhs) : impl(std::move(rhs.impl)) {}
 OpPassManager::OpPassManager(const OpPassManager &rhs) { *this = rhs; }
 OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
-  impl.reset(new OpPassManagerImpl(rhs.impl->name, rhs.impl->nesting));
+  impl = std::make_unique<OpPassManagerImpl>(rhs.impl->name, rhs.impl->nesting);
   impl->initializationGeneration = rhs.impl->initializationGeneration;
   for (auto &pass : rhs.impl->passes) {
     auto newPass = pass->clone();
