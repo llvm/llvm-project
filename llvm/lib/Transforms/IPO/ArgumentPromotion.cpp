@@ -177,9 +177,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         // Since loads will only have a single operand, and GEPs only a single
         // non-index operand, this will record direct loads without any indices,
         // and gep+loads with the GEP indices.
-        for (User::op_iterator II = UI->op_begin() + 1, IE = UI->op_end();
-             II != IE; ++II)
-          Indices.push_back(cast<ConstantInt>(*II)->getSExtValue());
+        for (const Use &I : llvm::drop_begin(UI->operands()))
+          Indices.push_back(cast<ConstantInt>(I)->getSExtValue());
         // GEPs with a single 0 index can be merged with direct loads
         if (Indices.size() == 1 && Indices.front() == 0)
           Indices.clear();
