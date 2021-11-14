@@ -1,7 +1,6 @@
-// RUN: %clangxx -O2 -ldl %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
-#include <dlfcn.h>
 
 #if !defined(__GLIBC_PREREQ)
 #define __GLIBC_PREREQ(a, b) 0
@@ -11,10 +10,11 @@
 // glbc version 2.16.
 #if __GLIBC_PREREQ(2, 16)
 extern "C" long sysconf(int name) {
-  fprintf(stderr, "sysconf wrapper called\n");
-  auto *addr = (long(*)(int))dlsym(RTLD_NEXT, "sysconf");
-  if (addr)
-    return (*addr)(name);
+  if (name == 158 /*_SC_SIGSTKSZ */) {
+    // Asan calls it during initialization but late enough to succeed.
+    return 0x10000;
+  }
+  fprintf(stderr, "sysconf wrapper called: %d\n", name);
   return 0;
 }
 #endif  // defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 16)

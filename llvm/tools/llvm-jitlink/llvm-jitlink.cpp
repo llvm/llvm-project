@@ -16,7 +16,6 @@
 
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -988,13 +987,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     ExitOnErr(loadProcessSymbols(*this));
   ExitOnErr(loadDylibs(*this));
 
-  auto &TT = ES.getExecutorProcessControl().getTargetTriple();
-
-  if (TT.isOSBinFormatMachO())
-    ObjLayer.addPlugin(ExitOnErr(
-        GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
-
   // Set up the platform.
+  auto &TT = ES.getExecutorProcessControl().getTargetTriple();
   if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
     if (auto P =
             MachOPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))

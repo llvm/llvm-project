@@ -1193,7 +1193,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
 
         SmallVector<Value *, 8> Indices;
-        for (Use &Idx : llvm::make_range(GEP->idx_begin(), GEP->idx_end())) {
+        for (Use &Idx : GEP->indices()) {
           if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
             Indices.push_back(CIdx);
             continue;
