@@ -180,17 +180,10 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     else
       Prot = MemProt::Read | MemProt::Write;
 
-    if (!isDebugSection(NSec)) {
-      auto FullyQualifiedName =
-          G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
-      NSec.GraphSection = &G->createSection(
-          StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()),
-          Prot);
-    } else
-      LLVM_DEBUG({
-        dbgs() << "    " << NSec.SegName << "," << NSec.SectName
-               << " is a debug section: No graph section will be created.\n";
-      });
+    auto FullyQualifiedName =
+        G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
+    NSec.GraphSection = &G->createSection(
+        StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()), Prot);
 
     IndexToSection.insert(std::make_pair(SecIndex, std::move(NSec)));
   }
