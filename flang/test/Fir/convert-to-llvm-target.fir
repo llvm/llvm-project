@@ -31,3 +31,43 @@ func @test_embox(%char_array : !fir.ref<!fir.char<1,?>>) -> () {
 // INT32:    %[[struct_with_buffer:.*]] = llvm.insertvalue %[[char_array]], %[[empty_struct]][0 : i32] : !llvm.struct<(ptr<i8>, i32)>
 // INT32:    %{{.*}} = llvm.insertvalue %[[c10_truncated:.*]], %[[struct_with_buffer]][1 : i32] : !llvm.struct<(ptr<i8>, i32)>
 // INT32-NEXT:    llvm.return
+
+// -----
+
+// Test fir.unboxchar
+
+func @unboxchar_i8(%arg0 : !fir.boxchar<1>) -> () {
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, i64)
+  return
+}
+
+// INT64-LABEL: llvm.func @unboxchar_i8
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][0 : i32] : !llvm.struct<(ptr<i8>, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1 : i32] : !llvm.struct<(ptr<i8>, i64)>
+// INT64-NEXT:  llvm.return
+
+// INT32-LABEL: llvm.func @unboxchar_i8
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i8>, i32)>
+// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][0 : i32] : !llvm.struct<(ptr<i8>, i32)>
+// INT32:  %[[len_unextended:.*]] = llvm.extractvalue %[[box_char]][1 : i32] : !llvm.struct<(ptr<i8>, i32)>
+// INT32:  %{{.*}} = llvm.sext %[[len_unextended]] : i32 to i64
+// INT32-NEXT:  llvm.return
+
+func @unboxchar_i32(%arg0 : !fir.boxchar<4>) -> () {
+  fir.unboxchar %arg0 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4>>, i64)
+  return
+}
+
+// INT64-LABEL: llvm.func @unboxchar_i32
+// INT64-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][0 : i32] : !llvm.struct<(ptr<i32>, i64)>
+// INT64:  %{{.*}} = llvm.extractvalue %[[box_char]][1 : i32] : !llvm.struct<(ptr<i32>, i64)>
+// INT64-NEXT:  llvm.return
+
+// INT32-LABEL: llvm.func @unboxchar_i32
+// INT32-SAME: %[[box_char:.*]]: !llvm.struct<(ptr<i32>, i32)>
+// INT32:  %{{.*}} = llvm.extractvalue %[[box_char]][0 : i32] : !llvm.struct<(ptr<i32>, i32)>
+// INT32:  %[[len_unextended:.*]] = llvm.extractvalue %[[box_char]][1 : i32] : !llvm.struct<(ptr<i32>, i32)>
+// INT32:  %{{.*}} = llvm.sext %[[len_unextended]] : i32 to i64
+// INT32-NEXT:  llvm.return

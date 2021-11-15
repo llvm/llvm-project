@@ -200,15 +200,15 @@ bool isa_fir_or_std_type(mlir::Type t) {
 
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
-      .Case<fir::ReferenceType, fir::PointerType, fir::HeapType>(
-          [](auto p) { return p.getEleTy(); })
+      .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
+            fir::LLVMPointerType>([](auto p) { return p.getEleTy(); })
       .Default([](mlir::Type) { return mlir::Type{}; });
 }
 
 mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
-      .Case<fir::ReferenceType, fir::PointerType, fir::HeapType>(
-          [](auto p) { return p.getEleTy(); })
+      .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
+            fir::LLVMPointerType>([](auto p) { return p.getEleTy(); })
       .Case<fir::BoxType>([](auto p) {
         auto eleTy = p.getEleTy();
         if (auto ty = fir::dyn_cast_ptrEleTy(eleTy))
@@ -864,7 +864,7 @@ bool fir::VectorType::isValidElementType(mlir::Type t) {
 void FIROpsDialect::registerTypes() {
   addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, fir::ComplexType,
            FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
-           PointerType, RealType, RecordType, ReferenceType, SequenceType,
-           ShapeType, ShapeShiftType, ShiftType, SliceType, TypeDescType,
-           fir::VectorType>();
+           LLVMPointerType, PointerType, RealType, RecordType, ReferenceType,
+           SequenceType, ShapeType, ShapeShiftType, ShiftType, SliceType,
+           TypeDescType, fir::VectorType>();
 }

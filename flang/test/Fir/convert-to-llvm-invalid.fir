@@ -72,3 +72,14 @@ func @bar_select_type(%arg : !fir.box<!fir.type<derived3{f:f32}>>) -> i32 {
   %zero = arith.constant 0 : i32
   return %zero : i32
 }
+
+// -----
+
+// Test `fir.global_len` conversion failure. Not implemented yet.
+
+fir.global @global_derived : !fir.type<minez(f:i32)> {
+  // expected-error@+1{{failed to legalize operation 'fir.global_len'}}
+  fir.global_len f, 1 : i32
+  %0 = fir.undefined !fir.type<minez>
+  fir.has_value %0 : !fir.type<minez>
+}

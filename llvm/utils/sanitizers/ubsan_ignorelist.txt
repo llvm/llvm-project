@@ -1,4 +1,4 @@
-# This blacklist should be applied when LLVM is built
+# This ignorelist should be applied when LLVM is built
 # with -fsanitize=undefined instrumentation. It exists
 # because libstdc++ has some undefined behavior issues
 # in some of the headers, in particular, stl_tree.h.

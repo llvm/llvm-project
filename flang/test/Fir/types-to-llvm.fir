@@ -176,6 +176,26 @@ func private @foo4(%arg0: !fir.logical<16>)
 
 // -----
 
+// Test `!fir.llvm_ptr` conversion.
+
+func private @foo0(%arg0: !fir.llvm_ptr<i8>)
+// CHECK-LABEL: foo0
+// CHECK-SAME: !llvm.ptr<i8>
+
+func private @foo1(%arg0: !fir.llvm_ptr<!fir.ref<f32>>)
+// CHECK-LABEL: foo1
+// CHECK-SAME: !llvm.ptr<ptr<f32>>
+
+func private @foo2(%arg0: !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<i32>>>>)
+// CHECK-LABEL: foo2
+// CHECK-SAME: !llvm.ptr<ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>>
+
+func private @foo3(%arg0: !fir.llvm_ptr<!fir.ptr<f32>>)
+// CHECK-LABEL: foo3
+// CHECK-SAME: !llvm.ptr<ptr<f32>>
+
+// -----
+
 // Test `!fir.complex<KIND>` conversion.
 
 func private @foo0(%arg0: !fir.complex<2>)

@@ -76,6 +76,10 @@ static cl::opt<bool>
     Analyze("analyze",
             cl::desc(Options.getOptionHelpText(options::OPT_analyze)),
             cl::cat(ClangCheckCategory));
+static cl::opt<std::string>
+    AnalyzerOutput("analyzer-output-path",
+                   cl::desc(Options.getOptionHelpText(options::OPT_o)),
+                   cl::cat(ClangCheckCategory));
 
 static cl::opt<bool>
     Fixit("fixit", cl::desc(Options.getOptionHelpText(options::OPT_fixit)),
@@ -206,7 +210,19 @@ int main(int argc, const char **argv) {
 
   // Clear adjusters because -fsyntax-only is inserted by the default chain.
   Tool.clearArgumentsAdjusters();
-  Tool.appendArgumentsAdjuster(getClangStripOutputAdjuster());
+
+  // Reset output path if is provided by user.
+  Tool.appendArgumentsAdjuster(
+      Analyze ? [&](const CommandLineArguments &Args, StringRef File) {
+                  auto Ret = getClangStripOutputAdjuster()(Args, File);
+                  if (!AnalyzerOutput.empty()) {
+                    Ret.emplace_back("-o");
+                    Ret.emplace_back(AnalyzerOutput);
+                  }
+                  return Ret;
+                }
+              : getClangStripOutputAdjuster());
+
   Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
 
   // Running the analyzer requires --analyze. Other modes can work with the

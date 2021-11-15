@@ -2086,10 +2086,9 @@ define <16 x i8> @splatconstant_funnnel_v16i8(<16 x i8> %x) nounwind {
 ;
 ; AVX512F-LABEL: splatconstant_funnnel_v16i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm2
-; AVX512F-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vpternlogq $226, %zmm2, %zmm1, %zmm0
+; AVX512F-NEXT:    vpsllw $4, %xmm0, %xmm1
+; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2103,10 +2102,9 @@ define <16 x i8> @splatconstant_funnnel_v16i8(<16 x i8> %x) nounwind {
 ;
 ; AVX512BW-LABEL: splatconstant_funnnel_v16i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX512BW-NEXT:    vpsrlw $4, %xmm0, %xmm2
-; AVX512BW-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpternlogq $226, %zmm2, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsllw $4, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -2120,10 +2118,9 @@ define <16 x i8> @splatconstant_funnnel_v16i8(<16 x i8> %x) nounwind {
 ;
 ; AVX512VBMI2-LABEL: splatconstant_funnnel_v16i8:
 ; AVX512VBMI2:       # %bb.0:
-; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} xmm1 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX512VBMI2-NEXT:    vpsrlw $4, %xmm0, %xmm2
-; AVX512VBMI2-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    vpternlogq $226, %zmm2, %zmm1, %zmm0
+; AVX512VBMI2-NEXT:    vpsllw $4, %xmm0, %xmm1
+; AVX512VBMI2-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VBMI2-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
 ; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    vzeroupper
 ; AVX512VBMI2-NEXT:    retq
