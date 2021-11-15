@@ -398,7 +398,19 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
 void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
     ValueRange tensors, ValueRange buffers) {
   assert(!tensors.empty() && "unexpected empty tensors");
-  return tensorToBufferMap.map(tensors, buffers);
+#ifndef NDEBUG
+  for (Value tensor : tensors) {
+    assert(tensor && "unexpected empty tensor");
+    assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
+  }
+  for (Value buffer : buffers) {
+    assert(buffer && "unexpected empty buffer");
+    assert((buffer.getType().isa<MemRefType>() ||
+            buffer.getType().isa<UnrankedMemRefType>()) &&
+           "expected that tensor is mapped to memref");
+  }
+#endif // NDEBUG
+  return mapping.map(tensors, buffers);
 }
 
 /// Wrapper for better debugging.
@@ -406,7 +418,17 @@ void mlir::linalg::comprehensive_bufferize::BufferizationState::mapBuffer(
     Value tensor, Value buffer) {
   assert(tensor && "unexpected empty tensor");
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  return tensorToBufferMap.map(tensor, buffer);
+  assert(buffer && "unexpected empty buffer");
+  assert((buffer.getType().isa<MemRefType>() ||
+          buffer.getType().isa<UnrankedMemRefType>()) &&
+         "expected that tensor is mapped to memref");
+  return mapping.map(tensor, buffer);
+}
+
+void mlir::linalg::comprehensive_bufferize::BufferizationState::mapValue(
+    Value from, Value to) {
+  assert(from && "unexpected empty value");
+  return mapping.map(from, to);
 }
 
 /// Wrapper for better debugging.
@@ -414,7 +436,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
     Value tensor) const {
   // TODO: if key comes from bbArg, forward.
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-  Value v = tensorToBufferMap.lookupOrNull(tensor);
+  Value v = mapping.lookupOrNull(tensor);
 
   if (!v) {
     // Dump tensor for easier debugging.
@@ -423,5 +445,28 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
     return Value();
   }
 
+  assert((v.getType().isa<MemRefType>() ||
+          v.getType().isa<UnrankedMemRefType>()) &&
+         "expected that tensor is mapped to memref");
   return v;
+}
+
+Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupValue(
+    Value value) const {
+  Value v = mapping.lookupOrNull(value);
+  if (!v) {
+    llvm_unreachable("tensor is not mapped");
+    return Value();
+  }
+  return v;
+}
+
+bool mlir::linalg::comprehensive_bufferize::BufferizationState::isMapped(
+    Value value) const {
+  return mapping.contains(value);
+}
+
+void mlir::linalg::comprehensive_bufferize::BufferizationState::markOpObsolete(
+    Operation *op) {
+  obsoleteOps.push_back(op);
 }
