@@ -1677,12 +1677,16 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
 
     // Bufferization phase.
     if (!options.testAnalysisOnly) {
-      BlockAndValueMapping tensorToBufferMap;
-      BufferizationState state(aliasInfo, *options.allocationFns,
-                               tensorToBufferMap);
+      BufferizationState state(aliasInfo, *options.allocationFns);
+
+      // Bufferize all ops in funcOp.
       if (failed(
               bufferizeFuncOpInternals(funcOp, state, bufferizedFunctionTypes)))
         return failure();
+
+      // Erase all obsolete ops.
+      for (Operation *op : state.obsoleteOps)
+        op->erase();
     }
   }
   // Annotate operations if we only want to report the analysis.
