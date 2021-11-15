@@ -14,7 +14,26 @@
 
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
+#include "sanitizer_stacktrace.h"
+
 namespace __sanitizer {
+
+static constexpr u32 kStackSizeBits = 16;
+
+StackStore::Id StackStore::store(const StackTrace &trace) {
+  uptr *stack_trace = alloc(trace.size + 1);
+  CHECK_LT(trace.size, 1 << kStackSizeBits);
+  *stack_trace = trace.size + (trace.tag << kStackSizeBits);
+  internal_memcpy(stack_trace + 1, trace.trace, trace.size * sizeof(uptr));
+  return reinterpret_cast<StackStore::Id>(stack_trace);
+}
+
+StackTrace StackStore::load(Id id) {
+  const uptr *stack_trace = reinterpret_cast<const uptr *>(id);
+  uptr size = *stack_trace & ((1 << kStackSizeBits) - 1);
+  uptr tag = *stack_trace >> kStackSizeBits;
+  return StackTrace(stack_trace + 1, size, tag);
+}
 
 uptr *StackStore::tryAlloc(uptr count) {
   // Optimisic lock-free allocation, essentially try to bump the region ptr.
