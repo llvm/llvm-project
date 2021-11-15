@@ -129,10 +129,12 @@ getKindForOp(Operation *reductionOp) {
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return vector::CombiningKind::ADD; })
       .Case<arith::AndIOp>([&](auto op) { return vector::CombiningKind::AND; })
-      .Case<MaxSIOp>([&](auto op) { return vector::CombiningKind::MAXSI; })
-      .Case<MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
-      .Case<MinSIOp>([&](auto op) { return vector::CombiningKind::MINSI; })
-      .Case<MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
+      .Case<arith::MaxSIOp>(
+          [&](auto op) { return vector::CombiningKind::MAXSI; })
+      .Case<arith::MaxFOp>([&](auto op) { return vector::CombiningKind::MAXF; })
+      .Case<arith::MinSIOp>(
+          [&](auto op) { return vector::CombiningKind::MINSI; })
+      .Case<arith::MinFOp>([&](auto op) { return vector::CombiningKind::MINF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return vector::CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return vector::CombiningKind::OR; })

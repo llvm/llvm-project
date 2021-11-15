@@ -145,3 +145,92 @@ func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
 // CHECK:           [[REM:%.+]] = arith.addi [[DIV]], [[ONE]] : index
 // CHECK:           [[RES:%.+]] = select [[ISZERO]], [[ZERO]], [[REM]] : index
 }
+
+// -----
+
+// CHECK-LABEL: func @maxf
+func @maxf(%a: f32, %b: f32) -> f32 {
+  %result = arith.maxf %a, %b : f32
+  return %result : f32
+}
+// CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ogt, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[SELECT:.*]] = select %[[CMP]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK-NEXT: %[[RESULT:.*]] = select %[[IS_NAN]], %[[NAN]], %[[SELECT]] : f32
+// CHECK-NEXT: return %[[RESULT]] : f32
+
+// -----
+
+// CHECK-LABEL: func @maxf_vector
+func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
+  %result = arith.maxf %a, %b : vector<4xf16>
+  return %result : vector<4xf16>
+}
+// CHECK-SAME: %[[LHS:.*]]: vector<4xf16>, %[[RHS:.*]]: vector<4xf16>)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ogt, %[[LHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[SELECT:.*]] = select %[[CMP]], %[[LHS]], %[[RHS]]
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[LHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[NAN:.*]] = arith.constant 0x7E00 : f16
+// CHECK-NEXT: %[[SPLAT_NAN:.*]] = splat %[[NAN]] : vector<4xf16>
+// CHECK-NEXT: %[[RESULT:.*]] = select %[[IS_NAN]], %[[SPLAT_NAN]], %[[SELECT]]
+// CHECK-NEXT: return %[[RESULT]] : vector<4xf16>
+
+// -----
+
+// CHECK-LABEL: func @minf
+func @minf(%a: f32, %b: f32) -> f32 {
+  %result = arith.minf %a, %b : f32
+  return %result : f32
+}
+// CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf olt, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[SELECT:.*]] = select %[[CMP]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK-NEXT: %[[RESULT:.*]] = select %[[IS_NAN]], %[[NAN]], %[[SELECT]] : f32
+// CHECK-NEXT: return %[[RESULT]] : f32
+
+
+// -----
+
+// CHECK-LABEL: func @maxsi
+func @maxsi(%a: i32, %b: i32) -> i32 {
+  %result = arith.maxsi %a, %b : i32
+  return %result : i32
+}
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi sgt, %[[LHS]], %[[RHS]] : i32
+
+// -----
+
+// CHECK-LABEL: func @minsi
+func @minsi(%a: i32, %b: i32) -> i32 {
+  %result = arith.minsi %a, %b : i32
+  return %result : i32
+}
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : i32
+
+
+// -----
+
+// CHECK-LABEL: func @maxui
+func @maxui(%a: i32, %b: i32) -> i32 {
+  %result = arith.maxui %a, %b : i32
+  return %result : i32
+}
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ugt, %[[LHS]], %[[RHS]] : i32
+
+
+// -----
+
+// CHECK-LABEL: func @minui
+func @minui(%a: i32, %b: i32) -> i32 {
+  %result = arith.minui %a, %b : i32
+  return %result : i32
+}
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32

@@ -295,7 +295,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
     # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: i32)
     # CHECK-NEXT:   %[[IN_CAST:.+]] = arith.fptosi %[[IN:.+]] : f32 to i32
-    # CHECK-NEXT:   %[[MAX:.+]] = maxsi %[[OUT]], %[[IN_CAST:.+]] : i32
+    # CHECK-NEXT:   %[[MAX:.+]] = arith.maxsi %[[OUT]], %[[IN_CAST:.+]] : i32
     # CHECK-NEXT:   linalg.yield %[[MAX]] : i32
     # CHECK-NEXT: -> tensor<2x4xi32>
     @builtin.FuncOp.from_py_func(
@@ -307,7 +307,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32i32_max_unsigned_pooling
     # CHECK:   = arith.fptoui
-    # CHECK:   = maxui
+    # CHECK:   = arith.maxui
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
@@ -320,7 +320,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: indexing_maps = [#[[$CONV_MAP_I]], #[[$POOL_MAP_K]], #[[$CONV_MAP_O]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
     # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: f32)
-    # CHECK-NEXT:   %[[MAX:.+]] = maxf %[[OUT]], %[[IN:.+]] : f32
+    # CHECK-NEXT:   %[[MAX:.+]] = arith.maxf %[[OUT]], %[[IN:.+]] : f32
     # CHECK-NEXT:   linalg.yield %[[MAX]] : f32
     # CHECK-NEXT: -> tensor<2x4xf32>
     @builtin.FuncOp.from_py_func(
@@ -332,7 +332,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32i32_min_pooling
     # CHECK:   = arith.fptosi
-    # CHECK:   = minsi
+    # CHECK:   = arith.minsi
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
@@ -342,7 +342,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32i32_min_unsigned_pooling
     # CHECK:   = arith.fptoui
-    # CHECK:   = minui
+    # CHECK:   = arith.minui
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
@@ -351,7 +351,7 @@ with Context() as ctx, Location.unknown():
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32f32_min_pooling
-    # CHECK:   = minf
+    # CHECK:   = arith.minf
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), f32))

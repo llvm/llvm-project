@@ -334,30 +334,30 @@ class _BodyBuilder:
 
   def _eval_max(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MaxFOp(lhs, rhs).result
+      return arith.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MaxSIOp(lhs, rhs).result
+      return arith.MaxSIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'max' operand: {lhs}")
 
   def _eval_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MaxFOp(lhs, rhs).result
+      return arith.MaxFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MaxUIOp(lhs, rhs).result
+      return arith.MaxUIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'max_unsigned' operand: {lhs}")
 
   def _eval_min(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MinFOp(lhs, rhs).result
+      return arith.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MinSIOp(lhs, rhs).result
+      return arith.MinSIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'min' operand: {lhs}")
 
   def _eval_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):
-      return std.MinFOp(lhs, rhs).result
+      return arith.MinFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
-      return std.MinUIOp(lhs, rhs).result
+      return arith.MinUIOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'min_unsigned' operand: {lhs}")
 
 

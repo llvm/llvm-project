@@ -819,7 +819,7 @@ func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):  // no predecessors
-    %max = maxf %in0, %out0 : f32
+    %max = arith.maxf %in0, %out0 : f32
     linalg.yield %max : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -834,7 +834,7 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
   // CHECK: %[[R:.+]] = vector.multi_reduction #vector.kind<minf>, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
-  // CHECK: minf %[[R]], %[[CMAXF]] : vector<4xf32>
+  // CHECK: arith.minf %[[R]], %[[CMAXF]] : vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %maxf32 = arith.constant 3.40282e+38 : f32
   %init = linalg.init_tensor [4] : tensor<4xf32>
@@ -844,7 +844,7 @@ func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):  // no predecessors
-    %min = minf %out0, %in0 : f32
+    %min = arith.minf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>

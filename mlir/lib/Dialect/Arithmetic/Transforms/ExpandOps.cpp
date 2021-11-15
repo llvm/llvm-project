@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+#include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
 
@@ -147,6 +148,50 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
   }
 };
 
+template <typename OpTy, arith::CmpFPredicate pred>
+struct MaxMinFOpConverter : public OpRewritePattern<OpTy> {
+public:
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const final {
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+
+    Location loc = op.getLoc();
+    Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
+    Value select = rewriter.create<SelectOp>(loc, cmp, lhs, rhs);
+
+    auto floatType = getElementTypeOrSelf(lhs.getType()).cast<FloatType>();
+    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
+                                                 lhs, rhs);
+
+    Value nan = rewriter.create<arith::ConstantFloatOp>(
+        loc, APFloat::getQNaN(floatType.getFloatSemantics()), floatType);
+    if (VectorType vectorType = lhs.getType().dyn_cast<VectorType>())
+      nan = rewriter.create<SplatOp>(loc, vectorType, nan);
+
+    rewriter.replaceOpWithNewOp<SelectOp>(op, isNaN, nan, select);
+    return success();
+  }
+};
+
+template <typename OpTy, arith::CmpIPredicate pred>
+struct MaxMinIOpConverter : public OpRewritePattern<OpTy> {
+public:
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const final {
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+
+    Location loc = op.getLoc();
+    Value cmp = rewriter.create<arith::CmpIOp>(loc, pred, lhs, rhs);
+    rewriter.replaceOpWithNewOp<SelectOp>(op, cmp, lhs, rhs);
+    return success();
+  }
+};
+
 struct ArithmeticExpandOpsPass
     : public ArithmeticExpandOpsBase<ArithmeticExpandOpsPass> {
   void runOnFunction() override {
@@ -156,9 +201,19 @@ struct ArithmeticExpandOpsPass
     arith::populateArithmeticExpandOpsPatterns(patterns);
 
     target.addLegalDialect<arith::ArithmeticDialect, StandardOpsDialect>();
-    target.addIllegalOp<arith::CeilDivUIOp, arith::CeilDivSIOp,
-                        arith::FloorDivSIOp>();
-
+    // clang-format off
+    target.addIllegalOp<
+      arith::CeilDivSIOp,
+      arith::CeilDivUIOp,
+      arith::FloorDivSIOp,
+      arith::MaxFOp,
+      arith::MaxSIOp,
+      arith::MaxUIOp,
+      arith::MinFOp,
+      arith::MinSIOp,
+      arith::MinUIOp
+    >();
+    // clang-format on
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
@@ -169,9 +224,19 @@ struct ArithmeticExpandOpsPass
 
 void mlir::arith::populateArithmeticExpandOpsPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<CeilDivUIOpConverter, CeilDivSIOpConverter, FloorDivSIOpConverter>(
-          patterns.getContext());
+  // clang-format off
+  patterns.add<
+    CeilDivSIOpConverter,
+    CeilDivUIOpConverter,
+    FloorDivSIOpConverter,
+    MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::OGT>,
+    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::OLT>,
+    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
+    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
+    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
+    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>
+   >(patterns.getContext());
+  // clang-format on
 }
 
 std::unique_ptr<Pass> mlir::arith::createArithmeticExpandOpsPass() {
