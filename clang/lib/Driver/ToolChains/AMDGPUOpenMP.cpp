@@ -106,6 +106,22 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     }
 
     if (HasLibm) {
+      // This is not certain to work. The device libs added here, and passed to
+      // llvm-link, are missing attributes that they expect to be inserted when
+      // passed to mlink-builtin-bitcode. The amdgpu backend does not generate
+      // conservatively correct code when attributes are missing, so this may
+      // be the root cause of miscompilations. Passing via mlink-builtin-bitcode
+      // ultimately hits CodeGenModule::addDefaultFunctionDefinitionAttributes
+      // on each function, see D28538 for context.
+      // Potential workarounds:
+      //  - unconditionally link all of the device libs to every translation
+      //    unit in clang via mlink-builtin-bitcode
+      //  - build a libm bitcode file as part of the DeviceRTL and explictly
+      //    mlink-builtin-bitcode the rocm device libs components at build time
+      //  - drop this llvm-link fork in favour or some calls into LLVM, chosen
+      //    to do basically the same work as llvm-link but with that call first
+      //  - write an opt pass that sets that on every function it sees and pipe
+      //    the device-libs bitcode through that on the way to this llvm-link
       SmallVector<std::string, 12> BCLibs =
           AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, SubArchName.str());
       llvm::for_each(BCLibs, [&](StringRef BCFile) {
