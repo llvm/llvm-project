@@ -779,13 +779,13 @@ defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_shor
 
 let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
-    FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap", VGPR_32, f32>;
+    FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap", VGPR_32, f32, null_frag, v2f32, VReg_64>;
   defm GLOBAL_ATOMIC_FMIN :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmin", VGPR_32, f32, int_amdgcn_global_atomic_fmin>;
   defm GLOBAL_ATOMIC_FMAX :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmax", VGPR_32, f32, int_amdgcn_global_atomic_fmax>;
   defm GLOBAL_ATOMIC_FCMPSWAP_X2 :
-    FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap_x2", VReg_64, f64>;
+    FLAT_Global_Atomic_Pseudo<"global_atomic_fcmpswap_x2", VReg_64, f64, null_frag, v2f64, VReg_128>;
   defm GLOBAL_ATOMIC_FMIN_X2 :
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmin_x2", VReg_64, f64, int_amdgcn_global_atomic_fmin>;
   defm GLOBAL_ATOMIC_FMAX_X2 :
