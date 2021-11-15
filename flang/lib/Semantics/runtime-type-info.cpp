@@ -679,6 +679,14 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     len = Fold(foldingContext, std::move(len));
   }
   if (dyType.category() == TypeCategory::Character && len) {
+    // Ignore IDIM(x) (represented as MAX(0, x))
+    if (const auto *clamped{evaluate::UnwrapExpr<
+            evaluate::Extremum<evaluate::SubscriptInteger>>(*len)}) {
+      if (clamped->ordering == evaluate::Ordering::Greater &&
+          clamped->left() == evaluate::Expr<evaluate::SubscriptInteger>{0}) {
+        len = clamped->right();
+      }
+    }
     AddValue(values, componentSchema_, "characterlen"s,
         evaluate::AsGenericExpr(GetValue(len, parameters)));
   } else {
