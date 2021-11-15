@@ -8,6 +8,7 @@
 
 #include "CheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "gtest/gtest.h"

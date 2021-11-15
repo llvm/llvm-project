@@ -11,6 +11,7 @@ add_clang_library(clangStaticAnalyzerCore
   BlockCounter.cpp
   BugReporter.cpp
   BugReporterVisitors.cpp
+  CallDescription.cpp
   CallEvent.cpp
   Checker.cpp
   CheckerContext.cpp
