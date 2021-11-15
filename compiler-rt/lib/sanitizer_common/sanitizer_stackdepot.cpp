@@ -19,7 +19,7 @@
 
 namespace __sanitizer {
 
-static PersistentAllocator<uptr> traceAllocator;
+static StackStore stackStore;
 
 struct StackDepotNode {
   using hash_type = u64;
@@ -73,13 +73,13 @@ void StackDepotHandle::inc_use_count_unsafe() {
 }
 
 uptr StackDepotNode::allocated() {
-  return traceAllocator.allocated() + tracePtrs.MemoryUsage() +
+  return stackStore.allocated() + tracePtrs.MemoryUsage() +
          useCounts.MemoryUsage();
 }
 
 void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
   stack_hash = hash;
-  uptr *stack_trace = traceAllocator.alloc(args.size + 1);
+  uptr *stack_trace = stackStore.alloc(args.size + 1);
   CHECK_LT(args.size, 1 << kStackSizeBits);
   *stack_trace = args.size + (args.tag << kStackSizeBits);
   internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
@@ -128,7 +128,7 @@ StackDepotHandle StackDepotNode::get_handle(u32 id) {
 void StackDepotTestOnlyUnmap() {
   theDepot.TestOnlyUnmap();
   tracePtrs.TestOnlyUnmap();
-  traceAllocator.TestOnlyUnmap();
+  stackStore.TestOnlyUnmap();
 }
 
 } // namespace __sanitizer
