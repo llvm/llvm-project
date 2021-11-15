@@ -62,7 +62,7 @@ void InitializeMainThread() {
   OnCreatedArgs args;
   __sanitizer::GetThreadStackTopAndBottom(true, &args.stack_end,
                                           &args.stack_begin);
-  u32 tid = ThreadCreate(0, GetThreadSelf(), true, &args);
+  u32 tid = ThreadCreate(kMainTid, true, &args);
   CHECK_EQ(tid, 0);
   ThreadStart(tid);
 }
@@ -86,14 +86,13 @@ void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
 void *__sanitizer_before_thread_create_hook(thrd_t thread, bool detached,
                                             const char *name, void *stack_base,
                                             size_t stack_size) {
-  uptr user_id = reinterpret_cast<uptr>(thread);
   ENSURE_LSAN_INITED;
   EnsureMainThreadIDIsCorrect();
   OnCreatedArgs args;
   args.stack_begin = reinterpret_cast<uptr>(stack_base);
   args.stack_end = args.stack_begin + stack_size;
   u32 parent_tid = GetCurrentThread();
-  u32 tid = ThreadCreate(parent_tid, user_id, detached, &args);
+  u32 tid = ThreadCreate(parent_tid, detached, &args);
   return reinterpret_cast<void *>(static_cast<uptr>(tid));
 }
 
