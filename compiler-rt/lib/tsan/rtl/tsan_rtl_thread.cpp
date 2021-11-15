@@ -227,15 +227,11 @@ void ThreadFinish(ThreadState *thr) {
   if (thr->tls_addr && thr->tls_size)
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
   thr->is_dead = true;
+  thr->is_inited = false;
   ctx->thread_registry.FinishThread(thr->tid);
 }
 
 void ThreadContext::OnFinished() {
-#if SANITIZER_GO
-  Free(thr->shadow_stack);
-  thr->shadow_stack_pos = nullptr;
-  thr->shadow_stack_end = nullptr;
-#endif
   if (!detached) {
     thr->fast_state.IncrementEpoch();
     // Can't increment epoch w/o writing to the trace as well.
@@ -243,6 +239,15 @@ void ThreadContext::OnFinished() {
     ReleaseImpl(thr, 0, &sync);
   }
   epoch1 = thr->fast_state.epoch();
+
+#if !SANITIZER_GO
+  UnmapOrDie(thr->shadow_stack, kShadowStackSize * sizeof(uptr));
+#else
+  Free(thr->shadow_stack);
+#endif
+  thr->shadow_stack = nullptr;
+  thr->shadow_stack_pos = nullptr;
+  thr->shadow_stack_end = nullptr;
 
   if (common_flags()->detect_deadlocks)
     ctx->dd->DestroyLogicalThread(thr->dd_lt);

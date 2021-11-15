@@ -161,4 +161,12 @@ def TestAttrParams: Test_Attr<"TestAttrParams"> {
   let assemblyFormat = "`<` params `>`";
 }
 
+// Test types can be parsed/printed.
+def TestAttrWithTypeParam : Test_Attr<"TestAttrWithTypeParam"> {
+  let parameters = (ins "::mlir::IntegerType":$int_type,
+                        "::mlir::Type":$any_type);
+  let mnemonic = "attr_with_type";
+  let assemblyFormat = "`<` $int_type `,` $any_type `>`";
+}
+
 #endif // TEST_ATTRDEFS

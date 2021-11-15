@@ -41,7 +41,7 @@ With an additional ``...=trace-pc,indirect-calls`` flag
 
 The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.
 
-Example: 
+Example:
 
 .. code-block:: c++
 
@@ -74,7 +74,7 @@ Example:
   extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
     if (!*guard) return;  // Duplicate the guard check.
     // If you set *guard to 0 this code will not be called again for this edge.
-    // Now you can get the PC and do whatever you want: 
+    // Now you can get the PC and do whatever you want:
     //   store it somewhere or symbolize it and print right away.
     // The values of `*guard` are as you set them in
     // __sanitizer_cov_trace_pc_guard_init and so you can make them consecutive
@@ -96,7 +96,7 @@ Example:
   }
 
 .. code-block:: console
-  
+
   clang++ -g  -fsanitize-coverage=trace-pc-guard trace-pc-guard-example.cc -c
   clang++ trace-pc-guard-cb.cc trace-pc-guard-example.o -fsanitize=address
   ASAN_OPTIONS=strip_path_prefix=`pwd`/ ./a.out
@@ -295,7 +295,7 @@ will not be instrumented.
   void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2);
 
   // Called before a comparison instruction if exactly one of the arguments is constant.
-  // Arg1 and Arg2 are arguments of the comparison, Arg1 is a compile-time constant. 
+  // Arg1 and Arg2 are arguments of the comparison, Arg1 is a compile-time constant.
   // These callbacks are emitted by -fsanitize-coverage=trace-cmp since 2017-08-11
   void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2);
   void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2);
@@ -444,8 +444,8 @@ Sancov Tool
 An simple ``sancov`` tool is provided to process coverage files.
 The tool is part of LLVM project and is currently supported only on Linux.
 It can handle symbolization tasks autonomously without any extra support
-from the environment. You need to pass .sancov files (named 
-``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files. 
+from the environment. You need to pass .sancov files (named
+``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files.
 Sancov matches these files using module names and binaries file names.
 
 .. code-block:: console

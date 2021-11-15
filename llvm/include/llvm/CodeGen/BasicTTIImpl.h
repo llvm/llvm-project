@@ -1121,11 +1121,10 @@ public:
 
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
                                             int VF,
-                                            const APInt &DemandedReplicatedElts,
+                                            const APInt &DemandedDstElts,
                                             TTI::TargetCostKind CostKind) {
-    assert(DemandedReplicatedElts.getBitWidth() ==
-               (unsigned)VF * ReplicationFactor &&
-           "Unexpected size of DemandedReplicatedElts.");
+    assert(DemandedDstElts.getBitWidth() == (unsigned)VF * ReplicationFactor &&
+           "Unexpected size of DemandedDstElts.");
 
     InstructionCost Cost;
 
@@ -1142,12 +1141,12 @@ public:
     // The cost is estimated as extract all mask elements from the <8xi1> mask
     // vector and insert them factor times into the <24xi1> shuffled mask
     // vector.
-    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedReplicatedElts, VF);
+    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedDstElts, VF);
     Cost += thisT()->getScalarizationOverhead(SrcVT, DemandedSrcElts,
                                               /*Insert*/ false,
                                               /*Extract*/ true);
     Cost +=
-        thisT()->getScalarizationOverhead(ReplicatedVT, DemandedReplicatedElts,
+        thisT()->getScalarizationOverhead(ReplicatedVT, DemandedDstElts,
                                           /*Insert*/ true, /*Extract*/ false);
 
     return Cost;

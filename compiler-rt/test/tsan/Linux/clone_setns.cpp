@@ -11,7 +11,10 @@
 #include <sys/wait.h>
 
 static int cloned(void *arg) {
-  if (unshare(CLONE_NEWUSER)) {
+  // Unshare can fail for other reasons, e.g. no permissions,
+  // so check only the error we are interested in:
+  // if the process is multi-threaded unshare must return EINVAL.
+  if (unshare(CLONE_NEWUSER) && errno == EINVAL) {
     fprintf(stderr, "unshare failed: %d\n", errno);
     exit(1);
   }

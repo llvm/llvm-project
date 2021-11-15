@@ -969,7 +969,7 @@ struct CounterCoverageMappingBuilder
         // If last statement contains terminate statements, add a gap area
         // between the two statements. Skipping attributed statements, because
         // they don't have valid start location.
-        if (LastStmt && HasTerminateStmt && !dyn_cast<AttributedStmt>(Child)) {
+        if (LastStmt && HasTerminateStmt && !isa<AttributedStmt>(Child)) {
           auto Gap = findGapAreaBetween(getEnd(LastStmt), getStart(Child));
           if (Gap)
             fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(),

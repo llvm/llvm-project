@@ -715,7 +715,7 @@ something you have to deal with on your own.
 ``options`` Python summary formatters can optionally define this
 third argument, which is an object of type ``lldb.SBTypeSummaryOptions``,
 allowing for a few customizations of the result. The decision to
-adopt or not this third argument - and the meaning of options 
+adopt or not this third argument - and the meaning of options
 thereof - is up to the individual formatter's writer.
 
 Other than interactively typing a Python script there are two other ways for

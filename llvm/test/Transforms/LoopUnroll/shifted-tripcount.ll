@@ -75,10 +75,10 @@ define void @non_latch_exit(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    store double [[MUL9_1]], double* [[ARRAYIDX7_1]], align 8
 ; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp eq i64 [[TMP16_1]], [[MUL10]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_END:%.*]], label [[LATCH_1]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    br label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %mul10 = shl i64 %n, 1

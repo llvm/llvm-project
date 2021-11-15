@@ -147,7 +147,7 @@ public:
                                            bool Insert, bool Extract);
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
                                             int VF,
-                                            const APInt &DemandedReplicatedElts,
+                                            const APInt &DemandedDstElts,
                                             TTI::TargetCostKind CostKind);
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                   MaybeAlign Alignment, unsigned AddressSpace,

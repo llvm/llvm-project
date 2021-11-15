@@ -1,5 +1,3 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
-
 // RUN: %clang_cc1 -triple arm-none-linux-gnueabi -target-feature +neon \
 // RUN:  -target-feature +sha2 -target-feature +aes \
 // RUN:  -target-cpu cortex-a57 -emit-llvm -O1 -o - %s | FileCheck %s
@@ -10,7 +8,7 @@
 // RUN: not %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:   -S -O3 -o - %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CRYPTO %s
 
-// Test new aarch64 intrinsics and types
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 

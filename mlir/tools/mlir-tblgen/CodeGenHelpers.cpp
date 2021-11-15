@@ -313,6 +313,7 @@ void StaticVerifierFunctionEmitter::collectOpConstraints(
     /// Collect attribute constraints.
     for (const NamedAttribute &namedAttr : op.getAttributes()) {
       if (!namedAttr.attr.getPredicate().isNull() &&
+          !namedAttr.attr.isDerivedAttr() &&
           canUniqueAttrConstraint(namedAttr.attr))
         collectConstraint(attrConstraints, "attr", namedAttr.attr);
     }

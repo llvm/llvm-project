@@ -38,7 +38,7 @@ look for the ``xray_instr_map`` section.
 
   $ objdump -h -j xray_instr_map ./bin/llc
   ./bin/llc:     file format elf64-x86-64
-  
+
   Sections:
   Idx Name          Size      VMA               LMA               File off  Algn
    14 xray_instr_map 00002fc0  00000000041516c6  00000000041516c6  03d516c6  2**0
@@ -105,13 +105,13 @@ output for an example trace would look like the following:
 
   $ llvm-xray convert -f yaml --symbolize --instr_map=./bin/llc xray-log.llc.m35qPB
   ---
-  header:          
+  header:
     version:         1
     type:            0
     constant-tsc:    true
     nonstop-tsc:     true
     cycle-frequency: 2601000000
-  records:         
+  records:
     - { type: 0, func-id: 110, function: __cxx_global_var_init.8, cpu: 37, thread: 69819, kind: function-enter, tsc: 5434426023268520 }
     - { type: 0, func-id: 110, function: __cxx_global_var_init.8, cpu: 37, thread: 69819, kind: function-exit, tsc: 5434426023523052 }
     - { type: 0, func-id: 164, function: __cxx_global_var_init, cpu: 37, thread: 69819, kind: function-enter, tsc: 5434426029925386 }
@@ -153,7 +153,7 @@ function bodies to 1. We can do that with the
 
   $ llvm-xray account xray-log.llc.5rqxkU --top=10 --sort=sum --sortorder=dsc --instr_map=./bin/llc
   Functions with latencies: 36652
-   funcid      count [      min,       med,       90p,       99p,       max]       sum  function    
+   funcid      count [      min,       med,       90p,       99p,       max]       sum  function
        75          1 [ 0.672368,  0.672368,  0.672368,  0.672368,  0.672368]  0.672368  llc.cpp:271:0: main
        78          1 [ 0.626455,  0.626455,  0.626455,  0.626455,  0.626455]  0.626455  llc.cpp:381:0: compileModule(char**, llvm::LLVMContext&)
    139617          1 [ 0.472618,  0.472618,  0.472618,  0.472618,  0.472618]  0.472618  LegacyPassManager.cpp:1723:0: llvm::legacy::PassManager::run(llvm::Module&)
@@ -345,5 +345,3 @@ making things better.
     XRay traces.
   - Collecting function call stacks and how often they're encountered in the
     XRay trace.
-
-

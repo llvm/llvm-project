@@ -32,8 +32,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; EPILOG: for.body.epil:
 ; EPILOG: %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ],  [ %indvars.iv.unr, %for.body.epil.preheader ]
-; EPILOG:  %epil.iter.sub = sub i32 %epil.iter, 1
-; EPILOG:  %epil.iter.cmp = icmp ne i32 %epil.iter.sub, 0
+; EPILOG:  %epil.iter.next = add i32 %epil.iter, 1
+; EPILOG:  %epil.iter.cmp = icmp ne i32 %epil.iter.next, %xtraiter
 ; EPILOG:  br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop !0
 
 ; NOEPILOG: for.body:
@@ -41,8 +41,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; PROLOG: for.body.prol:
 ; PROLOG: %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body.prol ], [ 0, %for.body.prol.preheader ]
-; PROLOG:  %prol.iter.sub = sub i32 %prol.iter, 1
-; PROLOG:  %prol.iter.cmp = icmp ne i32 %prol.iter.sub, 0
+; PROLOG:  %prol.iter.next = add i32 %prol.iter, 1
+; PROLOG:  %prol.iter.cmp = icmp ne i32 %prol.iter.next, %xtraiter
 ; PROLOG:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop !0
 
 ; NOPROLOG: for.body:

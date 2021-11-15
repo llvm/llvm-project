@@ -1157,7 +1157,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       // (ie., it has a slash suffix) whereas real_path() doesn't.
       // So we have to append '/' to be consistent.
       StringRef sep = sys::path::get_separator();
-      if (config->osoPrefix.equals(".") && !expanded.endswith(sep))
+      // real_path removes trailing slashes as part of the normalization, but
+      // these are meaningful for our text based stripping
+      if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
       config->osoPrefix = saver.save(expanded.str());
     }
@@ -1460,24 +1462,33 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     createSyntheticSymbols();
 
     if (!config->exportedSymbols.empty()) {
-      for (Symbol *sym : symtab->getSymbols()) {
+      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym)) {
           StringRef symbolName = defined->getName();
           if (config->exportedSymbols.match(symbolName)) {
             if (defined->privateExtern) {
-              warn("cannot export hidden symbol " + symbolName +
-                   "\n>>> defined in " + toString(defined->getFile()));
+              if (defined->weakDefCanBeHidden) {
+                // weak_def_can_be_hidden symbols behave similarly to
+                // private_extern symbols in most cases, except for when
+                // it is explicitly exported.
+                // The former can be exported but the latter cannot.
+                defined->privateExtern = false;
+              } else {
+                warn("cannot export hidden symbol " + symbolName +
+                     "\n>>> defined in " + toString(defined->getFile()));
+              }
             }
           } else {
             defined->privateExtern = true;
           }
         }
-      }
+      });
     } else if (!config->unexportedSymbols.empty()) {
-      for (Symbol *sym : symtab->getSymbols())
+      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym))
           if (config->unexportedSymbols.match(defined->getName()))
             defined->privateExtern = true;
+      });
     }
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
