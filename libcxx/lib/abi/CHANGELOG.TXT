@@ -13,6 +13,38 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 14.0
+------------
+
+* [libc++] Always define a key function for std::bad_function_call in the dylib
+
+  This commit added a new explicit instantiation of std::bad_function_call's
+  vtable in the shared library. This change is not an ABI break as it only
+  adds symbols to the library. Programs compiled against the library will not
+  rely on the vtable being defined in it by default. Reliance on the vtable
+  being in the shared library can be enabled by defining the
+  _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION macro.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNSt3__117bad_function_callD0Ev
+  Symbol added: __ZNSt3__117bad_function_callD1Ev
+  Symbol added: __ZNSt3__117bad_function_callD2Ev
+  Symbol added: __ZTINSt3__117bad_function_callE
+  Symbol added: __ZTSNSt3__117bad_function_callE
+  Symbol added: __ZTVNSt3__117bad_function_callE
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNKSt9exception4whatEv
+  Symbol added: _ZNSt3__117bad_function_callD0Ev
+  Symbol added: _ZNSt3__117bad_function_callD1Ev
+  Symbol added: _ZNSt3__117bad_function_callD2Ev
+  Symbol added: _ZTINSt3__117bad_function_callE
+  Symbol added: _ZTSNSt3__117bad_function_callE
+  Symbol added: _ZTVNSt3__117bad_function_callE
+
+------------
 Version 12.0
 ------------
 

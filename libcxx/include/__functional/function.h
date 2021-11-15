@@ -35,10 +35,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 class _LIBCPP_EXCEPTION_ABI bad_function_call
     : public exception
 {
-#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 public:
+// Note that when a key function is not used, every translation unit that uses
+// bad_function_call will end up containing a weak definition of the vtable and
+// typeinfo.
+#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
     virtual ~bad_function_call() _NOEXCEPT;
+#else
+    virtual ~bad_function_call() _NOEXCEPT {}
+#endif
 
+#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
     virtual const char* what() const _NOEXCEPT;
 #endif
 };
