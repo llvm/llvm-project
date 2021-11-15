@@ -36,6 +36,11 @@
 #include <string>
 #include <vector>
 
+// This file is using the LSP syntax for identifier names which is different
+// from the LLVM coding standard. To avoid the clang-tidy warnings, we're
+// disabling one check here.
+// NOLINTBEGIN(readability-identifier-naming)
+
 namespace clang {
 namespace clangd {
 
@@ -1793,5 +1798,7 @@ template <> struct format_provider<clang::clangd::Position> {
   }
 };
 } // namespace llvm
+
+// NOLINTEND(readability-identifier-naming)
 
 #endif
