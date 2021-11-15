@@ -10,6 +10,11 @@ define void @f() {
 ; OUTPUT_ATT-NEXT:    #APP
 ; OUTPUT_ATT-NEXT:    movq %rbx, %rax
 ; OUTPUT_ATT-NEXT:    #NO_APP
+; OUTPUT_ATT-NEXT:    #APP
+; OUTPUT_ATT-EMPTY:
+; OUTPUT_ATT-NEXT:    movq %rbx, %rax
+; OUTPUT_ATT-EMPTY:
+; OUTPUT_ATT-NEXT:    #NO_APP
 ; OUTPUT_ATT-NEXT:    retq
 ;
 ; OUTPUT_INTEL-LABEL: f:
@@ -17,8 +22,13 @@ define void @f() {
 ; OUTPUT_INTEL-NEXT:    #APP
 ; OUTPUT_INTEL-NEXT:    mov rax, rbx
 ; OUTPUT_INTEL-NEXT:    #NO_APP
+; OUTPUT_INTEL-NEXT:    #APP
+; OUTPUT_INTEL-EMPTY:
+; OUTPUT_INTEL-NEXT:    mov rax, rbx
+; OUTPUT_INTEL-EMPTY:
+; OUTPUT_INTEL-NEXT:    #NO_APP
 ; OUTPUT_INTEL-NEXT:    ret
   call void asm sideeffect "$(movq %rbx, %rax $|mov rax, rbx$)", "~{dirflag},~{fpsr},~{flags}"()
-
+  call void asm sideeffect inteldialect "$(movq %rbx, %rax $|mov rax, rbx$)", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }
