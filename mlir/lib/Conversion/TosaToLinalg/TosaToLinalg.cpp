@@ -1230,7 +1230,7 @@ public:
         loc, resultTy.getShape(), resultETy);
     if (!isQuantized) {
       Value conv = rewriter
-                       .create<linalg::DepthwiseConv2DNhwcOp>(
+                       .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
                            ValueRange{zeroTensor}, strideAttr, dilationAttr)
                        .getResult(0);
@@ -1254,7 +1254,7 @@ public:
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
       Value conv =
           rewriter
-              .create<linalg::DepthwiseConv2DNhwcQOp>(
+              .create<linalg::DepthwiseConv2DNhwcHwcmQOp>(
                   loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
                   ValueRange{zeroTensor}, strideAttr, dilationAttr)
               .getResult(0);
