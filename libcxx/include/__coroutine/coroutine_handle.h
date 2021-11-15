@@ -94,31 +94,6 @@ private:
 };
 
 // [coroutine.handle.compare]
-#if defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
-
-inline _LIBCPP_HIDE_FROM_ABI
-constexpr bool operator==(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
-    return __x.address() == __y.address();
-}
-inline _LIBCPP_HIDE_FROM_ABI
-constexpr bool operator<(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
-    return less<void*>()(__x.address(), __y.address());
-}
-inline _LIBCPP_HIDE_FROM_ABI
-constexpr bool operator>(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
-    return __y < __x;
-}
-inline _LIBCPP_HIDE_FROM_ABI
-constexpr bool operator<=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
-    return !(__x > __y);
-}
-inline _LIBCPP_HIDE_FROM_ABI
-constexpr bool operator>=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
-    return !(__x < __y);
-}
-
-#else
-
 inline _LIBCPP_HIDE_FROM_ABI
 constexpr bool operator==(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
     return __x.address() == __y.address();
@@ -127,8 +102,6 @@ inline _LIBCPP_HIDE_FROM_ABI
 constexpr strong_ordering operator<=>(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
     return compare_three_way()(__x.address(), __y.address());
 }
-
-#endif // defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
 
 template <class _Promise>
 struct _LIBCPP_TEMPLATE_VIS coroutine_handle {
