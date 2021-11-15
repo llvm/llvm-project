@@ -1191,7 +1191,17 @@ Example matches a
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('lambdaCapture0')"><a name="lambdaCapture0Anchor">lambdaCapture</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="lambdaCapture0"><pre></pre></td></tr>
+<tr><td colspan="4" class="doc" id="lambdaCapture0"><pre>Matches lambda captures.
+
+Given
+  int main() {
+    int x;
+    auto f = [x](){};
+    auto g = [x = 1](){};
+  }
+In the matcher `lambdaExpr(hasAnyCapture(lambdaCapture()))`,
+`lambdaCapture()` matches `x` and `x=1`.
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;</td><td class="name" onclick="toggle('nestedNameSpecifierLoc0')"><a name="nestedNameSpecifierLoc0Anchor">nestedNameSpecifierLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;...</td></tr>
@@ -4540,6 +4550,21 @@ implicit default/copy constructors).
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('forEachLambdaCapture0')"><a name="forEachLambdaCapture0Anchor">forEachLambdaCapture</a></td><td>LambdaCaptureMatcher InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachLambdaCapture0"><pre>Matches each lambda capture in a lambda expression.
+
+Given
+  int main() {
+    int x, y;
+    float z;
+    auto f = [=]() { return x + y + z; };
+  }
+lambdaExpr(forEachLambdaCapture(
+    lambdaCapture(capturesVar(varDecl(hasType(isInteger()))))))
+will trigger two matches, binding for 'x' and 'y' respectively.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaExpr.html">LambdaExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyCapture0')"><a name="hasAnyCapture0Anchor">hasAnyCapture</a></td><td>LambdaCaptureMatcher InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyCapture0"><pre>Matches any capture in a lambda expression.
 
@@ -5663,6 +5688,15 @@ functionDecl(isExternC())
   matches the declaration of f and g, but not the declaration of h.
 varDecl(isExternC())
   matches the declaration of x and y, but not the declaration of z.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isInitCapture0')"><a name="isInitCapture0Anchor">isInitCapture</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInitCapture0"><pre>Matches a variable serving as the implicit variable for a lambda init-
+capture.
+
+Example matches x (matcher = varDecl(isInitCapture()))
+auto f = [x=3]() { return x; };
 </pre></td></tr>
 
 
