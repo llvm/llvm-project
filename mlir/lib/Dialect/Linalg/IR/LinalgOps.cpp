@@ -3037,16 +3037,16 @@ LogicalResult matchAndReplaceDepthwiseConv(Operation *operation, Value input,
       loc, newInitTy, init, collapsedInitDims);
 
   Value newConv;
-  if (isa<DepthwiseConv2DNhwcOp>(operation)) {
+  if (isa<DepthwiseConv2DNhwcHwcmOp>(operation)) {
     newConv = rewriter
-                  .create<DepthwiseConv2DNhwOp>(
+                  .create<DepthwiseConv2DNhwcHwcOp>(
                       loc, newInitTy, ValueRange{input, collapsedKernel},
                       ValueRange{collapsedInit}, stride, dilation)
                   .getResult(0);
-  } else if (isa<DepthwiseConv2DNhwcQOp>(operation)) {
+  } else if (isa<DepthwiseConv2DNhwcHwcmQOp>(operation)) {
     newConv =
         rewriter
-            .create<DepthwiseConv2DNhwQOp>(
+            .create<DepthwiseConv2DNhwcHwcQOp>(
                 loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
                 ValueRange{collapsedInit}, stride, dilation)
             .getResult(0);
@@ -3062,10 +3062,10 @@ LogicalResult matchAndReplaceDepthwiseConv(Operation *operation, Value input,
 }
 
 struct SimplifyDepthwiseConvOp
-    : public OpRewritePattern<DepthwiseConv2DNhwcOp> {
-  using OpRewritePattern<DepthwiseConv2DNhwcOp>::OpRewritePattern;
+    : public OpRewritePattern<DepthwiseConv2DNhwcHwcmOp> {
+  using OpRewritePattern<DepthwiseConv2DNhwcHwcmOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcOp op,
+  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmOp op,
                                 PatternRewriter &rewriter) const override {
     Operation *operation = op.getOperation();
     Value input = op.getInputOperand(0)->get();
@@ -3082,10 +3082,10 @@ struct SimplifyDepthwiseConvOp
 };
 
 struct SimplifyDepthwiseConvQOp
-    : public OpRewritePattern<DepthwiseConv2DNhwcQOp> {
-  using OpRewritePattern<DepthwiseConv2DNhwcQOp>::OpRewritePattern;
+    : public OpRewritePattern<DepthwiseConv2DNhwcHwcmQOp> {
+  using OpRewritePattern<DepthwiseConv2DNhwcHwcmQOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcQOp op,
+  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmQOp op,
                                 PatternRewriter &rewriter) const override {
     Operation *operation = op.getOperation();
     Value input = op.getInputOperand(0)->get();

@@ -69,7 +69,7 @@ metadata: !LinalgOpMetadata
   name: matmul_unsigned
   cpp_class_name: MatmulUnsignedOp
   doc: |-
-    Performs a unsigned matrix multiplication of two 2D inputs.
+    Performs an unsigned matrix multiplication of two 2D inputs.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
@@ -1384,14 +1384,14 @@ structured_op: !LinalgStructuredOpConfig
                 is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv1D_nw
-  cpp_class_name: DepthwiseConv1DNwOp
+  name: depthwise_conv_1d_nwc_wc
+  cpp_class_name: DepthwiseConv1DNwcWcOp
   doc: |-
     Performs depth-wise 1-D convolution.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output. Multiplier is set to 1
-    which is a special case for most dpethwise convolutions.
+    which is a special case for most depthwise convolutions.
   implements:
   - LinalgConvolutionOpInterface
 structured_op: !LinalgStructuredOpConfig
@@ -1461,14 +1461,14 @@ structured_op: !LinalgStructuredOpConfig
                 is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv2D_nhw
-  cpp_class_name: DepthwiseConv2DNhwOp
+  name: depthwise_conv_2d_nhwc_hwc
+  cpp_class_name: DepthwiseConv2DNhwcHwcOp
   doc: |-
     Performs depth-wise 2-D convolution.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output. Multiplier is set to 1
-    which is a special case for most dpethwise convolutions.
+    which is a special case for most depthwise convolutions.
   implements:
   - LinalgConvolutionOpInterface
 structured_op: !LinalgStructuredOpConfig
@@ -1544,8 +1544,8 @@ structured_op: !LinalgStructuredOpConfig
                 is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv2D_nhw_q
-  cpp_class_name: DepthwiseConv2DNhwQOp
+  name: depthwise_conv_2d_nhwc_hwc_q
+  cpp_class_name: DepthwiseConv2DNhwcHwcQOp
   doc: |-
     Performs depth-wise 2-D convolution.
 
@@ -1660,8 +1660,8 @@ structured_op: !LinalgStructuredOpConfig
                     is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv2D_nhwc
-  cpp_class_name: DepthwiseConv2DNhwcOp
+  name: depthwise_conv_2d_nhwc_hwcm
+  cpp_class_name: DepthwiseConv2DNhwcHwcmOp
   doc: |-
     Performs depth-wise 2-D convolution.
 
@@ -1746,8 +1746,8 @@ structured_op: !LinalgStructuredOpConfig
                 is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv2D_nhwc_q
-  cpp_class_name: DepthwiseConv2DNhwcQOp
+  name: depthwise_conv_2d_nhwc_hwcm_q
+  cpp_class_name: DepthwiseConv2DNhwcHwcmQOp
   doc: |-
     Performs depth-wise 2-D convolution.
 

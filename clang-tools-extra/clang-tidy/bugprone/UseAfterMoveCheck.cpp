@@ -129,8 +129,12 @@ bool UseAfterMoveFinder::find(Stmt *FunctionBody, const Expr *MovingCall,
   Visited.clear();
 
   const CFGBlock *Block = BlockMap->blockContainingStmt(MovingCall);
-  if (!Block)
-    return false;
+  if (!Block) {
+    // This can happen if MovingCall is in a constructor initializer, which is
+    // not included in the CFG because the CFG is built only from the function
+    // body.
+    Block = &TheCFG->getEntry();
+  }
 
   return findInternal(Block, MovingCall, MovedVariable, TheUseAfterMove);
 }

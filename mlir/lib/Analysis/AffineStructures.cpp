@@ -19,7 +19,6 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3865,14 +3864,4 @@ LogicalResult mlir::getRelationFromMap(const AffineValueMap &map,
     rel.setValue(i, map.getOperand(i - rel.getNumRangeDims()));
 
   return success();
-}
-
-FailureOr<FlatAffineConstraints>
-mlir::parseIntegerSetToFAC(llvm::StringRef str, MLIRContext *context) {
-  IntegerSet set = parseIntegerSet(str, context);
-
-  if (!set)
-    return failure();
-
-  return FlatAffineConstraints(set);
 }
