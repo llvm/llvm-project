@@ -7065,6 +7065,7 @@ class SBMemoryRegionInfo(object):
         r"""
         __init__(SBMemoryRegionInfo self) -> SBMemoryRegionInfo
         __init__(SBMemoryRegionInfo self, SBMemoryRegionInfo rhs) -> SBMemoryRegionInfo
+        __init__(SBMemoryRegionInfo self, char const * name, lldb::addr_t begin, lldb::addr_t end, uint32_t permissions, bool mapped, bool stack_memory) -> SBMemoryRegionInfo
         """
         _lldb.SBMemoryRegionInfo_swiginit(self, _lldb.new_SBMemoryRegionInfo(*args))
     __swig_destroy__ = _lldb.delete_SBMemoryRegionInfo
@@ -7181,6 +7182,10 @@ class SBMemoryRegionInfoList(object):
     def GetSize(self):
         r"""GetSize(SBMemoryRegionInfoList self) -> uint32_t"""
         return _lldb.SBMemoryRegionInfoList_GetSize(self)
+
+    def GetMemoryRegionContainingAddress(self, addr, region_info):
+        r"""GetMemoryRegionContainingAddress(SBMemoryRegionInfoList self, lldb::addr_t addr, SBMemoryRegionInfo region_info) -> bool"""
+        return _lldb.SBMemoryRegionInfoList_GetMemoryRegionContainingAddress(self, addr, region_info)
 
     def GetMemoryRegionAtIndex(self, idx, region_info):
         r"""GetMemoryRegionAtIndex(SBMemoryRegionInfoList self, uint32_t idx, SBMemoryRegionInfo region_info) -> bool"""
