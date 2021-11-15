@@ -7,7 +7,7 @@
 # using the old single-char type modifiers to an equivalent new-style form where
 # each modifier is orthogonal and they can be composed.
 #
-# It was used to directly generate the .td files on master, so if you have any
+# It was used to directly generate the .td files on main, so if you have any
 # local additions I would suggest implementing any modifiers here, and running
 # it over your entire pre-merge .td files rather than trying to resolve any
 # conflicts manually.
