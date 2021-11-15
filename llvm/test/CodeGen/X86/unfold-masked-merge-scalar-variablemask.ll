@@ -705,10 +705,9 @@ define i32 @in_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-BMI-LABEL: in_constant_varx_42_invmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    notl %edx
-; CHECK-BMI-NEXT:    andnl %edx, %edi, %eax
-; CHECK-BMI-NEXT:    orl $42, %edx
-; CHECK-BMI-NEXT:    andnl %edx, %eax, %eax
+; CHECK-BMI-NEXT:    andnl %edi, %edx, %eax
+; CHECK-BMI-NEXT:    andl $42, %edx
+; CHECK-BMI-NEXT:    orl %edx, %eax
 ; CHECK-BMI-NEXT:    retq
   %notmask = xor i32 %mask, -1
   %n0 = xor i32 %x, 42 ; %x
@@ -879,11 +878,9 @@ define i32 @in_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-BMI-LABEL: in_constant_42_vary_invmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    movl %edx, %eax
-; CHECK-BMI-NEXT:    andl %edx, %esi
-; CHECK-BMI-NEXT:    notl %eax
-; CHECK-BMI-NEXT:    andl $42, %eax
-; CHECK-BMI-NEXT:    orl %esi, %eax
+; CHECK-BMI-NEXT:    andnl %edx, %esi, %eax
+; CHECK-BMI-NEXT:    orl $42, %edx
+; CHECK-BMI-NEXT:    andnl %edx, %eax, %eax
 ; CHECK-BMI-NEXT:    retq
   %notmask = xor i32 %mask, -1
   %n0 = xor i32 42, %y ; %x
