@@ -68,8 +68,7 @@ void glob_invalid_index3() {
 void glob_invalid_index4() {
   const int *ptr = glob_arr4[1];
   int idx = -42;
-  // FIXME: Should warn {{garbage or undefined}}.
-  auto x = ptr[idx]; // no-warning
+  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
 }
 
 int const glob_arr5[4][2] = {{1}, 3, 4, 5};
@@ -86,16 +85,11 @@ void glob_array_index3() {
 
 void glob_ptr_index2() {
   int const *ptr = glob_arr5[1];
-  // FIXME: Should be TRUE.
-  clang_analyzer_eval(ptr[0] == 3); // expected-warning{{UNKNOWN}}
-  // FIXME: Should be TRUE.
-  clang_analyzer_eval(ptr[1] == 4); // expected-warning{{UNKNOWN}}
-  // FIXME: Should be UNDEFINED.
-  clang_analyzer_eval(ptr[2] == 5); // expected-warning{{UNKNOWN}}
-  // FIXME: Should be UNDEFINED.
-  clang_analyzer_eval(ptr[3] == 0); // expected-warning{{UNKNOWN}}
-  // FIXME: Should be UNDEFINED.
-  clang_analyzer_eval(ptr[4] == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(ptr[0] == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr[1] == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr[2] == 5); // expected-warning{{UNDEFINED}}
+  clang_analyzer_eval(ptr[3] == 0); // expected-warning{{UNDEFINED}}
+  clang_analyzer_eval(ptr[4] == 0); // expected-warning{{UNDEFINED}}
 }
 
 void glob_invalid_index5() {
@@ -106,8 +100,7 @@ void glob_invalid_index5() {
 void glob_invalid_index6() {
   int const *ptr = &glob_arr5[1][0];
   int idx = 42;
-  // FIXME: Should warn {{garbage or undefined}}.
-  auto x = ptr[idx]; // no-warning
+  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
 }
 
 extern const int glob_arr_no_init[10];
