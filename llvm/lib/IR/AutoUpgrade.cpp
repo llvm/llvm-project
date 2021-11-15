@@ -962,6 +962,23 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name.startswith("ptrauth.")) {
+      Name = Name.substr(strlen("ptrauth."));
+      // Remove intptr overload.
+      Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Name)
+          .Case("auth.i64", Intrinsic::ptrauth_auth)
+          .Case("sign.i64", Intrinsic::ptrauth_sign)
+          .Case("sign.generic.i64", Intrinsic::ptrauth_sign_generic)
+          .Case("strip.i64", Intrinsic::ptrauth_strip)
+          .Case("resign.i64", Intrinsic::ptrauth_resign)
+          .Case("blend.i64", Intrinsic::ptrauth_blend)
+          .Default(Intrinsic::not_intrinsic);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+        return true;
+      }
+    }
     break;
 
   case 's':
