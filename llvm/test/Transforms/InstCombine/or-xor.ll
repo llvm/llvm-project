@@ -63,9 +63,8 @@ define i32 @test4(i32 %x, i32 %y) {
 
 define i32 @test5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X]], -1
-; CHECK-NEXT:    [[Z:%.*]] = or i32 [[XOR]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %xor = xor i32 %x, %y
@@ -79,9 +78,8 @@ define i32 @test5(i32 %x, i32 %y) {
 
 define <2 x i4> @test5_commuted(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @test5_commuted(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i4> [[X]], <i4 -1, i4 -1>
-; CHECK-NEXT:    [[Z:%.*]] = or <2 x i4> [[XOR]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
 ; CHECK-NEXT:    ret <2 x i4> [[Z]]
 ;
   %xor = xor <2 x i4> %x, %y
@@ -95,9 +93,8 @@ define <2 x i4> @test5_commuted(<2 x i4> %x, <2 x i4> %y) {
 
 define i64 @test5_commuted_x_y(i64 %x, i64 %y) {
 ; CHECK-LABEL: @test5_commuted_x_y(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i64 [[X]], -1
-; CHECK-NEXT:    [[Z:%.*]] = or i64 [[XOR]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %xor = xor i64 %y, %x
@@ -109,10 +106,10 @@ define i64 @test5_commuted_x_y(i64 %x, i64 %y) {
 
 define i8 @test5_extra_use_not(i8 %x, i8 %y, i8* %dst) {
 ; CHECK-LABEL: @test5_extra_use_not(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    store i8 [[NOTX]], i8* [[DST:%.*]], align 1
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[XOR]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %xor = xor i8 %x, %y
@@ -127,8 +124,8 @@ define i65 @test5_extra_use_xor(i65 %x, i65 %y, i65* %dst) {
 ; CHECK-LABEL: @test5_extra_use_xor(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i65 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    store i65 [[XOR]], i65* [[DST:%.*]], align 4
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i65 [[X]], -1
-; CHECK-NEXT:    [[Z:%.*]] = or i65 [[XOR]], [[NOTX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i65 [[X]], [[Y]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i65 [[TMP1]], -1
 ; CHECK-NEXT:    ret i65 [[Z]]
 ;
   %xor = xor i65 %x, %y
