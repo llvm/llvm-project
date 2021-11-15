@@ -1282,8 +1282,8 @@ void ASTWorker::run() {
         if (Done) {
           if (Requests.empty())
             return;
-          else     // Even though Done is set, finish pending requests.
-            break; // However, skip delays to shutdown fast.
+          // Even though Done is set, finish pending requests.
+          break; // However, skip delays to shutdown fast.
         }
 
         // Tracing: we have a next request, attribute this sleep to it.

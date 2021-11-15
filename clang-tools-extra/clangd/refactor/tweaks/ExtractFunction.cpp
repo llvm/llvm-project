@@ -223,8 +223,7 @@ bool alwaysReturns(const ExtractionZone &EZ) {
   while (const auto *CS = llvm::dyn_cast<CompoundStmt>(Last)) {
     if (CS->body_empty())
       return false;
-    else
-      Last = CS->body_back();
+    Last = CS->body_back();
   }
   return llvm::isa<ReturnStmt>(Last);
 }

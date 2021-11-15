@@ -194,8 +194,7 @@ bool JSONTransport::handleMessage(llvm::json::Value Message,
 
   if (ID)
     return Handler.onCall(*Method, std::move(Params), std::move(*ID));
-  else
-    return Handler.onNotify(*Method, std::move(Params));
+  return Handler.onNotify(*Method, std::move(Params));
 }
 
 // Tries to read a line up to and including \n.
@@ -254,14 +253,14 @@ bool JSONTransport::readStandardMessage(std::string &JSON) {
       }
       llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
       continue;
-    } else if (!LineRef.trim().empty()) {
-      // It's another header, ignore it.
-      continue;
-    } else {
-      // An empty line indicates the end of headers.
-      // Go ahead and read the JSON.
-      break;
     }
+
+    // An empty line indicates the end of headers.
+    // Go ahead and read the JSON.
+    if (LineRef.trim().empty())
+      break;
+
+    // It's another header, ignore it.
   }
 
   // The fuzzer likes crashing us by sending "Content-Length: 9999999999999999"
