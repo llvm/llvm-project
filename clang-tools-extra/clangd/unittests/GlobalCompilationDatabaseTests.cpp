@@ -40,7 +40,6 @@ using ::testing::EndsWith;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
-using ::testing::StartsWith;
 using ::testing::UnorderedElementsAre;
 
 TEST(GlobalCompilationDatabaseTest, FallbackCommand) {

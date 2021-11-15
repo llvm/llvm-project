@@ -73,7 +73,6 @@ using clang::clangd::SymbolOrigin;
 using clang::index::SymbolInfo;
 using clang::index::SymbolKind;
 using clang::index::SymbolLanguage;
-using clang::index::SymbolRole;
 using clang::tooling::CompileCommand;
 
 // Helper to (de)serialize the SymbolID. We serialize it as a hex string.
