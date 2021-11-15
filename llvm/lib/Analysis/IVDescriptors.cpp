@@ -146,12 +146,9 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
       // meaning that we will use sext instructions instead of zext
       // instructions to restore the original type.
       IsSigned = true;
-      if (!Bits.isNegative())
-        // If the value is not known to be negative, we don't known what the
-        // upper bit is, and therefore, we don't know what kind of extend we
-        // will need. In this case, just increase the bit width by one bit and
-        // use sext.
-        ++MaxBitWidth;
+      // Make sure at at least one sign bit is included in the result, so it
+      // will get properly sign-extended.
+      ++MaxBitWidth;
     }
   }
   if (!isPowerOf2_64(MaxBitWidth))
