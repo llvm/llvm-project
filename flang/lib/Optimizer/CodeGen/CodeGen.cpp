@@ -636,6 +636,18 @@ struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
   }
 };
 
+/// Lower `fir.global_len` operation.
+struct GlobalLenOpConversion : public FIROpConversion<fir::GlobalLenOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::GlobalLenOp globalLen, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        globalLen, "fir.global_len codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -1504,8 +1516,8 @@ public:
         BoxIsPtrOpConversion, BoxRankOpConversion, CallOpConversion,
         ConvertOpConversion, DispatchOpConversion, DispatchTableOpConversion,
         DTEntryOpConversion, DivcOpConversion, EmboxCharOpConversion,
-        ExtractValueOpConversion, HasValueOpConversion, GlobalOpConversion,
-        InsertOnRangeOpConversion, InsertValueOpConversion,
+        ExtractValueOpConversion, HasValueOpConversion, GlobalLenOpConversion,
+        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
         IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
         MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
