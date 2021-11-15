@@ -39,6 +39,7 @@
 #include "swift/AST/Module.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
+#include "swift/Basic/InitializeSwiftModules.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/Support/ConvertUTF.h"
 
@@ -79,6 +80,8 @@ void SwiftLanguage::Initialize() {
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics()
       .emplace(g_NSArrayClass1,
                lldb_private::formatters::swift::ArraySyntheticFrontEndCreator);
+
+  initializeSwiftModules();
 }
 
 void SwiftLanguage::Terminate() {

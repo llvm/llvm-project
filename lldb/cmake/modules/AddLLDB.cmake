@@ -153,6 +153,40 @@ function(add_lldb_library name)
   endif()
 endfunction(add_lldb_library)
 
+# BEGIN Swift Mods
+function(add_properties_for_swift_modules target)
+  if (BOOTSTRAPPING_MODE)
+    if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+      if(BOOTSTRAPPING_MODE MATCHES "HOSTTOOLS|.*HOSTLIBS")
+        target_link_directories(${target} PRIVATE
+            "${CMAKE_OSX_SYSROOT}/usr/lib/swift"
+            "${LLDB_SWIFT_LIBS}/macosx")
+        set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH
+            "/usr/lib/swift")
+      elseif(BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
+        target_link_directories(${target} PRIVATE "${LLDB_SWIFT_LIBS}/macosx")
+        set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH
+            "${LLDB_SWIFT_LIBS}/macosx")
+      else()
+        message(FATAL_ERROR "Unknown BOOTSTRAPPING_MODE '${BOOTSTRAPPING_MODE}'")
+      endif()
+
+      # Workaround for a linker crash related to autolinking: rdar://77839981
+      set_property(TARGET ${target} APPEND_STRING PROPERTY
+                   LINK_FLAGS " -lobjc ")
+    elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+      string(REGEX MATCH "^[^-]*" arch ${TARGET_TRIPLE})
+      target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
+  
+      # TODO: add "${LLDB_SWIFT_LIBS}/linux" to BUILD_RPATH and not INSTALL_RPATH.
+      # This does not work for some reason.
+      set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH
+          "${LLDB_SWIFT_LIBS}/linux;$ORIGIN/../lib/swift/linux")
+    endif()
+  endif()
+endfunction()
+# END Swift Mods
+
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "GENERATE_INSTALL"
