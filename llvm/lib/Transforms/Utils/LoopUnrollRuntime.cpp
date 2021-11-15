@@ -421,16 +421,6 @@ static bool canProfitablyUnrollMultiExitLoop(
   if (UnrollRuntimeMultiExit.getNumOccurrences())
     return UnrollRuntimeMultiExit;
 
-  // TODO: We used to bail out for correctness (now fixed).  Under what
-  // circumstances is this case profitable to allow?
-  if (!LatchExit->getSinglePredecessor())
-    return false;
-
-  // TODO: We used to bail out for correctness (now fixed).  Under what
-  // circumstances is this case profitable to allow?
-  if (UseEpilogRemainder && L->getParentLoop())
-    return false;
-
   // The main pain point with multi-exit loop unrolling is that once unrolled,
   // we will not be able to merge all blocks into a straight line code.
   // There are branches within the unrolled loop that go to the OtherExits.
