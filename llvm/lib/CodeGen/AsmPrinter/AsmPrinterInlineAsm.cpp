@@ -176,7 +176,7 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
       // If we have ${:foo}, then this is not a real operand reference, it is a
       // "magic" string reference, just like in .td files.  Arrange to call
       // PrintSpecial.
-      if (HasCurlyBraces && LastEmitted[0] == ':') {
+      if (HasCurlyBraces && *LastEmitted == ':') {
         ++LastEmitted;
         const char *StrStart = LastEmitted;
         const char *StrEnd = strchr(StrStart, '}');
@@ -200,7 +200,7 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                            Twine(AsmStr) + "'");
       LastEmitted = IDEnd;
 
-      if (Val >= NumOperands-1)
+      if (Val >= NumOperands - 1)
         report_fatal_error("Invalid $ operand number in inline asm string: '" +
                            Twine(AsmStr) + "'");
 
@@ -367,6 +367,10 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                            Twine(AsmStr) + "'");
       LastEmitted = IDEnd;
 
+      if (Val >= NumOperands - 1)
+        report_fatal_error("Invalid $ operand number in inline asm string: '" +
+                           Twine(AsmStr) + "'");
+
       char Modifier[2] = { 0, 0 };
 
       if (HasCurlyBraces) {
@@ -387,10 +391,6 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                              Twine(AsmStr) + "'");
         ++LastEmitted;    // Consume '}' character.
       }
-
-      if (Val >= NumOperands-1)
-        report_fatal_error("Invalid $ operand number in inline asm string: '" +
-                           Twine(AsmStr) + "'");
 
       // Okay, we finally have a value number.  Ask the target to print this
       // operand!
