@@ -93,3 +93,14 @@ void test() {
 // CHECK1: {{^    }}template<> struct foo<1, 0 + 0L> {
 template struct foo<1, 0 + 0L>;
 }
+
+namespace test5 {
+template<long> void f() {}
+void (*p)() = f<0>;
+template<unsigned = 0> void f() {}
+void (*q)() = f<>;
+// Not perfect - this code in the dump would be ambiguous, but it's the best we
+// can do to differentiate these two implicit specializations.
+// CHECK1: template<> void f<0L>()
+// CHECK1: template<> void f<0U>()
+}
