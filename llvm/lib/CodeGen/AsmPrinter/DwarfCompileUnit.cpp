@@ -367,7 +367,8 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
 void DwarfCompileUnit::addRange(RangeSpan Range) {
   DD->insertSectionLabel(Range.Begin);
 
-  bool SameAsPrevCU = this == DD->getPrevCU();
+  auto *PrevCU = DD->getPrevCU();
+  bool SameAsPrevCU = this == PrevCU;
   DD->setPrevCU(this);
   // If we have no current ranges just add the range and return, otherwise,
   // check the current section and CU against the previous section and CU we
@@ -376,6 +377,9 @@ void DwarfCompileUnit::addRange(RangeSpan Range) {
   if (CURanges.empty() || !SameAsPrevCU ||
       (&CURanges.back().End->getSection() !=
        &Range.End->getSection())) {
+    // Before a new range is added, always terminate the prior line table.
+    if (PrevCU)
+      DD->terminateLineTable(PrevCU);
     CURanges.push_back(Range);
     return;
   }
