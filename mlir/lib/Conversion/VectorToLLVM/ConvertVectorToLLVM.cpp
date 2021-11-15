@@ -752,6 +752,12 @@ class VectorFMAOpNDRewritePattern : public OpRewritePattern<FMAOp> {
 public:
   using OpRewritePattern<FMAOp>::OpRewritePattern;
 
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
+
   LogicalResult matchAndRewrite(FMAOp op,
                                 PatternRewriter &rewriter) const override {
     auto vType = op.getVectorType();
