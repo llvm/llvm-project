@@ -468,7 +468,7 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
 
   assert(DS.getTypeSpecType() == DeclSpec::TST_decltype &&
          "unexpected type in getDestructorType");
-  QualType T = BuildDecltypeType(DS.getRepAsExpr());
+  QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
 
   // If we know the type of the object, check that the correct destructor
   // type was named now; we can give better diagnostics this way.
@@ -7761,7 +7761,8 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     return true;
   }
 
-  QualType T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
+  QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc(),
+                                 false);
 
   TypeLocBuilder TLB;
   DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);

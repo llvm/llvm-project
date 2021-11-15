@@ -4219,7 +4219,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     if (BaseType.isNull())
       return true;
   } else if (DS.getTypeSpecType() == TST_decltype) {
-    BaseType = BuildDecltypeType(DS.getRepAsExpr());
+    BaseType = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
   } else if (DS.getTypeSpecType() == TST_decltype_auto) {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
