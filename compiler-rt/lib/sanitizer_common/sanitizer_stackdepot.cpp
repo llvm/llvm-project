@@ -14,7 +14,7 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_hash.h"
-#include "sanitizer_persistent_allocator.h"
+#include "sanitizer_stack_store.h"
 #include "sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
