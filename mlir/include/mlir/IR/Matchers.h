@@ -176,6 +176,16 @@ struct AnyValueMatcher {
   bool match(Value op) const { return true; }
 };
 
+/// Terminal matcher, always returns true.
+struct AnyCapturedValueMatcher {
+  Value *what;
+  AnyCapturedValueMatcher(Value *what) : what(what) {}
+  bool match(Value op) const {
+    *what = op;
+    return true;
+  }
+};
+
 /// Binds to a specific value and matches it.
 struct PatternMatcherValue {
   PatternMatcherValue(Value val) : value(val) {}
@@ -280,6 +290,7 @@ auto m_Op(Matchers... matchers) {
 
 namespace matchers {
 inline auto m_Any() { return detail::AnyValueMatcher(); }
+inline auto m_Any(Value *val) { return detail::AnyCapturedValueMatcher(val); }
 inline auto m_Val(Value v) { return detail::PatternMatcherValue(v); }
 } // namespace matchers
 
