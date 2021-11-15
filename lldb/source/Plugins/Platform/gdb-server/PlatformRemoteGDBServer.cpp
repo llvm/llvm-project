@@ -139,21 +139,6 @@ PlatformRemoteGDBServer::PlatformRemoteGDBServer()
 /// inherited from by the plug-in instance.
 PlatformRemoteGDBServer::~PlatformRemoteGDBServer() = default;
 
-bool PlatformRemoteGDBServer::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                              ArchSpec &arch) {
-  ArchSpec remote_arch = m_gdb_client.GetSystemArchitecture();
-
-  if (idx == 0) {
-    arch = remote_arch;
-    return arch.IsValid();
-  } else if (idx == 1 && remote_arch.IsValid() &&
-             remote_arch.GetTriple().isArch64Bit()) {
-    arch.SetTriple(remote_arch.GetTriple().get32BitArchVariant());
-    return arch.IsValid();
-  }
-  return false;
-}
-
 size_t PlatformRemoteGDBServer::GetSoftwareBreakpointTrapOpcode(
     Target &target, BreakpointSite *bp_site) {
   // This isn't needed if the z/Z packets are supported in the GDB remote
@@ -262,6 +247,15 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
     // now.
     if (m_working_dir)
       m_gdb_client.SetWorkingDir(m_working_dir);
+
+    m_supported_architectures.clear();
+    ArchSpec remote_arch = m_gdb_client.GetSystemArchitecture();
+    if (remote_arch) {
+      m_supported_architectures.push_back(remote_arch);
+      if (remote_arch.GetTriple().isArch64Bit())
+        m_supported_architectures.push_back(
+            ArchSpec(remote_arch.GetTriple().get32BitArchVariant()));
+    }
   } else {
     m_gdb_client.Disconnect();
     if (error.Success())
