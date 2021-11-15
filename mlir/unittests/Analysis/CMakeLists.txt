@@ -1,5 +1,4 @@
 add_mlir_unittest(MLIRAnalysisTests
-  AffineStructuresParserTest.cpp
   AffineStructuresTest.cpp
   LinearTransformTest.cpp
   PresburgerSetTest.cpp

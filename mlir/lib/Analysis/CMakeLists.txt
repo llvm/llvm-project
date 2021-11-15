@@ -66,7 +66,6 @@ add_mlir_library(MLIRLoopAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
-  MLIRParser
   MLIRPresburger
   MLIRSCF
   )
