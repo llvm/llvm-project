@@ -10,6 +10,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
+#include "llvm/ADT/StringSet.h"
+
 using namespace clang::ast_matchers;
 
 namespace clang {
@@ -30,6 +32,13 @@ void CalleeNamespaceCheck::registerMatchers(MatchFinder *Finder) {
       declRefExpr(to(functionDecl().bind("func"))).bind("use-site"), this);
 }
 
+// A list of functions that are exempted from this check. The __errno_location
+// function is for setting errno, which is allowed in libc, and the other
+// functions are specifically allowed to be external so that they can be
+// intercepted.
+static const llvm::StringSet<> IgnoredFunctions = {
+    "__errno_location", "malloc", "calloc", "realloc", "free", "aligned_alloc"};
+
 void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UsageSiteExpr = Result.Nodes.getNodeAs<DeclRefExpr>("use-site");
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>("func");
@@ -41,6 +50,9 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   // If the outermost namespace of the function is __llvm_libc, we're good.
   const auto *NS = dyn_cast<NamespaceDecl>(getOutermostNamespace(FuncDecl));
   if (NS && NS->getName() == "__llvm_libc")
+    return;
+
+  if (IgnoredFunctions.contains(FuncDecl->getName()))
     return;
 
   diag(UsageSiteExpr->getBeginLoc(), "%0 must resolve to a function declared "

@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   size_t len = internal::string_length(src);
   if (len > size)
     len = size;
-  char *dest = reinterpret_cast<char *>(::malloc(len + 1)); // NOLINT
+  char *dest = reinterpret_cast<char *>(::malloc(len + 1));
   if (dest == nullptr)
     return nullptr;
   inline_memcpy(dest, src, len + 1);

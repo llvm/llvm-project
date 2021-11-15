@@ -74,7 +74,7 @@ static inline T strtointeger(const char *__restrict src,
   const char *original_src = src;
 
   if (base < 0 || base == 1 || base > 36) {
-    errno = EINVAL; // NOLINT
+    errno = EINVAL;
     return 0;
   }
 
@@ -114,19 +114,19 @@ static inline T strtointeger(const char *__restrict src,
     // the result cannot change, but we still need to advance src to the end of
     // the number.
     if (result == ABS_MAX) {
-      errno = ERANGE; // NOLINT
+      errno = ERANGE;
       continue;
     }
 
     if (result > ABS_MAX_DIV_BY_BASE) {
       result = ABS_MAX;
-      errno = ERANGE; // NOLINT
+      errno = ERANGE;
     } else {
       result = result * base;
     }
     if (result > ABS_MAX - cur_digit) {
       result = ABS_MAX;
-      errno = ERANGE; // NOLINT
+      errno = ERANGE;
     } else {
       result = result + cur_digit;
     }

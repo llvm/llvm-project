@@ -55,7 +55,7 @@ template <> struct XFlowValues<double> {
 
 template <typename T> static inline T with_errno(T x, int err) {
   if (math_errhandling & MATH_ERRNO)
-    errno = err; // NOLINT
+    errno = err;
   return x;
 }
 

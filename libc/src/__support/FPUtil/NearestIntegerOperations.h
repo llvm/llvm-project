@@ -246,7 +246,7 @@ static inline I roundedFloatToSignedInteger(F x) {
   FPBits<F> bits(x);
   auto setDomainErrorAndRaiseInvalid = []() {
 #if math_errhandling & MATH_ERRNO
-    errno = EDOM; // NOLINT
+    errno = EDOM;
 #endif
 #if math_errhandling & MATH_ERREXCEPT
     raiseExcept(FE_INVALID);
