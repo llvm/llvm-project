@@ -833,6 +833,7 @@ std::optional<Procedure> Procedure::Characterize(
 }
 
 bool Procedure::CanBeCalledViaImplicitInterface() const {
+  // TODO: Pass back information on why we return false
   if (attrs.test(Attr::Elemental) || attrs.test(Attr::BindC)) {
     return false; // 15.4.2.2(5,6)
   } else if (IsFunction() &&
