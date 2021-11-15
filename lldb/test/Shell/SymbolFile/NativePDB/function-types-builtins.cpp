@@ -118,7 +118,7 @@ auto aab = &unary<int(*)[5]>;
 auto aac = &unary<int(&&)[5]>;
 // CHECK: (void (*)(int (&&)[5])) aac = {{.*}}
 auto aad = &unary<int(*const)[5]>;
-// CHECK: (void (*)(int (*)[5])) aad = {{.*}}
+// CHECK: (void (*)(int (*const)[5])) aad = {{.*}}
 
 
 // same test cases with return values, note we can't overload on return type

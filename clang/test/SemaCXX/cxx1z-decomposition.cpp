@@ -9,7 +9,7 @@ void num_elems() {
   int a1[1], a2[2];
 
   auto [] = a0; // expected-warning {{does not allow a decomposition group to be empty}}
-  auto [v1] = a0; // expected-error {{type 'A0' decomposes into 0 elements, but 1 name was provided}}
+  auto [v1] = a0; // expected-error {{type 'struct A0' decomposes into 0 elements, but 1 name was provided}}
   auto [] = a1; // expected-error {{type 'int[1]' decomposes into 1 element, but no names were provided}} expected-warning {{empty}}
   auto [v2] = a1;
   auto [v3, v4] = a1; // expected-error {{type 'int[1]' decomposes into 1 element, but 2 names were provided}}
@@ -70,7 +70,7 @@ void enclosing() {
 void bitfield() {
   struct { int a : 3, : 4, b : 5; } a;
   auto &[x, y] = a;
-  auto &[p, q, r] = a; // expected-error-re {{type '(unnamed struct at {{.*}})' decomposes into 2 elements, but 3 names were provided}}
+  auto &[p, q, r] = a; // expected-error-re {{type 'struct (unnamed struct at {{.*}})' decomposes into 2 elements, but 3 names were provided}}
 }
 
 void for_range() {
