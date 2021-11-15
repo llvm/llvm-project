@@ -1686,6 +1686,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     { ISD::TRUNCATE,  MVT::v16i8,  MVT::v16i16,  3 }, // extend to v16i32
     { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  8 },
+    { ISD::TRUNCATE,  MVT::v64i8,  MVT::v32i16,  8 },
 
     // Sign extend is zmm vpternlogd+vptruncdb.
     // Zero extend is zmm broadcast load+vptruncdw.
