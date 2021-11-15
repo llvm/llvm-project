@@ -47,7 +47,7 @@ Error decodeError(const json::Object &O) {
 // C "closure" for XPCTransport::loop() method
 namespace xpcClosure {
 void connection_handler(xpc_connection_t clientConnection);
-}
+} // namespace xpcClosure
 
 class XPCTransport : public Transport {
 public:
