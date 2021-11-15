@@ -235,6 +235,9 @@ public:
   /// Returns the tiled root operation.
   LinalgOp getRootOp() { return rootOp; }
 
+  /// Returns the loop ops generated from tiling.
+  ArrayRef<scf::ForOp> getLoopOps() { return tileLoopOps; }
+
 private:
   /// Returns true if the tile loop nest has no tile loops.
   bool isEmpty();
