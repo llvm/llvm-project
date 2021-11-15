@@ -862,16 +862,16 @@ private:
       combinedResult = rewriter.create<arith::MulIOp>(loc, mul, acc);
       break;
     case CombiningKind::MINUI:
-      combinedResult = rewriter.create<MinUIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MinUIOp>(loc, mul, acc);
       break;
     case CombiningKind::MINSI:
-      combinedResult = rewriter.create<MinSIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MinSIOp>(loc, mul, acc);
       break;
     case CombiningKind::MAXUI:
-      combinedResult = rewriter.create<MaxUIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MaxUIOp>(loc, mul, acc);
       break;
     case CombiningKind::MAXSI:
-      combinedResult = rewriter.create<MaxSIOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MaxSIOp>(loc, mul, acc);
       break;
     case CombiningKind::AND:
       combinedResult = rewriter.create<arith::AndIOp>(loc, mul, acc);
@@ -910,10 +910,10 @@ private:
       combinedResult = rewriter.create<arith::MulFOp>(loc, mul, acc);
       break;
     case CombiningKind::MINF:
-      combinedResult = rewriter.create<MinFOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MinFOp>(loc, mul, acc);
       break;
     case CombiningKind::MAXF:
-      combinedResult = rewriter.create<MaxFOp>(loc, mul, acc);
+      combinedResult = rewriter.create<arith::MaxFOp>(loc, mul, acc);
       break;
     case CombiningKind::ADD:   // Already handled this special case above.
     case CombiningKind::AND:   // Only valid for integer types.
