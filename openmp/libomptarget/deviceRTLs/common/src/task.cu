@@ -223,4 +223,14 @@ EXTERN void __kmpc_taskloop(kmp_Ident *loc, uint32_t global_tid,
   __kmpc_omp_task_with_deps(loc, global_tid, newKmpTaskDescr, 0, 0, 0, 0);
 }
 
+// All tasks on GPU devices are immediately executed. This makes the
+// omp_fulfill_event routine an empty routine and we don't need to
+// register completion events on detachable tasks
+EXTERN
+kmp_Event_t *__kmpc_task_allow_completion_event(kmp_Ident *loc_ref,
+                                                uint32_t gtid,
+                                                kmp_TaskDescr *task) {
+  return nullptr;
+}
+
 #pragma omp end declare target
