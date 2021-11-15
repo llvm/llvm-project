@@ -213,7 +213,12 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
     // Transfer all symbols with offset less than SplitIndex to NewBlock.
     while (!BlockSymbols.empty() &&
            BlockSymbols.back()->getOffset() < SplitIndex) {
-      BlockSymbols.back()->setBlock(NewBlock);
+      auto *Sym = BlockSymbols.back();
+      // If the symbol extends beyond the split, update the size to be within
+      // the new block.
+      if (Sym->getOffset() + Sym->getSize() > SplitIndex)
+        Sym->setSize(SplitIndex - Sym->getOffset());
+      Sym->setBlock(NewBlock);
       BlockSymbols.pop_back();
     }
 
