@@ -1924,3 +1924,74 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
   %and = and <32 x i1> %y, %cmp
   ret <32 x i1> %and
 }
+
+define <4 x i64> @PR52504(<4 x i16> %t3) {
+; SSE2-LABEL: PR52504:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,1,1]
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    pxor %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    pxor %xmm4, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: PR52504:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE42-NEXT:    pmovsxwq %xmm1, %xmm2
+; SSE42-NEXT:    pmovsxwq %xmm0, %xmm3
+; SSE42-NEXT:    pxor %xmm1, %xmm1
+; SSE42-NEXT:    pxor %xmm0, %xmm0
+; SSE42-NEXT:    pcmpgtq %xmm3, %xmm0
+; SSE42-NEXT:    por %xmm3, %xmm0
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm1
+; SSE42-NEXT:    por %xmm2, %xmm1
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: PR52504:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm2
+; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vcmptrueps %ymm3, %ymm3, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vblendvpd %ymm0, %ymm2, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR52504:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR52504:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxwq %xmm0, %ymm0
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vpmaxsq %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %t14 = sext <4 x i16> %t3 to <4 x i64>
+  %t15 = icmp sgt <4 x i64> %t14, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %t16 = select <4 x i1> %t15, <4 x i64> %t14, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>
+  ret <4 x i64> %t16
+}
