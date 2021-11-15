@@ -1187,6 +1187,7 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         if (D->isThisDeclarationADefinition())
           Out << ";";
         Out << "\n";
+        Indent();
         Visit(I);
       }
   }
