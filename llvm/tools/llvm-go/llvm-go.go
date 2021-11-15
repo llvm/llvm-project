@@ -96,7 +96,11 @@ func llvmFlags() compilerFlags {
 		// needed to resolve dependent symbols
 		stdLibOption = "-stdlib=libc++"
 	}
-	if runtime.GOOS != "darwin" {
+	if runtime.GOOS == "aix" {
+		// AIX linker does not honour `-rpath`, the closest substitution
+		// is `-blibpath`
+		ldflags = "-Wl,-blibpath:" + llvmConfig("--libdir") + " " + ldflags
+	} else if runtime.GOOS != "darwin" {
 		// OS X doesn't like -rpath with cgo. See:
 		// https://github.com/golang/go/issues/7293
 		ldflags = "-Wl,-rpath," + llvmConfig("--libdir") + " " + ldflags
