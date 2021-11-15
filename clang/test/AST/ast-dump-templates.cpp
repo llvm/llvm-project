@@ -78,7 +78,7 @@ struct foo {
 // includes the type for the auto argument and omits it for the fixed
 // type/unsigned argument (see
 // TemplateParameterList::shouldIncludeTypeForArgument)
-// CHECK1: template<> struct foo<0, 0L> {
+// CHECK1: {{^    }}template<> struct foo<0, 0L> {
 void test() {
   foo<0, 0 + 0L>::fn();
 }
@@ -88,6 +88,6 @@ void test() {
 // powered by the shouldIncludeTypeForArgument functionality.
 // Not sure if this it's intentional that these two specializations are rendered
 // differently in this way.
-// CHECK1: template<> struct foo<1, 0 + 0L> {
+// CHECK1: {{^    }}template<> struct foo<1, 0 + 0L> {
 template struct foo<1, 0 + 0L>;
 }
