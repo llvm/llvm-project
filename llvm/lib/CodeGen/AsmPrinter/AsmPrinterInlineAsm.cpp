@@ -351,9 +351,10 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         if (!StrEnd)
           report_fatal_error("Unterminated ${:foo} operand in inline asm"
                              " string: '" + Twine(AsmStr) + "'");
-
-        std::string Val(StrStart, StrEnd);
-        AP->PrintSpecial(MI, OS, Val.c_str());
+        if (CurVariant == -1 || CurVariant == AsmPrinterVariant) {
+          std::string Val(StrStart, StrEnd);
+          AP->PrintSpecial(MI, OS, Val.c_str());
+        }
         LastEmitted = StrEnd+1;
         break;
       }
