@@ -34,6 +34,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceOperandBundles.cpp
   deltas/ReduceSpecialGlobals.cpp
   deltas/ReduceOperands.cpp
+  deltas/ReduceOperandsSkip.cpp
   deltas/ReduceOperandsToArgs.cpp
   deltas/ReduceInstructionsMIR.cpp
   llvm-reduce.cpp

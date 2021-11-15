@@ -3424,23 +3424,24 @@ TEST_F(FunctionAttachmentTest, Verifier) {
   EXPECT_FALSE(verifyFunction(*F));
 }
 
-TEST_F(FunctionAttachmentTest, EntryCount) {
+TEST_F(FunctionAttachmentTest, RealEntryCount) {
   Function *F = getFunction("foo");
   EXPECT_FALSE(F->getEntryCount().hasValue());
   F->setEntryCount(12304, Function::PCT_Real);
   auto Count = F->getEntryCount();
   EXPECT_TRUE(Count.hasValue());
-  EXPECT_EQ(12304u, Count.getCount());
-  EXPECT_EQ(Function::PCT_Real, Count.getType());
+  EXPECT_EQ(12304u, Count->getCount());
+  EXPECT_EQ(Function::PCT_Real, Count->getType());
+}
 
-  // Repeat the same for synthetic counts.
-  F = getFunction("bar");
+TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
+  Function *F = getFunction("bar");
   EXPECT_FALSE(F->getEntryCount().hasValue());
   F->setEntryCount(123, Function::PCT_Synthetic);
-  Count = F->getEntryCount(true /*allow synthetic*/);
+  auto Count = F->getEntryCount(true /*allow synthetic*/);
   EXPECT_TRUE(Count.hasValue());
-  EXPECT_EQ(123u, Count.getCount());
-  EXPECT_EQ(Function::PCT_Synthetic, Count.getType());
+  EXPECT_EQ(123u, Count->getCount());
+  EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
 }
 
 TEST_F(FunctionAttachmentTest, SubprogramAttachment) {

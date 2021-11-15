@@ -52,6 +52,95 @@ using IsAdaptedIterCategorySame =
   std::is_same<typename std::iterator_traits<It>::iterator_category,
                typename std::iterator_traits<A<It>>::iterator_category>;
 
+// Check that dereferencing works correctly adapting pointers and proxies.
+template <class T>
+struct PointerWrapper : public iterator_adaptor_base<PointerWrapper<T>, T *> {
+  PointerWrapper(T *I) : PointerWrapper::iterator_adaptor_base(I) {}
+};
+struct IntProxy {
+  int &I;
+  IntProxy(int &I) : I(I) {}
+  void operator=(int NewValue) { I = NewValue; }
+};
+struct ConstIntProxy {
+  const int &I;
+  ConstIntProxy(const int &I) : I(I) {}
+};
+template <class T, class ProxyT>
+struct PointerProxyWrapper
+    : public iterator_adaptor_base<PointerProxyWrapper<T, ProxyT>, T *,
+                                   std::random_access_iterator_tag, T,
+                                   ptrdiff_t, T *, ProxyT> {
+  PointerProxyWrapper(T *I) : PointerProxyWrapper::iterator_adaptor_base(I) {}
+};
+using IntIterator = PointerWrapper<int>;
+using ConstIntIterator = PointerWrapper<const int>;
+using IntProxyIterator = PointerProxyWrapper<int, IntProxy>;
+using ConstIntProxyIterator = PointerProxyWrapper<const int, ConstIntProxy>;
+
+// There should only be a single (const-qualified) operator*, operator->, and
+// operator[]. This test confirms that there isn't a non-const overload. Rather
+// than adding those, users should double-check that T, PointerT, and ReferenceT
+// have the right constness, and/or make fields mutable.
+static_assert(&IntIterator::operator* == &IntIterator::operator*, "");
+static_assert(&IntIterator::operator-> == &IntIterator::operator->, "");
+static_assert(&IntIterator::operator[] == &IntIterator::operator[], "");
+
+template <class T,
+          std::enable_if_t<std::is_assignable<T, int>::value, bool> = false>
+constexpr bool canAssignFromInt(T &&) {
+  return true;
+}
+template <class T,
+          std::enable_if_t<!std::is_assignable<T, int>::value, bool> = false>
+constexpr bool canAssignFromInt(T &&) {
+  return false;
+}
+
+TEST(IteratorAdaptorTest, Dereference) {
+  int Number = 1;
+
+  // Construct some iterators and check whether they can be assigned to.
+  IntIterator I(&Number);
+  const IntIterator IC(&Number);
+  ConstIntIterator CI(&Number);
+  const ConstIntIterator CIC(&Number);
+  EXPECT_EQ(true, canAssignFromInt(*I));    // int *
+  EXPECT_EQ(true, canAssignFromInt(*IC));   // int *const
+  EXPECT_EQ(false, canAssignFromInt(*CI));  // const int *
+  EXPECT_EQ(false, canAssignFromInt(*CIC)); // const int *const
+
+  // Prove that dereference and assignment work.
+  EXPECT_EQ(1, *I);
+  EXPECT_EQ(1, *IC);
+  EXPECT_EQ(1, *CI);
+  EXPECT_EQ(1, *CIC);
+  *I = 2;
+  EXPECT_EQ(2, Number);
+  *IC = 3;
+  EXPECT_EQ(3, Number);
+
+  // Construct some proxy iterators and check whether they can be assigned to.
+  IntProxyIterator P(&Number);
+  const IntProxyIterator PC(&Number);
+  ConstIntProxyIterator CP(&Number);
+  const ConstIntProxyIterator CPC(&Number);
+  EXPECT_EQ(true, canAssignFromInt(*P));    // int *
+  EXPECT_EQ(true, canAssignFromInt(*PC));   // int *const
+  EXPECT_EQ(false, canAssignFromInt(*CP));  // const int *
+  EXPECT_EQ(false, canAssignFromInt(*CPC)); // const int *const
+
+  // Prove that dereference and assignment work.
+  EXPECT_EQ(3, (*P).I);
+  EXPECT_EQ(3, (*PC).I);
+  EXPECT_EQ(3, (*CP).I);
+  EXPECT_EQ(3, (*CPC).I);
+  *P = 4;
+  EXPECT_EQ(4, Number);
+  *PC = 5;
+  EXPECT_EQ(5, Number);
+}
+
 // pointeE_iterator
 static_assert(IsAdaptedIterCategorySame<pointee_iterator_defaulted,
                                         RandomAccessIter>::value, "");
@@ -178,6 +267,16 @@ TEST(FilterIteratorTest, Lambda) {
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
 }
 
+TEST(FilterIteratorTest, Enumerate) {
+  auto IsOdd = [](auto N) { return N.value() % 2 == 1; };
+  int A[] = {0, 1, 2, 3, 4, 5, 6};
+  auto Enumerate = llvm::enumerate(A);
+  SmallVector<int> Actual;
+  for (auto IndexedValue : make_filter_range(Enumerate, IsOdd))
+    Actual.push_back(IndexedValue.value());
+  EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
+}
+
 TEST(FilterIteratorTest, CallableObject) {
   int Counter = 0;
   struct Callable {
@@ -224,10 +323,7 @@ TEST(FilterIteratorTest, Composition) {
 TEST(FilterIteratorTest, InputIterator) {
   struct InputIterator
       : iterator_adaptor_base<InputIterator, int *, std::input_iterator_tag> {
-    using BaseT =
-        iterator_adaptor_base<InputIterator, int *, std::input_iterator_tag>;
-
-    InputIterator(int *It) : BaseT(It) {}
+    InputIterator(int *It) : InputIterator::iterator_adaptor_base(It) {}
   };
 
   auto IsOdd = [](int N) { return N % 2 == 1; };

@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -36,6 +37,7 @@ struct LinalgComprehensiveModuleBufferize
                 tensor::TensorDialect, vector::VectorDialect, scf::SCFDialect,
                 arith::ArithmeticDialect, StandardOpsDialect, AffineDialect>();
     registerBufferizableOpInterfaceExternalModels(registry);
+    linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };
 } // end namespace
@@ -70,6 +72,10 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   options.allowReturnMemref = allowReturnMemref;
   options.analysisFuzzerSeed = analysisFuzzerSeed;
   options.testAnalysisOnly = testAnalysisOnly;
+
+  // Enable InitTensorOp elimination.
+  options.addPostAnalysisStep<
+      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);

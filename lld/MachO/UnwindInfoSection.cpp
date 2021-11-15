@@ -295,7 +295,8 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
       return;
 
     // Write the rest of the CUE.
-    memcpy(buf, d->compactUnwind->data.data(), d->compactUnwind->data.size());
+    memcpy(buf + sizeof(Ptr), d->compactUnwind->data.data(),
+           d->compactUnwind->data.size());
     for (const Reloc &r : d->compactUnwind->relocs) {
       uint64_t referentVA = 0;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
@@ -309,9 +310,8 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
         }
       } else {
         auto *referentIsec = r.referent.get<InputSection *>();
-        ConcatInputSection *concatIsec = checkTextSegment(referentIsec);
-        if (!concatIsec->shouldOmitFromOutput())
-          referentVA = referentIsec->getVA(r.addend);
+        checkTextSegment(referentIsec);
+        referentVA = referentIsec->getVA(r.addend);
       }
       writeAddress(buf + r.offset, referentVA, r.length);
     }
@@ -439,8 +439,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
         continue;
       if (lsda1 == nullptr || lsda2 == nullptr)
         break;
-      if (lsda1->referent.get<InputSection *>() !=
-          lsda2->referent.get<InputSection *>())
+      if (lsda1->referent != lsda2->referent)
         break;
       if (lsda1->addend != lsda2->addend)
         break;
@@ -536,9 +535,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   }
 
   for (size_t idx : cuIndices) {
-    const CompactUnwindEntry<Ptr> &cu = cuEntries[idx];
     lsdaIndex[idx] = entriesWithLsda.size();
-    if (cu.lsda != 0)
+    if (findLsdaReloc(symbolsVec[idx].second->compactUnwind))
       entriesWithLsda.push_back(idx);
   }
 
@@ -617,8 +615,14 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
     const CompactUnwindEntry<Ptr> &cu = cuEntries[idx];
     const Defined *d = symbolsVec[idx].second;
     if (Reloc *r = findLsdaReloc(d->compactUnwind)) {
-      auto *isec = r->referent.get<InputSection *>();
-      lep->lsdaOffset = isec->getVA(r->addend) - in.header->addr;
+      uint64_t va;
+      if (auto *isec = r->referent.dyn_cast<InputSection *>()) {
+        va = isec->getVA(r->addend);
+      } else {
+        auto *sym = r->referent.get<Symbol *>();
+        va = sym->getVA() + r->addend;
+      }
+      lep->lsdaOffset = va - in.header->addr;
     }
     lep->functionOffset = cu.functionAddress - in.header->addr;
     lep++;

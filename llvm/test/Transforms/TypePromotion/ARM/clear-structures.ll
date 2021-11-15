@@ -39,9 +39,9 @@ define i32 @clear_structures(i8* nocapture readonly %fmt, [1 x i32] %ap.coerce, 
 ; CHECK-NEXT:    [[INCDEC_PTR23:%.*]] = getelementptr inbounds i8, i8* [[FMT_ADDR_0_PN]], i32 2
 ; CHECK-NEXT:    [[DOTPR74:%.*]] = load i8, i8* [[INCDEC_PTR23]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[DOTPR74]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 48
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 10
-; CHECK-NEXT:    br i1 [[TMP5]], label [[WHILE_COND24:%.*]], label [[COND_END]]
+; CHECK-NEXT:    [[DOTPR74_OFF:%.*]] = add i32 [[TMP3]], -48
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[DOTPR74_OFF]], 10
+; CHECK-NEXT:    br i1 [[TMP4]], label [[WHILE_COND24:%.*]], label [[COND_END]]
 ; CHECK:       while.cond24:
 ; CHECK-NEXT:    br label [[WHILE_COND24]]
 ; CHECK:       cond.end:

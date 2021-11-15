@@ -16,8 +16,8 @@ concepts. This document provides an overview of the general usage of the back-
 end, including a description of the conventions used and the set of accepted
 LLVM IR.
 
-.. note:: 
-   
+.. note::
+
    This document assumes a basic familiarity with CUDA and the PTX
    assembly language. Information about the CUDA Driver API and the PTX assembly
    language can be found in the `CUDA documentation
@@ -519,7 +519,7 @@ The output we get from ``llc`` (as of LLVM 3.4):
 Dissecting the Kernel
 ---------------------
 
-Now let us dissect the LLVM IR that makes up this kernel. 
+Now let us dissect the LLVM IR that makes up this kernel.
 
 Data Layout
 ^^^^^^^^^^^
@@ -969,4 +969,3 @@ This gives us the following PTX (excerpt):
     st.global.f32   [%rl1], %f110;
     ret;
   }
-

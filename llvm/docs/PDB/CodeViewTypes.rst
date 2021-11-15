@@ -33,7 +33,7 @@ all (if this type stream appears in the ``.debug$T`` section of an object file).
 Padding is implemented by inserting a decreasing sequence of `<_padding_records>`
 that terminates with ``LF_PAD0``.
 
-The final category of record is a ``member record``.  One particular leaf type -- 
+The final category of record is a ``member record``.  One particular leaf type --
 ``LF_FIELDLIST`` -- contains a series of embedded records.  While the outer
 ``LF_FIELDLIST`` describes its length (like any other leaf record), the embedded
 records -- called ``member records`` do not.

@@ -227,10 +227,10 @@ entry:
 ; ASM32-NEXT:          .byte   3                               # Advance line 1
 ; ASM32-NEXT:          .byte   1
 ; ASM32-NEXT:          .byte   1
-; ASM32-NEXT:          .byte   0                               # Set address to L..sec_end0
+; ASM32-NEXT:          .byte   0                               # Set address to L..func_end0
 ; ASM32-NEXT:          .byte   5
 ; ASM32-NEXT:          .byte   2
-; ASM32-NEXT:          .vbyte  4, L..sec_end0
+; ASM32-NEXT:          .vbyte  4, L..func_end0
 ; ASM32-NEXT:          .byte   0                               # End sequence
 ; ASM32-NEXT:          .byte   1
 ; ASM32-NEXT:          .byte   1
@@ -428,10 +428,10 @@ entry:
 ; ASM64-NEXT:          .byte   3                               # Advance line 1
 ; ASM64-NEXT:          .byte   1
 ; ASM64-NEXT:          .byte   1
-; ASM64-NEXT:          .byte   0                               # Set address to L..sec_end0
+; ASM64-NEXT:          .byte   0                               # Set address to L..func_end0
 ; ASM64-NEXT:          .byte   9
 ; ASM64-NEXT:          .byte   2
-; ASM64-NEXT:          .vbyte  8, L..sec_end0
+; ASM64-NEXT:          .vbyte  8, L..func_end0
 ; ASM64-NEXT:          .byte   0                               # End sequence
 ; ASM64-NEXT:          .byte   1
 ; ASM64-NEXT:          .byte   1

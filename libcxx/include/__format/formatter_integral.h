@@ -404,7 +404,7 @@ private:
       __out_it = _VSTD::copy(__begin, __first, _VSTD::move(__out_it));
       this->__alignment = _Flags::_Alignment::__right;
       this->__fill = _CharT('0');
-      unsigned __size = __first - __begin;
+      uint32_t __size = __first - __begin;
       this->__width -= _VSTD::min(__size, this->__width);
     }
 

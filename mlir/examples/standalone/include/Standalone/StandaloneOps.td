@@ -9,7 +9,7 @@
 #ifndef STANDALONE_OPS
 #define STANDALONE_OPS
 
-include "StandaloneDialect.td"
+include "Standalone/StandaloneDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Standalone_FooOp : Standalone_Op<"foo", [NoSideEffect,

@@ -50,6 +50,7 @@ extern "C" SEL sel_registerName(const char *) ORC_RT_WEAK_IMPORT;
 // Swift types.
 class ProtocolRecord;
 class ProtocolConformanceRecord;
+class TypeMetadataRecord;
 
 extern "C" void
 swift_registerProtocols(const ProtocolRecord *begin,
@@ -58,6 +59,10 @@ swift_registerProtocols(const ProtocolRecord *begin,
 extern "C" void swift_registerProtocolConformances(
     const ProtocolConformanceRecord *begin,
     const ProtocolConformanceRecord *end) ORC_RT_WEAK_IMPORT;
+
+extern "C" void swift_registerTypeMetadataRecords(
+    const TypeMetadataRecord *begin,
+    const TypeMetadataRecord *end) ORC_RT_WEAK_IMPORT;
 
 namespace {
 
@@ -172,6 +177,21 @@ Error registerSwift5ProtocolConformances(
   return Error::success();
 }
 
+Error registerSwift5Types(const std::vector<ExecutorAddrRange> &Sections,
+                          const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!Sections.empty() && !swift_registerTypeMetadataRecords))
+    return make_error<StringError>(
+        "swift_registerTypeMetadataRecords is not available");
+
+  for (const auto &Section : Sections)
+    swift_registerTypeMetadataRecords(
+        Section.Start.toPtr<const TypeMetadataRecord *>(),
+        Section.End.toPtr<const TypeMetadataRecord *>());
+
+  return Error::success();
+}
+
 Error runModInits(const std::vector<ExecutorAddrRange> &ModInitsSections,
                   const MachOJITDylibInitializers &MOJDIs) {
 
@@ -261,6 +281,7 @@ private:
        {"__DATA,__objc_classlist", registerObjCClasses},
        {"__TEXT,__swift5_protos", registerSwift5Protocols},
        {"__TEXT,__swift5_proto", registerSwift5ProtocolConformances},
+       {"__TEXT,__swift5_types", registerSwift5Types},
        {"__DATA,__mod_init_func", runModInits}};
 
   // FIXME: Move to thread-state.
@@ -308,7 +329,7 @@ Error MachOPlatformRuntimeState::registerThreadDataSection(
 Error MachOPlatformRuntimeState::deregisterThreadDataSection(
     span<const char> ThreadDataSection) {
   std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
-  auto I = ThreadDataSections.find(ThreadDataSection.end());
+  auto I = ThreadDataSections.find(ThreadDataSection.data());
   if (I == ThreadDataSections.end())
     return make_error<StringError>("Attempt to deregister unknown thread data "
                                    "section");

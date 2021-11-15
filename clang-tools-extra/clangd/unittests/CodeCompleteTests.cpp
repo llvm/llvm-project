@@ -1662,6 +1662,9 @@ TEST(CompletionTest, OverloadBundling) {
       // Overload with bool
       int a(bool);
       int b(float);
+
+      X(int);
+      X(float);
     };
     int GFuncC(int);
     int GFuncD(int);
@@ -1670,6 +1673,10 @@ TEST(CompletionTest, OverloadBundling) {
   // Member completions are bundled.
   EXPECT_THAT(completions(Context + "int y = X().^", {}, Opts).Completions,
               UnorderedElementsAre(Labeled("a(…)"), Labeled("b(float)")));
+
+  // Constructor completions are bundled.
+  EXPECT_THAT(completions(Context + "X z = X^", {}, Opts).Completions,
+              UnorderedElementsAre(Labeled("X"), Labeled("X(…)")));
 
   // Non-member completions are bundled, including index+sema.
   Symbol NoArgsGFunc = func("GFuncC");
@@ -1886,6 +1893,11 @@ TEST(CompletionTest, Render) {
   R = C.render(Opts);
   EXPECT_EQ(R.insertText, "Foo::x(${0:bool})");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::Snippet);
+
+  C.SnippetSuffix = "";
+  R = C.render(Opts);
+  EXPECT_EQ(R.insertText, "Foo::x");
+  EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
 
   Include.Insertion.emplace();
   R = C.render(Opts);
@@ -2317,6 +2329,15 @@ TEST(CompletionTest, CompletionFunctionArgsDisabled) {
         Results.Completions,
         UnorderedElementsAre(AllOf(Named("foo_class"), SnippetSuffix("<$0>")),
                              AllOf(Named("foo_alias"), SnippetSuffix("<$0>"))));
+  }
+  {
+    auto Results = completions(
+        R"cpp(
+      #define FOO(x, y) x##f
+      FO^ )cpp",
+        {}, Opts);
+    EXPECT_THAT(Results.Completions, UnorderedElementsAre(AllOf(
+                                         Named("FOO"), SnippetSuffix("($0)"))));
   }
 }
 
@@ -3165,6 +3186,7 @@ TEST(CompletionTest, FunctionArgsExist) {
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
   std::string Context = R"cpp(
+    #define MACRO(x)
     int foo(int A);
     int bar();
     struct Object {
@@ -3212,6 +3234,9 @@ TEST(CompletionTest, FunctionArgsExist) {
       Contains(AllOf(Labeled("Container<typename T>(int Size)"),
                      SnippetSuffix(""),
                      Kind(CompletionItemKind::Constructor))));
+  EXPECT_THAT(completions(Context + "MAC^(2)", {}, Opts).Completions,
+              Contains(AllOf(Labeled("MACRO(x)"), SnippetSuffix(""),
+                             Kind(CompletionItemKind::Text))));
 }
 
 TEST(CompletionTest, NoCrashDueToMacroOrdering) {

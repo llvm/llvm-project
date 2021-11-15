@@ -1643,10 +1643,8 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   // If this load follows a GEP, see if we can PRE the indices before analyzing.
   if (GetElementPtrInst *GEP =
           dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
-    for (GetElementPtrInst::op_iterator OI = GEP->idx_begin(),
-                                        OE = GEP->idx_end();
-         OI != OE; ++OI)
-      if (Instruction *I = dyn_cast<Instruction>(OI->get()))
+    for (Use &U : GEP->indices())
+      if (Instruction *I = dyn_cast<Instruction>(U.get()))
         Changed |= performScalarPRE(I);
   }
 

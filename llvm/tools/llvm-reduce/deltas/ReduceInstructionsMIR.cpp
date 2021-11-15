@@ -44,23 +44,6 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
   return 0;
 }
 
-static unsigned countInstructions(MachineFunction &MF) {
-  unsigned Count = 0;
-  MachineInstr *TopMI = nullptr;
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
-      if (MI.isTerminator())
-        continue;
-      if (MBB.isEntryBlock() && !TopMI) {
-        TopMI = &MI;
-        continue;
-      }
-      Count++;
-    }
-  }
-  return Count;
-}
-
 static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
   MachineDominatorTree MDT;
   MDT.runOnMachineFunction(MF);
@@ -138,6 +121,5 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
 
 void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Instructions...\n";
-  unsigned InstCount = countInstructions(Test.getProgram());
-  runDeltaPass(Test, InstCount, extractInstrFromModule);
+  runDeltaPass(Test, extractInstrFromModule);
 }

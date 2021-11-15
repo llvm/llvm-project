@@ -1902,6 +1902,11 @@ def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
   let assemblyFormat = "$compound attr-dict-with-keyword";
 }
 
+def FormatNestedAttr : TEST_Op<"format_nested_attr"> {
+  let arguments = (ins CompoundAttrNested:$nested);
+  let assemblyFormat = "$nested attr-dict-with-keyword";
+}
+
 //===----------------------------------------------------------------------===//
 // Custom Directives
 

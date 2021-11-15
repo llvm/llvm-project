@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/stop.h"
+#include "environment.h"
 #include "file.h"
 #include "io-error.h"
 #include "terminator.h"
@@ -52,6 +53,9 @@ static void CloseAllExternalUnits(const char *why) {
 [[noreturn]] void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
   CloseAllExternalUnits("STOP statement");
+  if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
+    quiet = true;
+  }
   if (!quiet) {
     std::fprintf(stderr, "Fortran %s", isErrorStop ? "ERROR STOP" : "STOP");
     if (code != EXIT_SUCCESS) {

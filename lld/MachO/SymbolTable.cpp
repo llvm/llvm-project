@@ -49,8 +49,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern, bool isThumb,
-                                 bool isReferencedDynamically,
-                                 bool noDeadStrip) {
+                                 bool isReferencedDynamically, bool noDeadStrip,
+                                 bool isWeakDefCanBeHidden) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -62,10 +62,10 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef) {
-
         // See further comment in createDefined() in InputFiles.cpp
         if (defined->isWeakDef()) {
           defined->privateExtern &= isPrivateExtern;
+          defined->weakDefCanBeHidden &= isWeakDefCanBeHidden;
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
         }
@@ -98,8 +98,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
-      isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip);
-  defined->overridesWeakDef = overridesWeakDef;
+      isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip,
+      overridesWeakDef, isWeakDefCanBeHidden);
   return defined;
 }
 
@@ -195,10 +195,11 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint64_t value, bool isPrivateExtern,
                                    bool includeInSymtab,
                                    bool referencedDynamically) {
-  Defined *s = addDefined(name, nullptr, isec, value, /*size=*/0,
-                          /*isWeakDef=*/false, isPrivateExtern,
-                          /*isThumb=*/false, referencedDynamically,
-                          /*noDeadStrip=*/false);
+  Defined *s =
+      addDefined(name, nullptr, isec, value, /*size=*/0,
+                 /*isWeakDef=*/false, isPrivateExtern,
+                 /*isThumb=*/false, referencedDynamically,
+                 /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
   s->includeInSymtab = includeInSymtab;
   return s;
 }

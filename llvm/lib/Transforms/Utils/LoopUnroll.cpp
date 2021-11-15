@@ -514,6 +514,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
   identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
 
+  // We place the unrolled iterations immediately after the original loop
+  // latch.  This is a reasonable default placement if we don't have block
+  // frequencies, and if we do, well the layout will be adjusted later.
+  auto BlockInsertPt = std::next(LatchBlock->getIterator());
   for (unsigned It = 1; It != ULO.Count; ++It) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -522,7 +526,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
       ValueToValueMapTy VMap;
       BasicBlock *New = CloneBasicBlock(*BB, VMap, "." + Twine(It));
-      Header->getParent()->getBasicBlockList().push_back(New);
+      Header->getParent()->getBasicBlockList().insert(BlockInsertPt, New);
 
       assert((*BB != Header || LI->getLoopFor(*BB) == L) &&
              "Header should not be in a sub-loop");

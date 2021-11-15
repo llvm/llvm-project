@@ -90,15 +90,15 @@ define void @vdiv(double* %x, double* %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL:%.*]]
 ; CHECK:       for.body.prol:
 ; CHECK-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL:%.*]], [[FOR_BODY_PROL]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PROL_PREHEADER]] ]
-; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ [[PROL_ITER_SUB:%.*]], [[FOR_BODY_PROL]] ], [ [[XTRAITER]], [[FOR_BODY_PROL_PREHEADER]] ]
+; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ [[PROL_ITER_NEXT:%.*]], [[FOR_BODY_PROL]] ], [ 0, [[FOR_BODY_PROL_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds double, double* [[Y]], i64 [[INDVARS_IV_PROL]]
 ; CHECK-NEXT:    [[T0_PROL:%.*]] = load double, double* [[ARRAYIDX_PROL]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast double [[T0_PROL]], [[TMP27]]
 ; CHECK-NEXT:    [[ARRAYIDX2_PROL:%.*]] = getelementptr inbounds double, double* [[X]], i64 [[INDVARS_IV_PROL]]
 ; CHECK-NEXT:    store double [[TMP28]], double* [[ARRAYIDX2_PROL]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nuw nsw i64 [[INDVARS_IV_PROL]], 1
-; CHECK-NEXT:    [[PROL_ITER_SUB]] = add i64 [[PROL_ITER]], -1
-; CHECK-NEXT:    [[PROL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[PROL_ITER_SUB]], 0
+; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; CHECK-NEXT:    [[PROL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP_NOT]], label [[FOR_BODY_PROL_LOOPEXIT]], label [[FOR_BODY_PROL]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       for.body.prol.loopexit:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER18]] ], [ [[INDVARS_IV_NEXT_PROL]], [[FOR_BODY_PROL]] ]

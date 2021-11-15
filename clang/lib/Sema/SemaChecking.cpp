@@ -2741,8 +2741,8 @@ static bool isValidBPFPreserveFieldInfoArg(Expr *Arg) {
   // to BPF backend to check whether the access is a
   // field access or not.
   return (Arg->IgnoreParens()->getObjectKind() == OK_BitField ||
-          dyn_cast<MemberExpr>(Arg->IgnoreParens()) ||
-          dyn_cast<ArraySubscriptExpr>(Arg->IgnoreParens()));
+          isa<MemberExpr>(Arg->IgnoreParens()) ||
+          isa<ArraySubscriptExpr>(Arg->IgnoreParens()));
 }
 
 static bool isEltOfVectorTy(ASTContext &Context, CallExpr *Call, Sema &S,
@@ -2766,8 +2766,8 @@ static bool isValidBPFPreserveTypeInfoArg(Expr *Arg) {
   //   1. __builtin_preserve_type_info(*(<type> *)0, flag);
   //   2. <type> var;
   //      __builtin_preserve_type_info(var, flag);
-  if (!dyn_cast<DeclRefExpr>(Arg->IgnoreParens()) &&
-      !dyn_cast<UnaryOperator>(Arg->IgnoreParens()))
+  if (!isa<DeclRefExpr>(Arg->IgnoreParens()) &&
+      !isa<UnaryOperator>(Arg->IgnoreParens()))
     return false;
 
   // Typedef type.

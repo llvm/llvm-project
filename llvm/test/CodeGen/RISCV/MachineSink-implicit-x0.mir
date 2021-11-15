@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=riscv32 %s -run-pass=machine-sink -o - | FileCheck %s
+
+# Verify that sinking of '%20:gpr = LUI 1, implicit $x0' is not inhibited by
+# the implicit use of '$x0'.
+# Register '$x0' is a 'MRI->isConstantPhysReg()' on RISCV and such uses should
+# not inhibit sinking transformation even though they are livein to the block
+# they are to be sunk into (inhibit under such conditions should only happen
+# for defines).
+
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI 1, implicit $x0
+  bb.0:
+    liveins: $x10
+    %10:gpr = COPY $x10
+    %20:gpr = LUI 1, implicit $x0
+    BEQ %10, %10, %bb.2
+    PseudoBR %bb.1
+  bb.1:
+    liveins: $x0
+    %30:gpr = ADDI %20, 5
+    PseudoBR %bb.3
+  bb.2:
+    PseudoBR %bb.3
+  bb.3:
+    PseudoRET
+...

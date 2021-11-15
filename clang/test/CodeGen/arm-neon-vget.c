@@ -1,5 +1,3 @@
-// REQUIRES: aarch64-registered-target || arm-registered-target
-
 // RUN: %clang_cc1 -triple thumbv7-apple-darwin \
 // RUN:   -target-abi apcs-gnu \
 // RUN:   -target-cpu cortex-a8 \
@@ -7,6 +5,8 @@
 // RUN:   -target-feature +soft-float-abi \
 // RUN:   -ffreestanding \
 // RUN:   -disable-O0-optnone -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 

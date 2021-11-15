@@ -84,7 +84,7 @@ private:
   bool IsZero() const { return x_.IsZero(); }
 
   decimal::ConversionToDecimalResult Convert(
-      int significantDigits, const DataEdit &, int flags = 0);
+      int significantDigits, enum decimal::FortranRounding, int flags = 0);
 
   BinaryFloatingPoint x_;
   char buffer_[BinaryFloatingPoint::maxDecimalConversionDigits +

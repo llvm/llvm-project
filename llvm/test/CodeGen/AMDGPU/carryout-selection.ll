@@ -372,9 +372,9 @@ define amdgpu_kernel void @vusubo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GCN-ISEL-LABEL: body:
 ; GCN-ISEL-LABEL: bb.3
 ; GCN-ISEL: %[[CARRY:[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64
-; GCN-ISEL: S_ADD_CO_PSEUDO %{{[0-9]+}}, %{{[0-9]+}}, %[[CARRY]]
+; GCN-ISEL: S_ADD_CO_PSEUDO %{{[0-9]+}}, killed %{{[0-9]+}}, killed %[[CARRY]]
 ; GCN-ISEL: %[[CARRY:[0-9]+]]:sreg_64_xexec = V_SUB_CO_U32_e64
-; GCN-ISEL: S_SUB_CO_PSEUDO %{{[0-9]+}}, %{{[0-9]+}}, %[[CARRY]]
+; GCN-ISEL: S_SUB_CO_PSEUDO killed %{{[0-9]+}}, %{{[0-9]+}}, %[[CARRY]]
 define amdgpu_kernel void @sudiv64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
   %result = udiv i64 %x, %y
   store i64 %result, i64 addrspace(1)* %out

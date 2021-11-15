@@ -390,8 +390,8 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
         continue;
       if (!isPredicate(R))
         continue;
-      for (auto U = MRI->use_begin(R); U != MRI->use_end(); ++U)
-        if (U->getParent()->isPHI())
+      for (const MachineOperand &U : MRI->use_operands(R))
+        if (U.getParent()->isPHI())
           return false;
     }
   }

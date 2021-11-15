@@ -170,14 +170,14 @@ ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
 
 ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 
-#if SANITIZER_LINUX && defined(__x86_64__)
-#include "sanitizer_syscall_linux_x86_64.inc"
-#elif SANITIZER_LINUX && SANITIZER_RISCV64
-#include "sanitizer_syscall_linux_riscv64.inc"
-#elif SANITIZER_LINUX && defined(__aarch64__)
-#include "sanitizer_syscall_linux_aarch64.inc"
-#elif SANITIZER_LINUX && defined(__arm__)
-#include "sanitizer_syscall_linux_arm.inc"
+#  if SANITIZER_LINUX && defined(__x86_64__)
+#    include "sanitizer_syscall_linux_x86_64.inc"
+#  elif SANITIZER_LINUX && SANITIZER_RISCV64
+#    include "sanitizer_syscall_linux_riscv64.inc"
+#  elif SANITIZER_LINUX && defined(__aarch64__)
+#    include "sanitizer_syscall_linux_aarch64.inc"
+#  elif SANITIZER_LINUX && defined(__arm__)
+#    include "sanitizer_syscall_linux_arm.inc"
 #  elif SANITIZER_LINUX && defined(__hexagon__)
 #    include "sanitizer_syscall_linux_hexagon.inc"
 #  else
@@ -1380,7 +1380,7 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 #elif defined(__aarch64__)
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr) {
-  long long res;
+  register long long res __asm__("x0");
   if (!fn || !child_stack)
     return -EINVAL;
   CHECK_EQ(0, (uptr)child_stack % 16);

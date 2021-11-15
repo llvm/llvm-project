@@ -6,7 +6,7 @@ readability-misleading-indentation
 Correct indentation helps to understand code. Mismatch of the syntactical
 structure and the indentation of the code may hide serious problems.
 Missing braces can also make it significantly harder to read the code,
-therefore it is important to use braces. 
+therefore it is important to use braces.
 
 The way to avoid dangling else is to always check that an ``else`` belongs
 to the ``if`` that begins in the same column.

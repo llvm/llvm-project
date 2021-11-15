@@ -377,7 +377,7 @@ def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 } // SchedRW
 } // Uses = [FPCW], mayRaiseFPException = 1
 
-let SchedRW = [WriteFTest] in {
+let SchedRW = [WriteFTest], Defs = [FPSW] in {
 def XAM_Fp32  : FpIf32<(outs), (ins RFP32:$src), OneArgFP, []>;
 def XAM_Fp64  : FpIf64<(outs), (ins RFP64:$src), OneArgFP, []>;
 def XAM_Fp80  : FpI_<(outs), (ins RFP80:$src), OneArgFP, []>;

@@ -1031,6 +1031,19 @@ const Symbol &GetAssociationRoot(const Symbol &original) {
   return symbol;
 }
 
+const Symbol *GetMainEntry(const Symbol *symbol) {
+  if (symbol) {
+    if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
+      if (const Scope * scope{subpDetails->entryScope()}) {
+        if (const Symbol * main{scope->symbol()}) {
+          return main;
+        }
+      }
+    }
+  }
+  return symbol;
+}
+
 bool IsVariableName(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
   if (symbol.has<ObjectEntityDetails>()) {
@@ -1044,7 +1057,8 @@ bool IsVariableName(const Symbol &original) {
 }
 
 bool IsPureProcedure(const Symbol &original) {
-  const Symbol &symbol{original.GetUltimate()};
+  // An ENTRY is pure if its containing subprogram is
+  const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {
       // procedure component with a pure interface

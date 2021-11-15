@@ -365,7 +365,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
 
       if (Dst &&
           DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
-        // This will work if the tied src is acessing WORD_0, and the dst is
+        // This will work if the tied src is accessing WORD_0, and the dst is
         // writing WORD_1. Modifiers don't matter because all the bits that
         // would be impacted are being overwritten by the dst.
         // Any other case will not work.
