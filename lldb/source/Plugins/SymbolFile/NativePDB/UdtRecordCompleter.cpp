@@ -28,13 +28,15 @@ using namespace lldb_private::npdb;
 
 using Error = llvm::Error;
 
-UdtRecordCompleter::UdtRecordCompleter(PdbTypeSymId id,
-                                       CompilerType &derived_ct,
-                                       clang::TagDecl &tag_decl,
-                                       PdbAstBuilder &ast_builder,
-                                       PdbIndex &index)
+UdtRecordCompleter::UdtRecordCompleter(
+    PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
+    PdbAstBuilder &ast_builder, PdbIndex &index,
+    llvm::DenseMap<lldb::opaque_compiler_type_t,
+                   llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
+        &cxx_record_map)
     : m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
-      m_ast_builder(ast_builder), m_index(index) {
+      m_ast_builder(ast_builder), m_index(index),
+      m_cxx_record_map(cxx_record_map) {
   CVType cvt = m_index.tpi().getType(m_id.index);
   switch (cvt.kind()) {
   case LF_ENUM:
@@ -78,14 +80,24 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
   clang::QualType method_qt =
       m_ast_builder.GetOrCreateType(PdbTypeSymId(type_idx));
   m_ast_builder.CompleteType(method_qt);
+  CompilerType method_ct = m_ast_builder.ToCompilerType(method_qt);
+  lldb::opaque_compiler_type_t derived_opaque_ty = m_derived_ct.GetOpaqueQualType();
+  auto iter = m_cxx_record_map.find(derived_opaque_ty);
+  if (iter != m_cxx_record_map.end()) {
+    if (iter->getSecond().contains({name, method_ct})) {
+      return;
+    }
+  }
 
   lldb::AccessType access_type = TranslateMemberAccess(access);
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      m_derived_ct.GetOpaqueQualType(), name.data(), nullptr,
-      m_ast_builder.ToCompilerType(method_qt), access_type, attrs.isVirtual(),
-      attrs.isStatic(), false, false, false, is_artificial);
+      derived_opaque_ty, name.data(), nullptr, method_ct,
+      access_type, attrs.isVirtual(), attrs.isStatic(), false, false, false,
+      is_artificial);
+
+  m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
 }
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
