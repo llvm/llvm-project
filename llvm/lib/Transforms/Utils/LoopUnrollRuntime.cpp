@@ -635,19 +635,21 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // These are exit blocks other than the target of the latch exiting block.
   SmallVector<BasicBlock *, 4> OtherExits;
   L->getUniqueNonLatchExitBlocks(OtherExits);
-  bool isMultiExitUnrollingEnabled =
-      canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                   UseEpilogRemainder) &&
-      canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
-                                       UseEpilogRemainder);
-  // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
-  if (!isMultiExitUnrollingEnabled &&
-      (!L->getExitingBlock() || OtherExits.size())) {
-    LLVM_DEBUG(
-        dbgs()
-        << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
-           "enabled!\n");
-    return false;
+  // Support only single exit and exiting block unless multi-exit loop
+  // unrolling is enabled.
+  if (!L->getExitingBlock() || OtherExits.size()) {
+    if (!canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
+                                      UseEpilogRemainder))
+      return false;
+
+    if (!canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit,
+                                          PreserveLCSSA, UseEpilogRemainder)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
+             "enabled!\n");
+      return false;
+    }
   }
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be unrolled than relying on induction var simplification.
