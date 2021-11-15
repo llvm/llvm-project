@@ -83,8 +83,7 @@ AsanThread *AsanThread::Create(thread_callback_t start_routine, void *arg,
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
   AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
-  asanThreadRegistry().CreateThread(*reinterpret_cast<uptr *>(thread), detached,
-                                    parent_tid, &args);
+  asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
   return thread;
 }
