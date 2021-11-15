@@ -880,10 +880,11 @@ static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g,
   }
 }
 
-static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
+static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g,
+                          u32 v) {
   if (!thr->in_ignored_lib)
     Release(thr, pc, (uptr)g);
-  u32 old = atomic_exchange(g, kGuardDone, memory_order_release);
+  u32 old = atomic_exchange(g, v, memory_order_release);
   if (old & kGuardWaiter)
     FutexWake(g, 1 << 30);
 }
@@ -913,12 +914,12 @@ STDCXX_INTERCEPTOR(int, __cxa_guard_acquire, atomic_uint32_t *g) {
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_release, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_release, g);
-  guard_release(thr, pc, g);
+  guard_release(thr, pc, g, kGuardDone);
 }
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_abort, g);
-  atomic_store(g, kGuardInit, memory_order_relaxed);
+  guard_release(thr, pc, g, kGuardInit);
 }
 
 namespace __tsan {
@@ -1515,7 +1516,7 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   // result in crashes due to too little stack space.
   if (guard_acquire(thr, pc, a, !SANITIZER_MAC)) {
     (*f)();
-    guard_release(thr, pc, a);
+    guard_release(thr, pc, a, kGuardDone);
   }
   return 0;
 }
