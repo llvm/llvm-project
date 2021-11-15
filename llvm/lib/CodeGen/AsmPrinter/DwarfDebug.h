@@ -781,6 +781,9 @@ public:
   const DwarfCompileUnit *getPrevCU() const { return PrevCU; }
   void setPrevCU(const DwarfCompileUnit *PrevCU) { this->PrevCU = PrevCU; }
 
+  /// Terminate the line table by adding the last range label.
+  void terminateLineTable(const DwarfCompileUnit *CU);
+
   /// Returns the entries for the .debug_loc section.
   const DebugLocStream &getDebugLocs() const { return DebugLocs; }
 
