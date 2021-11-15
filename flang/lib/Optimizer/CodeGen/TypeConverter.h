@@ -73,6 +73,11 @@ public:
       // Convert to i32 because of LLVM GEP indexing restriction.
       return mlir::IntegerType::get(field.getContext(), 32);
     });
+    addConversion([&](fir::LenType field) {
+      // Get size of len paramter from the descriptor.
+      return getModel<Fortran::runtime::typeInfo::TypeParameterValue>()(
+          &getContext());
+    });
     addConversion(
         [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
     addConversion(
