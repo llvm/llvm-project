@@ -2797,8 +2797,8 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
     ```mlir
       global @g : !fir.type<t(len1:i32)> {
         fir.global_len len1, 10 : i32
-        %1 = fir.undefined : !fir.type<t(len1:i32)>
-        return %1 : !fir.type<t(len1:i32)>
+        %1 = fir.undefined !fir.type<t(len1:i32)>
+        fir.has_value %1 : !fir.type<t(len1:i32)>
       }
     ```
   }];
