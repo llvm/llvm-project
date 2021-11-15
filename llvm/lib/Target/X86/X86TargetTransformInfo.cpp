@@ -3659,8 +3659,8 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
     break;                // AVX512BW
   case 8:
     if (!ST->hasVBMI())
-      return bailout();
-    break;
+      PromEltTyBits = 32; // promote to i32, AVX512F.
+    break;                // AVX512VBMI
   default:
     return bailout();
   }
