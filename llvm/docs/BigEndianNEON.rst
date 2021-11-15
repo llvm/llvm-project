@@ -54,7 +54,7 @@ A "little endian" layout has the least significant byte first (lowest in memory 
 
 .. figure:: ARM-BE-ldr.png
     :align: right
-    
+
     Big endian vector load using ``LDR``.
 
 
@@ -82,7 +82,7 @@ Because ``LD1 == LDR + REV`` and similarly ``LDR == LD1 + REV`` (on a big endian
 .. container:: clearer
 
     Note that throughout this section we only mention loads. Stores have exactly the same problems as their associated loads, so have been skipped for brevity.
- 
+
 
 Considerations
 ==============
@@ -156,7 +156,7 @@ Implementation
 
 There are 3 parts to the implementation:
 
-    1. Predicate ``LDR`` and ``STR`` instructions so that they are never allowed to be selected to generate vector loads and stores. The exception is one-lane vectors [1]_ - these by definition cannot have lane ordering problems so are fine to use ``LDR``/``STR``. 
+    1. Predicate ``LDR`` and ``STR`` instructions so that they are never allowed to be selected to generate vector loads and stores. The exception is one-lane vectors [1]_ - these by definition cannot have lane ordering problems so are fine to use ``LDR``/``STR``.
 
     2. Create code generation patterns for bitconverts that create ``REV`` instructions.
 
@@ -191,7 +191,7 @@ For the previous example, this would be::
 
     LD1   v0.4s, [x]
 
-    REV64 v0.4s, v0.4s                  // There is no REV128 instruction, so it must be synthesizedcd 
+    REV64 v0.4s, v0.4s                  // There is no REV128 instruction, so it must be synthesizedcd
     EXT   v0.16b, v0.16b, v0.16b, #8    // with a REV64 then an EXT to swap the two 64-bit elements.
 
     REV64 v0.2d, v0.2d
@@ -202,4 +202,3 @@ For the previous example, this would be::
 It turns out that these ``REV`` pairs can, in almost all cases, be squashed together into a single ``REV``. For the example above, a ``REV128 4s`` + ``REV128 2d`` is actually a ``REV64 4s``, as shown in the figure on the right.
 
 .. [1] One lane vectors may seem useless as a concept but they serve to distinguish between values held in general purpose registers and values held in NEON/VFP registers. For example, an ``i64`` would live in an ``x`` register, but ``<1 x i64>`` would live in a ``d`` register.
-

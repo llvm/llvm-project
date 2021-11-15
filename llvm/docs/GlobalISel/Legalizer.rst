@@ -235,14 +235,14 @@ There are some composite rules for common situations built out of the above faci
 
 * ``widenScalarToNextPow2()`` is like ``widenScalarIf()`` but is satisfied iff the type
   size in bits is not a power of 2 and selects a target type that is the next
-  largest power of 2. 
+  largest power of 2.
 
 .. _clampscalar:
 
 * ``minScalar()`` is like ``widenScalarIf()`` but is satisfied iff the type
   size in bits is smaller than the given minimum and selects the minimum as the
   target type. Similarly, there is also a ``maxScalar()`` for the maximum and a
-  ``clampScalar()`` to do both at once. 
+  ``clampScalar()`` to do both at once.
 
 * ``minScalarSameAs()`` is like ``minScalar()`` but the minimum is taken from another
   type index.

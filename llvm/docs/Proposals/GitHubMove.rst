@@ -813,7 +813,7 @@ umbrella and clang is a submodule in llvm).  The file
 ``submodule-map.txt`` is a list of pairs, one per line.  The first
 pair item describes the path to a submodule in the umbrella
 repository.  The second pair item describes the path where trees for
-that submodule should be written in the zipped history.  
+that submodule should be written in the zipped history.
 
 Let's say your umbrella repository is actually the llvm repository and
 it has submodules in the "nested sources" layout (clang in

@@ -38,7 +38,7 @@ This will occur for any function declaration that has incompatible linkage.
 .. code-block:: console
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass-analysis=openmp-opt omp140.cpp
-   omp140.cpp:1:1: remark: Could not internalize function. Some optimizations may not 
+   omp140.cpp:1:1: remark: Could not internalize function. Some optimizations may not
    be possible. [OMP140]
    __attribute__((weak)) void setup() {
    ^

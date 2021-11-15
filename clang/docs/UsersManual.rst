@@ -777,22 +777,22 @@ compilations steps.
     ld,"a.out",900,8000,53568
 
   The data on each row represent:
-  
+
   * file name of the tool executable,
   * output file name in quotes,
   * total execution time in microseconds,
   * execution time in user mode in microseconds,
   * peak memory usage in Kb.
-  
+
   It is possible to specify this option without any value. In this case statistics
   are printed on standard output in human readable format:
-  
+
   .. code-block:: console
 
     $ clang -fproc-stat-report foo.c
     clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
     ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
-  
+
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
   cleared, new data is appended to it, thus making posible to accumulate build
@@ -1347,7 +1347,7 @@ floating point semantic models: precise (the default), strict, and fast.
 
    Select which denormal numbers the code is permitted to require.
 
-   Valid values are: 
+   Valid values are:
 
    * ``ieee`` - IEEE 754 denormal numbers
    * ``preserve-sign`` - the sign of a flushed-to-zero number is preserved in the sign of 0
@@ -1359,7 +1359,7 @@ floating point semantic models: precise (the default), strict, and fast.
 
 **-f[no-]strict-float-cast-overflow**
 
-   When a floating-point value is not representable in a destination integer 
+   When a floating-point value is not representable in a destination integer
    type, the code has undefined behavior according to the language standard.
    By default, Clang will not guarantee any particular result in that case.
    With the 'no-strict' option, Clang attempts to match the overflowing behavior
@@ -1540,7 +1540,7 @@ Note that floating-point operations performed as part of constant initialization
    the optimizer may ignore parentheses when computing arithmetic expressions
    in circumstances where the parenthesized and unparenthesized expression
    express the same mathematical value. For example (a+b)+c is the same
-   mathematical value as a+(b+c), but the optimizer is free to evaluate the 
+   mathematical value as a+(b+c), but the optimizer is free to evaluate the
    additions in any order regardless of the parentheses. When enabled, this
    option forces the optimizer to honor the order of operations with respect
    to parentheses in all circumstances.
@@ -2213,7 +2213,7 @@ instrumentation:
 2. Run the instrumented executable with inputs that reflect the typical usage.
    By default, the profile data will be written to a ``default.profraw`` file
    in the current directory. You can override that default by using option
-   ``-fprofile-instr-generate=`` or by setting the ``LLVM_PROFILE_FILE`` 
+   ``-fprofile-instr-generate=`` or by setting the ``LLVM_PROFILE_FILE``
    environment variable to specify an alternate file. If non-default file name
    is specified by both the environment variable and the command line option,
    the environment variable takes precedence. The file name pattern specified
@@ -2303,7 +2303,7 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   When ``code`` is executed, the profile will be written to the file
   ``yyy/zzz/default_xxxx.profraw``.
 
-  To generate the profile data file with the compiler readable format, the 
+  To generate the profile data file with the compiler readable format, the
   ``llvm-profdata`` tool can be used with the profile directory as the input:
 
    .. code-block:: console
@@ -2567,7 +2567,7 @@ from ``-fprofile-exclude-list``.
 
    $ clang --coverage -fprofile-exclude-files="^/usr/include/.*$" \
            -fprofile-filter-files="^/usr/.*$"
-          
+
 In that case ``/usr/foo/oof.h`` is instrumented since it matches the filter regex and
 doesn't match the exclude regex, but ``/usr/include/foo.h`` doesn't since it matches
 the exclude regex.
@@ -3020,7 +3020,7 @@ tools
 
 Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
 supports full profile. There is only very limited support of the embedded
-profile. 
+profile.
 Starting from clang 9 a C++ mode is available for OpenCL (see
 :ref:`C++ for OpenCL <cxx_for_opencl>`).
 
@@ -3213,14 +3213,14 @@ convergent
 To make sure no invalid optimizations occur for single program multiple data
 (SPMD) / single instruction multiple thread (SIMT) Clang provides attributes that
 can be used for special functions that have cross work item semantics.
-An example is the subgroup operations such as `intel_sub_group_shuffle 
+An example is the subgroup operations such as `intel_sub_group_shuffle
 <https://www.khronos.org/registry/cl/extensions/intel/cl_intel_subgroups.txt>`_
 
    .. code-block:: c
 
      // Define custom my_sub_group_shuffle(data, c)
      // that makes use of intel_sub_group_shuffle
-     r1 = ... 
+     r1 = ...
      if (r0) r1 = computeA();
      // Shuffle data from r1 into r3
      // of threads id r2.
@@ -3252,7 +3252,7 @@ would prevent this:
 Using ``convergent`` guarantees correct execution by keeping CFG equivalence
 wrt operations marked as ``convergent``. CFG ``G´`` is equivalent to ``G`` wrt
 node ``Ni`` : ``iff ∀ Nj (i≠j)`` domination and post-domination relations with
-respect to ``Ni`` remain the same in both ``G`` and ``G´``. 
+respect to ``Ni`` remain the same in both ``G`` and ``G´``.
 
 noduplicate
 ^^^^^^^^^^^
@@ -3333,7 +3333,7 @@ mode.
 
      clang test.clcpp
 
-C++ for OpenCL kernel sources can also be compiled online in drivers supporting 
+C++ for OpenCL kernel sources can also be compiled online in drivers supporting
 `cl_ext_cxx_for_opencl
 <https://www.khronos.org/registry/OpenCL/extensions/ext/cl_ext_cxx_for_opencl.html>`_
 extension.
@@ -3350,7 +3350,7 @@ constructors. However, an easy workaround is to manually enqueue the
 constructor initialization kernel that has the following name scheme
 ``_GLOBAL__sub_I_<compiled file name>``.
 This kernel is only present if there are global objects with non-trivial
-constructors present in the compiled binary. One way to check this is by 
+constructors present in the compiled binary. One way to check this is by
 passing ``CL_PROGRAM_KERNEL_NAMES`` to ``clGetProgramInfo`` (OpenCL v2.0
 s5.8.7) and then checking whether any kernel name matches the naming scheme of
 global constructor initialization kernel above.

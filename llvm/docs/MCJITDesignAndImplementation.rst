@@ -30,7 +30,7 @@ TargetMachine will be created based on the target triple associated with
 the Module that was used to create the EngineBuilder.
 
 .. image:: MCJIT-engine-builder.png
- 
+
 EngineBuilder::create will call the static MCJIT::createJIT function,
 passing in its pointers to the module, memory manager and target machine
 objects, all of which will subsequently be owned by the MCJIT object.
@@ -41,7 +41,7 @@ communications between MCJIT and the actual RuntimeDyldImpl object that
 gets created when an object is loaded.
 
 .. image:: MCJIT-creation.png
- 
+
 Upon creation, MCJIT holds a pointer to the Module object that it received
 from EngineBuilder but it does not immediately generate code for this
 module.  Code generation is deferred until either the
@@ -61,7 +61,7 @@ passes to TargetMachine::addPassesToEmitMC before calling PassManager::run
 on the Module with which it was created.
 
 .. image:: MCJIT-load.png
- 
+
 The PassManager::run call causes the MC code generation mechanisms to emit
 a complete relocatable binary object image (either in either ELF or MachO
 format, depending on the target) into the ObjectBufferStream object, which
@@ -85,7 +85,7 @@ class) and calls the RuntimeDyldImpl::loadObject method to perform that
 actual loading.
 
 .. image:: MCJIT-dyld-load.png
- 
+
 RuntimeDyldImpl::loadObject begins by creating an ObjectImage instance
 from the ObjectBuffer it received.  ObjectImage, which wraps the
 ObjectFile class, is a helper class which parses the binary object image
@@ -106,7 +106,7 @@ it in one of two data structures, a section-based relocation list map and
 an external symbol relocation map.
 
 .. image:: MCJIT-load-object.png
- 
+
 When RuntimeDyldImpl::loadObject returns, all of the code and data
 sections for the object will have been loaded into memory allocated by the
 memory manager and relocation information will have been prepared, but the
@@ -166,7 +166,7 @@ have a target location at which the relocation will be applied that is
 likely located in a different section.
 
 .. image:: MCJIT-resolve-relocations.png
- 
+
 Once relocations have been applied as described above, MCJIT calls
 RuntimeDyld::getEHFrameSection, and if a non-zero result is returned
 passes the section data to the memory manager's registerEHFrames method.
@@ -177,4 +177,3 @@ Finally, MCJIT calls the memory manager's finalizeMemory method.  In this
 method, the memory manager will invalidate the target code cache, if
 necessary, and apply final permissions to the memory pages it has
 allocated for code and data memory.
-
