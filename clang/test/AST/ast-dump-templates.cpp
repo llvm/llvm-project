@@ -79,6 +79,8 @@ struct foo {
 // type/unsigned argument (see
 // TemplateParameterList::shouldIncludeTypeForArgument)
 // CHECK1: {{^    }}template<> struct foo<0, 0L> {
+// CHECK1: {{^    }}void test(){{ }}{
+// CHECK1: {{^        }}foo<0, 0 + 0L>::fn();
 void test() {
   foo<0, 0 + 0L>::fn();
 }
