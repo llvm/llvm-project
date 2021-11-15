@@ -2595,6 +2595,14 @@ void Stmt::printPretty(raw_ostream &Out, PrinterHelper *Helper,
   P.Visit(const_cast<Stmt *>(this));
 }
 
+void Stmt::printPrettyControlled(raw_ostream &Out, PrinterHelper *Helper,
+                                 const PrintingPolicy &Policy,
+                                 unsigned Indentation, StringRef NL,
+                                 const ASTContext *Context) const {
+  StmtPrinter P(Out, Helper, Policy, Indentation, NL, Context);
+  P.PrintControlledStmt(const_cast<Stmt *>(this));
+}
+
 void Stmt::printJson(raw_ostream &Out, PrinterHelper *Helper,
                      const PrintingPolicy &Policy, bool AddQuotes) const {
   std::string Buf;
