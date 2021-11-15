@@ -1174,7 +1174,7 @@ function(export_executable_symbols target)
       set(mangling itanium)
     endif()
     add_custom_command(OUTPUT ${exported_symbol_file}
-                       COMMAND "${Python3_EXECUTABLE}" ${LLVM_MAIN_SRC_DIR}/utils/extract_symbols.py --mangling=${mangling} ${static_libs} -o ${exported_symbol_file}
+                       COMMAND "${Python3_EXECUTABLE}" ${LLVM_MAIN_SRC_DIR}/utils/extract_symbols.py ${LLVM_EXTRACT_SYMBOLS_FLAGS} --mangling=${mangling} ${static_libs} -o ${exported_symbol_file}
                        WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
                        DEPENDS ${LLVM_MAIN_SRC_DIR}/utils/extract_symbols.py ${static_libs}
                        VERBATIM
