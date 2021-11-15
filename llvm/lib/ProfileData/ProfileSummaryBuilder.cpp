@@ -192,7 +192,7 @@ SampleProfileSummaryBuilder::computeSummaryForProfiles(
   // into many copies each representing the CFG profile of a particular calling
   // context. That makes the count distribution looks more flat as we now have
   // more function profiles each with lower counts, which in turn leads to lower
-  // hot thresholds. To compensate for that, by defauly we merge context
+  // hot thresholds. To compensate for that, by default we merge context
   // profiles before computing profile summary.
   if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
                                 !UseContextLessSummary.getNumOccurrences())) {
