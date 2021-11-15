@@ -887,6 +887,14 @@ void LinkerScript::switchTo(OutputSection *sec) {
 // subsequent call of this method.
 std::pair<MemoryRegion *, MemoryRegion *>
 LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
+  // Non-allocatable sections are not part of the process image.
+  if (!(sec->flags & SHF_ALLOC)) {
+    if (!sec->memoryRegionName.empty())
+      warn("ignoring memory region assignment for non-allocatable section '" +
+           sec->name + "'");
+    return {nullptr, nullptr};
+  }
+
   // If a memory region name was specified in the output section command,
   // then try to find that region first.
   if (!sec->memoryRegionName.empty()) {
@@ -902,8 +910,8 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   if (memoryRegions.empty())
     return {nullptr, nullptr};
 
-  // An allocatable orphan section should continue the previous memory region.
-  if (sec->sectionIndex == UINT32_MAX && (sec->flags & SHF_ALLOC) && hint)
+  // An orphan section should continue the previous memory region.
+  if (sec->sectionIndex == UINT32_MAX && hint)
     return {hint, hint};
 
   // See if a region can be found by matching section flags.
@@ -914,8 +922,7 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   }
 
   // Otherwise, no suitable region was found.
-  if (sec->flags & SHF_ALLOC)
-    error("no memory region specified for section '" + sec->name + "'");
+  error("no memory region specified for section '" + sec->name + "'");
   return {nullptr, nullptr};
 }
 

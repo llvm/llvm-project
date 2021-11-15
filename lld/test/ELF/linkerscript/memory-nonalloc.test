@@ -1,0 +1,48 @@
+REQUIRES: x86
+
+RUN: split-file %s %ts
+RUN: llvm-mc -filetype=obj -triple=x86_64 %ts/s -o %t.o
+
+## Check that a non-allocatable section is not assigned to a memory region by
+## matching the section/region properties. Previously, that could lead to an
+## "error: section '.nonalloc' will not fit in region 'RAM'".
+
+RUN: ld.lld %t.o -T %ts/t --fatal-warnings -o /dev/null
+
+## Check that an explicit assignment is ignored for a non-allocatable section.
+## Previously, that also could lead to the same error.
+
+RUN: ld.lld %t.o -T %ts/t2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
+
+WARN: warning: ignoring memory region assignment for non-allocatable section '.nonalloc'
+
+#--- s
+  .global _start
+_start:
+
+  ## Note: a "writable" section is used because lld does not fully support
+  ## memory region attribute "r" at the moment.
+  .section .nonalloc,"w"
+  .zero 0x1000
+
+#--- t
+MEMORY
+{
+  RAM (rwx) : ORIGIN = 0x8000, LENGTH = 0x100
+}
+
+SECTIONS
+{
+  .nonalloc : { *(.nonalloc) }
+}
+
+#--- t2
+MEMORY
+{
+  RAM (rwx) : ORIGIN = 0x8000, LENGTH = 0x100
+}
+
+SECTIONS
+{
+  .nonalloc : { *(.nonalloc) } > RAM
+}
