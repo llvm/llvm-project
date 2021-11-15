@@ -121,7 +121,7 @@ private:
       }
     }
 
-    // Sort and add all created GOT Atoms to master file
+    // Sort and add all created GOT Atoms to merged file
     std::vector<const GOTEntryAtom *> entries;
     entries.reserve(_targetToGOT.size());
     for (auto &it : _targetToGOT)
