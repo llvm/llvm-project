@@ -166,6 +166,10 @@ extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data) {
   return nullptr;
 }
 
+extern "C" void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(void *data) {
+  return nullptr;
+}
+
 extern lldb::ValueObjectSP
 LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data) {
   return nullptr;
@@ -219,6 +223,13 @@ LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
 extern "C" void *LLDBSwigPythonCreateScriptedProcess(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::TargetSP &target_sp, StructuredDataImpl *args_impl,
+    std::string &error_string) {
+  return nullptr;
+}
+
+extern "C" void *LLDBSwigPythonCreateScriptedThread(
+    const char *python_class_name, const char *session_dictionary_name,
+    const lldb::ProcessSP &process_sp, StructuredDataImpl *args_impl,
     std::string &error_string) {
   return nullptr;
 }

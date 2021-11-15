@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/PluginInterface.h"
@@ -563,6 +564,9 @@ public:
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 
   Status GetStatusFromSBError(const lldb::SBError &error) const;
+
+  llvm::Optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
+      const lldb::SBMemoryRegionInfo &mem_region) const;
 
 protected:
   Debugger &m_debugger;

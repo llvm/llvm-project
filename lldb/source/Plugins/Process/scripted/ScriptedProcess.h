@@ -13,6 +13,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
+#include "ScriptedThread.h"
+
 #include <mutex>
 
 namespace lldb_private {
@@ -23,17 +25,15 @@ protected:
   public:
     ScriptedProcessInfo(const ProcessLaunchInfo &launch_info) {
       m_class_name = launch_info.GetScriptedProcessClassName();
-      m_dictionary_sp = launch_info.GetScriptedProcessDictionarySP();
+      m_args_sp = launch_info.GetScriptedProcessDictionarySP();
     }
 
     std::string GetClassName() const { return m_class_name; }
-    StructuredData::DictionarySP GetDictionarySP() const {
-      return m_dictionary_sp;
-    }
+    StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
 
   private:
     std::string m_class_name;
-    StructuredData::DictionarySP m_dictionary_sp;
+    StructuredData::DictionarySP m_args_sp;
   };
 
 public:
@@ -77,7 +77,7 @@ public:
 
   Status DoDestroy() override;
 
-  void RefreshStateAfterStop() override{};
+  void RefreshStateAfterStop() override;
 
   bool IsAlive() override;
 
@@ -103,6 +103,8 @@ protected:
                           ThreadList &new_thread_list) override;
 
 private:
+  friend class ScriptedThread;
+
   void CheckInterpreterAndScriptObject() const;
   ScriptedProcessInterface &GetInterface() const;
   static bool IsScriptLanguageSupported(lldb::ScriptLanguage language);

@@ -2,7 +2,7 @@
 Test python scripted process in lldb
 """
 
-import os
+import os, json, tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -10,14 +10,12 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
-
 class ScriptedProcesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
-        self.source = "main.c"
 
     def tearDown(self):
         TestBase.tearDown(self)
@@ -43,55 +41,124 @@ class ScriptedProcesTestCase(TestBase):
         self.expect('script dir(ScriptedProcess)',
                     substrs=["launch"])
 
-    def test_launch_scripted_process_sbapi(self):
+    @skipIf(archs=no_match(['x86_64']))
+    def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
-        check its process ID and read string from memory."""
+        check its process ID, read string from memory, check scripted thread
+        id, name stop reason and register context.
+        """
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
-        scripted_process_example_relpath = ['..','..','..','..','examples','python','scripted_process','my_scripted_process.py']
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
+        scripted_process_example_relpath = 'dummy_scripted_process.py'
         self.runCmd("command script import " + os.path.join(self.getSourceDir(),
-                                                            *scripted_process_example_relpath))
+                                                            scripted_process_example_relpath))
 
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
-        launch_info.SetScriptedProcessClassName("my_scripted_process.MyScriptedProcess")
+        launch_info.SetScriptedProcessClassName("dummy_scripted_process.DummyScriptedProcess")
 
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
         self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
 
-        hello_world = "Hello, world!"
-        memory_read = process.ReadCStringFromMemory(0x50000000000,
-                                                    len(hello_world) + 1, # NULL byte
-                                                    error)
+        self.assertEqual(process.GetNumThreads(), 1)
 
-        self.assertTrue(error.Success(), "Failed to read memory from scripted process.")
-        self.assertEqual(hello_world, memory_read)
+        thread = process.GetSelectedThread()
+        self.assertTrue(thread, "Invalid thread.")
+        self.assertEqual(thread.GetThreadID(), 0x19)
+        self.assertEqual(thread.GetName(), "DummyScriptedThread.thread-1")
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
 
-    def test_launch_scripted_process_cli(self):
+        self.assertGreater(thread.GetNumFrames(), 0)
+
+        frame = thread.GetFrameAtIndex(0)
+        GPRs = None
+        register_set = frame.registers # Returns an SBValueList.
+        for regs in register_set:
+            if 'general purpose' in regs.name.lower():
+                GPRs = regs
+                break
+
+        self.assertTrue(GPRs, "Invalid General Purpose Registers Set")
+        self.assertEqual(GPRs.GetNumChildren(), 21)
+        for idx, reg in enumerate(GPRs, start=1):
+            self.assertEqual(idx, int(reg.value, 16))
+
+    def create_stack_skinny_corefile(self, file):
+        self.build()
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        self.assertTrue(process.IsValid(), "Process is invalid.")
+        # FIXME: Use SBAPI to save the process corefile.
+        self.runCmd("process save-core -s stack  " + file)
+        self.assertTrue(os.path.exists(file), "No stack-only corefile found.")
+        self.assertTrue(self.dbg.DeleteTarget(target), "Couldn't delete target")
+
+    @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
+    @skipIf(archs=no_match(['x86_64']))
+    def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
-        scripted_process_example_relpath = ['..','..','..','..','examples','python','scripted_process','my_scripted_process.py']
-        self.runCmd("command script import " + os.path.join(self.getSourceDir(),
-                                                            *scripted_process_example_relpath))
+        for module in target.modules:
+            if 'a.out' in module.GetFileSpec().GetFilename():
+                main_module = module
+                break
 
-        process = target.GetProcess()
+        self.assertTrue(main_module, "Invalid main module.")
+        error = target.SetModuleLoadAddress(main_module, 0)
+        self.assertTrue(error.Success(), "Reloading main module at offset 0 failed.")
+
+        os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
+        scripted_process_example_relpath = 'stack_core_scripted_process.py'
+        self.runCmd("command script import " + os.path.join(self.getSourceDir(),
+                                                            scripted_process_example_relpath))
+
+        corefile_process = None
+        with tempfile.NamedTemporaryFile() as file:
+            self.create_stack_skinny_corefile(file.name)
+            corefile_target = self.dbg.CreateTarget(None)
+            corefile_process = corefile_target.LoadCore(self.getBuildArtifact(file.name))
+        self.assertTrue(corefile_process, PROCESS_IS_VALID)
+
+        structured_data = lldb.SBStructuredData()
+        structured_data.SetFromJSON(json.dumps({
+            "backing_target_idx" : self.dbg.GetIndexOfTarget(corefile_process.GetTarget())
+        }))
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName("stack_core_scripted_process.StackCoreScriptedProcess")
+        launch_info.SetScriptedProcessDictionary(structured_data)
+
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertTrue(error.Success(), error.GetCString())
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
 
-        error = lldb.SBError()
-        hello_world = "Hello, world!"
-        memory_read = process.ReadCStringFromMemory(0x50000000000,
-                                                    len(hello_world) + 1, # NULL byte
-                                                    error)
+        self.assertEqual(process.GetNumThreads(), 1)
+        thread = process.GetSelectedThread()
+        self.assertTrue(thread, "Invalid thread.")
+        self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-1")
 
-        self.assertTrue(error.Success(), "Failed to read memory from scripted process.")
-        self.assertEqual(hello_world, memory_read)
+        self.assertEqual(thread.GetNumFrames(), 3)
+        frame = thread.GetSelectedFrame()
+        self.assertTrue(frame, "Invalid frame.")
+        self.assertEqual(frame.GetFunctionName(), "bar")
+        self.assertEqual(int(frame.FindValue("i", lldb.eValueTypeVariableArgument).GetValue()), 42)
+        self.assertEqual(int(frame.FindValue("j", lldb.eValueTypeVariableLocal).GetValue()), 42 * 42)

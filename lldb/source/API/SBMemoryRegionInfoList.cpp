@@ -48,6 +48,17 @@ public:
 
   void Clear() { m_regions.clear(); }
 
+  bool GetMemoryRegionContainingAddress(lldb::addr_t addr,
+                                        MemoryRegionInfo &region_info) {
+    for (auto &region : m_regions) {
+      if (region.GetRange().Contains(addr)) {
+        region_info = region;
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool GetMemoryRegionInfoAtIndex(size_t index,
                                   MemoryRegionInfo &region_info) {
     if (index >= GetSize())
@@ -103,6 +114,15 @@ uint32_t SBMemoryRegionInfoList::GetSize() const {
   return m_opaque_up->GetSize();
 }
 
+bool SBMemoryRegionInfoList::GetMemoryRegionContainingAddress(
+    lldb::addr_t addr, SBMemoryRegionInfo &region_info) {
+  LLDB_RECORD_METHOD(
+      bool, SBMemoryRegionInfoList, GetMemoryRegionContainingAddress,
+      (lldb::addr_t, lldb::SBMemoryRegionInfo &), addr, region_info);
+
+  return m_opaque_up->GetMemoryRegionContainingAddress(addr, region_info.ref());
+}
+
 bool SBMemoryRegionInfoList::GetMemoryRegionAtIndex(
     uint32_t idx, SBMemoryRegionInfo &region_info) {
   LLDB_RECORD_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
@@ -153,6 +173,9 @@ void RegisterMethods<SBMemoryRegionInfoList>(Registry &R) {
       SBMemoryRegionInfoList, operator=,(
                                   const lldb::SBMemoryRegionInfoList &));
   LLDB_REGISTER_METHOD_CONST(uint32_t, SBMemoryRegionInfoList, GetSize, ());
+  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfoList,
+                       GetMemoryRegionContainingAddress,
+                       (lldb::addr_t, lldb::SBMemoryRegionInfo &));
   LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
                        (uint32_t, lldb::SBMemoryRegionInfo &));
   LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Clear, ());

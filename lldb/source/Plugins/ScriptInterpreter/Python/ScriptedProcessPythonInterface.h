@@ -35,8 +35,9 @@ public:
 
   Status Stop() override;
 
-  lldb::MemoryRegionInfoSP
-  GetMemoryRegionContainingAddress(lldb::addr_t address) override;
+  llvm::Optional<MemoryRegionInfo>
+  GetMemoryRegionContainingAddress(lldb::addr_t address,
+                                   Status &error) override;
 
   StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) override;
 
@@ -50,6 +51,11 @@ public:
   lldb::pid_t GetProcessID() override;
 
   bool IsAlive() override;
+
+  llvm::Optional<std::string> GetScriptedThreadPluginName() override;
+
+private:
+  lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() override;
 };
 } // namespace lldb_private
 

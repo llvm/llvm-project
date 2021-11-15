@@ -25,6 +25,9 @@ public:
     GetSize () const;
 
     bool
+    GetMemoryRegionContainingAddress (lldb::addr_t addr, SBMemoryRegionInfo &region_info);
+
+    bool
     GetMemoryRegionAtIndex (uint32_t idx, SBMemoryRegionInfo &region_info);
 
     void
