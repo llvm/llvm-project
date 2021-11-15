@@ -939,7 +939,6 @@ struct SelectTypeOpConversion : public FIROpConversion<fir::SelectTypeOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     return rewriter.notifyMatchFailure(
         select, "fir.select_type codegen is not implemented yet");
-    return failure();
   }
 };
 
