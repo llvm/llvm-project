@@ -29688,7 +29688,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
   SDValue Amt = Op.getOperand(2);
-
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
   bool IsFSHR = Op.getOpcode() == ISD::FSHR;
 
   if (VT.isVector()) {
@@ -29699,7 +29699,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
 
     APInt APIntShiftAmt;
     if (X86::isConstantSplat(Amt, APIntShiftAmt)) {
-      uint64_t ShiftAmt = APIntShiftAmt.urem(VT.getScalarSizeInBits());
+      uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
       SDValue Imm = DAG.getTargetConstant(ShiftAmt, DL, MVT::i8);
       return getAVX512Node(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
                            {Op0, Op1, Imm}, DAG, Subtarget);
@@ -29719,7 +29719,6 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
   if ((VT == MVT::i8 || (ExpandFunnel && VT == MVT::i16)) &&
       !isa<ConstantSDNode>(Amt)) {
-    unsigned EltSizeInBits = VT.getScalarSizeInBits();
     SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, Amt.getValueType());
     SDValue HiShift = DAG.getConstant(EltSizeInBits, DL, Amt.getValueType());
     Op0 = DAG.getAnyExtOrTrunc(Op0, DL, MVT::i32);
