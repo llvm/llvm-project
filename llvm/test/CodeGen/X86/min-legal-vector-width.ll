@@ -1666,12 +1666,12 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-leg
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
+; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %ymm3
 ; CHECK-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm2
 ; CHECK-NEXT:    vpsrlw $6, %ymm0, %ymm3
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
+; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %ymm3
 ; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsrlw $7, %ymm0, %ymm2
@@ -1784,7 +1784,7 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -1797,7 +1797,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
