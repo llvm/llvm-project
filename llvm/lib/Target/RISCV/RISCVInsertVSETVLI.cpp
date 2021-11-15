@@ -900,7 +900,8 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     const BlockData &PBBInfo = BlockInfo[PBB->getNumber()];
     // If the exit from the predecessor has the VTYPE we are looking for
     // we might be able to avoid a VSETVLI.
-    if (PBBInfo.Exit.isUnknown() || !PBBInfo.Exit.hasSameVTYPE(Require))
+    if (PBBInfo.Exit.isUnknown() ||
+        !PBBInfo.Exit.hasCompatibleVTYPE(Require, /*Strict*/ false))
       return true;
 
     // We need the PHI input to the be the output of a VSET(I)VLI.
