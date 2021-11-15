@@ -2674,6 +2674,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // A | ( A ^ B) -> A |  B
   // A | (~A ^ B) -> A | ~B
   // (A & B) | (A ^ B)
+  // ~A | (A ^ B) -> ~(A & B)
+  // The swap above should always make Op0 the 'not' for the last case.
   if (match(Op1, m_Xor(m_Value(A), m_Value(B)))) {
     if (Op0 == A || Op0 == B)
       return BinaryOperator::CreateOr(A, B);
@@ -2681,6 +2683,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
         match(Op0, m_And(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(A, B);
+
+    if ((Op0->hasOneUse() || Op1->hasOneUse()) &&
+        (match(Op0, m_Not(m_Specific(A))) || match(Op0, m_Not(m_Specific(B)))))
+      return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
     if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {
       Value *Not = Builder.CreateNot(B, B->getName() + ".not");
