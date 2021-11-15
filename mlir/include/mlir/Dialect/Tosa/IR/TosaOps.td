@@ -760,6 +760,8 @@ def Tosa_MulOp : Tosa_Op<"mul", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1413,7 +1415,7 @@ def Tosa_PadOp : Tosa_Op<"pad", [
     Tosa_RankedTensor:$output
   );
 
-  let builders = [Tosa_PadOpQuantInfoBuilder, 
+  let builders = [Tosa_PadOpQuantInfoBuilder,
                   Tosa_ExplicitValuePadOpQuantInfoBuilder];
 }
 
