@@ -1435,6 +1435,46 @@ struct EmboxCharOpConversion : public FIROpConversion<fir::EmboxCharOp> {
     return success();
   }
 };
+
+/// Construct an `llvm.extractvalue` instruction. It will return value at
+/// element \p x from  \p tuple.
+mlir::LLVM::ExtractValueOp
+genExtractValueWithIndex(mlir::Location loc, mlir::Value tuple, mlir::Type ty,
+                         mlir::ConversionPatternRewriter &rewriter,
+                         mlir::MLIRContext *ctx, int x) {
+  auto cx = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(x));
+  auto xty = ty.cast<mlir::LLVM::LLVMStructType>().getBody()[x];
+  return rewriter.create<mlir::LLVM::ExtractValueOp>(loc, xty, tuple, cx);
+}
+
+/// Convert `fir.unboxchar` into two `llvm.extractvalue` instructions. One for
+/// the character buffer and one for the buffer length.
+struct UnboxCharOpConversion : public FIROpConversion<fir::UnboxCharOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::UnboxCharOp unboxchar, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    MLIRContext *ctx = unboxchar.getContext();
+
+    mlir::Type lenTy = convertType(unboxchar.getType(1));
+    mlir::Value tuple = adaptor.getOperands()[0];
+    mlir::Type tupleTy = tuple.getType();
+
+    mlir::Location loc = unboxchar.getLoc();
+    mlir::Value ptrToBuffer =
+        genExtractValueWithIndex(loc, tuple, tupleTy, rewriter, ctx, 0);
+
+    mlir::LLVM::ExtractValueOp len =
+        genExtractValueWithIndex(loc, tuple, tupleTy, rewriter, ctx, 1);
+    mlir::Value lenAfterCast = integerCast(loc, rewriter, lenTy, len);
+
+    rewriter.replaceOp(unboxchar,
+                       ArrayRef<mlir::Value>{ptrToBuffer, lenAfterCast});
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -1469,8 +1509,8 @@ public:
         IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
         MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
-        SubcOpConversion, UndefOpConversion, UnreachableOpConversion,
-        ZeroOpConversion>(typeConverter);
+        SubcOpConversion, UnboxCharOpConversion, UndefOpConversion,
+        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
