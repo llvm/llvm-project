@@ -58,12 +58,12 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::MulFOp) { return AtomicRMWKind::mulf; })
           .Case([](arith::AddIOp) { return AtomicRMWKind::addi; })
           .Case([](arith::MulIOp) { return AtomicRMWKind::muli; })
-          .Case([](MinFOp) { return AtomicRMWKind::minf; })
-          .Case([](MaxFOp) { return AtomicRMWKind::maxf; })
-          .Case([](MinSIOp) { return AtomicRMWKind::mins; })
-          .Case([](MaxSIOp) { return AtomicRMWKind::maxs; })
-          .Case([](MinUIOp) { return AtomicRMWKind::minu; })
-          .Case([](MaxUIOp) { return AtomicRMWKind::maxu; })
+          .Case([](arith::MinFOp) { return AtomicRMWKind::minf; })
+          .Case([](arith::MaxFOp) { return AtomicRMWKind::maxf; })
+          .Case([](arith::MinSIOp) { return AtomicRMWKind::mins; })
+          .Case([](arith::MaxSIOp) { return AtomicRMWKind::maxs; })
+          .Case([](arith::MinUIOp) { return AtomicRMWKind::minu; })
+          .Case([](arith::MaxUIOp) { return AtomicRMWKind::maxu; })
           .Default([](Operation *) -> Optional<AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
