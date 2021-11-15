@@ -168,9 +168,9 @@ func @insert_slice_fun(%A0 : tensor<?xf32>,
   ->  (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 {
   // Hoisted allocs.
-  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
   //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
   //      CHECK: %[[REALLOC_A0:.*]] = memref.alloc
+  //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
 
   // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
   //      CHECK: linalg.copy(%[[A0]], %[[REALLOC_A0]]

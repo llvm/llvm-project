@@ -1472,7 +1472,11 @@ struct Conv1D_NWC_Generator : public StructuredGenerator<LinalgOp> {
     Type rhsEltType = rhsShapedType.getElementType();
     Type resEltType = resShapedType.getElementType();
     VectorType lhsType = VectorType::get(
-        {nSize, (wSize - 1) * strideW + 1 + (kwSize - 1) * dilationW + 1,
+        {nSize,
+         // iw = ow * sw + kw *  dw - 1
+         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+         // Perform the proper inclusive -> exclusive -> inclusive
+         ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
         lhsEltType);
     VectorType rhsType = VectorType::get({kwSize, cSize, fSize}, rhsEltType);

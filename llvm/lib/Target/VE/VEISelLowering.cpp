@@ -2513,7 +2513,7 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
       default:
         // If the use is an instruction which treats the source operand as i32,
         // it is safe to avoid truncate here.
-        if (isI32Insn(*UI, N))
+        if (isI32Insn(U, N))
           continue;
         break;
       case ISD::ANY_EXTEND:
