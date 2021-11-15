@@ -500,7 +500,7 @@ public:
   //  - those without source range information, we don't record those
   //  - those that can't be stored in DynTypedNode.
   bool TraverseDecl(Decl *X) {
-    if (X && isa<TranslationUnitDecl>(X))
+    if (llvm::isa_and_nonnull<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
     // Base::TraverseDecl will suppress children, but not this node itself.
     if (X && X->isImplicit())
