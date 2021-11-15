@@ -32,6 +32,19 @@ struct __scudo_mallinfo {
   __scudo_mallinfo_data_t keepcost;
 };
 
+struct __scudo_mallinfo2 {
+  size_t arena;
+  size_t ordblks;
+  size_t smblks;
+  size_t hblks;
+  size_t hblkhd;
+  size_t usmblks;
+  size_t fsmblks;
+  size_t uordblks;
+  size_t fordblks;
+  size_t keepcost;
+};
+
 // Android sometimes includes malloc.h no matter what, which yields to
 // conflicting return types for mallinfo() if we use our own structure. So if
 // struct mallinfo is declared (#define courtesy of malloc.h), use it directly.
