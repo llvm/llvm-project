@@ -350,9 +350,16 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
         aliasingOperands.size() == 1 &&
         "ops with multiple aliasing OpOperands cannot bufferize out-of-place");
     Location loc = op->getLoc();
+    // Move insertion point right after `operandBuffer`. That is where the
+    // allocation should be inserted (in the absence of allocation hoisting).
+    if (auto bbArg = operandBuffer.dyn_cast<BlockArgument>()) {
+      b.setInsertionPointToStart(bbArg.getOwner());
+    } else {
+      b.setInsertionPointAfter(operandBuffer.getDefiningOp());
+    }
     // Allocate the result buffer.
     Value resultBuffer =
-        state.allocationFns.createAllocDeallocFn(b, loc, operand, state);
+        state.allocationFns.createAllocDeallocFn(b, loc, operandBuffer, state);
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -372,7 +379,7 @@ Value mlir::linalg::comprehensive_bufferize::getResultBuffer(
         !bufferizesToMemoryRead(*opOperand))
       skipCopy = true;
     if (!skipCopy) {
-      // Set insertion point now that potential alloc/dealloc are introduced.
+      // The copy happens right before the op that is bufferized.
       b.setInsertionPoint(op);
       state.allocationFns.memCpyFn(b, loc, operandBuffer, resultBuffer);
     }
