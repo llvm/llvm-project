@@ -107,7 +107,7 @@ public:
     friend class DWARFExpression;
     const DWARFExpression *Expr;
     uint64_t Offset;
-    Operation Op;
+    mutable Operation Op;
     iterator(const DWARFExpression *Expr, uint64_t Offset)
         : Expr(Expr), Offset(Offset) {
       Op.Error =
@@ -124,7 +124,7 @@ public:
       return Op;
     }
 
-    class Operation &operator*() {
+    class Operation &operator*() const {
       return Op;
     }
 
