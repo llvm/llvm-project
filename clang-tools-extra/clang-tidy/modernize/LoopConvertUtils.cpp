@@ -184,7 +184,7 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
   // If this is a conversion (as iterators commonly convert into their const
   // iterator counterparts), dig through that as well.
   if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E))
-    if (const auto *D = dyn_cast<CXXConversionDecl>(ME->getMethodDecl()))
+    if (isa<CXXConversionDecl>(ME->getMethodDecl()))
       return digThroughConstructorsConversions(ME->getImplicitObjectArgument());
   return E;
 }
