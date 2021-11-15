@@ -6324,6 +6324,7 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
   // Make sure we only try to split 256/512-bit types to avoid creating
   // narrow vectors.
   EVT VT = Op.getValueType();
+  (void)VT;
   assert((Op.getOperand(0).getValueType().is256BitVector() ||
           Op.getOperand(0).getValueType().is512BitVector()) &&
          (VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
@@ -6338,6 +6339,7 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
 static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG) {
   // Sanity check that all the types match.
   EVT VT = Op.getValueType();
+  (void)VT;
   assert(Op.getOperand(0).getValueType() == VT &&
          Op.getOperand(1).getValueType() == VT && "Unexpected VTs!");
   assert((VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
