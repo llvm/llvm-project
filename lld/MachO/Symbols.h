@@ -168,7 +168,7 @@ public:
   uint64_t value;
   // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
-  ConcatInputSection *compactUnwind = nullptr;
+  ConcatInputSection *unwindEntry = nullptr;
 };
 
 // This enum does double-duty: as a symbol property, it indicates whether & how

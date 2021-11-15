@@ -51,8 +51,8 @@ void markLive() {
     if (auto *d = dyn_cast<Defined>(s)) {
       if (d->isec)
         enqueue(d->isec, d->value);
-      if (d->compactUnwind)
-        enqueue(d->compactUnwind, 0);
+      if (d->unwindEntry)
+        enqueue(d->unwindEntry, 0);
     }
   };
 

@@ -277,17 +277,16 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
     if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
-      sections.push_back({});
+      sections.push_back(sec.addr);
       continue;
     }
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
     auto splitRecords = [&](int recordSize) -> void {
-      sections.push_back({});
+      sections.push_back(sec.addr);
       if (data.empty())
         return;
-
       Subsections &subsections = sections.back().subsections;
       subsections.reserve(data.size() / recordSize);
       auto *isec = make<ConcatInputSection>(
@@ -319,10 +318,12 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         isec = make<WordLiteralInputSection>(segname, name, this, data, align,
                                              flags);
       }
-      sections.push_back({});
+      sections.push_back(sec.addr);
       sections.back().subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
+      if (name == section_names::compactUnwind)
+        compactUnwindSection = &sections.back();
     } else if (segname == segment_names::llvm) {
       // ld64 does not appear to emit contents from sections within the __LLVM
       // segment. Symbols within those sections point to bitcode metadata
@@ -330,7 +331,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       // have the same name without causing duplicate symbol errors. Push an
       // empty entry to ensure indices line up for the remaining sections.
       // TODO: Evaluate whether the bitcode metadata is needed.
-      sections.push_back({});
+      sections.push_back(sec.addr);
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
@@ -340,10 +341,10 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         // object files that contain them. We filter them out early to avoid
         // parsing their relocations unnecessarily. But we must still push an
         // empty entry to ensure the indices line up for the remaining sections.
-        sections.push_back({});
+        sections.push_back(sec.addr);
         debugSections.push_back(isec);
       } else {
-        sections.push_back({});
+        sections.push_back(sec.addr);
         sections.back().subsections.push_back({0, isec});
       }
     }
@@ -358,7 +359,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
 // same location as an offset relative to the start of the containing
 // subsection.
 template <class T>
-static InputSection *findContainingSubsection(Subsections &subsections,
+static InputSection *findContainingSubsection(const Subsections &subsections,
                                               T *offset) {
   static_assert(std::is_same<uint64_t, T>::value ||
                     std::is_same<uint32_t, T>::value,
@@ -437,8 +438,17 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     // and insert them. Storing addends in the instruction stream is
     // possible, but inconvenient and more costly at link time.
 
-    int64_t pairedAddend = 0;
     relocation_info relInfo = relInfos[i];
+    bool isSubtrahend =
+        target->hasAttr(relInfo.r_type, RelocAttrBits::SUBTRAHEND);
+    if (isSubtrahend && StringRef(sec.sectname) == section_names::ehFrame) {
+      // __TEXT,__eh_frame only has symbols and SUBTRACTOR relocs when ld64 -r
+      // adds local "EH_Frame1" and "func.eh". Ignore them because they have
+      // gone unused by Mac OS since Snow Leopard (10.6), vintage 2009.
+      ++i;
+      continue;
+    }
+    int64_t pairedAddend = 0;
     if (target->hasAttr(relInfo.r_type, RelocAttrBits::ADDEND)) {
       pairedAddend = SignExtend64<24>(relInfo.r_symbolnum);
       relInfo = relInfos[++i];
@@ -449,8 +459,6 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
 
-    bool isSubtrahend =
-        target->hasAttr(relInfo.r_type, RelocAttrBits::SUBTRAHEND);
     int64_t embeddedAddend = target->getEmbeddedAddend(mb, sec.offset, relInfo);
     assert(!(embeddedAddend && pairedAddend));
     int64_t totalAddend = pairedAddend + embeddedAddend;
@@ -691,12 +699,17 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     Subsections &subsections = sections[i].subsections;
     if (subsections.empty())
       continue;
-
+    InputSection *lastIsec = subsections.back().isec;
+    if (lastIsec->getName() == section_names::ehFrame) {
+      // __TEXT,__eh_frame only has symbols and SUBTRACTOR relocs when ld64 -r
+      // adds local "EH_Frame1" and "func.eh". Ignore them because they have
+      // gone unused by Mac OS since Snow Leopard (10.6), vintage 2009.
+      continue;
+    }
     std::vector<uint32_t> &symbolIndices = symbolsBySection[i];
     uint64_t sectionAddr = sectionHeaders[i].addr;
     uint32_t sectionAlign = 1u << sectionHeaders[i].align;
 
-    InputSection *lastIsec = subsections.back().isec;
     // Record-based sections have already been split into subsections during
     // parseSections(), so we simply need to match Symbols to the corresponding
     // subsection here.
@@ -725,11 +738,11 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
       return nList[lhs].n_value < nList[rhs].n_value;
     });
-    Subsection subsec = subsections.back();
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
       uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
       StringRef name = strtab + sym.n_strx;
+      Subsection &subsec = subsections.back();
       InputSection *isec = subsec.isec;
 
       uint64_t subsecAddr = sectionAddr + subsec.offset;
@@ -773,7 +786,6 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       // emulating that behavior.
       nextIsec->align = MinAlign(sectionAlign, sym.n_value);
       subsections.push_back({sym.n_value - sectionAddr, nextIsec});
-      subsec = subsections.back();
     }
   }
 
@@ -799,7 +811,7 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
       make<ConcatInputSection>(segName.take_front(16), sectName.take_front(16),
                                /*file=*/this, data);
   isec->live = true;
-  sections.push_back({});
+  sections.push_back(0);
   sections.back().subsections.push_back({0, isec});
 }
 
@@ -869,7 +881,8 @@ template <class LP> void ObjFile::parse() {
   parseDebugInfo();
   if (config->emitDataInCodeInfo)
     parseDataInCode();
-  registerCompactUnwind();
+  if (compactUnwindSection)
+    registerCompactUnwind();
 }
 
 void ObjFile::parseDebugInfo() {
@@ -912,20 +925,7 @@ void ObjFile::parseDataInCode() {
 
 // Create pointers from symbols to their associated compact unwind entries.
 void ObjFile::registerCompactUnwind() {
-  // First, locate the __compact_unwind section.
-  Section *cuSection = nullptr;
-  for (Section &section : sections) {
-    if (section.subsections.empty())
-      continue;
-    if (section.subsections[0].isec->getSegName() != segment_names::ld)
-      continue;
-    cuSection = &section;
-    break;
-  }
-  if (!cuSection)
-    return;
-
-  for (Subsection &subsection : cuSection->subsections) {
+  for (const Subsection &subsection : compactUnwindSection->subsections) {
     ConcatInputSection *isec = cast<ConcatInputSection>(subsection.isec);
     // Hack!! Since each CUE contains a different function address, if ICF
     // operated naively and compared the entire contents of each CUE, entries
@@ -939,7 +939,7 @@ void ObjFile::registerCompactUnwind() {
     ConcatInputSection *referentIsec;
     for (auto it = isec->relocs.begin(); it != isec->relocs.end();) {
       Reloc &r = *it;
-      // We only wish to handle the relocation for CUE::functionAddress.
+      // CUE::functionAddress is at offset 0. Skip personality & LSDA relocs.
       if (r.offset != 0) {
         ++it;
         continue;
@@ -974,7 +974,7 @@ void ObjFile::registerCompactUnwind() {
         ++it;
         continue;
       }
-      (*symIt)->compactUnwind = isec;
+      (*symIt)->unwindEntry = isec;
       // Since we've sliced away the functionAddress, we should remove the
       // corresponding relocation too. Given that clang emits relocations in
       // reverse order of address, this relocation should be at the end of the

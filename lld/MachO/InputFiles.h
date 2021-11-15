@@ -41,6 +41,7 @@ namespace macho {
 struct PlatformInfo;
 class ConcatInputSection;
 class Symbol;
+class Defined;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -59,8 +60,9 @@ struct Subsection {
 using Subsections = std::vector<Subsection>;
 
 struct Section {
-  // uint64_t address = 0; // TODO(gkm): this will debut with __eh_frame handler
+  uint64_t address = 0;
   Subsections subsections;
+  Section(uint64_t addr) : address(addr){};
 };
 
 class InputFile {
@@ -114,6 +116,8 @@ public:
   ArrayRef<llvm::MachO::data_in_code_entry> dataInCodeEntries;
 
 private:
+  Section *compactUnwindSection = nullptr;
+
   template <class LP> void parse();
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>

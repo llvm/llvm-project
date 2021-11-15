@@ -120,10 +120,11 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   it = symbols.begin();
   uint64_t v = (*it)->value;
   for (++it; it != symbols.end(); ++it) {
-    if ((*it)->value == v)
-      (*it)->compactUnwind = nullptr;
+    Defined *d = *it;
+    if (d->value == v)
+      d->unwindEntry = nullptr;
     else
-      v = (*it)->value;
+      v = d->value;
   }
 }
 
