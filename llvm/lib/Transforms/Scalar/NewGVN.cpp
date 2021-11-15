@@ -1819,7 +1819,7 @@ NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
   // See if we know something about the comparison itself, like it is the target
   // of an assume.
   auto *CmpPI = PredInfo->getPredicateInfoFor(I);
-  if (dyn_cast_or_null<PredicateAssume>(CmpPI))
+  if (isa_and_nonnull<PredicateAssume>(CmpPI))
     return ExprResult::some(
         createConstantExpression(ConstantInt::getTrue(CI->getType())));
 

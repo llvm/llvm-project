@@ -1201,8 +1201,7 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
   if (!GEP)
     return false;
   bool Changed = false;
-  if (GEP->hasOneUse() &&
-      dyn_cast<GetElementPtrInst>(GEP->getPointerOperand())) {
+  if (GEP->hasOneUse() && isa<GetElementPtrInst>(GEP->getPointerOperand())) {
     IRBuilder<> Builder(GEP->getContext());
     Builder.SetInsertPoint(GEP);
     Builder.SetCurrentDebugLocation(GEP->getDebugLoc());

@@ -2810,7 +2810,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       const auto &ED = A.getAAFor<AAExecutionDomain>(
           *this, IRPosition::function(*F), DepClassTy::REQUIRED);
       if (CallBase *CB = dyn_cast<CallBase>(U))
-        if (!dyn_cast<ConstantInt>(CB->getArgOperand(0)) ||
+        if (!isa<ConstantInt>(CB->getArgOperand(0)) ||
             !ED.isExecutedByInitialThreadOnly(*CB))
           MallocCalls.erase(CB);
     }

@@ -546,7 +546,7 @@ class MetadataLoader::MetadataLoaderImpl {
         if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
           if (auto *DIExpr = DDI->getExpression())
             if (DIExpr->startsWithDeref() &&
-                dyn_cast_or_null<Argument>(DDI->getAddress())) {
+                isa_and_nonnull<Argument>(DDI->getAddress())) {
               SmallVector<uint64_t, 8> Ops;
               Ops.append(std::next(DIExpr->elements_begin()),
                          DIExpr->elements_end());

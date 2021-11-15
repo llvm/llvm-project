@@ -5254,7 +5254,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
     const GlobalValue *GV = G ? G->getGlobal() : nullptr;
 
     return DAG.getTarget().shouldAssumeDSOLocal(*Mod, GV) &&
-           !dyn_cast_or_null<GlobalIFunc>(GV);
+           !isa_and_nonnull<GlobalIFunc>(GV);
   };
 
   // The PLT is only used in 32-bit ELF PIC mode.  Attempting to use the PLT in
@@ -10769,7 +10769,7 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     // For f32 we also have legal lowering when the element is loaded from
     // memory.
     if (VT == MVT::v4f32 || VT == MVT::v2f64) {
-      if (!C || (VT == MVT::v4f32 && dyn_cast<LoadSDNode>(V2)))
+      if (!C || (VT == MVT::v4f32 && isa<LoadSDNode>(V2)))
         return DAG.getNode(PPCISD::VECINSERT, dl, VT, V1, V2, V3);
       return Op;
     }
