@@ -103,13 +103,13 @@ OpenMP's perspective. Rocr is an implementation of `HSA
   SOURCE_DIR=same-as-llvm-source # e.g. the checkout of llvm-project, next to openmp
   BUILD_DIR=somewhere
   INSTALL_PREFIX=same-as-llvm-install
-  
+
   cd $SOURCE_DIR
   git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.2.x \
     --single-branch
   git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.2.x \
     --single-branch
-  
+
   cd $BUILD_DIR && mkdir roct && cd roct
   cmake $SOURCE_DIR/ROCT-Thunk-Interface/ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
     -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
@@ -122,7 +122,7 @@ OpenMP's perspective. Rocr is an implementation of `HSA
   make && make install
 
 ``IMAGE_SUPPORT`` requires building rocr with clang and is not used by openmp.
-    
+
 Provided cmake's find_package can find the ROCR-Runtime package, LLVM will
 build a tool ``bin/amdgpu-arch`` which will print a string like ``gfx906`` when
 run if it recognises a GPU on the local system. LLVM will also build a shared
@@ -239,7 +239,7 @@ that are exposed through LLVM/Clang to the user as well.
 Q: What is a way to debug errors from mapping memory to a target device?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An experimental way to debug these errors is to use :ref:`remote process 
+An experimental way to debug these errors is to use :ref:`remote process
 offloading <remote_offloading_plugin>`.
 By using ``libomptarget.rtl.rpc.so`` and ``openmp-offloading-server``, it is
 possible to explicitly perform memory transfers between processes on the host
@@ -289,7 +289,7 @@ offloading provided by LLVM. It will attempt to find OpenMP target offloading
 support for your compiler. The flags necessary for OpenMP target offloading will
 be loaded into the ``OpenMPTarget::OpenMPTarget_<device>`` target or the
 ``OpenMPTarget_<device>_FLAGS`` variable if successful. Currently supported
-devices are ``AMDGPU`` and ``NVPTX``. 
+devices are ``AMDGPU`` and ``NVPTX``.
 
 To use this module, simply add the path to CMake's current module path and call
 ``find_package``. The module will be installed with your OpenMP installation by
@@ -300,11 +300,11 @@ require a few additions.
 
   cmake_minimum_required(VERSION 3.13.4)
   project(offloadTest VERSION 1.0 LANGUAGES CXX)
-  
+
   list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
-  
+
   find_package(OpenMPTarget REQUIRED NVPTX)
-  
+
   add_executable(offload)
   target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
   target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)

@@ -5,11 +5,11 @@ readability-string-compare
 
 Finds string comparisons using the compare method.
 
-A common mistake is to use the string's ``compare`` method instead of using the 
+A common mistake is to use the string's ``compare`` method instead of using the
 equality or inequality operators. The compare method is intended for sorting
-functions and thus returns a negative number, a positive number or 
-zero depending on the lexicographical relationship between the strings compared. 
-If an equality or inequality check can suffice, that is recommended. This is 
+functions and thus returns a negative number, a positive number or
+zero depending on the lexicographical relationship between the strings compared.
+If an equality or inequality check can suffice, that is recommended. This is
 recommended to avoid the risk of incorrect interpretation of the return value
 and to simplify the code. The string equality and inequality operators can
 also be faster than the ``compare`` method due to early termination.
@@ -50,5 +50,5 @@ Examples:
   }
 
 The above code examples show the list of if-statements that this check will
-give a warning for. All of them uses ``compare`` to check if equality or 
+give a warning for. All of them uses ``compare`` to check if equality or
 inequality of two strings instead of using the correct operators.

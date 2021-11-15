@@ -32,7 +32,7 @@ regions. This is typically coupled with the :ref:`OMP132 <omp132>` remark.
 .. code-block:: console
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp133.cpp
-   omp133.cpp:6:5: remark: Call may contain unknown parallel regions. Use 
+   omp133.cpp:6:5: remark: Call may contain unknown parallel regions. Use
    `__attribute__((assume("omp_no_parallelism")))` to override. [OMP133]
    setup();
    ^

@@ -4034,7 +4034,7 @@ mark macros as final, meaning they cannot be undef'd or re-defined. For example:
    #undef FINAL_MACRO  // warning: FINAL_MACRO is marked final and should not be undefined
 
 This is useful for enforcing system-provided macros that should not be altered
-in user headers or code. This is controlled by ``-Wpedantic-macros``. Final 
+in user headers or code. This is controlled by ``-Wpedantic-macros``. Final
 macros will always warn on redefinition, including situations with identical
 bodies and in system headers.
 
@@ -4077,7 +4077,7 @@ Examples are:
 
 .. code-block:: c
 
-   # 57 // Advance (or return) to line 57 of the current source file		
+   # 57 // Advance (or return) to line 57 of the current source file
    # 57 "frob" // Set to line 57 of "frob"
    # 1 "foo.h" 1 // Enter "foo.h" at line 1
    # 59 "main.c" 2 // Leave current include and return to "main.c"

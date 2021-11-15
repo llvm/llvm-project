@@ -3236,7 +3236,7 @@ the configuration (without a prefix: ``Auto``).
 **QualifierAlignment** (``QualifierAlignmentStyle``) :versionbadge:`clang-format 14`
   Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
 
-  .. warning:: 
+  .. warning::
 
    Setting ``QualifierAlignment``  to something other than `Leave`, COULD
    lead to incorrect code formatting due to incorrect decisions made due to

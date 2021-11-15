@@ -31,7 +31,7 @@ well together.
 
 This document contains information necessary to successfully implement this
 interface, use it, and to test both sides.  It also explains some of the finer
-points about what exactly results mean.  
+points about what exactly results mean.
 
 ``AliasAnalysis`` Class Overview
 ================================
@@ -70,7 +70,7 @@ possible) C code:
 
   int i;
   char C[2];
-  char A[10]; 
+  char A[10];
   /* ... */
   for (i = 0; i != 10; ++i) {
     C[0] = A[i];          /* One byte store */
@@ -87,7 +87,7 @@ contrast, the following code:
 
   int i;
   char C[2];
-  char A[10]; 
+  char A[10];
   /* ... */
   for (i = 0; i != 10; ++i) {
     ((short*)C)[0] = A[i];  /* Two byte store! */
@@ -103,7 +103,7 @@ accesses alias.
 
 The ``alias`` method
 --------------------
-  
+
 The ``alias`` method is the primary interface used to determine whether or not
 two memory objects alias each other.  It takes two memory objects as input and
 returns MustAlias, PartialAlias, MayAlias, or NoAlias as appropriate.

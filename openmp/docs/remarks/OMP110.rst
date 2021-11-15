@@ -31,12 +31,12 @@ Fortunately, this optimization can undo this by looking at its usage.
 .. code-block:: c++
 
   void use(int *x) { }
-  
+
   void foo() {
     int x;
     use(&x);
   }
-  
+
   int main() {
   #pragma omp target parallel
     foo();
@@ -56,9 +56,9 @@ the current scope, but they can again be removed once the usage is visible.
 .. code-block:: c++
 
   #include <complex>
-  
+
   using complex = std::complex<double>;
-  
+
   void zaxpy(complex *X, complex *Y, const complex D, int N) {
   #pragma omp target teams distribute parallel for firstprivate(D)
     for (int i = 0; i < N; ++i)

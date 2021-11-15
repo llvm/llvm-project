@@ -64,7 +64,7 @@ Options
 
 .. option:: WarnOnUnfixable
 
-   When `true`, emit a warning for cases where the check can't output a 
+   When `true`, emit a warning for cases where the check can't output a
    Fix-It. These can occur with declarations inside the ``else`` branch that
    would have an extended lifetime if the ``else`` branch was removed.
    Default value is `true`.
@@ -73,7 +73,7 @@ Options
 
    When `true`, the check will attempt to refactor a variable defined inside
    the condition of the ``if`` statement that is used in the ``else`` branch
-   defining them just before the ``if`` statement. This can only be done if 
+   defining them just before the ``if`` statement. This can only be done if
    the ``if`` statement is the last statement in its parent's scope.
    Default value is `true`.
 
@@ -82,7 +82,7 @@ LLVM alias
 ----------
 
 There is an alias of this check called llvm-else-after-return.
-In that version the options :option:`WarnOnUnfixable` and 
+In that version the options :option:`WarnOnUnfixable` and
 :option:`WarnOnConditionVariables` are both set to `false` by default.
 
 This check helps to enforce this `LLVM Coding Standards recommendation

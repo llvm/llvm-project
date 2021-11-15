@@ -536,8 +536,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defaults to ON.
 
 **LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
-  Semicolon-separated list of experimental targets to build and linked into 
-  llvm. This will build the experimental target without needing it to add to the 
+  Semicolon-separated list of experimental targets to build and linked into
+  llvm. This will build the experimental target without needing it to add to the
   list of all the targets available in the LLVM's main CMakeLists.txt.
 
 **LLVM_EXTERNAL_{CLANG,LLD,POLLY}_SOURCE_DIR**:PATH
@@ -615,7 +615,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
     $ D:\git> git clone https://github.com/mjansson/rpmalloc
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
-  
+
   This flag needs to be used along with the static CRT, ie. if building the
   Release target, add -DLLVM_USE_CRT_RELEASE=MT.
 

@@ -840,7 +840,7 @@ function. The operand fields are:
   plus 1.
 
 * *preemptionspecifier*: If present, an encoding of the :ref:`runtime preemption specifier<bcpreemptionspecifier>`  of this function.
- 
+
 MODULE_CODE_ALIAS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

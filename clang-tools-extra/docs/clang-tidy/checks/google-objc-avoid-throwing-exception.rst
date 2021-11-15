@@ -5,7 +5,7 @@ google-objc-avoid-throwing-exception
 
 Finds uses of throwing exceptions usages in Objective-C files.
 
-For the same reason as the Google C++ style guide, we prefer not throwing 
+For the same reason as the Google C++ style guide, we prefer not throwing
 exceptions from Objective-C code.
 
 The corresponding C++ style guide rule:

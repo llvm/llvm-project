@@ -37,26 +37,26 @@ stencil calculation shows how this can be used.
     for (int i0 = 0; i0 < M; i0 += MC) {
       for (int j0 = 0; j0 < N; j0 += NC) {
         double sX[MC][NC];
-  
+
   #pragma omp parallel for collapse(2) shared(sX) default(firstprivate)
         for (int i1 = 0; i1 < MC; ++i1)
           for (int j1 = 0; j1 < NC; ++j1)
             sX[i1][j1] = X[(i0 + i1) * N + (j0 + j1)];
-  
+
   #pragma omp parallel for collapse(2) shared(sX) default(firstprivate)
         for (int i1 = 1; i1 < MC - 1; ++i1)
           for (int j1 = 1; j1 < NC - 1; ++j1)
             Y[(i0 + i1) * N + j0 * j1] = (sX[i1 + 1][j1] + sX[i1 - 1][j1] +
                                           sX[i1][j1 + 1] + sX[i1][j1 - 1] +
                                           -4.0 * sX[i1][j1]) / (dX * dX);
-      }   
+      }
     }
   }
 
 .. code-block:: console
 
 
-  $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass=openmp-opt -fopenmp-version=51 omp111.cpp 
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass=openmp-opt -fopenmp-version=51 omp111.cpp
   omp111.cpp:10:14: remark: Replaced globalized variable with 8192 bytes of shared memory. [OMP111]
       double sX[MC][NC];
              ^

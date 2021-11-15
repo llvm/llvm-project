@@ -451,4 +451,3 @@ Clang-Tidy Checks
    `hicpp-vararg <hicpp-vararg.html>`_, `cppcoreguidelines-pro-type-vararg <cppcoreguidelines-pro-type-vararg.html>`_,
    `llvm-else-after-return <llvm-else-after-return.html>`_, `readability-else-after-return <readability-else-after-return.html>`_, "Yes"
    `llvm-qualified-auto <llvm-qualified-auto.html>`_, `readability-qualified-auto <readability-qualified-auto.html>`_, "Yes"
-   

@@ -182,7 +182,7 @@ OPTIONS
 
   Print just the file's name without any directories, instead of the
   absolute path.
-  
+
 .. _llvm-symbolizer-opt-C:
 
 .. option:: --demangle, -C
@@ -241,7 +241,7 @@ OPTIONS
   Specify the preferred output style. Defaults to ``LLVM``. When the output
   style is set to ``GNU``, the tool follows the style of GNU's **addr2line**.
   The differences from the ``LLVM`` style are:
-  
+
   * Does not print the column of a source code location.
 
   * Does not add an empty line after the report for an address.

@@ -446,7 +446,7 @@ added in the future:
     - On iOS platforms, we use AAPCS-VFP calling convention.
 "``swifttailcc``"
     This calling convention is like ``swiftcc`` in most respects, but also the
-    callee pops the argument area of the stack so that mandatory tail calls are 
+    callee pops the argument area of the stack so that mandatory tail calls are
     possible as in ``tailcc``.
 "``cfguard_checkcc``" - Windows Control Flow Guard (Check mechanism)
     This calling convention is used for the Control Flow Guard check function,
@@ -623,7 +623,7 @@ need to either ensure that a) all possible values are valid, or b)
 appropriate fencing is inserted.  Since the appropriate fencing is
 implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
-``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.  
+``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
 
 .. _globalvars:
 
@@ -12230,7 +12230,7 @@ Syntax:
 
       declare token
         @llvm.experimental.gc.statepoint(i64 <id>, i32 <num patch bytes>,
-                       func_type <target>, 
+                       func_type <target>,
                        i64 <#call args>, i64 <flags>,
                        ... (call parameters),
                        i64 0, i64 0)
@@ -12340,7 +12340,7 @@ Operands:
 
 The first and only argument is the ``gc.statepoint`` which starts
 the safepoint sequence of which this ``gc.result`` is a part.
-Despite the typing of this as a generic token, *only* the value defined 
+Despite the typing of this as a generic token, *only* the value defined
 by a ``gc.statepoint`` is legal here.
 
 Semantics:
@@ -12364,8 +12364,8 @@ Syntax:
 ::
 
       declare <pointer type>
-        @llvm.experimental.gc.relocate(token %statepoint_token, 
-                                       i32 %base_offset, 
+        @llvm.experimental.gc.relocate(token %statepoint_token,
+                                       i32 %base_offset,
                                        i32 %pointer_offset)
 
 Overview:
@@ -12379,7 +12379,7 @@ Operands:
 
 The first argument is the ``gc.statepoint`` which starts the
 safepoint sequence of which this ``gc.relocation`` is a part.
-Despite the typing of this as a generic token, *only* the value defined 
+Despite the typing of this as a generic token, *only* the value defined
 by a ``gc.statepoint`` is legal here.
 
 The second and third arguments are both indices into operands of the

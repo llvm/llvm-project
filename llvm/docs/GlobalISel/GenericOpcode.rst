@@ -811,9 +811,9 @@ Indirect branch to jump table entry
 G_JUMP_TABLE
 ^^^^^^^^^^^^
 
-Generates a pointer to the address of the jump table specified by the source 
+Generates a pointer to the address of the jump table specified by the source
 operand. The source operand is a jump table index.
-G_JUMP_TABLE can be used in conjunction with G_BRJT to support jump table 
+G_JUMP_TABLE can be used in conjunction with G_BRJT to support jump table
 codegen with GlobalISel.
 
 .. code-block:: none

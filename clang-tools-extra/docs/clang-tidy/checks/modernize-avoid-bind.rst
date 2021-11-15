@@ -51,7 +51,7 @@ Options
   to perform an incorrect transformation in the case where the result of the ``bind``
   is used in the context of a type erased functor such as ``std::function`` which
   allows mismatched arguments. For example:
-  
+
 
 .. code-block:: c++
 
@@ -84,5 +84,5 @@ that accepts 2 arguments. With permissive parameter list, it instead generates
   }
 
 which is correct.
-  
+
 This check requires using C++14 or higher to run.

@@ -35,6 +35,6 @@ Options
    `std::memcmp`, `memcmp`, `std::strcmp`, `strcmp`, `strncmp`.
 
 This check corresponds to the CERT C++ Coding Standard rule
-`OOP57-CPP. Prefer special member functions and overloaded operators to C 
+`OOP57-CPP. Prefer special member functions and overloaded operators to C
 Standard Library functions
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP57-CPP.+Prefer+special+member+functions+and+overloaded+operators+to+C+Standard+Library+functions>`_.

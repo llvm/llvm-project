@@ -152,7 +152,7 @@ Creating the binary distribution requires following the instructions
 That process will perform both Release+Asserts and Release builds but only
 pack the Release build for upload. You should use the Release+Asserts sysroot,
 normally under ``final/Phase3/Release+Asserts/llvmCore-3.8.1-RCn.install/``,
-for test-suite and run-time benchmarks, to make sure nothing serious has 
+for test-suite and run-time benchmarks, to make sure nothing serious has
 passed through the net. For compile-time benchmarks, use the Release version.
 
 The minimum required version of the tools you'll need are :doc:`here <GettingStarted>`
@@ -375,4 +375,3 @@ Announce the Release
 
 Send an email to the list announcing the release, pointing people to all the
 relevant documentation, download pages and bugs fixed.
-

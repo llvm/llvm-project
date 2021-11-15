@@ -3,11 +3,11 @@
 readability-qualified-auto
 ==========================
 
-Adds pointer qualifications to ``auto``-typed variables that are deduced to 
+Adds pointer qualifications to ``auto``-typed variables that are deduced to
 pointers.
 
 `LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html#beware-unnecessary-copies-with-auto>`_
-advises to make it obvious if a ``auto`` typed variable is a pointer. This 
+advises to make it obvious if a ``auto`` typed variable is a pointer. This
 check will transform ``auto`` to ``auto *`` when the type is deduced to be a
 pointer.
 
@@ -31,7 +31,7 @@ Would be transformed into:
     observe(*Data);
   }
 
-Note ``const`` ``volatile`` qualified types will retain their ``const`` and 
+Note ``const`` ``volatile`` qualified types will retain their ``const`` and
 ``volatile`` qualifiers. Pointers to pointers will not be fully qualified.
 
 .. code-block:: c++
@@ -54,7 +54,7 @@ Options
 -------
 
 .. option:: AddConstToQualified
-   
+
    When set to `true` the check will add const qualifiers variables defined as
    ``auto *`` or ``auto &`` when applicable.
    Default value is `true`.

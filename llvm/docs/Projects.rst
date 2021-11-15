@@ -94,7 +94,7 @@ Underneath your top level directory, you should have the following directories:
   benchmarks and programs that are known to compile with the Clang front
   end. You can use these programs to test your code, gather statistical
   information, and compare it to the current LLVM performance statistics.
-  
+
   Currently, there is no way to hook your tests directly into the ``llvm/test``
   testing harness. You will simply need to find a way to use the source
   provided within that directory on your own.

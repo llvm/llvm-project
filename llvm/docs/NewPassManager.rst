@@ -287,7 +287,7 @@ proper analyses invalidated.
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
-  
+
 The pass manager will call the analysis manager's ``invalidate()`` method
 with the pass's returned ``PreservedAnalyses``. This can be also done
 manually within the pass:

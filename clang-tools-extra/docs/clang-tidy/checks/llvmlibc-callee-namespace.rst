@@ -6,7 +6,7 @@ llvmlibc-callee-namespace
 Checks all calls resolve to functions within ``__llvm_libc`` namespace.
 
 .. code-block:: c++
-    
+
     namespace __llvm_libc {
 
     // Allow calls with the fully qualified name.

@@ -3,7 +3,7 @@
 LLVM/OpenMP Runtimes
 ====================
 
-There are four distinct types of LLVM/OpenMP runtimes 
+There are four distinct types of LLVM/OpenMP runtimes
 
 LLVM/OpenMP Host Runtime (``libomp``)
 -------------------------------------
@@ -84,7 +84,7 @@ variable declarations in the information messages. OpenMP Debugging information
 is enabled at any level of debugging so a full debug runtime is not required.
 For minimal debugging information compile with `-gline-tables-only`, or compile
 with `-g` for full debug information. A full list of flags supported by
-``LIBOMPTARGET_INFO`` is given below. 
+``LIBOMPTARGET_INFO`` is given below.
 
     * Print all data arguments upon entering an OpenMP device kernel: ``0x01``
     * Indicate when a mapped address already exists in the device mapping table:
@@ -260,10 +260,10 @@ offloading region.
     #pragma omp target teams distribute parallel for reduction(+:sum)
       for (int i = 0; i < N; ++i)
         sum += A[i];
-    
+
       return sum;
     }
-    
+
     int main() {
       const int N = 1024;
       double A[N];
@@ -280,7 +280,7 @@ going wrong.
 
 .. code-block:: text
 
-    CUDA error: an illegal memory access was encountered 
+    CUDA error: an illegal memory access was encountered
     Libomptarget error: Copying data from device failed.
     Libomptarget error: Call to targetDataEnd failed, abort target.
     Libomptarget error: Failed to process data after launching the kernel.
@@ -320,7 +320,7 @@ default. The solution is to add an explicit map clause in the target region.
     #pragma omp target teams distribute parallel for reduction(+:sum) map(to:A[0 : N])
       for (int i = 0; i < N; ++i)
         sum += A[i];
-    
+
       return sum;
     }
 
@@ -342,9 +342,9 @@ globalization.
 LIBOMPTARGET_SHARED_MEMORY_SIZE
 """""""""""""""""""""""""""""""
 
-This environment variable sets the amount of dynamic shared memory in bytes used 
-by the kernel once it is launched. A pointer to the dynamic memory buffer can 
-currently only be accessed using the ``__kmpc_get_dynamic_shared`` device 
+This environment variable sets the amount of dynamic shared memory in bytes used
+by the kernel once it is launched. A pointer to the dynamic memory buffer can
+currently only be accessed using the ``__kmpc_get_dynamic_shared`` device
 runtime call.
 
 .. toctree::
@@ -417,8 +417,8 @@ This is the maximum amount of time the client will wait for a response from the 
 LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
 --------------------------------------------------------------------
 
-The target device runtime is an LLVM bitcode library that implements OpenMP 
-runtime functions on the target device. It is linked with the device code's LLVM 
+The target device runtime is an LLVM bitcode library that implements OpenMP
+runtime functions on the target device. It is linked with the device code's LLVM
 IR during compilation.
 
 Debugging

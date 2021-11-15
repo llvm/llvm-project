@@ -943,7 +943,7 @@ For example:
 
 XXXInstrInfo.cpp:
 
-.. code-block:: c++ 
+.. code-block:: c++
 
   #define GET_INSTRINFO_NAMED_OPS // For getNamedOperandIdx() function
   #include "XXXGenInstrInfo.inc"
@@ -1047,7 +1047,7 @@ exact TableGen command from a build by using:
 
 .. code-block:: shell
 
-  $ VERBOSE=1 make ... 
+  $ VERBOSE=1 make ...
 
 and search for ``llvm-tblgen`` commands in the output.
 
@@ -1976,4 +1976,3 @@ The callback function initially saves and later restores the callee register
 values, incoming arguments, and frame and return address.  The callback
 function needs low-level access to the registers or stack, so it is typically
 implemented with assembler.
-

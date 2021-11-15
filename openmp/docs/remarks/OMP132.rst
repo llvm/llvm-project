@@ -34,7 +34,7 @@ regions. This is typically coupled with the :ref:`OMP133 <omp133>` remark.
 .. code-block:: console
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp132.cpp
-   omp133.cpp:4:1: remark: Generic-mode kernel is executed with a customized state machine 
+   omp133.cpp:4:1: remark: Generic-mode kernel is executed with a customized state machine
    that requires a fallback. [OMP132]
    #pragma omp target
    ^

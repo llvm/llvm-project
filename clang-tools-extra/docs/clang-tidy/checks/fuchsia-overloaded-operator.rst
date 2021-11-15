@@ -3,7 +3,7 @@
 fuchsia-overloaded-operator
 ===========================
 
-Warns if an operator is overloaded, except for the assignment (copy and move) 
+Warns if an operator is overloaded, except for the assignment (copy and move)
 operators.
 
 For example:

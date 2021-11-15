@@ -22,9 +22,9 @@ guarded so it is only executed by a single thread in the new merged region.
   void foo() {
   #pragma omp parallel
     parallel_work();
-  
+
     sequential_work();
-  
+
   #pragma omp parallel
     parallel_work();
   }

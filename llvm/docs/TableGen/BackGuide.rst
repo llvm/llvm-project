@@ -191,7 +191,7 @@ Some of these classes have additional members that
 are described in the following subsections.
 
 *All* of the classes derived from ``RecTy`` provide the ``get()`` function.
-It returns an instance of ``Recty`` corresponding to the derived class. 
+It returns an instance of ``Recty`` corresponding to the derived class.
 Some of the ``get()`` functions require an argument to
 specify which particular variant of the type is desired. These arguments are
 described in the following subsections.
@@ -334,7 +334,7 @@ The class provides the following additional functions.
 ~~~~~~~~~~~
 
 The ``DagInit`` class is a subclass of ``TypedInit``. Its instances
-represent the possible direct acyclic graphs (``dag``). 
+represent the possible direct acyclic graphs (``dag``).
 
 The class includes a pointer to an ``Init`` for the DAG operator and a
 pointer to a ``StringInit`` for the operator name. It includes the count of
@@ -426,7 +426,7 @@ The class provides these additional functions.
 .. code-block:: text
 
   using const_iterator = Init *const *;
- 
+
 
 ``StringInit``
 ~~~~~~~~~~~~~~
@@ -463,7 +463,7 @@ The following steps are required to create a new backend for TableGen.
      function. It should invoke the "main function" of your backend, which
      in this case, according to convention, is named ``EmitAddressModes``.
 
-5. Add a declaration of your "main function" to the corresponding 
+5. Add a declaration of your "main function" to the corresponding
    ``TableGenBackends.h`` header file.
 
 #. Add your backend C++ file to the appropriate ``CMakeLists.txt`` file so
@@ -616,7 +616,7 @@ null if the field does not exist.
 
 The field is assumed to have another record as its value. That record is returned
 as a pointer to a ``Record``. If the field does not exist or is unset, the
-functions returns null.  
+functions returns null.
 
 Getting Record Superclasses
 ===========================
@@ -692,12 +692,12 @@ functions are provided, each with four overloads.
 
 * ``PrintFatalNote`` prints a note and then terminates.
 
-Each of these five functions is overloaded four times. 
+Each of these five functions is overloaded four times.
 
 * ``PrintError(const Twine &Msg)``:
   Prints the message with no source file location.
 
-* ``PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg)``: 
+* ``PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg)``:
   Prints the message followed by the specified source line,
   along with a pointer to the item in error. The array of
   source file locations is typically taken from a ``Record`` instance.
@@ -769,14 +769,14 @@ over time. The output looks like this.
 .. code-block:: text
 
   DETAILED RECORDS for file llvm-project\llvm\lib\target\arc\arc.td
-  
+
   -------------------- Global Variables (5) --------------------
-  
+
   AMDGPUBufferIntrinsics = [int_amdgcn_buffer_load_format, ...
   AMDGPUImageDimAtomicIntrinsics = [int_amdgcn_image_atomic_swap_1d, ...
   ...
   -------------------- Classes (758) --------------------
-  
+
   AMDGPUBufferLoad  |IntrinsicsAMDGPU.td:879|
     Template args:
       LLVMType AMDGPUBufferLoad:data_ty = llvm_any_ty  |IntrinsicsAMDGPU.td:879|
@@ -786,7 +786,7 @@ over time. The output looks like this.
       string LLVMName = ""  |Intrinsics.td:343|
   ...
   -------------------- Records (12303) --------------------
-  
+
   AMDGPUSample_lz_o  |IntrinsicsAMDGPU.td:560|
     Defm sequence: |IntrinsicsAMDGPU.td:584| |IntrinsicsAMDGPU.td:566|
     Superclasses: AMDGPUSampleVariant
@@ -799,7 +799,7 @@ over time. The output looks like this.
   their values.
 
 * The classes are shown with their source location, template arguments,
-  superclasses, and fields. 
+  superclasses, and fields.
 
 * The records are shown with their source location, ``defm`` sequence,
   superclasses, and fields.
@@ -828,7 +828,7 @@ following is produced. This is the timing for the
                                TableGen Phase Timing
   ===-------------------------------------------------------------------------===
     Total Execution Time: 101.0106 seconds (102.4819 wall clock)
-  
+
      ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Name ---
     85.5197 ( 84.9%)   0.1560 ( 50.0%)  85.6757 ( 84.8%)  85.7009 ( 83.6%)  Backend overall
     15.1789 ( 15.1%)   0.0000 (  0.0%)  15.1789 ( 15.0%)  15.1829 ( 14.8%)  Parse, build records
@@ -847,7 +847,7 @@ the ``--emit-dag-isel`` backend run on the AMDGPU target.
                                TableGen Phase Timing
   ===-------------------------------------------------------------------------===
     Total Execution Time: 746.3868 seconds (747.1447 wall clock)
-  
+
      ---User Time---   --System Time--   --User+System--   ---Wall Time---  --- Name ---
     657.7938 ( 88.1%)   0.1404 ( 90.0%)  657.9342 ( 88.1%)  658.6497 ( 88.2%)  Emit matcher table
     70.2317 (  9.4%)   0.0000 (  0.0%)  70.2317 (  9.4%)  70.2700 (  9.4%)  Convert to matchers

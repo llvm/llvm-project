@@ -4,12 +4,12 @@ Inlining
 There are several options that control which calls the analyzer will consider for
 inlining. The major one is ``-analyzer-config ipa``:
 
-* ``analyzer-config ipa=none`` - All inlining is disabled. This is the only mode 
+* ``analyzer-config ipa=none`` - All inlining is disabled. This is the only mode
   available in LLVM 3.1 and earlier and in Xcode 4.3 and earlier.
 
-* ``analyzer-config ipa=basic-inlining`` - Turns on inlining for C functions, C++ 
-   static member functions, and blocks -- essentially, the calls that behave 
-   like simple C function calls. This is essentially the mode used in 
+* ``analyzer-config ipa=basic-inlining`` - Turns on inlining for C functions, C++
+   static member functions, and blocks -- essentially, the calls that behave
+   like simple C function calls. This is essentially the mode used in
    Xcode 4.4.
 
 * ``analyzer-config ipa=inlining`` - Turns on inlining when we can confidently find
@@ -23,15 +23,15 @@ inlining. The major one is ``-analyzer-config ipa``:
    correct. For virtual calls, inline the most plausible definition.
 
 * ``analyzer-config ipa=dynamic-bifurcate`` - Same as -analyzer-config ipa=dynamic,
-   but the path is split. We inline on one branch and do not inline on the 
-   other. This mode does not drop the coverage in cases when the parent class 
+   but the path is split. We inline on one branch and do not inline on the
+   other. This mode does not drop the coverage in cases when the parent class
    has code that is only exercised when some of its methods are overridden.
 
 Currently, ``-analyzer-config ipa=dynamic-bifurcate`` is the default mode.
 
-While ``-analyzer-config ipa`` determines in general how aggressively the analyzer 
-will try to inline functions, several additional options control which types of 
-functions can inlined, in an all-or-nothing way. These options use the 
+While ``-analyzer-config ipa`` determines in general how aggressively the analyzer
+will try to inline functions, several additional options control which types of
+functions can inlined, in an all-or-nothing way. These options use the
 analyzer's configuration table, so they are all specified as follows:
 
     ``-analyzer-config OPTION=VALUE``
@@ -52,7 +52,7 @@ functions with visible definitions will be considered for inlining. In some
 cases the analyzer may still choose not to inline the function.
 
 Note that under 'constructors', constructors for types with non-trivial
-destructors will not be inlined. Additionally, no C++ member functions will be 
+destructors will not be inlined. Additionally, no C++ member functions will be
 inlined under -analyzer-config ipa=none or -analyzer-config ipa=basic-inlining,
 regardless of the setting of the c++-inlining mode.
 
@@ -79,7 +79,7 @@ considered for inlining.
 
     ``-analyzer-config c++-stdlib-inlining=[true | false]``
 
-Currently, C++ standard library functions are considered for inlining by 
+Currently, C++ standard library functions are considered for inlining by
 default.
 
 The standard library functions and the STL in particular are used ubiquitously
@@ -107,7 +107,7 @@ objects. For example, these three expressions should be equivalent:
 
 
 .. code-block:: cpp
-   
+
  std::distance(c.begin(), c.end()) == 0
  c.begin() == c.end()
  c.empty()
@@ -214,7 +214,7 @@ Dynamic Calls and Devirtualization
 "Dynamic" calls are those that are resolved at runtime, such as C++ virtual
 method calls and Objective-C message sends. Due to the path-sensitive nature of
 the analysis, the analyzer may be able to reason about the dynamic type of the
-object whose method is being called and thus "devirtualize" the call. 
+object whose method is being called and thus "devirtualize" the call.
 
 This path-sensitive devirtualization occurs when the analyzer can determine what
 method would actually be called at runtime.  This is possible when the type
@@ -268,14 +268,14 @@ parlance), which ExprEngine uses to decide whether or not the call should be
 inlined.
 
 Inlining Dynamic Calls
-^^^^^^^^^^^^^^^^^^^^^^ 
+^^^^^^^^^^^^^^^^^^^^^^
 
 The -analyzer-config ipa option has five different modes: none, basic-inlining,
 inlining, dynamic, and dynamic-bifurcate. Under -analyzer-config ipa=dynamic,
 all dynamic calls are inlined, whether we are certain or not that this will
 actually be the definition used at runtime. Under -analyzer-config ipa=inlining,
 only "near-perfect" devirtualized calls are inlined*, and other dynamic calls
-are evaluated conservatively (as if no definition were available). 
+are evaluated conservatively (as if no definition were available).
 
 * Currently, no Objective-C messages are not inlined under
   -analyzer-config ipa=inlining, even if we are reasonably confident of the type
@@ -286,8 +286,8 @@ The last option, -analyzer-config ipa=dynamic-bifurcate, behaves similarly to
 "dynamic", but performs a conservative invalidation in the general virtual case
 in *addition* to inlining. The details of this are discussed below.
 
-As stated above, -analyzer-config ipa=basic-inlining does not inline any C++ 
-member functions or Objective-C method calls, even if they are non-virtual or 
+As stated above, -analyzer-config ipa=basic-inlining does not inline any C++
+member functions or Objective-C method calls, even if they are non-virtual or
 can be safely devirtualized.
 
 
@@ -297,29 +297,29 @@ Bifurcation
 ExprEngine::BifurcateCall implements the ``-analyzer-config ipa=dynamic-bifurcate``
 mode.
 
-When a call is made on an object with imprecise dynamic type information 
+When a call is made on an object with imprecise dynamic type information
 (RuntimeDefinition::mayHaveOtherDefinitions() evaluates to TRUE), ExprEngine
 bifurcates the path and marks the object's region (retrieved from the
 RuntimeDefinition object) with a path-sensitive "mode" in the ProgramState.
 
-Currently, there are 2 modes: 
+Currently, there are 2 modes:
 
 * ``DynamicDispatchModeInlined`` - Models the case where the dynamic type information
-   of the receiver (MemoryRegion) is assumed to be perfectly constrained so 
-   that a given definition of a method is expected to be the code actually 
-   called. When this mode is set, ExprEngine uses the Decl from 
-   RuntimeDefinition to inline any dynamically dispatched call sent to this 
+   of the receiver (MemoryRegion) is assumed to be perfectly constrained so
+   that a given definition of a method is expected to be the code actually
+   called. When this mode is set, ExprEngine uses the Decl from
+   RuntimeDefinition to inline any dynamically dispatched call sent to this
    receiver because the function definition is considered to be fully resolved.
 
 * ``DynamicDispatchModeConservative`` - Models the case where the dynamic type
-   information is assumed to be incorrect, for example, implies that the method 
-   definition is overridden in a subclass. In such cases, ExprEngine does not 
-   inline the methods sent to the receiver (MemoryRegion), even if a candidate 
-   definition is available. This mode is conservative about simulating the 
+   information is assumed to be incorrect, for example, implies that the method
+   definition is overridden in a subclass. In such cases, ExprEngine does not
+   inline the methods sent to the receiver (MemoryRegion), even if a candidate
+   definition is available. This mode is conservative about simulating the
    effects of a call.
 
-Going forward along the symbolic execution path, ExprEngine consults the mode 
-of the receiver's MemRegion to make decisions on whether the calls should be 
+Going forward along the symbolic execution path, ExprEngine consults the mode
+of the receiver's MemRegion to make decisions on whether the calls should be
 inlined or not, which ensures that there is at most one split per region.
 
 At a high level, "bifurcation mode" allows for increased semantic coverage in
@@ -331,8 +331,8 @@ conservative mode is used.
 Objective-C Message Heuristics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-ExprEngine relies on a set of heuristics to partition the set of Objective-C 
-method calls into those that require bifurcation and those that do not. Below 
+ExprEngine relies on a set of heuristics to partition the set of Objective-C
+method calls into those that require bifurcation and those that do not. Below
 are the cases when the DynamicTypeInfo of the object is considered precise
 (cannot be a subclass):
 
