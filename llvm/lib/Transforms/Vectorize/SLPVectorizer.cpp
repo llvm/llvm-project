@@ -5287,7 +5287,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
-    if (EU.User && isa<InsertElementInst>(EU.User)) {
+    if (isa_and_nonnull<InsertElementInst>(EU.User)) {
       if (auto *FTy = dyn_cast<FixedVectorType>(EU.User->getType())) {
         Optional<int> InsertIdx = getInsertIndex(EU.User, 0);
         if (!InsertIdx || *InsertIdx == UndefMaskElem)
@@ -5299,8 +5299,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
             return false;
           auto *IE1 = cast<InsertElementInst>(VU);
           auto *IE2 = cast<InsertElementInst>(V);
-          // Go though of insertelement instructions trying to find either VU as
-          // the original vector for IE2 or V as the original vector for IE1.
+          // Go through of insertelement instructions trying to find either VU
+          // as the original vector for IE2 or V as the original vector for IE1.
           do {
             if (IE1 == VU || IE2 == V)
               return true;
