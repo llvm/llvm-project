@@ -45902,6 +45902,36 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
   if (VT != Op1.getValueType() || !VT.isSimple() || !VT.isInteger())
     return SDValue();
 
+  // Try to convert an "is positive" signbit masking operation into arithmetic
+  // shift and "andn". This saves a materialization of a -1 vector constant.
+  // The "is negative" variant should be handled more generally because it only
+  // requires "and" rather than "andn":
+  // and (pcmpgt X, -1), Y --> pandn (vsrai X, BitWidth - 1), Y
+  //
+  // This is limited to the original type to avoid producing even more bitcasts.
+  // If the bitcasts can't be eliminated, then it is unlikely that this fold
+  // will be profitable.
+  if (N->getValueType(0) == VT &&
+      supportedVectorShiftWithImm(VT.getSimpleVT(), Subtarget, ISD::SRA)) {
+    SDValue X, Y;
+    if (Op1.hasOneUse() && Op1.getOpcode() == X86ISD::PCMPGT &&
+        isAllOnesOrAllOnesSplat(Op1.getOperand(1))) {
+      X = Op1.getOperand(0);
+      Y = Op0;
+    } else if (Op0.hasOneUse() && Op0.getOpcode() == X86ISD::PCMPGT &&
+               isAllOnesOrAllOnesSplat(Op0.getOperand(1))) {
+      X = Op0.getOperand(0);
+      Y = Op1;
+    }
+    if (X && Y) {
+      SDLoc DL(N);
+      SDValue Sra =
+          getTargetVShiftByConstNode(X86ISD::VSRAI, DL, VT.getSimpleVT(), X,
+                                     VT.getScalarSizeInBits() - 1, DAG);
+      return DAG.getNode(X86ISD::ANDNP, DL, VT, Sra, Y);
+    }
+  }
+
   APInt SplatVal;
   if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) ||
       !SplatVal.isMask())
