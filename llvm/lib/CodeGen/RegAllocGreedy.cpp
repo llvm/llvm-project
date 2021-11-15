@@ -15,6 +15,7 @@
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
 #include "RegAllocBase.h"
+#include "RegAllocEvictionAdvisor.h"
 #include "SpillPlacement.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -57,6 +58,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -69,7 +71,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -148,7 +149,6 @@ class RAGreedy : public MachineFunctionPass,
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
   using SmallLISet = SmallPtrSet<LiveInterval *, 4>;
-  using SmallVirtRegSet = SmallSet<Register, 16>;
 
   // context
   MachineFunction *MF;
@@ -174,47 +174,6 @@ class RAGreedy : public MachineFunctionPass,
   PQueue Queue;
   unsigned NextCascade;
   std::unique_ptr<VirtRegAuxInfo> VRAI;
-
-  // Live ranges pass through a number of stages as we try to allocate them.
-  // Some of the stages may also create new live ranges:
-  //
-  // - Region splitting.
-  // - Per-block splitting.
-  // - Local splitting.
-  // - Spilling.
-  //
-  // Ranges produced by one of the stages skip the previous stages when they are
-  // dequeued. This improves performance because we can skip interference checks
-  // that are unlikely to give any results. It also guarantees that the live
-  // range splitting algorithm terminates, something that is otherwise hard to
-  // ensure.
-  enum LiveRangeStage {
-    /// Newly created live range that has never been queued.
-    RS_New,
-
-    /// Only attempt assignment and eviction. Then requeue as RS_Split.
-    RS_Assign,
-
-    /// Attempt live range splitting if assignment is impossible.
-    RS_Split,
-
-    /// Attempt more aggressive live range splitting that is guaranteed to make
-    /// progress.  This is used for split products that may not be making
-    /// progress.
-    RS_Split2,
-
-    /// Live range will be spilled.  No more splitting will be attempted.
-    RS_Spill,
-
-
-    /// Live range is in memory. Because of other evictions, it might get moved
-    /// in a register in the end.
-    RS_Memory,
-
-    /// There is nothing more we can do to this live range.  Abort compilation
-    /// if it can't be assigned.
-    RS_Done
-  };
 
   // Enum CutOffStage to keep a track whether the register allocation failed
   // because of the cutoffs encountered in last chance recoloring.
@@ -266,25 +225,6 @@ class RAGreedy : public MachineFunctionPass,
         ExtraRegInfo[Reg].Stage = NewStage;
     }
   }
-
-  /// Cost of evicting interference.
-  struct EvictionCost {
-    unsigned BrokenHints = 0; ///< Total number of broken hints.
-    float MaxWeight = 0;      ///< Maximum spill weight evicted.
-
-    EvictionCost() = default;
-
-    bool isMax() const { return BrokenHints == ~0u; }
-
-    void setMax() { BrokenHints = ~0u; }
-
-    void setBrokenHints(unsigned NHints) { BrokenHints = NHints; }
-
-    bool operator<(const EvictionCost &O) const {
-      return std::tie(BrokenHints, MaxWeight) <
-             std::tie(O.BrokenHints, O.MaxWeight);
-    }
-  };
 
   /// EvictionTrack - Keeps track of past evictions in order to optimize region
   /// split decision.
