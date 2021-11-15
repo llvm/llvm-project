@@ -281,8 +281,8 @@ MachineBasicBlock::getLastNonDebugInstr(bool SkipPseudoOp) {
 }
 
 bool MachineBasicBlock::hasEHPadSuccessor() const {
-  for (const_succ_iterator I = succ_begin(), E = succ_end(); I != E; ++I)
-    if ((*I)->isEHPad())
+  for (const MachineBasicBlock *Succ : successors())
+    if (Succ->isEHPad())
       return true;
   return false;
 }
@@ -1042,17 +1042,16 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     for (instr_iterator I = getFirstInstrTerminator(), E = instr_end();
          I != E; ++I) {
       MachineInstr *MI = &*I;
-      for (MachineInstr::mop_iterator OI = MI->operands_begin(),
-           OE = MI->operands_end(); OI != OE; ++OI) {
-        if (!OI->isReg() || OI->getReg() == 0 ||
-            !OI->isUse() || !OI->isKill() || OI->isUndef())
+      for (MachineOperand &MO : MI->operands()) {
+        if (!MO.isReg() || MO.getReg() == 0 || !MO.isUse() || !MO.isKill() ||
+            MO.isUndef())
           continue;
-        Register Reg = OI->getReg();
+        Register Reg = MO.getReg();
         if (Register::isPhysicalRegister(Reg) ||
             LV->getVarInfo(Reg).removeKill(*MI)) {
           KilledRegs.push_back(Reg);
-          LLVM_DEBUG(dbgs() << "Removing terminator kill: " << *MI);
-          OI->setIsKill(false);
+          LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
+          MO.setIsKill(false);
         }
       }
     }
@@ -1063,12 +1062,11 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
          I != E; ++I) {
       MachineInstr *MI = &*I;
 
-      for (MachineInstr::mop_iterator OI = MI->operands_begin(),
-           OE = MI->operands_end(); OI != OE; ++OI) {
-        if (!OI->isReg() || OI->getReg() == 0)
+      for (const MachineOperand &MO : MI->operands()) {
+        if (!MO.isReg() || MO.getReg() == 0)
           continue;
 
-        Register Reg = OI->getReg();
+        Register Reg = MO.getReg();
         if (!is_contained(UsedRegs, Reg))
           UsedRegs.push_back(Reg);
       }

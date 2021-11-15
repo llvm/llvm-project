@@ -131,8 +131,7 @@ define zeroext i1 @test8_5(i8 zeroext %x)  align 2 {
 ; CHECK-LABEL: test8_5:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub w8, w0, #123
-; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #150
+; CHECK-NEXT:    cmn w8, #106
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:

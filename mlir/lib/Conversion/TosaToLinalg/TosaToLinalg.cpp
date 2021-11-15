@@ -1230,7 +1230,7 @@ public:
         loc, resultTy.getShape(), resultETy);
     if (!isQuantized) {
       Value conv = rewriter
-                       .create<linalg::DepthwiseConv2DNhwcOp>(
+                       .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
                            ValueRange{zeroTensor}, strideAttr, dilationAttr)
                        .getResult(0);
@@ -1254,7 +1254,7 @@ public:
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
       Value conv =
           rewriter
-              .create<linalg::DepthwiseConv2DNhwcQOp>(
+              .create<linalg::DepthwiseConv2DNhwcHwcmQOp>(
                   loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
                   ValueRange{zeroTensor}, strideAttr, dilationAttr)
               .getResult(0);
@@ -2381,20 +2381,30 @@ public:
           "Pad converter requires static shaped input / padding values.");
     }
 
-    Attribute constantAttr;
-    if (elementTy.isa<FloatType>())
-      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    else if (elementTy.isa<IntegerType>() && !padOp.quantization_info())
-      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
-      auto value = padOp.quantization_info().getValue().input_zp().getValue();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
+    // Setup the default constantAttr.
+
+    Value padConstant;
+
+    if (padOp.pad_const()) {
+      padConstant = rewriter.createOrFold<tensor::ExtractOp>(
+          loc, padOp.pad_const(), ValueRange({}));
+    } else {
+      Attribute constantAttr;
+      if (elementTy.isa<FloatType>())
+        constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
+      else if (elementTy.isa<IntegerType>() && !padOp.quantization_info())
+        constantAttr = rewriter.getIntegerAttr(elementTy, 0);
+      else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
+        auto value = padOp.quantization_info().getValue().input_zp().getValue();
+        constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
+      }
+      if (constantAttr)
+        padConstant = rewriter.create<arith::ConstantOp>(loc, constantAttr);
     }
 
-    if (!constantAttr) {
+    if (!padConstant) {
       return rewriter.notifyMatchFailure(
-          padOp,
-          "tosa.pad to linalg lowering encountered an unknown element type");
+          padOp, "tosa.pad was unable to determine the pad constant value.");
     }
 
     Value lowIndex =
@@ -2424,10 +2434,8 @@ public:
       highValues.push_back(highVal);
     }
 
-    Value constant = rewriter.create<arith::ConstantOp>(loc, constantAttr);
-
     auto newPadOp = linalg::PadTensorOp::createPadScalarOp(
-        padOp.getType(), input, constant, lowValues, highValues,
+        padOp.getType(), input, padConstant, lowValues, highValues,
         /*nofold=*/false, loc, rewriter);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());

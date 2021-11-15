@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -fallow-half-arguments-and-returns -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // vdupq_n_f64 -> dup.2d v0, v0[0]

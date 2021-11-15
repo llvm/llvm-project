@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=8 -mvscale-max=8 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=16 -mvscale-max=16 -flax-vector-conversions=none -fallow-half-arguments-and-returns -ffreestanding -fsyntax-only -verify %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 // expected-no-diagnostics
 
 #include <arm_sve.h>

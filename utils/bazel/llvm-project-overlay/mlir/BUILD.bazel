@@ -7,7 +7,12 @@
 
 load(":tblgen.bzl", "gentbl_cc_library", "td_library")
 load(":linalggen.bzl", "genlinalg")
-load(":build_defs.bzl", "cc_headers_only", "if_cuda_available")
+load(
+    ":build_defs.bzl",
+    "cc_headers_only",
+    "if_cuda_available",
+    "mlir_c_api_cc_library",
+)
 
 package(
     default_visibility = ["//visibility:public"],
@@ -308,7 +313,7 @@ cc_library(
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIIR",
     srcs = [
         "lib/CAPI/Dialect/Standard.cpp",
@@ -348,20 +353,22 @@ cc_library(
         "include/mlir/CAPI/Utils.h",
         "include/mlir/CAPI/Wrap.h",
     ],
-    includes = ["include"],
-    deps = [
-        ":ConversionPassIncGen",
+    header_deps = [
         ":IR",
-        ":InferTypeOpInterface",
-        ":Parser",
         ":Pass",
-        ":StandardOps",
         ":Support",
         "//llvm:Support",
     ],
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":InferTypeOpInterface",
+        ":Parser",
+        ":StandardOps",
+    ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIInterfaces",
     srcs = [
         "lib/CAPI/Interfaces/Interfaces.cpp",
@@ -375,26 +382,27 @@ cc_library(
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIAsync",
     srcs = [
         "lib/CAPI/Dialect/Async.cpp",
         "lib/CAPI/Dialect/AsyncPasses.cpp",
     ],
-    hdrs = [
-        "include/mlir-c/Dialect/Async.h",
+    hdrs = ["include/mlir-c/Dialect/Async.h"],
+    header_deps = [
+        ":AsyncPassIncGen",
+        ":CAPIIRHeaders",
     ],
     includes = ["include"],
     deps = [
         ":Async",
-        ":AsyncPassIncGen",
         ":AsyncTransforms",
         ":CAPIIR",
         ":Pass",
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPILinalg",
     srcs = [
         "lib/CAPI/Dialect/Linalg.cpp",
@@ -403,23 +411,29 @@ cc_library(
     hdrs = [
         "include/mlir-c/Dialect/Linalg.h",
     ],
+    header_deps = [
+        ":CAPIIRHeaders",
+        ":LinalgPassIncGen",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
         ":LinalgOps",
-        ":LinalgPassIncGen",
         ":LinalgTransforms",
         ":Pass",
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPILLVM",
     srcs = [
         "lib/CAPI/Dialect/LLVM.cpp",
     ],
     hdrs = [
         "include/mlir-c/Dialect/LLVM.h",
+    ],
+    header_deps = [
+        ":CAPIIRHeaders",
     ],
     includes = ["include"],
     deps = [
@@ -428,7 +442,7 @@ cc_library(
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIGPU",
     srcs = [
         "lib/CAPI/Dialect/GPU.cpp",
@@ -437,17 +451,20 @@ cc_library(
     hdrs = [
         "include/mlir-c/Dialect/GPU.h",
     ],
+    header_deps = [
+        ":CAPIIRHeaders",
+        ":GPUPassIncGen",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
         ":GPUDialect",
-        ":GPUPassIncGen",
         ":GPUTransforms",
         ":Pass",
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPISparseTensor",
     srcs = [
         "lib/CAPI/Dialect/SparseTensor.cpp",
@@ -456,34 +473,43 @@ cc_library(
     hdrs = [
         "include/mlir-c/Dialect/SparseTensor.h",
     ],
+    header_deps = [
+        ":CAPIIRHeaders",
+        ":SparseTensorPassIncGen",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
         ":Pass",
         ":SparseTensor",
-        ":SparseTensorPassIncGen",
         ":SparseTensorTransforms",
         ":Support",
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIConversion",
     srcs = ["lib/CAPI/Conversion/Passes.cpp"],
     hdrs = ["include/mlir-c/Conversion.h"],
+    header_deps = [
+        ":CAPIIRHeaders",
+        ":ConversionPassIncGen",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
-        ":ConversionPassIncGen",
         ":ConversionPasses",
         ":Pass",
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIDebug",
     srcs = ["lib/CAPI/Debug/Debug.cpp"],
     hdrs = ["include/mlir-c/Debug.h"],
+    header_deps = [
+        ":CAPIIRHeaders",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
@@ -492,17 +518,20 @@ cc_library(
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIExecutionEngine",
     srcs = ["lib/CAPI/ExecutionEngine/ExecutionEngine.cpp"],
     hdrs = [
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir/CAPI/ExecutionEngine.h",
     ],
+    header_deps = [
+        ":CAPIIRHeaders",
+        ":ExecutionEngine",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
-        ":ExecutionEngine",
         ":ExecutionEngineUtils",
         ":LLVMToLLVMIRTranslation",
         "//llvm:OrcJIT",
@@ -510,23 +539,29 @@ cc_library(
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPITransforms",
     srcs = ["lib/CAPI/Transforms/Passes.cpp"],
     hdrs = ["include/mlir-c/Transforms.h"],
+    header_deps = [
+        ":CAPIIRHeaders",
+        ":TransformsPassIncGen",
+    ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
         ":Pass",
         ":Transforms",
-        ":TransformsPassIncGen",
     ],
 )
 
-cc_library(
+mlir_c_api_cc_library(
     name = "CAPIRegistration",
     srcs = ["lib/CAPI/Registration/Registration.cpp"],
     hdrs = ["include/mlir-c/Registration.h"],
+    header_deps = [
+        ":CAPIIRHeaders",
+    ],
     includes = ["include"],
     deps = [
         ":AllPassesAndDialects",
@@ -543,6 +578,30 @@ exports_files(
     glob(["lib/Bindings/Python/**/*.cpp"]),
 )
 
+MLIR_BINDINGS_PYTHON_HEADERS = [
+    "lib/Bindings/Python/*.h",
+    "include/mlir-c/Bindings/Python/*.h",
+    "include/mlir/Bindings/Python/*.h",
+]
+
+cc_library(
+    name = "MLIRBindingsPythonHeaders",
+    includes = [
+        "include",
+        "lib/Bindings/Python",
+    ],
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
+    deps = [
+        ":CAPIIRHeaders",
+        "@pybind11",
+        "@python_runtime//:headers",
+    ],
+)
+
 cc_library(
     name = "MLIRBindingsPythonHeadersAndDeps",
     includes = [
@@ -553,11 +612,7 @@ cc_library(
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
     ],
-    textual_hdrs = glob([
-        "lib/Bindings/Python/*.h",
-        "include/mlir-c/Bindings/Python/*.h",
-        "include/mlir/Bindings/Python/*.h",
-    ]),
+    textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIR",
         "@pybind11",
@@ -565,20 +620,22 @@ cc_library(
     ],
 )
 
+MLIR_PYTHON_BINDINGS_SOURCES = [
+    "lib/Bindings/Python/DialectLinalg.cpp",
+    "lib/Bindings/Python/DialectSparseTensor.cpp",
+    "lib/Bindings/Python/IRAffine.cpp",
+    "lib/Bindings/Python/IRAttributes.cpp",
+    "lib/Bindings/Python/IRCore.cpp",
+    "lib/Bindings/Python/IRInterfaces.cpp",
+    "lib/Bindings/Python/IRModule.cpp",
+    "lib/Bindings/Python/IRTypes.cpp",
+    "lib/Bindings/Python/Pass.cpp",
+    "lib/Bindings/Python/PybindUtils.cpp",
+]
+
 cc_library(
     name = "MLIRBindingsPythonCore",
-    srcs = [
-        "lib/Bindings/Python/DialectLinalg.cpp",
-        "lib/Bindings/Python/DialectSparseTensor.cpp",
-        "lib/Bindings/Python/IRAffine.cpp",
-        "lib/Bindings/Python/IRAttributes.cpp",
-        "lib/Bindings/Python/IRCore.cpp",
-        "lib/Bindings/Python/IRInterfaces.cpp",
-        "lib/Bindings/Python/IRModule.cpp",
-        "lib/Bindings/Python/IRTypes.cpp",
-        "lib/Bindings/Python/Pass.cpp",
-        "lib/Bindings/Python/PybindUtils.cpp",
-    ],
+    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
     # These flags are needed for pybind11 to work.
     copts = [
         "-fexceptions",
@@ -605,6 +662,57 @@ cc_library(
         "//llvm:Support",
         "@pybind11",
         "@python_runtime//:headers",
+    ],
+)
+
+cc_library(
+    name = "MLIRBindingsPythonCoreNoCAPI",
+    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
+    # These flags are needed for pybind11 to work.
+    copts = [
+        "-fexceptions",
+        "-frtti",
+    ],
+    features = [
+        # Cannot use header_modules (parse_headers feature fails).
+        "-use_header_modules",
+    ],
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIAsyncHeaders",
+        ":CAPIDebugHeaders",
+        ":CAPIGPUHeaders",
+        ":CAPIIRHeaders",
+        ":CAPILinalgHeaders",
+        ":CAPIRegistrationHeaders",
+        ":CAPISparseTensorHeaders",
+        ":MLIRBindingsPythonHeaders",
+        "//llvm:Support",
+        "@pybind11",
+        "@python_runtime//:headers",
+    ],
+)
+
+# Target that bundles together the CAPI objects needed for
+# MLIRBindingsPythonCoreNoCAPI.
+cc_library(
+    name = "MLIRBindingsPythonCAPIObjects",
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIAsyncObjects",
+        ":CAPIDebugObjects",
+        ":CAPIGPUObjects",
+        ":CAPIIRObjects",
+        ":CAPIInterfacesObjects",
+        ":CAPILinalgObjects",
+        ":CAPIRegistrationObjects",
+        ":CAPISparseTensorObjects",
     ],
 )
 
@@ -1458,6 +1566,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":StandardOps",
+        ":VectorOps",
         ":X86Vector",
         "//llvm:Core",
         "//llvm:Support",
@@ -1715,6 +1824,7 @@ cc_library(
     deps = [
         ":Affine",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":IR",
         ":LLVMDialect",
         ":LinalgOps",
@@ -6180,6 +6290,26 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "LinalgBufferizableOpInterfaceImpl",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizableOpInterface",
+        ":IR",
+        ":LinalgOps",
+        ":LinalgStructuredOpsIncGen",
+        ":Support",
+        ":TensorDialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "LinalgDocTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/LinalgDoc.td"],
@@ -6302,6 +6432,7 @@ cc_library(
     deps = [
         ":Affine",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":CopyOpInterface",
         ":DialectUtils",
         ":IR",
@@ -6380,11 +6511,13 @@ cc_library(
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
+        ":BufferizableOpInterface",
         ":ComplexDialect",
         ":ComprehensiveBufferize",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":LinalgBufferizableOpInterfaceImpl",
         ":LinalgOps",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
@@ -6400,6 +6533,7 @@ cc_library(
         ":TransformUtils",
         ":VectorOps",
         ":VectorToSCF",
+        ":X86VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -6414,13 +6548,12 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":Affine",
         ":ArithmeticDialect",
         ":BufferizableOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":LinalgOps",
-        ":LinalgStructuredOpsIncGen",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",

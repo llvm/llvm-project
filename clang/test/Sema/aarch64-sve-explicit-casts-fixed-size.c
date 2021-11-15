@@ -6,6 +6,8 @@
 
 // expected-no-diagnostics
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_sve.h>
 
 #define N __ARM_FEATURE_SVE_BITS

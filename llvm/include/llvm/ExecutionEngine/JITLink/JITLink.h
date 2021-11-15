@@ -343,6 +343,12 @@ private:
   std::vector<Edge> Edges;
 };
 
+// Align a JITTargetAddress to conform with block alignment requirements.
+inline JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
+  uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
+  return Addr + Delta;
+}
+
 /// Describes symbol linkage. This can be used to make resolve definition
 /// clashes.
 enum class Linkage : uint8_t {
@@ -1299,6 +1305,8 @@ public:
                      bool PreserveSrcSection = false) {
     if (&DstSection == &SrcSection)
       return;
+    for (auto *B : SrcSection.blocks())
+      B->setSection(DstSection);
     SrcSection.transferContentTo(DstSection);
     if (!PreserveSrcSection)
       removeSection(SrcSection);

@@ -5,6 +5,8 @@
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
 // RUN:     opt -S -mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A64 %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: define{{.*}} <2 x float> @test_vrnda_f32(<2 x float> %a)

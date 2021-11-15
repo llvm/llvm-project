@@ -1,6 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang -cl-std=CL2.0 -emit-llvm -g -gheterogeneous-dwarf -O0 -S -nogpulib -target amdgcn-amd-amdhsa -mcpu=fiji -o - %s | FileCheck %s
-// RUN: %clang -cl-std=CL2.0 -emit-llvm -g -gheterogeneous-dwarf -O0 -S -nogpulib -target amdgcn-amd-amdhsa-opencl -mcpu=fiji -o - %s | FileCheck %s
+// RUN: %clang -Xclang -disable-llvm-verifier -cl-std=CL2.0 -emit-llvm -g -gheterogeneous-dwarf -O0 -S -nogpulib -target amdgcn-amd-amdhsa -mcpu=fiji -o - %s | FileCheck %s
+// RUN: %clang -Xclang -disable-llvm-verifier -cl-std=CL2.0 -emit-llvm -g -gheterogeneous-dwarf -O0 -S -nogpulib -target amdgcn-amd-amdhsa-opencl -mcpu=fiji -o - %s | FileCheck %s
+
+// FIXME: shouldn't need -disable-llvm-verifier once patch for verifier lands
 
 // CHECK-DAG: @FileVar0 = hidden addrspace(1) global i32 addrspace(1)* null, align 8, !dbg.def ![[FILEVAR0_F:[0-9]+]]
 // CHECK-DAG: ![[FILEVAR0_GV:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar0", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)

@@ -22,7 +22,7 @@ public:
   Haiku(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
 
-  bool isPIEDefault() const override {
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
     return getTriple().getArch() == llvm::Triple::x86_64;
   }
 

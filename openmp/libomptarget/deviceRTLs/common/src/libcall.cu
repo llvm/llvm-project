@@ -373,4 +373,12 @@ EXTERN int omp_test_lock(omp_lock_t *lock) {
   return rc;
 }
 
+// See kmp_tasking.cpp, allow_completion call:
+// no need to fulfill an event: all tasks
+// are immediately executed by the encountering
+// thread
+EXTERN void omp_fulfill_event(kmp_Event_t *event) {
+  PRINT0(LD_IO, "call omp_fulfill_event()\n");
+}
+
 #pragma omp end declare target

@@ -113,13 +113,6 @@ function generate-cmake-libcxx-win() {
           "${@}"
 }
 
-function generate-cmake-aix() {
-    generate-cmake-base \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-          "${@}"
-}
-
 function check-runtimes() {
     echo "--- Installing libc++, libc++abi and libunwind to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
@@ -482,7 +475,8 @@ bootstrapping-build)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
-          -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu" \
+          -DLLVM_RUNTIME_TARGETS="$(c++ --print-target-triple)" \
+          -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake" \
           -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
@@ -526,6 +520,7 @@ legacy-standalone)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
           -DLIBCXX_CXX_ABI=libcxxabi \
+          -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
           -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
 
@@ -623,9 +618,10 @@ aix)
     export CC=ibm-clang
     export CXX=ibm-clang++_r
     clean
-    generate-cmake-aix -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
                    -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in"
+                   -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in" \
+                   -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
     # TODO: use check-runtimes once libunwind builds cleanly on AIX.
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
     ${NINJA} -vC "${BUILD_DIR}" check-cxx check-cxxabi

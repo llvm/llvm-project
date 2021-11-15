@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-darwin -target-feature +neon -fsyntax-only -ffreestanding -verify %s
 // RUN: %clang_cc1 -triple aarch64_be-none-linux-gnu -target-feature +neon -fsyntax-only -ffreestanding -verify %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // rdar://13527900

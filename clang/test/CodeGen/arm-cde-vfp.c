@@ -4,6 +4,8 @@
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
 // RUN:   -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_cde.h>
 
 // CHECK-LABEL: @test_vcx1_u32(

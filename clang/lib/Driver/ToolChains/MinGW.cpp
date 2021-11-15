@@ -98,7 +98,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                         const char *LinkingOutput) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
-  const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
+  const SanitizerArgs &Sanitize = TC.getSanitizerArgs(Args);
 
   ArgStringList CmdArgs;
 
@@ -482,7 +482,9 @@ bool toolchains::MinGW::isPICDefault() const {
          getArch() == llvm::Triple::aarch64;
 }
 
-bool toolchains::MinGW::isPIEDefault() const { return false; }
+bool toolchains::MinGW::isPIEDefault(const llvm::opt::ArgList &Args) const {
+  return false;
+}
 
 bool toolchains::MinGW::isPICDefaultForced() const {
   return getArch() == llvm::Triple::x86_64 ||

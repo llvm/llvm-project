@@ -38,13 +38,15 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
 // CHECK_FUNC_BB_EDGE_DEPRECATED: warning: argument '-fsanitize-coverage=[func|bb|edge]' is deprecated, use '-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc]' instead
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-pc,trace-cmp,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-pc,trace-cmp,trace-loads,trace-stores,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-type=3
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-indirect-calls
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-cmp
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-div
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-gep
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-pc
+// CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-loads
+// CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-trace-stores
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func,edge,indirect-calls,trace-cmp -fno-sanitize-coverage=edge,indirect-calls %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MASK
 // CHECK-MASK: -fsanitize-coverage-type=1

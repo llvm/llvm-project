@@ -882,34 +882,48 @@ void LinkerScript::switchTo(OutputSection *sec) {
 
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
-// returned. Otherwise, a nullptr is returned.
-MemoryRegion *LinkerScript::findMemoryRegion(OutputSection *sec) {
+// returned in the first member of the pair. Otherwise, a nullptr is returned.
+// The second member of the pair is a hint that should be passed to the
+// subsequent call of this method.
+std::pair<MemoryRegion *, MemoryRegion *>
+LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
+  // Non-allocatable sections are not part of the process image.
+  if (!(sec->flags & SHF_ALLOC)) {
+    if (!sec->memoryRegionName.empty())
+      warn("ignoring memory region assignment for non-allocatable section '" +
+           sec->name + "'");
+    return {nullptr, nullptr};
+  }
+
   // If a memory region name was specified in the output section command,
   // then try to find that region first.
   if (!sec->memoryRegionName.empty()) {
     if (MemoryRegion *m = memoryRegions.lookup(sec->memoryRegionName))
-      return m;
+      return {m, m};
     error("memory region '" + sec->memoryRegionName + "' not declared");
-    return nullptr;
+    return {nullptr, nullptr};
   }
 
   // If at least one memory region is defined, all sections must
   // belong to some memory region. Otherwise, we don't need to do
   // anything for memory regions.
   if (memoryRegions.empty())
-    return nullptr;
+    return {nullptr, nullptr};
+
+  // An orphan section should continue the previous memory region.
+  if (sec->sectionIndex == UINT32_MAX && hint)
+    return {hint, hint};
 
   // See if a region can be found by matching section flags.
   for (auto &pair : memoryRegions) {
     MemoryRegion *m = pair.second;
     if ((m->flags & sec->flags) && (m->negFlags & sec->flags) == 0)
-      return m;
+      return {m, nullptr};
   }
 
   // Otherwise, no suitable region was found.
-  if (sec->flags & SHF_ALLOC)
-    error("no memory region specified for section '" + sec->name + "'");
-  return nullptr;
+  error("no memory region specified for section '" + sec->name + "'");
+  return {nullptr, nullptr};
 }
 
 static OutputSection *findFirstSection(PhdrEntry *load) {
@@ -1132,6 +1146,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
 
 void LinkerScript::adjustSectionsAfterSorting() {
   // Try and find an appropriate memory region to assign offsets in.
+  MemoryRegion *hint = nullptr;
   for (BaseCommand *base : sectionCommands) {
     if (auto *sec = dyn_cast<OutputSection>(base)) {
       if (!sec->lmaRegionName.empty()) {
@@ -1140,7 +1155,7 @@ void LinkerScript::adjustSectionsAfterSorting() {
         else
           error("memory region '" + sec->lmaRegionName + "' not declared");
       }
-      sec->memRegion = findMemoryRegion(sec);
+      std::tie(sec->memRegion, hint) = findMemoryRegion(sec, hint);
     }
   }
 

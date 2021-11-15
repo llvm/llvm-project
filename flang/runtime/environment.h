@@ -37,9 +37,11 @@ struct ExecutionEnvironment {
   int argc;
   const char **argv;
   const char **envp;
-  int listDirectedOutputLineLengthLimit;
+
+  int listDirectedOutputLineLengthLimit; // FORT_FMT_RECL
   enum decimal::FortranRounding defaultOutputRoundingMode;
-  Convert conversion;
+  Convert conversion; // FORT_CONVERT
+  bool noStopMessage; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
 };
 extern ExecutionEnvironment executionEnvironment;
 } // namespace Fortran::runtime

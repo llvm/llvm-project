@@ -1,5 +1,7 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -o - %s | FileCheck %s
+// RUN: %clang_cc1 -disable-llvm-verifier -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -o - %s | FileCheck %s
+
+// FIXME: shouldn't need -disable-llvm-verifier once patch for verifier lands
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))

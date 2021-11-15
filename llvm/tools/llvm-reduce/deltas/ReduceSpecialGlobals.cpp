@@ -35,24 +35,8 @@ static void extractSpecialGlobalsFromModule(Oracle &O, Module &Program) {
   }
 }
 
-/// Counts the amount of special globals and prints their
-/// respective name & index
-static int countSpecialGlobals(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Special Globals Index Reference:\n";
-  int Count = 0;
-  for (StringRef Name : SpecialGlobalNames) {
-    if (auto *Used = Program.getNamedGlobal(Name))
-      errs() << "\t" << ++Count << ": " << Used->getName() << "\n";
-  }
-  errs() << "----------------------------\n";
-  return Count;
-}
-
 void llvm::reduceSpecialGlobalsDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Special Globals ...\n";
-  int Functions = countSpecialGlobals(Test.getProgram());
-  runDeltaPass(Test, Functions, extractSpecialGlobalsFromModule);
+  runDeltaPass(Test, extractSpecialGlobalsFromModule);
   errs() << "----------------------------\n";
 }

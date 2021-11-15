@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -D PTR_ARG='&i' -D INT_ARG=i -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=ADDROF-VAL %s
-// RUN: %clang_cc1 -D PTR_ARG='&i' -D INT_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=ADDROF-NOVAL %s
-// RUN: %clang_cc1 -D PTR_ARG=0 -D INT_ARG=i -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=NOADDROF-VAL %s
-// RUN: %clang_cc1 -D PTR_ARG=0 -D INT_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=NOADDROF-NOVAL %s
+// RUN: %clang_cc1 -disable-llvm-verifier -D PTR_ARG='&i' -D INT_ARG=i -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=ADDROF-VAL %s
+// RUN: %clang_cc1 -disable-llvm-verifier -D PTR_ARG='&i' -D INT_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=ADDROF-NOVAL %s
+// RUN: %clang_cc1 -disable-llvm-verifier -D PTR_ARG=0 -D INT_ARG=i -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=NOADDROF-VAL %s
+// RUN: %clang_cc1 -disable-llvm-verifier -D PTR_ARG=0 -D INT_ARG=0 -emit-llvm -debug-info-kind=standalone -gheterogeneous-dwarf %s -o - | FileCheck --check-prefix=NOADDROF-NOVAL %s
+
+// FIXME: shouldn't need -disable-llvm-verifier once patch for verifier lands
 
 // ADDROF-VAL: @i = internal constant i32 1, align 4, !dbg.def ![[#FRAGMENT:]]
 // ADDROF-NOVAL: @i = internal constant i32 1, align 4, !dbg.def ![[#FRAGMENT:]]

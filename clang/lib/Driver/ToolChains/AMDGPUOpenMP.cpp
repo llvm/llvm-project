@@ -429,10 +429,21 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
     const char *InputFileName) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor",    "gnu", "--no-undefined",
-                        "-shared",    "-o",  Output.getFilename(),
-                        InputFileName};
+  ArgStringList LldArgs{"-flavor", "gnu", "--no-undefined", "-shared", "-o"};
 
+  auto &TC = getToolChain();
+  auto &D = TC.getDriver();
+  auto TargetID = TC.getTargetID();
+  auto FileName = llvm::sys::path::stem(Output.getFilename());
+  auto OutFileName = Twine(FileName + "-" + TargetID +
+                           llvm::sys::path::extension(Output.getFilename()))
+                         .str();
+  if (C.getDriver().isSaveTempsEnabled()) {
+    OutFileName.append(".out");
+  }
+  LldArgs.push_back(Args.MakeArgString(OutFileName.c_str()));
+
+  LldArgs.push_back(Args.MakeArgString(InputFileName));
   // Get the environment variable ROCM_LLD_ARGS and add to lld.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
   if (OptEnv.hasValue()) {
@@ -442,16 +453,12 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
       LldArgs.push_back(Args.MakeArgString(Env.trim()));
   }
 
-  auto &TC = getToolChain();
-  auto &D = TC.getDriver();
-  StringRef GPUArch =
-      getProcessorFromTargetID(TC.getTriple(), TC.getTargetID());
+  StringRef GPUArch = getProcessorFromTargetID(TC.getTriple(), TargetID);
   LldArgs.push_back(Args.MakeArgString("-plugin-opt=mcpu=" + GPUArch));
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
-  amdgpu::getAMDGPUTargetFeatures(D, TC.getTriple(), Args, Features,
-                                  TC.getTargetID());
+  amdgpu::getAMDGPUTargetFeatures(D, TC.getTriple(), Args, Features, TargetID);
 
   // Add features to mattr such as cumode
   std::string MAttrString = "-plugin-opt=-mattr=";

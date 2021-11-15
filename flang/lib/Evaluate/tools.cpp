@@ -911,12 +911,12 @@ std::optional<std::string> FindImpureCall(
   return FindImpureCallHelper{context}(proc);
 }
 
-// Compare procedure characteristics for equality except that lhs may be
-// Pure or Elemental when rhs is not.
+// Compare procedure characteristics for equality except that rhs may be
+// Pure or Elemental when lhs is not.
 static bool CharacteristicsMatch(const characteristics::Procedure &lhs,
     const characteristics::Procedure &rhs) {
   using Attr = characteristics::Procedure::Attr;
-  auto lhsAttrs{rhs.attrs};
+  auto lhsAttrs{lhs.attrs};
   lhsAttrs.set(
       Attr::Pure, lhs.attrs.test(Attr::Pure) || rhs.attrs.test(Attr::Pure));
   lhsAttrs.set(Attr::Elemental,
@@ -1031,6 +1031,19 @@ const Symbol &GetAssociationRoot(const Symbol &original) {
   return symbol;
 }
 
+const Symbol *GetMainEntry(const Symbol *symbol) {
+  if (symbol) {
+    if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
+      if (const Scope * scope{subpDetails->entryScope()}) {
+        if (const Symbol * main{scope->symbol()}) {
+          return main;
+        }
+      }
+    }
+  }
+  return symbol;
+}
+
 bool IsVariableName(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
   if (symbol.has<ObjectEntityDetails>()) {
@@ -1044,7 +1057,8 @@ bool IsVariableName(const Symbol &original) {
 }
 
 bool IsPureProcedure(const Symbol &original) {
-  const Symbol &symbol{original.GetUltimate()};
+  // An ENTRY is pure if its containing subprogram is
+  const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {
       // procedure component with a pure interface

@@ -148,15 +148,19 @@ ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
 {
   CHECK_EQ(reinterpret_cast<uptr>(this) % SANITIZER_CACHE_LINE_SIZE, 0);
 #if !SANITIZER_GO
-  shadow_stack_pos = shadow_stack;
-  shadow_stack_end = shadow_stack + kShadowStackSize;
+  // C/C++ uses fixed size shadow stack.
+  const int kInitStackSize = kShadowStackSize;
+  shadow_stack = static_cast<uptr *>(
+      MmapNoReserveOrDie(kInitStackSize * sizeof(uptr), "shadow stack"));
+  SetShadowRegionHugePageMode(reinterpret_cast<uptr>(shadow_stack),
+                              kInitStackSize * sizeof(uptr));
 #else
-  // Setup dynamic shadow stack.
+  // Go uses malloc-allocated shadow stack with dynamic size.
   const int kInitStackSize = 8;
-  shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
+  shadow_stack = static_cast<uptr *>(Alloc(kInitStackSize * sizeof(uptr)));
+#endif
   shadow_stack_pos = shadow_stack;
   shadow_stack_end = shadow_stack + kInitStackSize;
-#endif
 }
 
 #if !SANITIZER_GO
@@ -506,7 +510,8 @@ void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   ctx->thread_registry.Unlock();
 }
 
-void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
+void ForkChildAfter(ThreadState *thr, uptr pc,
+                    bool start_thread) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
   ScopedErrorReportLock::Unlock();
@@ -518,7 +523,8 @@ void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   VPrintf(1, "ThreadSanitizer: forked new process with pid %d,"
       " parent had %d threads\n", (int)internal_getpid(), (int)nthread);
   if (nthread == 1) {
-    StartBackgroundThread();
+    if (start_thread)
+      StartBackgroundThread();
   } else {
     // We've just forked a multi-threaded process. We cannot reasonably function
     // after that (some mutexes may be locked before fork). So just enable

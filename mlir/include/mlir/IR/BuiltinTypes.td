@@ -542,7 +542,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.
-    /// Arguments that are passed into the builder must out-live the builder.
+    /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
     /// [deprecated] Returns the memory space in old raw integer representation.
@@ -701,6 +701,11 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
       return $_get(elementType.getContext(), shape, elementType, encoding);
     }]>
   ];
+  let extraClassDeclaration = [{
+    /// This is a builder type that keeps local references to arguments.
+    /// Arguments that are passed into the builder must outlive the builder.
+    class Builder;
+  }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }
@@ -924,6 +929,10 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     }]>
   ];
   let extraClassDeclaration = [{
+    /// This is a builder type that keeps local references to arguments.
+    /// Arguments that are passed into the builder must outlive the builder.
+    class Builder;
+
     /// Returns true of the given type can be used as an element of a vector
     /// type. In particular, vectors can consist of integer, index, or float
     /// primitives.

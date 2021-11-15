@@ -298,6 +298,14 @@ class Dialect {
   // If this dialect overrides the hook for op interface fallback.
   bit hasOperationInterfaceFallback = 0;
 
+  // If this dialect should use default generated attribute parser boilerplate:
+  // it'll dispatch the parsing to every individual attributes directly.
+  bit useDefaultAttributePrinterParser = 0;
+
+  // If this dialect should use default generated type parser boilerplate:
+  // it'll dispatch the parsing to every individual types directly.
+  bit useDefaultTypePrinterParser = 0;
+
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;
 
@@ -558,20 +566,17 @@ class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
     Type<And<[containerPred,
                 SubstLeaves<"$_self", !cast<string>(elementTypeCall),
                 etype.predicate>]>,
-         descr # " of " # etype.summary # " values", cppClassName> {
-  // The type of elements in the container.
-  Type elementType = etype;
-
-  // Call to retrieve.
-  code getElementTypeCall = elementTypeCall;
-}
+         descr # " of " # etype.summary # " values", cppClassName>;
 
 class ShapedContainerType<list<Type> allowedTypes,
                           Pred containerPred, string descr,
                           string cppClassName = "::mlir::Type"> :
-    ContainerType<AnyTypeOf<allowedTypes>, containerPred,
-                  "$_self.cast<::mlir::ShapedType>().getElementType()", descr,
-                  cppClassName>;
+    Type<And<[containerPred,
+              Concat<"[](::mlir::Type elementType) { return ",
+                SubstLeaves<"$_self", "elementType",
+                AnyTypeOf<allowedTypes>.predicate>,
+                "; }($_self.cast<::mlir::ShapedType>().getElementType())">]>,
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppClassName>;
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"$_self.cast<::mlir::ShapedType>().hasRank()">;
@@ -1748,7 +1753,7 @@ def IntNonNegative : AttrConstraint<
     "whose value is non-negative">;
 
 def IntPositive : AttrConstraint<
-    CPred<"$_self.cast<IntegerAttr>().getValue().isStrictlyPositive()">,
+    CPred<"$_self.cast<::mlir::IntegerAttr>().getValue().isStrictlyPositive()">,
     "whose value is positive">;
 
 class ArrayMinCount<int n> : AttrConstraint<
@@ -2933,6 +2938,9 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   // The underlying C++ value type
   let returnType = dialect.cppNamespace # "::" # cppClassName;
 
+  // Make it possible to use such attributes as parameters for other attributes.
+  string cppType = dialect.cppNamespace # "::" # cppClassName;
+
   // The call expression to convert from the storage type to the return
   // type. For example, an enum can be stored as an int but returned as an
   // enum class.
@@ -2997,7 +3005,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // be replaced with the required attribute type.
   string parser = ?;
   // The default parameter printer is `$_printer << $_self`. Overload the stream
-  // operator of `DialectAsmPrinter` as necessary to print your type. Or you can
+  // operator of `AsmPrinter` as necessary to print your type. Or you can
   // provide a custom printer.
   string printer = ?;
 }

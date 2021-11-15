@@ -1044,25 +1044,11 @@ Status Platform::KillProcess(const lldb::pid_t pid) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   LLDB_LOGF(log, "Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
 
-  // Try to find a process plugin to handle this Kill request.  If we can't,
-  // fall back to the default OS implementation.
-  size_t num_debuggers = Debugger::GetNumDebuggers();
-  for (size_t didx = 0; didx < num_debuggers; ++didx) {
-    DebuggerSP debugger = Debugger::GetDebuggerAtIndex(didx);
-    lldb_private::TargetList &targets = debugger->GetTargetList();
-    for (int tidx = 0; tidx < targets.GetNumTargets(); ++tidx) {
-      ProcessSP process = targets.GetTargetAtIndex(tidx)->GetProcessSP();
-      if (process->GetID() == pid)
-        return process->Destroy(true);
-    }
-  }
-
   if (!IsHost()) {
     return Status(
-        "base lldb_private::Platform class can't kill remote processes unless "
-        "they are controlled by a process plugin");
+        "base lldb_private::Platform class can't kill remote processes");
   }
-  Host::Kill(pid, SIGTERM);
+  Host::Kill(pid, SIGKILL);
   return Status();
 }
 
@@ -1124,7 +1110,7 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
         // If we didn't have any file actions, the pseudo terminal might have
         // been used where the secondary side was given as the file to open for
-        // stdin/out/err after we have already opened the master so we can
+        // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
         int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {

@@ -3,6 +3,8 @@
 
 // Test that we can use the poly64 type on AArch32
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: @test_poly64

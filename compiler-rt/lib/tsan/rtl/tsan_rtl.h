@@ -159,12 +159,8 @@ struct ThreadState {
 #if !SANITIZER_GO
   IgnoreSet mop_ignore_set;
   IgnoreSet sync_ignore_set;
-  // C/C++ uses fixed size shadow stack.
-  uptr shadow_stack[kShadowStackSize];
-#else
-  // Go uses malloc-allocated shadow stack with dynamic size.
-  uptr *shadow_stack;
 #endif
+  uptr *shadow_stack;
   uptr *shadow_stack_end;
   uptr *shadow_stack_pos;
   RawShadow *racy_shadow_addr;
@@ -440,7 +436,7 @@ void InitializeDynamicAnnotations();
 
 void ForkBefore(ThreadState *thr, uptr pc);
 void ForkParentAfter(ThreadState *thr, uptr pc);
-void ForkChildAfter(ThreadState *thr, uptr pc);
+void ForkChildAfter(ThreadState *thr, uptr pc, bool start_thread);
 
 void ReportRace(ThreadState *thr);
 bool OutputReport(ThreadState *thr, const ScopedReport &srep);
@@ -616,6 +612,9 @@ void ALWAYS_INLINE TraceAddEvent(ThreadState *thr, FastState fs,
                                         EventType typ, u64 addr) {
   if (!kCollectHistory)
     return;
+  // TraceSwitch accesses shadow_stack, but it's called infrequently,
+  // so we check it here proactively.
+  DCHECK(thr->shadow_stack);
   DCHECK_GE((int)typ, 0);
   DCHECK_LE((int)typ, 7);
   DCHECK_EQ(GetLsb(addr, kEventPCBits), addr);

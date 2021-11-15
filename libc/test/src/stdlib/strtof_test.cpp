@@ -82,7 +82,8 @@ TEST_F(LlvmLibcStrToFTest, DecimalsWithRoundingProblems) {
 }
 
 TEST_F(LlvmLibcStrToFTest, DecimalSubnormals) {
-  runTest("1.4012984643248170709237295832899161312802619418765e-45", 55, 0x1);
+  runTest("1.4012984643248170709237295832899161312802619418765e-45", 55, 0x1,
+          ERANGE);
 }
 
 TEST_F(LlvmLibcStrToFTest, DecimalWithLongExponent) {
@@ -130,6 +131,10 @@ TEST_F(LlvmLibcStrToFTest, HexadecimalNormalRoundingTests) {
   runTest("0x123456600", 11, 0x4f91a2b3);
   // This gets rounded up to even
   runTest("0x123456700", 11, 0x4f91a2b4);
+}
+
+TEST_F(LlvmLibcStrToFTest, HexadecimalsWithRoundingProblems) {
+  runTest("0xFFFFFFFF", 10, 0x4f800000);
 }
 
 TEST_F(LlvmLibcStrToFTest, HexadecimalOutOfRangeTests) {

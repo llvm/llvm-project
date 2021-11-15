@@ -6,5 +6,5 @@ cert-dcl51-cpp
 ==============
 
 The cert-dcl51-cpp check is an alias, please see
-`bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_ for more 
+`bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_ for more
 information.

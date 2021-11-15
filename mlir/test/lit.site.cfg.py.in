@@ -25,6 +25,7 @@ config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
 config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
+config.host_cmake_generator = "@CMAKE_GENERATOR@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"

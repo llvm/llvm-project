@@ -37,8 +37,9 @@ bool IoStatementBase::Emit(const char32_t *, std::size_t) {
   return false;
 }
 
-std::optional<char32_t> IoStatementBase::GetCurrentChar() {
-  return std::nullopt;
+std::size_t IoStatementBase::GetNextInputBytes(const char *&p) {
+  p = nullptr;
+  return 0;
 }
 
 bool IoStatementBase::AdvanceRecord(int) { return false; }
@@ -110,13 +111,9 @@ bool InternalIoStatementState<DIR, CHAR>::Emit(
 }
 
 template <Direction DIR, typename CHAR>
-std::optional<char32_t> InternalIoStatementState<DIR, CHAR>::GetCurrentChar() {
-  if constexpr (DIR == Direction::Output) {
-    Crash(
-        "InternalIoStatementState<Direction::Output>::GetCurrentChar() called");
-    return std::nullopt;
-  }
-  return unit_.GetCurrentChar(*this);
+std::size_t InternalIoStatementState<DIR, CHAR>::GetNextInputBytes(
+    const char *&p) {
+  return unit_.GetNextInputBytes(p, *this);
 }
 
 template <Direction DIR, typename CHAR>
@@ -326,12 +323,8 @@ bool ExternalIoStatementState<DIR>::Emit(
 }
 
 template <Direction DIR>
-std::optional<char32_t> ExternalIoStatementState<DIR>::GetCurrentChar() {
-  if constexpr (DIR == Direction::Output) {
-    Crash(
-        "ExternalIoStatementState<Direction::Output>::GetCurrentChar() called");
-  }
-  return unit().GetCurrentChar(*this);
+std::size_t ExternalIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
+  return unit().GetNextInputBytes(p, *this);
 }
 
 template <Direction DIR>
@@ -424,8 +417,8 @@ bool IoStatementState::Receive(
       [=](auto &x) { return x.get().Receive(data, n, elementBytes); }, u_);
 }
 
-std::optional<char32_t> IoStatementState::GetCurrentChar() {
-  return std::visit([&](auto &x) { return x.get().GetCurrentChar(); }, u_);
+std::size_t IoStatementState::GetNextInputBytes(const char *&p) {
+  return std::visit([&](auto &x) { return x.get().GetNextInputBytes(p); }, u_);
 }
 
 bool IoStatementState::AdvanceRecord(int n) {
@@ -499,100 +492,6 @@ bool IoStatementState::EmitField(
     return EmitRepeated(' ', static_cast<int>(width - length)) &&
         Emit(p, length);
   }
-}
-
-std::optional<char32_t> IoStatementState::PrepareInput(
-    const DataEdit &edit, std::optional<int> &remaining) {
-  remaining.reset();
-  if (edit.descriptor == DataEdit::ListDirected) {
-    GetNextNonBlank();
-  } else {
-    if (edit.width.value_or(0) > 0) {
-      remaining = *edit.width;
-    }
-    SkipSpaces(remaining);
-  }
-  return NextInField(remaining);
-}
-
-std::optional<char32_t> IoStatementState::SkipSpaces(
-    std::optional<int> &remaining) {
-  while (!remaining || *remaining > 0) {
-    if (auto ch{GetCurrentChar()}) {
-      if (*ch != ' ' && *ch != '\t') {
-        return ch;
-      }
-      HandleRelativePosition(1);
-      if (remaining) {
-        GotChar();
-        --*remaining;
-      }
-    } else {
-      break;
-    }
-  }
-  return std::nullopt;
-}
-
-std::optional<char32_t> IoStatementState::NextInField(
-    std::optional<int> &remaining) {
-  if (!remaining) { // list-directed or NAMELIST: check for separators
-    if (auto next{GetCurrentChar()}) {
-      switch (*next) {
-      case ' ':
-      case '\t':
-      case ',':
-      case ';':
-      case '/':
-      case '(':
-      case ')':
-      case '\'':
-      case '"':
-      case '*':
-      case '\n': // for stream access
-        break;
-      default:
-        HandleRelativePosition(1);
-        return next;
-      }
-    }
-  } else if (*remaining > 0) {
-    if (auto next{GetCurrentChar()}) {
-      --*remaining;
-      HandleRelativePosition(1);
-      GotChar();
-      return next;
-    }
-    const ConnectionState &connection{GetConnectionState()};
-    if (!connection.IsAtEOF() && connection.recordLength &&
-        connection.positionInRecord >= *connection.recordLength) {
-      IoErrorHandler &handler{GetIoErrorHandler()};
-      if (mutableModes().nonAdvancing) {
-        handler.SignalEor();
-      } else if (connection.isFixedRecordLength && !connection.modes.pad) {
-        handler.SignalError(IostatRecordReadOverrun);
-      }
-      if (connection.modes.pad) { // PAD='YES'
-        --*remaining;
-        return std::optional<char32_t>{' '};
-      }
-    }
-  }
-  return std::nullopt;
-}
-
-std::optional<char32_t> IoStatementState::GetNextNonBlank() {
-  auto ch{GetCurrentChar()};
-  bool inNamelist{GetConnectionState().modes.inNamelist};
-  while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
-    if (ch && (*ch == ' ' || *ch == '\t')) {
-      HandleRelativePosition(1);
-    } else if (!AdvanceRecord()) {
-      return std::nullopt;
-    }
-    ch = GetCurrentChar();
-  }
-  return ch;
 }
 
 bool IoStatementState::Inquire(
@@ -827,8 +726,8 @@ bool ChildIoStatementState<DIR>::Emit(const char32_t *data, std::size_t chars) {
 }
 
 template <Direction DIR>
-std::optional<char32_t> ChildIoStatementState<DIR>::GetCurrentChar() {
-  return child_.parent().GetCurrentChar();
+std::size_t ChildIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
+  return child_.parent().GetNextInputBytes(p);
 }
 
 template <Direction DIR>

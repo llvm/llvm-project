@@ -73,7 +73,7 @@ for.end:
 }
 
 define i32 @pr51794_signed_negative(i16 %iv.start, i32 %xor.start) {
-; CHECK-LABEL: define {{.*}} @pr51794_signed_negative
+; CHECK-LABEL: define {{.*}} @pr51794_signed_negative(
 ; CHECK:   [[XOR_START:%.+]] = insertelement <4 x i32> zeroinitializer, i32 %xor.start, i32 0
 ; CHECK-LABEL: vector.body:
 ; CHECK:         [[XOR_RED:%.+]] = phi <4 x i32> [ [[XOR_START]], %vector.ph ], [ [[XOR_SEXT:%.+]], %vector.body ]
@@ -104,4 +104,34 @@ exit:
   ret i32 %xor.lcssa
 }
 
+define i32 @pr52485_signed_negative(i32 %xor.start) {
+; CHECK-LABEL: define {{.*}} @pr52485_signed_negative(
+; CHECK:   [[XOR_START:%.+]] = insertelement <4 x i32> zeroinitializer, i32 %xor.start, i32 0
+; CHECK-LABEL: vector.body:
+; CHECK:         [[XOR_RED:%.+]] = phi <4 x i32> [ [[XOR_START]], %vector.ph ], [ [[XOR_SEXT:%.+]], %vector.body ]
+; CHECK:         [[AND:%.+]] = and <4 x i32> [[XOR_RED]], <i32 255, i32 255, i32 255, i32 255>
+; CHECK-NEXT:    [[XOR:%.+]] = xor <4 x i32> [[AND]], <i32 -9, i32 -9, i32 -9, i32 -9>
+; CHECK:         [[XOR_TRUNC:%.+]] = trunc <4 x i32> [[XOR]] to <4 x i8>
+; CHECK-NEXT:    [[XOR_SEXT]] = sext <4 x i8> [[XOR_TRUNC]] to <4 x i32>
+;
+; CHECK-LABEL: middle.block:
+; CHECK-NEXT:   [[RES_TRUNC:%.+]] = trunc <4 x i32> [[XOR_SEXT]] to <4 x i8>
+; CHECK-NEXT:   [[RES_RED:%.+]]  = call i8 @llvm.vector.reduce.xor.v4i8(<4 x i8> [[RES_TRUNC]])
+; CHECK-NEXT:   sext i8 [[RES_RED]] to i32
+;
+entry:
+  br label %loop
 
+loop:
+  %iv = phi i32 [ -23, %entry ], [ %iv.next, %loop ]
+  %xor.red = phi i32 [ %xor.start, %entry ], [ %xor, %loop ]
+  %and = and i32 %xor.red, 255
+  %xor = xor i32 %and, -9
+  %iv.next = add nuw nsw i32 %iv, 2
+  %cmp.not = icmp eq i32 %iv.next, -15
+  br i1 %cmp.not, label %exit, label %loop
+
+exit:
+  %xor.lcssa = phi i32 [ %xor, %loop ]
+  ret i32 %xor.lcssa
+}

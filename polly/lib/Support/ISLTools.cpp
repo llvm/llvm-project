@@ -217,7 +217,7 @@ isl::set polly::shiftDim(isl::set Set, int Pos, int Amount) {
   unsigned NumDims = unsignedFromIslSize(Set.tuple_dim());
   if (Pos < 0)
     Pos = NumDims + Pos;
-  assert(Pos < NumDims && "Dimension index must be in range");
+  assert(unsigned(Pos) < NumDims && "Dimension index must be in range");
   isl::space Space = Set.get_space();
   Space = Space.map_from_domain_and_range(Space);
   isl::multi_aff Translator = makeShiftDimAff(Space, Pos, Amount);
@@ -238,7 +238,7 @@ isl::map polly::shiftDim(isl::map Map, isl::dim Dim, int Pos, int Amount) {
   unsigned NumDims = unsignedFromIslSize(Map.dim(Dim));
   if (Pos < 0)
     Pos = NumDims + Pos;
-  assert(Pos < NumDims && "Dimension index must be in range");
+  assert(unsigned(Pos) < NumDims && "Dimension index must be in range");
   isl::space Space = Map.get_space();
   switch (Dim) {
   case isl::dim::in:

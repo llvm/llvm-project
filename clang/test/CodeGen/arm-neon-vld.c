@@ -5,6 +5,8 @@
 // RUN:     -target-feature +fp16 -S -disable-O0-optnone -emit-llvm -o - %s | \
 // RUN:     opt -S -mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A32 %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: @test_vld1_f16_x2(

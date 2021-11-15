@@ -1,7 +1,7 @@
 ; RUN: opt -disable-output -debugify-each -passes=gvn < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: ERROR: Instruction with empty DebugLoc in function _Z3bazv --  {{%.*}} = phi
-; CHECK: CheckFunctionDebugify [GVN]: PASS
+; CHECK: CheckFunctionDebugify [GVNPass]: PASS
 
 @foo = dso_local local_unnamed_addr global i32 0, align 4
 @x = global i8 17

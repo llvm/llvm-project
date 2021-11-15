@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix=SM20
-; RUN: llc < %s -march=nvptx -mcpu=sm_30 | FileCheck %s --check-prefix=SM30
+; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=SM20
+; RUN: llc < %s -march=nvptx -mcpu=sm_30 -verify-machineinstrs | FileCheck %s --check-prefix=SM30
 
 target triple = "nvptx-unknown-cuda"
 

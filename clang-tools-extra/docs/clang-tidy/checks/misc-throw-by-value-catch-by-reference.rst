@@ -47,7 +47,7 @@ Options
 .. option:: MaxSize
 
    Determines the maximum size of an object allowed to be caught without
-   warning. Only applicable if :option:`WarnOnLargeObject` is set to `true`. If 
+   warning. Only applicable if :option:`WarnOnLargeObject` is set to `true`. If
    the option is set by the user to `std::numeric_limits<uint64_t>::max()` then
    it reverts to the default value.
    Default is the size of `size_t`.

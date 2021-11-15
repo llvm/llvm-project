@@ -362,6 +362,32 @@ auto map_range(ContainerTy &&C, FuncTy F) {
   return make_range(map_iterator(C.begin(), F), map_iterator(C.end(), F));
 }
 
+/// A base type of mapped iterator, that is useful for building derived
+/// iterators that do not need/want to store the map function (as in
+/// mapped_iterator). These iterators must simply provide a `mapElement` method
+/// that defines how to map a value of the iterator to the provided reference
+/// type.
+template <typename DerivedT, typename ItTy, typename ReferenceTy>
+class mapped_iterator_base
+    : public iterator_adaptor_base<
+          DerivedT, ItTy,
+          typename std::iterator_traits<ItTy>::iterator_category,
+          std::remove_reference_t<ReferenceTy>,
+          typename std::iterator_traits<ItTy>::difference_type,
+          std::remove_reference_t<ReferenceTy> *, ReferenceTy> {
+public:
+  using BaseT = mapped_iterator_base;
+
+  mapped_iterator_base(ItTy U)
+      : mapped_iterator_base::iterator_adaptor_base(std::move(U)) {}
+
+  ItTy getCurrent() { return this->I; }
+
+  ReferenceTy operator*() const {
+    return static_cast<const DerivedT &>(*this).mapElement(*this->I);
+  }
+};
+
 /// Helper to determine if type T has a member called rbegin().
 template <typename Ty> class has_rbegin_impl {
   using yes = char[1];
@@ -430,12 +456,7 @@ class filter_iterator_base
           typename std::common_type<
               IterTag, typename std::iterator_traits<
                            WrappedIteratorT>::iterator_category>::type> {
-  using BaseT = iterator_adaptor_base<
-      filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>,
-      WrappedIteratorT,
-      typename std::common_type<
-          IterTag, typename std::iterator_traits<
-                       WrappedIteratorT>::iterator_category>::type>;
+  using BaseT = typename filter_iterator_base::iterator_adaptor_base;
 
 protected:
   WrappedIteratorT End;
@@ -470,12 +491,10 @@ template <typename WrappedIteratorT, typename PredicateT,
           typename IterTag = std::forward_iterator_tag>
 class filter_iterator_impl
     : public filter_iterator_base<WrappedIteratorT, PredicateT, IterTag> {
-  using BaseT = filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>;
-
 public:
   filter_iterator_impl(WrappedIteratorT Begin, WrappedIteratorT End,
                        PredicateT Pred)
-      : BaseT(Begin, End, Pred) {}
+      : filter_iterator_impl::filter_iterator_base(Begin, End, Pred) {}
 };
 
 /// Specialization of filter_iterator_base for bidirectional iteration.
@@ -484,8 +503,8 @@ class filter_iterator_impl<WrappedIteratorT, PredicateT,
                            std::bidirectional_iterator_tag>
     : public filter_iterator_base<WrappedIteratorT, PredicateT,
                                   std::bidirectional_iterator_tag> {
-  using BaseT = filter_iterator_base<WrappedIteratorT, PredicateT,
-                                     std::bidirectional_iterator_tag>;
+  using BaseT = typename filter_iterator_impl::filter_iterator_base;
+
   void findPrevValid() {
     while (!this->Pred(*this->I))
       BaseT::operator--();
@@ -573,9 +592,7 @@ template <typename WrappedIteratorT>
 class early_inc_iterator_impl
     : public iterator_adaptor_base<early_inc_iterator_impl<WrappedIteratorT>,
                                    WrappedIteratorT, std::input_iterator_tag> {
-  using BaseT =
-      iterator_adaptor_base<early_inc_iterator_impl<WrappedIteratorT>,
-                            WrappedIteratorT, std::input_iterator_tag>;
+  using BaseT = typename early_inc_iterator_impl::iterator_adaptor_base;
 
   using PointerT = typename std::iterator_traits<WrappedIteratorT>::pointer;
 
@@ -700,9 +717,7 @@ protected:
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
-  value_type operator*() { return deref(std::index_sequence_for<Iters...>{}); }
-
-  const value_type operator*() const {
+  value_type operator*() const {
     return deref(std::index_sequence_for<Iters...>{});
   }
 
@@ -872,8 +887,6 @@ public:
   zip_longest_iterator(std::pair<Iters &&, Iters &&>... ts)
       : iterators(std::forward<Iters>(ts.first)...),
         end_iterators(std::forward<Iters>(ts.second)...) {}
-
-  value_type operator*() { return deref(std::index_sequence_for<Iters...>{}); }
 
   value_type operator*() const {
     return deref(std::index_sequence_for<Iters...>{});
@@ -1145,8 +1158,7 @@ template <typename DerivedT, typename BaseT, typename T,
           typename PointerT = T *, typename ReferenceT = T &>
 class indexed_accessor_range_base {
 public:
-  using RangeBaseT =
-      indexed_accessor_range_base<DerivedT, BaseT, T, PointerT, ReferenceT>;
+  using RangeBaseT = indexed_accessor_range_base;
 
   /// An iterator element of this range.
   class iterator : public indexed_accessor_iterator<iterator, BaseT, T,
@@ -1159,8 +1171,7 @@ public:
 
   private:
     iterator(BaseT owner, ptrdiff_t curIndex)
-        : indexed_accessor_iterator<iterator, BaseT, T, PointerT, ReferenceT>(
-              owner, curIndex) {}
+        : iterator::indexed_accessor_iterator(owner, curIndex) {}
 
     /// Allow access to the constructor.
     friend indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
@@ -1968,8 +1979,7 @@ template <typename R> struct result_pair {
   }
 
   std::size_t index() const { return Index; }
-  const value_reference value() const { return *Iter; }
-  value_reference value() { return *Iter; }
+  value_reference value() const { return *Iter; }
 
 private:
   std::size_t Index = std::numeric_limits<std::size_t>::max();
@@ -1978,11 +1988,8 @@ private:
 
 template <typename R>
 class enumerator_iter
-    : public iterator_facade_base<
-          enumerator_iter<R>, std::forward_iterator_tag, result_pair<R>,
-          typename std::iterator_traits<IterOfRange<R>>::difference_type,
-          typename std::iterator_traits<IterOfRange<R>>::pointer,
-          typename std::iterator_traits<IterOfRange<R>>::reference> {
+    : public iterator_facade_base<enumerator_iter<R>, std::forward_iterator_tag,
+                                  const result_pair<R>> {
   using result_type = result_pair<R>;
 
 public:
@@ -1992,7 +1999,6 @@ public:
   enumerator_iter(std::size_t Index, IterOfRange<R> Iter)
       : Result(Index, Iter) {}
 
-  result_type &operator*() { return Result; }
   const result_type &operator*() const { return Result; }
 
   enumerator_iter &operator++() {

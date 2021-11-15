@@ -65,6 +65,11 @@ WithNote(::testing::Matcher<Note> NoteMatcher1,
   return Field(&Diag::Notes, UnorderedElementsAre(NoteMatcher1, NoteMatcher2));
 }
 
+::testing::Matcher<const Diag &>
+WithTag(::testing::Matcher<DiagnosticTag> TagMatcher) {
+  return Field(&Diag::Tags, Contains(TagMatcher));
+}
+
 MATCHER_P2(Diag, Range, Message,
            "Diag at " + llvm::to_string(Range) + " = [" + Message + "]") {
   return arg.Range == Range && arg.Message == Message;

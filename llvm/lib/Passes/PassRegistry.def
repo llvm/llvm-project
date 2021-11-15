@@ -336,7 +336,7 @@ FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
-FUNCTION_PASS("sroa", SROA())
+FUNCTION_PASS("sroa", SROAPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -435,9 +435,9 @@ FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           parseMergedLoadStoreMotionOptions,
                           "no-split-footer-bb;split-footer-bb")
 FUNCTION_PASS_WITH_PARAMS("gvn",
-                          "GVN",
+                          "GVNPass",
                            [](GVNOptions Opts) {
-                             return GVN(Opts);
+                             return GVNPass(Opts);
                            },
                           parseGVNOptions,
                           "no-pre;pre;"

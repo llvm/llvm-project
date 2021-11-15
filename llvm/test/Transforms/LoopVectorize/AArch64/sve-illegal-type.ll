@@ -79,6 +79,35 @@ for.end:
   ret void
 }
 
+; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
+define void @uniform_store_i1(i1* noalias %dst, i64* noalias %start, i64 %N) {
+; CHECK-LABEL: @uniform_store_i1
+; CHECK: vector.body
+; CHECK: %[[GEP:.*]] = getelementptr inbounds i64, <2 x i64*> {{.*}}, i64 1
+; CHECK: %[[ICMP:.*]] = icmp eq <2 x i64*> %[[GEP]], %[[SPLAT:.*]]
+; CHECK: %[[EXTRACT1:.*]] = extractelement <2 x i1> %[[ICMP]], i32 0
+; CHECK: store i1 %[[EXTRACT1]], i1* %dst
+; CHECK: %[[EXTRACT2:.*]] = extractelement <2 x i1> %[[ICMP]], i32 1
+; CHECK: store i1 %[[EXTRACT2]], i1* %dst
+; CHECK-NOT: vscale
+entry:
+  br label %for.body
+
+for.body:
+  %first.sroa = phi i64* [ %incdec.ptr, %for.body ], [ %start, %entry ]
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i64 %iv, 1
+  %0 = load i64, i64* %first.sroa
+  %incdec.ptr = getelementptr inbounds i64, i64* %first.sroa, i64 1
+  %cmp.not = icmp eq i64* %incdec.ptr, %start
+  store i1 %cmp.not, i1* %dst
+  %cmp = icmp ult i64 %iv, %N
+  br i1 %cmp, label %for.body, label %end, !llvm.loop !0
+
+end:
+  ret void
+}
+
 define dso_local void @loop_fixed_width_i128(i128* nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_fixed_width_i128
 ; CHECK: load <4 x i128>, <4 x i128>*

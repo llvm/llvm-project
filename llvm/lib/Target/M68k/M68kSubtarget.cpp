@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kSubtarget.h"
-#include "GlSel/M68kCallLowering.h"
-#include "GlSel/M68kLegalizerInfo.h"
-#include "GlSel/M68kRegisterBankInfo.h"
+#include "GISel/M68kCallLowering.h"
+#include "GISel/M68kLegalizerInfo.h"
+#include "GISel/M68kRegisterBankInfo.h"
 
 #include "M68k.h"
 #include "M68kMachineFunction.h"

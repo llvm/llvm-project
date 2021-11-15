@@ -3258,7 +3258,7 @@ struct FormatStyle {
   bool SpaceBeforeInheritanceColon;
 
   /// Different ways to put a space before opening parentheses.
-  enum SpaceBeforeParensOptions : unsigned char {
+  enum SpaceBeforeParensStyle : unsigned char {
     /// Never put a space before opening parentheses.
     /// \code
     ///    void f() {
@@ -3313,12 +3313,100 @@ struct FormatStyle {
     ///      }
     ///    }
     /// \endcode
-    SBPO_Always
+    SBPO_Always,
+    /// Configure each individual space before parentheses in
+    /// `SpaceBeforeParensOptions`.
+    SBPO_Custom,
   };
 
   /// Defines in which cases to put a space before opening parentheses.
   /// \version 3.5
-  SpaceBeforeParensOptions SpaceBeforeParens;
+  SpaceBeforeParensStyle SpaceBeforeParens;
+
+  /// Precise control over the spacing before parentheses.
+  /// \code
+  ///   # Should be declared this way:
+  ///   SpaceBeforeParens: Custom
+  ///   SpaceBeforeParensOptions:
+  ///     AfterControlStatements: true
+  ///     AfterFunctionDefinitionName: true
+  /// \endcode
+  struct SpaceBeforeParensCustom {
+    /// If ``true``, put space betwee control statement keywords
+    /// (for/if/while...) and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    if (...) {}                     vs.    if(...) {}
+    /// \endcode
+    bool AfterControlStatements;
+    /// If ``true``, put space between foreach macros and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    FOREACH (...)                   vs.    FOREACH(...)
+    ///      <loop-body>                            <loop-body>
+    /// \endcode
+    bool AfterForeachMacros;
+    /// If ``true``, put a space between function declaration name and opening
+    /// parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    void f ();                      vs.    void f();
+    /// \endcode
+    bool AfterFunctionDeclarationName;
+    /// If ``true``, put a space between function definition name and opening
+    /// parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    void f () {}                    vs.    void f() {}
+    /// \endcode
+    bool AfterFunctionDefinitionName;
+    /// If ``true``, put space between if macros and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    IF (...)                        vs.    IF(...)
+    ///      <conditional-body>                     <conditional-body>
+    /// \endcode
+    bool AfterIfMacros;
+    /// If ``true``, put a space before opening parentheses only if the
+    /// parentheses are not empty.
+    /// \code
+    ///    true:                                  false:
+    ///    void f (int a);                 vs.    void f();
+    ///    f (a);                                 f();
+    /// \endcode
+    bool BeforeNonEmptyParentheses;
+
+    SpaceBeforeParensCustom()
+        : AfterControlStatements(false), AfterForeachMacros(false),
+          AfterFunctionDeclarationName(false),
+          AfterFunctionDefinitionName(false), AfterIfMacros(false),
+          BeforeNonEmptyParentheses(false) {}
+
+    bool operator==(const SpaceBeforeParensCustom &Other) const {
+      return AfterControlStatements == Other.AfterControlStatements &&
+             AfterForeachMacros == Other.AfterForeachMacros &&
+             AfterFunctionDeclarationName ==
+                 Other.AfterFunctionDeclarationName &&
+             AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
+             AfterIfMacros == Other.AfterIfMacros &&
+             BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
+    }
+  };
+
+  /// Control of individual space before parentheses.
+  ///
+  /// If ``SpaceBeforeParens`` is set to ``Custom``, use this to specify
+  /// how each individual space before parentheses case should be handled.
+  /// Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   SpaceBeforeParens: Custom
+  ///   SpaceBeforeParensOptions:
+  ///     AfterControlStatements: true
+  ///     AfterFunctionDefinitionName: true
+  /// \endcode
+  /// \version 14
+  SpaceBeforeParensCustom SpaceBeforeParensOptions;
 
   /// If ``false``, spaces will be removed before range-based for loop
   /// colon.
@@ -3715,6 +3803,7 @@ struct FormatStyle {
                R.SpaceBeforeCtorInitializerColon &&
            SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
+           SpaceBeforeParensOptions == R.SpaceBeforeParensOptions &&
            SpaceAroundPointerQualifiers == R.SpaceAroundPointerQualifiers &&
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&

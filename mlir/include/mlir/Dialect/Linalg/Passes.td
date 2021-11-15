@@ -287,6 +287,19 @@ def LinalgStrategyGeneralizePass
   ];
 }
 
+// TODO: atm this is applied to all supported ops. If/when we need finer control
+// this should be exposed with an opName + filter and a proper pattern.
+def LinalgStrategyDecomposePass
+    : FunctionPass<"linalg-strategy-decompose-pass"> {
+  let summary = "Configurable pass to apply pattern-based generalization.";
+  let constructor = "mlir::createLinalgStrategyDecomposePass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
+  let options = [
+    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
+      "Which func op is the anchor to latch on.">,
+  ];
+}
+
 def LinalgStrategyInterchangePass
     : FunctionPass<"linalg-strategy-interchange-pass"> {
   let summary = "Configurable pass to apply pattern-based iterator interchange.";

@@ -403,7 +403,7 @@ void SIScheduleBlock::schedule(MachineBasicBlock::iterator BeginBlock,
   }
 
   // TODO: compute InternalAdditionnalPressure.
-  InternalAdditionnalPressure.resize(TopPressure.MaxSetPressure.size());
+  InternalAdditionalPressure.resize(TopPressure.MaxSetPressure.size());
 
   // Check everything is right.
 #ifndef NDEBUG

@@ -169,7 +169,7 @@ static constexpr const CombiningKind combiningKindsList[] = {
     // clang-format on
 };
 
-void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
+void CombiningKindAttr::print(AsmPrinter &printer) const {
   printer << "kind<";
   auto kinds = llvm::make_filter_range(combiningKindsList, [&](auto kind) {
     return bitEnumContains(this->getKind(), kind);
@@ -179,7 +179,7 @@ void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
   printer << ">";
 }
 
-Attribute CombiningKindAttr::parse(DialectAsmParser &parser) {
+Attribute CombiningKindAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -207,7 +207,7 @@ Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,
     return {};
 
   if (attrKind == "kind")
-    return CombiningKindAttr::parse(parser);
+    return CombiningKindAttr::parse(parser, {});
 
   parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
   return {};
@@ -472,8 +472,8 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   auto rhsType = types[1].cast<VectorType>();
   auto maskElementType = parser.getBuilder().getI1Type();
   std::array<Type, 2> maskTypes = {
-      VectorType::get(lhsType.getShape(), maskElementType),
-      VectorType::get(rhsType.getShape(), maskElementType)};
+      VectorType::Builder(lhsType).setElementType(maskElementType),
+      VectorType::Builder(rhsType).setElementType(maskElementType)};
   if (parser.resolveOperands(masksInfo, maskTypes, loc, result.operands))
     return failure();
   return success();

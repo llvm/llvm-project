@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-feature +neon -target-feature +bf16 -mfloat-abi soft \
 // RUN:  -disable-O0-optnone -emit-llvm -fno-legacy-pass-manager %s -o - | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: @test_vcreate_bf16(

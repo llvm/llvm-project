@@ -341,7 +341,16 @@ std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Ty) {
 
 TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   // No scope means global scope and that uses the zero index.
-  if (!Scope || isa<DIFile>(Scope))
+  //
+  // We also use zero index when the scope is a DISubprogram
+  // to suppress the emission of LF_STRING_ID for the function,
+  // which can trigger a link-time error with the linker in
+  // VS2019 version 16.11.2 or newer.
+  // Note, however, skipping the debug info emission for the DISubprogram
+  // is a temporary fix. The root issue here is that we need to figure out
+  // the proper way to encode a function nested in another function
+  // (as introduced by the Fortran 'contains' keyword) in CodeView.
+  if (!Scope || isa<DIFile>(Scope) || isa<DISubprogram>(Scope))
     return TypeIndex();
 
   assert(!isa<DIType>(Scope) && "shouldn't make a namespace scope for a type");

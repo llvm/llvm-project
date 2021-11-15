@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceBasicBlocks.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -25,7 +26,7 @@ using namespace llvm;
 
 /// Replaces BB Terminator with one that only contains Chunk BBs
 static void replaceBranchTerminator(BasicBlock &BB,
-                                    const std::set<BasicBlock *> &BBsToKeep) {
+                                    const DenseSet<BasicBlock *> &BBsToKeep) {
   auto *Term = BB.getTerminator();
   std::vector<BasicBlock *> ChunkSucessors;
   for (auto *Succ : successors(&BB))
@@ -68,7 +69,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
 /// replace with something)
 static void
 removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
-                                 const std::set<BasicBlock *> &BBsToKeep) {
+                                 const DenseSet<BasicBlock *> &BBsToKeep) {
   if (!BBsToKeep.count(SwInst.getDefaultDest())) {
     auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
     ReturnInst::Create(SwInst.getContext(),
@@ -89,28 +90,21 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
-  std::vector<BasicBlock *> InitBBsToKeep;
+  DenseSet<BasicBlock *> BBsToKeep;
 
-  for (auto &F : Program)
-    for (auto &BB : F)
-      if (O.shouldKeep())
-        InitBBsToKeep.push_back(&BB);
-
-  // We create a vector first, then convert it to a set, so that we don't have
-  // to pay the cost of rebalancing the set frequently if the order we insert
-  // the elements doesn't match the order they should appear inside the set.
-  std::set<BasicBlock *> BBsToKeep(InitBBsToKeep.begin(), InitBBsToKeep.end());
-
-  std::vector<BasicBlock *> BBsToDelete;
-  for (auto &F : Program)
+  SmallVector<BasicBlock *> BBsToDelete;
+  for (auto &F : Program) {
     for (auto &BB : F) {
-      if (!BBsToKeep.count(&BB)) {
+      if (O.shouldKeep())
+        BBsToKeep.insert(&BB);
+      else {
         BBsToDelete.push_back(&BB);
         // Remove out-of-chunk BB from successor phi nodes
         for (auto *Succ : successors(&BB))
           Succ->removePredecessor(&BB);
       }
     }
+  }
 
   // Replace terminators that reference out-of-chunk BBs
   for (auto &F : Program)
@@ -126,28 +120,19 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
     // Instructions might be referenced in other BBs
     for (auto &I : *BB)
       I.replaceAllUsesWith(UndefValue::get(I.getType()));
-    BB->eraseFromParent();
-  }
-}
-
-/// Counts the amount of basic blocks and prints their name & respective index
-static int countBasicBlocks(Module &Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  int BBCount = 0;
-  for (auto &F : Program)
-    for (auto &BB : F) {
-      if (BB.hasName())
-        outs() << "\t" << ++BBCount << ": " << BB.getName() << "\n";
-      else
-        outs() << "\t" << ++BBCount << ": Unnamed\n";
+    if (BB->getParent()->size() == 1) {
+      // this is the last basic block of the function, thus we must also make
+      // sure to remove comdat and set linkage to external
+      auto F = BB->getParent();
+      F->deleteBody();
+      F->setComdat(nullptr);
+    } else {
+      BB->eraseFromParent();
     }
-
-  return BBCount;
+  }
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Basic Blocks...\n";
-  int BBCount = countBasicBlocks(Test.getProgram());
-  runDeltaPass(Test, BBCount, extractBasicBlocksFromModule);
+  runDeltaPass(Test, extractBasicBlocksFromModule);
 }

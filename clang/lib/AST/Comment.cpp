@@ -210,6 +210,7 @@ void DeclInfo::fill() {
   IsObjCMethod = false;
   IsInstanceMethod = false;
   IsClassMethod = false;
+  IsVariadic = false;
   ParamVars = None;
   TemplateParameters = nullptr;
 
@@ -221,6 +222,7 @@ void DeclInfo::fill() {
   CurrentDecl = CommentDecl;
 
   Decl::Kind K = CommentDecl->getKind();
+  const TypeSourceInfo *TSI = nullptr;
   switch (K) {
   default:
     // Defaults are should be good for declarations we don't handle explicitly.
@@ -247,6 +249,8 @@ void DeclInfo::fill() {
       IsInstanceMethod = MD->isInstance();
       IsClassMethod = !IsInstanceMethod;
     }
+    IsVariadic = FD->isVariadic();
+    assert(involvesFunctionType());
     break;
   }
   case Decl::ObjCMethod: {
@@ -257,6 +261,8 @@ void DeclInfo::fill() {
     IsObjCMethod = true;
     IsInstanceMethod = MD->isInstanceMethod();
     IsClassMethod = !IsInstanceMethod;
+    IsVariadic = MD->isVariadic();
+    assert(involvesFunctionType());
     break;
   }
   case Decl::FunctionTemplate: {
@@ -267,6 +273,8 @@ void DeclInfo::fill() {
     ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
     TemplateParameters = FTD->getTemplateParameters();
+    IsVariadic = FD->isVariadic();
+    assert(involvesFunctionType());
     break;
   }
   case Decl::ClassTemplate: {
@@ -293,76 +301,66 @@ void DeclInfo::fill() {
     Kind = ClassKind;
     break;
   case Decl::Var:
+    if (const VarTemplateDecl *VTD =
+            cast<VarDecl>(CommentDecl)->getDescribedVarTemplate()) {
+      TemplateKind = TemplateSpecialization;
+      TemplateParameters = VTD->getTemplateParameters();
+    }
+    LLVM_FALLTHROUGH;
   case Decl::Field:
   case Decl::EnumConstant:
   case Decl::ObjCIvar:
   case Decl::ObjCAtDefsField:
-  case Decl::ObjCProperty: {
-    const TypeSourceInfo *TSI;
+  case Decl::ObjCProperty:
     if (const auto *VD = dyn_cast<DeclaratorDecl>(CommentDecl))
       TSI = VD->getTypeSourceInfo();
     else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(CommentDecl))
       TSI = PD->getTypeSourceInfo();
-    else
-      TSI = nullptr;
-    if (TSI) {
-      TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
-      FunctionTypeLoc FTL;
-      if (getFunctionTypeLoc(TL, FTL)) {
-        ParamVars = FTL.getParams();
-        ReturnType = FTL.getReturnLoc().getType();
-      }
-    }
     Kind = VariableKind;
+    break;
+  case Decl::VarTemplate: {
+    const VarTemplateDecl *VTD = cast<VarTemplateDecl>(CommentDecl);
+    Kind = VariableKind;
+    TemplateKind = Template;
+    TemplateParameters = VTD->getTemplateParameters();
+    if (const VarDecl *VD = VTD->getTemplatedDecl())
+      TSI = VD->getTypeSourceInfo();
     break;
   }
   case Decl::Namespace:
     Kind = NamespaceKind;
     break;
   case Decl::TypeAlias:
-  case Decl::Typedef: {
+  case Decl::Typedef:
     Kind = TypedefKind;
-    // If this is a typedef / using to something we consider a function, extract
-    // arguments and return type.
-    const TypeSourceInfo *TSI =
-        K == Decl::Typedef
-            ? cast<TypedefDecl>(CommentDecl)->getTypeSourceInfo()
-            : cast<TypeAliasDecl>(CommentDecl)->getTypeSourceInfo();
-    if (!TSI)
-      break;
-    TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
-    FunctionTypeLoc FTL;
-    if (getFunctionTypeLoc(TL, FTL)) {
-      Kind = FunctionKind;
-      ParamVars = FTL.getParams();
-      ReturnType = FTL.getReturnLoc().getType();
-    }
+    TSI = cast<TypedefNameDecl>(CommentDecl)->getTypeSourceInfo();
     break;
-  }
   case Decl::TypeAliasTemplate: {
     const TypeAliasTemplateDecl *TAT = cast<TypeAliasTemplateDecl>(CommentDecl);
     Kind = TypedefKind;
     TemplateKind = Template;
     TemplateParameters = TAT->getTemplateParameters();
-    TypeAliasDecl *TAD = TAT->getTemplatedDecl();
-    if (!TAD)
-      break;
-
-    const TypeSourceInfo *TSI = TAD->getTypeSourceInfo();
-    if (!TSI)
-      break;
-    TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
-    FunctionTypeLoc FTL;
-    if (getFunctionTypeLoc(TL, FTL)) {
-      Kind = FunctionKind;
-      ParamVars = FTL.getParams();
-      ReturnType = FTL.getReturnLoc().getType();
-    }
+    if (TypeAliasDecl *TAD = TAT->getTemplatedDecl())
+      TSI = TAD->getTypeSourceInfo();
     break;
   }
   case Decl::Enum:
     Kind = EnumKind;
     break;
+  }
+
+  // If the type is a typedef / using to something we consider a function,
+  // extract arguments and return type.
+  if (TSI) {
+    TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+    FunctionTypeLoc FTL;
+    if (getFunctionTypeLoc(TL, FTL)) {
+      ParamVars = FTL.getParams();
+      ReturnType = FTL.getReturnLoc().getType();
+      if (const auto *FPT = dyn_cast<FunctionProtoType>(FTL.getTypePtr()))
+        IsVariadic = FPT->isVariadic();
+      assert(involvesFunctionType());
+    }
   }
 
   IsFilled = true;

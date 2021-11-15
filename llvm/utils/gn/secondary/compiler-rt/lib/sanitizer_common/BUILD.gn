@@ -18,6 +18,7 @@ source_set("sources") {
     "sanitizer_allocator_checks.cpp",
     "sanitizer_allocator_checks.h",
     "sanitizer_allocator_combined.h",
+    "sanitizer_allocator_dlsym.h",
     "sanitizer_allocator_interface.h",
     "sanitizer_allocator_internal.h",
     "sanitizer_allocator_local_cache.h",

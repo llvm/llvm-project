@@ -71,8 +71,8 @@ if the :option:`ReplacementString` option is set to `NO_DISCARD`.
 
 .. note::
 
-    If the :option:`ReplacementString` is not a C++ attribute, but instead a 
-    macro, then that macro must be defined in scope or the fix-it will not be 
+    If the :option:`ReplacementString` is not a C++ attribute, but instead a
+    macro, then that macro must be defined in scope or the fix-it will not be
     applied.
 
 .. note::

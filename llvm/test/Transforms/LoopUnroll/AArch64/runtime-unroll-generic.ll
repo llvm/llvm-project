@@ -20,7 +20,7 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[UNROLL_ITER:%.*]] = and i32 [[ARG_0]], -4
 ; CHECK-A55-NEXT:    br label [[FOR_BODY6:%.*]]
 ; CHECK-A55:       for.body6:
-; CHECK-A55-NEXT:    [[NITER:%.*]] = phi i32 [ [[UNROLL_ITER]], [[FOR_BODY6_PREHEADER_NEW]] ], [ [[NITER_NSUB_3:%.*]], [[FOR_BODY6]] ]
+; CHECK-A55-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY6_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_BODY6]] ]
 ; CHECK-A55-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
 ; CHECK-A55-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-A55-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX14]], align 2
@@ -50,8 +50,8 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[MUL16_3:%.*]] = mul nsw i32 [[CONV15_3]], [[CONV_3]]
 ; CHECK-A55-NEXT:    [[ADD21_3:%.*]] = add nsw i32 [[MUL16_3]], [[ADD21_2]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_3]], i32* [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[NITER_NSUB_3]] = add i32 [[NITER]], -4
-; CHECK-A55-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i32 [[NITER_NSUB_3]], 0
+; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
+; CHECK-A55-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-A55:       for.end.loopexit.unr-lcssa:
 ; CHECK-A55-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
@@ -67,8 +67,6 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 1
 ; CHECK-A55-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL_1:%.*]]
-; CHECK-A55:       for.end:
-; CHECK-A55-NEXT:    ret void
 ; CHECK-A55:       for.body6.epil.1:
 ; CHECK-A55-NEXT:    [[TMP14:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
 ; CHECK-A55-NEXT:    [[CONV_EPIL_1:%.*]] = sext i16 [[TMP14]] to i32
@@ -90,6 +88,8 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[ADD21_EPIL_2:%.*]] = add nsw i32 [[MUL16_EPIL_2]], [[TMP19]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_2]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    br label [[FOR_END]]
+; CHECK-A55:       for.end:
+; CHECK-A55-NEXT:    ret void
 ;
 ; CHECK-GENERIC-LABEL: @runtime_unroll_generic(
 ; CHECK-GENERIC-NEXT:  entry:

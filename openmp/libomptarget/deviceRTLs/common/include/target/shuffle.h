@@ -35,7 +35,7 @@ int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 ///{
 extern "C" {
 unsigned GetLaneId();
-unsigned GetWarpSize();
+unsigned __kmpc_get_warp_size();
 void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi);
 uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi);
 }
@@ -60,8 +60,7 @@ int32_t __kmpc_impl_shfl_down_sync(uint64_t Mask, int32_t Var, uint32_t Delta,
 
 inline int32_t __kmpc_impl_shfl_sync(uint64_t Mask, int32_t Var,
                                      int32_t SrcLane) {
-  //int Width = GetWarpSize();
-  int Width = WARPSIZE;
+  int Width = __kmpc_get_warp_size();
   int Self = GetLaneId();
   int Index = SrcLane + (Self & ~(Width - 1));
   return __builtin_amdgcn_ds_bpermute(Index << 2, Var);
@@ -91,7 +90,7 @@ inline int32_t __kmpc_impl_shfl_sync(uint64_t Mask, int32_t Var,
 
 inline int32_t __kmpc_impl_shfl_down_sync(uint64_t Mask, int32_t Var,
                                           uint32_t Delta, int32_t Width) {
-  int32_t T = ((GetWarpSize() - Width) << 8) | 0x1f;
+  int32_t T = ((__kmpc_get_warp_size() - Width) << 8) | 0x1f;
   return __nvvm_shfl_sync_down_i32(Mask, Var, Delta, T);
 }
 

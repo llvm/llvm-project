@@ -101,8 +101,8 @@ public:
 
   CombiningKind getKind() const;
 
-  void print(DialectAsmPrinter &p) const;
-  static Attribute parse(DialectAsmParser &parser);
+  void print(AsmPrinter &p) const;
+  static Attribute parse(AsmParser &parser, Type type);
 };
 
 /// Collects patterns to progressively lower vector.broadcast ops on high-D

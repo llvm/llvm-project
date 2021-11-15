@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 %s -triple aarch64_be -target-feature +neon -verify -fsyntax-only -ffreestanding
 // RUN: %clang_cc1 %s -triple armebv7 -target-cpu cortex-a8 -verify -fsyntax-only -ffreestanding
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 int32x4_t x = {1, 2, 3, 4}; // expected-warning{{vector initializers are not compatible with NEON intrinsics}} expected-note{{consider using vld1q_s32() to initialize a vector from memory, or vcombine_s32(vcreate_s32(), vcreate_s32()) to initialize from integer constants}}

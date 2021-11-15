@@ -3188,7 +3188,7 @@ public:
     Iterator() = delete;
     Iterator(const Iterator &) = default;
     bool operator==(const Iterator &R) const { return R.Op == Op; }
-    DIOp::Variant &operator*() { return *Op; }
+    DIOp::Variant &operator*() const { return *Op; }
     friend iterator_facade_base::difference_type operator-(Iterator LHS,
                                                            Iterator RHS) {
       return LHS.Op - RHS.Op;

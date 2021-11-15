@@ -6,6 +6,8 @@
 // RUN:   -ffreestanding \
 // RUN:   -disable-O0-optnone -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // Check that the vget_low/vget_high intrinsics generate a single shuffle

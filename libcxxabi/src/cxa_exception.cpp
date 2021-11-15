@@ -382,7 +382,12 @@ asm("	.pushsection	.text.__cxa_end_cleanup,\"ax\",%progbits\n"
     "	bl	__cxa_end_cleanup_impl\n"
     "	pop	{r1, r2, r3, r4}\n"
     "	mov	lr, r4\n"
-    "	b	_Unwind_Resume\n"
+#if defined(LIBCXXABI_BAREMETAL)
+    "	ldr	r4,	=_Unwind_Resume\n"
+    "	bx	r4\n"
+#else
+    "   b _Unwind_Resume\n"
+#endif
     "	.popsection");
 #endif // defined(_LIBCXXABI_ARM_EHABI)
 

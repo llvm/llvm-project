@@ -8,6 +8,7 @@ declare half @llvm.experimental.constrained.trunc.f16(half, metadata)
 declare half @llvm.experimental.constrained.rint.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.nearbyint.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.roundeven.f16(half, metadata)
+declare half @llvm.experimental.constrained.round.f16(half, metadata)
 
 define half @fceil32(half %f) #0 {
 ; X86-LABEL: fceil32:
@@ -98,6 +99,39 @@ define half @froundeven16(half %f) #0 {
 ; X64-NEXT:    retq
 
   %res = call half @llvm.experimental.constrained.roundeven.f16(
+                        half %f, metadata !"fpexcept.strict") #0
+  ret half %res
+}
+
+define half @fround16(half %f) #0 {
+; X86-LABEL: fround16:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovss %xmm0, (%esp)
+; X86-NEXT:    calll roundf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: fround16:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X64-NEXT:    callq roundf@PLT
+; X64-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; X64-NEXT:    popq %rax
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq
+
+  %res = call half @llvm.experimental.constrained.round.f16(
                         half %f, metadata !"fpexcept.strict") #0
   ret half %res
 }

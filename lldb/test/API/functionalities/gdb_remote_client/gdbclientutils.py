@@ -203,6 +203,8 @@ class MockGDBServerResponder:
         if packet.startswith("qRegisterInfo"):
             regnum = int(packet[len("qRegisterInfo"):], 16)
             return self.qRegisterInfo(regnum)
+        if packet == "k":
+            return self.k()
 
         return self.other(packet)
 
@@ -331,6 +333,9 @@ class MockGDBServerResponder:
     def qRegisterInfo(self, num):
         return ""
 
+    def k(self):
+        return ""
+
     """
     Raised when we receive a packet for which there is no default action.
     Override the responder class to implement behavior suitable for the test at
@@ -415,27 +420,27 @@ class PtyServerSocket(ServerSocket):
     def __init__(self):
         import pty
         import tty
-        master, slave = pty.openpty()
-        tty.setraw(master)
-        self._master = io.FileIO(master, 'r+b')
-        self._slave = io.FileIO(slave, 'r+b')
+        primary, secondary = pty.openpty()
+        tty.setraw(primary)
+        self._primary = io.FileIO(primary, 'r+b')
+        self._secondary = io.FileIO(secondary, 'r+b')
 
     def get_connect_address(self):
         libc = ctypes.CDLL(None)
         libc.ptsname.argtypes = (ctypes.c_int,)
         libc.ptsname.restype = ctypes.c_char_p
-        return libc.ptsname(self._master.fileno()).decode()
+        return libc.ptsname(self._primary.fileno()).decode()
 
     def get_connect_url(self):
         return "serial://" + self.get_connect_address()
 
     def close_server(self):
-        self._slave.close()
-        self._master.close()
+        self._secondary.close()
+        self._primary.close()
 
     def recv(self):
         try:
-            return self._master.read(4096)
+            return self._primary.read(4096)
         except OSError as e:
             # closing the pty results in EIO on Linux, convert it to EOF
             if e.errno == errno.EIO:
@@ -443,7 +448,7 @@ class PtyServerSocket(ServerSocket):
             raise
 
     def sendall(self, data):
-        return self._master.write(data)
+        return self._primary.write(data)
 
 
 class MockGDBServer:

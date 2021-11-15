@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -fallow-half-arguments-and-returns -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s
-// Test new aarch64 intrinsics and types
+
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 

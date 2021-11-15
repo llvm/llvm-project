@@ -23,7 +23,7 @@ Examples:
     std::mt19937 engine2(1); // Diagnose
     engine1.seed(); // Diagnose
     engine2.seed(1); // Diagnose
-    
+
     std::time_t t;
     engine1.seed(std::time(&t)); // Diagnose, system time might be controlled by user
 

@@ -120,7 +120,7 @@ ExprInspection checks
       clang_analyzer_checkInlined(true); // expected-warning{{TRUE}}
       return 42;
     }
-    
+
     void topLevel() {
       clang_analyzer_checkInlined(false); // no-warning (not inlined)
       int value = inlined();

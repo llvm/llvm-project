@@ -11,7 +11,7 @@
 /// structures and waterfall loops.
 ///
 /// When we do structurization, we usually transform an if-else into two
-/// sucessive if-then (with a flow block to do predicate inversion). Consider a
+/// successive if-then (with a flow block to do predicate inversion). Consider a
 /// simple case after structurization: A divergent value %a was defined before
 /// if-else and used in both THEN (use in THEN is optional) and ELSE part:
 ///    bb.if:

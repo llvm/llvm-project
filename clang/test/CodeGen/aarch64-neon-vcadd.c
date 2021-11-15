@@ -2,6 +2,8 @@
 // RUN:  -target-feature +v8.3a -target-feature +fullfp16 -S -emit-llvm -o - %s \
 // RUN:  | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 void foo16x4_rot90(float16x4_t a, float16x4_t b)

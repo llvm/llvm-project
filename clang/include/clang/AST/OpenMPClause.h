@@ -322,6 +322,81 @@ public:
   }
 };
 
+/// This represents the 'align' clause in the '#pragma omp allocate'
+/// directive.
+///
+/// \code
+/// #pragma omp allocate(a) allocator(omp_default_mem_alloc) align(8)
+/// \endcode
+/// In this example directive '#pragma omp allocate' has simple 'allocator'
+/// clause with the allocator 'omp_default_mem_alloc' and align clause with
+/// value of 8.
+class OMPAlignClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Alignment specified with align clause.
+  Stmt *Alignment = nullptr;
+
+  /// Set alignment value.
+  void setAlignment(Expr *A) { Alignment = A; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Build 'align' clause with the given alignment
+  ///
+  /// \param A Alignment value.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPAlignClause(Expr *A, SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_align, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Alignment(A) {}
+
+  /// Build an empty clause.
+  OMPAlignClause()
+      : OMPClause(llvm::omp::OMPC_align, SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Build 'align' clause with the given alignment
+  ///
+  /// \param A Alignment value.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  static OMPAlignClause *Create(const ASTContext &C, Expr *A,
+                                SourceLocation StartLoc,
+                                SourceLocation LParenLoc,
+                                SourceLocation EndLoc);
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns alignment
+  Expr *getAlignment() const { return cast_or_null<Expr>(Alignment); }
+
+  child_range children() { return child_range(&Alignment, &Alignment + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Alignment, &Alignment + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_align;
+  }
+};
+
 /// This represents clause 'allocate' in the '#pragma omp ...' directives.
 ///
 /// \code

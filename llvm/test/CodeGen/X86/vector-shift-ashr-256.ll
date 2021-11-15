@@ -1080,12 +1080,10 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ;
 ; X86-AVX2-LABEL: constant_shift_v4i64:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,0,7,0,31,0,62,0]
-; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
-; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1073741824,0,16777216,0,1,2,0]
+; X86-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
   %shift = ashr <4 x i64> %a, <i64 1, i64 7, i64 31, i64 62>
   ret <4 x i64> %shift
