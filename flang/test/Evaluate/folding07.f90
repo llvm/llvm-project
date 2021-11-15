@@ -204,12 +204,12 @@ module m
     max8 = maxexponent(0._8), &
     max10 = maxexponent(0._10), &
     max16 = maxexponent(0._16)
-  logical, parameter :: test_max2 = max2 == 15
-  logical, parameter :: test_max3 = max3 == 127
-  logical, parameter :: test_max4 = max4 == 127
-  logical, parameter :: test_max8 = max8 == 1023
-  logical, parameter :: test_max10 = max10 == 16383
-  logical, parameter :: test_max16 = max16 == 16383
+  logical, parameter :: test_max2 = max2 == 16
+  logical, parameter :: test_max3 = max3 == 128
+  logical, parameter :: test_max4 = max4 == 128
+  logical, parameter :: test_max8 = max8 == 1024
+  logical, parameter :: test_max10 = max10 == 16384
+  logical, parameter :: test_max16 = max16 == 16384
 
   integer, parameter :: &
     min2 = minexponent(0._2), &
@@ -218,12 +218,12 @@ module m
     min8 = minexponent(0._8), &
     min10 = minexponent(0._10), &
     min16 = minexponent(0._16)
-  logical, parameter :: test_min2 = min2 == -14
-  logical, parameter :: test_min3 = min3 == -126
-  logical, parameter :: test_min4 = min4 == -126
-  logical, parameter :: test_min8 = min8 == -1022
-  logical, parameter :: test_min10 = min10 == -16382
-  logical, parameter :: test_min16 = min16 == -16382
+  logical, parameter :: test_min2 = min2 == -13
+  logical, parameter :: test_min3 = min3 == -125
+  logical, parameter :: test_min4 = min4 == -125
+  logical, parameter :: test_min8 = min8 == -1021
+  logical, parameter :: test_min10 = min10 == -16381
+  logical, parameter :: test_min16 = min16 == -16381
 
   integer, parameter :: &
     irange1 = range(0_1), &
