@@ -286,10 +286,11 @@ public:
     return *this;
   }
 
-  /// Create a new RankedTensorType by erasing a dim from shape.
-  RankedTensorType dropDim(unsigned dim) {
+  /// Create a new RankedTensor by erasing a dim from shape @pos.
+  RankedTensorType dropDim(unsigned pos) {
+    assert(pos < shape.size() && "overflow");
     SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
-    newShape.erase(newShape.begin() + dim);
+    newShape.erase(newShape.begin() + pos);
     return setShape(newShape);
   }
 
@@ -301,6 +302,52 @@ private:
   ArrayRef<int64_t> shape;
   Type elementType;
   Attribute encoding;
+};
+
+//===----------------------------------------------------------------------===//
+// VectorType
+//===----------------------------------------------------------------------===//
+
+/// This is a builder type that keeps local references to arguments. Arguments
+/// that are passed into the builder must outlive the builder.
+class VectorType::Builder {
+public:
+  /// Build from another VectorType.
+  explicit Builder(VectorType other)
+      : shape(other.getShape()), elementType(other.getElementType()) {}
+
+  /// Build from scratch.
+  Builder(ArrayRef<int64_t> shape, Type elementType)
+      : shape(shape), elementType(elementType) {}
+
+  Builder &setShape(ArrayRef<int64_t> newShape) {
+    shape = newShape;
+    return *this;
+  }
+
+  Builder &setElementType(Type newElementType) {
+    elementType = newElementType;
+    return *this;
+  }
+
+  /// Create a new VectorType by erasing a dim from shape @pos.
+  /// In the particular case where the vector has a single dimension that we
+  /// drop, return the scalar element type.
+  // TODO: unify once we have a VectorType that supports 0-D.
+  Type dropDim(unsigned pos) {
+    assert(pos < shape.size() && "overflow");
+    if (shape.size() == 1)
+      return elementType;
+    SmallVector<int64_t, 4> newShape(shape.begin(), shape.end());
+    newShape.erase(newShape.begin() + pos);
+    return setShape(newShape);
+  }
+
+  operator VectorType() { return VectorType::get(shape, elementType); }
+
+private:
+  ArrayRef<int64_t> shape;
+  Type elementType;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of
