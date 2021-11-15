@@ -324,7 +324,7 @@ implementation details exposed via
 ClangAttrVisitor
 -------------------
 
-**Purpose**: Creates AttrVisitor.inc, which is used when implementing 
+**Purpose**: Creates AttrVisitor.inc, which is used when implementing
 recursive AST visitors.
 
 ClangAttrTemplateInstantiate
@@ -789,7 +789,7 @@ is guarded by ``GET_ATable_DECL``, while the definitions are guarded by
           return false;
         return false;
       });
-  
+
     if (Idx == Table.end() ||
         Key.Val1 != Idx->Val1 ||
         Key.Val2 != Idx->Val2)
@@ -967,4 +967,3 @@ This use of ``SearchIndex`` generates the following additional C++ code.
       return nullptr;
     return &CTable[Idx->_index];
   }
-

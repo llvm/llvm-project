@@ -321,7 +321,7 @@ A better way to write the test above would be using LLDB's testing function
 
 **Do not use hard-coded line numbers in your test case.**
 
-Instead, try to tag the line with some distinguishing pattern, and use the function line_number() defined in lldbtest.py which takes 
+Instead, try to tag the line with some distinguishing pattern, and use the function line_number() defined in lldbtest.py which takes
 filename and string_to_match as arguments and returns the line number.
 
 As an example, take a look at test/API/functionalities/breakpoint/breakpoint_conditions/main.c which has these
@@ -369,7 +369,7 @@ the test harness.
 
 The default cleanup action performed by the packages/Python/lldbsuite/test/lldbtest.py module invokes the "make clean" os command.
 
-If this default cleanup is not enough, individual class can provide an extra cleanup hook with a class method named classCleanup , 
+If this default cleanup is not enough, individual class can provide an extra cleanup hook with a class method named classCleanup ,
 for example, in test/API/terminal/TestSTTYBeforeAndAfter.py:
 
 .. code-block:: python
@@ -380,7 +380,7 @@ for example, in test/API/terminal/TestSTTYBeforeAndAfter.py:
         cls.RemoveTempFile("child_send1.txt")
 
 
-The 'child_send1.txt' file gets generated during the test run, so it makes sense to explicitly spell out the action in the same 
+The 'child_send1.txt' file gets generated during the test run, so it makes sense to explicitly spell out the action in the same
 TestSTTYBeforeAndAfter.py file to do the cleanup instead of artificially adding it as part of the default cleanup action which serves to
 cleanup those intermediate and a.out files.
 

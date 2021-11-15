@@ -116,7 +116,7 @@ file formats.
  section index or section name.
 
 .. option:: --string-table
- 
+
  Display contents of the string table.
 
 .. option:: --symbols, --syms, -s
