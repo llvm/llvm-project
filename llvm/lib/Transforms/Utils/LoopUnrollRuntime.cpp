@@ -411,35 +411,11 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
   return NewLoop;
 }
 
-/// Returns true if we can safely unroll a multi-exit/exiting loop. OtherExits
-/// is populated with all the loop exit blocks other than the LatchExit block.
-static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
-                                         bool PreserveLCSSA,
-                                         bool UseEpilogRemainder) {
-
-  // We currently have some correctness constrains in unrolling a multi-exit
-  // loop. Check for these below.
-
-  // We rely on LCSSA form being preserved when the exit blocks are transformed.
-  // (Note that only an off-by-default mode of the old PM disables PreserveLCCA.)
-  if (!PreserveLCSSA)
-    return false;
-
-  // All constraints have been satisfied.
-  return true;
-}
-
 /// Returns true if we can profitably unroll the multi-exit loop L. Currently,
 /// we return true only if UnrollRuntimeMultiExit is set to true.
 static bool canProfitablyUnrollMultiExitLoop(
     Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
-    bool PreserveLCSSA, bool UseEpilogRemainder) {
-
-#if !defined(NDEBUG)
-  assert(canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                      UseEpilogRemainder) &&
-         "Should be safe to unroll before checking profitability!");
-#endif
+    bool UseEpilogRemainder) {
 
   // Priority goes to UnrollRuntimeMultiExit if it's supplied.
   if (UnrollRuntimeMultiExit.getNumOccurrences())
@@ -638,12 +614,13 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // Support only single exit and exiting block unless multi-exit loop
   // unrolling is enabled.
   if (!L->getExitingBlock() || OtherExits.size()) {
-    if (!canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                      UseEpilogRemainder))
+    // We rely on LCSSA form being preserved when the exit blocks are transformed.
+    // (Note that only an off-by-default mode of the old PM disables PreserveLCCA.)
+    if (!PreserveLCSSA)
       return false;
 
     if (!canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit,
-                                          PreserveLCSSA, UseEpilogRemainder)) {
+                                          UseEpilogRemainder)) {
       LLVM_DEBUG(
           dbgs()
           << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
