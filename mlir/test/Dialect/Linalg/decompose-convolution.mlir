@@ -68,3 +68,27 @@ func @conv2d_nhwc_4x1x2x8_tensor(%input: tensor<4x3x5x3xf32>, %filter: tensor<2x
     outs(%init : tensor<4x1x2x8xf32>) -> tensor<4x1x2x8xf32>
   return %0 : tensor<4x1x2x8xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @depthwise_conv_2d_nhwc_hwc_tensor
+func @depthwise_conv_2d_nhwc_hwc_tensor(%input: tensor<1x1x113x96xf32>, %filter: tensor<1x3x96xf32>, %out: tensor<1x1x56x96xf32>) -> tensor<1x1x56x96xf32> {
+  //     CHECK: linalg.depthwise_conv_1d_nwc_wc
+  %0 = linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>}
+         ins(%input, %filter: tensor<1x1x113x96xf32>, tensor<1x3x96xf32>)
+         outs(%out: tensor<1x1x56x96xf32>) -> tensor<1x1x56x96xf32>
+  return %0: tensor<1x1x56x96xf32>
+}
+
+// -----
+
+// Do not convert convolution ops whose window dimensions are not ones.
+
+// CHECK-LABEL: func @depthwise_conv_2d_nhwc_hwc_tensor
+func @depthwise_conv_2d_nhwc_hwc_tensor(%input: tensor<1x113x113x96xf32>, %filter: tensor<3x3x96xf32>, %out: tensor<1x56x56x96xf32>) -> tensor<1x56x56x96xf32> {
+  //     CHECK: linalg.depthwise_conv_2d_nhwc_hwc
+  %0 = linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>}
+         ins(%input, %filter: tensor<1x113x113x96xf32>, tensor<3x3x96xf32>)
+         outs(%out: tensor<1x56x56x96xf32>) -> tensor<1x56x56x96xf32>
+  return %0: tensor<1x56x56x96xf32>
+}
