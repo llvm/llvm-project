@@ -1215,29 +1215,12 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
 
 namespace {
 
-// If extractOp is only removing unit dimensions it can be transformed to a
-// shapecast.
-class ExtractToShapeCast final : public OpRewritePattern<ExtractOp> {
-public:
-  using OpRewritePattern<ExtractOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    auto dstVecType = extractOp.getResult().getType().dyn_cast<VectorType>();
-    if (!dstVecType || extractOp.getVectorType().getNumElements() !=
-                           dstVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(extractOp, dstVecType,
-                                             extractOp.vector());
-    return success();
-  }
-};
-
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractToShapeCast>(context);
+  // ExtractToShapeCast is not a default canonicalization, it is opt-in by
+  // calling `populateCastAwayVectorLeadingOneDimPatterns`
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -1401,27 +1384,6 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
 
 namespace {
 
-// BroadcastOp can only add dimensions or broadcast a dimension from 1 to N. In
-// the degenerated case where the broadcast only adds dimensions of size 1 it
-// can be replaced by a ShapeCastOp. This canonicalization checks if the total
-// number of elements is the same before and after the broadcast to detect if
-// the only change in the vector type are new dimensions of size 1.
-class BroadcastToShapeCast final : public OpRewritePattern<BroadcastOp> {
-public:
-  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
-                                PatternRewriter &rewriter) const override {
-    auto srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
-    if (!srcVecType || broadcastOp.getVectorType().getNumElements() !=
-                           srcVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
-        broadcastOp, broadcastOp.getVectorType(), broadcastOp.source());
-    return success();
-  }
-};
-
 // Fold broadcast1(broadcast2(x)) into broadcast1(x).
 struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
   using OpRewritePattern<BroadcastOp>::OpRewritePattern;
@@ -1440,7 +1402,9 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<BroadcastToShapeCast, BroadcastFolder>(context);
+  // BroadcastToShapeCast is not a default canonicalization, it is opt-in by
+  // calling `populateCastAwayVectorLeadingOneDimPatterns`
+  results.add<BroadcastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1605,31 +1569,10 @@ static LogicalResult verify(InsertOp op) {
   return success();
 }
 
-namespace {
-
-// If insertOp is only inserting unit dimensions it can be transformed to a
-// shapecast.
-class InsertToShapeCast final : public OpRewritePattern<InsertOp> {
-public:
-  using OpRewritePattern<InsertOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(InsertOp insertOp,
-                                PatternRewriter &rewriter) const override {
-    auto srcVecType = insertOp.getSourceType().dyn_cast<VectorType>();
-    if (!srcVecType || insertOp.getDestVectorType().getNumElements() !=
-                           srcVecType.getNumElements())
-      return failure();
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(
-        insertOp, insertOp.getDestVectorType(), insertOp.source());
-    return success();
-  }
-};
-
-} // namespace
-
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToShapeCast>(context);
+  // InsertToShapeCast is not a default canonicalization, it is opt-in by
+  // calling `populateCastAwayVectorLeadingOneDimPatterns`
 }
 
 // Eliminates insert operations that produce values identical to their source
