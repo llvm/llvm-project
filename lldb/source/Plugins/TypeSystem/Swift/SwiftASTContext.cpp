@@ -1269,8 +1269,13 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::TargetTooNew:
     return "The module file was built for a target newer than the current "
            "target.";
+  case swift::serialization::Status::RevisionIncompatible:
+    return "The module file was built for a different version of the compiler.";
   case swift::serialization::Status::NotInOSSA:
-    return "The module file was not built with -enable-ossa-modules";
+    return "The module file was not compiled with -enable-ossa-modules when it "
+           "was required to do so.";
+  case swift::serialization::Status::SDKMismatch:
+    return "The module file was built with a different SDK version.";
   }
 }
 
