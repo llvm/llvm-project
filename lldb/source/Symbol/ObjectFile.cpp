@@ -715,3 +715,20 @@ void llvm::format_provider<ObjectFile::Strata>::format(
     break;
   }
 }
+
+
+Symtab *ObjectFile::GetSymtab() {
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    if (!m_symtab_up) {
+      ElapsedTime elapsed(module_sp->GetSymtabParseTime());
+      m_symtab_up = std::make_unique<Symtab>(this);
+      std::lock_guard<std::recursive_mutex> symtab_guard(
+          m_symtab_up->GetMutex());
+      ParseSymtab(*m_symtab_up);
+      m_symtab_up->Finalize();
+    }
+  }
+  return m_symtab_up.get();
+}
