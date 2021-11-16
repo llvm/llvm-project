@@ -55,7 +55,8 @@ header_markup = {
     "cwchar": ["ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS"],
     "wchar.h": ["ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS"],
 
-    "experimental/coroutine": ["if defined(__cpp_coroutines)"],
+    "experimental/coroutine": ["ifndef _LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES"],
+    "coroutine": ["ifndef _LIBCPP_HAS_NO_CXX20_COROUTINES"],
     "experimental/regex": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
 }
 

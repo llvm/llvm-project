@@ -88,6 +88,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <condition_variable>
 TEST_MACROS();
+#ifndef _LIBCPP_HAS_NO_CXX20_COROUTINES
+#    include <coroutine>
+TEST_MACROS();
+#endif
 #include <csetjmp>
 TEST_MACROS();
 #include <csignal>
@@ -321,7 +325,7 @@ TEST_MACROS();
 #if __cplusplus >= 201103L
 #    include <experimental/algorithm>
 TEST_MACROS();
-#    if defined(__cpp_coroutines)
+#    ifndef _LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES
 #        include <experimental/coroutine>
 TEST_MACROS();
 #    endif
