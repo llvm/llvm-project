@@ -62,7 +62,7 @@ define i32 @test_sub_urem(i32 %arg) {
 ; CHECK-NEXT:    %urem = urem i32 %arg, 8
 ; CHECK-NEXT:    --> (zext i3 (trunc i32 %arg to i3) to i32) U: [0,8) S: [0,8)
 ; CHECK-NEXT:    %sub = sub i32 %arg, %urem
-; CHECK-NEXT:    --> ((-1 * (zext i3 (trunc i32 %arg to i3) to i32))<nsw> + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> (8 * (%arg /u 8))<nuw> U: [0,-7) S: [-2147483648,2147483641)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_sub_urem
 ;
   %urem = urem i32 %arg, 8
@@ -78,7 +78,7 @@ define i32 @test_trunc_zext(i32 %arg) {
 ; CHECK-NEXT:    %zext = zext i3 %trunc to i32
 ; CHECK-NEXT:    --> (zext i3 (trunc i32 %arg to i3) to i32) U: [0,8) S: [0,8)
 ; CHECK-NEXT:    %sub = sub i32 %arg, %zext
-; CHECK-NEXT:    --> ((-1 * (zext i3 (trunc i32 %arg to i3) to i32))<nsw> + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> (8 * (%arg /u 8))<nuw> U: [0,-7) S: [-2147483648,2147483641)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_trunc_zext
 ;
   %trunc = trunc i32 %arg to i3
