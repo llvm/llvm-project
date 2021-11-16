@@ -1251,3 +1251,23 @@ func @absent() -> i1 {
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.mlir.null : !llvm.ptr<i64>
 // CHECK-NEXT:  %[[ret_val:.*]] = llvm.call @is_present(%[[ptr]]) : (!llvm.ptr<i64>) -> i1
 // CHECK-NEXT:  llvm.return %[[ret_val]] : i1
+
+// -----
+
+// Test `fir.string_lit` conversion.
+
+func @string_lit0() {
+  %1 = fir.string_lit "Hello, World!"(13) : !fir.char<1>
+  return
+}
+
+// CHECK-LABEL: llvm.func @string_lit0
+// CHECK: %{{.*}} = llvm.mlir.constant("Hello, World!") : !llvm.array<13 x i8>
+
+func @string_lit1() {
+  %2 = fir.string_lit [158, 2345](2) : !fir.char<2>
+  return
+}
+
+// CHECK-LABEL: llvm.func @string_lit1
+// %{{.*}} = llvm.mlir.constant(dense<[158, 2345]> : vector<2xi16>) : !llvm.array<2 x i16>
