@@ -325,9 +325,6 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
     for (auto attr : op.iterator_types())
       if (isReductionIterator(attr))
         return false;
-    // TODO: generalize support lib beyond vectors
-    if (op.iterator_types().size() != 1)
-      return false;
     *sparseOut = lhs;
     return true;
   }
