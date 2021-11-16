@@ -55,7 +55,8 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
 
 bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
   bool Changed = false;
-
+  bool IsPrivateAndUnprocessed = F.hasFnAttribute(CORO_PRESPLIT_ATTR) &&
+    F.hasLocalLinkage();
   for (auto IB = inst_begin(F), E = inst_end(F); IB != E;) {
     Instruction &I = *IB++;
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -83,6 +84,12 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
         break;
       case Intrinsic::coro_subfn_addr:
         lowerSubFn(Builder, cast<CoroSubFnInst>(II));
+        break;
+      case Intrinsic::coro_end:
+      case Intrinsic::coro_suspend_retcon:
+        if (IsPrivateAndUnprocessed) {
+          II->replaceAllUsesWith(UndefValue::get(II->getType()));
+        } else continue;
         break;
       case Intrinsic::coro_async_size_replace:
         auto *Target = cast<ConstantStruct>(
