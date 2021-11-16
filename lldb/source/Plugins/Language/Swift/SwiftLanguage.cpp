@@ -1485,22 +1485,23 @@ void SwiftLanguage::GetExceptionResolverDescription(bool catch_on,
 }
 
 ConstString SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
-  const char *mangled_name_cstr = mangled.GetMangledName().GetCString();
+  ConstString mangled_name = mangled.GetMangledName();
   ConstString demangled_name = mangled.GetDemangledName();
-  if (demangled_name && mangled_name_cstr && mangled_name_cstr[0]) {
-    if (SwiftLanguageRuntime::IsSwiftMangledName(demangled.GetStringRef())) {
+  if (demangled_name && mangled_name) {
+    if (SwiftLanguageRuntime::IsSwiftMangledName(
+            demangled_name.GetStringRef())) {
       lldb_private::ConstString basename;
       bool is_method = false;
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
-              mangled, basename, is_method)) {
-        if (basename && basename != mangled)
+              mangled_name, basename, is_method)) {
+        if (basename && basename != mangled_name)
           return basename;
       }
     }
   }
   if (demangled_name)
     return demangled_name;
-  return mangled.GetMangledName();
+  return mangled_name;
 }
 
 //------------------------------------------------------------------
