@@ -493,6 +493,9 @@ TEST(LinkGraphTest, SplitBlock) {
                                 false, false);
   auto &S4 = G.addDefinedSymbol(B1, 12, "S4", 4, Linkage::Strong,
                                 Scope::Default, false, false);
+  // Add a symbol that extends beyond the split.
+  auto &S5 = G.addDefinedSymbol(B1, 0, "S5", 16, Linkage::Strong,
+                                Scope::Default, false, false);
 
   // Add an extra block, EB, and target symbols, and use these to add edges
   // from B1 to EB.
@@ -537,6 +540,11 @@ TEST(LinkGraphTest, SplitBlock) {
 
   EXPECT_EQ(&S4.getBlock(), &B1);
   EXPECT_EQ(S4.getOffset(), 4U);
+
+  EXPECT_EQ(&S5.getBlock(), &B2);
+  EXPECT_EQ(S5.getOffset(), 0U);
+  // Size shrinks to fit.
+  EXPECT_EQ(S5.getSize(), 8U);
 
   // Check that edges in B1 have been transferred as expected:
   // Both blocks should now have two edges each at offsets 0 and 4.

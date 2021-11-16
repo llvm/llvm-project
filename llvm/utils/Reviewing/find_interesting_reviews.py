@@ -532,7 +532,7 @@ def find_reviewers_for_diff_heuristic(diff):
     # applies to.
     assert len(GIT_REPO_METADATA) == 1
     git_repo = os.path.join("git_repos", GIT_REPO_METADATA[0][0])
-    cmd = 'git -C {0} rev-list -n 1 --before="{1}" master'.format(
+    cmd = 'git -C {0} rev-list -n 1 --before="{1}" main'.format(
         git_repo,
         datetime.fromtimestamp(
             diff.dateModified).strftime("%Y-%m-%d %H:%M:%s"))

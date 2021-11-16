@@ -258,7 +258,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_coroutine",
     "values": { "c++20": 201902 },
     "headers": ["coroutine"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_destroying_delete",
     "values": { "c++20": 201806 },

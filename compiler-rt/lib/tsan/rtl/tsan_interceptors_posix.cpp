@@ -90,6 +90,7 @@ DECLARE_REAL(int, pthread_mutexattr_gettype, void *, void *)
 DECLARE_REAL(int, fflush, __sanitizer_FILE *fp)
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr size)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
+extern "C" int pthread_equal(void *t1, void *t2);
 extern "C" void *pthread_self();
 extern "C" void _exit(int status);
 #if !SANITIZER_NETBSD
@@ -880,10 +881,11 @@ static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g,
   }
 }
 
-static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
+static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g,
+                          u32 v) {
   if (!thr->in_ignored_lib)
     Release(thr, pc, (uptr)g);
-  u32 old = atomic_exchange(g, kGuardDone, memory_order_release);
+  u32 old = atomic_exchange(g, v, memory_order_release);
   if (old & kGuardWaiter)
     FutexWake(g, 1 << 30);
 }
@@ -913,12 +915,12 @@ STDCXX_INTERCEPTOR(int, __cxa_guard_acquire, atomic_uint32_t *g) {
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_release, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_release, g);
-  guard_release(thr, pc, g);
+  guard_release(thr, pc, g, kGuardDone);
 }
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_abort, g);
-  atomic_store(g, kGuardInit, memory_order_relaxed);
+  guard_release(thr, pc, g, kGuardInit);
 }
 
 namespace __tsan {
@@ -1515,7 +1517,7 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   // result in crashes due to too little stack space.
   if (guard_acquire(thr, pc, a, !SANITIZER_MAC)) {
     (*f)();
-    guard_release(thr, pc, a);
+    guard_release(thr, pc, a, kGuardDone);
   }
   return 0;
 }
@@ -2132,11 +2134,11 @@ TSAN_INTERCEPTOR(int, pthread_kill, void *tid, int sig) {
   ThreadSignalContext *sctx = SigCtx(thr);
   CHECK_NE(sctx, 0);
   int prev = sctx->int_signal_send;
-  if (tid == pthread_self()) {
+  bool self = pthread_equal(tid, pthread_self());
+  if (self)
     sctx->int_signal_send = sig;
-  }
   int res = REAL(pthread_kill)(tid, sig);
-  if (tid == pthread_self()) {
+  if (self) {
     CHECK_EQ(sctx->int_signal_send, sig);
     sctx->int_signal_send = prev;
   }
@@ -2391,8 +2393,11 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
   ThreadSetName(((TsanInterceptorContext *) ctx)->thr, name)
 
-#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
-  __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
+#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name)         \
+  if (pthread_equal(pthread_self(), reinterpret_cast<void *>(thread))) \
+    COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name);                     \
+  else                                                                 \
+    __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
 
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) BLOCK_REAL(name)
 

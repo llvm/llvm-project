@@ -283,36 +283,36 @@ public:
   Value applyfn__max(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
-      return builder.create<MaxFOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
     if (isInteger(lhs))
-      return builder.create<MaxSIOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MaxSIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
   Value applyfn__max_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
-      return builder.create<MaxFOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
     if (isInteger(lhs))
-      return builder.create<MaxUIOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MaxUIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
   Value applyfn__min(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
-      return builder.create<MinFOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
     if (isInteger(lhs))
-      return builder.create<MinSIOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MinSIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
   Value applyfn__min_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
-      return builder.create<MinFOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
     if (isInteger(lhs))
-      return builder.create<MinUIOp>(lhs.getLoc(), lhs, rhs);
+      return builder.create<arith::MinUIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
@@ -3037,16 +3037,16 @@ LogicalResult matchAndReplaceDepthwiseConv(Operation *operation, Value input,
       loc, newInitTy, init, collapsedInitDims);
 
   Value newConv;
-  if (isa<DepthwiseConv2DNhwcOp>(operation)) {
+  if (isa<DepthwiseConv2DNhwcHwcmOp>(operation)) {
     newConv = rewriter
-                  .create<DepthwiseConv2DNhwOp>(
+                  .create<DepthwiseConv2DNhwcHwcOp>(
                       loc, newInitTy, ValueRange{input, collapsedKernel},
                       ValueRange{collapsedInit}, stride, dilation)
                   .getResult(0);
-  } else if (isa<DepthwiseConv2DNhwcQOp>(operation)) {
+  } else if (isa<DepthwiseConv2DNhwcHwcmQOp>(operation)) {
     newConv =
         rewriter
-            .create<DepthwiseConv2DNhwQOp>(
+            .create<DepthwiseConv2DNhwcHwcQOp>(
                 loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
                 ValueRange{collapsedInit}, stride, dilation)
             .getResult(0);
@@ -3062,10 +3062,10 @@ LogicalResult matchAndReplaceDepthwiseConv(Operation *operation, Value input,
 }
 
 struct SimplifyDepthwiseConvOp
-    : public OpRewritePattern<DepthwiseConv2DNhwcOp> {
-  using OpRewritePattern<DepthwiseConv2DNhwcOp>::OpRewritePattern;
+    : public OpRewritePattern<DepthwiseConv2DNhwcHwcmOp> {
+  using OpRewritePattern<DepthwiseConv2DNhwcHwcmOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcOp op,
+  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmOp op,
                                 PatternRewriter &rewriter) const override {
     Operation *operation = op.getOperation();
     Value input = op.getInputOperand(0)->get();
@@ -3082,10 +3082,10 @@ struct SimplifyDepthwiseConvOp
 };
 
 struct SimplifyDepthwiseConvQOp
-    : public OpRewritePattern<DepthwiseConv2DNhwcQOp> {
-  using OpRewritePattern<DepthwiseConv2DNhwcQOp>::OpRewritePattern;
+    : public OpRewritePattern<DepthwiseConv2DNhwcHwcmQOp> {
+  using OpRewritePattern<DepthwiseConv2DNhwcHwcmQOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcQOp op,
+  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmQOp op,
                                 PatternRewriter &rewriter) const override {
     Operation *operation = op.getOperation();
     Value input = op.getInputOperand(0)->get();

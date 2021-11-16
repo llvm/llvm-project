@@ -954,12 +954,17 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
           " designator '%s'"_err_en_US;
   } else if (lhsProcedure->HasExplicitInterface() &&
       !rhsProcedure->HasExplicitInterface()) {
+    // Section 10.2.2.4, paragraph 3 prohibits associating a procedure pointer
+    // with an explicit interface with a procedure with an implicit interface
     msg = "Procedure %s with explicit interface may not be associated with"
           " procedure designator '%s' with implicit interface"_err_en_US;
   } else if (!lhsProcedure->HasExplicitInterface() &&
       rhsProcedure->HasExplicitInterface()) {
-    msg = "Procedure %s with implicit interface may not be associated with"
-          " procedure designator '%s' with explicit interface"_err_en_US;
+    if (!rhsProcedure->CanBeCalledViaImplicitInterface()) {
+      msg = "Procedure %s with implicit interface may not be associated "
+            "with procedure designator '%s' with explicit interface that "
+            "cannot be called via an implicit interface"_err_en_US;
+    }
   } else {
     msg = "Procedure %s associated with incompatible procedure"
           " designator '%s'"_err_en_US;

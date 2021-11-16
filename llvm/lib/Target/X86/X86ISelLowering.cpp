@@ -6293,57 +6293,57 @@ static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
   return std::make_pair(Lo, Hi);
 }
 
-// Split an unary integer op into 2 half sized ops.
-static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
+/// Break an operation into 2 half sized ops and then concatenate the results.
+static SDValue splitVectorOp(SDValue Op, SelectionDAG &DAG) {
+  unsigned NumOps = Op.getNumOperands();
   EVT VT = Op.getValueType();
+  SDLoc dl(Op);
 
+  // Extract the LHS Lo/Hi vectors
+  SmallVector<SDValue> LoOps(NumOps, SDValue());
+  SmallVector<SDValue> HiOps(NumOps, SDValue());
+  for (unsigned I = 0; I != NumOps; ++I) {
+    SDValue SrcOp = Op.getOperand(I);
+    if (!SrcOp.getValueType().isVector()) {
+      LoOps[I] = HiOps[I] = SrcOp;
+      continue;
+    }
+    std::tie(LoOps[I], HiOps[I]) = splitVector(SrcOp, DAG, dl);
+  }
+
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
+                     DAG.getNode(Op.getOpcode(), dl, LoVT, LoOps),
+                     DAG.getNode(Op.getOpcode(), dl, HiVT, HiOps));
+}
+
+/// Break an unary integer operation into 2 half sized ops and then
+/// concatenate the result back.
+static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG) {
   // Make sure we only try to split 256/512-bit types to avoid creating
   // narrow vectors.
+  EVT VT = Op.getValueType();
+  (void)VT;
   assert((Op.getOperand(0).getValueType().is256BitVector() ||
           Op.getOperand(0).getValueType().is512BitVector()) &&
          (VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
   assert(Op.getOperand(0).getValueType().getVectorNumElements() ==
              VT.getVectorNumElements() &&
          "Unexpected VTs!");
-
-  SDLoc dl(Op);
-
-  // Extract the Lo/Hi vectors
-  SDValue Lo, Hi;
-  std::tie(Lo, Hi) = splitVector(Op.getOperand(0), DAG, dl);
-
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
-                     DAG.getNode(Op.getOpcode(), dl, LoVT, Lo),
-                     DAG.getNode(Op.getOpcode(), dl, HiVT, Hi));
+  return splitVectorOp(Op, DAG);
 }
 
 /// Break a binary integer operation into 2 half sized ops and then
 /// concatenate the result back.
 static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG) {
-  EVT VT = Op.getValueType();
-
   // Sanity check that all the types match.
+  EVT VT = Op.getValueType();
+  (void)VT;
   assert(Op.getOperand(0).getValueType() == VT &&
          Op.getOperand(1).getValueType() == VT && "Unexpected VTs!");
   assert((VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
-
-  SDLoc dl(Op);
-
-  // Extract the LHS Lo/Hi vectors
-  SDValue LHS1, LHS2;
-  std::tie(LHS1, LHS2) = splitVector(Op.getOperand(0), DAG, dl);
-
-  // Extract the RHS Lo/Hi vectors
-  SDValue RHS1, RHS2;
-  std::tie(RHS1, RHS2) = splitVector(Op.getOperand(1), DAG, dl);
-
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-  return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
-                     DAG.getNode(Op.getOpcode(), dl, LoVT, LHS1, RHS1),
-                     DAG.getNode(Op.getOpcode(), dl, HiVT, LHS2, RHS2));
+  return splitVectorOp(Op, DAG);
 }
 
 // Helper for splitting operands of an operation to legal target size and
@@ -6400,29 +6400,63 @@ static SDValue getAVX512Node(unsigned Opcode, const SDLoc &DL, MVT VT,
                              ArrayRef<SDValue> Ops, SelectionDAG &DAG,
                              const X86Subtarget &Subtarget) {
   assert(Subtarget.hasAVX512() && "AVX512 target expected");
-
-  // If we have VLX or the type is already 512-bits, then create the node
-  // directly.
-  if (Subtarget.hasVLX() || VT.is512BitVector())
-    return DAG.getNode(Opcode, DL, VT, Ops);
-
-  // Widen the vector ops.
   MVT SVT = VT.getScalarType();
-  MVT WideVT = MVT::getVectorVT(SVT, 512 / SVT.getSizeInBits());
-  SmallVector<SDValue> WideOps(Ops.begin(), Ops.end());
-  for (SDValue &Op : WideOps) {
+
+  // If we have a 32/64 splatted constant, splat it to DstTy to
+  // encourage a foldable broadcast'd operand.
+  auto MakeBroadcastOp = [&](SDValue Op, MVT OpVT, MVT DstVT) {
+    unsigned OpEltSizeInBits = OpVT.getScalarSizeInBits();
+    // AVX512 broadcasts 32/64-bit operands.
+    // TODO: Support float once getAVX512Node is used by fp-ops.
+    if (!OpVT.isInteger() || OpEltSizeInBits < 32 ||
+        !DAG.getTargetLoweringInfo().isTypeLegal(SVT))
+      return SDValue();
+    // If we're not widening, don't bother if we're not bitcasting.
+    if (OpVT == DstVT && Op.getOpcode() != ISD::BITCAST)
+      return SDValue();
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(peekThroughBitcasts(Op))) {
+      APInt SplatValue, SplatUndef;
+      unsigned SplatBitSize;
+      bool HasAnyUndefs;
+      if (BV->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                              HasAnyUndefs, OpEltSizeInBits) &&
+          !HasAnyUndefs && SplatValue.getBitWidth() == OpEltSizeInBits)
+        return DAG.getConstant(SplatValue, DL, DstVT);
+    }
+    return SDValue();
+  };
+
+  bool Widen = !(Subtarget.hasVLX() || VT.is512BitVector());
+
+  MVT DstVT = VT;
+  if (Widen)
+    DstVT = MVT::getVectorVT(SVT, 512 / SVT.getSizeInBits());
+
+  // Canonicalize src operands.
+  SmallVector<SDValue> SrcOps(Ops.begin(), Ops.end());
+  for (SDValue &Op : SrcOps) {
     MVT OpVT = Op.getSimpleValueType();
     // Just pass through scalar operands.
     if (!OpVT.isVector())
       continue;
-    assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
-           "Vector size mismatch");
-    Op = widenSubVector(Op, false, Subtarget, DAG, DL, 512);
+    assert(OpVT == VT && "Vector type mismatch");
+
+    if (SDValue BroadcastOp = MakeBroadcastOp(Op, OpVT, DstVT)) {
+      Op = BroadcastOp;
+      continue;
+    }
+
+    // Just widen the subvector by inserting into an undef wide vector.
+    if (Widen)
+      Op = widenSubVector(Op, false, Subtarget, DAG, DL, 512);
   }
 
+  SDValue Res = DAG.getNode(Opcode, DL, DstVT, SrcOps);
+
   // Perform the 512-bit op then extract the bottom subvector.
-  SDValue Res = DAG.getNode(Opcode, DL, WideVT, WideOps);
-  return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+  if (Widen)
+    Res = extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+  return Res;
 }
 
 /// Insert i1-subvector to i1-vector.
@@ -29654,7 +29688,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
   SDValue Amt = Op.getOperand(2);
-
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
   bool IsFSHR = Op.getOpcode() == ISD::FSHR;
 
   if (VT.isVector()) {
@@ -29665,7 +29699,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
 
     APInt APIntShiftAmt;
     if (X86::isConstantSplat(Amt, APIntShiftAmt)) {
-      uint64_t ShiftAmt = APIntShiftAmt.urem(VT.getScalarSizeInBits());
+      uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
       SDValue Imm = DAG.getTargetConstant(ShiftAmt, DL, MVT::i8);
       return getAVX512Node(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
                            {Op0, Op1, Imm}, DAG, Subtarget);
@@ -29685,7 +29719,6 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
   if ((VT == MVT::i8 || (ExpandFunnel && VT == MVT::i16)) &&
       !isa<ConstantSDNode>(Amt)) {
-    unsigned EltSizeInBits = VT.getScalarSizeInBits();
     SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, Amt.getValueType());
     SDValue HiShift = DAG.getConstant(EltSizeInBits, DL, Amt.getValueType());
     Op0 = DAG.getAnyExtOrTrunc(Op0, DL, MVT::i32);
@@ -45873,7 +45906,12 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
   // The "is negative" variant should be handled more generally because it only
   // requires "and" rather than "andn":
   // and (pcmpgt X, -1), Y --> pandn (vsrai X, BitWidth - 1), Y
-  if (supportedVectorShiftWithImm(VT.getSimpleVT(), Subtarget, ISD::SRA)) {
+  //
+  // This is limited to the original type to avoid producing even more bitcasts.
+  // If the bitcasts can't be eliminated, then it is unlikely that this fold
+  // will be profitable.
+  if (N->getValueType(0) == VT &&
+      supportedVectorShiftWithImm(VT.getSimpleVT(), Subtarget, ISD::SRA)) {
     SDValue X, Y;
     if (Op1.hasOneUse() && Op1.getOpcode() == X86ISD::PCMPGT &&
         isAllOnesOrAllOnesSplat(Op1.getOperand(1))) {
@@ -46229,7 +46267,8 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
   MVT VT = N->getSimpleValueType(0);
-  if (!VT.isVector() || (VT.getScalarSizeInBits() % 8) != 0)
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  if (!VT.isVector() || (EltSizeInBits % 8) != 0)
     return SDValue();
 
   SDValue N0 = peekThroughBitcasts(N->getOperand(0));
@@ -46265,12 +46304,17 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
 
   if (useVPTERNLOG(Subtarget, VT)) {
     // Emit a VPTERNLOG node directly - 0xCA is the imm code for A?B:C.
-    SDValue A = DAG.getBitcast(VT, N0.getOperand(1));
-    SDValue B = DAG.getBitcast(VT, N0.getOperand(0));
-    SDValue C = DAG.getBitcast(VT, N1.getOperand(0));
+    // VPTERNLOG is only available as vXi32/64-bit types.
+    MVT OpSVT = EltSizeInBits == 32 ? MVT::i32 : MVT::i64;
+    MVT OpVT =
+        MVT::getVectorVT(OpSVT, VT.getSizeInBits() / OpSVT.getSizeInBits());
+    SDValue A = DAG.getBitcast(OpVT, N0.getOperand(1));
+    SDValue B = DAG.getBitcast(OpVT, N0.getOperand(0));
+    SDValue C = DAG.getBitcast(OpVT, N1.getOperand(0));
     SDValue Imm = DAG.getTargetConstant(0xCA, DL, MVT::i8);
-    return getAVX512Node(X86ISD::VPTERNLOG, DL, VT, {A, B, C, Imm}, DAG,
-                         Subtarget);
+    SDValue Res = getAVX512Node(X86ISD::VPTERNLOG, DL, OpVT, {A, B, C, Imm},
+                                DAG, Subtarget);
+    return DAG.getBitcast(VT, Res);
   }
 
   SDValue X = N->getOperand(0);

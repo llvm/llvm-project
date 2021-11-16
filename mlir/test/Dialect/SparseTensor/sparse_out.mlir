@@ -20,14 +20,12 @@
 }
 
 // CHECK-LABEL:   func @sparse_simply_dynamic1(
-// CHECK-SAME:                                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
-// CHECK-DAG:           %[[VAL_1:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK-DAG:           %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_3]]] : memref<?xindex>
@@ -41,7 +39,7 @@
 // CHECK:               memref.store %[[VAL_17]], %[[VAL_8]]{{\[}}%[[VAL_15]]] : memref<?xf32>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_18:.*]] = sparse_tensor.tensor %[[VAL_4]], %[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]] : memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32> to tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_18]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
 func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
@@ -65,10 +63,10 @@ func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 }
 
 // CHECK-LABEL:   func @sparse_simply_dynamic2(
-// CHECK-SAME:                                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>,
-// CHECK-SAME:                                 %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
-// CHECK-DAG:           %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK-DAG:           %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xf32>
@@ -117,7 +115,7 @@ func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 // CHECK:               scf.yield %[[VAL_42]], %[[VAL_45]] : index, index
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_46:.*]] = sparse_tensor.tensor %[[VAL_7]], %[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]] : memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32> to tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_46:.*]] = sparse_tensor.load %[[VAL_1]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_46]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
 func @sparse_simply_dynamic2(%arga: tensor<32x16xf32, #CSR>,

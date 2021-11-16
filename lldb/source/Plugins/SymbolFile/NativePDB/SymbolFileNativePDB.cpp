@@ -945,11 +945,11 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
     llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(file_addr);
     if (!modi)
       return 0;
-    CompilandIndexItem *cci = m_index->compilands().GetCompiland(*modi);
-    if (!cci)
+    CompUnitSP cu_sp = GetCompileUnitAtIndex(modi.getValue());
+    if (!cu_sp)
       return 0;
 
-    sc.comp_unit = GetOrCreateCompileUnit(*cci).get();
+    sc.comp_unit = cu_sp.get();
     resolved_flags |= eSymbolContextCompUnit;
   }
 

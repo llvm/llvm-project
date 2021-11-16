@@ -2,7 +2,7 @@
 
 // Make sure we accept this
 template<class X>struct A{typedef X Y;};
-template<class X>bool operator==(A<X>,typename A<X>::Y); // expected-note{{candidate template ignored: could not match 'A<type-parameter-0-0>' against 'B<int> *'}}
+template<class X>bool operator==(A<X>,typename A<X>::Y); // expected-note{{candidate template ignored: could not match 'A<X>' against 'B<int> *'}}
 
 int a(A<int> x) { return operator==(x,1); }
 

@@ -29,7 +29,7 @@ mandatory_inclusions = {
     "chrono": ["compare"],
     "cinttypes": ["cstdint"],
     "complex.h": ["complex"],
-    # TODO "coroutine": ["compare"],
+    "coroutine": ["compare"],
     "deque": ["compare", "initializer_list"],
     "filesystem": ["compare"],
     "forward_list": ["compare", "initializer_list"],

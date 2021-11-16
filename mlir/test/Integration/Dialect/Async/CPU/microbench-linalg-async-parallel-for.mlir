@@ -6,6 +6,7 @@
 // RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-scf-to-std                                      \
+// RUN:               -arith-expand                                            \
 // RUN:               -std-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-memref-to-llvm                                  \

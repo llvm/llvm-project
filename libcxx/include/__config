@@ -1273,8 +1273,8 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 #endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
-#if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
-#define _LIBCPP_HAS_NO_COROUTINES
+#if !defined(__cpp_impl_coroutine) || __cpp_impl_coroutine < 201902L
+#define _LIBCPP_HAS_NO_CXX20_COROUTINES
 #endif
 
 #if !defined(__cpp_impl_three_way_comparison) || __cpp_impl_three_way_comparison < 201907L

@@ -116,3 +116,43 @@ li x6, 12900925247761
 # CHECK-S-OBJ-NEXT: slli.uw t1, t1, 12
 # CHECK-S-OBJ-NEXT: addi t1, t1, -1366
 li x6, 12900918536874
+
+# CHECK-S-OBJ-NOALIAS: lui t1, 349525
+# CHECK-S-OBJ-NOALIAS-NEXT: sh2add t1, t1, t1
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 1
+# CHECK-S-OBJ: lui t1, 349525
+# CHECK-S-OBJ-NEXT: sh2add t1, t1, t1
+# CHECK-S-OBJ-NEXT: addi t1, t1, 1
+li x6, 7158272001 # 0x0000_0001_aaaa_9001
+
+# CHECK-S-OBJ-NOALIAS: lui t1, 349525
+# CHECK-S-OBJ-NOALIAS-NEXT: sh3add t1, t1, t1
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 1
+# CHECK-S-OBJ: lui t1, 349525
+# CHECK-S-OBJ-NEXT: sh3add t1, t1, t1
+# CHECK-S-OBJ-NEXT: addi t1, t1, 1
+li x6, 12884889601 # 0x0000_0002_ffff_d001
+
+# CHECK-S-OBJ-NOALIAS: lui t1, 768955
+# CHECK-S-OBJ-NOALIAS-NEXT: sh1add t1, t1, t1
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 1
+# CHECK-S-OBJ: lui t1, 768955
+# CHECK-S-OBJ-NEXT: sh1add t1, t1, t1
+# CHECK-S-OBJ-NEXT: addi t1, t1, 1
+li x6, -3435982847 # 0xffff_ffff_3333_1001
+
+# CHECK-S-OBJ-NOALIAS: lui t1, 768945
+# CHECK-S-OBJ-NOALIAS-NEXT: sh2add t1, t1, t1
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 1
+# CHECK-S-OBJ: lui t1, 768945
+# CHECK-S-OBJ-NEXT: sh2add t1, t1, t1
+# CHECK-S-OBJ-NEXT: addi t1, t1, 1
+li x6, -5726842879 # 0xffff_fffe_aaa7_5001
+
+# CHECK-S-OBJ-NOALIAS: lui t1, 768955
+# CHECK-S-OBJ-NOALIAS-NEXT: sh3add t1, t1, t1
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 1
+# CHECK-S-OBJ: lui t1, 768955
+# CHECK-S-OBJ-NEXT: sh3add t1, t1, t1
+# CHECK-S-OBJ-NEXT: addi t1, t1, 1
+li x6, -10307948543 # 0xffff_fffd_9999_3001

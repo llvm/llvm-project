@@ -50,3 +50,36 @@ func @select_case_charachter(%arg0: !fir.char<2, 10>, %arg1: !fir.char<2, 10>, %
 ^bb3:
   return
 }
+
+// -----
+
+// Test `fir.select_type` conversion failure. Not implemented yet.
+
+func @bar_select_type(%arg : !fir.box<!fir.type<derived3{f:f32}>>) -> i32 {
+  %0 = arith.constant 1 : i32
+  %2 = arith.constant 3 : i32
+
+  // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
+  fir.select_type %arg : !fir.box<!fir.type<derived3{f:f32}>> [ 
+    #fir.instance<!fir.int<4>>,^bb1(%0:i32), 
+    #fir.instance<!fir.int<8>>,^bb2(%2:i32), 
+    unit,^bb5 ]
+^bb1(%a : i32) :
+  return %a : i32
+^bb2(%b : i32) :
+  return %b : i32
+^bb5 :
+  %zero = arith.constant 0 : i32
+  return %zero : i32
+}
+
+// -----
+
+// Test `fir.global_len` conversion failure. Not implemented yet.
+
+fir.global @global_derived : !fir.type<minez(f:i32)> {
+  // expected-error@+1{{failed to legalize operation 'fir.global_len'}}
+  fir.global_len f, 1 : i32
+  %0 = fir.undefined !fir.type<minez>
+  fir.has_value %0 : !fir.type<minez>
+}

@@ -1667,11 +1667,16 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i32,  2 }, // vpmovdb
     { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i32,  2 }, // vpmovdb
     { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 2 }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v32i8,   MVT::v16i32, 2 }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v64i8,   MVT::v16i32, 2 }, // vpmovdb
     { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 2 }, // vpmovdw
     { ISD::TRUNCATE,  MVT::v32i16,  MVT::v16i32, 2 }, // vpmovdw
     { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i64,  2 }, // vpmovqb
     { ISD::TRUNCATE,  MVT::v2i16,   MVT::v2i64,  1 }, // vpshufb
     { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v8i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v32i8,   MVT::v8i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v64i8,   MVT::v8i64,  2 }, // vpmovqb
     { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  2 }, // vpmovqw
     { ISD::TRUNCATE,  MVT::v16i16,  MVT::v8i64,  2 }, // vpmovqw
     { ISD::TRUNCATE,  MVT::v32i16,  MVT::v8i64,  2 }, // vpmovqw
@@ -1681,6 +1686,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     { ISD::TRUNCATE,  MVT::v16i8,  MVT::v16i16,  3 }, // extend to v16i32
     { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  8 },
+    { ISD::TRUNCATE,  MVT::v64i8,  MVT::v32i16,  8 },
 
     // Sign extend is zmm vpternlogd+vptruncdb.
     // Zero extend is zmm broadcast load+vptruncdw.
@@ -3653,8 +3659,8 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
     break;                // AVX512BW
   case 8:
     if (!ST->hasVBMI())
-      return bailout();
-    break;
+      PromEltTyBits = 32; // promote to i32, AVX512F.
+    break;                // AVX512VBMI
   default:
     return bailout();
   }

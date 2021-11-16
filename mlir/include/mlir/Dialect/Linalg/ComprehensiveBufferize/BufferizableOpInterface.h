@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
 #define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
 
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
@@ -39,6 +40,9 @@ enum class BufferRelation {
 class BufferizationAliasInfo {
 public:
   explicit BufferizationAliasInfo(Operation *rootOp);
+
+  // BufferizationAliasInfo should be passed as a reference.
+  BufferizationAliasInfo(const BufferizationAliasInfo &) = delete;
 
   /// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
   /// beginning the alias and equivalence sets only contain `v` itself.
@@ -237,13 +241,17 @@ struct AllocationCallbacks {
 /// the results of the analysis.
 struct BufferizationState {
   BufferizationState(BufferizationAliasInfo &aliasInfo,
-                     AllocationCallbacks &allocationFns,
-                     BlockAndValueMapping &tensorToBufferMap)
-      : aliasInfo(aliasInfo), allocationFns(allocationFns),
-        tensorToBufferMap(tensorToBufferMap) {}
+                     AllocationCallbacks &allocationFns)
+      : aliasInfo(aliasInfo), allocationFns(allocationFns) {}
+
+  // BufferizationState should be passed as a reference.
+  BufferizationState(const BufferizationState &) = delete;
 
   /// Map tensor values to memref buffers.
   void mapBuffer(ValueRange tensors, ValueRange buffers);
+
+  /// Map a value to another value.
+  void mapValue(Value from, Value to);
 
   /// Map a tensor value to a memref buffer.
   void mapBuffer(Value tensor, Value buffer);
@@ -252,6 +260,16 @@ struct BufferizationState {
   /// Asserts if no buffer is associated.
   Value lookupBuffer(Value tensor) const;
 
+  /// Lookup the value that is associated to the given value. Asserts if no
+  /// value is associated.
+  Value lookupValue(Value value) const;
+
+  /// Return `true` if the given value is mapped.
+  bool isMapped(Value value) const;
+
+  /// Mark `op` as obsolete, so that it is deleted after bufferization.
+  void markOpObsolete(Operation *op);
+
   /// `aliasInfo` keeps track of aliasing and equivalent values.
   BufferizationAliasInfo &aliasInfo;
 
@@ -259,8 +277,12 @@ struct BufferizationState {
   /// ops and memcpy ops.
   AllocationCallbacks &allocationFns;
 
-  /// The mapping of tensors to buffers.
-  BlockAndValueMapping &tensorToBufferMap;
+  /// The mapping of tensors to buffers. May also contain mappings of non-tensor
+  /// values.
+  BlockAndValueMapping mapping;
+
+  /// Obsolete ops that should be deleted after bufferization.
+  SmallVector<Operation *> obsoleteOps;
 };
 
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate

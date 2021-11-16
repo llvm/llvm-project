@@ -176,7 +176,7 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
       // If we have ${:foo}, then this is not a real operand reference, it is a
       // "magic" string reference, just like in .td files.  Arrange to call
       // PrintSpecial.
-      if (HasCurlyBraces && LastEmitted[0] == ':') {
+      if (HasCurlyBraces && *LastEmitted == ':') {
         ++LastEmitted;
         const char *StrStart = LastEmitted;
         const char *StrEnd = strchr(StrStart, '}');
@@ -184,8 +184,7 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
           report_fatal_error("Unterminated ${:foo} operand in inline asm"
                              " string: '" + Twine(AsmStr) + "'");
 
-        std::string Val(StrStart, StrEnd);
-        AP->PrintSpecial(MI, OS, Val.c_str());
+        AP->PrintSpecial(MI, OS, StringRef(StrStart, StrEnd - StrStart));
         LastEmitted = StrEnd+1;
         break;
       }
@@ -201,7 +200,7 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                            Twine(AsmStr) + "'");
       LastEmitted = IDEnd;
 
-      if (Val >= NumOperands-1)
+      if (Val >= NumOperands - 1)
         report_fatal_error("Invalid $ operand number in inline asm string: '" +
                            Twine(AsmStr) + "'");
 
@@ -351,9 +350,8 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         if (!StrEnd)
           report_fatal_error("Unterminated ${:foo} operand in inline asm"
                              " string: '" + Twine(AsmStr) + "'");
-
-        std::string Val(StrStart, StrEnd);
-        AP->PrintSpecial(MI, OS, Val.c_str());
+        if (CurVariant == -1 || CurVariant == AsmPrinterVariant)
+          AP->PrintSpecial(MI, OS, StringRef(StrStart, StrEnd - StrStart));
         LastEmitted = StrEnd+1;
         break;
       }
@@ -368,6 +366,10 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         report_fatal_error("Bad $ operand number in inline asm string: '" +
                            Twine(AsmStr) + "'");
       LastEmitted = IDEnd;
+
+      if (Val >= NumOperands - 1)
+        report_fatal_error("Invalid $ operand number in inline asm string: '" +
+                           Twine(AsmStr) + "'");
 
       char Modifier[2] = { 0, 0 };
 
@@ -389,10 +391,6 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                              Twine(AsmStr) + "'");
         ++LastEmitted;    // Consume '}' character.
       }
-
-      if (Val >= NumOperands-1)
-        report_fatal_error("Invalid $ operand number in inline asm string: '" +
-                           Twine(AsmStr) + "'");
 
       // Okay, we finally have a value number.  Ask the target to print this
       // operand!
@@ -560,13 +558,13 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
 /// syntax used is ${:comment}.  Targets can override this to add support
 /// for their own strange codes.
 void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
-                              const char *Code) const {
-  if (!strcmp(Code, "private")) {
+                              StringRef Code) const {
+  if (Code == "private") {
     const DataLayout &DL = MF->getDataLayout();
     OS << DL.getPrivateGlobalPrefix();
-  } else if (!strcmp(Code, "comment")) {
+  } else if (Code == "comment") {
     OS << MAI->getCommentString();
-  } else if (!strcmp(Code, "uid")) {
+  } else if (Code == "uid") {
     // Comparing the address of MI isn't sufficient, because machineinstrs may
     // be allocated to the same address across functions.
 

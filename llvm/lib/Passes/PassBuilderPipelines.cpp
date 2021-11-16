@@ -168,7 +168,7 @@ static cl::opt<bool> EnableO3NonTrivialUnswitching(
     cl::ZeroOrMore, cl::desc("Enable non-trivial loop unswitching for -O3"));
 
 static cl::opt<bool> EnableEagerlyInvalidateAnalyses(
-    "eagerly-invalidate-analyses", cl::init(false), cl::Hidden,
+    "eagerly-invalidate-analyses", cl::init(true), cl::Hidden,
     cl::desc("Eagerly invalidate more analyses in default pipelines"));
 
 PipelineTuningOptions::PipelineTuningOptions() {
