@@ -669,7 +669,8 @@ lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   std::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
+                                               g_category);
     if (g_category) {
       LoadSwiftFormatters(g_category);
       LoadFoundationValueTypesFormatters(g_category);
@@ -1500,13 +1501,6 @@ ConstString SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mang
   if (demangled_name)
     return demangled_name;
   return mangled.GetMangledName();
-}
-
-//------------------------------------------------------------------
-// PluginInterface protocol
-//------------------------------------------------------------------
-lldb_private::ConstString SwiftLanguage::GetPluginName() {
-  return GetPluginNameStatic();
 }
 
 //------------------------------------------------------------------

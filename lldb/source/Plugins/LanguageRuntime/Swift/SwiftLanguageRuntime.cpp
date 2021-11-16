@@ -97,7 +97,7 @@ AppleObjCRuntimeV2 *
 SwiftLanguageRuntime::GetObjCRuntime(lldb_private::Process &process) {
   if (auto objc_runtime = ObjCLanguageRuntime::Get(process)) {
     if (objc_runtime->GetPluginName() ==
-        AppleObjCRuntimeV2::GetPluginNameStatic())
+        AppleObjCRuntimeV2::GetPluginNameStatic().GetStringRef())
       return (AppleObjCRuntimeV2 *)objc_runtime;
   }
   return nullptr;
@@ -146,7 +146,7 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
     if (runtime_kind == RuntimeKind::ObjC) {
       auto *obj_file = target.GetExecutableModule()->GetObjectFile();
       bool have_objc_interop =
-          obj_file && obj_file->GetPluginName().GetStringRef().equals("mach-o");
+          obj_file && obj_file->GetPluginName().equals("mach-o");
       if (!have_objc_interop)
         return {};
     }
@@ -626,7 +626,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
 
   // When dealing with ELF, we need to pass in the contents of the on-disk
   // file, since the Section Header Table is not present in the child process
-  if (obj_file->GetPluginName().GetStringRef().equals("elf")) {
+  if (obj_file->GetPluginName().equals("elf")) {
     DataExtractor extractor;
     auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
     const uint8_t *file_data = extractor.GetDataStart();
@@ -2007,10 +2007,6 @@ void SwiftLanguageRuntime::Terminate() {
 lldb_private::ConstString SwiftLanguageRuntime::GetPluginNameStatic() {
   static ConstString g_name("swift");
   return g_name;
-}
-
-lldb_private::ConstString SwiftLanguageRuntime::GetPluginName() {
-  return GetPluginNameStatic();
 }
 
 #define FORWARD(METHOD, ...)                                                   \

@@ -70,10 +70,6 @@ ConstString TypeSystemSwift::GetPluginNameStatic() {
   return ConstString("swift");
 }
 
-ConstString TypeSystemSwift::GetPluginName() {
-  return TypeSystemSwift::GetPluginNameStatic();
-}
-
 /// \}
 
 void TypeSystemSwift::DumpValue(
