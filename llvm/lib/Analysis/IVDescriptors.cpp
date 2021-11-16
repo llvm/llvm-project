@@ -198,7 +198,10 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   if (Kind != RecurKind::FAdd)
     return false;
 
-  if (Exit->getOpcode() != Instruction::FAdd || Exit != ExactFPMathInst)
+  // Ensure the exit instruction is an FAdd, and that it only has one user
+  // other than the reduction PHI
+  if (Exit->getOpcode() != Instruction::FAdd || Exit->hasNUsesOrMore(3) ||
+      Exit != ExactFPMathInst)
     return false;
 
   // The only pattern accepted is the one in which the reduction PHI
