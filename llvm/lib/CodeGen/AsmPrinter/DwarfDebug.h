@@ -65,19 +65,21 @@ class Module;
 /// such that it could levarage polymorphism to extract common code for
 /// DbgVariable and DbgLabel.
 class DbgEntity {
-  const DINode *Entity;
-  const DILocation *InlinedAt;
-  DIE *TheDIE = nullptr;
-  unsigned SubclassID;
-
 public:
   enum DbgEntityKind {
     DbgVariableKind,
     DbgLabelKind
   };
 
-  DbgEntity(const DINode *N, const DILocation *IA, unsigned ID)
-    : Entity(N), InlinedAt(IA), SubclassID(ID) {}
+private:
+  const DINode *Entity;
+  const DILocation *InlinedAt;
+  DIE *TheDIE = nullptr;
+  const DbgEntityKind SubclassID;
+
+public:
+  DbgEntity(const DINode *N, const DILocation *IA, DbgEntityKind ID)
+      : Entity(N), InlinedAt(IA), SubclassID(ID) {}
   virtual ~DbgEntity() {}
 
   /// Accessors.
@@ -85,19 +87,18 @@ public:
   const DINode *getEntity() const { return Entity; }
   const DILocation *getInlinedAt() const { return InlinedAt; }
   DIE *getDIE() const { return TheDIE; }
-  unsigned getDbgEntityID() const { return SubclassID; }
+  DbgEntityKind getDbgEntityID() const { return SubclassID; }
   /// @}
 
   void setDIE(DIE &D) { TheDIE = &D; }
 
   static bool classof(const DbgEntity *N) {
     switch (N->getDbgEntityID()) {
-    default:
-      return false;
     case DbgVariableKind:
     case DbgLabelKind:
       return true;
     }
+    llvm_unreachable("Invalid DbgEntityKind");
   }
 };
 
