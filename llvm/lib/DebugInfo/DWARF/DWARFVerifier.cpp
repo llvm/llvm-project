@@ -552,9 +552,10 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
         DWARFExpression Expression(Data, U->getAddressByteSize(),
                                    U->getFormParams().Format);
-        bool Error = any_of(Expression, [](DWARFExpression::Operation &Op) {
-          return Op.isError();
-        });
+        bool Error =
+            any_of(Expression, [](const DWARFExpression::Operation &Op) {
+              return Op.isError();
+            });
         if (Error || !Expression.verify(U))
           ReportError("DIE contains invalid DWARF expression:");
       }
@@ -1400,11 +1401,12 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
                        U->getAddressByteSize());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
-    bool IsInteresting = any_of(Expression, [](DWARFExpression::Operation &Op) {
-      return !Op.isError() && (Op.getCode() == DW_OP_addr ||
-                               Op.getCode() == DW_OP_form_tls_address ||
-                               Op.getCode() == DW_OP_GNU_push_tls_address);
-    });
+    bool IsInteresting =
+        any_of(Expression, [](const DWARFExpression::Operation &Op) {
+          return !Op.isError() && (Op.getCode() == DW_OP_addr ||
+                                   Op.getCode() == DW_OP_form_tls_address ||
+                                   Op.getCode() == DW_OP_GNU_push_tls_address);
+        });
     if (IsInteresting)
       return true;
   }
