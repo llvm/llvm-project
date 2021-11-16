@@ -147,7 +147,7 @@ static bool isDereferenceableAndAlignedPointer(
                                               Alignment, Size, DL, CtxI, DT,
                                               TLI, Visited, MaxDepth);
 
-  if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(V))
+  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
                                               Size, DL, CtxI, DT, TLI,
                                               Visited, MaxDepth);
