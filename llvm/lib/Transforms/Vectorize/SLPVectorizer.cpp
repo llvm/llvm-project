@@ -3883,10 +3883,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Required to be able to find correct matches between different gather
       // nodes and reuse the vectorized values rather than trying to gather them
       // again.
-      const int IndexIdx = 1;
+      int IndexIdx = 1;
       Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
       Type *Ty = all_of(VL,
-                        [VL0Ty](Value *V) {
+                        [VL0Ty, IndexIdx](Value *V) {
                           return VL0Ty == cast<GetElementPtrInst>(V)
                                               ->getOperand(IndexIdx)
                                               ->getType();
