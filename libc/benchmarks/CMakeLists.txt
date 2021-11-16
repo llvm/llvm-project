@@ -17,7 +17,7 @@ string(REPLACE ";" " " GOOGLE_BENCHMARK_TARGET_FLAGS "${GOOGLE_BENCHMARK_TARGET_
 ExternalProject_Add(google-benchmark
     EXCLUDE_FROM_ALL ON
     PREFIX google-benchmark
-    SOURCE_DIR ${LIBC_SOURCE_DIR}/../llvm/utils/benchmark
+    SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
     INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark
     CMAKE_CACHE_ARGS
         -DBUILD_SHARED_LIBS:BOOL=OFF
