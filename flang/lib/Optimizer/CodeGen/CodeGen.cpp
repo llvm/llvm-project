@@ -487,6 +487,52 @@ static mlir::Type getComplexEleTy(mlir::Type complex) {
   return complex.cast<fir::ComplexType>().getElementType();
 }
 
+/// Compare complex values
+///
+/// Per 10.1, the only comparisons available are .EQ. (oeq) and .NE. (une).
+///
+/// For completeness, all other comparison are done on the real component only.
+struct CmpcOpConversion : public FIROpConversion<fir::CmpcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::CmpcOp cmp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::ValueRange operands = adaptor.getOperands();
+    mlir::MLIRContext *ctxt = cmp.getContext();
+    mlir::Type eleTy = convertType(getComplexEleTy(cmp.lhs().getType()));
+    mlir::Type resTy = convertType(cmp.getType());
+    mlir::Location loc = cmp.getLoc();
+    auto pos0 = mlir::ArrayAttr::get(ctxt, rewriter.getI32IntegerAttr(0));
+    SmallVector<mlir::Value, 2> rp{rewriter.create<mlir::LLVM::ExtractValueOp>(
+                                       loc, eleTy, operands[0], pos0),
+                                   rewriter.create<mlir::LLVM::ExtractValueOp>(
+                                       loc, eleTy, operands[1], pos0)};
+    auto rcp =
+        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, rp, cmp->getAttrs());
+    auto pos1 = mlir::ArrayAttr::get(ctxt, rewriter.getI32IntegerAttr(1));
+    SmallVector<mlir::Value, 2> ip{rewriter.create<mlir::LLVM::ExtractValueOp>(
+                                       loc, eleTy, operands[0], pos1),
+                                   rewriter.create<mlir::LLVM::ExtractValueOp>(
+                                       loc, eleTy, operands[1], pos1)};
+    auto icp =
+        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, ip, cmp->getAttrs());
+    SmallVector<mlir::Value, 2> cp{rcp, icp};
+    switch (cmp.getPredicate()) {
+    case mlir::arith::CmpFPredicate::OEQ: // .EQ.
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmp, resTy, cp);
+      break;
+    case mlir::arith::CmpFPredicate::UNE: // .NE.
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmp, resTy, cp);
+      break;
+    default:
+      rewriter.replaceOp(cmp, rcp.getResult());
+      break;
+    }
+    return success();
+  }
+};
+
 /// convert value of from-type to value of to-type
 struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
@@ -1514,15 +1560,17 @@ public:
         AllocaOpConversion, BoxAddrOpConversion, BoxDimsOpConversion,
         BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
         BoxIsPtrOpConversion, BoxRankOpConversion, CallOpConversion,
-        ConvertOpConversion, DispatchOpConversion, DispatchTableOpConversion,
-        DTEntryOpConversion, DivcOpConversion, EmboxCharOpConversion,
-        ExtractValueOpConversion, HasValueOpConversion, GlobalLenOpConversion,
-        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
-        IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
-        MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
-        SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
-        SubcOpConversion, UnboxCharOpConversion, UndefOpConversion,
-        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+        CmpcOpConversion, ConvertOpConversion, DispatchOpConversion,
+        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
+        EmboxCharOpConversion, ExtractValueOpConversion, HasValueOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
+        InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
+        NegcOpConversion, MulcOpConversion, SelectCaseOpConversion,
+        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
+        StoreOpConversion, SubcOpConversion, UnboxCharOpConversion,
+        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+        typeConverter);
+
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
