@@ -1,4 +1,4 @@
-//===- llvm/unittest/ADT/DenseMapMap.cpp - DenseMap unit tests --*- C++ -*-===//
+//===- sanitizer_dense_map_test.cpp -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_common/sanitizer_dense_map.h"
+
+#include <initializer_list>
 #include <map>
 #include <set>
 
 #include "gtest/gtest.h"
-#include "llvm/ADT/DenseMap.h"
 
-using namespace llvm;
+using namespace __sanitizer;
 
 namespace {
 
@@ -290,41 +292,6 @@ TYPED_TEST(DenseMapTest, SwapTest) {
     EXPECT_EQ(this->getValue(i), this->Map[this->getKey(i)]);
 }
 
-// A more complex iteration test
-TYPED_TEST(DenseMapTest, IterationTest) {
-  bool visited[100];
-  std::map<typename TypeParam::key_type, unsigned> visitedIndex;
-
-  // Insert 100 numbers into the map
-  for (int i = 0; i < 100; ++i) {
-    visited[i] = false;
-    visitedIndex[this->getKey(i)] = i;
-
-    this->Map[this->getKey(i)] = this->getValue(i);
-  }
-
-  // Iterate over all numbers and mark each one found.
-  for (typename TypeParam::iterator it = this->Map.begin();
-       it != this->Map.end(); ++it)
-    visited[visitedIndex[it->first]] = true;
-
-  // Ensure every number was visited.
-  for (int i = 0; i < 100; ++i)
-    ASSERT_TRUE(visited[i]) << "Entry #" << i << " was never visited";
-}
-
-// const_iterator test
-TYPED_TEST(DenseMapTest, ConstIteratorTest) {
-  // Check conversion from iterator to const_iterator.
-  typename TypeParam::iterator it = this->Map.begin();
-  typename TypeParam::const_iterator cit(it);
-  EXPECT_TRUE(it == cit);
-
-  // Check copying of const_iterators.
-  typename TypeParam::const_iterator cit2(cit);
-  EXPECT_TRUE(cit == cit2);
-}
-
 namespace {
 // Simple class that counts how many moves and copy happens when growing a map
 struct CountCopyAndMove {
@@ -476,31 +443,6 @@ TEST(DenseMapCustomTest, ReserveTest) {
   }
 }
 
-// Make sure DenseMap works with StringRef keys.
-TEST(DenseMapCustomTest, StringRefTest) {
-  DenseMap<StringRef, int> M;
-
-  M["a"] = 1;
-  M["b"] = 2;
-  M["c"] = 3;
-
-  EXPECT_EQ(3u, M.size());
-  EXPECT_EQ(1, M.lookup("a"));
-  EXPECT_EQ(2, M.lookup("b"));
-  EXPECT_EQ(3, M.lookup("c"));
-
-  EXPECT_EQ(0, M.lookup("q"));
-
-  // Test the empty string, spelled various ways.
-  EXPECT_EQ(0, M.lookup(""));
-  EXPECT_EQ(0, M.lookup(StringRef()));
-  EXPECT_EQ(0, M.lookup(StringRef("a", 0)));
-  M[""] = 42;
-  EXPECT_EQ(42, M.lookup(""));
-  EXPECT_EQ(42, M.lookup(StringRef()));
-  EXPECT_EQ(42, M.lookup(StringRef("a", 0)));
-}
-
 // Key traits that allows lookup with either an unsigned or char* key;
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
@@ -542,60 +484,6 @@ TEST(DenseMapCustomTest, FindAsTest) {
   EXPECT_TRUE(map.find_as("d") == map.end());
 }
 
-TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
-  SmallDenseMap<int, int> M = {{0, 0}, {0, 1}, {1, 2}};
-  EXPECT_EQ(2u, M.size());
-  EXPECT_EQ(1u, M.count(0));
-  EXPECT_EQ(0, M[0]);
-  EXPECT_EQ(1u, M.count(1));
-  EXPECT_EQ(2, M[1]);
-}
-
-struct ContiguousDenseMapInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
-  static unsigned getHashValue(const unsigned &Val) { return Val; }
-  static bool isEqual(const unsigned &LHS, const unsigned &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Test that filling a small dense map with exactly the number of elements in
-// the map grows to have enough space for an empty bucket.
-TEST(DenseMapCustomTest, SmallDenseMapGrowTest) {
-  SmallDenseMap<unsigned, unsigned, 32, ContiguousDenseMapInfo> map;
-  // Add some number of elements, then delete a few to leave us some tombstones.
-  // If we just filled the map with 32 elements we'd grow because of not enough
-  // tombstones which masks the issue here.
-  for (unsigned i = 0; i < 20; ++i) map[i] = i + 1;
-  for (unsigned i = 0; i < 10; ++i) map.erase(i);
-  for (unsigned i = 20; i < 32; ++i) map[i] = i + 1;
-
-  // Size tests
-  EXPECT_EQ(22u, map.size());
-
-  // Try to find an element which doesn't exist.  There was a bug in
-  // SmallDenseMap which led to a map with num elements == small capacity not
-  // having an empty bucket any more.  Finding an element not in the map would
-  // therefore never terminate.
-  EXPECT_TRUE(map.find(32) == map.end());
-}
-
-TEST(DenseMapCustomTest, LargeSmallDenseMapCompaction) {
-  SmallDenseMap<unsigned, unsigned, 128, ContiguousDenseMapInfo> map;
-  // Fill to < 3/4 load.
-  for (unsigned i = 0; i < 95; ++i) map[i] = i;
-  // And erase, leaving behind tombstones.
-  for (unsigned i = 0; i < 95; ++i) map.erase(i);
-  // Fill further, so that less than 1/8 are empty, but still below 3/4 load.
-  for (unsigned i = 95; i < 128; ++i) map[i] = i;
-
-  EXPECT_EQ(33u, map.size());
-  // Similar to the previous test, check for a non-existing element, as an
-  // indirect check that tombstones have been removed.
-  EXPECT_TRUE(map.find(0) == map.end());
-}
-
 TEST(DenseMapCustomTest, TryEmplaceTest) {
   DenseMap<int, std::unique_ptr<int>> Map;
   std::unique_ptr<int> P(new int(2));
@@ -605,20 +493,6 @@ TEST(DenseMapCustomTest, TryEmplaceTest) {
   EXPECT_FALSE(Try2.second);
   EXPECT_EQ(Try1.first, Try2.first);
   EXPECT_NE(nullptr, P);
-}
-
-TEST(DenseMapCustomTest, ConstTest) {
-  // Test that const pointers work okay for count and find, even when the
-  // underlying map is a non-const pointer.
-  DenseMap<int *, int> Map;
-  int A;
-  int *B = &A;
-  const int *C = &A;
-  Map.insert({B, 0});
-  EXPECT_EQ(Map.count(B), 1u);
-  EXPECT_EQ(Map.count(C), 1u);
-  EXPECT_NE(Map.find(B), Map.end());
-  EXPECT_NE(Map.find(C), Map.end());
 }
 
 struct IncompleteStruct;
