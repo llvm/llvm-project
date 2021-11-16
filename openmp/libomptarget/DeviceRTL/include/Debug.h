@@ -57,6 +57,8 @@ int printf(const char *format, ...);
 struct DebugEntryRAII {
   DebugEntryRAII(const char *File, const unsigned Line, const char *Function);
   ~DebugEntryRAII();
+
+  static void init();
 };
 
 #endif
