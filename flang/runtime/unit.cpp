@@ -261,9 +261,10 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   if (recordLength) {
     // It is possible for recordLength to have a value now for a
     // variable-length output record if the previous operation
-    // was a BACKSPACE.
+    // was a BACKSPACE or non advancing input statement.
     if (!isFixedRecordLength) {
       recordLength.reset();
+      beganReadingRecord_ = false;
     } else if (furthestAfter > *recordLength) {
       handler.SignalError(IostatRecordWriteOverrun,
           "Attempt to write %zd bytes to position %jd in a fixed-size record "

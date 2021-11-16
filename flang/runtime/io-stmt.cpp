@@ -264,7 +264,16 @@ template <Direction DIR>
 ExternalIoStatementState<DIR>::ExternalIoStatementState(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : ExternalIoStatementBase{unit, sourceFile, sourceLine}, mutableModes_{
-                                                                 unit.modes} {}
+                                                                 unit.modes} {
+  if constexpr (DIR == Direction::Output) {
+    // If the last statement was a non advancing IO input statement, the unit
+    // furthestPositionInRecord was not advanced, but the positionInRecord may
+    // have been advanced. Advance furthestPositionInRecord here to avoid
+    // overwriting the part of the record that has been read with blanks.
+    unit.furthestPositionInRecord =
+        std::max(unit.furthestPositionInRecord, unit.positionInRecord);
+  }
+}
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
