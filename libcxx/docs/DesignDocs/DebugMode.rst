@@ -58,6 +58,15 @@ The following containers and classes support iterator debugging:
 The remaining containers do not currently support iterator debugging.
 Patches welcome.
 
+Randomizing Unspecified Behavior (``_LIBCPP_DEBUG == 1``)
+---------------------------------------------------------
+This also enables the randomization of unspecified behavior, for
+example, for equal elements in ``std::sort`` or randomizing both parts of
+the partition after ``std::nth_element`` call. This effort helps you to migrate
+to potential future faster versions of these algorithms and deflake your tests
+which depend on such behavior. To fix the seed, use
+``_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY_SEED=seed`` definition.
+
 Handling Assertion Failures
 ===========================
 When a debug assertion fails the assertion handler is called via the

@@ -177,6 +177,7 @@ Design Documents
    DesignDocs/NoexceptPolicy
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
+   DesignDocs/UnspecifiedBehaviorRandomization
    DesignDocs/VisibilityMacros
 
 
