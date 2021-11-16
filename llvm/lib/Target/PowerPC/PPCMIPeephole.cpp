@@ -378,6 +378,7 @@ static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
 // Perform peephole optimizations.
 bool PPCMIPeephole::simplifyCode(void) {
   bool Simplified = false;
+  bool TrapOpt = false;
   MachineInstr* ToErase = nullptr;
   std::map<MachineInstr *, bool> TOCSaves;
   const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
@@ -418,6 +419,13 @@ bool PPCMIPeephole::simplifyCode(void) {
       if (ToErase) {
         ToErase->eraseFromParent();
         ToErase = nullptr;
+      }
+      // If a conditional trap instruction got optimized to an
+      // unconditional trap, eliminate all the instructions between
+      // the trap and the terminator of the MBB.
+      if (TrapOpt && !MI.isTerminator()) {
+        ToErase = &MI;
+        continue;
       }
 
       // Ignore debug instructions.
@@ -1006,6 +1014,50 @@ bool PPCMIPeephole::simplifyCode(void) {
           ++NumRotatesCollapsed;
         break;
       }
+      // We will replace TD/TW/TDI/TWI with an unconditional trap if it will
+      // always trap, we will delete the node if it will never trap.
+      case PPC::TDI:
+      case PPC::TWI:
+      case PPC::TD:
+      case PPC::TW: {
+        MachineInstr *LiMI1 = getVRegDefOrNull(&MI.getOperand(1), MRI);
+        MachineInstr *LiMI2 = getVRegDefOrNull(&MI.getOperand(2), MRI);
+        unsigned Opcode1 = LiMI1->getOpcode();
+        unsigned Opcode2 = LiMI2->getOpcode();
+        bool IsOperand2Immediate = MI.getOperand(2).isImm();
+        // We can only do the optimization if we can get immediates
+        // from both operands
+        if (!(LiMI1 && (Opcode1 == PPC::LI || Opcode1 == PPC::LI8)))
+          break;
+        if (!IsOperand2Immediate &&
+            !(LiMI2 && (Opcode2 == PPC::LI || Opcode2 == PPC::LI8)))
+          break;
+
+        auto ImmOperand0 = MI.getOperand(0).getImm();
+        auto ImmOperand1 = LiMI1->getOperand(1).getImm();
+        auto ImmOperand2 = IsOperand2Immediate ? MI.getOperand(2).getImm()
+                                               : LiMI2->getOperand(1).getImm();
+
+        // We will replace the MI with an unconditional trap if it will always
+        // trap.
+        if ((ImmOperand0 == 31) ||
+            ((ImmOperand0 & 0x10) &&
+             ((int64_t)ImmOperand1 < (int64_t)ImmOperand2)) ||
+            ((ImmOperand0 & 0x8) &&
+             ((int64_t)ImmOperand1 > (int64_t)ImmOperand2)) ||
+            ((ImmOperand0 & 0x2) &&
+             ((uint64_t)ImmOperand1 < (uint64_t)ImmOperand2)) ||
+            ((ImmOperand0 & 0x1) &&
+             ((uint64_t)ImmOperand1 > (uint64_t)ImmOperand2)) ||
+            ((ImmOperand0 & 0x4) && (ImmOperand1 == ImmOperand2))) {
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::TRAP));
+          TrapOpt = true;
+        }
+        // We will delete the MI if it will never trap.
+        ToErase = &MI;
+        Simplified = true;
+        break;
+      }
       }
     }
 
@@ -1015,6 +1067,8 @@ bool PPCMIPeephole::simplifyCode(void) {
       ToErase->eraseFromParent();
       ToErase = nullptr;
     }
+    // Reset TrapOpt to false at the end of the basic block.
+    TrapOpt = false;
   }
 
   // Eliminate all the TOC save instructions which are redundant.
