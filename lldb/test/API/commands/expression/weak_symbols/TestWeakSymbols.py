@@ -19,6 +19,7 @@ class TestWeakSymbolsInExpressions(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @decorators.skipUnlessDarwin
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_weak_symbol_in_expr(self):
         """Tests that we can refer to weak symbols in expressions."""
         self.build()

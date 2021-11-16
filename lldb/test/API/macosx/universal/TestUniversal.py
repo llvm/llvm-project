@@ -27,6 +27,7 @@ class UniversalTestCase(TestBase):
                           ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_sbdebugger_create_target_with_file_and_target_triple(self):
         """Test the SBDebugger.CreateTargetWithFileAndTargetTriple() API."""
         # Invoke the default build rule.
@@ -52,6 +53,7 @@ class UniversalTestCase(TestBase):
                           ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_process_launch_for_universal(self):
         """Test process launch of a universal binary."""
         from lldbsuite.test.lldbutil import print_registers
