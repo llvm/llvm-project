@@ -3,6 +3,6 @@ executable("ScudoBenchmarks") {
   sources = [ "malloc_benchmark.cpp" ]
   deps = [
     "//compiler-rt/lib/scudo/standalone:sources",
-    "//llvm/utils/benchmark",
+    "//third-party/benchmark",
   ]
 }
