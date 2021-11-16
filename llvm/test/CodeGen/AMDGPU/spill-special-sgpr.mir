@@ -45,7 +45,7 @@ body:             |
     ; GFX9-NEXT: $sgpr14 = S_MOV_B32 4294967295, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX9-NEXT: $sgpr15 = S_MOV_B32 14680064, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX9-NEXT: $sgpr12 = S_ADD_U32 $sgpr12, $sgpr9, implicit-def $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
-    ; GFX9-NEXT: $sgpr13 = S_ADDC_U32 $sgpr13, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GFX9-NEXT: $sgpr13 = S_ADDC_U32 $sgpr13, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX9-NEXT: $vcc = IMPLICIT_DEF
     ; GFX9-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GFX9-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
@@ -81,7 +81,7 @@ body:             |
     ; GFX10-NEXT: $sgpr98 = S_MOV_B32 4294967295, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GFX10-NEXT: $sgpr99 = S_MOV_B32 836853760, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GFX10-NEXT: $sgpr96 = S_ADD_U32 $sgpr96, $sgpr9, implicit-def $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
-    ; GFX10-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
+    ; GFX10-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GFX10-NEXT: $vcc = IMPLICIT_DEF
     ; GFX10-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GFX10-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
