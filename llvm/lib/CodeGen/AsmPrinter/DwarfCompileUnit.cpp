@@ -980,9 +980,7 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
     bool visitedAllDependencies = Item.getInt();
     WorkList.pop_back();
 
-    // Dependency is in a different lexical scope or a global.
-    if (!Var)
-      continue;
+    assert(Var);
 
     // Already handled.
     if (Visited.count(Var))
@@ -1006,8 +1004,10 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
     // visited again after all of its dependencies are handled.
     WorkList.push_back({Var, 1});
     for (auto *Dependency : dependencies(Var)) {
-      auto Dep = dyn_cast_or_null<const DILocalVariable>(Dependency);
-      WorkList.push_back({DbgVar[Dep], 0});
+      // Don't add dependency if it is in a different lexical scope or a global.
+      if (const auto *Dep = dyn_cast<const DILocalVariable>(Dependency))
+        if (DbgVariable *Var = DbgVar.lookup(Dep))
+          WorkList.push_back({Var, 0});
     }
   }
   return Result;
