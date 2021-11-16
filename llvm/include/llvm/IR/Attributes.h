@@ -37,7 +37,6 @@ class AttrBuilder;
 class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
-template<typename T> struct DenseMapInfo;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
@@ -266,7 +265,7 @@ inline Attribute unwrap(LLVMAttributeRef Attr) {
 /// and removing string or integer attributes involves a FoldingSet lookup.
 class AttributeSet {
   friend AttributeListImpl;
-  template <typename Ty> friend struct DenseMapInfo;
+  template <typename Ty, typename Enable> friend struct DenseMapInfo;
 
   // TODO: Extract AvailableAttrs from AttributeSetNode and store them here.
   // This will allow an efficient implementation of addAttribute and
@@ -367,7 +366,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// \class
 /// Provide DenseMapInfo for AttributeSet.
-template <> struct DenseMapInfo<AttributeSet> {
+template <> struct DenseMapInfo<AttributeSet, void> {
   static AttributeSet getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
@@ -409,7 +408,7 @@ private:
   friend class AttributeListImpl;
   friend class AttributeSet;
   friend class AttributeSetNode;
-  template <typename Ty> friend struct DenseMapInfo;
+  template <typename Ty, typename Enable> friend struct DenseMapInfo;
 
   /// The attributes that we are managing. This can be null to represent
   /// the empty attributes list.
@@ -899,7 +898,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// \class
 /// Provide DenseMapInfo for AttributeList.
-template <> struct DenseMapInfo<AttributeList> {
+template <> struct DenseMapInfo<AttributeList, void> {
   static AttributeList getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;

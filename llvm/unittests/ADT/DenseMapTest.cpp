@@ -655,4 +655,47 @@ TEST(DenseMapCustomTest, OpaquePointerKey) {
   EXPECT_EQ(Map.find(K2), Map.end());
   EXPECT_EQ(Map.find(K3), Map.end());
 }
+} // namespace
+
+namespace {
+struct A {
+  A(int value) : value(value) {}
+  int value;
+};
+struct B : public A {
+  using A::A;
+};
+} // namespace
+
+namespace llvm {
+template <typename T>
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<A, T>::value>> {
+  static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
+  static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
+  static unsigned getHashValue(const T &Val) { return Val.value; }
+  static bool isEqual(const T &LHS, const T &RHS) {
+    return LHS.value == RHS.value;
+  }
+};
+} // namespace llvm
+
+namespace {
+TEST(DenseMapCustomTest, SFINAEMapInfo) {
+  // Test that we can use a pointer to an incomplete type as a DenseMap key.
+  // This is an important build time optimization, since many classes have
+  // DenseMap members.
+  DenseMap<B, int> Map;
+  B Keys[3] = {{0}, {1}, {2}};
+  Map.insert({Keys[0], 1});
+  Map.insert({Keys[1], 2});
+  Map.insert({Keys[2], 3});
+  EXPECT_EQ(Map.count(Keys[0]), 1u);
+  EXPECT_EQ(Map[Keys[0]], 1);
+  EXPECT_EQ(Map[Keys[1]], 2);
+  EXPECT_EQ(Map[Keys[2]], 3);
+  Map.clear();
+  EXPECT_EQ(Map.find(Keys[0]), Map.end());
+  EXPECT_EQ(Map.find(Keys[1]), Map.end());
+  EXPECT_EQ(Map.find(Keys[2]), Map.end());
 }
+} // namespace

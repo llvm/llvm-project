@@ -201,6 +201,19 @@ template <> struct DenseMapInfo<mlir::Attribute> {
     return LHS == RHS;
   }
 };
+template <typename T>
+struct DenseMapInfo<
+    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value>>
+    : public DenseMapInfo<mlir::Attribute> {
+  static T getEmptyKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
+    return T::getFromOpaquePointer(pointer);
+  }
+  static T getTombstoneKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
+    return T::getFromOpaquePointer(pointer);
+  }
+};
 
 /// Allow LLVM to steal the low bits of Attributes.
 template <> struct PointerLikeTypeTraits<mlir::Attribute> {
