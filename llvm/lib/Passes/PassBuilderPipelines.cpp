@@ -171,6 +171,13 @@ static cl::opt<bool> EnableEagerlyInvalidateAnalyses(
     "eagerly-invalidate-analyses", cl::init(true), cl::Hidden,
     cl::desc("Eagerly invalidate more analyses in default pipelines"));
 
+static cl::opt<bool> EnableNoRerunSimplificationPipeline(
+    "enable-no-rerun-simplification-pipeline", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Prevent running the simplification pipeline on a function more "
+        "than once in the case that SCC mutations cause a function to be "
+        "visited multiple times as long as the function has not been changed"));
+
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
   LoopVectorization = true;
@@ -736,9 +743,13 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase),
-      PTO.EagerlyInvalidateAnalyses));
+      PTO.EagerlyInvalidateAnalyses, EnableNoRerunSimplificationPipeline));
 
   MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+
+  if (EnableNoRerunSimplificationPipeline)
+    MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
+        InvalidateAnalysisPass<ShouldNotRunFunctionPassesAnalysis>()));
 
   return MIWP;
 }
