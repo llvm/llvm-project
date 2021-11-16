@@ -603,7 +603,7 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
                                  /*NumberOfArgumentsMustMatch=*/true);
 }
 
-static bool IsPossiblyOpaquelyQualifiedType(const Type *T) {
+static bool IsPossiblyOpaquelyQualifiedTypeInternal(const Type *T) {
   assert(T->isCanonicalUnqualified());
 
   switch (T->getTypeClass()) {
@@ -619,7 +619,7 @@ static bool IsPossiblyOpaquelyQualifiedType(const Type *T) {
   case Type::IncompleteArray:
   case Type::VariableArray:
   case Type::DependentSizedArray:
-    return IsPossiblyOpaquelyQualifiedType(
+    return IsPossiblyOpaquelyQualifiedTypeInternal(
         cast<ArrayType>(T)->getElementType().getTypePtr());
 
   default:
@@ -630,7 +630,7 @@ static bool IsPossiblyOpaquelyQualifiedType(const Type *T) {
 /// Determines whether the given type is an opaque type that
 /// might be more qualified when instantiated.
 static bool IsPossiblyOpaquelyQualifiedType(QualType T) {
-  return IsPossiblyOpaquelyQualifiedType(
+  return IsPossiblyOpaquelyQualifiedTypeInternal(
       T->getCanonicalTypeInternal().getTypePtr());
 }
 
