@@ -1494,7 +1494,7 @@ ConstString SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mang
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
               mangled, basename, is_method)) {
         if (basename && basename != mangled)
-          return basename);
+          return basename;
       }
     }
   }
