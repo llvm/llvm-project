@@ -465,6 +465,39 @@ struct BoxRankOpConversion : public FIROpConversion<fir::BoxRankOp> {
   }
 };
 
+/// Lower `fir.string_lit` to LLVM IR dialect operation.
+struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::StringLitOp constop, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto ty = convertType(constop.getType());
+    auto attr = constop.getValue();
+    if (attr.isa<mlir::StringAttr>()) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(constop, ty, attr);
+      return success();
+    }
+
+    auto arr = attr.cast<mlir::ArrayAttr>();
+    auto charTy = constop.getType().cast<fir::CharacterType>();
+    unsigned bits = lowerTy().characterBitsize(charTy);
+    mlir::Type intTy = rewriter.getIntegerType(bits);
+    auto attrs = llvm::map_range(
+        arr.getValue(), [intTy, bits](mlir::Attribute attr) -> Attribute {
+          return mlir::IntegerAttr::get(
+              intTy,
+              attr.cast<mlir::IntegerAttr>().getValue().sextOrTrunc(bits));
+        });
+    mlir::Type vecType = mlir::VectorType::get(arr.size(), intTy);
+    auto denseAttr = mlir::DenseElementsAttr::get(
+        vecType.cast<mlir::ShapedType>(), llvm::to_vector<8>(attrs));
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(constop, ty,
+                                                         denseAttr);
+    return success();
+  }
+};
+
 // `fir.call` -> `llvm.call`
 struct CallOpConversion : public FIROpConversion<fir::CallOp> {
   using FIROpConversion::FIROpConversion;
@@ -1592,19 +1625,20 @@ public:
     mlir::OwningRewritePatternList pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
-        AllocaOpConversion, BoxAddrOpConversion, BoxCharLenOpConversion, BoxDimsOpConversion,
-        BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
-        BoxIsPtrOpConversion, BoxRankOpConversion, CallOpConversion,
-        CmpcOpConversion, ConvertOpConversion, DispatchOpConversion,
-        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxCharOpConversion, ExtractValueOpConversion, HasValueOpConversion,
-        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        InsertOnRangeOpConversion, InsertValueOpConversion,
+        AllocaOpConversion, BoxAddrOpConversion, BoxCharLenOpConversion,
+        BoxDimsOpConversion, BoxEleSizeOpConversion, BoxIsAllocOpConversion,
+        BoxIsArrayOpConversion, BoxIsPtrOpConversion, BoxRankOpConversion,
+        CallOpConversion, CmpcOpConversion, ConvertOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
+        DivcOpConversion, EmboxCharOpConversion, ExtractValueOpConversion,
+        HasValueOpConversion, GenTypeDescOpConversion, GlobalLenOpConversion,
+        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
         IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
         MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
-        SubcOpConversion, UnboxCharOpConversion, UndefOpConversion,
-        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
+        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+        typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
