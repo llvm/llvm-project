@@ -1065,18 +1065,13 @@ define <8 x i16> @test_aligned_v8i16_1(i16* %Ptr) {
 ;
 ; P8-LABEL: test_aligned_v8i16_1:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lhzx r3, 0, r3
-; P8-NEXT:    mtvsrwz v2, r3
-; P8-NEXT:    vsplth v2, v2, 3
+; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    vsplth v2, v2, 7
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test_aligned_v8i16_1:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    li r4, 1
 ; P7-NEXT:    lvx v2, 0, r3
-; P7-NEXT:    lvsl v4, 0, r3
-; P7-NEXT:    lvx v3, r4, r3
-; P7-NEXT:    vperm v2, v2, v3, v4
 ; P7-NEXT:    vsplth v2, v2, 0
 ; P7-NEXT:    blr
 ;
@@ -1088,18 +1083,13 @@ define <8 x i16> @test_aligned_v8i16_1(i16* %Ptr) {
 ;
 ; P8-AIX32-LABEL: test_aligned_v8i16_1:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    lhzx r3, 0, r3
-; P8-AIX32-NEXT:    mtvsrwz v2, r3
-; P8-AIX32-NEXT:    vsplth v2, v2, 3
+; P8-AIX32-NEXT:    lvx v2, 0, r3
+; P8-AIX32-NEXT:    vsplth v2, v2, 0
 ; P8-AIX32-NEXT:    blr
 ;
 ; P7-AIX32-LABEL: test_aligned_v8i16_1:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    li r4, 1
 ; P7-AIX32-NEXT:    lvx v2, 0, r3
-; P7-AIX32-NEXT:    lvsl v4, 0, r3
-; P7-AIX32-NEXT:    lvx v3, r4, r3
-; P7-AIX32-NEXT:    vperm v2, v2, v3, v4
 ; P7-AIX32-NEXT:    vsplth v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
@@ -1119,19 +1109,15 @@ define <8 x i16> @test_aligned_v8i16_2(i16* %Ptr) {
 ;
 ; P8-LABEL: test_aligned_v8i16_2:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lhz r3, 32(r3)
-; P8-NEXT:    mtvsrwz v2, r3
-; P8-NEXT:    vsplth v2, v2, 3
+; P8-NEXT:    addi r3, r3, 32
+; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    vsplth v2, v2, 7
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test_aligned_v8i16_2:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    li r4, 1
 ; P7-NEXT:    addi r3, r3, 32
 ; P7-NEXT:    lvx v2, 0, r3
-; P7-NEXT:    lvx v3, r4, r3
-; P7-NEXT:    lvsl v4, 0, r3
-; P7-NEXT:    vperm v2, v2, v3, v4
 ; P7-NEXT:    vsplth v2, v2, 0
 ; P7-NEXT:    blr
 ;
@@ -1144,19 +1130,15 @@ define <8 x i16> @test_aligned_v8i16_2(i16* %Ptr) {
 ;
 ; P8-AIX32-LABEL: test_aligned_v8i16_2:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    lhz r3, 32(r3)
-; P8-AIX32-NEXT:    mtvsrwz v2, r3
-; P8-AIX32-NEXT:    vsplth v2, v2, 3
+; P8-AIX32-NEXT:    addi r3, r3, 32
+; P8-AIX32-NEXT:    lvx v2, 0, r3
+; P8-AIX32-NEXT:    vsplth v2, v2, 0
 ; P8-AIX32-NEXT:    blr
 ;
 ; P7-AIX32-LABEL: test_aligned_v8i16_2:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    li r4, 1
 ; P7-AIX32-NEXT:    addi r3, r3, 32
 ; P7-AIX32-NEXT:    lvx v2, 0, r3
-; P7-AIX32-NEXT:    lvx v3, r4, r3
-; P7-AIX32-NEXT:    lvsl v4, 0, r3
-; P7-AIX32-NEXT:    vperm v2, v2, v3, v4
 ; P7-AIX32-NEXT:    vsplth v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
@@ -1176,16 +1158,13 @@ define <16 x i8> @test_aligned_v16i8_1(i8* %Ptr) {
 ;
 ; P8-LABEL: test_aligned_v16i8_1:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lbzx r3, 0, r3
-; P8-NEXT:    mtvsrwz v2, r3
-; P8-NEXT:    vspltb v2, v2, 7
+; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    vspltb v2, v2, 15
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test_aligned_v16i8_1:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lvsl v2, 0, r3
-; P7-NEXT:    lvx v3, 0, r3
-; P7-NEXT:    vperm v2, v3, v3, v2
+; P7-NEXT:    lvx v2, 0, r3
 ; P7-NEXT:    vspltb v2, v2, 0
 ; P7-NEXT:    blr
 ;
@@ -1197,16 +1176,13 @@ define <16 x i8> @test_aligned_v16i8_1(i8* %Ptr) {
 ;
 ; P8-AIX32-LABEL: test_aligned_v16i8_1:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    lbzx r3, 0, r3
-; P8-AIX32-NEXT:    mtvsrwz v2, r3
-; P8-AIX32-NEXT:    vspltb v2, v2, 7
+; P8-AIX32-NEXT:    lvx v2, 0, r3
+; P8-AIX32-NEXT:    vspltb v2, v2, 0
 ; P8-AIX32-NEXT:    blr
 ;
 ; P7-AIX32-LABEL: test_aligned_v16i8_1:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    lvsl v2, 0, r3
-; P7-AIX32-NEXT:    lvx v3, 0, r3
-; P7-AIX32-NEXT:    vperm v2, v3, v3, v2
+; P7-AIX32-NEXT:    lvx v2, 0, r3
 ; P7-AIX32-NEXT:    vspltb v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
@@ -1226,17 +1202,15 @@ define <16 x i8> @test_aligned_v16i8_2(i8* %Ptr) {
 ;
 ; P8-LABEL: test_aligned_v16i8_2:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lbz r3, 16(r3)
-; P8-NEXT:    mtvsrwz v2, r3
-; P8-NEXT:    vspltb v2, v2, 7
+; P8-NEXT:    addi r3, r3, 16
+; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    vspltb v2, v2, 15
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test_aligned_v16i8_2:
 ; P7:       # %bb.0: # %entry
 ; P7-NEXT:    addi r3, r3, 16
-; P7-NEXT:    lvsl v2, 0, r3
-; P7-NEXT:    lvx v3, 0, r3
-; P7-NEXT:    vperm v2, v3, v3, v2
+; P7-NEXT:    lvx v2, 0, r3
 ; P7-NEXT:    vspltb v2, v2, 0
 ; P7-NEXT:    blr
 ;
@@ -1249,17 +1223,15 @@ define <16 x i8> @test_aligned_v16i8_2(i8* %Ptr) {
 ;
 ; P8-AIX32-LABEL: test_aligned_v16i8_2:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    lbz r3, 16(r3)
-; P8-AIX32-NEXT:    mtvsrwz v2, r3
-; P8-AIX32-NEXT:    vspltb v2, v2, 7
+; P8-AIX32-NEXT:    addi r3, r3, 16
+; P8-AIX32-NEXT:    lvx v2, 0, r3
+; P8-AIX32-NEXT:    vspltb v2, v2, 0
 ; P8-AIX32-NEXT:    blr
 ;
 ; P7-AIX32-LABEL: test_aligned_v16i8_2:
 ; P7-AIX32:       # %bb.0: # %entry
 ; P7-AIX32-NEXT:    addi r3, r3, 16
-; P7-AIX32-NEXT:    lvsl v2, 0, r3
-; P7-AIX32-NEXT:    lvx v3, 0, r3
-; P7-AIX32-NEXT:    vperm v2, v3, v3, v2
+; P7-AIX32-NEXT:    lvx v2, 0, r3
 ; P7-AIX32-NEXT:    vspltb v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
