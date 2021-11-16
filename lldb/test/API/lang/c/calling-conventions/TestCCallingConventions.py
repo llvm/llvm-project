@@ -42,17 +42,20 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec(test_file))
         return True
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test_regcall(self):
         if not self.build_and_run("regcall.c"):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     @expectedFailureDarwin(archs=["arm64", "arm64e"]) # rdar://84528755
     def test_ms_abi(self):
         if not self.build_and_run("ms_abi.c"):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test_stdcall(self):
         if not self.build_and_run("stdcall.c"):
             return
@@ -63,11 +66,13 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1.0)", result_type="int", result_value="1")
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test_fastcall(self):
         if not self.build_and_run("fastcall.c"):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test_pascal(self):
         if not self.build_and_run("pascal.c"):
             return
