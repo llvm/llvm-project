@@ -648,7 +648,7 @@ static void checkDivisionRepresentation(
 
   std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> res(
       fac.getNumLocalIds(), llvm::None);
-  fac.getLocalReprLbUbPairs(res);
+  fac.getLocalReprs(res);
 
   // Check if all expected divisions are computed.
   for (unsigned i = 0, e = fac.getNumLocalIds(); i < e; ++i)
