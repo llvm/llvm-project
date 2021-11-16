@@ -450,7 +450,7 @@ static void *BackgroundThread(void *arg) {
   const u64 kMs2Ns = 1000 * 1000;
   const u64 start = NanoTime();
 
-  u64 last_flush = NanoTime();
+  u64 last_flush = start;
   uptr last_rss = 0;
   for (int i = 0;
       atomic_load(&ctx->stop_background_thread, memory_order_relaxed) == 0;
@@ -463,7 +463,7 @@ static void *BackgroundThread(void *arg) {
       if (last_flush + flags()->flush_memory_ms * kMs2Ns < now) {
         VPrintf(1, "ThreadSanitizer: periodic memory flush\n");
         FlushShadowMemory();
-        last_flush = NanoTime();
+        now = last_flush = NanoTime();
       }
     }
     if (flags()->memory_limit_mb > 0) {
@@ -476,6 +476,7 @@ static void *BackgroundThread(void *arg) {
         VPrintf(1, "ThreadSanitizer: flushing memory due to RSS\n");
         FlushShadowMemory();
         rss = GetRSS();
+        now = NanoTime();
         VPrintf(1, "ThreadSanitizer: memory flushed RSS=%llu\n", (u64)rss>>20);
       }
       last_rss = rss;
