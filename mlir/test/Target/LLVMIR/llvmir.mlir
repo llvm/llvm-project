@@ -1560,7 +1560,7 @@ llvm.func @switch_args(%arg0: i32) -> i32 {
   // CHECK-NEXT:   i32 -1, label %[[SWITCHCASE_bb2:[0-9]+]]
   // CHECK-NEXT:   i32 1, label %[[SWITCHCASE_bb3:[0-9]+]]
   // CHECK-NEXT: ]
-  llvm.switch %arg0, ^bb1 [
+  llvm.switch %arg0 : i32, ^bb1 [
     -1: ^bb2(%0 : i32),
     1: ^bb3(%1, %2 : i32, i32)
   ]
@@ -1590,7 +1590,7 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
   %1 = llvm.mlir.constant(23 : i32) : i32
   %2 = llvm.mlir.constant(29 : i32) : i32
   // CHECK: !prof ![[SWITCH_WEIGHT_NODE:[0-9]+]]
-  llvm.switch %arg0, ^bb1(%0 : i32) [
+  llvm.switch %arg0 : i32, ^bb1(%0 : i32) [
     9: ^bb2(%1, %2 : i32, i32),
     99: ^bb3
   ] {branch_weights = dense<[13, 17, 19]> : vector<3xi32>}

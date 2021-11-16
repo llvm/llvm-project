@@ -215,7 +215,7 @@ func @select(%arg : index, %arg2 : i32) -> i32 {
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(3 : i32) : i32
 // CHECK:         %[[SELECTOR:.*]] = llvm.trunc %[[SELECTVALUE]] : i{{.*}} to i32
-// CHECK:         llvm.switch %[[SELECTOR]], ^bb5 [
+// CHECK:         llvm.switch %[[SELECTOR]] : i32, ^bb5 [
 // CHECK:           1: ^bb1(%[[C0]] : i32),
 // CHECK:           2: ^bb2(%[[C2]], %[[SELECTVALUE]], %[[ARG1]] : i32, [[IDX]], i32),
 // CHECK:           3: ^bb3(%[[ARG1]], %[[C2]] : i32, i32),
@@ -260,7 +260,7 @@ func @select_rank(%arg : i32, %arg2 : i32) -> i32 {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK:         llvm.switch %[[SELECTVALUE]], ^bb5 [
+// CHECK:         llvm.switch %[[SELECTVALUE]] : i32, ^bb5 [
 // CHECK:           1: ^bb1(%[[C0]] : i32),
 // CHECK:           2: ^bb2(%[[C2]], %[[SELECTVALUE]], %[[ARG1]] : i32, i32, i32),
 // CHECK:           3: ^bb3(%[[ARG1]], %[[C2]] : i32, i32),

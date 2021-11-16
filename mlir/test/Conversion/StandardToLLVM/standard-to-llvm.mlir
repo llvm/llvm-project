@@ -592,3 +592,31 @@ func @select_2dvector(%arg0 : vector<4x3xi1>, %arg1 : vector<4x3xi32>, %arg2 : v
   %0 = select %arg0, %arg1, %arg2 : vector<4x3xi1>, vector<4x3xi32>
   std.return
 }
+
+// -----
+
+// CHECK-LABEL: func @switchi8(
+func @switchi8(%arg0 : i8) -> i32 {
+switch %arg0 : i8, [
+  default: ^bb1,
+    42: ^bb1,
+    43: ^bb3
+  ]
+^bb1:
+  %c_1 = arith.constant 1 : i32
+  std.return %c_1 : i32
+^bb3:
+  %c_42 = arith.constant 42 : i32
+  std.return %c_42: i32
+}
+// CHECK:     llvm.switch %arg0 : i8, ^bb1 [
+// CHECK-NEXT:       42: ^bb1,
+// CHECK-NEXT:       43: ^bb2
+// CHECK-NEXT:     ]
+// CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb0
+// CHECK-NEXT:     %[[E0:.+]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK-NEXT:     llvm.return %[[E0]] : i32
+// CHECK:   ^bb2:  // pred: ^bb0
+// CHECK-NEXT:     %[[E1:.+]] = llvm.mlir.constant(42 : i32) : i32
+// CHECK-NEXT:     llvm.return %[[E1]] : i32
+// CHECK-NEXT:   }
