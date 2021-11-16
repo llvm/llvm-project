@@ -2601,6 +2601,19 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     }
   }
 
+  // Canonicalize (-1 * urem X, Y) + X --> (Y * X/Y)
+  if (Ops.size() == 2) {
+    const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(Ops[0]);
+    if (Mul && Mul->getNumOperands() == 2 &&
+        Mul->getOperand(0)->isAllOnesValue()) {
+      const SCEV *X;
+      const SCEV *Y;
+      if (matchURem(Mul->getOperand(1), X, Y) && X == Ops[1]) {
+        return getMulExpr(Y, getUDivExpr(X, Y));
+      }
+    }
+  }
+
   // Skip past any other cast SCEVs.
   while (Idx < Ops.size() && Ops[Idx]->getSCEVType() < scAddExpr)
     ++Idx;

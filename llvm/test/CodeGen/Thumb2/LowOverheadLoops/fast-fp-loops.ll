@@ -6,7 +6,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    beq .LBB0_11
+; CHECK-NEXT:    beq.w .LBB0_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
 ; CHECK-NEXT:    add.w r5, r0, r3, lsl #2
 ; CHECK-NEXT:    add.w r4, r2, r3, lsl #2
@@ -42,19 +42,21 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    letp lr, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_11
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader.new
-; CHECK-NEXT:    sub.w lr, r3, r12
+; CHECK-NEXT:    bic r3, r3, #3
+; CHECK-NEXT:    movs r5, #1
+; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    add.w lr, r5, r3, lsr #2
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:  .LBB0_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds r5, r1, r4
 ; CHECK-NEXT:    adds r6, r2, r4
 ; CHECK-NEXT:    adds r7, r0, r4
-; CHECK-NEXT:    adds r3, #4
-; CHECK-NEXT:    vldr s0, [r5]
 ; CHECK-NEXT:    adds r4, #16
+; CHECK-NEXT:    vldr s0, [r5]
+; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vldr s2, [r6]
-; CHECK-NEXT:    cmp lr, r3
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r7]
 ; CHECK-NEXT:    vldr s0, [r5, #4]
@@ -69,7 +71,7 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    vldr s2, [r6, #12]
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r7, #12]
-; CHECK-NEXT:    bne .LBB0_7
+; CHECK-NEXT:    le lr, .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    wls lr, r12, .LBB0_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
