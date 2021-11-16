@@ -15,7 +15,7 @@ void previouslyAvailable() AVAILABLE_PREV;
 void currentlyAvailable() AVAILABLE_CURRENT;
 void willBeAvailabile() AVAILABLE_NEXT;
 #ifndef NO_WARNING
-// expected-note@-2 {{'willBeAvailabile' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14.0.0}}
+// expected-note@-2 {{'willBeAvailabile' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14}}
 #endif
 
 
@@ -23,7 +23,7 @@ typedef struct {
 
 } Record AVAILABLE_NEXT;
 #ifndef NO_WARNING
-// expected-note@-2 {{'Record' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14.0.0}}
+// expected-note@-2 {{'Record' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14}}
 #endif
 
 AVAILABLE_PREV
@@ -56,7 +56,7 @@ void previouslyAvailableIOS() __attribute__((availability(ios, introduced = 10))
 void currentlyAvailableIOS() __attribute__((availability(ios, introduced = 14)));
 void willBeAvailabileIOS() __attribute__((availability(ios, introduced = 14.1)));
 #ifndef NO_WARNING
-// expected-note@-2 {{'willBeAvailabileIOS' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14.0.0}}
+// expected-note@-2 {{'willBeAvailabileIOS' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14}}
 #endif
 
 void testIOSAvailabilityAlsoWorks() {
@@ -77,7 +77,7 @@ typedef struct {
 
 } Record2 __attribute__((availability(ios, introduced = 14.1)));
 #ifndef NO_WARNING
-// expected-note@-2 {{'Record2' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14.0.0}}
+// expected-note@-2 {{'Record2' has been marked as being introduced in macCatalyst 14.1 here, but the deployment target is macCatalyst 14}}
 #endif
 
 __attribute__((availability(ios, introduced = 10)))

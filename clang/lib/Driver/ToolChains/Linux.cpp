@@ -277,14 +277,11 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     // Android sysroots contain a library directory for each supported OS
     // version as well as some unversioned libraries in the usual multiarch
     // directory.
-    unsigned Major;
-    unsigned Minor;
-    unsigned Micro;
-    Triple.getEnvironmentVersion(Major, Minor, Micro);
-    addPathIfExists(D,
-                    SysRoot + "/usr/lib/" + MultiarchTriple + "/" +
-                        llvm::to_string(Major),
-                    Paths);
+    addPathIfExists(
+        D,
+        SysRoot + "/usr/lib/" + MultiarchTriple + "/" +
+            llvm::to_string(Triple.getEnvironmentVersion().getMajor()),
+        Paths);
   }
 
   addPathIfExists(D, SysRoot + "/usr/lib/" + MultiarchTriple, Paths);

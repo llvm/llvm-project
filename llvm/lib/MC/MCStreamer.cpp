@@ -1316,27 +1316,25 @@ void MCStreamer::emitVersionForTarget(const Triple &Target,
   if (Target.getOSMajorVersion() == 0)
     return;
 
-  unsigned Major = 0;
-  unsigned Minor = 0;
-  unsigned Update = 0;
+  VersionTuple Version;
   switch (Target.getOS()) {
   case Triple::MacOSX:
   case Triple::Darwin:
-    Target.getMacOSXVersion(Major, Minor, Update);
+    Target.getMacOSXVersion(Version);
     break;
   case Triple::IOS:
   case Triple::TvOS:
-    Target.getiOSVersion(Major, Minor, Update);
+    Version = Target.getiOSVersion();
     break;
   case Triple::WatchOS:
-    Target.getWatchOSVersion(Major, Minor, Update);
+    Version = Target.getWatchOSVersion();
     break;
   default:
     llvm_unreachable("unexpected OS type");
   }
-  assert(Major != 0 && "A non-zero major version is expected");
-  auto LinkedTargetVersion = targetVersionOrMinimumSupportedOSVersion(
-      Target, VersionTuple(Major, Minor, Update));
+  assert(Version.getMajor() != 0 && "A non-zero major version is expected");
+  auto LinkedTargetVersion =
+      targetVersionOrMinimumSupportedOSVersion(Target, Version);
   auto BuildVersionOSVersion = getMachoBuildVersionSupportedOS(Target);
   if (BuildVersionOSVersion.empty() ||
       LinkedTargetVersion >= BuildVersionOSVersion)

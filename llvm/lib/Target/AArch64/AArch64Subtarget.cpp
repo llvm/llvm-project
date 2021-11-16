@@ -346,9 +346,7 @@ bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
     return false;
 
   if (TargetTriple.isiOS()) {
-    unsigned Major, Minor, Micro;
-    TargetTriple.getiOSVersion(Major, Minor, Micro);
-    return Major >= 8;
+    return TargetTriple.getiOSVersion() >= VersionTuple(8);
   }
 
   return false;
