@@ -833,6 +833,7 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
                             lldb::ModuleSP &exe_module_sp,
                             const FileSpecList *module_search_paths_ptr) {
   Status error;
+
   if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
     if (module_spec.GetArchitecture().IsValid()) {
       error = ModuleList::GetSharedModule(module_spec, exe_module_sp,
@@ -855,9 +856,77 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
       }
     }
   } else {
-    error.SetErrorStringWithFormat("'%s' does not exist",
-                                   module_spec.GetFileSpec().GetPath().c_str());
+    error.SetErrorStringWithFormat(
+        "'%s' does not exist", module_spec.GetFileSpec().GetPath().c_str());
   }
+  return error;
+}
+
+Status
+Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
+                            lldb::ModuleSP &exe_module_sp,
+                            const FileSpecList *module_search_paths_ptr) {
+  Status error;
+
+  // We may connect to a process and use the provided executable (Don't use
+  // local $PATH).
+  ModuleSpec resolved_module_spec(module_spec);
+
+  // Resolve any executable within a bundle on MacOSX
+  Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
+
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
+      module_spec.GetUUID().IsValid()) {
+    if (resolved_module_spec.GetArchitecture().IsValid() ||
+        resolved_module_spec.GetUUID().IsValid()) {
+      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                          module_search_paths_ptr, nullptr,
+                                          nullptr);
+
+      if (exe_module_sp && exe_module_sp->GetObjectFile())
+        return error;
+      exe_module_sp.reset();
+    }
+    // No valid architecture was specified or the exact arch wasn't found so
+    // ask the platform for the architectures that we should be using (in the
+    // correct order) and see if we can find a match that way
+    StreamString arch_names;
+    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
+             idx, resolved_module_spec.GetArchitecture());
+         ++idx) {
+      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                          module_search_paths_ptr, nullptr,
+                                          nullptr);
+      // Did we find an executable using one of the
+      if (error.Success()) {
+        if (exe_module_sp && exe_module_sp->GetObjectFile())
+          break;
+        else
+          error.SetErrorToGenericError();
+      }
+
+      if (idx > 0)
+        arch_names.PutCString(", ");
+      arch_names.PutCString(
+          resolved_module_spec.GetArchitecture().GetArchitectureName());
+    }
+
+    if (error.Fail() || !exe_module_sp) {
+      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
+        error.SetErrorStringWithFormatv(
+            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+            resolved_module_spec.GetFileSpec(), GetPluginName(),
+            arch_names.GetData());
+      } else {
+        error.SetErrorStringWithFormatv("'{0}' is not readable",
+                                        resolved_module_spec.GetFileSpec());
+      }
+    }
+  } else {
+    error.SetErrorStringWithFormatv("'{0}' does not exist",
+                                    resolved_module_spec.GetFileSpec());
+  }
+
   return error;
 }
 
@@ -1507,12 +1576,13 @@ const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
   return m_trap_handlers;
 }
 
-Status Platform::GetCachedExecutable(
-    ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, Platform &remote_platform) {
+Status
+Platform::GetCachedExecutable(ModuleSpec &module_spec,
+                              lldb::ModuleSP &module_sp,
+                              const FileSpecList *module_search_paths_ptr) {
   const auto platform_spec = module_spec.GetFileSpec();
-  const auto error = LoadCachedExecutable(
-      module_spec, module_sp, module_search_paths_ptr, remote_platform);
+  const auto error =
+      LoadCachedExecutable(module_spec, module_sp, module_search_paths_ptr);
   if (error.Success()) {
     module_spec.GetFileSpec() = module_sp->GetFileSpec();
     module_spec.GetPlatformFileSpec() = platform_spec;
@@ -1521,15 +1591,17 @@ Status Platform::GetCachedExecutable(
   return error;
 }
 
-Status Platform::LoadCachedExecutable(
-    const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, Platform &remote_platform) {
-  return GetRemoteSharedModule(module_spec, nullptr, module_sp,
-                               [&](const ModuleSpec &spec) {
-                                 return remote_platform.ResolveExecutable(
-                                     spec, module_sp, module_search_paths_ptr);
-                               },
-                               nullptr);
+Status
+Platform::LoadCachedExecutable(const ModuleSpec &module_spec,
+                               lldb::ModuleSP &module_sp,
+                               const FileSpecList *module_search_paths_ptr) {
+  return GetRemoteSharedModule(
+      module_spec, nullptr, module_sp,
+      [&](const ModuleSpec &spec) {
+        return ResolveRemoteExecutable(spec, module_sp,
+                                       module_search_paths_ptr);
+      },
+      nullptr);
 }
 
 Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
