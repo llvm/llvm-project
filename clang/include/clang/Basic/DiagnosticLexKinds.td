@@ -269,7 +269,9 @@ def err_bad_character_encoding : Error<
 def warn_bad_character_encoding : ExtWarn<
   "illegal character encoding in character literal">,
   InGroup<InvalidSourceEncoding>;
-def err_lexing_string : Error<"failure when lexing a string">;
+def err_lexing_string : Error<"failure when lexing a string literal">;
+def err_lexing_char : Error<"failure when lexing a character literal">;
+def err_lexing_numeric : Error<"failure when lexing a numeric literal">;
 def err_placeholder_in_source : Error<"editor placeholder in source file">;
 
 //===----------------------------------------------------------------------===//
