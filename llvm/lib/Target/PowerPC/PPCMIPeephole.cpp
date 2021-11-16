@@ -1022,15 +1022,15 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::TW: {
         MachineInstr *LiMI1 = getVRegDefOrNull(&MI.getOperand(1), MRI);
         MachineInstr *LiMI2 = getVRegDefOrNull(&MI.getOperand(2), MRI);
-        unsigned Opcode1 = LiMI1->getOpcode();
-        unsigned Opcode2 = LiMI2->getOpcode();
         bool IsOperand2Immediate = MI.getOperand(2).isImm();
         // We can only do the optimization if we can get immediates
         // from both operands
-        if (!(LiMI1 && (Opcode1 == PPC::LI || Opcode1 == PPC::LI8)))
+        if (!(LiMI1 && (LiMI1->getOpcode() == PPC::LI ||
+                        LiMI1->getOpcode() == PPC::LI8)))
           break;
         if (!IsOperand2Immediate &&
-            !(LiMI2 && (Opcode2 == PPC::LI || Opcode2 == PPC::LI8)))
+            !(LiMI2 && (LiMI2->getOpcode() == PPC::LI ||
+                        LiMI2->getOpcode() == PPC::LI8)))
           break;
 
         auto ImmOperand0 = MI.getOperand(0).getImm();
