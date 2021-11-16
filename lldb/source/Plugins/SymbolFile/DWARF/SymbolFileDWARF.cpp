@@ -3541,33 +3541,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                          type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
                          die.GetCU()->GetAddressByteSize());
 
-    // Swift let-bindings are marked by a DW_TAG_const_type.
-    bool is_constant = false;
-    if (sc.comp_unit->GetLanguage() == eLanguageTypeSwift) {
-      DWARFDIE type_die = die.GetReferencedDIE(llvm::dwarf::DW_AT_type);
-      if (type_die && type_die.Tag() == llvm::dwarf::DW_TAG_const_type)
-        is_constant = true;
-    }
-
-    var_sp = std::make_shared<Variable>(
-        die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
-        scope_ranges, &decl, location, is_external, is_artificial,
-        location_is_const_value_data, is_static_member, is_constant);
-  } else {
-    // Not ready to parse this variable yet. It might be a global or static
-    // variable that is in a function scope and the function in the symbol
-    // context wasn't filled in yet
-    return var_sp;
+  // Swift let-bindings are marked by a DW_TAG_const_type.
+  bool is_constant = false;
+  if (sc.comp_unit->GetLanguage() == eLanguageTypeSwift) {
+    DWARFDIE type_die = die.GetReferencedDIE(llvm::dwarf::DW_AT_type);
+    if (type_die && type_die.Tag() == llvm::dwarf::DW_TAG_const_type)
+      is_constant = true;
   }
-  // Cache var_sp even if NULL (the variable was just a specification or was
-  // missing vital information to be able to be displayed in the debugger
-  // (missing location due to optimization, etc)) so we don't re-parse this
-  // DIE over and over later...
-  GetDIEToVariable()[die.GetDIE()] = var_sp;
-  if (spec_die)
-    GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
 
-  return var_sp;
+  return std::make_shared<Variable>(
+      die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
+      scope_ranges, &decl, location, is_external, is_artificial,
+      location_is_const_value_data, is_static_member, is_constant);
 }
 
 DWARFDIE
