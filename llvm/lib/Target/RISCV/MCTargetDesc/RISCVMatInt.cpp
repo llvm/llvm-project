@@ -284,6 +284,32 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       if (TmpSeq.size() < Res.size())
         Res = TmpSeq;
     }
+    // Try to use LUI+SH*ADD+ADDI.
+    int64_t Hi52 = ((uint64_t)Val + 0x800ull) & ~0xfffull;
+    int64_t Lo12 = SignExtend64<12>(Val);
+    Div = 0;
+    if (isInt<32>(Hi52 / 3) && (Hi52 % 3) == 0) {
+      Div = 3;
+      Opc = RISCV::SH1ADD;
+    } else if (isInt<32>(Hi52 / 5) && (Hi52 % 5) == 0) {
+      Div = 5;
+      Opc = RISCV::SH2ADD;
+    } else if (isInt<32>(Hi52 / 9) && (Hi52 % 9) == 0) {
+      Div = 9;
+      Opc = RISCV::SH3ADD;
+    }
+    // Build the new instruction sequence.
+    if (Div > 0) {
+      // For Val that has zero Lo12 (implies Val equals to Hi52) should has
+      // already been processed to LUI+SH*ADD by previous optimization.
+      assert(Lo12 != 0 &&
+             "unexpected instruction sequence for immediate materialisation");
+      generateInstSeqImpl(Hi52 / Div, ActiveFeatures, TmpSeq);
+      TmpSeq.push_back(RISCVMatInt::Inst(Opc, 0));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADDI, Lo12));
+      if (TmpSeq.size() < Res.size())
+        Res = TmpSeq;
+    }
   }
 
   return Res;

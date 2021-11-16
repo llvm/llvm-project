@@ -207,7 +207,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
 }
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
-                                   DIDumpOptions DumpOpts, uint64_t Operands[2],
+                                   DIDumpOptions DumpOpts,
+                                   const uint64_t Operands[2],
                                    unsigned Operand) {
   assert(Operand < 2 && "operand out of bounds");
   auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
@@ -226,7 +227,7 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
 
 static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                                   DIDumpOptions DumpOpts, uint8_t Opcode,
-                                  uint64_t Operands[2],
+                                  const uint64_t Operands[2],
                                   const MCRegisterInfo *MRI, bool isEH) {
   if (!MRI)
     return false;
@@ -262,7 +263,7 @@ static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
 bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
                                        const DWARFExpression *Expr,
                                        const MCRegisterInfo *RegInfo,
-                                       DWARFUnit *U, bool isEH) {
+                                       DWARFUnit *U, bool isEH) const {
   if (Error) {
     OS << "<decoding error>";
     return false;

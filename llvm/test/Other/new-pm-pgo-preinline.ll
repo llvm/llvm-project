@@ -1,5 +1,5 @@
-; RUN: opt -disable-verify -debug-pass-manager -pgo-kind=pgo-instr-gen-pipeline -passes='default<Os>' -S %s 2>&1 | FileCheck %s --check-prefixes=CHECK-Osz
-; RUN: opt -disable-verify -debug-pass-manager -pgo-kind=pgo-instr-gen-pipeline -passes='default<Oz>' -S %s 2>&1 | FileCheck %s --check-prefixes=CHECK-Osz
+; RUN: opt -disable-verify -eagerly-invalidate-analyses=0 -debug-pass-manager -pgo-kind=pgo-instr-gen-pipeline -passes='default<Os>' -S %s 2>&1 | FileCheck %s --check-prefixes=CHECK-Osz
+; RUN: opt -disable-verify -eagerly-invalidate-analyses=0 -debug-pass-manager -pgo-kind=pgo-instr-gen-pipeline -passes='default<Oz>' -S %s 2>&1 | FileCheck %s --check-prefixes=CHECK-Osz
 
 ; CHECK-Osz: Running pass: ModuleInlinerWrapperPass
 ; CHECK-Osz-NEXT: Running analysis: InlineAdvisorAnalysis

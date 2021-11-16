@@ -78,7 +78,7 @@ public:
                 return (l->name() < r->name());
               });
 
-    // Add all shims to master file.
+    // Add all shims to merged file.
     for (const DefinedAtom *shim : shims)
       mergedFile.addAtom(*shim);
 
