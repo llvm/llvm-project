@@ -189,12 +189,7 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
   bool MadeChange = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineBasicBlock::iterator mi = MBB.begin(), me = MBB.end();
-         mi != me;) {
-      MachineInstr &MI = *mi;
-      // Advance iterator here because MI may be erased.
-      ++mi;
-
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       // Only expand pseudos.
       if (!MI.isPseudo())
         continue;
