@@ -509,7 +509,7 @@ void ModuleList::FindFunctions(const RegularExpression &name,
   if (keep_looking) {
     end = dylinker_modules.end();
     for (pos = dylinker_modules.begin(); pos != end; pos++)
-      (*pos)->FindFunctions(name, include_symbols, include_inlines, sc_list);
+      (*pos)->FindFunctions(name, options, sc_list);
   }
   // END SWIFT
 }

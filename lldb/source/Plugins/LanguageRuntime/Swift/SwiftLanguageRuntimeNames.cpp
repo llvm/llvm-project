@@ -1105,9 +1105,12 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
   std::string apply_target =
       demangle_ctx.getThunkTarget(apply_name.GetStringRef());
   if (!apply_target.empty()) {
-    curr_sc.module_sp->FindFunctions(ConstString(apply_target), CompilerDeclContext(),
-                                     eFunctionNameTypeFull, true, false,
-                                     sc_list);
+    ModuleFunctionSearchOptions function_options;
+    function_options.include_symbols = true;
+    function_options.include_inlines = false;
+    curr_sc.module_sp->FindFunctions(
+        ConstString(apply_target), CompilerDeclContext(), eFunctionNameTypeFull,
+        function_options, sc_list);
     size_t num_symbols = sc_list.GetSize();
     if (num_symbols == 0)
       return false;
