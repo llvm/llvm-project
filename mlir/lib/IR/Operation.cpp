@@ -30,7 +30,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   if (auto *op = AbstractOperation::lookup(name, context))
     representation = op;
   else
-    representation = Identifier::get(name, context);
+    representation = StringAttr::get(name, context);
 }
 
 /// Return the name of the dialect this operation is registered to.
@@ -51,10 +51,10 @@ StringRef OperationName::getStringRef() const {
 }
 
 /// Return the name of this operation as an identifier. This always succeeds.
-Identifier OperationName::getIdentifier() const {
+StringAttr OperationName::getIdentifier() const {
   if (auto *op = representation.dyn_cast<const AbstractOperation *>())
     return op->name;
-  return representation.get<Identifier>();
+  return representation.get<StringAttr>();
 }
 
 OperationName OperationName::getFromOpaquePointer(const void *pointer) {

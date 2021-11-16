@@ -655,7 +655,7 @@ void OpEmitter::genAttrNameGetters() {
   // Emit the getAttributeNameForIndex methods.
   {
     auto *method = opClass.addInlineMethod<Method::MP_Private>(
-        "::mlir::Identifier", "getAttributeNameForIndex",
+        "::mlir::StringAttr", "getAttributeNameForIndex",
         MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
     method->body()
@@ -663,7 +663,7 @@ void OpEmitter::genAttrNameGetters() {
   }
   {
     auto *method = opClass.addStaticInlineMethod<Method::MP_Private>(
-        "::mlir::Identifier", "getAttributeNameForIndex",
+        "::mlir::StringAttr", "getAttributeNameForIndex",
         MethodParameter("::mlir::OperationName", "name"),
         MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
@@ -683,7 +683,7 @@ void OpEmitter::genAttrNameGetters() {
       // Generate the non-static variant.
       {
         auto *method =
-            opClass.addInlineMethod("::mlir::Identifier", methodName);
+            opClass.addInlineMethod("::mlir::StringAttr", methodName);
         ERROR_IF_PRUNED(method, methodName, op);
         method->body()
             << llvm::formatv(attrNameMethodBody, attrIt.second).str();
@@ -692,7 +692,7 @@ void OpEmitter::genAttrNameGetters() {
       // Generate the static variant.
       {
         auto *method = opClass.addStaticInlineMethod(
-            "::mlir::Identifier", methodName,
+            "::mlir::StringAttr", methodName,
             MethodParameter("::mlir::OperationName", "name"));
         ERROR_IF_PRUNED(method, methodName, op);
         method->body() << llvm::formatv(attrNameMethodBody,

@@ -3,20 +3,6 @@
 import gdb.printing
 
 
-class IdentifierPrinter:
-  """Prints an mlir::Identifier instance."""
-
-  def __init__(self, val):
-    self.entry = val['entry']
-
-  def to_string(self):
-    ptr = (self.entry + 1).cast(gdb.lookup_type('char').pointer())
-    return ptr.string(length=self.entry['keyLength'])
-
-  def display_hint(self):
-    return 'string'
-
-
 class StoragePrinter:
   """Prints bases of a struct and its fields."""
 
@@ -158,8 +144,6 @@ def get_attr_or_type_printer(val, get_type_id):
 
 
 pp = gdb.printing.RegexpCollectionPrettyPrinter('MLIRSupport')
-
-pp.add_printer('mlir::Identifier', '^mlir::Identifier$', IdentifierPrinter)
 
 # Printers for types deriving from AttributeStorage or TypeStorage.
 pp.add_printer('mlir::detail::FusedLocationStorage',

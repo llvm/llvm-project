@@ -1171,13 +1171,13 @@ static void populateVectorizationPatterns(
   constexpr static StringRef kPromotedMarker = "PROMOTED";
   tilingPatterns.add<LinalgTilingPattern<ConvOp>>(
       context, LinalgTilingOptions().setTileSizes(tileSizes),
-      LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                 Identifier::get(kTiledMarker, context)));
+      LinalgTransformationFilter(ArrayRef<StringAttr>{},
+                                 StringAttr::get(kTiledMarker, context)));
 
   promotionPatterns.add<LinalgPromotionPattern<ConvOp>>(
       context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
-      LinalgTransformationFilter(Identifier::get(kTiledMarker, context),
-                                 Identifier::get(kPromotedMarker, context)));
+      LinalgTransformationFilter(StringAttr::get(kTiledMarker, context),
+                                 StringAttr::get(kPromotedMarker, context)));
 
   SmallVector<bool, 4> mask(N);
   int offset = tileSizes.size() - N;
