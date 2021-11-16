@@ -13,7 +13,7 @@
 // <format>
 
 // Tests the parsing of the format string as specified in [format.string.std].
-// It validates whether the std-format-spec is valid for a string type.
+// It validates whether the std-format-spec is valid for an integer type.
 
 #include <format>
 #include <cassert>
