@@ -79,6 +79,10 @@ void TypeSystemSwift::DumpValue(
     uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
     bool verbose, uint32_t depth) {}
 
+void TypeSystemSwift::Dump(llvm::raw_ostream &output) {
+  // TODO: What to dump?
+}
+
 bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
                                           uint32_t &count, bool &is_complex) {
   count = 0;
