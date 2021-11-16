@@ -223,10 +223,6 @@ private:
 /// for example, the use of a "NOLINTBEGIN" comment that is not followed by a
 /// "NOLINTEND" comment - a diagnostic regarding the improper use is returned
 /// via the output argument `SuppressionErrors`.
-bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                              const Diagnostic &Info, ClangTidyContext &Context,
-                              bool AllowIO = true);
-
 bool shouldSuppressDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info,
     ClangTidyContext &Context,

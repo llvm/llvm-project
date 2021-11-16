@@ -391,9 +391,13 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           bool IsInsideMainFile =
               Info.hasSourceManager() &&
               isInsideMainFile(Info.getLocation(), Info.getSourceManager());
+          SmallVector<tidy::ClangTidyError, 1> TidySuppressedErrors;
           if (IsInsideMainFile &&
               tidy::shouldSuppressDiagnostic(DiagLevel, Info, *CTContext,
+                                             TidySuppressedErrors,
                                              /*AllowIO=*/false)) {
+            // FIXME: should we expose the suppression error (invalid use of
+            // NOLINT comments)?
             return DiagnosticsEngine::Ignored;
           }
 
