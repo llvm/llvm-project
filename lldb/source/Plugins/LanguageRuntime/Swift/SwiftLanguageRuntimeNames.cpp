@@ -319,7 +319,7 @@ public:
 
   bool StopOthers() override { return false; }
 
-  void WillPop() override {
+  void DidPop() override {
     if (m_async_breakpoint_sp)
       m_async_breakpoint_sp->GetTarget().RemoveBreakpointByID(
           m_async_breakpoint_sp->GetID());
