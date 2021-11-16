@@ -134,9 +134,8 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
 
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
-  for (MachineBasicBlock::instr_iterator
-         I = N->instr_begin(), E = N->instr_end(); I != E; ++I)
-    I->AddRegOperandsToUseLists(RegInfo);
+  for (MachineInstr &MI : N->instrs())
+    MI.AddRegOperandsToUseLists(RegInfo);
 }
 
 void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(

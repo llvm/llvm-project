@@ -271,16 +271,15 @@ void GCMachineCodeAnalysis::VisitCallPoint(MachineBasicBlock::iterator CI) {
 
 void GCMachineCodeAnalysis::FindSafePoints(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
-    for (MachineBasicBlock::iterator MI = MBB.begin(), ME = MBB.end();
-         MI != ME; ++MI)
-      if (MI->isCall()) {
+    for (MachineInstr &MI : MBB)
+      if (MI.isCall()) {
         // Do not treat tail or sibling call sites as safe points.  This is
         // legal since any arguments passed to the callee which live in the
         // remnants of the callers frame will be owned and updated by the
         // callee if required.
-        if (MI->isTerminator())
+        if (MI.isTerminator())
           continue;
-        VisitCallPoint(MI);
+        VisitCallPoint(&MI);
       }
 }
 

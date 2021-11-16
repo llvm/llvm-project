@@ -711,9 +711,7 @@ bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
     if (!shouldExitEarly(&MF, OptimizationKind)) {
       SmallVector<MachineInstr *, 8> RemoveMIs;
       for (MachineBasicBlock &MBB : MF) {
-        for (MachineBasicBlock::iterator MII = MBB.begin(), MIE = MBB.end();
-             MII != MIE;) {
-          MachineInstr &MI = *MII;
+        for (MachineInstr &MI : MBB) {
           bool InstRewrite;
           if (OptimizationKind == VectorElem)
             InstRewrite = optimizeVectElement(MI) ;
@@ -725,7 +723,6 @@ bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
             RemoveMIs.push_back(&MI);
             Changed = true;
           }
-          ++MII;
         }
       }
       for (MachineInstr *MI : RemoveMIs)

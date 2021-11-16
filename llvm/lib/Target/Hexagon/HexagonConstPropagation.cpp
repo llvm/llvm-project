@@ -995,8 +995,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
     bool HaveTargets = computeBlockSuccessors(B, Targets);
     // Rewrite the executable instructions. Skip branches if we don't
     // have block successor information.
-    for (auto I = B->rbegin(), E = B->rend(); I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::reverse(*B)) {
       if (InstrExec.count(&MI)) {
         if (MI.isBranch() && !HaveTargets)
           continue;
