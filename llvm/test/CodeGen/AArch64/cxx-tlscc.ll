@@ -93,9 +93,9 @@ __tls_init.exit:
 ; CHECK-O0: stp d5, d4
 ; CHECK-O0: stp d3, d2
 ; CHECK-O0: stp d1, d0
-; CHECK-O0: stp x14, x13
-; CHECK-O0: stp x12, x11
-; CHECK-O0: stp x10, x9
+; CHECK-O0: str x14
+; CHECK-O0: stp x13, x12
+; CHECK-O0: stp x11, x10
 ; CHECK-O0: stp x8, x7
 ; CHECK-O0: stp x6, x5
 ; CHECK-O0: stp x4, x3
@@ -110,9 +110,9 @@ __tls_init.exit:
 ; CHECK-O0: ldp x4, x3
 ; CHECK-O0: ldp x6, x5
 ; CHECK-O0: ldp x8, x7
-; CHECK-O0: ldp x10, x9
-; CHECK-O0: ldp x12, x11
-; CHECK-O0: ldp x14, x13
+; CHECK-O0: ldp x11, x10
+; CHECK-O0: ldp x13, x12
+; CHECK-O0: ldr x14
 ; CHECK-O0: ldp d1, d0
 ; CHECK-O0: ldp d3, d2
 ; CHECK-O0: ldp d5, d4
@@ -219,6 +219,32 @@ entry:
   %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
   ret void
 }
+
+define cxx_fast_tlscc void @weird_prologue_regs(i32 %n) #1 {
+; CHECK-LABEL: weird_prologue_regs:
+; CHECK-NOT: str x9
+; CHECK-NOT: stp{{.*}}x9{{.*}}[
+; CHECK-NOT: str x19
+; CHECK-NOT: stp{{.*}}x19{{.*}}[
+
+; CHECK: sub x9, sp, #
+; CHECK: and sp, x9, #0x
+; CHECK: mov x19, sp
+
+; CHECK-NOT: str x9
+; CHECK-NOT: stp{{.*}}x9{{.*}}[
+; CHECK-NOT: str x19
+; CHECK-NOT: stp{{.*}}x19{{.*}}[
+
+  %p0 = alloca i32, i32 200
+  %p1 = alloca i32, align 32
+  %p2 = alloca i32, i32 %n
+  call void @callee(i32* %p0)
+  call void @callee(i32* %p1)
+  call void @callee(i32* %p2)
+  ret void
+}
+declare void @callee(i32*)
 
 attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind }

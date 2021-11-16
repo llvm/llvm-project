@@ -468,7 +468,7 @@ def CSR_Darwin_AArch64_TLS
 // CSR_Darwin_AArch64_CXX_TLS should be a subset of CSR_Darwin_AArch64_TLS.
 def CSR_Darwin_AArch64_CXX_TLS
     : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS,
-                           (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
+                           (sub (sequence "X%u", 1, 28), X9, X15, X16, X17, X18, X19),
                            (sequence "D%u", 0, 31))>;
 
 // CSRs that are handled by prologue, epilogue.
