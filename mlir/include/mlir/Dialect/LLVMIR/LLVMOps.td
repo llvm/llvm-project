@@ -724,7 +724,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
      NoSideEffect]> {
   let arguments = (ins
-    AnyInteger:$value,
+    I32:$value,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<ElementsAttr>:$case_values,
@@ -738,9 +738,9 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
 
   let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = [{
-    $value `:` type($value) `,`
+    $value `,`
     $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
-    `[` `\n` custom<SwitchOpCases>(ref(type($value)), $case_values, $caseDestinations,
+    `[` `\n` custom<SwitchOpCases>($case_values, $caseDestinations,
                                    $caseOperands, type($caseOperands)) `]`
     attr-dict
   }];
