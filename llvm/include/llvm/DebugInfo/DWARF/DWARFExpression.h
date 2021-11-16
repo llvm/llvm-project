@@ -97,7 +97,9 @@ public:
     bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
                const DWARFExpression *Expr, const MCRegisterInfo *RegInfo,
                DWARFUnit *U, bool isEH) const;
-    bool verify(DWARFUnit *U);
+
+    /// Verify \p Op. Does not affect the return of \a isError().
+    static bool verify(const Operation &Op, DWARFUnit *U);
 
   private:
     bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,

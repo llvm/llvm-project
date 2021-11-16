@@ -357,10 +357,9 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
   }
 }
 
-bool DWARFExpression::Operation::verify(DWARFUnit *U) {
-
+bool DWARFExpression::Operation::verify(const Operation &Op, DWARFUnit *U) {
   for (unsigned Operand = 0; Operand < 2; ++Operand) {
-    unsigned Size = Desc.Op[Operand];
+    unsigned Size = Op.Desc.Op[Operand];
 
     if (Size == Operation::SizeNA)
       break;
@@ -370,13 +369,11 @@ bool DWARFExpression::Operation::verify(DWARFUnit *U) {
       // the generic type should be done, so don't look up a base type in that
       // case. The same holds for DW_OP_reinterpret, which is currently not
       // supported.
-      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+      if (Op.Opcode == DW_OP_convert && Op.Operands[Operand] == 0)
         continue;
-      auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
-      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type) {
-        Error = true;
+      auto Die = U->getDIEForOffset(U->getOffset() + Op.Operands[Operand]);
+      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type)
         return false;
-      }
     }
   }
 
@@ -385,7 +382,7 @@ bool DWARFExpression::Operation::verify(DWARFUnit *U) {
 
 bool DWARFExpression::verify(DWARFUnit *U) {
   for (auto &Op : *this)
-    if (!Op.verify(U))
+    if (!Operation::verify(Op, U))
       return false;
 
   return true;
