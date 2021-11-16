@@ -241,6 +241,19 @@ steps:
     timeout_in_minutes: 120
 
   # Tests with the various supported ways to build libc++.
+  - label: "Bootstrapping build"
+    command: "libcxx/utils/ci/run-buildbot bootstrapping-build"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "Legacy Lit configuration"
     command: "libcxx/utils/ci/run-buildbot legacy-test-config"
     artifact_paths:
@@ -269,19 +282,6 @@ steps:
 
   - label: "Legacy LLVM_ENABLE_PROJECTS build"
     command: "libcxx/utils/ci/run-buildbot legacy-project-build"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Bootstrapping build"
-    command: "libcxx/utils/ci/run-buildbot bootstrapping-build"
     artifact_paths:
       - "**/test-results.xml"
     agents:
