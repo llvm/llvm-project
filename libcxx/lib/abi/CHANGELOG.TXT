@@ -25,6 +25,13 @@ Version 14.0
   being in the shared library can be enabled by defining the
   _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION macro.
 
+  Note that this commit also causes the libc++ shared library to start relying
+  on std::exception::what() being provided. This is due to the fact that the
+  shared library now contains the vtable for std::bad_function_call, which
+  references std::exception::what(). This shouldn't be an issue since that
+  function needs to be available to users in order to use std::bad_function_call
+  before this patch too.
+
   x86_64-apple-apple-darwin
   -------------------------
   Symbol added: __ZNSt3__117bad_function_callD0Ev
@@ -36,13 +43,13 @@ Version 14.0
 
   x86_64-unknown-linux-gnu
   ------------------------
-  Symbol added: _ZNKSt9exception4whatEv
   Symbol added: _ZNSt3__117bad_function_callD0Ev
   Symbol added: _ZNSt3__117bad_function_callD1Ev
   Symbol added: _ZNSt3__117bad_function_callD2Ev
   Symbol added: _ZTINSt3__117bad_function_callE
   Symbol added: _ZTSNSt3__117bad_function_callE
   Symbol added: _ZTVNSt3__117bad_function_callE
+  Added dependency on symbol: _ZNKSt9exception4whatEv
 
 ------------
 Version 12.0
