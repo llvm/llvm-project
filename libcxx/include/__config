@@ -82,6 +82,11 @@
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+// Override the default return value of exception::what() for
+// bad_function_call::what() with a string that is specific to
+// bad_function_call (see http://wg21.link/LWG2233). This is an ABI break
+// because it changes the vtable layout of bad_function_call.
+#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #  define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 // In C++20 and later, don't derive std::plus from std::binary_function,
@@ -127,6 +132,11 @@
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
 # define _LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+
+// Define a key function for `bad_function_call` in the library, to centralize
+// its vtable and typeinfo to libc++ rather than having all other libraries
+// using that class define their own copies.
+#  define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y

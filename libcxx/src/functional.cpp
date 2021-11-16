@@ -14,7 +14,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 bad_function_call::~bad_function_call() noexcept
 {
 }
+#endif
 
+#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 const char*
 bad_function_call::what() const noexcept
 {
