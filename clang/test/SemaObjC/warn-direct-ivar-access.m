@@ -3,39 +3,39 @@
 
 __attribute__((objc_root_class)) @interface MyObject {
 @public
-    id _myMaster;
+    id _myLeader;
     id _isTickledPink; // expected-error {{existing instance variable '_isTickledPink' for property 'isTickledPink'}}
     int _myIntProp;
 }
-@property(retain) id myMaster;
+@property(retain) id myLeader;
 @property(assign) id isTickledPink; // expected-note {{property declared here}}
 @property int myIntProp;
 @end
 
 @implementation MyObject
 
-@synthesize myMaster = _myMaster;
+@synthesize myLeader = _myLeader;
 @synthesize isTickledPink = _isTickledPink; // expected-note {{property synthesized here}}
 @synthesize myIntProp = _myIntProp;
 
 - (void) doSomething {
-    _myMaster = _isTickledPink; // expected-warning {{instance variable '_myMaster' is being directly accessed}} \
+    _myLeader = _isTickledPink; // expected-warning {{instance variable '_myLeader' is being directly accessed}} \
     // expected-warning {{instance variable '_isTickledPink' is being directly accessed}}
 }
 
 - (id) init {
-    _myMaster=0;
-    return _myMaster;
+    _myLeader=0;
+    return _myLeader;
 }
-- (void) dealloc { _myMaster = 0; }
+- (void) dealloc { _myLeader = 0; }
 @end
 
 MyObject * foo ()
 {
 	MyObject* p=0;
-        p.isTickledPink = p.myMaster;	// ok
-	p->_isTickledPink = (*p)._myMaster; // expected-warning {{instance variable '_isTickledPink' is being directly accessed}} \
-        // expected-warning {{instance variable '_myMaster' is being directly accessed}}
+        p.isTickledPink = p.myLeader;	// ok
+	p->_isTickledPink = (*p)._myLeader; // expected-warning {{instance variable '_isTickledPink' is being directly accessed}} \
+        // expected-warning {{instance variable '_myLeader' is being directly accessed}}
         if (p->_myIntProp) // expected-warning {{instance variable '_myIntProp' is being directly accessed}}
           p->_myIntProp = 0; // expected-warning {{instance variable '_myIntProp' is being directly accessed}}
 	return p->_isTickledPink; // expected-warning {{instance variable '_isTickledPink' is being directly accessed}}
