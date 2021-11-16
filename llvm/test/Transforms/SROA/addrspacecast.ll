@@ -303,10 +303,8 @@ define void @select_addrspacecast_gv(i1 %a, i1 %b) {
 
 define void @select_addrspacecast_gv_constexpr(i1 %a, i1 %b) {
 ; CHECK-LABEL: @select_addrspacecast_gv_constexpr(
-; CHECK-NEXT:    [[C:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[C_0_ASC_SROA_CAST:%.*]] = addrspacecast i64* [[C]] to i64 addrspace(2)*
-; CHECK-NEXT:    [[COND_IN:%.*]] = select i1 undef, i64 addrspace(2)* [[C_0_ASC_SROA_CAST]], i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*)
-; CHECK-NEXT:    [[COND:%.*]] = load i64, i64 addrspace(2)* [[COND_IN]], align 8
+; CHECK-NEXT:    [[COND_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i64, i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*), align 8
+; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 undef, i64 undef, i64 [[COND_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret void
 ;
   %c = alloca i64, align 8
