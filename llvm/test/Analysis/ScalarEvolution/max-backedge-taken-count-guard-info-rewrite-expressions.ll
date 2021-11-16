@@ -7,7 +7,7 @@
 define void @rewrite_zext(i32 %n) {
 ; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2305843009213693951
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
 ; CHECK-NEXT:  Predicates:
 ; CHECK:        Loop %loop: Trip multiple is 1
@@ -36,7 +36,7 @@ exit:
 define i32 @rewrite_zext_min_max(i32 %N, i32* %arr) {
 ; CHECK-LABEL:  Determining loop execution counts for: @rewrite_zext_min_max
 ; CHECK-NEXT:   Loop %loop: backedge-taken count is ((-4 + (4 * ((zext i32 (16 umin %N) to i64) /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:   Loop %loop: max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:   Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:   Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((zext i32 (16 umin %N) to i64) /u 4))<nuw><nsw>)<nsw> /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:         Loop %loop: Trip multiple is 1
@@ -134,7 +134,7 @@ exit:
 define void @rewrite_zext_and_base_1(i32 %n) {
 ; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_and_base
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2305843009213693951
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
 ; CHECK-NEXT:  Predicates:
 ; CHECK:        Loop %loop: Trip multiple is 1
@@ -168,7 +168,7 @@ exit:
 define void @rewrite_zext_and_base_2(i32 %n) {
 ; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_and_base
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2305843009213693951
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8 + (8 * ((zext i32 %n to i64) /u 8))<nuw><nsw>)<nsw> /u 8)
 ; CHECK-NEXT:  Predicates:
 ; CHECK:        Loop %loop: Trip multiple is 1
