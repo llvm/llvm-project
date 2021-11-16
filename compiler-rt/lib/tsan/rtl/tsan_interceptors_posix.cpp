@@ -90,6 +90,7 @@ DECLARE_REAL(int, pthread_mutexattr_gettype, void *, void *)
 DECLARE_REAL(int, fflush, __sanitizer_FILE *fp)
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr size)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
+extern "C" int pthread_equal(void *t1, void *t2);
 extern "C" void *pthread_self();
 extern "C" void _exit(int status);
 #if !SANITIZER_NETBSD
@@ -2392,8 +2393,11 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
   ThreadSetName(((TsanInterceptorContext *) ctx)->thr, name)
 
-#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
-  __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
+#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name)         \
+  if (pthread_equal(pthread_self(), reinterpret_cast<void *>(thread))) \
+    COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name);                     \
+  else                                                                 \
+    __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
 
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) BLOCK_REAL(name)
 
