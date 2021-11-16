@@ -191,7 +191,8 @@ struct TraceHeader {
 };
 
 struct TracePart : TraceHeader {
-  static constexpr uptr kByteSize = 256 << 10;
+  // There are a lot of goroutines in Go, so we use smaller parts.
+  static constexpr uptr kByteSize = (SANITIZER_GO ? 128 : 256) << 10;
   static constexpr uptr kSize =
       (kByteSize - sizeof(TraceHeader)) / sizeof(Event);
   // TraceAcquire does a fast event pointer overflow check by comparing
