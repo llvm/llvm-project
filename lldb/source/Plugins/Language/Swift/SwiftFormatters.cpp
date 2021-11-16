@@ -277,17 +277,16 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       return false;
 
     uint64_t buffer[2] = {raw0, raw1};
-    DataExtractor data(buffer, count, process->GetByteOrder(), ptrSize);
 
     StringPrinter::ReadBufferAndDumpToStreamOptions options(read_options);
-    options.SetData(data);
+    options.SetData(
+        DataExtractor(buffer, count, process->GetByteOrder(), ptrSize));
     options.SetStream(&stream);
     options.SetSourceSize(count);
     options.SetBinaryZeroIsTerminator(false);
     options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
     return StringPrinter::ReadBufferAndDumpToStream<
         StringPrinter::StringElementType::UTF8>(options);
-
   }
 
   uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
