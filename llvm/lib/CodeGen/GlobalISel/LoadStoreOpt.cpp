@@ -375,9 +375,6 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
     ConstantVals.emplace_back(MaybeCst->Value);
   }
 
-  Register WideReg;
-  auto *WideMMO =
-      MF->getMachineMemOperand(&FirstStore->getMMO(), 0, WideValueTy);
   if (ConstantVals.empty()) {
     // Mimic the SDAG behaviour here and don't try to do anything for unknown
     // values. In future, we should also support the cases of loads and
@@ -395,11 +392,12 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
     // wider one.
     WideConst.insertBits(ConstantVals[Idx], Idx * SmallTy.getSizeInBits());
   }
-  WideReg = Builder.buildConstant(WideValueTy, WideConst).getReg(0);
+  Register WideReg = Builder.buildConstant(WideValueTy, WideConst).getReg(0);
   LLVM_DEBUG({
     dbgs() << "Created merged store: "
            << *Builder.buildStore(WideReg, FirstStore->getPointerReg(),
-                                  *WideMMO);
+                                  *MF->getMachineMemOperand(
+                                      &FirstStore->getMMO(), 0, WideValueTy));
   });
   NumStoresMerged += Stores.size();
 
