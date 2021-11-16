@@ -1,6 +1,21 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.13.4)
-project(Runtimes C CXX ASM)
+
+# Add path for custom and the LLVM build's modules to the CMake module path.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
+)
+
+# We may have an incomplete toolchain - do language support tests without
+# linking.
+include(EnableLanguageNolink)
+project(Runtimes LANGUAGES NONE)
+llvm_enable_language_nolink(C CXX ASM)
 
 set(LLVM_ALL_RUNTIMES "compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
@@ -27,14 +42,6 @@ endfunction()
 
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-
-# Add path for custom and the LLVM build's modules to the CMake module path.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
-)
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
@@ -88,14 +95,29 @@ if(APPLE)
 endif()
 
 include(CheckLibraryExists)
+include(CheckLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+
+
+check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
+if (NOT LLVM_RUNTIMES_LINKING_WORKS)
+  # The compiler driver may be implicitly trying to link against libunwind, which
+  # might not work if libunwind doesn't exist yet. Try to check if
+  # --unwindlib=none is supported, and use that if possible.
+  # Don't add this if not necessary to fix linking, as it can break using
+  # e.g. ASAN/TSAN.
+  llvm_check_linker_flag("--unwindlib=none" LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+  if (LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+  endif()
+endif()
 
 # Disable use of the installed C++ standard library when building runtimes.
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-check_c_compiler_flag(-nostdlib++ LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
+llvm_check_linker_flag(-nostdlib++ LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
 if (LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
