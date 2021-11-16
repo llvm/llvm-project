@@ -15,6 +15,7 @@
 #include "Delta.h"
 #include "ReducerWorkItem.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -31,6 +32,11 @@ static cl::opt<unsigned int> StartingGranularityLevel(
     "starting-granularity-level",
     cl::desc("Number of times to divide chunks prior to first test"));
 
+static cl::opt<bool> TmpFilesAsBitcode(
+    "write-tmp-files-as-bitcode",
+    cl::desc("Write temporary files as bitcode, instead of textual IR"),
+    cl::init(false));
+
 void writeOutput(ReducerWorkItem &M, llvm::StringRef Message);
 
 bool isReduced(ReducerWorkItem &M, TestRunner &Test,
@@ -38,12 +44,26 @@ bool isReduced(ReducerWorkItem &M, TestRunner &Test,
   // Write ReducerWorkItem to tmp file
   int FD;
   std::error_code EC = sys::fs::createTemporaryFile(
-      "llvm-reduce", M.isMIR() ? "mir" : "ll", FD, CurrentFilepath);
+      "llvm-reduce", M.isMIR() ? "mir" : (TmpFilesAsBitcode ? "bc" : "ll"), FD,
+      CurrentFilepath);
   if (EC) {
     errs() << "Error making unique filename: " << EC.message() << "!\n";
     exit(1);
   }
 
+  if (TmpFilesAsBitcode) {
+    llvm::raw_fd_ostream OutStream(FD, true);
+    WriteBitcodeToFile(M, OutStream);
+    OutStream.close();
+    if (OutStream.has_error()) {
+      errs() << "Error emitting bitcode to file '" << CurrentFilepath << "'!\n";
+      sys::fs::remove(CurrentFilepath);
+      exit(1);
+    }
+    bool Res = Test.run(CurrentFilepath);
+    sys::fs::remove(CurrentFilepath);
+    return Res;
+  }
   ToolOutputFile Out(CurrentFilepath, FD);
   M.print(Out.os(), /*AnnotationWriter=*/nullptr);
   Out.os().close();
