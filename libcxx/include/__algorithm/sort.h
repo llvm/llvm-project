@@ -18,6 +18,10 @@
 #include <__utility/swap.h>
 #include <memory>
 
+#if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
+#  include <__algorithm/shuffle.h>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -529,12 +533,13 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-    if (__libcpp_is_constant_evaluated()) {
-        _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
-    } else {
-        _VSTD::__sort<_Comp_ref>(_VSTD::__unwrap_iter(__first), _VSTD::__unwrap_iter(__last), _Comp_ref(__comp));
-    }
+  _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last);
+  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
+  if (__libcpp_is_constant_evaluated()) {
+    _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
+  } else {
+    _VSTD::__sort<_Comp_ref>(_VSTD::__unwrap_iter(__first), _VSTD::__unwrap_iter(__last), _Comp_ref(__comp));
+  }
 }
 
 template <class _RandomAccessIterator>
