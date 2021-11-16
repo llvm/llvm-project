@@ -1828,8 +1828,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->AddExtraClangArgs(DeserializedArgs);
   if (target)
     swift_ast_sp->AddUserClangArgs(*target);
-  else if (auto &global_target_properties = Target::GetGlobalProperties())
-    swift_ast_sp->AddUserClangArgs(*global_target_properties);
+  else
+    swift_ast_sp->AddUserClangArgs(Target::GetGlobalProperties());
 
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
