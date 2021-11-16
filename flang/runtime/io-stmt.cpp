@@ -25,17 +25,11 @@ bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
   return false;
 }
 
-bool IoStatementBase::Emit(const char *, std::size_t) {
-  return false;
-}
+bool IoStatementBase::Emit(const char *, std::size_t) { return false; }
 
-bool IoStatementBase::Emit(const char16_t *, std::size_t) {
-  return false;
-}
+bool IoStatementBase::Emit(const char16_t *, std::size_t) { return false; }
 
-bool IoStatementBase::Emit(const char32_t *, std::size_t) {
-  return false;
-}
+bool IoStatementBase::Emit(const char32_t *, std::size_t) { return false; }
 
 std::size_t IoStatementBase::GetNextInputBytes(const char *&p) {
   p = nullptr;
@@ -71,9 +65,7 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, char *, std::size_t) {
   return false;
 }
 
-bool IoStatementBase::Inquire(InquiryKeywordHash, bool &) {
-  return false;
-}
+bool IoStatementBase::Inquire(InquiryKeywordHash, bool &) { return false; }
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t, bool &) {
   return false;
@@ -1248,9 +1240,8 @@ InquireIOLengthState::InquireIOLengthState(
     const char *sourceFile, int sourceLine)
     : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
 
-bool InquireIOLengthState::Emit(
-    const char *, std::size_t n, std::size_t elementBytes) {
-  bytes_ += n * elementBytes;
+bool InquireIOLengthState::Emit(const char *, std::size_t n, std::size_t) {
+  bytes_ += n;
   return true;
 }
 

@@ -12,6 +12,7 @@
 
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
@@ -19,6 +20,7 @@
 #include <cstring>
 #include <string_view>
 
+using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
 
 struct ExternalIOTests : public CrashHandlerFixture {};
@@ -44,7 +46,7 @@ TEST(ExternalIOTests, TestDirectUnformatted) {
   // INQUIRE(IOLENGTH=) j
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
   ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-      io, reinterpret_cast<const char *>(&buffer), 1, recl))
+      io, reinterpret_cast<const char *>(&buffer), recl, 1))
       << "OutputUnformattedBlock() for InquireIoLength";
   ASSERT_EQ(IONAME(GetIoLength)(io), recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
@@ -171,8 +173,23 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
   for (int j{1}; j <= 3; ++j) {
     ASSERT_TRUE(IONAME(OutputUnformattedBlock)(
-        io, reinterpret_cast<const char *>(&buffer), 1, recl))
+        io, reinterpret_cast<const char *>(&buffer), recl, 1))
         << "OutputUnformattedBlock() for InquireIoLength";
+  }
+  ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for InquireIoLength";
+
+  // INQUIRE(IOLENGTH=) j, ...
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(TypeCode{CFI_type_int64_t}, recl, &buffer, 0);
+  desc.Dump(stderr);
+  desc.Check();
+  io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
+  for (int j{1}; j <= 3; ++j) {
+    ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
+        << "OutputDescriptor() for InquireIoLength";
   }
   ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
