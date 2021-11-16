@@ -131,6 +131,10 @@ set(files
   __concepts/swappable.h
   __concepts/totally_ordered.h
   __config
+  __coroutine/coroutine_handle.h
+  __coroutine/coroutine_traits.h
+  __coroutine/noop_coroutine_handle.h
+  __coroutine/trivial_awaitables.h
   __debug
   __errc
   __format/format_arg.h
@@ -323,6 +327,7 @@ set(files
   complex.h
   concepts
   condition_variable
+  coroutine
   csetjmp
   csignal
   cstdarg

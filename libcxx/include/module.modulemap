@@ -417,6 +417,19 @@ module std [system] {
     header "condition_variable"
     export *
   }
+  module coroutine {
+    requires coroutines
+    header "coroutine"
+    export compare
+    export *
+
+    module __coroutine {
+      module coroutine_handle             { private header "__coroutine/coroutine_handle.h"             }
+      module coroutine_traits             { private header "__coroutine/coroutine_traits.h"             }
+      module trivial_awaitables           { private header "__coroutine/trivial_awaitables.h"           }
+      module noop_coroutine_handle        { private header "__coroutine/noop_coroutine_handle.h"        }
+    }
+  }
   module deque {
     header "deque"
     export initializer_list
