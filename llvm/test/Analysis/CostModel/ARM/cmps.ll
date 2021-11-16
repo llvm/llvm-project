@@ -8,6 +8,8 @@
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE-SIZE
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define i32 @cmps() {
 ; CHECK-MVE-RECIP-LABEL: 'cmps'
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -24,7 +26,7 @@ define i32 @cmps() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a12 = fcmp oge <2 x double> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = icmp eq i32* undef, undef
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %q = icmp eq <4 x i32*> undef, undef
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %q = icmp eq <4 x i32*> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-RECIP-LABEL: 'cmps'
@@ -42,7 +44,7 @@ define i32 @cmps() {
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %a12 = fcmp oge <2 x double> undef, undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = icmp eq i32* undef, undef
-; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %q = icmp eq <4 x i32*> undef, undef
+; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %q = icmp eq <4 x i32*> undef, undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-BASE-RECIP-LABEL: 'cmps'
@@ -60,7 +62,7 @@ define i32 @cmps() {
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %a12 = fcmp oge <2 x double> undef, undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = icmp eq i32* undef, undef
-; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %q = icmp eq <4 x i32*> undef, undef
+; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %q = icmp eq <4 x i32*> undef, undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8R-RECIP-LABEL: 'cmps'
@@ -78,7 +80,7 @@ define i32 @cmps() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a12 = fcmp oge <2 x double> undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %p = icmp eq i32* undef, undef
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %q = icmp eq <4 x i32*> undef, undef
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %q = icmp eq <4 x i32*> undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-MVE-SIZE-LABEL: 'cmps'
@@ -182,9 +184,9 @@ define void @minmax() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-RECIP-LABEL: 'minmax'
@@ -197,9 +199,9 @@ define void @minmax() {
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
-; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
-; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
+; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
+; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-RECIP-LABEL: 'minmax'
@@ -212,9 +214,9 @@ define void @minmax() {
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
-; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
-; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
+; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
+; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-RECIP-LABEL: 'minmax'
@@ -227,9 +229,9 @@ define void @minmax() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE-SIZE-LABEL: 'minmax'
@@ -242,7 +244,7 @@ define void @minmax() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
@@ -257,7 +259,7 @@ define void @minmax() {
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
@@ -272,7 +274,7 @@ define void @minmax() {
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
-; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
+; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
@@ -289,7 +291,7 @@ define void @minmax() {
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt i32* undef, undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, i32* undef, i32* undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x i32*> undef, undef
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s6 = select <4 x i1> %c6, <4 x i32*> undef, <4 x i32*> undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c1 = icmp slt i8 undef, undef
