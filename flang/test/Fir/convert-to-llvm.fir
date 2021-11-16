@@ -521,6 +521,57 @@ func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
 
 // -----
 
+// Test FIR complex compare conversion
+
+func @compare_complex_eq(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+  %r = fir.cmpc "oeq", %a, %b : !fir.complex<8>
+  return %r : i1
+}
+
+// CHECK-LABEL: llvm.func @compare_complex_eq
+// CHECK-SAME: [[A:%.*]]: !llvm.struct<(f64, f64)>,
+// CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "oeq" [[RA]], [[RB]] : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "oeq" [[IA]], [[IB]] : f64
+// CHECK: [[RES:%.*]] = llvm.and [[RESR]], [[RESI]] : i1
+// CHECK: return [[RES]] : i1
+
+func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+  %r = fir.cmpc "une", %a, %b : !fir.complex<8>
+  return %r : i1
+}
+
+// CHECK-LABEL: llvm.func @compare_complex_ne
+// CHECK-SAME: [[A:%.*]]: !llvm.struct<(f64, f64)>,
+// CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "une" [[RA]], [[RB]] : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "une" [[IA]], [[IB]] : f64
+// CHECK: [[RES:%.*]] = llvm.or [[RESR]], [[RESI]] : i1
+// CHECK: return [[RES]] : i1
+
+func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+  %r = fir.cmpc "ogt", %a, %b : !fir.complex<8>
+  return %r : i1
+}
+
+// CHECK-LABEL: llvm.func @compare_complex_other
+// CHECK-SAME: [[A:%.*]]: !llvm.struct<(f64, f64)>,
+// CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK: [[RESR:%.*]] = llvm.fcmp "ogt" [[RA]], [[RB]] : f64
+// CHECK: return [[RESR]] : i1
+
+// -----
+
 // Test `fir.convert` operation conversion from Float type.
 
 func @convert_from_float(%arg0 : f32) {
