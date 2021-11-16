@@ -132,7 +132,7 @@ public:
       return Op;
     }
 
-    iterator skipBytes(uint64_t Add) {
+    iterator skipBytes(uint64_t Add) const {
       return iterator(Expr, Op.EndOffset + Add);
     }
 
