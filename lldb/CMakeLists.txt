@@ -35,8 +35,10 @@ if (LLDB_ENABLE_PYTHON)
     "Path where Python modules are installed, relative to install prefix")
   set(cachestring_LLDB_PYTHON_EXE_RELATIVE_PATH
     "Path to python interpreter exectuable, relative to install prefix")
+  set(cachestring_LLDB_PYTHON_EXT_SUFFIX
+    "Filename extension for native code python modules")
 
-  foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH)
+  foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH LLDB_PYTHON_EXT_SUFFIX)
     if(NOT DEFINED ${var} AND NOT CMAKE_CROSSCOMPILING)
       execute_process(
         COMMAND ${Python3_EXECUTABLE}

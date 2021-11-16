@@ -149,15 +149,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   else()
     set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
   endif()
-  if(WIN32)
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb_d.pyd")
-    else()
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.pyd")
-    endif()
-  else()
-    set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.so")
-  endif()
+  set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb${LLDB_PYTHON_EXT_SUFFIX}")
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 

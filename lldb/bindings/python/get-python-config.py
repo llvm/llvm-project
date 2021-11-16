@@ -39,7 +39,8 @@ def main():
                         print("tried:", e, file=sys.stderr)
                     print("sys.prefix:", sys.prefix, file=sys.stderr)
                     sys.exit(1)
-
+    elif args.variable_name == "LLDB_PYTHON_EXT_SUFFIX":
+        print(sysconfig.get_config_var('EXT_SUFFIX'))
     else:
         parser.error(f"unknown variable {args.variable_name}")
 
