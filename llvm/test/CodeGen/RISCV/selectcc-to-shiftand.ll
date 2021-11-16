@@ -117,14 +117,35 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 
 ; Compare if positive and select variable or zero.
 define i32 @pos_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
-; CHECK-LABEL: pos_sel_variable_and_zero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    bgez a0, .LBB6_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, zero
-; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: pos_sel_variable_and_zero:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bgez a0, .LBB6_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:  .LBB6_2:
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: pos_sel_variable_and_zero:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    bgez a0, .LBB6_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:  .LBB6_2:
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: pos_sel_variable_and_zero:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    srai a0, a0, 31
+; RV32ZBB-NEXT:    andn a0, a1, a0
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: pos_sel_variable_and_zero:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    srai a0, a0, 31
+; RV64ZBB-NEXT:    andn a0, a1, a0
+; RV64ZBB-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 %b, i32 0
   ret i32 %retval
