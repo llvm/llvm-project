@@ -118,6 +118,7 @@ void localVariableInitTest() {
 
 class CtorInitializerListTest {
   RegularException exc;
+  RegularException exc2{};
 
   CtorInitializerListTest() : exc(RegularException()) {}
 

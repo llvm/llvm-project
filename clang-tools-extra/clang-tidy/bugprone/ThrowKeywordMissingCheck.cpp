@@ -26,7 +26,7 @@ void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
               isSameOrDerivedFrom(matchesName("[Ee]xception|EXCEPTION")))),
           unless(anyOf(hasAncestor(stmt(
                            anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),
-                       hasAncestor(varDecl()),
+                       hasAncestor(decl(anyOf(varDecl(), fieldDecl()))),
                        allOf(hasAncestor(CtorInitializerList),
                              unless(hasAncestor(cxxCatchStmt()))))))
           .bind("temporary-exception-not-thrown"),
