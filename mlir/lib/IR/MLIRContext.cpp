@@ -772,14 +772,14 @@ void AbstractOperation::insert(
          "context");
 
   // Register the attribute names of this operation.
-  MutableArrayRef<Identifier> cachedAttrNames;
+  MutableArrayRef<StringAttr> cachedAttrNames;
   if (!attrNames.empty()) {
-    cachedAttrNames = MutableArrayRef<Identifier>(
-        impl.abstractDialectSymbolAllocator.Allocate<Identifier>(
+    cachedAttrNames = MutableArrayRef<StringAttr>(
+        impl.abstractDialectSymbolAllocator.Allocate<StringAttr>(
             attrNames.size()),
         attrNames.size());
     for (unsigned i : llvm::seq<unsigned>(0, attrNames.size()))
-      new (&cachedAttrNames[i]) Identifier(Identifier::get(attrNames[i], ctx));
+      new (&cachedAttrNames[i]) StringAttr(StringAttr::get(ctx, attrNames[i]));
   }
 
   // Register the information for this operation.
@@ -801,8 +801,8 @@ AbstractOperation::AbstractOperation(
     VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
     detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
-    ArrayRef<Identifier> attrNames)
-    : name(Identifier::get(name, dialect.getContext())), dialect(dialect),
+    ArrayRef<StringAttr> attrNames)
+    : name(StringAttr::get(dialect.getContext(), name)), dialect(dialect),
       typeID(typeID), interfaceMap(std::move(interfaceMap)),
       foldHookFn(std::move(foldHook)),
       getCanonicalizationPatternsFn(std::move(getCanonicalizationPatterns)),

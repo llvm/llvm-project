@@ -188,7 +188,7 @@ Attribute DictionaryAttr::get(StringRef name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
   return it.second ? it.first->second : Attribute();
 }
-Attribute DictionaryAttr::get(Identifier name) const {
+Attribute DictionaryAttr::get(StringAttr name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
   return it.second ? it.first->second : Attribute();
 }
@@ -198,7 +198,7 @@ Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
   return it.second ? *it.first : Optional<NamedAttribute>();
 }
-Optional<NamedAttribute> DictionaryAttr::getNamed(Identifier name) const {
+Optional<NamedAttribute> DictionaryAttr::getNamed(StringAttr name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
   return it.second ? *it.first : Optional<NamedAttribute>();
 }
@@ -207,7 +207,7 @@ Optional<NamedAttribute> DictionaryAttr::getNamed(Identifier name) const {
 bool DictionaryAttr::contains(StringRef name) const {
   return impl::findAttrSorted(begin(), end(), name).second;
 }
-bool DictionaryAttr::contains(Identifier name) const {
+bool DictionaryAttr::contains(StringAttr name) const {
   return impl::findAttrSorted(begin(), end(), name).second;
 }
 
@@ -394,7 +394,7 @@ bool BoolAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 Identifier dialect, StringRef attrData,
+                                 StringAttr dialect, StringRef attrData,
                                  Type type) {
   if (!Dialect::isValidNamespace(dialect.strref()))
     return emitError() << "invalid dialect namespace '" << dialect << "'";
@@ -1247,7 +1247,7 @@ bool OpaqueElementsAttr::decode(ElementsAttr &result) {
 
 LogicalResult
 OpaqueElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                           Identifier dialect, StringRef value,
+                           StringAttr dialect, StringRef value,
                            ShapedType type) {
   if (!Dialect::isValidNamespace(dialect.strref()))
     return emitError() << "invalid dialect namespace '" << dialect << "'";

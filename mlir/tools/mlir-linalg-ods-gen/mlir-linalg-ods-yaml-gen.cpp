@@ -1092,7 +1092,7 @@ int main(int argc, char **argv) {
     }
 
     genContext.setLoc(NameLoc::get(
-        Identifier::get(opConfig.metadata->cppClassName, &mlirContext)));
+        StringAttr::get(&mlirContext, opConfig.metadata->cppClassName)));
     if (failed(generateOp(opConfig, genContext))) {
       return 1;
     }

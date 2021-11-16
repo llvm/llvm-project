@@ -309,7 +309,7 @@ def AffineForOp : Affine_Op<"for",
     void setStep(int64_t step) {
       assert(step > 0 && "step has to be a positive integer constant");
       auto *context = getLowerBoundMap().getContext();
-      (*this)->setAttr(Identifier::get(getStepAttrName(), context),
+      (*this)->setAttr(StringAttr::get(context, getStepAttrName()),
                        IntegerAttr::get(IndexType::get(context), step));
     }
 
@@ -815,7 +815,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
     NamedAttribute getAffineMapAttrForMemRef(Value mref) {
       assert(mref == memref() &&
              "Expected mref argument to match memref operand");
-      return {Identifier::get(getMapAttrName(), getContext()),
+      return {StringAttr::get(getContext(), getMapAttrName()),
         getAffineMapAttr()};
     }
 

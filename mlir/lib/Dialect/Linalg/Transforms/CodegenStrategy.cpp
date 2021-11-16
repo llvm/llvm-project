@@ -35,12 +35,12 @@ void mlir::linalg::CodegenStrategy::configurePassPipeline(
     const std::unique_ptr<Transformation> &t =
         transformationSequence[stepCount];
     std::string currentStr = std::to_string(stepCount);
-    auto currentState = Identifier::get(currentStr, context);
+    auto currentState = StringAttr::get(context, currentStr);
     std::string nextStr = std::to_string(stepCount + 1);
-    auto nextState = Identifier::get(nextStr, context);
+    auto nextState = StringAttr::get(context, nextStr);
     auto filter = (currentState.str() == std::to_string(0))
                       ? linalg::LinalgTransformationFilter(
-                            t->filter, ArrayRef<Identifier>{}, nextState)
+                            t->filter, ArrayRef<StringAttr>{}, nextState)
                       : linalg::LinalgTransformationFilter(
                             t->filter, currentState, nextState);
     t->addToPassPipeline(pm, filter);

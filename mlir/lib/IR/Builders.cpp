@@ -19,8 +19,8 @@
 
 using namespace mlir;
 
-Identifier Builder::getIdentifier(const Twine &str) {
-  return Identifier::get(str, context);
+StringAttr Builder::getIdentifier(const Twine &str) {
+  return getStringAttr(str);
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,7 +83,7 @@ NoneType Builder::getNoneType() { return NoneType::get(context); }
 //===----------------------------------------------------------------------===//
 
 NamedAttribute Builder::getNamedAttr(StringRef name, Attribute val) {
-  return NamedAttribute(getIdentifier(name), val);
+  return NamedAttribute(getStringAttr(name), val);
 }
 
 UnitAttr Builder::getUnitAttr() { return UnitAttr::get(context); }

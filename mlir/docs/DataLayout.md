@@ -102,7 +102,7 @@ conceptually a collection of key-value pairs called data layout specification
 _entries_. Data layout specification attributes implement the
 `DataLayoutSpecInterface`, described below. Each entry is itself an attribute
 that implements the `DataLayoutEntryInterface`. Entries have a key, either a
-`Type` or an `Identifier`, and a value. Keys are used to associate entries with
+`Type` or a `StringAttr`, and a value. Keys are used to associate entries with
 specific types or dialects: when handling a data layout properties request, a
 type or a dialect can only see the specification entries relevant to them and
 must go through the supplied `DataLayout` object for any recursive query. This

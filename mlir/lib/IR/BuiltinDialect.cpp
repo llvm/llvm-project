@@ -153,7 +153,7 @@ static LogicalResult verify(FuncOp op) {
 /// from this function to dest.
 void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
   // Add the attributes of this function to dest.
-  llvm::MapVector<Identifier, Attribute> newAttrs;
+  llvm::MapVector<StringAttr, Attribute> newAttrs;
   for (const auto &attr : dest->getAttrs())
     newAttrs.insert(attr);
   for (const auto &attr : (*this)->getAttrs())

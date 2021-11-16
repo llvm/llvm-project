@@ -237,10 +237,10 @@ TEST(NamedAttrListTest, TestAppendAssign) {
 
   {
     auto it = attrs.begin();
-    EXPECT_EQ(it->first, b.getIdentifier("foo"));
+    EXPECT_EQ(it->first, b.getStringAttr("foo"));
     EXPECT_EQ(it->second, b.getStringAttr("bar"));
     ++it;
-    EXPECT_EQ(it->first, b.getIdentifier("baz"));
+    EXPECT_EQ(it->first, b.getStringAttr("baz"));
     EXPECT_EQ(it->second, b.getStringAttr("boo"));
   }
 
@@ -261,10 +261,10 @@ TEST(NamedAttrListTest, TestAppendAssign) {
 
   {
     auto it = attrs.begin();
-    EXPECT_EQ(it->first, b.getIdentifier("foo"));
+    EXPECT_EQ(it->first, b.getStringAttr("foo"));
     EXPECT_EQ(it->second, b.getStringAttr("f"));
     ++it;
-    EXPECT_EQ(it->first, b.getIdentifier("zoo"));
+    EXPECT_EQ(it->first, b.getStringAttr("zoo"));
     EXPECT_EQ(it->second, b.getStringAttr("z"));
   }
 

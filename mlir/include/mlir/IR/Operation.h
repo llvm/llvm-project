@@ -320,19 +320,21 @@ public:
   }
 
   /// Return the specified attribute if present, null otherwise.
-  Attribute getAttr(Identifier name) { return attrs.get(name); }
+  Attribute getAttr(StringAttr name) { return attrs.get(name); }
   Attribute getAttr(StringRef name) { return attrs.get(name); }
 
-  template <typename AttrClass> AttrClass getAttrOfType(Identifier name) {
+  template <typename AttrClass>
+  AttrClass getAttrOfType(StringAttr name) {
     return getAttr(name).dyn_cast_or_null<AttrClass>();
   }
-  template <typename AttrClass> AttrClass getAttrOfType(StringRef name) {
+  template <typename AttrClass>
+  AttrClass getAttrOfType(StringRef name) {
     return getAttr(name).dyn_cast_or_null<AttrClass>();
   }
 
   /// Return true if the operation has an attribute with the provided name,
   /// false otherwise.
-  bool hasAttr(Identifier name) { return attrs.contains(name); }
+  bool hasAttr(StringAttr name) { return attrs.contains(name); }
   bool hasAttr(StringRef name) { return attrs.contains(name); }
   template <typename AttrClass, typename NameT>
   bool hasAttrOfType(NameT &&name) {
@@ -342,19 +344,19 @@ public:
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
-  void setAttr(Identifier name, Attribute value) {
+  void setAttr(StringAttr name, Attribute value) {
     NamedAttrList attributes(attrs);
     if (attributes.set(name, value) != value)
       attrs = attributes.getDictionary(getContext());
   }
   void setAttr(StringRef name, Attribute value) {
-    setAttr(Identifier::get(name, getContext()), value);
+    setAttr(StringAttr::get(getContext(), name), value);
   }
 
   /// Remove the attribute with the specified name if it exists. Return the
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
-  Attribute removeAttr(Identifier name) {
+  Attribute removeAttr(StringAttr name) {
     NamedAttrList attributes(attrs);
     Attribute removedAttr = attributes.erase(name);
     if (removedAttr)
@@ -362,7 +364,7 @@ public:
     return removedAttr;
   }
   Attribute removeAttr(StringRef name) {
-    return removeAttr(Identifier::get(name, getContext()));
+    return removeAttr(StringAttr::get(getContext(), name));
   }
 
   /// A utility iterator that filters out non-dialect attributes.

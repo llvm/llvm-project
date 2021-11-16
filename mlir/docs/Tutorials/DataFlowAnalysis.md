@@ -137,7 +137,7 @@ struct MetadataLatticeValue {
 
   /// Our value represents the combined metadata, which is originally a
   /// DictionaryAttr, so we use a map.
-  DenseMap<Identifier, Attribute> metadata;
+  DenseMap<StringAttr, Attribute> metadata;
 };
 ```
 

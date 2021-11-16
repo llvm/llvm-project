@@ -251,7 +251,7 @@ void FunctionType::walkImmediateSubElements(
 
 /// Verify the construction of an opaque type.
 LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 Identifier dialect, StringRef typeData) {
+                                 StringAttr dialect, StringRef typeData) {
   if (!Dialect::isValidNamespace(dialect.strref()))
     return emitError() << "invalid dialect namespace '" << dialect << "'";
 

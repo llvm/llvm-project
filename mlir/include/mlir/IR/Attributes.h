@@ -136,10 +136,10 @@ inline ::llvm::hash_code hash_value(Attribute arg) {
 // NamedAttribute
 //===----------------------------------------------------------------------===//
 
-/// NamedAttribute is combination of a name, represented by an Identifier, and a
+/// NamedAttribute is combination of a name, represented by a StringAttr, and a
 /// value, represented by an Attribute. The attribute pointer should always be
 /// non-null.
-using NamedAttribute = std::pair<Identifier, Attribute>;
+using NamedAttribute = std::pair<StringAttr, Attribute>;
 
 bool operator<(const NamedAttribute &lhs, const NamedAttribute &rhs);
 bool operator<(const NamedAttribute &lhs, StringRef rhs);

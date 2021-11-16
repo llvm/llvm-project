@@ -8,7 +8,6 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -152,7 +151,7 @@ TEST(DenseSplatTest, StringSplat) {
   MLIRContext context;
   context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(Identifier::get("test", &context), "string");
+      OpaqueType::get(StringAttr::get(&context, "test"), "string");
   StringRef value = "test-string";
   testSplat(stringType, value);
 }
@@ -161,7 +160,7 @@ TEST(DenseSplatTest, StringAttrSplat) {
   MLIRContext context;
   context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(Identifier::get("test", &context), "string");
+      OpaqueType::get(StringAttr::get(&context, "test"), "string");
   Attribute stringAttr = StringAttr::get("test-string", stringType);
   testSplat(stringType, stringAttr);
 }
@@ -211,7 +210,7 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   IntegerType intTy = IntegerType::get(&context, 32);
   FloatType floatTy = FloatType::getF32(&context);
-  Type stringTy = OpaqueType::get(Identifier::get("test", &context), "string");
+  Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
   ShapedType tensorF32 = RankedTensorType::get({2, 2}, floatTy);

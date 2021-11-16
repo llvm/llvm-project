@@ -549,7 +549,7 @@ class OpaqueType<string dialect, string name, string summary>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
          summary, "::mlir::OpaqueType">,
     BuildableType<"::mlir::OpaqueType::get("
-                  "$_builder.getIdentifier(\"" # dialect # "\"), \""
+                  "$_builder.getStringAttr(\"" # dialect # "\"), \""
                   # name # "\")">;
 
 // Function Type

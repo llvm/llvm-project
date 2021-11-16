@@ -25,9 +25,6 @@ class IntegerType;
 class StringAttr;
 class TypeRange;
 
-// TODO: Remove this when all usages have been replaced with StringAttr.
-using Identifier = StringAttr;
-
 //===----------------------------------------------------------------------===//
 // FloatType
 //===----------------------------------------------------------------------===//

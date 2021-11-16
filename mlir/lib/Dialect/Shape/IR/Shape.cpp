@@ -207,7 +207,7 @@ LogicalResult ShapeDialect::verifyOperationAttribute(Operation *op,
     if (auto arr = attribute.second.dyn_cast<ArrayAttr>()) {
       // Verify all entries are function libraries and mappings in libraries
       // refer to unique ops.
-      DenseSet<Identifier> key;
+      DenseSet<StringAttr> key;
       for (auto it : arr) {
         if (!it.isa<SymbolRefAttr>())
           return op->emitError(

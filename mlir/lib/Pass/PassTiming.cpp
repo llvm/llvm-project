@@ -52,7 +52,7 @@ struct PassTiming : public PassInstrumentation {
   // Pipeline
   //===--------------------------------------------------------------------===//
 
-  void runBeforePipeline(Identifier name,
+  void runBeforePipeline(StringAttr name,
                          const PipelineParentInfo &parentInfo) override {
     auto tid = llvm::get_threadid();
     auto &activeTimers = activeThreadTimers[tid];
@@ -73,7 +73,7 @@ struct PassTiming : public PassInstrumentation {
     }));
   }
 
-  void runAfterPipeline(Identifier, const PipelineParentInfo &) override {
+  void runAfterPipeline(StringAttr, const PipelineParentInfo &) override {
     auto &activeTimers = activeThreadTimers[llvm::get_threadid()];
     assert(!activeTimers.empty() && "expected active timer");
     activeTimers.pop_back();

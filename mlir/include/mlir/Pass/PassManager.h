@@ -34,9 +34,6 @@ class PassInstrumentation;
 class PassInstrumentor;
 class StringAttr;
 
-// TODO: Remove this when all usages have been replaced with StringAttr.
-using Identifier = StringAttr;
-
 namespace detail {
 struct OpPassManagerImpl;
 class OpToOpPassAdaptor;
@@ -54,7 +51,7 @@ struct PassExecutionState;
 class OpPassManager {
 public:
   enum class Nesting { Implicit, Explicit };
-  OpPassManager(Identifier name, Nesting nesting = Nesting::Explicit);
+  OpPassManager(StringAttr name, Nesting nesting = Nesting::Explicit);
   OpPassManager(StringRef name, Nesting nesting = Nesting::Explicit);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
@@ -78,7 +75,7 @@ public:
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
-  OpPassManager &nest(Identifier nestedName);
+  OpPassManager &nest(StringAttr nestedName);
   OpPassManager &nest(StringRef nestedName);
   template <typename OpT> OpPassManager &nest() {
     return nest(OpT::getOperationName());
@@ -101,7 +98,7 @@ public:
   size_t size() const;
 
   /// Return the operation name that this pass manager operates on.
-  Identifier getOpName(MLIRContext &context) const;
+  StringAttr getOpName(MLIRContext &context) const;
 
   /// Return the operation name that this pass manager operates on.
   StringRef getOpName() const;

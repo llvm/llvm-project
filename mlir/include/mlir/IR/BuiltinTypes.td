@@ -600,13 +600,13 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
     ```
   }];
   let parameters = (ins
-    "Identifier":$dialectNamespace,
+    "StringAttr":$dialectNamespace,
     StringRefParameter<"">:$typeData
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "Identifier":$dialectNamespace, CArg<"StringRef", "{}">:$typeData
+      "StringAttr":$dialectNamespace, CArg<"StringRef", "{}">:$typeData
     ), [{
       return $_get(dialectNamespace.getContext(), dialectNamespace, typeData);
     }]>

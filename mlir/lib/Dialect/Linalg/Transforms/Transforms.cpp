@@ -49,13 +49,13 @@ const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
-    ArrayRef<Identifier> matchDisjunction, Optional<Identifier> replacement)
+    ArrayRef<StringAttr> matchDisjunction, Optional<StringAttr> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement), matchByDefault(false) {}
 
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
-    FilterFunction f, ArrayRef<Identifier> matchDisjunction,
-    Optional<Identifier> replacement)
+    FilterFunction f, ArrayRef<StringAttr> matchDisjunction,
+    Optional<StringAttr> replacement)
     : filters(),
       matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement), matchByDefault(false) {
@@ -101,10 +101,10 @@ void mlir::linalg::LinalgTransformationFilter::
                                       Operation *op) const {
   if (replacement.hasValue())
     op->setAttr(LinalgTransforms::kLinalgTransformMarker,
-                rewriter.getStringAttr(replacement.getValue().strref()));
+                replacement.getValue());
   else
-    op->removeAttr(Identifier::get(LinalgTransforms::kLinalgTransformMarker,
-                                   rewriter.getContext()));
+    op->removeAttr(
+        rewriter.getStringAttr(LinalgTransforms::kLinalgTransformMarker));
 }
 
 LinalgTilingOptions &

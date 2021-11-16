@@ -16,7 +16,7 @@ namespace mlir {
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   GPUFuncOpLowering(LLVMTypeConverter &converter, unsigned allocaAddrSpace,
-                    Identifier kernelAttributeName)
+                    StringAttr kernelAttributeName)
       : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
         allocaAddrSpace(allocaAddrSpace),
         kernelAttributeName(kernelAttributeName) {}
@@ -30,7 +30,7 @@ private:
   unsigned allocaAddrSpace;
 
   /// The attribute name to use instead of `gpu.kernel`.
-  Identifier kernelAttributeName;
+  StringAttr kernelAttributeName;
 };
 
 struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {

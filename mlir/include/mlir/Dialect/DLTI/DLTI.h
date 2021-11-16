@@ -41,7 +41,7 @@ public:
   constexpr const static llvm::StringLiteral kAttrKeyword = "dl_entry";
 
   /// Returns the entry with the given key and value.
-  static DataLayoutEntryAttr get(Identifier key, Attribute value);
+  static DataLayoutEntryAttr get(StringAttr key, Attribute value);
   static DataLayoutEntryAttr get(Type key, Attribute value);
 
   /// Returns the key of this entry.
