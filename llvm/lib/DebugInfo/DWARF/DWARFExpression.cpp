@@ -408,7 +408,7 @@ static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
   SmallVector<PrintedExpr, 4> Stack;
 
   while (I != E) {
-    DWARFExpression::Operation &Op = *I;
+    const DWARFExpression::Operation &Op = *I;
     uint8_t Opcode = Op.getCode();
     switch (Opcode) {
     case dwarf::DW_OP_regx: {
