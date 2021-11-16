@@ -586,6 +586,38 @@ struct CmpcOpConversion : public FIROpConversion<fir::CmpcOp> {
   }
 };
 
+/// Lower complex constants
+struct ConstcOpConversion : public FIROpConversion<fir::ConstcOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::ConstcOp conc, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = conc.getLoc();
+    mlir::MLIRContext *ctx = conc.getContext();
+    mlir::Type ty = convertType(conc.getType());
+    mlir::Type ety = convertType(getComplexEleTy(conc.getType()));
+    auto realFloatAttr = mlir::FloatAttr::get(ety, getValue(conc.getReal()));
+    auto realPart =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, ety, realFloatAttr);
+    auto imFloatAttr = mlir::FloatAttr::get(ety, getValue(conc.getImaginary()));
+    auto imPart =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, ety, imFloatAttr);
+    auto realIndex = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+    auto imIndex = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(1));
+    auto undef = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+    auto setReal = rewriter.create<mlir::LLVM::InsertValueOp>(
+        loc, ty, undef, realPart, realIndex);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(conc, ty, setReal,
+                                                           imPart, imIndex);
+    return success();
+  }
+
+  inline APFloat getValue(mlir::Attribute attr) const {
+    return attr.cast<fir::RealAttr>().getValue();
+  }
+};
+
 /// convert value of from-type to value of to-type
 struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
@@ -1685,17 +1717,18 @@ public:
         BoxDimsOpConversion, BoxEleSizeOpConversion, BoxIsAllocOpConversion,
         BoxIsArrayOpConversion, BoxIsPtrOpConversion, BoxRankOpConversion,
         BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
-        ConvertOpConversion, DispatchOpConversion, DispatchTableOpConversion,
-        DTEntryOpConversion, DivcOpConversion, EmboxCharOpConversion,
-        ExtractValueOpConversion, HasValueOpConversion, GenTypeDescOpConversion,
-        GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
-        NegcOpConversion, MulcOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, UnboxCharOpConversion, UndefOpConversion,
-        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+        ConstcOpConversion, ConvertOpConversion, DispatchOpConversion,
+        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
+        EmboxCharOpConversion, ExtractValueOpConversion, HasValueOpConversion,
+        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
+        MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
+        SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+        ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+        StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+        UnboxCharOpConversion, UndefOpConversion, UnreachableOpConversion,
+        ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
