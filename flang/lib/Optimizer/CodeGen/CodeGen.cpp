@@ -694,6 +694,18 @@ struct GlobalLenOpConversion : public FIROpConversion<fir::GlobalLenOp> {
   }
 };
 
+/// Lower `fir.gentypedesc` to a global constant.
+struct GenTypeDescOpConversion : public FIROpConversion<fir::GenTypeDescOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::GenTypeDescOp gentypedesc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return rewriter.notifyMatchFailure(
+        gentypedesc, "fir.fir.gentypedesc codegen is not implemented yet");
+  }
+};
+
 /// Lower `fir.has_value` operation to `llvm.return` operation.
 struct HasValueOpConversion : public FIROpConversion<fir::HasValueOp> {
   using FIROpConversion::FIROpConversion;
@@ -1563,14 +1575,13 @@ public:
         CmpcOpConversion, ConvertOpConversion, DispatchOpConversion,
         DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
         EmboxCharOpConversion, ExtractValueOpConversion, HasValueOpConversion,
-        GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
-        NegcOpConversion, MulcOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        StoreOpConversion, SubcOpConversion, UnboxCharOpConversion,
-        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
-        typeConverter);
-
+        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
+        MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
+        SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
+        SubcOpConversion, UnboxCharOpConversion, UndefOpConversion,
+        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
