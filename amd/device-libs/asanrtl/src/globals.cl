@@ -5,24 +5,9 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "asan_util.h"
 #include "globals.h"
-
-static bool
-is_aligned_by_granularity(uptr addr) {
-    return (addr & (SHADOW_GRANULARITY - 1)) == 0;
-}
-
-// round up size to the nearest multiple of boundary.
-static uptr
-round_upto(uptr size, uptr boundary) {
-    return (size + boundary - 1) & ~(boundary - 1);
-}
-
-// round down size to the nearest multiple of boundary.
-static uptr
-round_downto(uptr size, uptr boundary) {
-    return size & ~(boundary - 1);
-}
+#include "shadow_mapping.h"
 
 // fill shadow bytes of range [aligned_beg, aligned_beg+aligned_size)
 // with value.

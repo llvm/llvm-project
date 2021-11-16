@@ -7,13 +7,6 @@
 
 typedef ulong uptr;
 
-
-void* __asan_memmove(void* to, void* from, uptr size) { return to; }
-
-void* __asan_memcpy(void* to, void* from, uptr size) { return to; }
-
-void* __asan_memset(void* s, int c, uptr n) { return s; }
-
 void __asan_handle_no_return(void) {}
 
 void __sanitizer_ptr_cmp(uptr a, uptr b) {}
