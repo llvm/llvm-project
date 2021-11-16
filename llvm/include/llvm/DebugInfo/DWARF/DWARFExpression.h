@@ -116,12 +116,12 @@ public:
     }
 
   public:
-    class Operation &operator++() {
+    iterator &operator++() {
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
           !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
-      return Op;
+      return *this;
     }
 
     class Operation &operator*() const {
