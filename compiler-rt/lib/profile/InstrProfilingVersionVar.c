@@ -13,5 +13,14 @@
  * The runtime should only provide its own definition of this symbol when the
  * user has not specified one. Set this up by moving the runtime's copy of this
  * symbol to an object file within the archive.
+ *
+ * Hide this symbol everywhere except Apple platforms, where its presence is
+ * checked by the TAPI tool.
  */
-COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
+#if !defined(__APPLE__)
+#define VERSION_VAR_VISIBILITY COMPILER_RT_VISIBILITY
+#else
+#define VERSION_VAR_VISIBILITY
+#endif
+VERSION_VAR_VISIBILITY COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR =
+    INSTR_PROF_RAW_VERSION;
