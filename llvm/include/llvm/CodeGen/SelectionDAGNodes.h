@@ -58,7 +58,6 @@ namespace llvm {
 
 class APInt;
 class Constant;
-template <typename T> struct DenseMapInfo;
 class GlobalValue;
 class MachineBasicBlock;
 class MachineConstantPoolValue;

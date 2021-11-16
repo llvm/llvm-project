@@ -46,7 +46,7 @@ template <typename KeyT, typename ValueT> struct DenseMapPair;
 } // namespace detail
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
-template <typename T> struct DenseMapInfo;
+template <typename T, typename Enable> struct DenseMapInfo;
 template <typename ValueT, typename ValueInfoT> class DenseSet;
 class MallocAllocator;
 template <typename T> class MutableArrayRef;
@@ -90,7 +90,8 @@ using llvm::Twine;
 //
 // Containers.
 using llvm::ArrayRef;
-using llvm::DenseMapInfo;
+template <typename T, typename Enable = void>
+using DenseMapInfo = llvm::DenseMapInfo<T, Enable>;
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>

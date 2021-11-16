@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-template <typename T> struct DenseMapInfo;
+template <typename T, typename Enable> struct DenseMapInfo;
 template <typename PointerT, unsigned IntBits, typename PtrTraits>
 struct PointerIntPairInfo;
 
@@ -192,7 +192,7 @@ struct PointerIntPairInfo {
 
 // Provide specialization of DenseMapInfo for PointerIntPair.
 template <typename PointerTy, unsigned IntBits, typename IntType>
-struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>> {
+struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
   using Ty = PointerIntPair<PointerTy, IntBits, IntType>;
 
   static Ty getEmptyKey() {

@@ -269,6 +269,18 @@ template <> struct DenseMapInfo<mlir::Type> {
   static unsigned getHashValue(mlir::Type val) { return mlir::hash_value(val); }
   static bool isEqual(mlir::Type LHS, mlir::Type RHS) { return LHS == RHS; }
 };
+template <typename T>
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value>>
+    : public DenseMapInfo<mlir::Type> {
+  static T getEmptyKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
+    return T::getFromOpaquePointer(pointer);
+  }
+  static T getTombstoneKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
+    return T::getFromOpaquePointer(pointer);
+  }
+};
 
 /// We align TypeStorage by 8, so allow LLVM to steal the low bits.
 template <> struct PointerLikeTypeTraits<mlir::Type> {
