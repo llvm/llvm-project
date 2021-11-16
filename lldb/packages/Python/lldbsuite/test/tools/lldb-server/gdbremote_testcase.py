@@ -791,7 +791,7 @@ class GdbRemoteTestCaseBase(Base):
 
             if time.time() > timeout_time:
                 raise Exception(
-                    'timed out after {} seconds while waiting for theads: waiting for at least {} threads, found {}'.format(
+                    'timed out after {} seconds while waiting for threads: waiting for at least {} threads, found {}'.format(
                         self.DEFAULT_TIMEOUT, thread_count, actual_thread_count))
 
         return threads
