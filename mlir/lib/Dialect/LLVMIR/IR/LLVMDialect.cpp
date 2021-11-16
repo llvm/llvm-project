@@ -269,21 +269,20 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
 /// <cases> ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
 ///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )?
 static ParseResult parseSwitchOpCases(
-    OpAsmParser &parser, Type &flagType, ElementsAttr &caseValues,
+    OpAsmParser &parser, ElementsAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &caseOperands,
     SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
-  SmallVector<APInt> values;
-  unsigned bitWidth = flagType.getIntOrFloatBitWidth();
+  SmallVector<int32_t> values;
+  int32_t value = 0;
   do {
-    int64_t value = 0;
     OptionalParseResult integerParseResult = parser.parseOptionalInteger(value);
     if (values.empty() && !integerParseResult.hasValue())
       return success();
 
     if (!integerParseResult.hasValue() || integerParseResult.getValue())
       return failure();
-    values.push_back(APInt(bitWidth, value));
+    values.push_back(value);
 
     Block *destination;
     SmallVector<OpAsmParser::OperandType> operands;
@@ -300,14 +299,11 @@ static ParseResult parseSwitchOpCases(
     caseOperandTypes.emplace_back(operandTypes);
   } while (!parser.parseOptionalComma());
 
-  ShapedType caseValueType =
-        VectorType::get(static_cast<int64_t>(values.size()), flagType); 
-  caseValues = DenseIntElementsAttr::get(caseValueType, values);
+  caseValues = parser.getBuilder().getI32VectorAttr(values);
   return success();
 }
 
 static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op,
-                               Type &flagType,
                                ElementsAttr caseValues,
                                SuccessorRange caseDestinations,
                                OperandRangeRange caseOperands,
