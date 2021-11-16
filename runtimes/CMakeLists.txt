@@ -36,8 +36,6 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
 
-set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
-
 function(get_compiler_rt_path path)
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
