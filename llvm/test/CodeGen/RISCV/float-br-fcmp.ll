@@ -668,8 +668,8 @@ define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    beqz a0, .LBB17_3
 ; RV64IF-NEXT:  # %bb.2: # %if.end4
 ; RV64IF-NEXT:    li a0, 0
-; RV64IF-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 32
 ; RV64IF-NEXT:    ret
 ; RV64IF-NEXT:  .LBB17_3: # %if.then

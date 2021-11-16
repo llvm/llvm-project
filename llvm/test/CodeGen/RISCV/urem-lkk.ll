@@ -133,9 +133,9 @@ define i32 @combine_urem_udiv(i32 %x) nounwind {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call __udivsi3@plt
 ; RV32I-NEXT:    add a0, s1, a0
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -170,9 +170,9 @@ define i32 @combine_urem_udiv(i32 %x) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __udivdi3@plt
 ; RV64I-NEXT:    add a0, s1, a0
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;

@@ -20,8 +20,8 @@ define void @simple_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    call notdead@plt
 ; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = alloca i8, i32 %n
@@ -48,9 +48,9 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; RV32I-NEXT:    call notdead@plt
 ; RV32I-NEXT:    mv sp, s1
 ; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %sp = call i8* @llvm.stacksave()
@@ -94,8 +94,8 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    call func@plt
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = alloca i8, i32 %n

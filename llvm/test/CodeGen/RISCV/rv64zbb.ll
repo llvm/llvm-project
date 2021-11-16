@@ -162,8 +162,8 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    srliw a1, a0, 24
 ; RV64I-NEXT:  .LBB2_2: # %cond.end
 ; RV64I-NEXT:    sub a0, s0, a1
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -224,8 +224,8 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    srliw a0, a1, 24
 ; RV64I-NEXT:    xori a0, a0, 31
 ; RV64I-NEXT:  .LBB3_2:
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -507,8 +507,8 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    srliw a0, a1, 24
 ; RV64I-NEXT:  .LBB8_2:
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -563,8 +563,8 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    srliw a0, a1, 24
 ; RV64I-NEXT:    addi a0, a0, 1
 ; RV64I-NEXT:  .LBB9_2:
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;

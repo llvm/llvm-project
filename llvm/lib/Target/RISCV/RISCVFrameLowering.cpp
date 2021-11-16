@@ -1065,10 +1065,14 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
-  // Manually restore values not restored by libcall. Insert in reverse order.
+  // Manually restore values not restored by libcall.
+  // Keep the same order as in the prologue. There is no need to reverse the
+  // order in the epilogue. In addition, the return address will be restored
+  // first in the epilogue. It increases the opportunity to avoid the
+  // load-to-use data hazard between loading RA and return by RA.
   // loadRegFromStackSlot can insert multiple instructions.
   const auto &NonLibcallCSI = getNonLibcallCSI(*MF, CSI);
-  for (auto &CS : reverse(NonLibcallCSI)) {
+  for (auto &CS : NonLibcallCSI) {
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI);

@@ -40,8 +40,8 @@ define void @lmul4() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v = alloca <vscale x 4 x i64>
@@ -60,8 +60,8 @@ define void @lmul8() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %v = alloca <vscale x 8 x i64>
@@ -98,8 +98,8 @@ define void @lmul2_and_4() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 2 x i64>
@@ -120,8 +120,8 @@ define void @lmul1_and_4() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
@@ -159,8 +159,8 @@ define void @lmul4_and_1() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -181,8 +181,8 @@ define void @lmul4_and_2() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -203,8 +203,8 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -227,8 +227,8 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -277,8 +277,8 @@ define void @gpr_and_lmul1_and_4() nounwind {
 ; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    sd a0, 8(sp)
 ; CHECK-NEXT:    addi sp, s0, -32
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %x1 = alloca i64
@@ -301,8 +301,8 @@ define void @lmul_1_2_4_8() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
@@ -325,8 +325,8 @@ define void @lmul_1_2_4_8_x2_0() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
@@ -353,8 +353,8 @@ define void @lmul_1_2_4_8_x2_1() nounwind {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %v8 = alloca <vscale x 8 x i64>

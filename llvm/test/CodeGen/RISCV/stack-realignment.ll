@@ -21,8 +21,8 @@ define void @caller32() {
 ; RV32I-NEXT:    mv a0, sp
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -32
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -40,8 +40,8 @@ define void @caller32() {
 ; RV64I-NEXT:    mv a0, sp
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -32
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 32
@@ -93,8 +93,8 @@ define void @caller64() {
 ; RV32I-NEXT:    mv a0, sp
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -64
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 64
 ; RV32I-NEXT:    ret
 ;
@@ -112,8 +112,8 @@ define void @caller64() {
 ; RV64I-NEXT:    mv a0, sp
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -64
-; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 64
@@ -165,8 +165,8 @@ define void @caller128() {
 ; RV32I-NEXT:    mv a0, sp
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -128
-; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 128
 ; RV32I-NEXT:    ret
 ;
@@ -184,8 +184,8 @@ define void @caller128() {
 ; RV64I-NEXT:    mv a0, sp
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -128
-; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 128
@@ -237,8 +237,8 @@ define void @caller256() {
 ; RV32I-NEXT:    mv a0, sp
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -256
-; RV32I-NEXT:    lw s0, 248(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 252(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 248(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 256
 ; RV32I-NEXT:    ret
 ;
@@ -256,8 +256,8 @@ define void @caller256() {
 ; RV64I-NEXT:    mv a0, sp
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -256
-; RV64I-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 256
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 256
@@ -309,8 +309,8 @@ define void @caller512() {
 ; RV32I-NEXT:    addi a0, sp, 512
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -1024
-; RV32I-NEXT:    lw s0, 1016(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 1020(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 1016(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 1024
 ; RV32I-NEXT:    ret
 ;
@@ -328,8 +328,8 @@ define void @caller512() {
 ; RV64I-NEXT:    addi a0, sp, 512
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -1024
-; RV64I-NEXT:    ld s0, 1008(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 1016(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 1008(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 1024
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 512
@@ -383,8 +383,8 @@ define void @caller1024() {
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    addi sp, s0, -2048
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    ret
 ;
@@ -404,8 +404,8 @@ define void @caller1024() {
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    addi sp, s0, -2048
 ; RV64I-NEXT:    addi sp, sp, 16
-; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 1024
@@ -466,8 +466,8 @@ define void @caller2048() {
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, -2032
 ; RV32I-NEXT:    add sp, sp, a0
-; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    ret
 ;
@@ -494,8 +494,8 @@ define void @caller2048() {
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    addiw a0, a0, -2032
 ; RV64I-NEXT:    add sp, sp, a0
-; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 2048
@@ -556,8 +556,8 @@ define void @caller4096() {
 ; RV32I-NEXT:    lui a0, 2
 ; RV32I-NEXT:    addi a0, a0, -2032
 ; RV32I-NEXT:    add sp, sp, a0
-; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    ret
 ;
@@ -584,8 +584,8 @@ define void @caller4096() {
 ; RV64I-NEXT:    lui a0, 2
 ; RV64I-NEXT:    addiw a0, a0, -2032
 ; RV64I-NEXT:    add sp, sp, a0
-; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 4096

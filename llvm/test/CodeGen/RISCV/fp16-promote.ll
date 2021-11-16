@@ -52,8 +52,8 @@ define void @test_fptrunc_float(float %f, half* %p) nounwind {
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    call __gnu_f2h_ieee@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = fptrunc float %f to half
@@ -70,8 +70,8 @@ define void @test_fptrunc_double(double %d, half* %p) nounwind {
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    call __truncdfhf2@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = fptrunc double %d to half
@@ -97,10 +97,10 @@ define void @test_fadd(half* %p, half* %q) nounwind {
 ; CHECK-NEXT:    fadd.s fa0, fa0, fs0
 ; CHECK-NEXT:    call __gnu_f2h_ieee@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
-; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %a = load half, half* %p
@@ -128,10 +128,10 @@ define void @test_fmul(half* %p, half* %q) nounwind {
 ; CHECK-NEXT:    fmul.s fa0, fa0, fs0
 ; CHECK-NEXT:    call __gnu_f2h_ieee@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
-; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %a = load half, half* %p

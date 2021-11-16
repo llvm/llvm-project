@@ -286,19 +286,19 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a1, %lo(Y1+12)(a4)
 ; CHECK-NEXT:    sw a2, %lo(Y1)(a4)
 ; CHECK-NEXT:    sw a3, %lo(Y1+4)(a4)
-; CHECK-NEXT:    lw s11, 636(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s10, 640(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s9, 644(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s8, 648(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s7, 652(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s6, 656(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s5, 660(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s4, 664(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s3, 668(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s2, 672(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 676(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 680(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw ra, 684(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 680(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 676(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 672(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 668(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 664(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 660(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 656(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 652(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 648(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 644(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 640(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 636(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 688
 ; CHECK-NEXT:    ret
   %1 = load fp128, fp128* @U, align 16

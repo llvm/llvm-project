@@ -402,8 +402,8 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw s1, 0(a0)
 ; RV32I-NEXT:    sw t0, 4(a0)
-; RV32I-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;

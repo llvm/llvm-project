@@ -21,8 +21,8 @@ define float @float_test(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    call __addsf3@plt
 ; RV32IF-NEXT:    mv a1, s0
 ; RV32IF-NEXT:    call __divsf3@plt
-; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -35,8 +35,8 @@ define float @float_test(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    call __addsf3@plt
 ; RV64IF-NEXT:    mv a1, s0
 ; RV64IF-NEXT:    call __divsf3@plt
-; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
   %1 = fadd float %a, %b
@@ -57,9 +57,9 @@ define double @double_test(double %a, double %b) nounwind {
 ; RV32IF-NEXT:    mv a2, s1
 ; RV32IF-NEXT:    mv a3, s0
 ; RV32IF-NEXT:    call __divdf3@plt
-; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -72,8 +72,8 @@ define double @double_test(double %a, double %b) nounwind {
 ; RV64IF-NEXT:    call __adddf3@plt
 ; RV64IF-NEXT:    mv a1, s0
 ; RV64IF-NEXT:    call __divdf3@plt
-; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
   %1 = fadd double %a, %b

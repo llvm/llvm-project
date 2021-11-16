@@ -302,8 +302,8 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; LMULMAX8-NEXT:    vmv.v.v v8, v24
 ; LMULMAX8-NEXT:    call ext3@plt
 ; LMULMAX8-NEXT:    addi sp, s0, -384
-; LMULMAX8-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
+; LMULMAX8-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    addi sp, sp, 384
 ; LMULMAX8-NEXT:    ret
 ;
@@ -332,8 +332,8 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; LMULMAX4-NEXT:    vmv.v.v v12, v28
 ; LMULMAX4-NEXT:    call ext3@plt
 ; LMULMAX4-NEXT:    addi sp, s0, -384
-; LMULMAX4-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
+; LMULMAX4-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    addi sp, sp, 384
 ; LMULMAX4-NEXT:    ret
   %t = call fastcc <32 x i32> @ext3(<32 x i32> %z, <32 x i32> %y, <32 x i32> %x, i32 %w, i32 42)
@@ -396,8 +396,8 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; LMULMAX8-NEXT:    vmv.v.i v16, 0
 ; LMULMAX8-NEXT:    call vector_arg_indirect_stack@plt
 ; LMULMAX8-NEXT:    addi sp, s0, -384
-; LMULMAX8-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
+; LMULMAX8-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    addi sp, sp, 384
 ; LMULMAX8-NEXT:    ret
 ;
@@ -433,8 +433,8 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; LMULMAX4-NEXT:    vmv.v.i v20, 0
 ; LMULMAX4-NEXT:    call vector_arg_indirect_stack@plt
 ; LMULMAX4-NEXT:    addi sp, s0, -384
-; LMULMAX4-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
+; LMULMAX4-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    addi sp, sp, 384
 ; LMULMAX4-NEXT:    ret
   %s = call fastcc <32 x i32> @vector_arg_indirect_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 8)

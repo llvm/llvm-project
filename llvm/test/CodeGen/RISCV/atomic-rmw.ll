@@ -2034,10 +2034,10 @@ define i8 @atomicrmw_max_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB35_1
 ; RV32I-NEXT:  .LBB35_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2106,10 +2106,10 @@ define i8 @atomicrmw_max_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB35_1
 ; RV64I-NEXT:  .LBB35_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -2182,10 +2182,10 @@ define i8 @atomicrmw_max_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB36_1
 ; RV32I-NEXT:  .LBB36_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2254,10 +2254,10 @@ define i8 @atomicrmw_max_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB36_1
 ; RV64I-NEXT:  .LBB36_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -2330,10 +2330,10 @@ define i8 @atomicrmw_max_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB37_1
 ; RV32I-NEXT:  .LBB37_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2402,10 +2402,10 @@ define i8 @atomicrmw_max_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB37_1
 ; RV64I-NEXT:  .LBB37_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -2478,10 +2478,10 @@ define i8 @atomicrmw_max_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB38_1
 ; RV32I-NEXT:  .LBB38_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2550,10 +2550,10 @@ define i8 @atomicrmw_max_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB38_1
 ; RV64I-NEXT:  .LBB38_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -2626,10 +2626,10 @@ define i8 @atomicrmw_max_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB39_1
 ; RV32I-NEXT:  .LBB39_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2698,10 +2698,10 @@ define i8 @atomicrmw_max_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB39_1
 ; RV64I-NEXT:  .LBB39_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -2774,10 +2774,10 @@ define i8 @atomicrmw_min_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB40_1
 ; RV32I-NEXT:  .LBB40_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2846,10 +2846,10 @@ define i8 @atomicrmw_min_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB40_1
 ; RV64I-NEXT:  .LBB40_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -2922,10 +2922,10 @@ define i8 @atomicrmw_min_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB41_1
 ; RV32I-NEXT:  .LBB41_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -2994,10 +2994,10 @@ define i8 @atomicrmw_min_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB41_1
 ; RV64I-NEXT:  .LBB41_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3070,10 +3070,10 @@ define i8 @atomicrmw_min_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB42_1
 ; RV32I-NEXT:  .LBB42_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3142,10 +3142,10 @@ define i8 @atomicrmw_min_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB42_1
 ; RV64I-NEXT:  .LBB42_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3218,10 +3218,10 @@ define i8 @atomicrmw_min_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB43_1
 ; RV32I-NEXT:  .LBB43_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3290,10 +3290,10 @@ define i8 @atomicrmw_min_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB43_1
 ; RV64I-NEXT:  .LBB43_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3366,10 +3366,10 @@ define i8 @atomicrmw_min_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB44_1
 ; RV32I-NEXT:  .LBB44_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3438,10 +3438,10 @@ define i8 @atomicrmw_min_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB44_1
 ; RV64I-NEXT:  .LBB44_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3512,10 +3512,10 @@ define i8 @atomicrmw_umax_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB45_1
 ; RV32I-NEXT:  .LBB45_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3576,10 +3576,10 @@ define i8 @atomicrmw_umax_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB45_1
 ; RV64I-NEXT:  .LBB45_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3644,10 +3644,10 @@ define i8 @atomicrmw_umax_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB46_1
 ; RV32I-NEXT:  .LBB46_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3708,10 +3708,10 @@ define i8 @atomicrmw_umax_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB46_1
 ; RV64I-NEXT:  .LBB46_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3776,10 +3776,10 @@ define i8 @atomicrmw_umax_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB47_1
 ; RV32I-NEXT:  .LBB47_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3840,10 +3840,10 @@ define i8 @atomicrmw_umax_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB47_1
 ; RV64I-NEXT:  .LBB47_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -3908,10 +3908,10 @@ define i8 @atomicrmw_umax_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB48_1
 ; RV32I-NEXT:  .LBB48_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -3972,10 +3972,10 @@ define i8 @atomicrmw_umax_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB48_1
 ; RV64I-NEXT:  .LBB48_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -4040,10 +4040,10 @@ define i8 @atomicrmw_umax_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB49_1
 ; RV32I-NEXT:  .LBB49_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -4104,10 +4104,10 @@ define i8 @atomicrmw_umax_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB49_1
 ; RV64I-NEXT:  .LBB49_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -4172,10 +4172,10 @@ define i8 @atomicrmw_umin_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB50_1
 ; RV32I-NEXT:  .LBB50_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -4236,10 +4236,10 @@ define i8 @atomicrmw_umin_i8_monotonic(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB50_1
 ; RV64I-NEXT:  .LBB50_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -4304,10 +4304,10 @@ define i8 @atomicrmw_umin_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB51_1
 ; RV32I-NEXT:  .LBB51_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -4368,10 +4368,10 @@ define i8 @atomicrmw_umin_i8_acquire(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB51_1
 ; RV64I-NEXT:  .LBB51_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -4436,10 +4436,10 @@ define i8 @atomicrmw_umin_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB52_1
 ; RV32I-NEXT:  .LBB52_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -4500,10 +4500,10 @@ define i8 @atomicrmw_umin_i8_release(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB52_1
 ; RV64I-NEXT:  .LBB52_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -4568,10 +4568,10 @@ define i8 @atomicrmw_umin_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB53_1
 ; RV32I-NEXT:  .LBB53_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -4632,10 +4632,10 @@ define i8 @atomicrmw_umin_i8_acq_rel(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB53_1
 ; RV64I-NEXT:  .LBB53_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -4700,10 +4700,10 @@ define i8 @atomicrmw_umin_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    j .LBB54_1
 ; RV32I-NEXT:  .LBB54_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -4764,10 +4764,10 @@ define i8 @atomicrmw_umin_i8_seq_cst(i8 *%a, i8 %b) nounwind {
 ; RV64I-NEXT:    j .LBB54_1
 ; RV64I-NEXT:  .LBB54_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -6914,10 +6914,10 @@ define i16 @atomicrmw_max_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB90_1
 ; RV32I-NEXT:  .LBB90_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -6987,10 +6987,10 @@ define i16 @atomicrmw_max_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB90_1
 ; RV64I-NEXT:  .LBB90_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7064,10 +7064,10 @@ define i16 @atomicrmw_max_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB91_1
 ; RV32I-NEXT:  .LBB91_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -7137,10 +7137,10 @@ define i16 @atomicrmw_max_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB91_1
 ; RV64I-NEXT:  .LBB91_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7214,10 +7214,10 @@ define i16 @atomicrmw_max_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB92_1
 ; RV32I-NEXT:  .LBB92_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -7287,10 +7287,10 @@ define i16 @atomicrmw_max_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB92_1
 ; RV64I-NEXT:  .LBB92_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7364,10 +7364,10 @@ define i16 @atomicrmw_max_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB93_1
 ; RV32I-NEXT:  .LBB93_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -7437,10 +7437,10 @@ define i16 @atomicrmw_max_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB93_1
 ; RV64I-NEXT:  .LBB93_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7514,10 +7514,10 @@ define i16 @atomicrmw_max_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB94_1
 ; RV32I-NEXT:  .LBB94_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -7587,10 +7587,10 @@ define i16 @atomicrmw_max_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB94_1
 ; RV64I-NEXT:  .LBB94_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7664,10 +7664,10 @@ define i16 @atomicrmw_min_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB95_1
 ; RV32I-NEXT:  .LBB95_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -7737,10 +7737,10 @@ define i16 @atomicrmw_min_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB95_1
 ; RV64I-NEXT:  .LBB95_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7814,10 +7814,10 @@ define i16 @atomicrmw_min_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB96_1
 ; RV32I-NEXT:  .LBB96_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -7887,10 +7887,10 @@ define i16 @atomicrmw_min_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB96_1
 ; RV64I-NEXT:  .LBB96_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -7964,10 +7964,10 @@ define i16 @atomicrmw_min_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB97_1
 ; RV32I-NEXT:  .LBB97_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8037,10 +8037,10 @@ define i16 @atomicrmw_min_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB97_1
 ; RV64I-NEXT:  .LBB97_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8114,10 +8114,10 @@ define i16 @atomicrmw_min_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB98_1
 ; RV32I-NEXT:  .LBB98_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8187,10 +8187,10 @@ define i16 @atomicrmw_min_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB98_1
 ; RV64I-NEXT:  .LBB98_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8264,10 +8264,10 @@ define i16 @atomicrmw_min_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB99_1
 ; RV32I-NEXT:  .LBB99_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8337,10 +8337,10 @@ define i16 @atomicrmw_min_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB99_1
 ; RV64I-NEXT:  .LBB99_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8415,11 +8415,11 @@ define i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB100_1
 ; RV32I-NEXT:  .LBB100_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8484,11 +8484,11 @@ define i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB100_1
 ; RV64I-NEXT:  .LBB100_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8557,11 +8557,11 @@ define i16 @atomicrmw_umax_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB101_1
 ; RV32I-NEXT:  .LBB101_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8626,11 +8626,11 @@ define i16 @atomicrmw_umax_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB101_1
 ; RV64I-NEXT:  .LBB101_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8699,11 +8699,11 @@ define i16 @atomicrmw_umax_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB102_1
 ; RV32I-NEXT:  .LBB102_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8768,11 +8768,11 @@ define i16 @atomicrmw_umax_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB102_1
 ; RV64I-NEXT:  .LBB102_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8841,11 +8841,11 @@ define i16 @atomicrmw_umax_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB103_1
 ; RV32I-NEXT:  .LBB103_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -8910,11 +8910,11 @@ define i16 @atomicrmw_umax_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB103_1
 ; RV64I-NEXT:  .LBB103_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -8983,11 +8983,11 @@ define i16 @atomicrmw_umax_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB104_1
 ; RV32I-NEXT:  .LBB104_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -9052,11 +9052,11 @@ define i16 @atomicrmw_umax_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB104_1
 ; RV64I-NEXT:  .LBB104_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -9125,11 +9125,11 @@ define i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB105_1
 ; RV32I-NEXT:  .LBB105_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -9194,11 +9194,11 @@ define i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB105_1
 ; RV64I-NEXT:  .LBB105_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -9267,11 +9267,11 @@ define i16 @atomicrmw_umin_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB106_1
 ; RV32I-NEXT:  .LBB106_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -9336,11 +9336,11 @@ define i16 @atomicrmw_umin_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB106_1
 ; RV64I-NEXT:  .LBB106_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -9409,11 +9409,11 @@ define i16 @atomicrmw_umin_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB107_1
 ; RV32I-NEXT:  .LBB107_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -9478,11 +9478,11 @@ define i16 @atomicrmw_umin_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB107_1
 ; RV64I-NEXT:  .LBB107_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -9551,11 +9551,11 @@ define i16 @atomicrmw_umin_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB108_1
 ; RV32I-NEXT:  .LBB108_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -9620,11 +9620,11 @@ define i16 @atomicrmw_umin_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB108_1
 ; RV64I-NEXT:  .LBB108_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -9693,11 +9693,11 @@ define i16 @atomicrmw_umin_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    j .LBB109_1
 ; RV32I-NEXT:  .LBB109_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -9762,11 +9762,11 @@ define i16 @atomicrmw_umin_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    j .LBB109_1
 ; RV64I-NEXT:  .LBB109_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11099,9 +11099,9 @@ define i32 @atomicrmw_max_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB145_1
 ; RV32I-NEXT:  .LBB145_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11143,10 +11143,10 @@ define i32 @atomicrmw_max_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB145_1
 ; RV64I-NEXT:  .LBB145_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11189,9 +11189,9 @@ define i32 @atomicrmw_max_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB146_1
 ; RV32I-NEXT:  .LBB146_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11233,10 +11233,10 @@ define i32 @atomicrmw_max_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB146_1
 ; RV64I-NEXT:  .LBB146_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11279,9 +11279,9 @@ define i32 @atomicrmw_max_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB147_1
 ; RV32I-NEXT:  .LBB147_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11323,10 +11323,10 @@ define i32 @atomicrmw_max_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB147_1
 ; RV64I-NEXT:  .LBB147_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11369,9 +11369,9 @@ define i32 @atomicrmw_max_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB148_1
 ; RV32I-NEXT:  .LBB148_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11413,10 +11413,10 @@ define i32 @atomicrmw_max_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB148_1
 ; RV64I-NEXT:  .LBB148_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11459,9 +11459,9 @@ define i32 @atomicrmw_max_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB149_1
 ; RV32I-NEXT:  .LBB149_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11503,10 +11503,10 @@ define i32 @atomicrmw_max_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB149_1
 ; RV64I-NEXT:  .LBB149_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11549,9 +11549,9 @@ define i32 @atomicrmw_min_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB150_1
 ; RV32I-NEXT:  .LBB150_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11593,10 +11593,10 @@ define i32 @atomicrmw_min_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB150_1
 ; RV64I-NEXT:  .LBB150_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11639,9 +11639,9 @@ define i32 @atomicrmw_min_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB151_1
 ; RV32I-NEXT:  .LBB151_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11683,10 +11683,10 @@ define i32 @atomicrmw_min_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB151_1
 ; RV64I-NEXT:  .LBB151_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11729,9 +11729,9 @@ define i32 @atomicrmw_min_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB152_1
 ; RV32I-NEXT:  .LBB152_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11773,10 +11773,10 @@ define i32 @atomicrmw_min_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB152_1
 ; RV64I-NEXT:  .LBB152_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11819,9 +11819,9 @@ define i32 @atomicrmw_min_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB153_1
 ; RV32I-NEXT:  .LBB153_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11863,10 +11863,10 @@ define i32 @atomicrmw_min_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB153_1
 ; RV64I-NEXT:  .LBB153_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11909,9 +11909,9 @@ define i32 @atomicrmw_min_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB154_1
 ; RV32I-NEXT:  .LBB154_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -11953,10 +11953,10 @@ define i32 @atomicrmw_min_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB154_1
 ; RV64I-NEXT:  .LBB154_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -11999,9 +11999,9 @@ define i32 @atomicrmw_umax_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB155_1
 ; RV32I-NEXT:  .LBB155_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12043,10 +12043,10 @@ define i32 @atomicrmw_umax_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB155_1
 ; RV64I-NEXT:  .LBB155_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12089,9 +12089,9 @@ define i32 @atomicrmw_umax_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB156_1
 ; RV32I-NEXT:  .LBB156_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12133,10 +12133,10 @@ define i32 @atomicrmw_umax_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB156_1
 ; RV64I-NEXT:  .LBB156_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12179,9 +12179,9 @@ define i32 @atomicrmw_umax_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB157_1
 ; RV32I-NEXT:  .LBB157_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12223,10 +12223,10 @@ define i32 @atomicrmw_umax_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB157_1
 ; RV64I-NEXT:  .LBB157_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12269,9 +12269,9 @@ define i32 @atomicrmw_umax_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB158_1
 ; RV32I-NEXT:  .LBB158_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12313,10 +12313,10 @@ define i32 @atomicrmw_umax_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB158_1
 ; RV64I-NEXT:  .LBB158_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12359,9 +12359,9 @@ define i32 @atomicrmw_umax_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB159_1
 ; RV32I-NEXT:  .LBB159_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12403,10 +12403,10 @@ define i32 @atomicrmw_umax_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB159_1
 ; RV64I-NEXT:  .LBB159_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12449,9 +12449,9 @@ define i32 @atomicrmw_umin_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB160_1
 ; RV32I-NEXT:  .LBB160_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12493,10 +12493,10 @@ define i32 @atomicrmw_umin_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB160_1
 ; RV64I-NEXT:  .LBB160_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12539,9 +12539,9 @@ define i32 @atomicrmw_umin_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB161_1
 ; RV32I-NEXT:  .LBB161_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12583,10 +12583,10 @@ define i32 @atomicrmw_umin_i32_acquire(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB161_1
 ; RV64I-NEXT:  .LBB161_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12629,9 +12629,9 @@ define i32 @atomicrmw_umin_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB162_1
 ; RV32I-NEXT:  .LBB162_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12673,10 +12673,10 @@ define i32 @atomicrmw_umin_i32_release(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB162_1
 ; RV64I-NEXT:  .LBB162_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12719,9 +12719,9 @@ define i32 @atomicrmw_umin_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB163_1
 ; RV32I-NEXT:  .LBB163_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12763,10 +12763,10 @@ define i32 @atomicrmw_umin_i32_acq_rel(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB163_1
 ; RV64I-NEXT:  .LBB163_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -12809,9 +12809,9 @@ define i32 @atomicrmw_umin_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    j .LBB164_1
 ; RV32I-NEXT:  .LBB164_4: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -12853,10 +12853,10 @@ define i32 @atomicrmw_umin_i32_seq_cst(i32 *%a, i32 %b) nounwind {
 ; RV64I-NEXT:    j .LBB164_1
 ; RV64I-NEXT:  .LBB164_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -14321,10 +14321,10 @@ define i64 @atomicrmw_max_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB200_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -14375,10 +14375,10 @@ define i64 @atomicrmw_max_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB200_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -14412,9 +14412,9 @@ define i64 @atomicrmw_max_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB200_1
 ; RV64I-NEXT:  .LBB200_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -14474,10 +14474,10 @@ define i64 @atomicrmw_max_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB201_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -14528,10 +14528,10 @@ define i64 @atomicrmw_max_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB201_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -14565,9 +14565,9 @@ define i64 @atomicrmw_max_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB201_1
 ; RV64I-NEXT:  .LBB201_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -14627,10 +14627,10 @@ define i64 @atomicrmw_max_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB202_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -14681,10 +14681,10 @@ define i64 @atomicrmw_max_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB202_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -14718,9 +14718,9 @@ define i64 @atomicrmw_max_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB202_1
 ; RV64I-NEXT:  .LBB202_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -14780,10 +14780,10 @@ define i64 @atomicrmw_max_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB203_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -14834,10 +14834,10 @@ define i64 @atomicrmw_max_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB203_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -14871,9 +14871,9 @@ define i64 @atomicrmw_max_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB203_1
 ; RV64I-NEXT:  .LBB203_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -14933,10 +14933,10 @@ define i64 @atomicrmw_max_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB204_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -14987,10 +14987,10 @@ define i64 @atomicrmw_max_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB204_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15024,9 +15024,9 @@ define i64 @atomicrmw_max_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB204_1
 ; RV64I-NEXT:  .LBB204_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -15087,10 +15087,10 @@ define i64 @atomicrmw_min_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB205_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -15142,10 +15142,10 @@ define i64 @atomicrmw_min_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB205_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15179,9 +15179,9 @@ define i64 @atomicrmw_min_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB205_1
 ; RV64I-NEXT:  .LBB205_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -15242,10 +15242,10 @@ define i64 @atomicrmw_min_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB206_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -15297,10 +15297,10 @@ define i64 @atomicrmw_min_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB206_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15334,9 +15334,9 @@ define i64 @atomicrmw_min_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB206_1
 ; RV64I-NEXT:  .LBB206_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -15397,10 +15397,10 @@ define i64 @atomicrmw_min_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB207_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -15452,10 +15452,10 @@ define i64 @atomicrmw_min_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB207_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15489,9 +15489,9 @@ define i64 @atomicrmw_min_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB207_1
 ; RV64I-NEXT:  .LBB207_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -15552,10 +15552,10 @@ define i64 @atomicrmw_min_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB208_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -15607,10 +15607,10 @@ define i64 @atomicrmw_min_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB208_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15644,9 +15644,9 @@ define i64 @atomicrmw_min_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB208_1
 ; RV64I-NEXT:  .LBB208_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -15707,10 +15707,10 @@ define i64 @atomicrmw_min_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB209_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -15762,10 +15762,10 @@ define i64 @atomicrmw_min_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB209_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15799,9 +15799,9 @@ define i64 @atomicrmw_min_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB209_1
 ; RV64I-NEXT:  .LBB209_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -15861,10 +15861,10 @@ define i64 @atomicrmw_umax_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB210_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -15915,10 +15915,10 @@ define i64 @atomicrmw_umax_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB210_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -15952,9 +15952,9 @@ define i64 @atomicrmw_umax_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB210_1
 ; RV64I-NEXT:  .LBB210_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16014,10 +16014,10 @@ define i64 @atomicrmw_umax_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB211_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16068,10 +16068,10 @@ define i64 @atomicrmw_umax_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB211_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -16105,9 +16105,9 @@ define i64 @atomicrmw_umax_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB211_1
 ; RV64I-NEXT:  .LBB211_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16167,10 +16167,10 @@ define i64 @atomicrmw_umax_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB212_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16221,10 +16221,10 @@ define i64 @atomicrmw_umax_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB212_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -16258,9 +16258,9 @@ define i64 @atomicrmw_umax_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB212_1
 ; RV64I-NEXT:  .LBB212_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16320,10 +16320,10 @@ define i64 @atomicrmw_umax_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB213_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16374,10 +16374,10 @@ define i64 @atomicrmw_umax_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB213_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -16411,9 +16411,9 @@ define i64 @atomicrmw_umax_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB213_1
 ; RV64I-NEXT:  .LBB213_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16473,10 +16473,10 @@ define i64 @atomicrmw_umax_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB214_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16527,10 +16527,10 @@ define i64 @atomicrmw_umax_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB214_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -16564,9 +16564,9 @@ define i64 @atomicrmw_umax_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB214_1
 ; RV64I-NEXT:  .LBB214_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16627,10 +16627,10 @@ define i64 @atomicrmw_umin_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB215_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16682,10 +16682,10 @@ define i64 @atomicrmw_umin_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB215_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -16719,9 +16719,9 @@ define i64 @atomicrmw_umin_i64_monotonic(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB215_1
 ; RV64I-NEXT:  .LBB215_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16782,10 +16782,10 @@ define i64 @atomicrmw_umin_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB216_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16837,10 +16837,10 @@ define i64 @atomicrmw_umin_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB216_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -16874,9 +16874,9 @@ define i64 @atomicrmw_umin_i64_acquire(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB216_1
 ; RV64I-NEXT:  .LBB216_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -16937,10 +16937,10 @@ define i64 @atomicrmw_umin_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB217_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -16992,10 +16992,10 @@ define i64 @atomicrmw_umin_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB217_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -17029,9 +17029,9 @@ define i64 @atomicrmw_umin_i64_release(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB217_1
 ; RV64I-NEXT:  .LBB217_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -17092,10 +17092,10 @@ define i64 @atomicrmw_umin_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB218_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -17147,10 +17147,10 @@ define i64 @atomicrmw_umin_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB218_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -17184,9 +17184,9 @@ define i64 @atomicrmw_umin_i64_acq_rel(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB218_1
 ; RV64I-NEXT:  .LBB218_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
@@ -17247,10 +17247,10 @@ define i64 @atomicrmw_umin_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32I-NEXT:  .LBB219_7: # %atomicrmw.end
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -17302,10 +17302,10 @@ define i64 @atomicrmw_umin_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV32IA-NEXT:  .LBB219_7: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a4
 ; RV32IA-NEXT:    mv a1, a5
-; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
@@ -17339,9 +17339,9 @@ define i64 @atomicrmw_umin_i64_seq_cst(i64 *%a, i64 %b) nounwind {
 ; RV64I-NEXT:    j .LBB219_1
 ; RV64I-NEXT:  .LBB219_4: # %atomicrmw.end
 ; RV64I-NEXT:    mv a0, a3
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;

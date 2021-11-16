@@ -24,10 +24,10 @@ define i64 @complex_float_add(i64 %a.coerce, i64 %b.coerce) nounwind {
 ; CHECK-NEXT:    slli a1, s0, 32
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:

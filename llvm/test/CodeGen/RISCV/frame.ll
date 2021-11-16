@@ -37,8 +37,8 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    addi a0, s0, -28
 ; RV32I-WITHFP-NEXT:    call test1@plt
 ; RV32I-WITHFP-NEXT:    li a0, 0
-; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
   %key = alloca %struct.key_t, align 4

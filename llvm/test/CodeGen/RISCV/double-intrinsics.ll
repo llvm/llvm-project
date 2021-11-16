@@ -206,9 +206,9 @@ define double @sincos_f64(double %a) nounwind {
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
-; RV32IFD-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
 ;
@@ -227,8 +227,8 @@ define double @sincos_f64(double %a) nounwind {
 ; RV64IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
-; RV64IFD-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 32
 ; RV64IFD-NEXT:    ret
 ;
@@ -253,11 +253,11 @@ define double @sincos_f64(double %a) nounwind {
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __adddf3@plt
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
@@ -275,9 +275,9 @@ define double @sincos_f64(double %a) nounwind {
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.sin.f64(double %a)
@@ -633,9 +633,9 @@ define double @fmuladd_f64(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __adddf3@plt
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -648,8 +648,8 @@ define double @fmuladd_f64(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    call __muldf3@plt
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.fmuladd.f64(double %a, double %b, double %c)
