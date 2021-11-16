@@ -734,7 +734,7 @@ DataInCodeSection::DataInCodeSection()
 template <class LP>
 static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
   using SegmentCommand = typename LP::segment_command;
-  using Section = typename LP::section;
+  using SectionHeader = typename LP::section;
 
   std::vector<MachO::data_in_code_entry> dataInCodeEntries;
   for (const InputFile *inputFile : inputFiles) {
@@ -745,8 +745,8 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
         findCommand(objFile->mb.getBufferStart(), LP::segmentLCType));
     if (!c)
       continue;
-    ArrayRef<Section> sections{reinterpret_cast<const Section *>(c + 1),
-                               c->nsects};
+    ArrayRef<SectionHeader> sectionHeaders{
+        reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
 
     ArrayRef<MachO::data_in_code_entry> entries = objFile->dataInCodeEntries;
     if (entries.empty())
@@ -754,15 +754,14 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
     // For each code subsection find 'data in code' entries residing in it.
     // Compute the new offset values as
     // <offset within subsection> + <subsection address> - <__TEXT address>.
-    for (size_t i = 0, n = sections.size(); i < n; ++i) {
-      const SubsectionMap &subsecMap = objFile->subsections[i];
-      for (const SubsectionEntry &subsecEntry : subsecMap) {
-        const InputSection *isec = subsecEntry.isec;
+    for (size_t i = 0, n = sectionHeaders.size(); i < n; ++i) {
+      for (const Subsection &subsec : objFile->sections[i].subsections) {
+        const InputSection *isec = subsec.isec;
         if (!isCodeSection(isec))
           continue;
         if (cast<ConcatInputSection>(isec)->shouldOmitFromOutput())
           continue;
-        const uint64_t beginAddr = sections[i].addr + subsecEntry.offset;
+        const uint64_t beginAddr = sectionHeaders[i].addr + subsec.offset;
         auto it = llvm::lower_bound(
             entries, beginAddr,
             [](const MachO::data_in_code_entry &entry, uint64_t addr) {
