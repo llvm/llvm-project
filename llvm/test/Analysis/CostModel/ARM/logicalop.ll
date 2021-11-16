@@ -8,6 +8,8 @@
 ; RUN: opt < %s  -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8m.base | FileCheck %s --check-prefix=CHECK-THUMB1-SIZE
 ; RUN: opt < %s  -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8m.main | FileCheck %s --check-prefix=CHECK-THUMB2-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @op() {
   ; Logical and/or - select's cost must be equivalent to that of binop
 ; CHECK-MVE-RECIP-LABEL: 'op'

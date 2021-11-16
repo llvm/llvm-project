@@ -8,6 +8,8 @@
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8a-linux-gnueabihf < %s | FileCheck %s --check-prefix=CHECK-V8-SIZE
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-MVE-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @stores() {
 ; CHECK-NOVEC-LABEL: 'stores'
 ; CHECK-NOVEC-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 undef, i8* undef, align 4
