@@ -116,6 +116,58 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   }
   return SplitOne;
 }
+// Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
+// modified module if the chunk resulted in a reduction.
+template <typename T>
+static std::unique_ptr<ReducerWorkItem>
+CheckChunk(Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
+           function_ref<void(Oracle &, T &)> ExtractChunksFromModule,
+           std::set<Chunk> &UninterestingChunks,
+           std::vector<Chunk> &ChunksStillConsideredInteresting) {
+  // Take all of ChunksStillConsideredInteresting chunks, except those we've
+  // already deemed uninteresting (UninterestingChunks) but didn't remove
+  // from ChunksStillConsideredInteresting yet, and additionally ignore
+  // ChunkToCheckForUninterestingness chunk.
+  std::vector<Chunk> CurrentChunks;
+  CurrentChunks.reserve(ChunksStillConsideredInteresting.size() -
+                        UninterestingChunks.size() - 1);
+  copy_if(ChunksStillConsideredInteresting, std::back_inserter(CurrentChunks),
+          [&](const Chunk &C) {
+            return !UninterestingChunks.count(C) &&
+                   C != ChunkToCheckForUninterestingness;
+          });
+
+  // Clone module before hacking it up..
+  std::unique_ptr<ReducerWorkItem> Clone =
+      cloneReducerWorkItem(Test.getProgram());
+  // Generate Module with only Targets inside Current Chunks
+  Oracle O(CurrentChunks);
+  ExtractChunksFromModule(O, *Clone);
+
+  // Some reductions may result in invalid IR. Skip such reductions.
+  if (verifyReducerWorkItem(*Clone, &errs())) {
+    if (AbortOnInvalidReduction) {
+      errs() << "Invalid reduction\n";
+      exit(1);
+    }
+    errs() << " **** WARNING | reduction resulted in invalid module, "
+              "skipping\n";
+    return nullptr;
+  }
+
+  errs() << "Ignoring: ";
+  ChunkToCheckForUninterestingness.print();
+  for (const Chunk &C : UninterestingChunks)
+    C.print();
+
+  SmallString<128> CurrentFilepath;
+  if (!isReduced(*Clone, Test, CurrentFilepath)) {
+    // Program became non-reduced, so this chunk appears to be interesting.
+    errs() << "\n";
+    return nullptr;
+  }
+  return Clone;
+}
 
 /// Runs the Delta Debugging algorithm, splits the code into chunks and
 /// reduces the amount of chunks that are considered interesting by the
@@ -162,52 +214,15 @@ void runDeltaPassInt(
     std::set<Chunk> UninterestingChunks;
     for (Chunk &ChunkToCheckForUninterestingness :
          reverse(ChunksStillConsideredInteresting)) {
-      // Take all of ChunksStillConsideredInteresting chunks, except those we've
-      // already deemed uninteresting (UninterestingChunks) but didn't remove
-      // from ChunksStillConsideredInteresting yet, and additionally ignore
-      // ChunkToCheckForUninterestingness chunk.
-      std::vector<Chunk> CurrentChunks;
-      CurrentChunks.reserve(ChunksStillConsideredInteresting.size() -
-                            UninterestingChunks.size() - 1);
-      copy_if(ChunksStillConsideredInteresting,
-              std::back_inserter(CurrentChunks), [&](const Chunk &C) {
-                return !UninterestingChunks.count(C) &&
-                       C != ChunkToCheckForUninterestingness;
-              });
-
-      // Clone module before hacking it up..
-      std::unique_ptr<ReducerWorkItem> Clone =
-          cloneReducerWorkItem(Test.getProgram());
-      // Generate Module with only Targets inside Current Chunks
-      Oracle O(CurrentChunks);
-      ExtractChunksFromModule(O, *Clone);
-
-      // Some reductions may result in invalid IR. Skip such reductions.
-      if (verifyReducerWorkItem(*Clone, &errs())) {
-        if (AbortOnInvalidReduction) {
-          errs() << "Invalid reduction\n";
-          exit(1);
-        }
-        errs() << " **** WARNING | reduction resulted in invalid module, "
-                  "skipping\n";
+      std::unique_ptr<ReducerWorkItem> Result = CheckChunk(
+          ChunkToCheckForUninterestingness, Test, ExtractChunksFromModule,
+          UninterestingChunks, ChunksStillConsideredInteresting);
+      if (!Result)
         continue;
-      }
-
-      errs() << "Ignoring: ";
-      ChunkToCheckForUninterestingness.print();
-      for (const Chunk &C : UninterestingChunks)
-        C.print();
-
-      SmallString<128> CurrentFilepath;
-      if (!isReduced(*Clone, Test, CurrentFilepath)) {
-        // Program became non-reduced, so this chunk appears to be interesting.
-        errs() << "\n";
-        continue;
-      }
 
       FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
-      ReducedProgram = std::move(Clone);
+      ReducedProgram = std::move(Result);
       errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
       writeOutput(*ReducedProgram, "Saved new best reduction to ");
     }
