@@ -2089,6 +2089,48 @@ struct UnboxProcOpConversion : public FIROpConversion<fir::UnboxProcOp> {
   }
 };
 
+/// Convert `fir.field_index`. The conversion depends on whether the size of
+/// the record is static or dynamic.
+struct FieldIndexOpConversion : public FIROpConversion<fir::FieldIndexOp> {
+  using FIROpConversion::FIROpConversion;
+
+  // NB: most field references should be resolved by this point
+  mlir::LogicalResult
+  matchAndRewrite(fir::FieldIndexOp field, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto recTy = field.on_type().cast<fir::RecordType>();
+    unsigned index = recTy.getFieldIndex(field.field_id());
+
+    if (!fir::hasDynamicSize(recTy)) {
+      // Derived type has compile-time constant layout. Return index of the
+      // component type in the parent type (to be used in GEP).
+      rewriter.replaceOp(field, mlir::ValueRange{genConstantOffset(
+                                    field.getLoc(), rewriter, index)});
+      return success();
+    }
+
+    // Derived type has compile-time constant layout. Call the compiler
+    // generated function to determine the byte offset of the field at runtime.
+    // This returns a non-constant.
+    FlatSymbolRefAttr symAttr = mlir::SymbolRefAttr::get(
+        field.getContext(), getOffsetMethodName(recTy, field.field_id()));
+    NamedAttribute callAttr = rewriter.getNamedAttr("callee", symAttr);
+    NamedAttribute fieldAttr = rewriter.getNamedAttr(
+        "field", mlir::IntegerAttr::get(lowerTy().indexType(), index));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        field, lowerTy().offsetType(), adaptor.getOperands(),
+        llvm::ArrayRef<mlir::NamedAttribute>{callAttr, fieldAttr});
+    return success();
+  }
+
+  // Re-Construct the name of the compiler generated method that calculates the
+  // offset
+  inline static std::string getOffsetMethodName(fir::RecordType recTy,
+                                                llvm::StringRef field) {
+    return recTy.getName().str() + "P." + field.str() + ".offset";
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2120,16 +2162,17 @@ public:
         CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
         DispatchOpConversion, DispatchTableOpConversion, DTEntryOpConversion,
         DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-        EmboxProcOpConversion, ExtractValueOpConversion, FirEndOpConversion,
-        HasValueOpConversion, GenTypeDescOpConversion, GlobalLenOpConversion,
-        GlobalOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
-        IsPresentOpConversion, LoadOpConversion, NegcOpConversion,
-        MulcOpConversion, SelectCaseOpConversion, SelectOpConversion,
-        SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
-        ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
-        StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-        UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
-        UnreachableOpConversion, ZeroOpConversion>(typeConverter);
+        EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+        FirEndOpConversion, HasValueOpConversion, GenTypeDescOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
+        InsertValueOpConversion, IsPresentOpConversion, LoadOpConversion,
+        NegcOpConversion, MulcOpConversion, SelectCaseOpConversion,
+        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
+        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
+        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
+        SubcOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion, ZeroOpConversion>(
+        typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
