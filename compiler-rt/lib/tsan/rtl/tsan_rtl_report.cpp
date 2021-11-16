@@ -270,7 +270,6 @@ int ScopedReportBase::AddMutex(uptr addr, StackID creation_stack_id) {
   rep_->mutexes.PushBack(rm);
   rm->id = rep_->mutexes.Size() - 1;
   rm->addr = addr;
-  rm->destroyed = false;
   rm->stack = SymbolizeStackId(creation_stack_id);
   return rm->id;
 }

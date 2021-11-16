@@ -93,7 +93,6 @@ struct ReportThread {
 struct ReportMutex {
   int id;
   uptr addr;
-  bool destroyed;
   ReportStack *stack;
 };
 

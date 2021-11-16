@@ -223,17 +223,11 @@ static void PrintMutexShortWithAddress(const ReportMutex *rm,
 
 static void PrintMutex(const ReportMutex *rm) {
   Decorator d;
-  if (rm->destroyed) {
-    Printf("%s", d.Mutex());
-    Printf("  Mutex M%u is already destroyed.\n\n", rm->id);
-    Printf("%s", d.Default());
-  } else {
-    Printf("%s", d.Mutex());
-    Printf("  Mutex M%u (%p) created at:\n", rm->id,
-           reinterpret_cast<void *>(rm->addr));
-    Printf("%s", d.Default());
-    PrintStack(rm->stack);
-  }
+  Printf("%s", d.Mutex());
+  Printf("  Mutex M%u (%p) created at:\n", rm->id,
+         reinterpret_cast<void *>(rm->addr));
+  Printf("%s", d.Default());
+  PrintStack(rm->stack);
 }
 
 static void PrintThread(const ReportThread *rt) {
