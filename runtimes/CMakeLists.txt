@@ -43,14 +43,6 @@ endfunction()
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
-# Add path for custom and the LLVM build's modules to the CMake module path.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
-)
-
 function(get_compiler_rt_path path)
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
