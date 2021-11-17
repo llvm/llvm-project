@@ -3997,6 +3997,21 @@ Type *ScalarEvolution::getWiderType(Type *T1, Type *T2) const {
   return  getTypeSizeInBits(T1) >= getTypeSizeInBits(T2) ? T1 : T2;
 }
 
+bool ScalarEvolution::instructionCouldExistWitthOperands(const SCEV *A,
+                                                         const SCEV *B) {
+  /// For a valid use point to exist, the defining scope of one operand
+  /// must dominate the other.
+  bool PreciseA, PreciseB;
+  auto *ScopeA = getDefiningScopeBound({A}, PreciseA);
+  auto *ScopeB = getDefiningScopeBound({B}, PreciseB);
+  if (!PreciseA || !PreciseB)
+    // Can't tell.
+    return false;
+  return (ScopeA == ScopeB) || DT.dominates(ScopeA, ScopeB) ||
+    DT.dominates(ScopeB, ScopeA);
+}
+
+
 const SCEV *ScalarEvolution::getCouldNotCompute() {
   return CouldNotCompute.get();
 }
@@ -6612,7 +6627,9 @@ static void collectUniqueOps(const SCEV *S,
 }
 
 const Instruction *
-ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
+ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops,
+                                       bool &Precise) {
+  Precise = true;
   // Do a bounded search of the def relation of the requested SCEVs.
   SmallSet<const SCEV *, 16> Visited;
   SmallVector<const SCEV *> Worklist;
@@ -6620,8 +6637,10 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
     if (!Visited.insert(S).second)
       return;
     // Threshold of 30 here is arbitrary.
-    if (Visited.size() > 30)
+    if (Visited.size() > 30) {
+      Precise = false;
       return;
+    }
     Worklist.push_back(S);
   };
 
@@ -6642,6 +6661,12 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
     }
   }
   return Bound ? Bound : &*F.getEntryBlock().begin();
+}
+
+const Instruction *
+ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops) {
+  bool Discard;
+  return getDefiningScopeBound(Ops, Discard);
 }
 
 bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,

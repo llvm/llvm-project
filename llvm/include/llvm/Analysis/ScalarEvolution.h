@@ -519,6 +519,22 @@ public:
   // Returns a wider type among {Ty1, Ty2}.
   Type *getWiderType(Type *Ty1, Type *Ty2) const;
 
+  /// Return true if there exists a point in the program at which both
+  /// A and B could be operands to the same instruction.
+  /// SCEV expressions are generally assumed to correspond to instructions
+  /// which could exists in IR.  In general, this requires that there exists
+  /// a use point in the program where all operands dominate the use.
+  ///
+  /// Example:
+  /// loop {
+  ///   if
+  ///     loop { v1 = load @global1; }
+  ///   else
+  ///     loop { v2 = load @global2; }
+  /// }
+  /// No SCEV with operand V1, and v2 can exist in this program.
+  bool instructionCouldExistWitthOperands(const SCEV *A, const SCEV *B);
+
   /// Return true if the SCEV is a scAddRecExpr or it contains
   /// scAddRecExpr. The result will be cached in HasRecMap.
   bool containsAddRecurrence(const SCEV *S);
@@ -1947,7 +1963,13 @@ private:
   const Instruction *getNonTrivialDefiningScopeBound(const SCEV *S);
 
   /// Return a scope which provides an upper bound on the defining scope for
-  /// a SCEV with the operands in Ops.
+  /// a SCEV with the operands in Ops.  The outparam Precise is set if the
+  /// bound found is a precise bound (i.e. must be the defining scope.)
+  const Instruction *getDefiningScopeBound(ArrayRef<const SCEV *> Ops,
+                                           bool &Precise);
+
+  /// Wrapper around the above for cases which don't care if the bound
+  /// is precise.
   const Instruction *getDefiningScopeBound(ArrayRef<const SCEV *> Ops);
 
   /// Given two instructions in the same function, return true if we can
