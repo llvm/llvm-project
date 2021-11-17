@@ -151,7 +151,8 @@ llvm::Expected<std::string> parsePath(llvm::StringRef Path) {
   namespace path = llvm::sys::path;
   if (path::is_absolute(Path, path::Style::posix)) {
     return std::string(Path);
-  } else if (path::is_absolute(Path, path::Style::windows)) {
+  }
+  if (path::is_absolute(Path, path::Style::windows)) {
     std::string Converted = path::convert_to_slash(Path, path::Style::windows);
     if (Converted.front() != '/')
       Converted = "/" + Converted;

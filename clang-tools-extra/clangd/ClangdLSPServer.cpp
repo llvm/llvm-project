@@ -929,8 +929,7 @@ void ClangdLSPServer::onDocumentSymbol(const DocumentSymbolParams &Params,
         adjustSymbolKinds(*Items, SupportedSymbolKinds);
         if (SupportsHierarchicalDocumentSymbol)
           return Reply(std::move(*Items));
-        else
-          return Reply(flattenSymbolHierarchy(*Items, FileURI));
+        return Reply(flattenSymbolHierarchy(*Items, FileURI));
       });
 }
 

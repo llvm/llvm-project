@@ -687,7 +687,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
   if (Data.startswith("RIFF")) {
     return readRIFF(Data);
-  } else if (auto YAMLContents = readYAML(Data)) {
+  }
+  if (auto YAMLContents = readYAML(Data)) {
     return std::move(*YAMLContents);
   } else {
     return error("Not a RIFF file and failed to parse as YAML: {0}",
