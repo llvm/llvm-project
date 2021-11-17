@@ -136,6 +136,10 @@ public:
   void replaceRegOpWith(MachineRegisterInfo &MRI, MachineOperand &FromRegOp,
                         Register ToReg) const;
 
+  /// Replace the opcode in instruction with a new opcode and inform the
+  /// observer of the changes.
+  void replaceOpcodeWith(MachineInstr &FromMI, unsigned ToOpcode) const;
+
   /// Get the register bank of \p Reg.
   /// If Reg has not been assigned a register, a register class,
   /// or a register bank, then this returns nullptr.

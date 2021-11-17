@@ -64,19 +64,29 @@ def remove_fcanonicalize : GICombineRule<
          [{ return PostLegalizerHelper.matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
 
+def foldable_fneg_matchdata : GIDefMatchData<"MachineInstr *">;
+
+def foldable_fneg : GICombineRule<
+  (defs root:$ffn, foldable_fneg_matchdata:$matchinfo),
+  (match (wip_match_opcode G_FNEG):$ffn,
+         [{ return Helper.matchFoldableFneg(*${ffn}, ${matchinfo}); }]),
+  (apply [{ Helper.applyFoldableFneg(*${ffn}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
 def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines, clamp_i64_to_i16]> {
+  "AMDGPUGenPreLegalizerCombinerHelper",
+  [all_combines, clamp_i64_to_i16, foldable_fneg]> {
   let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPreLegalizerCombinerHelperState";
+  let AdditionalArguments = [];
 }
 
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
-   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize]> {
+   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];
