@@ -177,8 +177,8 @@ LogicalResult OperationVerifier::verifyOperation(
 
   // If we can get operation info for this, check the custom hook.
   OperationName opName = op.getName();
-  auto *opInfo = opName.getAbstractOperation();
-  if (opInfo && failed(opInfo->verifyInvariants(&op)))
+  Optional<RegisteredOperationName> registeredInfo = opName.getRegisteredInfo();
+  if (registeredInfo && failed(registeredInfo->verifyInvariants(&op)))
     return failure();
 
   if (unsigned numRegions = op.getNumRegions()) {
@@ -218,7 +218,7 @@ LogicalResult OperationVerifier::verifyOperation(
   }
 
   // If this is a registered operation, there is nothing left to do.
-  if (opInfo)
+  if (registeredInfo)
     return success();
 
   // Otherwise, verify that the parent dialect allows un-registered operations.

@@ -59,14 +59,10 @@ class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
 //===----------------------------------------------------------------------===//
-// AbstractOperation
+// OperationName
 //===----------------------------------------------------------------------===//
 
-/// This is a "type erased" representation of a registered operation.  This
-/// should only be used by things like the AsmPrinter and other things that need
-/// to be parameterized by generic operation hooks.  Most user code should use
-/// the concrete operation types.
-class AbstractOperation {
+class OperationName {
 public:
   using GetCanonicalizationPatternsFn =
       llvm::unique_function<void(RewritePatternSet &, MLIRContext *) const>;
@@ -80,32 +76,211 @@ public:
   using VerifyInvariantsFn =
       llvm::unique_function<LogicalResult(Operation *) const>;
 
-  /// This is the name of the operation.
-  const StringAttr name;
+protected:
+  /// This class represents a type erased version of an operation. It contains
+  /// all of the components necessary for opaquely interacting with an
+  /// operation. If the operation is not registered, some of these components
+  /// may not be populated.
+  struct Impl {
+    Impl(StringAttr name)
+        : name(name), dialect(nullptr), interfaceMap(llvm::None) {}
 
-  /// This is the dialect that this operation belongs to.
-  Dialect &dialect;
+    /// The name of the operation.
+    StringAttr name;
 
-  /// The unique identifier of the derived Op class.
-  TypeID typeID;
+    //===------------------------------------------------------------------===//
+    // Registered Operation Info
+
+    /// The following fields are only populated when the operation is
+    /// registered.
+
+    /// Returns true if the operation has been registered, i.e. if the
+    /// registration info has been populated.
+    bool isRegistered() const { return dialect; }
+
+    /// This is the dialect that this operation belongs to.
+    Dialect *dialect;
+
+    /// The unique identifier of the derived Op class.
+    TypeID typeID;
+
+    /// A map of interfaces that were registered to this operation.
+    detail::InterfaceMap interfaceMap;
+
+    /// Internal callback hooks provided by the op implementation.
+    FoldHookFn foldHookFn;
+    GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+    HasTraitFn hasTraitFn;
+    ParseAssemblyFn parseAssemblyFn;
+    PrintAssemblyFn printAssemblyFn;
+    VerifyInvariantsFn verifyInvariantsFn;
+
+    /// A list of attribute names registered to this operation in StringAttr
+    /// form. This allows for operation classes to use StringAttr for attribute
+    /// lookup/creation/etc., as opposed to raw strings.
+    ArrayRef<StringAttr> attributeNames;
+  };
+
+public:
+  OperationName(StringRef name, MLIRContext *context);
+
+  /// Return if this operation is registered.
+  bool isRegistered() const { return impl->isRegistered(); }
+
+  /// If this operation is registered, returns the registered information, None
+  /// otherwise.
+  Optional<RegisteredOperationName> getRegisteredInfo() const;
+
+  /// Returns true if the operation was registered with a particular trait, e.g.
+  /// hasTrait<OperandsAreSignlessIntegerLike>(). Returns false if the operation
+  /// is unregistered.
+  template <template <typename T> class Trait> bool hasTrait() const {
+    return hasTrait(TypeID::get<Trait>());
+  }
+  bool hasTrait(TypeID traitID) const {
+    return isRegistered() && impl->hasTraitFn(traitID);
+  }
+
+  /// Returns true if the operation *might* have the provided trait. This
+  /// means that either the operation is unregistered, or it was registered with
+  /// the provide trait.
+  template <template <typename T> class Trait> bool mightHaveTrait() const {
+    return mightHaveTrait(TypeID::get<Trait>());
+  }
+  bool mightHaveTrait(TypeID traitID) const {
+    return !isRegistered() || impl->hasTraitFn(traitID);
+  }
+
+  /// Returns an instance of the concept object for the given interface if it
+  /// was registered to this operation, null otherwise. This should not be used
+  /// directly.
+  template <typename T> typename T::Concept *getInterface() const {
+    return impl->interfaceMap.lookup<T>();
+  }
+
+  /// Returns true if this operation has the given interface registered to it.
+  template <typename T> bool hasInterface() const {
+    return hasInterface(TypeID::get<T>());
+  }
+  bool hasInterface(TypeID interfaceID) const {
+    return impl->interfaceMap.contains(interfaceID);
+  }
+
+  /// Return the dialect this operation is registered to if the dialect is
+  /// loaded in the context, or nullptr if the dialect isn't loaded.
+  Dialect *getDialect() const {
+    return isRegistered() ? impl->dialect : impl->name.getReferencedDialect();
+  }
+
+  /// Return the name of the dialect this operation is registered to.
+  StringRef getDialectNamespace() const;
+
+  /// Return the operation name with dialect name stripped, if it has one.
+  StringRef stripDialect() const { return getStringRef().split('.').second; }
+
+  /// Return the name of this operation. This always succeeds.
+  StringRef getStringRef() const { return getIdentifier(); }
+
+  /// Return the name of this operation as a StringAttr.
+  StringAttr getIdentifier() const { return impl->name; }
+
+  void print(raw_ostream &os) const;
+  void dump() const;
+
+  /// Represent the operation name as an opaque pointer. (Used to support
+  /// PointerLikeTypeTraits).
+  void *getAsOpaquePointer() const { return const_cast<Impl *>(impl); }
+  static OperationName getFromOpaquePointer(const void *pointer) {
+    return OperationName(
+        const_cast<Impl *>(reinterpret_cast<const Impl *>(pointer)));
+  }
+
+  bool operator==(const OperationName &rhs) const { return impl == rhs.impl; }
+  bool operator!=(const OperationName &rhs) const { return !(*this == rhs); }
+
+protected:
+  OperationName(Impl *impl) : impl(impl) {}
+
+  /// The internal implementation of the operation name.
+  Impl *impl;
+
+  /// Allow access to the Impl struct.
+  friend MLIRContextImpl;
+};
+
+inline raw_ostream &operator<<(raw_ostream &os, OperationName info) {
+  info.print(os);
+  return os;
+}
+
+// Make operation names hashable.
+inline llvm::hash_code hash_value(OperationName arg) {
+  return llvm::hash_value(arg.getAsOpaquePointer());
+}
+
+//===----------------------------------------------------------------------===//
+// RegisteredOperationName
+//===----------------------------------------------------------------------===//
+
+/// This is a "type erased" representation of a registered operation. This
+/// should only be used by things like the AsmPrinter and other things that need
+/// to be parameterized by generic operation hooks. Most user code should use
+/// the concrete operation types.
+class RegisteredOperationName : public OperationName {
+public:
+  /// Lookup the registered operation information for the given operation.
+  /// Returns None if the operation isn't registered.
+  static Optional<RegisteredOperationName> lookup(StringRef name,
+                                                  MLIRContext *ctx) {
+    return OperationName(name, ctx).getRegisteredInfo();
+  }
+
+  /// Register a new operation in a Dialect object.
+  /// This constructor is used by Dialect objects when they register the list of
+  /// operations they contain.
+  template <typename T>
+  static void insert(Dialect &dialect) {
+    insert(T::getOperationName(), dialect, TypeID::get<T>(),
+           T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
+           T::getVerifyInvariantsFn(), T::getFoldHookFn(),
+           T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
+           T::getHasTraitFn(), T::getAttributeNames());
+  }
+  /// The use of this method is in general discouraged in favor of
+  /// 'insert<CustomOp>(dialect)'.
+  static void
+  insert(StringRef name, Dialect &dialect, TypeID typeID,
+         ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
+         VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
+         GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
+         detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+         ArrayRef<StringRef> attrNames);
+
+  /// Return the dialect this operation is registered to.
+  Dialect &getDialect() const { return *impl->dialect; }
+
+  /// Return the unique identifier of the derived Op class.
+  TypeID getTypeID() const { return impl->typeID; }
 
   /// Use the specified object to parse this ops custom assembly format.
   ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
 
   /// Return the static hook for parsing this operation assembly.
-  const ParseAssemblyFn &getParseAssemblyFn() const { return parseAssemblyFn; }
+  const ParseAssemblyFn &getParseAssemblyFn() const {
+    return impl->parseAssemblyFn;
+  }
 
   /// This hook implements the AsmPrinter for this operation.
   void printAssembly(Operation *op, OpAsmPrinter &p,
                      StringRef defaultDialect) const {
-    return printAssemblyFn(op, p, defaultDialect);
+    return impl->printAssemblyFn(op, p, defaultDialect);
   }
 
   /// This hook implements the verifier for this operation.  It should emits an
   /// error message and returns failure if a problem is detected, or returns
   /// success if everything is ok.
   LogicalResult verifyInvariants(Operation *op) const {
-    return verifyInvariantsFn(op);
+    return impl->verifyInvariantsFn(op);
   }
 
   /// This hook implements a generalized folder for this operation.  Operations
@@ -129,66 +304,30 @@ public:
   /// generalized constant folding.
   LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) const {
-    return foldHookFn(op, operands, results);
+    return impl->foldHookFn(op, operands, results);
   }
 
   /// This hook returns any canonicalization pattern rewrites that the operation
   /// supports, for use by the canonicalization pass.
   void getCanonicalizationPatterns(RewritePatternSet &results,
                                    MLIRContext *context) const {
-    return getCanonicalizationPatternsFn(results, context);
+    return impl->getCanonicalizationPatternsFn(results, context);
   }
 
-  /// Returns an instance of the concept object for the given interface if it
-  /// was registered to this operation, null otherwise. This should not be used
-  /// directly.
-  template <typename T>
-  typename T::Concept *getInterface() const {
-    return interfaceMap.lookup<T>();
-  }
-
-  /// Returns true if this operation has the given interface registered to it.
-  bool hasInterface(TypeID interfaceID) const {
-    return interfaceMap.contains(interfaceID);
+  /// Attach the given models as implementations of the corresponding interfaces
+  /// for the concrete operation.
+  template <typename... Models>
+  void attachInterface() {
+    impl->interfaceMap.insert<Models...>();
   }
 
   /// Returns true if the operation has a particular trait.
-  template <template <typename T> class Trait>
-  bool hasTrait() const {
-    return hasTraitFn(TypeID::get<Trait>());
+  template <template <typename T> class Trait> bool hasTrait() const {
+    return hasTrait(TypeID::get<Trait>());
   }
 
   /// Returns true if the operation has a particular trait.
-  bool hasTrait(TypeID traitID) const { return hasTraitFn(traitID); }
-
-  /// Look up the specified operation in the specified MLIRContext and return a
-  /// pointer to it if present.  Otherwise, return a null pointer.
-  static const AbstractOperation *lookup(StringRef opName,
-                                         MLIRContext *context) {
-    return lookupMutable(opName, context);
-  }
-
-  /// This constructor is used by Dialect objects when they register the list of
-  /// operations they contain.
-  template <typename T>
-  static void insert(Dialect &dialect) {
-    insert(T::getOperationName(), dialect, TypeID::get<T>(),
-           T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
-           T::getVerifyInvariantsFn(), T::getFoldHookFn(),
-           T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
-           T::getHasTraitFn(), T::getAttributeNames());
-  }
-
-  /// Register a new operation in a Dialect object.
-  /// The use of this method is in general discouraged in favor of
-  /// 'insert<CustomOp>(dialect)'.
-  static void
-  insert(StringRef name, Dialect &dialect, TypeID typeID,
-         ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
-         VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
-         GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-         detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
-         ArrayRef<StringRef> attrNames);
+  bool hasTrait(TypeID traitID) const { return impl->hasTraitFn(traitID); }
 
   /// Return the list of cached attribute names registered to this operation.
   /// The order of attributes cached here is unique to each type of operation,
@@ -206,43 +345,29 @@ public:
   /// greatly simplifying the cost and complexity of attribute usage produced by
   /// the generator.
   ///
-  ArrayRef<StringAttr> getAttributeNames() const { return attributeNames; }
+  ArrayRef<StringAttr> getAttributeNames() const {
+    return impl->attributeNames;
+  }
+
+  /// Represent the operation name as an opaque pointer. (Used to support
+  /// PointerLikeTypeTraits).
+  static RegisteredOperationName getFromOpaquePointer(const void *pointer) {
+    return RegisteredOperationName(
+        const_cast<Impl *>(reinterpret_cast<const Impl *>(pointer)));
+  }
 
 private:
-  AbstractOperation(StringRef name, Dialect &dialect, TypeID typeID,
-                    ParseAssemblyFn &&parseAssembly,
-                    PrintAssemblyFn &&printAssembly,
-                    VerifyInvariantsFn &&verifyInvariants,
-                    FoldHookFn &&foldHook,
-                    GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-                    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
-                    ArrayRef<StringAttr> attrNames);
+  RegisteredOperationName(Impl *impl) : OperationName(impl) {}
 
-  /// Give Op access to lookupMutable.
-  template <typename ConcreteType, template <typename T> class... Traits>
-  friend class Op;
-
-  /// Look up the specified operation in the specified MLIRContext and return a
-  /// pointer to it if present.  Otherwise, return a null pointer.
-  static AbstractOperation *lookupMutable(StringRef opName,
-                                          MLIRContext *context);
-
-  /// A map of interfaces that were registered to this operation.
-  detail::InterfaceMap interfaceMap;
-
-  /// Internal callback hooks provided by the op implementation.
-  FoldHookFn foldHookFn;
-  GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
-  HasTraitFn hasTraitFn;
-  ParseAssemblyFn parseAssemblyFn;
-  PrintAssemblyFn printAssemblyFn;
-  VerifyInvariantsFn verifyInvariantsFn;
-
-  /// A list of attribute names registered to this operation in identifier form.
-  /// This allows for operation classes to use identifiers for attribute
-  /// lookup/creation/etc., as opposed to strings.
-  ArrayRef<StringAttr> attributeNames;
+  /// Allow access to the constructor.
+  friend OperationName;
 };
+
+inline Optional<RegisteredOperationName>
+OperationName::getRegisteredInfo() const {
+  return isRegistered() ? RegisteredOperationName(impl)
+                        : Optional<RegisteredOperationName>();
+}
 
 //===----------------------------------------------------------------------===//
 // Attribute Dictionary-Like Interface
@@ -434,76 +559,6 @@ private:
   // not occur.
   mutable llvm::PointerIntPair<Attribute, 1, bool> dictionarySorted;
 };
-
-//===----------------------------------------------------------------------===//
-// OperationName
-//===----------------------------------------------------------------------===//
-
-class OperationName {
-public:
-  using RepresentationUnion =
-      PointerUnion<StringAttr, const AbstractOperation *>;
-
-  OperationName(AbstractOperation *op) : representation(op) {}
-  OperationName(StringRef name, MLIRContext *context);
-
-  /// Return the name of the dialect this operation is registered to.
-  StringRef getDialectNamespace() const;
-
-  /// Return the dialect this operation is registered to if the dialect is
-  /// loaded in the context, or nullptr if the dialect isn't loaded.
-  Dialect *getDialect() const {
-    if (const auto *abstractOp = getAbstractOperation())
-      return &abstractOp->dialect;
-    return representation.get<StringAttr>().getReferencedDialect();
-  }
-
-  /// Return the operation name with dialect name stripped, if it has one.
-  StringRef stripDialect() const;
-
-  /// Return the name of this operation. This always succeeds.
-  StringRef getStringRef() const;
-
-  /// Return the name of this operation as an identifier. This always succeeds.
-  StringAttr getIdentifier() const;
-
-  /// If this operation has a registered operation description, return it.
-  /// Otherwise return null.
-  const AbstractOperation *getAbstractOperation() const {
-    return representation.dyn_cast<const AbstractOperation *>();
-  }
-
-  void print(raw_ostream &os) const;
-  void dump() const;
-
-  void *getAsOpaquePointer() const {
-    return static_cast<void *>(representation.getOpaqueValue());
-  }
-  static OperationName getFromOpaquePointer(const void *pointer);
-
-private:
-  RepresentationUnion representation;
-  OperationName(RepresentationUnion representation)
-      : representation(representation) {}
-};
-
-inline raw_ostream &operator<<(raw_ostream &os, OperationName identifier) {
-  identifier.print(os);
-  return os;
-}
-
-inline bool operator==(OperationName lhs, OperationName rhs) {
-  return lhs.getAsOpaquePointer() == rhs.getAsOpaquePointer();
-}
-
-inline bool operator!=(OperationName lhs, OperationName rhs) {
-  return lhs.getAsOpaquePointer() != rhs.getAsOpaquePointer();
-}
-
-// Make operation names hashable.
-inline llvm::hash_code hash_value(OperationName arg) {
-  return llvm::hash_value(arg.getAsOpaquePointer());
-}
 
 //===----------------------------------------------------------------------===//
 // OperationState
@@ -1119,39 +1174,53 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 } // end namespace mlir
 
 namespace llvm {
-// Identifiers hash just like pointers, there is no need to hash the bytes.
 template <>
 struct DenseMapInfo<mlir::OperationName> {
   static mlir::OperationName getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::OperationName::getFromOpaquePointer(pointer);
   }
   static mlir::OperationName getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::OperationName::getFromOpaquePointer(pointer);
   }
-  static unsigned getHashValue(mlir::OperationName Val) {
-    return DenseMapInfo<void *>::getHashValue(Val.getAsOpaquePointer());
+  static unsigned getHashValue(mlir::OperationName val) {
+    return DenseMapInfo<void *>::getHashValue(val.getAsOpaquePointer());
   }
-  static bool isEqual(mlir::OperationName LHS, mlir::OperationName RHS) {
-    return LHS == RHS;
+  static bool isEqual(mlir::OperationName lhs, mlir::OperationName rhs) {
+    return lhs == rhs;
+  }
+};
+template <>
+struct DenseMapInfo<mlir::RegisteredOperationName>
+    : public DenseMapInfo<mlir::OperationName> {
+  static mlir::RegisteredOperationName getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
+  }
+  static mlir::RegisteredOperationName getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
   }
 };
 
-/// The pointer inside of an identifier comes from a StringMap, so its alignment
-/// is always at least 4 and probably 8 (on 64-bit machines).  Allow LLVM to
-/// steal the low bits.
 template <>
 struct PointerLikeTypeTraits<mlir::OperationName> {
-public:
   static inline void *getAsVoidPointer(mlir::OperationName I) {
     return const_cast<void *>(I.getAsOpaquePointer());
   }
   static inline mlir::OperationName getFromVoidPointer(void *P) {
     return mlir::OperationName::getFromOpaquePointer(P);
   }
-  static constexpr int NumLowBitsAvailable = PointerLikeTypeTraits<
-      mlir::OperationName::RepresentationUnion>::NumLowBitsAvailable;
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
+};
+template <>
+struct PointerLikeTypeTraits<mlir::RegisteredOperationName>
+    : public PointerLikeTypeTraits<mlir::OperationName> {
+  static inline mlir::RegisteredOperationName getFromVoidPointer(void *P) {
+    return mlir::RegisteredOperationName::getFromOpaquePointer(P);
+  }
 };
 
 } // end namespace llvm
