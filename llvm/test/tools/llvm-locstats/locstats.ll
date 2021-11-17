@@ -1,6 +1,6 @@
 ; UNSUPPORTED: system-windows
 ; REQUIRES: x86-registered-target
-; RUN: llc %s -o %t0.o -filetype=obj
+; RUN: llc %s -o %t0.o -filetype=obj -experimental-debug-variable-locations=false
 ; RUN: %llvm-locstats %t0.o | FileCheck %s --check-prefix=LOCSTATS
 ;
 ; Test the llvm-locstats output.

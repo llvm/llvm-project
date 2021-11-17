@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
+# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
 #
 # A DBG_VALUE_LIST that has a component spilt and restored should had its
 # expression and operands updated to refer to the stack for that period, and
