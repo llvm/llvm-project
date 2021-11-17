@@ -1120,11 +1120,11 @@ public:
   Symbol &addDefinedSymbol(Block &Content, JITTargetAddress Offset,
                            StringRef Name, JITTargetAddress Size, Linkage L,
                            Scope S, bool IsCallable, bool IsLive) {
-    assert(S == Scope::Local || llvm::count_if(defined_symbols(),
-                                               [&](const Symbol *Sym) {
-                                                 return Sym->getName() == Name;
-                                               }) == 0 &&
-                                    "Duplicate defined symbol");
+    assert((S == Scope::Local || llvm::count_if(defined_symbols(),
+                                                [&](const Symbol *Sym) {
+                                                  return Sym->getName() == Name;
+                                                }) == 0) &&
+           "Duplicate defined symbol");
     auto &Sym =
         Symbol::constructNamedDef(Allocator.Allocate<Symbol>(), Content, Offset,
                                   Name, Size, L, S, IsLive, IsCallable);
