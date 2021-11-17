@@ -32,14 +32,12 @@ class TestRealDefinition(TestBase):
                              'stop reason = breakpoint'])
 
         # Run and stop at Foo
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         self.runCmd("continue", RUN_SUCCEEDED)
 
         # Run at stop at main
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # This should display correctly.
         self.expect(
@@ -69,14 +67,12 @@ class TestRealDefinition(TestBase):
                              'stop reason = breakpoint'])
 
         # Run and stop at Foo
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         self.runCmd("continue", RUN_SUCCEEDED)
 
         # Run at stop at main
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # This should display correctly.
         self.expect(
