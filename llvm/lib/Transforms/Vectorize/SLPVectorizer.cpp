@@ -327,7 +327,11 @@ static bool isCommutative(Instruction *I) {
 /// TargetTransformInfo::getInstructionThroughput?
 static Optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
-  auto *EI0 = cast<ExtractElementInst>(VL[0]);
+  const auto *It =
+      find_if(VL, [](Value *V) { return isa<ExtractElementInst>(V); });
+  if (It == VL.end())
+    return None;
+  auto *EI0 = cast<ExtractElementInst>(*It);
   if (isa<ScalableVectorType>(EI0->getVectorOperandType()))
     return None;
   unsigned Size =
@@ -336,33 +340,41 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
   Value *Vec2 = nullptr;
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
+  Mask.assign(VL.size(), UndefMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
+    // Undef can be represented as an undef element in a vector.
+    if (isa<UndefValue>(VL[I]))
+      continue;
     auto *EI = cast<ExtractElementInst>(VL[I]);
+    if (isa<ScalableVectorType>(EI->getVectorOperandType()))
+      return None;
     auto *Vec = EI->getVectorOperand();
+    // We can extractelement from undef or poison vector.
+    if (isa<UndefValue>(Vec))
+      continue;
     // All vector operands must have the same number of vector elements.
     if (cast<FixedVectorType>(Vec->getType())->getNumElements() != Size)
       return None;
+    if (isa<UndefValue>(EI->getIndexOperand()))
+      continue;
     auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
     if (!Idx)
       return None;
     // Undefined behavior if Idx is negative or >= Size.
-    if (Idx->getValue().uge(Size)) {
-      Mask.push_back(UndefMaskElem);
+    if (Idx->getValue().uge(Size))
       continue;
-    }
     unsigned IntIdx = Idx->getValue().getZExtValue();
-    Mask.push_back(IntIdx);
-    // We can extractelement from undef or poison vector.
-    if (isa<UndefValue>(Vec))
-      continue;
+    Mask[I] = IntIdx;
     // For correct shuffling we have to have at most 2 different vector operands
     // in all extractelement instructions.
-    if (!Vec1 || Vec1 == Vec)
+    if (!Vec1 || Vec1 == Vec) {
       Vec1 = Vec;
-    else if (!Vec2 || Vec2 == Vec)
+    } else if (!Vec2 || Vec2 == Vec) {
       Vec2 = Vec;
-    else
+      Mask[I] += Size;
+    } else {
       return None;
+    }
     if (CommonShuffleMode == Permute)
       continue;
     // If the extract index is not the same as the operation number, it is a
@@ -4414,15 +4426,19 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
                                                bool IsGather) {
     DenseMap<Value *, int> ExtractVectorsTys;
     for (auto *V : VL) {
+      if (isa<UndefValue>(V))
+        continue;
       // If all users of instruction are going to be vectorized and this
       // instruction itself is not going to be vectorized, consider this
       // instruction as dead and remove its cost from the final cost of the
       // vectorized tree.
-      if (!areAllUsersVectorized(cast<Instruction>(V), VectorizedVals) ||
-          (IsGather && ScalarToTreeEntry.count(V)))
+      if (!areAllUsersVectorized(cast<Instruction>(V), VectorizedVals))
         continue;
       auto *EE = cast<ExtractElementInst>(V);
-      unsigned Idx = *getExtractIndex(EE);
+      Optional<unsigned> EEIdx = getExtractIndex(EE);
+      if (!EEIdx)
+        continue;
+      unsigned Idx = *EEIdx;
       if (TTIRef.getNumberOfParts(VecTy) !=
           TTIRef.getNumberOfParts(EE->getVectorOperandType())) {
         auto It =
@@ -4454,6 +4470,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     for (const auto &Data : ExtractVectorsTys) {
       auto *EEVTy = cast<FixedVectorType>(Data.first->getType());
       unsigned NumElts = VecTy->getNumElements();
+      if (Data.second % NumElts == 0)
+        continue;
       if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy)) {
         unsigned Idx = (Data.second / NumElts) * NumElts;
         unsigned EENumElts = EEVTy->getNumElements();
@@ -4516,10 +4534,12 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // broadcast.
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
     }
-    if (E->getOpcode() == Instruction::ExtractElement && allSameType(VL) &&
-        allSameBlock(VL) &&
-        !isa<ScalableVectorType>(
-            cast<ExtractElementInst>(E->getMainOp())->getVectorOperandType())) {
+    if ((E->getOpcode() == Instruction::ExtractElement ||
+         all_of(E->Scalars,
+                [](Value *V) {
+                  return isa<ExtractElementInst, UndefValue>(V);
+                })) &&
+        allSameType(VL)) {
       // Check that gather of extractelements can be represented as just a
       // shuffle of a single/two vectors the scalars are extracted from.
       SmallVector<int> Mask;
@@ -5111,7 +5131,11 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
                    [this](Value *V) { return EphValues.contains(V); }) &&
            (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
             TE->Scalars.size() < Limit ||
-            (TE->getOpcode() == Instruction::ExtractElement &&
+            ((TE->getOpcode() == Instruction::ExtractElement ||
+              all_of(TE->Scalars,
+                     [](Value *V) {
+                       return isa<ExtractElementInst, UndefValue>(V);
+                     })) &&
              isFixedVectorShuffle(TE->Scalars, Mask)) ||
             (TE->State == TreeEntry::NeedToGather &&
              TE->getOpcode() == Instruction::Load && !TE->isAltShuffle()));
@@ -9183,8 +9207,9 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
-      (llvm::all_of(BuildVectorOpds,
-                    [](Value *V) { return isa<ExtractElementInst>(V); }) &&
+      (llvm::all_of(
+           BuildVectorOpds,
+           [](Value *V) { return isa<ExtractElementInst, UndefValue>(V); }) &&
        isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
 
