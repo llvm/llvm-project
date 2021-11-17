@@ -29,6 +29,9 @@ struct MemorySizeDistribution {
   ArrayRef<double> Probabilities; // Size indexed array of probabilities.
 };
 
+/// Returns a list of memmove size distributions.
+ArrayRef<MemorySizeDistribution> getMemmoveSizeDistributions();
+
 /// Returns a list of memcpy size distributions.
 ArrayRef<MemorySizeDistribution> getMemcpySizeDistributions();
 
