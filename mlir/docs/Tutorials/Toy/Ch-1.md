@@ -59,11 +59,11 @@ def main() {
 
   # A new call with <3, 2> (instead of <2, 3>) for both dimensions will
   # trigger another specialization of `multiply_transpose`.
-  var e = multiply_transpose(b, c);
+  var e = multiply_transpose(transpose(a), c);
 
   # Finally, calling into `multiply_transpose` with incompatible shape will
   # trigger a shape inference error.
-  var f = multiply_transpose(transpose(a), c);
+  var f = multiply_transpose(b, c);
 }
 ```
 
