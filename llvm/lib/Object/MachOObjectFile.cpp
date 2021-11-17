@@ -20,6 +20,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -4764,4 +4765,15 @@ MachOObjectFile::findDsymObjectMembers(StringRef Path) {
                              "%s: no objects found in dSYM bundle",
                              Path.str().c_str());
   return ObjectPaths;
+}
+
+llvm::swift::Swift5ReflectionSectionKind
+MachOObjectFile::mapReflectionSectionNameToEnumValue(
+    StringRef SectionName) const {
+#define HANDLE_SWIFT_SECTION(KIND, MACHO, ELF, COFF)                           \
+  .Case(MACHO, llvm::swift::Swift5ReflectionSectionKind::KIND)
+  return StringSwitch<llvm::swift::Swift5ReflectionSectionKind>(SectionName)
+#include "llvm/BinaryFormat/Swift.def"
+      .Default(llvm::swift::Swift5ReflectionSectionKind::unknown);
+#undef HANDLE_SWIFT_SECTION
 }

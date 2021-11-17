@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/VersionTuple.h"
@@ -228,6 +229,10 @@ protected:
   MCSection *ReadOnly8Section = nullptr;
   MCSection *ReadOnly16Section = nullptr;
 
+  // Swift5 Reflection Data Sections
+  std::array<MCSection *, swift::Swift5ReflectionSectionKind::last>
+      Swift5ReflectionSections = {};
+
 public:
   void initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
                             bool LargeCodeModel = false);
@@ -422,6 +427,14 @@ public:
   MCSection *getEHFrameSection() const { return EHFrameSection; }
 
   bool isPositionIndependent() const { return PositionIndependent; }
+
+  // Swift5 Reflection Data Sections
+  MCSection *getSwift5ReflectionSection(
+      llvm::swift::Swift5ReflectionSectionKind ReflSectionKind) {
+    return ReflSectionKind != llvm::swift::Swift5ReflectionSectionKind::unknown
+               ? Swift5ReflectionSections[ReflSectionKind]
+               : nullptr;
+  }
 
 private:
   bool PositionIndependent = false;
