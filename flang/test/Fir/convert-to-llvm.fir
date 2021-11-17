@@ -1271,3 +1271,51 @@ func @string_lit1() {
 
 // CHECK-LABEL: llvm.func @string_lit1
 // %{{.*}} = llvm.mlir.constant(dense<[158, 2345]> : vector<2xi16>) : !llvm.array<2 x i16>
+
+// -----
+
+// Test must be dead conversion.
+
+func @dead_shift() {
+  %c0 = arith.constant 0 : index
+  %0 = fir.shift %c0 : (index) -> !fir.shift<1>
+  return
+}
+
+// CHECK-LABEL: llvm.func @dead_shift
+// CHECK-NOT: fir.shift
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK-NEXT: llvm.return
+
+func @dead_shape() {
+  %c0 = arith.constant 0 : index
+  %0 = fir.shape %c0 : (index) -> !fir.shape<1>
+  return
+}
+
+// CHECK-LABEL: llvm.func @dead_shape
+// CHECK-NOT: fir.shape
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK-NEXT: llvm.return
+
+func @dead_shapeshift() {
+  %c0 = arith.constant 0 : index
+  %0 = fir.shape_shift %c0, %c0 : (index, index) -> !fir.shapeshift<1>
+  return
+}
+
+// CHECK-LABEL: llvm.func @dead_shapeshift
+// CHECK-NOT: fir.shape_shift
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK-NEXT: llvm.return
+
+func @dead_slice() {
+  %c0 = arith.constant 0 : index
+  %0 = fir.slice %c0, %c0, %c0 : (index, index, index) -> !fir.slice<1>
+  return
+}
+
+// CHECK-LABEL: llvm.func @dead_slice
+// CHECK-NOT: fir.slice
+// CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
+// CHECK-NEXT: llvm.return
