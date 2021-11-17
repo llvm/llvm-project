@@ -1323,7 +1323,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
 
     // Handle the case where the operation has inferred types.
     InferTypeOpInterface::Concept *concept =
-        state.name.getAbstractOperation()->getInterface<InferTypeOpInterface>();
+        state.name.getRegisteredInfo()->getInterface<InferTypeOpInterface>();
 
     // TODO: Handle failure.
     state.types.clear();

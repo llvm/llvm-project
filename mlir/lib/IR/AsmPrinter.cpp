@@ -383,7 +383,7 @@ public:
     if (!printerFlags.shouldPrintGenericOpForm()) {
       // Check to see if this is a known operation.  If so, use the registered
       // custom printer hook.
-      if (auto *opInfo = op->getAbstractOperation()) {
+      if (auto opInfo = op->getRegisteredInfo()) {
         opInfo->printAssembly(op, *this, /*defaultDialect=*/"");
         return;
       }
@@ -2517,9 +2517,9 @@ void OperationPrinter::printOperation(Operation *op) {
 
   // If requested, always print the generic form.
   if (!printerFlags.shouldPrintGenericOpForm()) {
-    // Check to see if this is a known operation.  If so, use the registered
+    // Check to see if this is a known operation. If so, use the registered
     // custom printer hook.
-    if (auto *opInfo = op->getAbstractOperation()) {
+    if (auto opInfo = op->getRegisteredInfo()) {
       opInfo->printAssembly(op, *this, defaultDialectStack.back());
       return;
     }

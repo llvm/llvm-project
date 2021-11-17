@@ -96,20 +96,6 @@ void mlir::registerMLIRContextCLOptions() {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Utility reader lock that takes a runtime flag that specifies if we really
-/// need to lock.
-struct ScopedReaderLock {
-  ScopedReaderLock(llvm::sys::SmartRWMutex<true> &mutexParam, bool shouldLock)
-      : mutex(shouldLock ? &mutexParam : nullptr) {
-    if (mutex)
-      mutex->lock_shared();
-  }
-  ~ScopedReaderLock() {
-    if (mutex)
-      mutex->unlock_shared();
-  }
-  llvm::sys::SmartRWMutex<true> *mutex;
-};
 /// Utility writer lock that takes a runtime flag that specifies if we really
 /// need to lock.
 struct ScopedWriterLock {
@@ -277,12 +263,17 @@ public:
   DenseMap<StringRef, std::unique_ptr<Dialect>> loadedDialects;
   DialectRegistry dialectsRegistry;
 
-  /// This is a mapping from operation name to AbstractOperation for registered
-  /// operations.
-  llvm::StringMap<AbstractOperation> registeredOperations;
-
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
+
+  /// This is a mapping from operation name to the operation info describing it.
+  llvm::StringMap<OperationName::Impl> operations;
+
+  /// A vector of operation info specifically for registered operations.
+  SmallVector<RegisteredOperationName> registeredOperations;
+
+  /// A mutex used when accessing operation information.
+  llvm::sys::SmartRWMutex<true> operationInfoMutex;
 
   //===--------------------------------------------------------------------===//
   // Affine uniquing
@@ -667,28 +658,24 @@ void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
 /// Return information about all registered operations.  This isn't very
 /// efficient, typically you should ask the operations about their properties
 /// directly.
-std::vector<AbstractOperation *> MLIRContext::getRegisteredOperations() {
+std::vector<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
   // We just have the operations in a non-deterministic hash table order. Dump
   // into a temporary array, then sort it by operation name to get a stable
   // ordering.
-  llvm::StringMap<AbstractOperation> &registeredOps =
-      impl->registeredOperations;
-
-  std::vector<AbstractOperation *> result;
-  result.reserve(registeredOps.size());
-  for (auto &elt : registeredOps)
-    result.push_back(&elt.second);
-  llvm::array_pod_sort(
-      result.begin(), result.end(),
-      [](AbstractOperation *const *lhs, AbstractOperation *const *rhs) {
-        return (*lhs)->name.compare((*rhs)->name);
-      });
+  std::vector<RegisteredOperationName> result(
+      impl->registeredOperations.begin(), impl->registeredOperations.end());
+  llvm::array_pod_sort(result.begin(), result.end(),
+                       [](const RegisteredOperationName *lhs,
+                          const RegisteredOperationName *rhs) {
+                         return lhs->getIdentifier().compare(
+                             rhs->getIdentifier());
+                       });
 
   return result;
 }
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
-  return impl->registeredOperations.count(name);
+  return OperationName(name, this).isRegistered();
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
@@ -739,26 +726,49 @@ AbstractAttribute *AbstractAttribute::lookupMutable(TypeID typeID,
 }
 
 //===----------------------------------------------------------------------===//
-// AbstractOperation
+// OperationName
 //===----------------------------------------------------------------------===//
 
-ParseResult AbstractOperation::parseAssembly(OpAsmParser &parser,
-                                             OperationState &result) const {
-  return parseAssemblyFn(parser, result);
+OperationName::OperationName(StringRef name, MLIRContext *context) {
+  MLIRContextImpl &ctxImpl = context->getImpl();
+
+  // Check for an existing name in read-only mode.
+  bool isMultithreadingEnabled = context->isMultithreadingEnabled();
+  if (isMultithreadingEnabled) {
+    llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
+    auto it = ctxImpl.operations.find(name);
+    if (it != ctxImpl.operations.end()) {
+      impl = &it->second;
+      return;
+    }
+  }
+
+  // Acquire a writer-lock so that we can safely create the new instance.
+  ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
+
+  auto it = ctxImpl.operations.insert({name, OperationName::Impl(nullptr)});
+  if (it.second)
+    it.first->second.name = StringAttr::get(context, name);
+  impl = &it.first->second;
 }
 
-/// Look up the specified operation in the operation set and return a pointer
-/// to it if present. Otherwise, return a null pointer.
-AbstractOperation *AbstractOperation::lookupMutable(StringRef opName,
-                                                    MLIRContext *context) {
-  auto &impl = context->getImpl();
-  auto it = impl.registeredOperations.find(opName);
-  if (it != impl.registeredOperations.end())
-    return &it->second;
-  return nullptr;
+StringRef OperationName::getDialectNamespace() const {
+  if (Dialect *dialect = getDialect())
+    return dialect->getNamespace();
+  return getStringRef().split('.').first;
 }
 
-void AbstractOperation::insert(
+//===----------------------------------------------------------------------===//
+// RegisteredOperationName
+//===----------------------------------------------------------------------===//
+
+ParseResult
+RegisteredOperationName::parseAssembly(OpAsmParser &parser,
+                                       OperationState &result) const {
+  return impl->parseAssemblyFn(parser, result);
+}
+
+void RegisteredOperationName::insert(
     StringRef name, Dialect &dialect, TypeID typeID,
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
     VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
@@ -766,51 +776,47 @@ void AbstractOperation::insert(
     detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
     ArrayRef<StringRef> attrNames) {
   MLIRContext *ctx = dialect.getContext();
-  auto &impl = ctx->getImpl();
-  assert(impl.multiThreadedExecutionContext == 0 &&
-         "Registering a new operation kind while in a multi-threaded execution "
+  auto &ctxImpl = ctx->getImpl();
+  assert(ctxImpl.multiThreadedExecutionContext == 0 &&
+         "registering a new operation kind while in a multi-threaded execution "
          "context");
 
   // Register the attribute names of this operation.
   MutableArrayRef<StringAttr> cachedAttrNames;
   if (!attrNames.empty()) {
     cachedAttrNames = MutableArrayRef<StringAttr>(
-        impl.abstractDialectSymbolAllocator.Allocate<StringAttr>(
+        ctxImpl.abstractDialectSymbolAllocator.Allocate<StringAttr>(
             attrNames.size()),
         attrNames.size());
     for (unsigned i : llvm::seq<unsigned>(0, attrNames.size()))
       new (&cachedAttrNames[i]) StringAttr(StringAttr::get(ctx, attrNames[i]));
   }
 
-  // Register the information for this operation.
-  AbstractOperation opInfo(
-      name, dialect, typeID, std::move(parseAssembly), std::move(printAssembly),
-      std::move(verifyInvariants), std::move(foldHook),
-      std::move(getCanonicalizationPatterns), std::move(interfaceMap),
-      std::move(hasTrait), cachedAttrNames);
-  if (!impl.registeredOperations.insert({name, std::move(opInfo)}).second) {
+  // Insert the operation info if it doesn't exist yet.
+  auto it = ctxImpl.operations.insert({name, OperationName::Impl(nullptr)});
+  if (it.second)
+    it.first->second.name = StringAttr::get(ctx, name);
+  OperationName::Impl &impl = it.first->second;
+
+  if (impl.isRegistered()) {
     llvm::errs() << "error: operation named '" << name
                  << "' is already registered.\n";
     abort();
   }
-}
+  ctxImpl.registeredOperations.push_back(RegisteredOperationName(&impl));
 
-AbstractOperation::AbstractOperation(
-    StringRef name, Dialect &dialect, TypeID typeID,
-    ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
-    VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
-    GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
-    ArrayRef<StringAttr> attrNames)
-    : name(StringAttr::get(dialect.getContext(), name)), dialect(dialect),
-      typeID(typeID), interfaceMap(std::move(interfaceMap)),
-      foldHookFn(std::move(foldHook)),
-      getCanonicalizationPatternsFn(std::move(getCanonicalizationPatterns)),
-      hasTraitFn(std::move(hasTrait)),
-      parseAssemblyFn(std::move(parseAssembly)),
-      printAssemblyFn(std::move(printAssembly)),
-      verifyInvariantsFn(std::move(verifyInvariants)),
-      attributeNames(attrNames) {}
+  // Update the registered info for this operation.
+  impl.dialect = &dialect;
+  impl.typeID = typeID;
+  impl.interfaceMap = std::move(interfaceMap);
+  impl.foldHookFn = std::move(foldHook);
+  impl.getCanonicalizationPatternsFn = std::move(getCanonicalizationPatterns);
+  impl.hasTraitFn = std::move(hasTrait);
+  impl.parseAssemblyFn = std::move(parseAssembly);
+  impl.printAssemblyFn = std::move(printAssembly);
+  impl.verifyInvariantsFn = std::move(verifyInvariants);
+  impl.attributeNames = cachedAttrNames;
+}
 
 //===----------------------------------------------------------------------===//
 // AbstractType

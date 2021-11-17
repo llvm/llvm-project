@@ -669,7 +669,7 @@ void OpEmitter::genAttrNameGetters() {
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
     method->body() << "assert(index < " << attributeNames.size()
                    << " && \"invalid attribute index\");\n"
-                      "  return name.getAbstractOperation()"
+                      "  return name.getRegisteredInfo()"
                       "->getAttributeNames()[index];";
   }
 

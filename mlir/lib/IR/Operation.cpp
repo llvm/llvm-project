@@ -20,49 +20,6 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// OperationName
-//===----------------------------------------------------------------------===//
-
-/// Form the OperationName for an op with the specified string.  This either is
-/// a reference to an AbstractOperation if one is known, or a uniqued Identifier
-/// if not.
-OperationName::OperationName(StringRef name, MLIRContext *context) {
-  if (auto *op = AbstractOperation::lookup(name, context))
-    representation = op;
-  else
-    representation = StringAttr::get(name, context);
-}
-
-/// Return the name of the dialect this operation is registered to.
-StringRef OperationName::getDialectNamespace() const {
-  if (Dialect *dialect = getDialect())
-    return dialect->getNamespace();
-  return getStringRef().split('.').first;
-}
-
-/// Return the operation name with dialect name stripped, if it has one.
-StringRef OperationName::stripDialect() const {
-  return getStringRef().split('.').second;
-}
-
-/// Return the name of this operation. This always succeeds.
-StringRef OperationName::getStringRef() const {
-  return getIdentifier().strref();
-}
-
-/// Return the name of this operation as an identifier. This always succeeds.
-StringAttr OperationName::getIdentifier() const {
-  if (auto *op = representation.dyn_cast<const AbstractOperation *>())
-    return op->name;
-  return representation.get<StringAttr>();
-}
-
-OperationName OperationName::getFromOpaquePointer(const void *pointer) {
-  return OperationName(
-      RepresentationUnion::getFromOpaqueValue(const_cast<void *>(pointer)));
-}
-
-//===----------------------------------------------------------------------===//
 // Operation
 //===----------------------------------------------------------------------===//
 
@@ -115,11 +72,8 @@ Operation *Operation::create(Location location, OperationName name,
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
-  bool needsOperandStorage = true;
-  if (operands.empty()) {
-    if (const AbstractOperation *abstractOp = name.getAbstractOperation())
-      needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
-  }
+  bool needsOperandStorage =
+      operands.empty() ? !name.hasTrait<OpTrait::ZeroOperands>() : true;
 
   // Compute the byte size for the operation and the operand storage. This takes
   // into account the size of the operation, its trailing objects, and its
@@ -543,8 +497,8 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  auto *abstractOp = getAbstractOperation();
-  if (abstractOp && succeeded(abstractOp->foldHook(this, operands, results)))
+  Optional<RegisteredOperationName> info = getRegisteredInfo();
+  if (info && succeeded(info->foldHook(this, operands, results)))
     return success();
 
   // Otherwise, fall back on the dialect hook to handle it.

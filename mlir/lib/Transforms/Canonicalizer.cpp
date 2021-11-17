@@ -37,8 +37,8 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     RewritePatternSet owningPatterns(context);
     for (auto *dialect : context->getLoadedDialects())
       dialect->getCanonicalizationPatterns(owningPatterns);
-    for (auto *op : context->getRegisteredOperations())
-      op->getCanonicalizationPatterns(owningPatterns, context);
+    for (RegisteredOperationName op : context->getRegisteredOperations())
+      op.getCanonicalizationPatterns(owningPatterns, context);
 
     patterns = FrozenRewritePatternSet(std::move(owningPatterns),
                                        disabledPatterns, enabledPatterns);

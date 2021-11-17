@@ -57,14 +57,14 @@ public:
   OperationName getName() { return name; }
 
   /// If this operation has a registered operation description, return it.
-  /// Otherwise return null.
-  const AbstractOperation *getAbstractOperation() {
-    return getName().getAbstractOperation();
+  /// Otherwise return None.
+  Optional<RegisteredOperationName> getRegisteredInfo() {
+    return getName().getRegisteredInfo();
   }
 
   /// Returns true if this operation has a registered operation description,
   /// otherwise false.
-  bool isRegistered() { return getAbstractOperation(); }
+  bool isRegistered() { return getName().isRegistered(); }
 
   /// Remove this operation from its parent block and delete it.
   void erase();
@@ -468,16 +468,14 @@ public:
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
   template <template <typename T> class Trait> bool hasTrait() {
-    const AbstractOperation *abstractOp = getAbstractOperation();
-    return abstractOp ? abstractOp->hasTrait<Trait>() : false;
+    return name.hasTrait<Trait>();
   }
 
-  /// Returns true if the operation is *might* have the provided trait. This
+  /// Returns true if the operation *might* have the provided trait. This
   /// means that either the operation is unregistered, or it was registered with
   /// the provide trait.
   template <template <typename T> class Trait> bool mightHaveTrait() {
-    const AbstractOperation *abstractOp = getAbstractOperation();
-    return abstractOp ? abstractOp->hasTrait<Trait>() : true;
+    return name.mightHaveTrait<Trait>();
   }
 
   //===--------------------------------------------------------------------===//
