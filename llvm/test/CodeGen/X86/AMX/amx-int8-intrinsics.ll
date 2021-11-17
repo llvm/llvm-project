@@ -8,7 +8,6 @@ define void @test_amx() {
 ; CHECK-NEXT:    tdpbsud %tmm7, %tmm4, %tmm3
 ; CHECK-NEXT:    tdpbusd %tmm7, %tmm0, %tmm3
 ; CHECK-NEXT:    tdpbuud %tmm1, %tmm4, %tmm3
-; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    retq
   call void @llvm.x86.tdpbssd(i8 3, i8 4, i8 7)
 
