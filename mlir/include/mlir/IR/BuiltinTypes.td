@@ -895,7 +895,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     vector-type ::= `vector` `<` static-dimension-list vector-element-type `>`
     vector-element-type ::= float-type | integer-type | index-type
 
-    static-dimension-list ::= (decimal-literal `x`)+
+    static-dimension-list ::= (decimal-literal `x`)*
     ```
 
     The vector type represents a SIMD style vector, used by target-specific
@@ -903,12 +903,12 @@ def Builtin_Vector : Builtin_Type<"Vector", [
     vector<16 x f32>) we also support multidimensional registers on targets that
     support them (like TPUs).
 
-    Vector shapes must be positive decimal integers.
+    Vector shapes must be positive decimal integers. 0D vectors are allowed by
+    omitting the dimension: `vector<f32>`.
 
     Note: hexadecimal integer literals are not allowed in vector type
     declarations, `vector<0x42xi32>` is invalid because it is interpreted as a
     2D vector with shape `(0, 42)` and zero shapes are not allowed.
-
 
     Examples:
 

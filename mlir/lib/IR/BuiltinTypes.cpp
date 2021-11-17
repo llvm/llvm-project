@@ -441,9 +441,6 @@ bool ShapedType::hasStaticShape(ArrayRef<int64_t> shape) const {
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType) {
-  if (shape.empty())
-    return emitError() << "vector types must have at least one dimension";
-
   if (!isValidElementType(elementType))
     return emitError()
            << "vector elements must be int/index/float type but got "
