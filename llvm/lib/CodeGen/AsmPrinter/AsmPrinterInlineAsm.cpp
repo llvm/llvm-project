@@ -276,7 +276,7 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
   int CurVariant = -1;            // The number of the {.|.|.} region we are in.
   const char *LastEmitted = AsmStr; // One past the last character emitted.
   unsigned NumOperands = MI->getNumOperands();
-  int AsmPrinterVariant = MAI->getAssemblerDialect();
+  int AsmPrinterVariant = MMI->getTarget().unqualifiedInlineAsmVariant();
 
   if (MAI->getEmitGNUAsmStartIndentationMarker())
     OS << '\t';

@@ -485,6 +485,10 @@ public:
   virtual bool useIPRA() const {
     return false;
   }
+
+  /// The default variant to use in unqualified `asm` instructions.
+  /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
+  virtual int unqualifiedInlineAsmVariant() const { return 0; }
 };
 
 /// Helper method for getting the code model, returning Default if
