@@ -66,7 +66,9 @@ public:
                                          // target, else use existing one
                          Status &error) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
+  std::vector<ArchSpec> GetSupportedArchitectures() override {
+    return m_supported_architectures;
+  }
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
@@ -181,6 +183,8 @@ private:
 
   llvm::Optional<std::string> DoGetUserName(UserIDResolver::id_t uid) override;
   llvm::Optional<std::string> DoGetGroupName(UserIDResolver::id_t uid) override;
+
+  std::vector<ArchSpec> m_supported_architectures;
 
   PlatformRemoteGDBServer(const PlatformRemoteGDBServer &) = delete;
   const PlatformRemoteGDBServer &
