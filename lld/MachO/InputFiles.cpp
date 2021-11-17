@@ -355,8 +355,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
 // any subsection splitting has occurred). It will be updated to represent the
 // same location as an offset relative to the start of the containing
 // subsection.
+template <class T>
 static InputSection *findContainingSubsection(Subsections &subsections,
-                                              uint64_t *offset) {
+                                              T *offset) {
   auto it = std::prev(llvm::upper_bound(
       subsections, *offset,
       [](uint64_t value, Subsection subsec) { return value < subsec.offset; }));
