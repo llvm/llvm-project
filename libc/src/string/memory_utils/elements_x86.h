@@ -30,7 +30,7 @@ namespace x86 {
 
 #ifdef __SSE2__
 template <typename Base> struct Vector : public Base {
-  static void Copy(char *dst, const char *src) {
+  static void Copy(char *__restrict dst, const char *__restrict src) {
     Base::Store(dst, Base::Load(src));
   }
 
