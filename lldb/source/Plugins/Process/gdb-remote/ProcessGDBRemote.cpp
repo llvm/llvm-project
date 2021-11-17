@@ -677,133 +677,143 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
   //  LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD);
   //  ::LogSetLogFile ("/dev/stdout");
 
-  error = EstablishConnectionIfNeeded(launch_info);
-  if (error.Success()) {
-    PseudoTerminal pty;
-    const bool disable_stdio = (launch_flags & eLaunchFlagDisableSTDIO) != 0;
+  ObjectFile *object_file = exe_module->GetObjectFile();
+  if (object_file) {
+    error = EstablishConnectionIfNeeded(launch_info);
+    if (error.Success()) {
+      PseudoTerminal pty;
+      const bool disable_stdio = (launch_flags & eLaunchFlagDisableSTDIO) != 0;
 
-    PlatformSP platform_sp(GetTarget().GetPlatform());
-    if (disable_stdio) {
-      // set to /dev/null unless redirected to a file above
-      if (!stdin_file_spec)
-        stdin_file_spec.SetFile(FileSystem::DEV_NULL,
-                                FileSpec::Style::native);
-      if (!stdout_file_spec)
-        stdout_file_spec.SetFile(FileSystem::DEV_NULL,
-                                 FileSpec::Style::native);
-      if (!stderr_file_spec)
-        stderr_file_spec.SetFile(FileSystem::DEV_NULL,
-                                 FileSpec::Style::native);
-    } else if (platform_sp && platform_sp->IsHost()) {
-      // If the debugserver is local and we aren't disabling STDIO, lets use
-      // a pseudo terminal to instead of relying on the 'O' packets for stdio
-      // since 'O' packets can really slow down debugging if the inferior
-      // does a lot of output.
-      if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
-          !errorToBool(pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY))) {
-        FileSpec secondary_name(pty.GetSecondaryName());
-
+      PlatformSP platform_sp(GetTarget().GetPlatform());
+      if (disable_stdio) {
+        // set to /dev/null unless redirected to a file above
         if (!stdin_file_spec)
-          stdin_file_spec = secondary_name;
-
+          stdin_file_spec.SetFile(FileSystem::DEV_NULL,
+                                  FileSpec::Style::native);
         if (!stdout_file_spec)
-          stdout_file_spec = secondary_name;
-
+          stdout_file_spec.SetFile(FileSystem::DEV_NULL,
+                                   FileSpec::Style::native);
         if (!stderr_file_spec)
-          stderr_file_spec = secondary_name;
-      }
-      LLDB_LOGF(
-          log,
-          "ProcessGDBRemote::%s adjusted STDIO paths for local platform "
-          "(IsHost() is true) using secondary: stdin=%s, stdout=%s, "
-          "stderr=%s",
-          __FUNCTION__,
-          stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
-          stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
-          stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
-    }
+          stderr_file_spec.SetFile(FileSystem::DEV_NULL,
+                                   FileSpec::Style::native);
+      } else if (platform_sp && platform_sp->IsHost()) {
+        // If the debugserver is local and we aren't disabling STDIO, lets use
+        // a pseudo terminal to instead of relying on the 'O' packets for stdio
+        // since 'O' packets can really slow down debugging if the inferior
+        // does a lot of output.
+        if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
+            !errorToBool(pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY))) {
+          FileSpec secondary_name(pty.GetSecondaryName());
 
-    LLDB_LOGF(log,
-              "ProcessGDBRemote::%s final STDIO paths after all "
-              "adjustments: stdin=%s, stdout=%s, stderr=%s",
-              __FUNCTION__,
-              stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
-              stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
-              stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
+          if (!stdin_file_spec)
+            stdin_file_spec = secondary_name;
 
-    if (stdin_file_spec)
-      m_gdb_comm.SetSTDIN(stdin_file_spec);
-    if (stdout_file_spec)
-      m_gdb_comm.SetSTDOUT(stdout_file_spec);
-    if (stderr_file_spec)
-      m_gdb_comm.SetSTDERR(stderr_file_spec);
+          if (!stdout_file_spec)
+            stdout_file_spec = secondary_name;
 
-    m_gdb_comm.SetDisableASLR(launch_flags & eLaunchFlagDisableASLR);
-    m_gdb_comm.SetDetachOnError(launch_flags & eLaunchFlagDetachOnError);
-
-    m_gdb_comm.SendLaunchArchPacket(
-        GetTarget().GetArchitecture().GetArchitectureName());
-
-    const char *launch_event_data = launch_info.GetLaunchEventData();
-    if (launch_event_data != nullptr && *launch_event_data != '\0')
-      m_gdb_comm.SendLaunchEventDataPacket(launch_event_data);
-
-    if (working_dir) {
-      m_gdb_comm.SetWorkingDir(working_dir);
-    }
-
-    // Send the environment and the program + arguments after we connect
-    m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
-
-    {
-      // Scope for the scoped timeout object
-      GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
-                                                    std::chrono::seconds(10));
-
-      int arg_packet_err = m_gdb_comm.SendArgumentsPacket(launch_info);
-      if (arg_packet_err == 0) {
-        std::string error_str;
-        if (m_gdb_comm.GetLaunchSuccess(error_str)) {
-          SetID(m_gdb_comm.GetCurrentProcessID());
-        } else {
-          error.SetErrorString(error_str.c_str());
+          if (!stderr_file_spec)
+            stderr_file_spec = secondary_name;
         }
-      } else {
-        error.SetErrorStringWithFormat("'A' packet returned an error: %i",
-                                       arg_packet_err);
-      }
-    }
-
-    if (GetID() == LLDB_INVALID_PROCESS_ID) {
-      LLDB_LOGF(log, "failed to connect to debugserver: %s",
-                error.AsCString());
-      KillDebugserverProcess();
-      return error;
-    }
-
-    StringExtractorGDBRemote response;
-    if (m_gdb_comm.GetStopReply(response)) {
-      SetLastStopPacket(response);
-
-      const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
-
-      if (process_arch.IsValid()) {
-        GetTarget().MergeArchitecture(process_arch);
-      } else {
-        const ArchSpec &host_arch = m_gdb_comm.GetHostArchitecture();
-        if (host_arch.IsValid())
-          GetTarget().MergeArchitecture(host_arch);
+        LLDB_LOGF(
+            log,
+            "ProcessGDBRemote::%s adjusted STDIO paths for local platform "
+            "(IsHost() is true) using secondary: stdin=%s, stdout=%s, "
+            "stderr=%s",
+            __FUNCTION__,
+            stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
+            stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
+            stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
       }
 
-      SetPrivateState(SetThreadStopInfo(response));
+      LLDB_LOGF(log,
+                "ProcessGDBRemote::%s final STDIO paths after all "
+                "adjustments: stdin=%s, stdout=%s, stderr=%s",
+                __FUNCTION__,
+                stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
+                stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
+                stderr_file_spec ? stderr_file_spec.GetCString() : "<null>");
 
-      if (!disable_stdio) {
-        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
-          SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+      if (stdin_file_spec)
+        m_gdb_comm.SetSTDIN(stdin_file_spec);
+      if (stdout_file_spec)
+        m_gdb_comm.SetSTDOUT(stdout_file_spec);
+      if (stderr_file_spec)
+        m_gdb_comm.SetSTDERR(stderr_file_spec);
+
+      m_gdb_comm.SetDisableASLR(launch_flags & eLaunchFlagDisableASLR);
+      m_gdb_comm.SetDetachOnError(launch_flags & eLaunchFlagDetachOnError);
+
+      m_gdb_comm.SendLaunchArchPacket(
+          GetTarget().GetArchitecture().GetArchitectureName());
+
+      const char *launch_event_data = launch_info.GetLaunchEventData();
+      if (launch_event_data != nullptr && *launch_event_data != '\0')
+        m_gdb_comm.SendLaunchEventDataPacket(launch_event_data);
+
+      if (working_dir) {
+        m_gdb_comm.SetWorkingDir(working_dir);
       }
+
+      // Send the environment and the program + arguments after we connect
+      m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
+
+      {
+        // Scope for the scoped timeout object
+        GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
+                                                      std::chrono::seconds(10));
+
+        int arg_packet_err = m_gdb_comm.SendArgumentsPacket(launch_info);
+        if (arg_packet_err == 0) {
+          std::string error_str;
+          if (m_gdb_comm.GetLaunchSuccess(error_str)) {
+            SetID(m_gdb_comm.GetCurrentProcessID());
+          } else {
+            error.SetErrorString(error_str.c_str());
+          }
+        } else {
+          error.SetErrorStringWithFormat("'A' packet returned an error: %i",
+                                         arg_packet_err);
+        }
+      }
+
+      if (GetID() == LLDB_INVALID_PROCESS_ID) {
+        LLDB_LOGF(log, "failed to connect to debugserver: %s",
+                  error.AsCString());
+        KillDebugserverProcess();
+        return error;
+      }
+
+      StringExtractorGDBRemote response;
+      if (m_gdb_comm.GetStopReply(response)) {
+        SetLastStopPacket(response);
+
+        const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
+
+        if (process_arch.IsValid()) {
+          GetTarget().MergeArchitecture(process_arch);
+        } else {
+          const ArchSpec &host_arch = m_gdb_comm.GetHostArchitecture();
+          if (host_arch.IsValid())
+            GetTarget().MergeArchitecture(host_arch);
+        }
+
+        SetPrivateState(SetThreadStopInfo(response));
+
+        if (!disable_stdio) {
+          if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+            SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+        }
+      }
+    } else {
+      LLDB_LOGF(log, "failed to connect to debugserver: %s", error.AsCString());
     }
   } else {
-    LLDB_LOGF(log, "failed to connect to debugserver: %s", error.AsCString());
+    // Set our user ID to an invalid process ID.
+    SetID(LLDB_INVALID_PROCESS_ID);
+    error.SetErrorStringWithFormat(
+        "failed to get object file from '%s' for arch %s",
+        exe_module->GetFileSpec().GetFilename().AsCString(),
+        exe_module->GetArchitecture().GetArchitectureName());
   }
   return error;
 }
