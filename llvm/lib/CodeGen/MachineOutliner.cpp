@@ -798,6 +798,7 @@ bool MachineOutliner::outline(Module &M,
                  Last = std::next(CallInst.getReverse());
              Iter != Last; Iter++) {
           MachineInstr *MI = &*Iter;
+          SmallSet<Register, 2> InstrUseRegs;
           for (MachineOperand &MOP : MI->operands()) {
             // Skip over anything that isn't a register.
             if (!MOP.isReg())
@@ -806,7 +807,8 @@ bool MachineOutliner::outline(Module &M,
             if (MOP.isDef()) {
               // Introduce DefRegs set to skip the redundant register.
               DefRegs.insert(MOP.getReg());
-              if (!MOP.isDead() && UseRegs.count(MOP.getReg()))
+              if (UseRegs.count(MOP.getReg()) &&
+                  !InstrUseRegs.count(MOP.getReg()))
                 // Since the regiester is modeled as defined,
                 // it is not necessary to be put in use register set.
                 UseRegs.erase(MOP.getReg());
@@ -814,6 +816,7 @@ bool MachineOutliner::outline(Module &M,
               // Any register which is not undefined should
               // be put in the use register set.
               UseRegs.insert(MOP.getReg());
+              InstrUseRegs.insert(MOP.getReg());
             }
           }
           if (MI->isCandidateForCallSiteEntry())
