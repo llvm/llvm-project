@@ -67,7 +67,7 @@ public:
 
   uint32_t GetAddressByteSize() const override;
 
-  lldb_private::Symtab *GetSymtab() override;
+  void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override;
 

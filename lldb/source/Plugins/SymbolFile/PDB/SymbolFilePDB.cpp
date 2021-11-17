@@ -1421,7 +1421,6 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
                ));
   }
 
-  symtab.CalculateSymbolSizes();
   symtab.Finalize();
 }
 
