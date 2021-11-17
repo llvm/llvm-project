@@ -773,13 +773,6 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
   endif()
 
-  if (LIBCXX_SUPPORTS_UNWINDLIB_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
-    # If we're linking directly against the libunwind that we're building
-    # in the same invocation, don't try to link in the toolchain's
-    # default libunwind (which may be missing still).
-    target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
-  endif()
-
   if (LIBCXX_HAS_SYSTEM_LIB)
     target_link_libraries(${target} PRIVATE System)
   endif()
