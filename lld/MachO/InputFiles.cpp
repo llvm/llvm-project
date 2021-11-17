@@ -70,6 +70,8 @@
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
+#include <type_traits>
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support::endian;
@@ -358,6 +360,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
 template <class T>
 static InputSection *findContainingSubsection(Subsections &subsections,
                                               T *offset) {
+  static_assert(std::is_same<uint64_t, T>::value ||
+                    std::is_same<uint32_t, T>::value,
+                "unexpected type for offset");
   auto it = std::prev(llvm::upper_bound(
       subsections, *offset,
       [](uint64_t value, Subsection subsec) { return value < subsec.offset; }));
