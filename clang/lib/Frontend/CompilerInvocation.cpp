@@ -1614,18 +1614,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_inline_asm_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value == "att") {
-      Opts.InlineAsmDialect = CodeGenOptions::IAD_ATT;
-    } else if (Value == "intel") {
-      Opts.InlineAsmDialect = CodeGenOptions::IAD_Intel;
-    } else {
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    }
-  }
-
   // PIC defaults to -fno-direct-access-external-data while non-PIC defaults to
   // -fdirect-access-external-data.
   Opts.DirectAccessExternalData =
