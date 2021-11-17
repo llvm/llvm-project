@@ -6,13 +6,13 @@ void *baseline(void *x) {
   return __builtin_assume_aligned(x, 1);
 }
 
-// CHECK-LABEL: blacklist_0
-__attribute__((no_sanitize("undefined"))) void *blacklist_0(void *x) {
+// CHECK-LABEL: ignorelist_0
+__attribute__((no_sanitize("undefined"))) void *ignorelist_0(void *x) {
   return __builtin_assume_aligned(x, 1);
 }
 
-// CHECK-LABEL: blacklist_1
-__attribute__((no_sanitize("alignment"))) void *blacklist_1(void *x) {
+// CHECK-LABEL: ignorelist_1
+__attribute__((no_sanitize("alignment"))) void *ignorelist_1(void *x) {
   return __builtin_assume_aligned(x, 1);
 }
 

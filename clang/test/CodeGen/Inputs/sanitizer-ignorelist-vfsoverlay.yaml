@@ -3,10 +3,10 @@
   'roots': [
     { 'name': '@DIR@', 'type': 'directory',
       'contents': [
-        { 'name': 'only-virtual-file.blacklist', 'type': 'file',
+        { 'name': 'only-virtual-file.ignorelist', 'type': 'file',
           'external-contents': '@REAL_FILE@'
         },
-        { 'name': 'invalid-virtual-file.blacklist', 'type': 'file',
+        { 'name': 'invalid-virtual-file.ignorelist', 'type': 'file',
           'external-contents': '@NONEXISTENT_FILE@'
         }
       ]

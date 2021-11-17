@@ -14,13 +14,13 @@ char *baseline(char *base, unsigned long offset) {
   return base + offset;
 }
 
-// CHECK-LABEL: @blacklist_0
-__attribute__((no_sanitize("undefined"))) char *blacklist_0(char *base, unsigned long offset) {
+// CHECK-LABEL: @ignorelist_0
+__attribute__((no_sanitize("undefined"))) char *ignorelist_0(char *base, unsigned long offset) {
   return base + offset;
 }
 
-// CHECK-LABEL: @blacklist_1
-__attribute__((no_sanitize("pointer-overflow"))) char *blacklist_1(char *base, unsigned long offset) {
+// CHECK-LABEL: @ignorelist_1
+__attribute__((no_sanitize("pointer-overflow"))) char *ignorelist_1(char *base, unsigned long offset) {
   return base + offset;
 }
 
