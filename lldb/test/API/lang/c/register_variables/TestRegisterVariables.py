@@ -50,7 +50,7 @@ class RegisterVariableTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 1, expected_location_hit_count = 1)
 
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(
@@ -76,7 +76,7 @@ class RegisterVariableTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 2, expected_location_hit_count = 1)
 
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(
@@ -102,7 +102,7 @@ class RegisterVariableTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 3, expected_location_hit_count = 1)
 
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(
