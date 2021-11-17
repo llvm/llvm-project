@@ -2,4 +2,5 @@
 utils/bazel
 # Ignore third-party projects. These should be configured separately and some
 # include Bazel configs.
+libcxx/utils/google-benchmark
 third-party
