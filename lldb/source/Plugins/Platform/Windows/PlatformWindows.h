@@ -63,8 +63,9 @@ public:
                          lldb_private::Target *target,
                          lldb_private::Status &error) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
+  std::vector<ArchSpec> GetSupportedArchitectures() override {
+    return m_supported_architectures;
+  }
 
   void GetStatus(lldb_private::Stream &strm) override;
 
@@ -82,6 +83,8 @@ private:
   lldb_private::Status EvaluateLoaderExpression(lldb_private::Process *process,
                                                 const char *expression,
                                                 lldb::ValueObjectSP &value);
+
+  std::vector<ArchSpec> m_supported_architectures;
 };
 
 } // namespace lldb_private
