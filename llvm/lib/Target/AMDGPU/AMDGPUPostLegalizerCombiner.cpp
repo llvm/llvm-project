@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUCombinerHelper.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -34,10 +35,11 @@ protected:
   MachineIRBuilder &B;
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
-  CombinerHelper &Helper;
+  AMDGPUCombinerHelper &Helper;
 
 public:
-  AMDGPUPostLegalizerCombinerHelper(MachineIRBuilder &B, CombinerHelper &Helper)
+  AMDGPUPostLegalizerCombinerHelper(MachineIRBuilder &B,
+                                    AMDGPUCombinerHelper &Helper)
       : B(B), MF(B.getMF()), MRI(*B.getMRI()), Helper(Helper){};
 
   struct FMinFMaxLegacyInfo {
@@ -257,12 +259,12 @@ bool AMDGPUPostLegalizerCombinerHelper::matchRemoveFcanonicalize(
 
 class AMDGPUPostLegalizerCombinerHelperState {
 protected:
-  CombinerHelper &Helper;
+  AMDGPUCombinerHelper &Helper;
   AMDGPUPostLegalizerCombinerHelper &PostLegalizerHelper;
 
 public:
   AMDGPUPostLegalizerCombinerHelperState(
-      CombinerHelper &Helper,
+      AMDGPUCombinerHelper &Helper,
       AMDGPUPostLegalizerCombinerHelper &PostLegalizerHelper)
       : Helper(Helper), PostLegalizerHelper(PostLegalizerHelper) {}
 };
@@ -300,7 +302,7 @@ public:
 bool AMDGPUPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT, LInfo);
+  AMDGPUCombinerHelper Helper(Observer, B, KB, MDT, LInfo);
   AMDGPUPostLegalizerCombinerHelper PostLegalizerHelper(B, Helper);
   AMDGPUGenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper,
                                                  PostLegalizerHelper);
