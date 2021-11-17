@@ -5,7 +5,7 @@
 ;; FIXME: When dangling nodes for a variadic dbg_value are found, we should be
 ;; able to recover the value in some cases.
 
-; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - -experimental-debug-variable-locations=false | FileCheck %s
 
 ;; Check that dangling debug info in the SelectionDAG build phase is handled
 ;; in the same way for variadic dbg_value ndoes as non-variadics.

@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc < %s -filetype=obj -experimental-debug-variable-locations=false | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; This test creates two UserValues in LiveDebugVariables with one location
 ; each. x must be spilled, but y will be allocated to a CSR. x's location

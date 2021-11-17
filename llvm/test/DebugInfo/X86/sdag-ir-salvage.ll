@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before finalize-isel %s -o -  | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before finalize-isel %s -o -  -experimental-debug-variable-locations=false | FileCheck %s
 
 ; Test that the dbg.value for %baz, which doesn't exist in the 'next' bb,
 ; can be salvaged back to the underlying argument vreg.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=false | FileCheck %s
 
 ; Test the movement of dbg.values of arguments. SelectionDAG tries to be
 ; helpful and places DBG_VALUEs of Arguments at the start of functions.

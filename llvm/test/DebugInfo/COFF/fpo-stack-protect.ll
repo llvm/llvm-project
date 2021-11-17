@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck %s
 
 ; C source:
 ; void escape(int *);

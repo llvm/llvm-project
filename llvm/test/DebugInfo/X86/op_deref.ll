@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj \
 ; RUN:     | llvm-dwarfdump -v -debug-info - \
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF4
-; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj -dwarf-version=3 \
+; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj -dwarf-version=3\
 ; RUN:     | llvm-dwarfdump -v -debug-info - \
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF3
 

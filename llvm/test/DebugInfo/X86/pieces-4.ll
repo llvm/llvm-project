@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc -filetype=obj < %s -experimental-debug-variable-locations=false | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
 
 ; Compile the following with -O1:
 

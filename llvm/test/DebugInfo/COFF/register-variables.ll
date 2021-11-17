@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefix=ASM
+; RUN: llc < %s -filetype=obj -experimental-debug-variable-locations=false | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; Generated from:
 ; volatile int x;

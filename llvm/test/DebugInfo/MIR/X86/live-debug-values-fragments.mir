@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -run-pass=livedebugvalues | FileCheck %s
+# RUN: llc %s -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=false | FileCheck %s
 #
 # The first func tests that, for two independent variable fragments defined in
 # blocks 1 and 2, _both_ their locations are propagated into the exit block.

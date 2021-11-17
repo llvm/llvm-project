@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=livedebugvars -o %t
+; RUN: llc %s -stop-after=livedebugvars -o %t -experimental-debug-variable-locations=false
 ; RUN: cat %t | FileCheck %s
 ;
 ; Test that we can emit debug info for large values that are split

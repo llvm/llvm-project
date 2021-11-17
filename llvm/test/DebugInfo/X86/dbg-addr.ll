@@ -1,4 +1,4 @@
-; RUN: llc %s -o %t.s
+; RUN: llc %s -o %t.s -experimental-debug-variable-locations=false
 ; RUN: llvm-mc -triple x86_64--linux %t.s -filetype=obj -o %t.o
 ; RUN: FileCheck < %t.s %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF

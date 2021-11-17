@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s
 
 ; This test case was generated from the following phi-split.c program,
 ; using: clang phi-split.c -g -O1 -S -o - --target=i386 -emit-llvm

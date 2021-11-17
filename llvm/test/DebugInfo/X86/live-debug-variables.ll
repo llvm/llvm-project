@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s | llvm-dwarfdump -name i4 - \
+; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s -experimental-debug-variable-locations=false | llvm-dwarfdump -name i4 - \
 ; RUN:     | FileCheck %s
 
 ; The test inlines the function F four times, with each inlined variable for

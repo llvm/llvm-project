@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s
 
 ; This test case is a modified version of dbg_value_phi_isel1.ll
 ; where the llvm.dbg.value nodes in for.body has been moved.
