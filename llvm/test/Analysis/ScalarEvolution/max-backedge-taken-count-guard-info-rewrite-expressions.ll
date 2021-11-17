@@ -64,12 +64,13 @@ exit:
   ret i32 0
 }
 
-; Test case from PR52464.
-define i32 @rewrite_zext_icmp_ne(i32 %N) {
-; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_icmp_ne
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * ((4 + (zext i32 (-1 + (zext i2 (trunc i32 %N to i2) to i32))<nsw> to i64))<nuw><nsw> /u 4))<nuw><nsw>)<nsw> /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 1073741823
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * ((4 + (zext i32 (-1 + (zext i2 (trunc i32 %N to i2) to i32))<nsw> to i64))<nuw><nsw> /u 4))<nuw><nsw>)<nsw> /u 4)
+; Test case from PR52464. applyLoopGuards needs to apply information about %and
+; to %ext, which requires rewriting the zext.
+define i32 @rewrite_zext_with_info_from_icmp_ne(i32 %N) {
+; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_with_info_from_icmp_ne
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
@@ -97,7 +98,7 @@ exit:
   ret i32 0
 }
 
-; Similar to @rewrite_zext_icmp_ne, but the loop is not guarded by %and != 0,
+; Similar to @rewrite_zext_with_info_from_icmp_ne, but the loop is not guarded by %and != 0,
 ; hence the subsequent subtraction may yield a negative number.
 define i32 @rewrite_zext_no_icmp_ne(i32 %N) {
 ; CHECK-LABEL: Determining loop execution counts for: @rewrite_zext_no_icmp_ne
