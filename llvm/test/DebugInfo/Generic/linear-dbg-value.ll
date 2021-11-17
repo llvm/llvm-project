@@ -1,5 +1,5 @@
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39452.
-; RUN: llc -stop-before=finalize-isel -pre-RA-sched=linearize -verify-machineinstrs=0 < %s | FileCheck %s
+; RUN: llc -stop-before=finalize-isel -pre-RA-sched=linearize -verify-machineinstrs=0 < %s -experimental-debug-variable-locations=false | FileCheck %s
 source_filename = "linear-dbg-value.ll"
 
 ; Function Attrs: nounwind readonly uwtable

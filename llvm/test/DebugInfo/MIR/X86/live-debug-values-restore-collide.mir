@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown | FileCheck %s
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown -experimental-debug-variable-locations=false | FileCheck %s
 #
 # This is a regression test for register/stack variable locations being
 # interpreted as each other. We place a variable location on the stack, based

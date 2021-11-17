@@ -1856,8 +1856,12 @@ TargetLoweringBase::getTypeLegalizationCost(const DataLayout &DL,
   while (true) {
     LegalizeKind LK = getTypeConversion(C, MTy);
 
-    if (LK.first == TypeScalarizeScalableVector)
-      return std::make_pair(InstructionCost::getInvalid(), MVT::getVT(Ty));
+    if (LK.first == TypeScalarizeScalableVector) {
+      // Ensure we return a sensible simple VT here, since many callers of this
+      // function require it.
+      MVT VT = MTy.isSimple() ? MTy.getSimpleVT() : MVT::i64;
+      return std::make_pair(InstructionCost::getInvalid(), VT);
+    }
 
     if (LK.first == TypeLegal)
       return std::make_pair(Cost, MTy.getSimpleVT());

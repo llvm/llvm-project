@@ -75,7 +75,7 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 }
 
 void InitializeMainThread() {
-  u32 tid = ThreadCreate(kMainTid, 0, true);
+  u32 tid = ThreadCreate(kMainTid, true);
   CHECK_EQ(tid, kMainTid);
   ThreadStart(tid, GetTid());
 }

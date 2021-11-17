@@ -9669,9 +9669,12 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
   // Solve the general equation.
   const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
                                                getNegativeSCEV(Start), *this);
-  const SCEV *M = E == getCouldNotCompute()
-                      ? E
-                      : getConstant(getUnsignedRangeMax(E));
+
+  const SCEV *M = E;
+  if (E != getCouldNotCompute()) {
+    APInt MaxWithGuards = getUnsignedRangeMax(applyLoopGuards(E, L));
+    M = getConstant(APIntOps::umin(MaxWithGuards, getUnsignedRangeMax(E)));
+  }
   return ExitLimit(E, M, false, Predicates);
 }
 

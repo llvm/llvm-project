@@ -320,8 +320,9 @@ llvm::SmallString<256> FuzzyMatcher::dumpLast(llvm::raw_ostream &OS) const {
   if (!WordContainsPattern) {
     OS << "Substring check failed.\n";
     return Result;
-  } else if (isAwful(std::max(Scores[PatN][WordN][Match].Score,
-                              Scores[PatN][WordN][Miss].Score))) {
+  }
+  if (isAwful(std::max(Scores[PatN][WordN][Match].Score,
+                       Scores[PatN][WordN][Miss].Score))) {
     OS << "Substring check passed, but all matches are forbidden\n";
   }
   if (!(PatTypeSet & 1 << Upper))

@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-before finalize-isel -o - | FileCheck %s
+; RUN: llc %s -stop-before finalize-isel -o - -experimental-debug-variable-locations=false | FileCheck %s
 
 ;--------------------------------------------------------------------
 ; This test case is basically generated from the following C code.
