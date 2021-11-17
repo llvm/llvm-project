@@ -145,6 +145,7 @@ void AsanThread::SetThreadStackAndTls(const AsanThread::InitOptions *options) {
 
 // Called by __asan::AsanInitInternal (asan_rtl.c).
 AsanThread *CreateMainThread() {
+  thrd_t self = thrd_current();
   char name[ZX_MAX_NAME_LEN];
   CHECK_NE(__sanitizer::MainThreadStackBase, 0);
   CHECK_GT(__sanitizer::MainThreadStackSize, 0);
