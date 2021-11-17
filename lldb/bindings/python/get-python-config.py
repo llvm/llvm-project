@@ -24,19 +24,21 @@ def main():
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
         tried = list()
         exe = sys.executable
+        prefix = os.path.realpath(sys.prefix)
         while True:
             try:
-                print(relpath_nodots(exe, sys.prefix))
+                print(relpath_nodots(exe, prefix))
                 break
             except ValueError:
                 tried.append(exe)
                 if os.path.islink(exe):
-                    exe = os.path.join(os.path.dirname(exe), os.readlink(exe))
+                    exe = os.path.join(os.path.realpath(os.path.dirname(exe)), os.readlink(exe))
                     continue
                 else:
                     print("Could not find a relative path to sys.executable under sys.prefix", file=sys.stderr)
                     for e in tried:
                         print("tried:", e, file=sys.stderr)
+                    print("realpath(sys.prefix):", prefix, file=sys.stderr)
                     print("sys.prefix:", sys.prefix, file=sys.stderr)
                     sys.exit(1)
     elif args.variable_name == "LLDB_PYTHON_EXT_SUFFIX":
