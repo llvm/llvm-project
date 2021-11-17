@@ -2493,125 +2493,118 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   m_process_input_reader.reset();
 
   Module *exe_module = GetTarget().GetExecutableModulePointer();
-
-  // The "remote executable path" is hooked up to the local Executable
-  // module.  But we should be able to debug a remote process even if the
-  // executable module only exists on the remote.  However, there needs to
-  // be a way to express this path, without actually having a module.
-  // The way to do that is to set the ExecutableFile in the LaunchInfo.
-  // Figure that out here:
-  
-  FileSpec exe_spec_to_use;
   if (!exe_module) {
-    if (!launch_info.GetExecutableFile()) {
-      error.SetErrorString("executable module does not exist");
-      return error;
-    }
-    exe_spec_to_use = launch_info.GetExecutableFile();
-  } else
-    exe_spec_to_use = exe_module->GetFileSpec();
-  
-  if (exe_module && FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
+    error.SetErrorString("executable module does not exist");
+    return error;
+  }
+
+  char local_exec_file_path[PATH_MAX];
+  char platform_exec_file_path[PATH_MAX];
+  exe_module->GetFileSpec().GetPath(local_exec_file_path,
+                                    sizeof(local_exec_file_path));
+  exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
+                                            sizeof(platform_exec_file_path));
+  if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
     // Install anything that might need to be installed prior to launching.
     // For host systems, this will do nothing, but if we are connected to a
     // remote platform it will install any needed binaries
     error = GetTarget().Install(&launch_info);
     if (error.Fail())
       return error;
-  }
-  // Listen and queue events that are broadcasted during the process launch.
-  ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
-  HijackProcessEvents(listener_sp);
-  auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
 
-  if (PrivateStateThreadIsValid())
-    PausePrivateStateThread();
+    // Listen and queue events that are broadcasted during the process launch.
+    ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
+    HijackProcessEvents(listener_sp);
+    auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
 
-  error = WillLaunch(exe_module);
-  if (error.Success()) {
-    const bool restarted = false;
-    SetPublicState(eStateLaunching, restarted);
-    m_should_detach = false;
+    if (PrivateStateThreadIsValid())
+      PausePrivateStateThread();
 
-    if (m_public_run_lock.TrySetRunning()) {
-      // Now launch using these arguments.
-      error = DoLaunch(exe_module, launch_info);
-    } else {
-      // This shouldn't happen
-      error.SetErrorString("failed to acquire process run lock");
-    }
+    error = WillLaunch(exe_module);
+    if (error.Success()) {
+      const bool restarted = false;
+      SetPublicState(eStateLaunching, restarted);
+      m_should_detach = false;
 
-    if (error.Fail()) {
-      if (GetID() != LLDB_INVALID_PROCESS_ID) {
-        SetID(LLDB_INVALID_PROCESS_ID);
-        const char *error_string = error.AsCString();
-        if (error_string == nullptr)
-          error_string = "launch failed";
-        SetExitStatus(-1, error_string);
+      if (m_public_run_lock.TrySetRunning()) {
+        // Now launch using these arguments.
+        error = DoLaunch(exe_module, launch_info);
+      } else {
+        // This shouldn't happen
+        error.SetErrorString("failed to acquire process run lock");
       }
-    } else {
-      EventSP event_sp;
 
-      // Now wait for the process to launch and return control to us, and then
-      // call DidLaunch:
-      StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
+      if (error.Fail()) {
+        if (GetID() != LLDB_INVALID_PROCESS_ID) {
+          SetID(LLDB_INVALID_PROCESS_ID);
+          const char *error_string = error.AsCString();
+          if (error_string == nullptr)
+            error_string = "launch failed";
+          SetExitStatus(-1, error_string);
+        }
+      } else {
+        EventSP event_sp;
 
-      if (state == eStateInvalid || !event_sp) {
-        // We were able to launch the process, but we failed to catch the
-        // initial stop.
-        error.SetErrorString("failed to catch stop after launch");
-        SetExitStatus(0, "failed to catch stop after launch");
-        Destroy(false);
-      } else if (state == eStateStopped || state == eStateCrashed) {
-        DidLaunch();
+        // Now wait for the process to launch and return control to us, and then
+        // call DidLaunch:
+        StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
 
-        DynamicLoader *dyld = GetDynamicLoader();
-        if (dyld)
-          dyld->DidLaunch();
+        if (state == eStateInvalid || !event_sp) {
+          // We were able to launch the process, but we failed to catch the
+          // initial stop.
+          error.SetErrorString("failed to catch stop after launch");
+          SetExitStatus(0, "failed to catch stop after launch");
+          Destroy(false);
+        } else if (state == eStateStopped || state == eStateCrashed) {
+          DidLaunch();
 
-        GetJITLoaders().DidLaunch();
+          DynamicLoader *dyld = GetDynamicLoader();
+          if (dyld)
+            dyld->DidLaunch();
 
-        SystemRuntime *system_runtime = GetSystemRuntime();
-        if (system_runtime)
-          system_runtime->DidLaunch();
+          GetJITLoaders().DidLaunch();
 
-        if (!m_os_up)
-          LoadOperatingSystemPlugin(false);
+          SystemRuntime *system_runtime = GetSystemRuntime();
+          if (system_runtime)
+            system_runtime->DidLaunch();
 
-        // We successfully launched the process and stopped, now it the
-        // right time to set up signal filters before resuming.
-        UpdateAutomaticSignalFiltering();
+          if (!m_os_up)
+            LoadOperatingSystemPlugin(false);
 
-        // Note, the stop event was consumed above, but not handled. This
-        // was done to give DidLaunch a chance to run. The target is either
-        // stopped or crashed. Directly set the state.  This is done to
-        // prevent a stop message with a bunch of spurious output on thread
-        // status, as well as not pop a ProcessIOHandler.
-        // We are done with the launch hijack listener, and this stop should
-        // go to the public state listener:
-        RestoreProcessEvents();
-        SetPublicState(state, false);
+          // We successfully launched the process and stopped, now it the
+          // right time to set up signal filters before resuming.
+          UpdateAutomaticSignalFiltering();
 
-        if (PrivateStateThreadIsValid())
-          ResumePrivateStateThread();
-        else
-          StartPrivateStateThread();
+          // Note, the stop event was consumed above, but not handled. This
+          // was done to give DidLaunch a chance to run. The target is either
+          // stopped or crashed. Directly set the state.  This is done to
+          // prevent a stop message with a bunch of spurious output on thread
+          // status, as well as not pop a ProcessIOHandler.
+          // We are done with the launch hijack listener, and this stop should
+          // go to the public state listener:
+          RestoreProcessEvents();
+          SetPublicState(state, false);
 
-        // Target was stopped at entry as was intended. Need to notify the
-        // listeners about it.
-        if (state == eStateStopped &&
-            launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+          if (PrivateStateThreadIsValid())
+            ResumePrivateStateThread();
+          else
+            StartPrivateStateThread();
+
+          // Target was stopped at entry as was intended. Need to notify the
+          // listeners about it.
+          if (state == eStateStopped &&
+              launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+            HandlePrivateEvent(event_sp);
+        } else if (state == eStateExited) {
+          // We exited while trying to launch somehow.  Don't call DidLaunch
+          // as that's not likely to work, and return an invalid pid.
           HandlePrivateEvent(event_sp);
-      } else if (state == eStateExited) {
-        // We exited while trying to launch somehow.  Don't call DidLaunch
-        // as that's not likely to work, and return an invalid pid.
-        HandlePrivateEvent(event_sp);
+        }
       }
     }
   } else {
-    std::string local_exec_file_path = exe_spec_to_use.GetPath();
     error.SetErrorStringWithFormat("file doesn't exist: '%s'",
-                                   local_exec_file_path.c_str());
+                                   local_exec_file_path);
   }
 
   return error;
