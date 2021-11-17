@@ -506,8 +506,8 @@ steps:
     timeout_in_minutes: 120
 
   # Tests on non-Unix platforms
-  - label: "Windows (DLL)"
-    command: "bash libcxx/utils/ci/run-buildbot windows-dll"
+  - label: "Clang-cl (DLL)"
+    command: "bash libcxx/utils/ci/run-buildbot clang-cl-dll"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -518,8 +518,32 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Windows (Static)"
-    command: "bash libcxx/utils/ci/run-buildbot windows-static"
+  - label: "Clang-cl (Static)"
+    command: "bash libcxx/utils/ci/run-buildbot clang-cl-static"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "MinGW (DLL)"
+    command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "MinGW (Static)"
+    command: "bash libcxx/utils/ci/run-buildbot mingw-static"
     artifact_paths:
       - "**/test-results.xml"
     agents:
