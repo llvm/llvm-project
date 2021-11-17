@@ -4,7 +4,6 @@ import os
 import sys
 import argparse
 import sysconfig
-import distutils.sysconfig
 
 
 def relpath_nodots(path, base):
@@ -20,7 +19,18 @@ def main():
     parser.add_argument("variable_name")
     args = parser.parse_args()
     if args.variable_name == "LLDB_PYTHON_RELATIVE_PATH":
-        print(distutils.sysconfig.get_python_lib(True, False, ''))
+        # LLDB_PYTHON_RELATIVE_PATH is the relative path from lldb's prefix
+        # to where lldb's python libraries will be installed.
+        #
+        # The way we're going to compute this is to take the relative path from
+        # PYTHON'S prefix to where python libraries are supposed to be
+        # installed.
+        #
+        # The result is if LLDB and python are give the same prefix, then
+        # lldb's python lib will be put in the correct place for python to find it.
+        # If not, you'll have to use lldb -P or lldb -print-script-interpreter-info
+        # to figure out where it is.
+        print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
         tried = list()
         exe = sys.executable
