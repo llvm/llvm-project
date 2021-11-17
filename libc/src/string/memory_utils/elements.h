@@ -24,12 +24,12 @@ namespace __llvm_libc {
 // higher order abstractions. Each function is defined twice: once with
 // fixed-size operations, and once with runtime-size operations.
 
-// Fixed-size copies from 'src' to 'dst'.
+// Fixed-size copy from 'src' to 'dst'.
 template <typename Element>
 void Copy(char *__restrict dst, const char *__restrict src) {
   Element::Copy(dst, src);
 }
-// Runtime-size copies from 'src' to 'dst'.
+// Runtime-size copy from 'src' to 'dst'.
 template <typename Element>
 void Copy(char *__restrict dst, const char *__restrict src, size_t size) {
   Element::Copy(dst, src, size);
