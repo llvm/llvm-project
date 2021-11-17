@@ -15,6 +15,7 @@
 #define SANITIZER_THREAD_REGISTRY_H
 
 #include "sanitizer_common.h"
+#include "sanitizer_dense_map.h"
 #include "sanitizer_list.h"
 #include "sanitizer_mutex.h"
 
@@ -127,6 +128,7 @@ class MUTEX ThreadRegistry {
   // Finishes thread and returns previous status.
   ThreadStatus FinishThread(u32 tid);
   void StartThread(u32 tid, tid_t os_id, ThreadType thread_type, void *arg);
+  u32 ConsumeThreadUserId(uptr user_id);
   void SetThreadUserId(u32 tid, uptr user_id);
 
  private:
@@ -146,6 +148,7 @@ class MUTEX ThreadRegistry {
   InternalMmapVector<ThreadContextBase *> threads_;
   IntrusiveList<ThreadContextBase> dead_threads_;
   IntrusiveList<ThreadContextBase> invalid_threads_;
+  DenseMap<uptr, Tid> live_;
 
   void QuarantinePush(ThreadContextBase *tctx);
   ThreadContextBase *QuarantinePop();
