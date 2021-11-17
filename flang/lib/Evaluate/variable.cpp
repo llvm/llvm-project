@@ -264,13 +264,18 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
     if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc->expr())}) {
       return chExpr->LEN();
     }
-  } else if (auto dyType{DynamicType::From(ultimate)}) {
+  }
+  if (auto dyType{DynamicType::From(ultimate)}) {
     if (auto len{dyType->GetCharLength()}) {
-      return len;
-    } else if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
-      return Expr<SubscriptInteger>{DescriptorInquiry{
-          NamedEntity{symbol}, DescriptorInquiry::Field::Len}};
+      if (ultimate.owner().IsDerivedType() || IsScopeInvariantExpr(*len)) {
+        return AsExpr(Extremum<SubscriptInteger>{
+            Ordering::Greater, Expr<SubscriptInteger>{0}, std::move(*len)});
+      }
     }
+  }
+  if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
+    return Expr<SubscriptInteger>{
+        DescriptorInquiry{NamedEntity{symbol}, DescriptorInquiry::Field::Len}};
   }
   return std::nullopt;
 }
