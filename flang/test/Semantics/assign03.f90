@@ -277,6 +277,8 @@ contains
     logical, parameter :: l4 = is_contiguous(x%a(:,v))
     !ERROR: Must be a constant value
     logical, parameter :: l5 = is_contiguous(y(v,1)%a(1,1))
+    !ERROR: Must be a constant value
+    logical, parameter :: l6 = is_contiguous(p(:))
   end
   subroutine test3(b)
     integer, intent(inout) :: b(..)

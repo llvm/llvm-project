@@ -678,8 +678,15 @@ public:
     if (!(*this)(symbol).has_value()) {
       return false;
     } else if (auto rank{CheckSubscripts(x.subscript())}) {
-      // a(:)%b(1,1) is not contiguous; a(1)%b(:,:) is
-      return *rank > 0 || x.Rank() == 0;
+      if (x.Rank() == 0) {
+        return true;
+      } else if (*rank > 0) {
+        // a(1)%b(:,:) is contiguous if an only if a(1)%b is contiguous.
+        return (*this)(x.base());
+      } else {
+        // a(:)%b(1,1) is not contiguous.
+        return false;
+      }
     } else {
       return false;
     }
