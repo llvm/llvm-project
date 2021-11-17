@@ -9,9 +9,9 @@
 #ifndef USES_ALLOC_TYPES_H
 #define USES_ALLOC_TYPES_H
 
-# include <memory>
-# include <cassert>
+#include <cassert>
 #include <cstdlib>
+#include <memory>
 
 #include "test_macros.h"
 #include "test_workarounds.h"
