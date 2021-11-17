@@ -29825,16 +29825,31 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return SDValue();
 
   bool IsSplatAmt = DAG.isSplatValue(Amt);
+  SDValue AmtMask = DAG.getConstant(EltSizeInBits - 1, DL, VT);
 
   // v16i8/v32i8: Split rotation into rot4/rot2/rot1 stages and select by
   // the amount bit.
-  if (EltSizeInBits == 8 && !IsSplatAmt) {
+  if (EltSizeInBits == 8) {
     if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode()))
       return SDValue();
 
-    // We don't need ModuloAmt here as we just peek at individual bits.
     MVT ExtVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
+    // If the amount is a splat, attempt to fold as unpack(x,x) << zext(y):
+    // rotl(x,y) -> (((aext(x) << bw) | zext(x)) << (y & (bw-1))) >> bw.
+    if (SDValue BaseRotAmt =
+            DAG.getSplatValue(DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask))) {
+      BaseRotAmt = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, BaseRotAmt);
+      SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
+      SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
+      Lo = getTargetVShiftNode(X86ISD::VSHLI, DL, ExtVT, Lo, BaseRotAmt,
+                               Subtarget, DAG);
+      Hi = getTargetVShiftNode(X86ISD::VSHLI, DL, ExtVT, Hi, BaseRotAmt,
+                               Subtarget, DAG);
+      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, /*PackHiHalf */ true);
+    }
+
+    // We don't need ModuloAmt here as we just peek at individual bits.
     auto SignBitSelect = [&](MVT SelVT, SDValue Sel, SDValue V0, SDValue V1) {
       if (Subtarget.hasSSE41()) {
         // On SSE41 targets we can use PBLENDVB which selects bytes based just
@@ -29894,13 +29909,11 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     // If the amount is a splat, perform the modulo BEFORE the splat,
     // this helps LowerScalarVariableShift to remove the splat later.
     Amt = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, BaseRotAmt);
-    Amt = DAG.getNode(ISD::AND, DL, VT, Amt,
-                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
+    Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
     Amt = DAG.getVectorShuffle(VT, DL, Amt, DAG.getUNDEF(VT),
                                SmallVector<int>(NumElts, 0));
   } else {
-    Amt = DAG.getNode(ISD::AND, DL, VT, Amt,
-                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
+    Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
   }
 
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
