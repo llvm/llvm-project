@@ -74,7 +74,6 @@
 
 namespace llvm {
   class APSInt;
-  template <typename ValueT> struct DenseMapInfo;
   template <typename ValueT, typename ValueInfoT> class DenseSet;
   class SmallBitVector;
   struct InlineAsmIdentifierInfo;

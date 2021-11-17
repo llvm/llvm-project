@@ -463,6 +463,7 @@ module std [system] {
       module format_fwd             { private header "__format/format_fwd.h"             }
       module format_parse_context   { private header "__format/format_parse_context.h"   }
       module format_string          { private header "__format/format_string.h"          }
+      module format_to_n_result     { private header "__format/format_to_n_result.h"     }
       module formatter              { private header "__format/formatter.h"              }
       module formatter_bool         { private header "__format/formatter_bool.h"         }
       module formatter_char         { private header "__format/formatter_char.h"         }

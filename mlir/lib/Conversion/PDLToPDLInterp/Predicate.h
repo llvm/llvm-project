@@ -164,12 +164,12 @@ private:
 /// A position describing an attribute of an operation.
 struct AttributePosition
     : public PredicateBase<AttributePosition, Position,
-                           std::pair<OperationPosition *, Identifier>,
+                           std::pair<OperationPosition *, StringAttr>,
                            Predicates::AttributePos> {
   explicit AttributePosition(const KeyTy &key);
 
   /// Returns the attribute name of this position.
-  Identifier getName() const { return key.second; }
+  StringAttr getName() const { return key.second; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -487,7 +487,7 @@ public:
 
   /// Returns an attribute position for an attribute of the given operation.
   Position *getAttribute(OperationPosition *p, StringRef name) {
-    return AttributePosition::get(uniquer, p, Identifier::get(name, ctx));
+    return AttributePosition::get(uniquer, p, StringAttr::get(ctx, name));
   }
 
   /// Returns an operand position for an operand of the given operation.

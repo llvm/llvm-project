@@ -316,13 +316,11 @@ for.inc:                                          ; preds = %sw.bb, %sw.bb1, %fo
 ; CHECK: call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32(
 
-; TODO: We should be able to support the unrolled loop body.
 ; CHECK-UNROLL-LABEL: unroll_inc_int
 ; CHECK-UNROLL:     [[PREHEADER:.LBB[0-9_]+]]: @ %for.body.preheader
 ; CHECK-UNROLL-NOT: dls
 ; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
-; CHECK-UNROLL-NOT: le lr, [[LOOP]]
-; CHECK-UNROLL:     bne [[LOOP]]
+; CHECK-UNROLL:     le lr, [[LOOP]]
 ; CHECK-UNROLL:     wls lr, r12, [[EXIT:.LBB[0-9_]+]]
 ; CHECK-UNROLL:     [[EPIL:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:     le lr, [[EPIL]]
@@ -354,13 +352,11 @@ for.body:
 ; CHECK: call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %N)
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32(
 
-; TODO: We should be able to support the unrolled loop body.
 ; CHECK-UNROLL-LABEL: unroll_inc_unsigned
 ; CHECK-UNROLL:     [[PREHEADER:.LBB[0-9_]+]]: @ %for.body.preheader
 ; CHECK-UNROLL-NOT: dls
 ; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
-; CHECK-UNROLL-NOT: le lr, [[LOOP]]
-; CHECK-UNROLL:     bne [[LOOP]]
+; CHECK-UNROLL:     le lr, [[LOOP]]
 ; CHECK-UNROLL:     wls lr, r12, [[EPIL_EXIT:.LBB[0-9_]+]]
 ; CHECK-UNROLL: [[EPIL:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:     le lr, [[EPIL]]

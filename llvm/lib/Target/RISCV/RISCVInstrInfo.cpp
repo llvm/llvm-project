@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1674,7 +1675,8 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4)
 
 MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                    LiveVariables *LV) const {
+                                                    LiveVariables *LV,
+                                                    LiveIntervals *LIS) const {
   switch (MI.getOpcode()) {
   default:
     break;
@@ -1713,6 +1715,20 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
         MachineOperand &Op = MI.getOperand(I);
         if (Op.isReg() && Op.isKill())
           LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
+      }
+    }
+
+    if (LIS) {
+      SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+
+      if (MI.getOperand(0).isEarlyClobber()) {
+        // Use operand 1 was tied to early-clobber def operand 0, so its live
+        // interval could have ended at an early-clobber slot. Now they are not
+        // tied we need to update it to the normal register slot.
+        LiveInterval &LI = LIS->getInterval(MI.getOperand(1).getReg());
+        LiveRange::Segment *S = LI.getSegmentContaining(Idx);
+        if (S->end == Idx.getRegSlot(true))
+          S->end = Idx.getRegSlot();
       }
     }
 

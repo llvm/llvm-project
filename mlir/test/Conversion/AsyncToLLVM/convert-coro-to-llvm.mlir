@@ -64,7 +64,7 @@ func @coro_suspend() {
   // CHECK: %[[FINAL:.*]] = llvm.mlir.constant(false) : i1
   // CHECK: %[[RET:.*]] = llvm.intr.coro.suspend %[[STATE]], %[[FINAL]]
   // CHECK: %[[SEXT:.*]] = llvm.sext %[[RET]] : i8 to i32
-  // CHECK: llvm.switch %[[SEXT]], ^[[SUSPEND:[b0-9]+]]
+  // CHECK: llvm.switch %[[SEXT]] : i32, ^[[SUSPEND:[b0-9]+]]
   // CHECK-NEXT: 0: ^[[RESUME:[b0-9]+]]
   // CHECK-NEXT: 1: ^[[CLEANUP:[b0-9]+]]
   async.coro.suspend %2, ^suspend, ^resume, ^cleanup

@@ -211,9 +211,9 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic", [
   );
 
   let verifier = [{ return success(); }];
-  
+
   let assemblyFormat = [{
-    $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index) 
+    $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index)
   }];
 }
 
@@ -249,7 +249,7 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
     <!-- End of AutoGen section -->
 
     ```
-    scalar-type ::= integer-type | float-type | boolean-type 
+    scalar-type ::= integer-type | float-type | boolean-type
     vector-insert-dynamic-op ::= `spv.VectorInsertDynamic ` ssa-use `,`
                                   ssa-use `[` ssa-use `]`
                                   `:` `vector<` integer-literal `x` scalar-type `>` `,`
@@ -275,9 +275,9 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
   );
 
   let verifier = [{ return success(); }];
-  
+
   let assemblyFormat = [{
-    $component `,` $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index) 
+    $component `,` $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index)
   }];
 }
 

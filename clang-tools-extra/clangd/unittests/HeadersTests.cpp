@@ -33,7 +33,6 @@ using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
-using ::testing::UnorderedElementsAreArray;
 
 class HeadersTest : public ::testing::Test {
 public:

@@ -260,15 +260,15 @@ OptionalParseResult Parser::parseOptionalAttribute(StringAttr &attribute,
 ///   attribute-entry ::= (bare-id | string-literal) `=` attribute-value
 ///
 ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
-  llvm::SmallDenseSet<Identifier> seenKeys;
+  llvm::SmallDenseSet<StringAttr> seenKeys;
   auto parseElt = [&]() -> ParseResult {
     // The name of an attribute can either be a bare identifier, or a string.
-    Optional<Identifier> nameId;
+    Optional<StringAttr> nameId;
     if (getToken().is(Token::string))
-      nameId = builder.getIdentifier(getToken().getStringValue());
+      nameId = builder.getStringAttr(getToken().getStringValue());
     else if (getToken().isAny(Token::bare_identifier, Token::inttype) ||
              getToken().isKeyword())
-      nameId = builder.getIdentifier(getTokenSpelling());
+      nameId = builder.getStringAttr(getTokenSpelling());
     else
       return emitError("expected attribute name");
     if (!seenKeys.insert(*nameId).second)
@@ -856,7 +856,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   std::string data;
   if (parseElementAttrHexValues(*this, hexTok, data))
     return nullptr;
-  return OpaqueElementsAttr::get(builder.getIdentifier(name), type, data);
+  return OpaqueElementsAttr::get(builder.getStringAttr(name), type, data);
 }
 
 /// Shaped type for elements attribute.

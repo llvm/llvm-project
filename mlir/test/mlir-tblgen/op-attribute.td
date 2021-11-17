@@ -43,19 +43,19 @@ def AOp : NS_Op<"a_op", []> {
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
 // DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
 
-// DECL:      ::mlir::Identifier aAttrAttrName()
+// DECL:      ::mlir::StringAttr aAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
-// DECL:      ::mlir::Identifier aAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr aAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 0);
 
-// DECL:      ::mlir::Identifier bAttrAttrName()
+// DECL:      ::mlir::StringAttr bAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(1);
-// DECL:      ::mlir::Identifier bAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr bAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 1);
 
-// DECL:      ::mlir::Identifier cAttrAttrName()
+// DECL:      ::mlir::StringAttr cAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(2);
-// DECL:      ::mlir::Identifier cAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr cAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 2);
 
 // DEF-LABEL: AOp definitions
@@ -157,19 +157,19 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
 // DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
 
-// DECL:      ::mlir::Identifier getAAttrAttrName()
+// DECL:      ::mlir::StringAttr getAAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
-// DECL:      ::mlir::Identifier getAAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr getAAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 0);
 
-// DECL:      ::mlir::Identifier getBAttrAttrName()
+// DECL:      ::mlir::StringAttr getBAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(1);
-// DECL:      ::mlir::Identifier getBAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr getBAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 1);
 
-// DECL:      ::mlir::Identifier getCAttrAttrName()
+// DECL:      ::mlir::StringAttr getCAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(2);
-// DECL:      ::mlir::Identifier getCAttrAttrName(::mlir::OperationName name)
+// DECL:      ::mlir::StringAttr getCAttrAttrName(::mlir::OperationName name)
 // DECL-NEXT:      return getAttributeNameForIndex(name, 2);
 
 // DEF-LABEL: AgetOp definitions

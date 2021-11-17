@@ -58,8 +58,8 @@ void TestLinalgDistribution::runOnFunction() {
   populateLinalgDistributeTiledLoopPattern(
       distributeTiledLoopsPatterns, getDistributionOptions(),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>{},
-          {Identifier::get("distributed", funcOp.getContext())})
+          ArrayRef<StringAttr>{},
+          {StringAttr::get("distributed", funcOp.getContext())})
           .addFilter([](Operation *op) {
             return success(!op->getParentOfType<linalg::TiledLoopOp>());
           }));

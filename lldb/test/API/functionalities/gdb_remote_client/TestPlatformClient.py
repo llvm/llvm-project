@@ -4,12 +4,15 @@ import os
 import time
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 def hexlify(string):
     return binascii.hexlify(string.encode()).decode()
 
 class TestPlatformClient(GDBRemoteTestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
 
     def test_process_list_with_all_users(self):
         """Test connecting to a remote linux platform"""

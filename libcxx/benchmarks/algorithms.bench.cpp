@@ -38,18 +38,65 @@ enum class Order {
   Descending,
   SingleElement,
   PipeOrgan,
-  Heap
+  Heap,
+  QuickSortAdversary,
 };
-struct AllOrders : EnumValuesAsTuple<AllOrders, Order, 6> {
+struct AllOrders : EnumValuesAsTuple<AllOrders, Order, 7> {
   static constexpr const char* Names[] = {"Random",     "Ascending",
                                           "Descending", "SingleElement",
-                                          "PipeOrgan",  "Heap"};
+                                          "PipeOrgan",  "Heap",
+                                          "QuickSortAdversary"};
 };
+
+// fillAdversarialQuickSortInput fills the input vector with N int-like values.
+// These values are arranged in such a way that they would invoke O(N^2)
+// behavior on any quick sort implementation that satisifies certain conditions.
+// Details are available in the following paper:
+// "A Killer Adversary for Quicksort", M. D. McIlroy, Software—Practice &
+// ExperienceVolume 29 Issue 4 April 10, 1999 pp 341–344.
+// https://dl.acm.org/doi/10.5555/311868.311871.
+template <class T>
+void fillAdversarialQuickSortInput(T& V, size_t N) {
+  assert(N > 0);
+  // If an element is equal to gas, it indicates that the value of the element
+  // is still to be decided and may change over the course of time.
+  const int gas = N - 1;
+  V.resize(N);
+  for (int i = 0; i < N; ++i) {
+    V[i] = gas;
+  }
+  // Candidate for the pivot position.
+  int candidate = 0;
+  int nsolid = 0;
+  // Populate all positions in the generated input to gas.
+  std::vector<int> ascVals(V.size());
+  // Fill up with ascending values from 0 to V.size()-1.  These will act as
+  // indices into V.
+  std::iota(ascVals.begin(), ascVals.end(), 0);
+  std::sort(ascVals.begin(), ascVals.end(), [&](int x, int y) {
+    if (V[x] == gas && V[y] == gas) {
+      // We are comparing two inputs whose value is still to be decided.
+      if (x == candidate) {
+        V[x] = nsolid++;
+      } else {
+        V[y] = nsolid++;
+      }
+    }
+    if (V[x] == gas) {
+      candidate = x;
+    } else if (V[y] == gas) {
+      candidate = y;
+    }
+    return V[x] < V[y];
+  });
+}
 
 template <typename T>
 void fillValues(std::vector<T>& V, size_t N, Order O) {
   if (O == Order::SingleElement) {
     V.resize(N, 0);
+  } else if (O == Order::QuickSortAdversary) {
+    fillAdversarialQuickSortInput(V, N);
   } else {
     while (V.size() < N)
       V.push_back(V.size());
@@ -127,6 +174,9 @@ void sortValues(T& V, Order O) {
     break;
   case Order::Heap:
     std::make_heap(V.begin(), V.end());
+    break;
+  case Order::QuickSortAdversary:
+    // Nothing to do
     break;
   }
 }

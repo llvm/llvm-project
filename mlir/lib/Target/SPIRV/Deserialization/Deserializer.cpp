@@ -227,7 +227,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc, "invalid Decoration code : ") << words[1];
   }
   auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
-  auto symbol = opBuilder.getIdentifier(attrName);
+  auto symbol = opBuilder.getStringAttr(attrName);
   switch (static_cast<spirv::Decoration>(words[1])) {
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
@@ -1964,7 +1964,7 @@ Location spirv::Deserializer::createFileLineColLoc(OpBuilder opBuilder) {
   auto fileName = debugInfoMap.lookup(debugLine->fileID).str();
   if (fileName.empty())
     fileName = "<unknown>";
-  return FileLineColLoc::get(opBuilder.getIdentifier(fileName), debugLine->line,
+  return FileLineColLoc::get(opBuilder.getStringAttr(fileName), debugLine->line,
                              debugLine->col);
 }
 

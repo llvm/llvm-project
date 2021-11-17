@@ -943,8 +943,9 @@ static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
     NewMI->setFlag(Flag);
 }
 
-MachineInstr *SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                      LiveVariables *LV) const {
+MachineInstr *
+SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                        LiveIntervals *LIS) const {
   MachineBasicBlock *MBB = MI.getParent();
 
   // Try to convert an AND into an RISBG-type instruction.
@@ -985,6 +986,8 @@ MachineInstr *SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
             LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
         }
       }
+      if (LIS)
+        LIS->ReplaceMachineInstrInMaps(MI, *MIB);
       transferDeadCC(&MI, MIB);
       return MIB;
     }

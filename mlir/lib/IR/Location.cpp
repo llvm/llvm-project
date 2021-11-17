@@ -8,7 +8,6 @@
 
 #include "mlir/IR/Location.h"
 #include "mlir/IR/BuiltinDialect.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"

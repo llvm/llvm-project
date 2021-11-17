@@ -14,9 +14,8 @@
 #ifndef MLIR_IR_OPERATION_SUPPORT_H
 #define MLIR_IR_OPERATION_SUPPORT_H
 
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockSupport.h"
-#include "mlir/IR/Identifier.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Types.h"
@@ -82,7 +81,7 @@ public:
       llvm::unique_function<LogicalResult(Operation *) const>;
 
   /// This is the name of the operation.
-  const Identifier name;
+  const StringAttr name;
 
   /// This is the dialect that this operation belongs to.
   Dialect &dialect;
@@ -207,7 +206,7 @@ public:
   /// greatly simplifying the cost and complexity of attribute usage produced by
   /// the generator.
   ///
-  ArrayRef<Identifier> getAttributeNames() const { return attributeNames; }
+  ArrayRef<StringAttr> getAttributeNames() const { return attributeNames; }
 
 private:
   AbstractOperation(StringRef name, Dialect &dialect, TypeID typeID,
@@ -217,7 +216,7 @@ private:
                     FoldHookFn &&foldHook,
                     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
                     detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
-                    ArrayRef<Identifier> attrNames);
+                    ArrayRef<StringAttr> attrNames);
 
   /// Give Op access to lookupMutable.
   template <typename ConcreteType, template <typename T> class... Traits>
@@ -242,7 +241,7 @@ private:
   /// A list of attribute names registered to this operation in identifier form.
   /// This allows for operation classes to use identifiers for attribute
   /// lookup/creation/etc., as opposed to strings.
-  ArrayRef<Identifier> attributeNames;
+  ArrayRef<StringAttr> attributeNames;
 };
 
 //===----------------------------------------------------------------------===//
@@ -288,12 +287,12 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
   return {first, false};
 }
 
-/// Identifier lookups on large attribute lists will switch to string binary
+/// StringAttr lookups on large attribute lists will switch to string binary
 /// search. String binary searches become significantly faster than linear scans
 /// with the identifier when the attribute list becomes very large.
 template <typename IteratorT>
 std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
-                                          Identifier name) {
+                                          StringAttr name) {
   constexpr unsigned kSmallAttributeList = 16;
   if (std::distance(first, last) > kSmallAttributeList)
     return findAttrSorted(first, last, name.strref());
@@ -332,7 +331,7 @@ public:
   void append(StringRef name, Attribute attr);
 
   /// Add an attribute with the specified name.
-  void append(Identifier name, Attribute attr) {
+  void append(StringAttr name, Attribute attr) {
     append(NamedAttribute(name, attr));
   }
 
@@ -384,24 +383,24 @@ public:
   ArrayRef<NamedAttribute> getAttrs() const;
 
   /// Return the specified attribute if present, null otherwise.
-  Attribute get(Identifier name) const;
+  Attribute get(StringAttr name) const;
   Attribute get(StringRef name) const;
 
   /// Return the specified named attribute if present, None otherwise.
   Optional<NamedAttribute> getNamed(StringRef name) const;
-  Optional<NamedAttribute> getNamed(Identifier name) const;
+  Optional<NamedAttribute> getNamed(StringAttr name) const;
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
   /// Returns the previous attribute value of `name`, or null if no
   /// attribute previously existed with `name`.
-  Attribute set(Identifier name, Attribute value);
+  Attribute set(StringAttr name, Attribute value);
   Attribute set(StringRef name, Attribute value);
 
   /// Erase the attribute with the given name from the list. Return the
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
-  Attribute erase(Identifier name);
+  Attribute erase(StringAttr name);
   Attribute erase(StringRef name);
 
   iterator begin() { return attrs.begin(); }
@@ -443,7 +442,7 @@ private:
 class OperationName {
 public:
   using RepresentationUnion =
-      PointerUnion<Identifier, const AbstractOperation *>;
+      PointerUnion<StringAttr, const AbstractOperation *>;
 
   OperationName(AbstractOperation *op) : representation(op) {}
   OperationName(StringRef name, MLIRContext *context);
@@ -456,7 +455,7 @@ public:
   Dialect *getDialect() const {
     if (const auto *abstractOp = getAbstractOperation())
       return &abstractOp->dialect;
-    return representation.get<Identifier>().getReferencedDialect();
+    return representation.get<StringAttr>().getReferencedDialect();
   }
 
   /// Return the operation name with dialect name stripped, if it has one.
@@ -466,7 +465,7 @@ public:
   StringRef getStringRef() const;
 
   /// Return the name of this operation as an identifier. This always succeeds.
-  Identifier getIdentifier() const;
+  StringAttr getIdentifier() const;
 
   /// If this operation has a registered operation description, return it.
   /// Otherwise return null.
@@ -549,11 +548,11 @@ public:
 
   /// Add an attribute with the specified name.
   void addAttribute(StringRef name, Attribute attr) {
-    addAttribute(Identifier::get(name, getContext()), attr);
+    addAttribute(StringAttr::get(getContext(), name), attr);
   }
 
   /// Add an attribute with the specified name.
-  void addAttribute(Identifier name, Attribute attr) {
+  void addAttribute(StringAttr name, Attribute attr) {
     attributes.append(name, attr);
   }
 

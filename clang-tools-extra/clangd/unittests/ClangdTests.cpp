@@ -54,10 +54,8 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
-using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
-using ::testing::Gt;
 using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::SizeIs;

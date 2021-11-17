@@ -15171,8 +15171,12 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   SmallVector<Value*, 4> Ops;
 
-  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
-    Ops.push_back(EmitScalarExpr(E->getArg(i)));
+  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
+    if (E->getArg(i)->getType()->isArrayType())
+      Ops.push_back(EmitArrayToPointerDecay(E->getArg(i)).getPointer());
+    else
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
+  }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 

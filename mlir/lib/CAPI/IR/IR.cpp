@@ -145,9 +145,9 @@ MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
                                  MlirLocation childLoc) {
   if (mlirLocationIsNull(childLoc))
     return wrap(
-        Location(NameLoc::get(Identifier::get(unwrap(name), unwrap(context)))));
+        Location(NameLoc::get(StringAttr::get(unwrap(context), unwrap(name)))));
   return wrap(Location(NameLoc::get(
-      Identifier::get(unwrap(name), unwrap(context)), unwrap(childLoc))));
+      StringAttr::get(unwrap(context), unwrap(name)), unwrap(childLoc))));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
@@ -753,7 +753,7 @@ MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
 //===----------------------------------------------------------------------===//
 
 MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
-  return wrap(Identifier::get(unwrap(str), unwrap(context)));
+  return wrap(StringAttr::get(unwrap(context), unwrap(str)));
 }
 
 MlirContext mlirIdentifierGetContext(MlirIdentifier ident) {

@@ -136,10 +136,10 @@ inline ::llvm::hash_code hash_value(Attribute arg) {
 // NamedAttribute
 //===----------------------------------------------------------------------===//
 
-/// NamedAttribute is combination of a name, represented by an Identifier, and a
+/// NamedAttribute is combination of a name, represented by a StringAttr, and a
 /// value, represented by an Attribute. The attribute pointer should always be
 /// non-null.
-using NamedAttribute = std::pair<Identifier, Attribute>;
+using NamedAttribute = std::pair<StringAttr, Attribute>;
 
 bool operator<(const NamedAttribute &lhs, const NamedAttribute &rhs);
 bool operator<(const NamedAttribute &lhs, StringRef rhs);
@@ -199,6 +199,19 @@ template <> struct DenseMapInfo<mlir::Attribute> {
   }
   static bool isEqual(mlir::Attribute LHS, mlir::Attribute RHS) {
     return LHS == RHS;
+  }
+};
+template <typename T>
+struct DenseMapInfo<
+    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value>>
+    : public DenseMapInfo<mlir::Attribute> {
+  static T getEmptyKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
+    return T::getFromOpaquePointer(pointer);
+  }
+  static T getTombstoneKey() {
+    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
+    return T::getFromOpaquePointer(pointer);
   }
 };
 

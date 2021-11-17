@@ -58,8 +58,7 @@ class EnumTypesTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # Look up information about the 'enum_test_days' enum type.
         # Check for correct display.

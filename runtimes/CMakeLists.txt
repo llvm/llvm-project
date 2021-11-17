@@ -111,10 +111,11 @@ include(HandleLLVMOptions)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-if (NOT LLVM_DEFAULT_TARGET_TRIPLE)
-  include(GetHostTriple)
-  get_host_triple(LLVM_DEFAULT_TARGET_TRIPLE)
-endif()
+# Host triple is used by tests to check if they are running natively.
+include(GetHostTriple)
+get_host_triple(LLVM_HOST_TRIPLE)
+set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
+  "Default target for which the runtimes will be built.")
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)

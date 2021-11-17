@@ -428,6 +428,8 @@ private:
   MCRegister tryAssign(LiveInterval&, AllocationOrder&,
                      SmallVectorImpl<Register>&,
                      const SmallVirtRegSet&);
+  MCRegister tryFindEvictionCandidate(LiveInterval &, const AllocationOrder &,
+                                      uint8_t, const SmallVirtRegSet &) const;
   MCRegister tryEvict(LiveInterval &, AllocationOrder &,
                     SmallVectorImpl<Register> &, uint8_t,
                     const SmallVirtRegSet &);
@@ -1099,17 +1101,9 @@ bool RAGreedy::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-/// tryEvict - Try to evict all interferences for a physreg.
-/// @param  VirtReg Currently unassigned virtual register.
-/// @param  Order   Physregs to try.
-/// @return         Physreg to assign VirtReg, or 0.
-MCRegister RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
-                            SmallVectorImpl<Register> &NewVRegs,
-                            uint8_t CostPerUseLimit,
-                            const SmallVirtRegSet &FixedRegisters) {
-  NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
-                     TimePassesIsEnabled);
-
+MCRegister RAGreedy::tryFindEvictionCandidate(
+    LiveInterval &VirtReg, const AllocationOrder &Order,
+    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
   // Keep track of the cheapest interference seen so far.
   EvictionCost BestCost;
   BestCost.setMax();
@@ -1167,7 +1161,22 @@ MCRegister RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
     if (I.isHint())
       break;
   }
+  return BestPhys;
+}
 
+/// tryEvict - Try to evict all interferences for a physreg.
+/// @param  VirtReg Currently unassigned virtual register.
+/// @param  Order   Physregs to try.
+/// @return         Physreg to assign VirtReg, or 0.
+MCRegister RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
+                              SmallVectorImpl<Register> &NewVRegs,
+                              uint8_t CostPerUseLimit,
+                              const SmallVirtRegSet &FixedRegisters) {
+  NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
+                     TimePassesIsEnabled);
+
+  MCRegister BestPhys =
+      tryFindEvictionCandidate(VirtReg, Order, CostPerUseLimit, FixedRegisters);
   if (BestPhys.isValid())
     evictInterference(VirtReg, BestPhys, NewVRegs);
   return BestPhys;
