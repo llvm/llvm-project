@@ -31,9 +31,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
-#ifndef _LIBCPP_HAS_NO_THREADS
-#    include <atomic>
-#endif
+#include <atomic>
 #ifndef _LIBCPP_HAS_NO_THREADS
 #    include <barrier>
 #endif

@@ -1190,10 +1190,9 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_HAS_GCC_ATOMIC_IMP
 #endif
 
-#if (!defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
-     !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
-     !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)) \
-     || defined(_LIBCPP_HAS_NO_THREADS)
+#if !defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
+    !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
+    !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)
 #  define _LIBCPP_HAS_NO_ATOMIC_HEADER
 #else
 #  ifndef _LIBCPP_ATOMIC_FLAG_TYPE

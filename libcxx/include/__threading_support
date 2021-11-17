@@ -12,6 +12,7 @@
 
 #include <__availability>
 #include <__config>
+#include <__thread/poll_with_backoff.h>
 #include <chrono>
 #include <errno.h>
 #include <iosfwd>
@@ -266,29 +267,6 @@ struct __libcpp_timed_backoff_policy {
       return false;
   }
 };
-
-static _LIBCPP_CONSTEXPR const int __libcpp_polling_count = 64;
-
-template<class _Fn, class _BFn>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-bool __libcpp_thread_poll_with_backoff(
-  _Fn && __f, _BFn && __bf, chrono::nanoseconds __max_elapsed = chrono::nanoseconds::zero())
-{
-    auto const __start = chrono::high_resolution_clock::now();
-    for(int __count = 0;;) {
-      if(__f())
-        return true; // _Fn completion means success
-      if(__count < __libcpp_polling_count) {
-        __count += 1;
-        continue;
-      }
-      chrono::nanoseconds const __elapsed = chrono::high_resolution_clock::now() - __start;
-      if(__max_elapsed != chrono::nanoseconds::zero() && __max_elapsed < __elapsed)
-          return false; // timeout failure
-      if(__bf(__elapsed))
-        return false; // _BFn completion means failure
-    }
-}
 
 #if (!defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
      defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL))

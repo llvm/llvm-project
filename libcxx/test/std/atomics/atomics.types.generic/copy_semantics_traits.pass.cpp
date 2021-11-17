@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-has-no-threads
 
 // <atomic>
 
@@ -28,7 +27,6 @@
 // };
 
 #include <atomic>
-
 #include <type_traits>
 
 template <typename T>

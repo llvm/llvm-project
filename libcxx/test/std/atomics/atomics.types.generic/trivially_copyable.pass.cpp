@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
 
 // <atomic>
 
@@ -18,8 +16,11 @@
 #include <atomic>
 #include <new>
 #include <cassert>
-#include <thread> // for thread_id
 #include <chrono> // for nanoseconds
+
+#ifndef _LIBCPP_HAS_NO_THREADS
+#   include <thread> // for thread_id
+#endif
 
 struct TriviallyCopyable {
   explicit TriviallyCopyable(int i) : i_(i) { }
@@ -33,8 +34,10 @@ void test(T t) {
 
 int main(int, char**) {
   test(TriviallyCopyable(42));
-  test(std::this_thread::get_id());
   test(std::chrono::nanoseconds(2));
+#ifndef _LIBCPP_HAS_NO_THREADS
+  test(std::this_thread::get_id());
+#endif
 
   return 0;
 }
