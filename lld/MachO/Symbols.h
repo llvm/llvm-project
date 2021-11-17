@@ -109,9 +109,6 @@ public:
   bool used : 1;
 };
 
-static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 48,
-              "Try to minimize Symbol's size; we create many instances");
-
 class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
@@ -173,13 +170,6 @@ public:
   uint64_t size;
   ConcatInputSection *compactUnwind = nullptr;
 };
-
-// The Microsoft ABI doesn't support using parent class tail padding for child
-// members, hence the _MSC_VER check.
-#if !defined(_MSC_VER)
-static_assert(sizeof(void *) != 8 || sizeof(Defined) == 80,
-              "Try to minimize Defined's size; we create many instances");
-#endif
 
 // This enum does double-duty: as a symbol property, it indicates whether & how
 // a dylib symbol is referenced. As a DylibFile property, it indicates the kind
@@ -306,9 +296,6 @@ union SymbolUnion {
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
   alignas(LazySymbol) char e[sizeof(LazySymbol)];
 };
-
-static_assert(sizeof(SymbolUnion) == sizeof(Defined),
-              "Defined should be the largest Symbol kind");
 
 template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *s, ArgT &&...arg) {
