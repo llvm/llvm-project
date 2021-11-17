@@ -2910,6 +2910,168 @@ struct FieldIndexOpConversion : public FIROpConversion<fir::FieldIndexOp> {
   }
 };
 
+/// Convert to (memory) reference to a reference to a subobject.
+/// The coordinate_of op is a Swiss army knife operation that can be used on
+/// (memory) references to records, arrays, complex, etc. as well as boxes.
+/// With unboxed arrays, there is the restriction that the array have a static
+/// shape in all but the last column.
+struct CoordinateOpConversion
+    : public FIROpAndTypeConversion<fir::CoordinateOp> {
+  using FIROpAndTypeConversion::FIROpAndTypeConversion;
+
+  mlir::LogicalResult
+  doRewrite(fir::CoordinateOp coor, mlir::Type ty, OpAdaptor adaptor,
+            mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::ValueRange operands = adaptor.getOperands();
+
+    mlir::Location loc = coor.getLoc();
+    mlir::Value base = operands[0];
+    mlir::Type baseObjectTy = coor.getBaseType();
+    mlir::Type objectTy = fir::dyn_cast_ptrOrBoxEleTy(baseObjectTy);
+    assert(objectTy && "fir.coordinate_of expects a reference type");
+
+    // Complex type - basically, extract the real or imaginary part
+    if (fir::isa_complex(objectTy)) {
+      mlir::LLVM::ConstantOp c0 =
+          genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
+      SmallVector<mlir::Value> offs = {c0, operands[1]};
+      mlir::Value gep = genGEP(loc, ty, rewriter, base, offs);
+      rewriter.replaceOp(coor, gep);
+      return success();
+    }
+
+    // Box type - get the base pointer from the box
+    if (auto boxTy = baseObjectTy.dyn_cast<fir::BoxType>()) {
+      doRewriteBox(coor, ty, operands, loc, rewriter);
+      return success();
+    }
+
+    // Sequence type (e.g. fir.array)
+    if (auto arrTy = objectTy.dyn_cast<fir::SequenceType>()) {
+      doRewriteSequence(loc);
+      return success();
+    }
+
+    return rewriter.notifyMatchFailure(
+        coor, "fir.coordinate_of base operand has unsupported type");
+  }
+
+  unsigned getFieldNumber(fir::RecordType ty, mlir::Value op) const {
+    return fir::hasDynamicSize(ty)
+               ? op.getDefiningOp()
+                     ->getAttrOfType<mlir::IntegerAttr>("field")
+                     .getInt()
+               : getIntValue(op);
+  }
+
+  int64_t getIntValue(mlir::Value val) const {
+    assert(val && val.dyn_cast<mlir::OpResult>() && "must not be null value");
+    mlir::Operation *defop = val.getDefiningOp();
+
+    if (auto constOp = dyn_cast<mlir::arith::ConstantIntOp>(defop))
+      return constOp.value();
+    if (auto llConstOp = dyn_cast<mlir::LLVM::ConstantOp>(defop))
+      if (auto attr = llConstOp.value().dyn_cast<mlir::IntegerAttr>())
+        return attr.getValue().getSExtValue();
+    fir::emitFatalError(val.getLoc(), "must be a constant");
+  }
+
+private:
+  void doRewriteBox(fir::CoordinateOp coor, mlir::Type ty,
+                    mlir::ValueRange operands, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::Type boxObjTy = coor.getBaseType();
+    assert(boxObjTy.dyn_cast<fir::BoxType>() && "This is not a `fir.box`");
+
+    mlir::Value boxBaseAddr = operands[0];
+
+    // 1. SPECIAL CASE (uses `fir.len_param_index`):
+    //   %box = ... : !fir.box<!fir.type<derived{len1:i32}>>
+    //   %lenp = fir.len_param_index len1, !fir.type<derived{len1:i32}>
+    //   %addr = coordinate_of %box, %lenp
+    if (coor.getNumOperands() == 2) {
+      mlir::Operation *coordinateDef = (*coor.coor().begin()).getDefiningOp();
+      if (isa_and_nonnull<fir::LenParamIndexOp>(coordinateDef)) {
+        TODO(loc,
+             "fir.coordinate_of - fir.len_param_index is not supported yet");
+      }
+    }
+
+    // 2. GENERAL CASE:
+    // 2.1. (`fir.array`)
+    //   %box = ... : !fix.box<!fir.array<?xU>>
+    //   %idx = ... : index
+    //   %resultAddr = coordinate_of %box, %idx : !fir.ref<U>
+    // 2.2 (`fir.derived`)
+    //   %box = ... : !fix.box<!fir.type<derived_type{field_1:i32}>>
+    //   %idx = ... : i32
+    //   %resultAddr = coordinate_of %box, %idx : !fir.ref<i32>
+    // 2.3 (`fir.derived` inside `fir.array`)
+    //   %box = ... : !fir.box<!fir.array<10 x !fir.type<derived_1{field_1:f32, field_2:f32}>>>
+    //   %idx1 = ... : index
+    //   %idx2 = ... : i32
+    //   %resultAddr = coordinate_of %box, %idx1, %idx2 : !fir.ref<f32>
+    // 2.4. TODO: Either document or disable any other case that the following
+    //  implementation might convert.
+    mlir::LLVM::ConstantOp c0 =
+        genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
+    mlir::Value resultAddr =
+        loadBaseAddrFromBox(loc, getBaseAddrTypeFromBox(boxBaseAddr.getType()),
+                            boxBaseAddr, rewriter);
+    auto currentObjTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
+    mlir::Type voidPtrTy = ::getVoidPtrType(coor.getContext());
+
+    for (unsigned i = 1, last = operands.size(); i < last; ++i) {
+      if (auto arrTy = currentObjTy.dyn_cast<fir::SequenceType>()) {
+        if (i != 1)
+          TODO(loc, "fir.array nested inside other array and/or derived type");
+        // Applies byte strides from the box. Ignore lower bound from box
+        // since fir.coordinate_of indexes are zero based. Lowering takes care
+        // of lower bound aspects. This both accounts for dynamically sized
+        // types and non contiguous arrays.
+        auto idxTy = lowerTy().indexType();
+        mlir::Value off = genConstantIndex(loc, idxTy, rewriter, 0);
+        for (unsigned index = i, lastIndex = i + arrTy.getDimension();
+             index < lastIndex; ++index) {
+          mlir::Value stride =
+              loadStrideFromBox(loc, operands[0], index - i, rewriter);
+          auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy,
+                                                       operands[index], stride);
+          off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off);
+        }
+        auto voidPtrBase =
+            rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, resultAddr);
+        SmallVector<mlir::Value> args{voidPtrBase, off};
+        resultAddr = rewriter.create<mlir::LLVM::GEPOp>(loc, voidPtrTy, args);
+        i += arrTy.getDimension() - 1;
+        currentObjTy = arrTy.getEleTy();
+      } else if (auto recTy = currentObjTy.dyn_cast<fir::RecordType>()) {
+        auto recRefTy =
+            mlir::LLVM::LLVMPointerType::get(lowerTy().convertType(recTy));
+        mlir::Value nxtOpnd = operands[i];
+        auto memObj =
+            rewriter.create<mlir::LLVM::BitcastOp>(loc, recRefTy, resultAddr);
+        llvm::SmallVector<mlir::Value> args = {memObj, c0, nxtOpnd};
+        currentObjTy = recTy.getType(getFieldNumber(recTy, nxtOpnd));
+        auto llvmCurrentObjTy = lowerTy().convertType(currentObjTy);
+        auto gep = rewriter.create<mlir::LLVM::GEPOp>(
+            loc, mlir::LLVM::LLVMPointerType::get(llvmCurrentObjTy), args);
+        resultAddr =
+            rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, gep);
+      } else {
+        fir::emitFatalError(loc, "unexpected type in coordinate_of");
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, ty, resultAddr);
+    return;
+  }
+
+  void doRewriteSequence(mlir::Location loc) const {
+    TODO(loc, "fir.coordinate_of codegen for sequence types");
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2939,7 +3101,7 @@ public:
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
         CallOpConversion, CmpcOpConversion, ConstcOpConversion,
-        ConvertOpConversion, DispatchOpConversion, DispatchTableOpConversion,
+        ConvertOpConversion, CoordinateOpConversion, DispatchOpConversion, DispatchTableOpConversion,
         DTEntryOpConversion, DivcOpConversion, EmboxOpConversion,
         EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
         FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
