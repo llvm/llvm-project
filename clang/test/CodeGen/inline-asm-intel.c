@@ -1,15 +1,17 @@
 // REQUIRES: x86-registered-target
 
 /// Accept intel inline asm but write it out as att:
-// RUN: %clang_cc1 -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -triple i386-unknown-unknown -mllvm -x86-asm-syntax=att -inline-asm=intel -O0 -S %s -o - | FileCheck --check-prefix=ATT %s
-// RUN: %clang_cc1 -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -triple x86_64-unknown-unknown -mllvm -x86-asm-syntax=att -inline-asm=intel -O0 -S %s -o - | FileCheck --check-prefix=ATT %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -mllvm -x86-asm-syntax=att -inline-asm=intel -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -O0 -S %s -o - | FileCheck --check-prefix=ATT %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mllvm -x86-asm-syntax=att -inline-asm=intel -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -O0 -S %s -o - | FileCheck --check-prefix=ATT %s
 
 /// Accept intel inline asm and write it out as intel:
-// RUN: %clang_cc1 -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -triple i386-unknown-unknown -mllvm -x86-asm-syntax=intel -inline-asm=intel -O0 -S %s -o - | FileCheck  --check-prefix=INTEL %s
-// RUN: %clang_cc1 -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -triple x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -inline-asm=intel -O0 -S %s -o - | FileCheck  --check-prefix=INTEL %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -mllvm -x86-asm-syntax=intel -inline-asm=intel -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -O0 -S %s -o - | FileCheck  --check-prefix=INTEL %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -inline-asm=intel -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -O0 -S %s -o - | FileCheck  --check-prefix=INTEL %s
 
-// RUN: %clang_cc1 -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -triple i386-pc-win32 -mllvm -x86-asm-syntax=intel -inline-asm=intel -O0 -S %s -o - -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 | FileCheck  --check-prefix=INTEL %s
-// RUN: %clang_cc1 -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -triple x86_64-pc-win32 -mllvm -x86-asm-syntax=intel -inline-asm=intel -O0 -S %s -o - -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 | FileCheck  --check-prefix=INTEL %s
+/// Check MS compat mode (_MSC_VER defined). The driver always picks intel
+/// output in that mode, so test only that.
+// RUN: %clang_cc1 -triple i386-pc-win32 -mllvm -x86-asm-syntax=intel -inline-asm=intel -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -O0 -S %s -o - -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 | FileCheck  --check-prefix=INTEL %s
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -mllvm -x86-asm-syntax=intel -inline-asm=intel -Werror -target-feature +hreset -target-feature +pconfig -target-feature +sgx -ffreestanding -O0 -S %s -o - -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 | FileCheck  --check-prefix=INTEL %s
 
 // Test that intrinsics headers still work with -masm=intel.
 #ifdef _MSC_VER
