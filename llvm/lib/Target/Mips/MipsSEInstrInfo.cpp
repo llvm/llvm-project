@@ -509,6 +509,8 @@ bool MipsSEInstrInfo::isBranchWithImm(unsigned Opc) const {
   case Mips::BLTIC_NM:
   case Mips::BLTIUC_NM:
   case Mips::BNEIC_NM:
+  case Mips::BBNEZC_NM:
+  case Mips::BBEQZC_NM:
     return true;
   }
 }
@@ -612,6 +614,8 @@ unsigned MipsSEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {
   case Mips::BNEC_NM:   return Mips::BEQC_NM;
   case Mips::BNEIC_NM:  return Mips::BEQIC_NM;
   case Mips::BNEZC_NM:  return Mips::BEQZC_NM;
+  case Mips::BBNEZC_NM:  return Mips::BBEQZC_NM;
+  case Mips::BBEQZC_NM:  return Mips::BBNEZC_NM;
   }
 }
 
@@ -723,6 +727,7 @@ unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
           Opc == Mips::BEQZC_MMR6 || Opc == Mips::BNEZC_MMR6 ||
           Opc == Mips::BEQC_NM || Opc == Mips::BEQIC_NM || Opc == Mips::BEQZC_NM ||
           Opc == Mips::BNEC_NM || Opc == Mips::BNEIC_NM || Opc == Mips::BNEZC_NM ||
+          Opc == Mips::BBNEZC_NM || Opc == Mips::BBEQZC_NM ||
           Opc == Mips::BGEC_NM || Opc == Mips::BGEIC_NM ||
           Opc == Mips::BGEUC_NM || Opc == Mips::BGEIUC_NM ||
           Opc == Mips::BLTC_NM || Opc == Mips::BLTIC_NM ||

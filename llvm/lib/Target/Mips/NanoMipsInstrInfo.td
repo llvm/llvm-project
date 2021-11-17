@@ -54,6 +54,8 @@ def uimm3plus1_nm : Operand<i32> {
   let ParserMatchClass = !cast<AsmOperandClass>("UImm3Plus1AsmOperandClass");
 }
 
+def simm32power2 : IntImmLeaf<i32, [{ return isPowerOf2_32(Imm.getSExtValue()); }]>;
+
 def uimm16_simm12 : Operand<i32>;
 
 def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
@@ -61,6 +63,10 @@ def addruimm12 : ComplexPattern<iPTR, 2, "selectIntAddrUImm12", [frameindex]>;
 def addrindexed : ComplexPattern<iPTR, 2, "selectIntAddrIndexed", [frameindex]>;
 def addrindexedlsl1 : ComplexPattern<iPTR, 2, "selectIntAddrIndexedLsl1", [frameindex]>;
 def addrindexedlsl2 : ComplexPattern<iPTR, 2, "selectIntAddrIndexedLsl2", []>;
+
+def Log2XForm : SDNodeXForm<imm, [{ return CurDAG->getTargetConstant(Log2_32(N->getZExtValue()),
+                                                                   SDLoc(N), MVT::i32);
+                                  }]>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -489,6 +495,21 @@ class CBranchZeroNM<string opstr, DAGOperand opnd, PatFrag cond_op,
   bit isCTI = 1;
 }
 
+class CBranchBitNM<string opstr, DAGOperand opnd, PatFrag cond_op,
+                   RegisterOperand RO,
+                   Operand imm_type, SDPatternOperator ImmOp>
+    : InstSize32,
+      InstNM<(outs), (ins RO:$rt, imm_type:$u, opnd:$offset),
+             !strconcat(opstr, "\t$rt, $u, $offset"),
+        [(brcond (i32 (cond_op (and RO:$rt, (shl 1, ImmOp:$u)), 0)), bb:$offset)]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasDelaySlot = 0;
+  let Defs = [AT_NM];
+  bit isCTI = 1;
+}
+
+
 let isCodeGenOnly = 1, hasNoSchedulingInfo = 1,
     hasDelaySlot = 0 in {
 
@@ -510,6 +531,11 @@ def BLTUC_NM  : CBranchNM<"bltuc", brtarget, setult, GPR32NMOpnd>, InstSize32;
 def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>, InstSize32;
 def BNEIC_NM : CBranchImmNM<"bneic", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
 def BNEZC_NM : CBranchZeroNM<"bnezc", brtarget, setne, GPR32NMOpnd>;
+
+// Bit-test branches
+def BBNEZC_NM : CBranchBitNM<"bbnezc", brtarget, setne, GPR32NMOpnd, simm32, simm32power2>;
+def BBEQZC_NM : CBranchBitNM<"bbeqzc", brtarget, seteq, GPR32NMOpnd, simm32, simm32power2>;
+
 }
 
 class BCBase : InstNM<(outs), (ins jmptarget:$target), "bc\t$target",
@@ -561,6 +587,12 @@ def : NMPat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
 // Branch on integer value
 def : NMPat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
             (BNEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>;
+
+// Bit-test branch
+def : Pat<(brcond (i32 (setne (and GPR32NM:$rt, simm32power2:$imm), 0)), bb:$offset),
+          (BBNEZC_NM GPR32NM:$rt, (Log2XForm $imm), bb:$offset)>;
+def : Pat<(brcond (i32 (seteq (and GPR32NM:$rt, simm32power2:$imm), 0)), bb:$offset),
+          (BBEQZC_NM GPR32NM:$rt, (Log2XForm $imm), bb:$offset)>;
 
 
 //===----------------------------------------------------------------------===//
