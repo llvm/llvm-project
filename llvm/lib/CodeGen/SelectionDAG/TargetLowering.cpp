@@ -7083,8 +7083,8 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
     SDValue CTLZ = DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Op);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
-    return DAG.getNode(ISD::SELECT, dl, VT, SrcIsZero,
-                       DAG.getConstant(NumBitsPerElt, dl, VT), CTLZ);
+    return DAG.getSelect(dl, VT, SrcIsZero,
+                         DAG.getConstant(NumBitsPerElt, dl, VT), CTLZ);
   }
 
   // Only expand vector types if we have the appropriate vector bit operations.
@@ -7132,8 +7132,8 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
     SDValue CTTZ = DAG.getNode(ISD::CTTZ_ZERO_UNDEF, dl, VT, Op);
     SDValue Zero = DAG.getConstant(0, dl, VT);
     SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
-    return DAG.getNode(ISD::SELECT, dl, VT, SrcIsZero,
-                       DAG.getConstant(NumBitsPerElt, dl, VT), CTTZ);
+    return DAG.getSelect(dl, VT, SrcIsZero,
+                         DAG.getConstant(NumBitsPerElt, dl, VT), CTTZ);
   }
 
   // Only expand vector types if we have the appropriate vector bit operations.
