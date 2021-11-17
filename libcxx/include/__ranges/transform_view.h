@@ -303,14 +303,12 @@ public:
     return __x.__current_ >= __y.__current_;
   }
 
-#if !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
   {
     return __x.__current_ <=> __y.__current_;
   }
-#endif // !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
 
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr __iterator operator+(__iterator __i, difference_type __n)
