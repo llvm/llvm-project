@@ -1795,6 +1795,37 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
     }
   }
 
+  // (~A & B & C) | ~(A | B | C) -> ~(A | (B ^ C))
+  // (~A | B | C) & ~(A & B & C) -> (~A | (B ^ C))
+  // TODO: One use checks are conservative. We just need to check that a total
+  //       number of multiple used values does not exceed reduction
+  //       in operations.
+  if (match(Op0,
+            m_OneUse(m_c_BinOp(FlippedOpcode,
+                               m_BinOp(FlippedOpcode, m_Value(B), m_Value(C)),
+                               m_CombineAnd(m_Value(X), m_Not(m_Value(A)))))) ||
+      match(Op0, m_OneUse(m_c_BinOp(
+                     FlippedOpcode,
+                     m_c_BinOp(FlippedOpcode, m_Value(C),
+                               m_CombineAnd(m_Value(X), m_Not(m_Value(A)))),
+                     m_Value(B))))) {
+    // X = ~A
+    if (match(Op1, m_OneUse(m_Not(m_c_BinOp(
+                       Opcode, m_c_BinOp(Opcode, m_Specific(A), m_Specific(B)),
+                       m_Specific(C))))) ||
+        match(Op1, m_OneUse(m_Not(m_c_BinOp(
+                       Opcode, m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)),
+                       m_Specific(A))))) ||
+        match(Op1, m_OneUse(m_Not(m_c_BinOp(
+                       Opcode, m_c_BinOp(Opcode, m_Specific(A), m_Specific(C)),
+                       m_Specific(B)))))) {
+      Value *Xor = Builder.CreateXor(B, C);
+      return (Opcode == Instruction::Or)
+                 ? BinaryOperator::CreateNot(Builder.CreateOr(Xor, A))
+                 : BinaryOperator::CreateOr(Xor, X);
+    }
+  }
+
   return nullptr;
 }
 
