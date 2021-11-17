@@ -100,3 +100,51 @@ func @gentypedesc() {
 
 // expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.dispatch_table'}}
 fir.dt_entry "method", @method_impl
+
+// -----
+
+// Test `fir.shape` conversion failure because the op has uses.
+
+func @shape_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
+  %c0 = arith.constant 1 : index
+  // expected-error@+1{{failed to legalize operation 'fir.shape'}}
+  %0 = fir.shape %c0, %c0 : (index, index) -> !fir.shape<2>
+  %1 = fir.array_coor %arg0(%0) %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+// Test `fir.slice` conversion failure because the op has uses.
+
+func @slice_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
+  %c0 = arith.constant 1 : index
+  // expected-error@+1{{failed to legalize operation 'fir.slice'}}
+  %0 = fir.slice %c0, %c0, %c0, %c0, %c0, %c0 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %1 = fir.array_coor %arg0[%0] %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<2>, index, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+// Test `fir.shift` conversion failure because the op has uses.
+
+func @shift_not_dead(%arg0: !fir.box<!fir.array<?xf32>>, %i: index) {
+  %c0 = arith.constant 1 : index
+  // expected-error@+1{{failed to legalize operation 'fir.shift'}}
+  %0 = fir.shift %c0 : (index) -> !fir.shift<1>
+  %1 = fir.array_coor %arg0(%0) %i : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+// Test `fir.shape_shift` conversion failure because the op has uses.
+
+func @shape_shift_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
+  %c0 = arith.constant 1 : index
+  // expected-error@+1{{failed to legalize operation 'fir.shape_shift'}}
+  %0 = fir.shape_shift %c0, %c0, %c0, %c0 : (index, index, index, index) -> !fir.shapeshift<2>
+  %1 = fir.array_coor %arg0(%0) %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<f32>
+  return
+}
