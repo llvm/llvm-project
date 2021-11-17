@@ -1,9 +1,6 @@
 static_library("benchmark") {
   sources = [
     "src/benchmark.cc",
-    "src/benchmark_api_internal.cc",
-    "src/benchmark_name.cc",
-    "src/benchmark_runner.cc",
     "src/benchmark_register.cc",
     "src/colorprint.cc",
     "src/commandlineflags.cc",
@@ -12,7 +9,6 @@ static_library("benchmark") {
     "src/counter.cc",
     "src/csv_reporter.cc",
     "src/json_reporter.cc",
-    "src/perf_counters.cc",
     "src/reporter.cc",
     "src/sleep.cc",
     "src/statistics.cc",
