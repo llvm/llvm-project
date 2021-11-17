@@ -49,7 +49,7 @@ public:
 } // namespace impl
 } // namespace mlir
 
-DataLayoutEntryAttr DataLayoutEntryAttr::get(Identifier key, Attribute value) {
+DataLayoutEntryAttr DataLayoutEntryAttr::get(StringAttr key, Attribute value) {
   return Base::get(key.getContext(), key, value);
 }
 
@@ -89,7 +89,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
     return {};
 
   return type ? get(type, value)
-              : get(parser.getBuilder().getIdentifier(identifier), value);
+              : get(parser.getBuilder().getStringAttr(identifier), value);
 }
 
 void DataLayoutEntryAttr::print(AsmPrinter &os) const {
@@ -97,7 +97,7 @@ void DataLayoutEntryAttr::print(AsmPrinter &os) const {
   if (auto type = getKey().dyn_cast<Type>())
     os << type;
   else
-    os << "\"" << getKey().get<Identifier>().strref() << "\"";
+    os << "\"" << getKey().get<StringAttr>().strref() << "\"";
   os << ", " << getValue() << ">";
 }
 
@@ -146,13 +146,13 @@ LogicalResult
 DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                            ArrayRef<DataLayoutEntryInterface> entries) {
   DenseSet<Type> types;
-  DenseSet<Identifier> ids;
+  DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
     if (auto type = entry.getKey().dyn_cast<Type>()) {
       if (!types.insert(type).second)
         return emitError() << "repeated layout entry key: " << type;
     } else {
-      auto id = entry.getKey().get<Identifier>();
+      auto id = entry.getKey().get<StringAttr>();
       if (!ids.insert(id).second)
         return emitError() << "repeated layout entry key: " << id.getValue();
     }
@@ -191,13 +191,13 @@ overwriteDuplicateEntries(SmallVectorImpl<DataLayoutEntryInterface> &oldEntries,
 static LogicalResult
 combineOneSpec(DataLayoutSpecInterface spec,
                DenseMap<TypeID, DataLayoutEntryList> &entriesForType,
-               DenseMap<Identifier, DataLayoutEntryInterface> &entriesForID) {
+               DenseMap<StringAttr, DataLayoutEntryInterface> &entriesForID) {
   // A missing spec should be fine.
   if (!spec)
     return success();
 
   DenseMap<TypeID, DataLayoutEntryList> newEntriesForType;
-  DenseMap<Identifier, DataLayoutEntryInterface> newEntriesForID;
+  DenseMap<StringAttr, DataLayoutEntryInterface> newEntriesForID;
   spec.bucketEntriesByType(newEntriesForType, newEntriesForID);
 
   // Try overwriting the old entries with the new ones.
@@ -220,7 +220,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
   }
 
   for (const auto &kvp : newEntriesForID) {
-    Identifier id = kvp.second.getKey().get<Identifier>();
+    StringAttr id = kvp.second.getKey().get<StringAttr>();
     Dialect *dialect = id.getReferencedDialect();
     if (!entriesForID.count(id)) {
       entriesForID[id] = kvp.second;
@@ -253,7 +253,7 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
 
   // Combine all specs in order, with `this` being the last one.
   DenseMap<TypeID, DataLayoutEntryList> entriesForType;
-  DenseMap<Identifier, DataLayoutEntryInterface> entriesForID;
+  DenseMap<StringAttr, DataLayoutEntryInterface> entriesForID;
   for (DataLayoutSpecInterface spec : specs)
     if (failed(combineOneSpec(spec, entriesForType, entriesForID)))
       return nullptr;
@@ -320,7 +320,7 @@ public:
 
   LogicalResult verifyEntry(DataLayoutEntryInterface entry,
                             Location loc) const final {
-    StringRef entryName = entry.getKey().get<Identifier>().strref();
+    StringRef entryName = entry.getKey().get<StringAttr>().strref();
     if (entryName == DLTIDialect::kDataLayoutEndiannessKey) {
       auto value = entry.getValue().dyn_cast<StringAttr>();
       if (value &&

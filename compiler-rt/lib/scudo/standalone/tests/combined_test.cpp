@@ -679,3 +679,23 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemInit) {
 
   Allocator->setOption(scudo::Option::ThreadDisableMemInit, 0);
 }
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
+  auto *Allocator = this->Allocator.get();
+
+  // Regression test: make realloc-in-place happen at the very right end of a
+  // mapped region.
+  constexpr int nPtrs = 10000;
+  for (int i = 1; i < 32; ++i) {
+    scudo::uptr Size = 16 * i - 1;
+    std::vector<void *> Ptrs;
+    for (int i = 0; i < nPtrs; ++i) {
+      void *P = Allocator->allocate(Size, Origin);
+      P = Allocator->reallocate(P, Size + 1);
+      Ptrs.push_back(P);
+    }
+
+    for (int i = 0; i < nPtrs; ++i)
+      Allocator->deallocate(Ptrs[i], Origin);
+  }
+}

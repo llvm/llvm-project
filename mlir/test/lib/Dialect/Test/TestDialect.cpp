@@ -963,7 +963,7 @@ static ParseResult parseStringAttrPrettyNameOp(OpAsmParser &parser,
   }
 
   auto namesAttr = parser.getBuilder().getStrArrayAttr(names);
-  result.attributes.push_back({Identifier::get("names", context), namesAttr});
+  result.attributes.push_back({StringAttr::get(context, "names"), namesAttr});
   return success();
 }
 

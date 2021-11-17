@@ -144,6 +144,7 @@ set(files
   __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
+  __format/format_to_n_result.h
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_char.h

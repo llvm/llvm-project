@@ -13,7 +13,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-using ::testing::ElementsAre;
 
 TEST(RIFFTest, File) {
   riff::File File{riff::fourCC("test"),

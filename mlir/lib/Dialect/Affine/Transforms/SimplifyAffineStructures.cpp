@@ -35,7 +35,7 @@ struct SimplifyAffineStructures
   /// Utility to simplify an affine attribute and update its entry in the parent
   /// operation if necessary.
   template <typename AttributeT>
-  void simplifyAndUpdateAttribute(Operation *op, Identifier name,
+  void simplifyAndUpdateAttribute(Operation *op, StringAttr name,
                                   AttributeT attr) {
     auto &simplified = simplifiedAttributes[attr];
     if (simplified == attr)

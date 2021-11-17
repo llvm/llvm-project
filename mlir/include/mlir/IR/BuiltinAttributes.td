@@ -379,15 +379,15 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
 
     /// Return the specified attribute if present, null otherwise.
     Attribute get(StringRef name) const;
-    Attribute get(Identifier name) const;
+    Attribute get(StringAttr name) const;
 
     /// Return the specified named attribute if present, None otherwise.
     Optional<NamedAttribute> getNamed(StringRef name) const;
-    Optional<NamedAttribute> getNamed(Identifier name) const;
+    Optional<NamedAttribute> getNamed(StringAttr name) const;
 
     /// Return whether the specified attribute is present.
     bool contains(StringRef name) const;
-    bool contains(Identifier name) const;
+    bool contains(StringAttr name) const;
 
     /// Support range iteration.
     using iterator = llvm::ArrayRef<NamedAttribute>::iterator;
@@ -641,11 +641,11 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
     #dialect<"opaque attribute data">
     ```
   }];
-  let parameters = (ins "Identifier":$dialectNamespace,
+  let parameters = (ins "StringAttr":$dialectNamespace,
                         StringRefParameter<"">:$attrData,
                         AttributeSelfTypeParameter<"">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "Identifier":$dialect,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
                                         "StringRef":$attrData,
                                         "Type":$type), [{
       return $_get(dialect.getContext(), dialect, attrData, type);
@@ -688,11 +688,11 @@ def Builtin_OpaqueElementsAttr : Builtin_Attr<
 
   // TODO: Provide a way to avoid copying content of large opaque
   // tensors This will likely require a new reference attribute kind.
-  let parameters = (ins "Identifier":$dialect,
+  let parameters = (ins "StringAttr":$dialect,
                         StringRefParameter<"">:$value,
                         AttributeSelfTypeParameter<"", "ShapedType">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "Identifier":$dialect,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
                                         "ShapedType":$type,
                                         "StringRef":$value), [{
       return $_get(dialect.getContext(), dialect, value, type);
@@ -701,7 +701,7 @@ def Builtin_OpaqueElementsAttr : Builtin_Attr<
                                         "ShapedType":$type,
                                         "StringRef":$value), [{
       MLIRContext *ctxt = dialect->getContext();
-      Identifier dialectName = Identifier::get(dialect->getNamespace(), ctxt);
+      StringAttr dialectName = StringAttr::get(ctxt, dialect->getNamespace());
       return $_get(ctxt, dialectName, value, type);
     }]>
   ];

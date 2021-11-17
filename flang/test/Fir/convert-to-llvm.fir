@@ -215,7 +215,7 @@ func @select(%arg : index, %arg2 : i32) -> i32 {
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(3 : i32) : i32
 // CHECK:         %[[SELECTOR:.*]] = llvm.trunc %[[SELECTVALUE]] : i{{.*}} to i32
-// CHECK:         llvm.switch %[[SELECTOR]], ^bb5 [
+// CHECK:         llvm.switch %[[SELECTOR]] : i32, ^bb5 [
 // CHECK:           1: ^bb1(%[[C0]] : i32),
 // CHECK:           2: ^bb2(%[[C2]], %[[SELECTVALUE]], %[[ARG1]] : i32, [[IDX]], i32),
 // CHECK:           3: ^bb3(%[[ARG1]], %[[C2]] : i32, i32),
@@ -260,7 +260,7 @@ func @select_rank(%arg : i32, %arg2 : i32) -> i32 {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK:         llvm.switch %[[SELECTVALUE]], ^bb5 [
+// CHECK:         llvm.switch %[[SELECTVALUE]] : i32, ^bb5 [
 // CHECK:           1: ^bb1(%[[C0]] : i32),
 // CHECK:           2: ^bb2(%[[C2]], %[[SELECTVALUE]], %[[ARG1]] : i32, i32, i32),
 // CHECK:           3: ^bb3(%[[ARG1]], %[[C2]] : i32, i32),
@@ -518,6 +518,57 @@ func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
 // CHECK:         %{{.*}} = llvm.insertvalue %[[NEGX]], %{{.*}}[0 : i32] : !llvm.struct<(f128, f128)>
 // CHECK:         %{{.*}} = llvm.insertvalue %[[NEGY]], %{{.*}}[1 : i32] : !llvm.struct<(f128, f128)>
 // CHECK:         llvm.return %{{.*}} : !llvm.struct<(f128, f128)>
+
+// -----
+
+// Test FIR complex compare conversion
+
+func @compare_complex_eq(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+  %r = fir.cmpc "oeq", %a, %b : !fir.complex<8>
+  return %r : i1
+}
+
+// CHECK-LABEL: llvm.func @compare_complex_eq
+// CHECK-SAME: [[A:%.*]]: !llvm.struct<(f64, f64)>,
+// CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "oeq" [[RA]], [[RB]] : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "oeq" [[IA]], [[IB]] : f64
+// CHECK: [[RES:%.*]] = llvm.and [[RESR]], [[RESI]] : i1
+// CHECK: return [[RES]] : i1
+
+func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+  %r = fir.cmpc "une", %a, %b : !fir.complex<8>
+  return %r : i1
+}
+
+// CHECK-LABEL: llvm.func @compare_complex_ne
+// CHECK-SAME: [[A:%.*]]: !llvm.struct<(f64, f64)>,
+// CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "une" [[RA]], [[RB]] : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "une" [[IA]], [[IB]] : f64
+// CHECK: [[RES:%.*]] = llvm.or [[RESR]], [[RESI]] : i1
+// CHECK: return [[RES]] : i1
+
+func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+  %r = fir.cmpc "ogt", %a, %b : !fir.complex<8>
+  return %r : i1
+}
+
+// CHECK-LABEL: llvm.func @compare_complex_other
+// CHECK-SAME: [[A:%.*]]: !llvm.struct<(f64, f64)>,
+// CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0 : i32] : !llvm.struct<(f64, f64)>
+// CHECK: [[RESR:%.*]] = llvm.fcmp "ogt" [[RA]], [[RB]] : f64
+// CHECK: return [[RESR]] : i1
 
 // -----
 
@@ -1200,3 +1251,23 @@ func @absent() -> i1 {
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.mlir.null : !llvm.ptr<i64>
 // CHECK-NEXT:  %[[ret_val:.*]] = llvm.call @is_present(%[[ptr]]) : (!llvm.ptr<i64>) -> i1
 // CHECK-NEXT:  llvm.return %[[ret_val]] : i1
+
+// -----
+
+// Test `fir.string_lit` conversion.
+
+func @string_lit0() {
+  %1 = fir.string_lit "Hello, World!"(13) : !fir.char<1>
+  return
+}
+
+// CHECK-LABEL: llvm.func @string_lit0
+// CHECK: %{{.*}} = llvm.mlir.constant("Hello, World!") : !llvm.array<13 x i8>
+
+func @string_lit1() {
+  %2 = fir.string_lit [158, 2345](2) : !fir.char<2>
+  return
+}
+
+// CHECK-LABEL: llvm.func @string_lit1
+// %{{.*}} = llvm.mlir.constant(dense<[158, 2345]> : vector<2xi16>) : !llvm.array<2 x i16>

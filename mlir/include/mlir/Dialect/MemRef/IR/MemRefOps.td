@@ -48,10 +48,11 @@ class AllocLikeOp<string mnemonic,
     ], traits)> {
 
   let arguments = (ins Variadic<Index>:$dynamicSizes,
-                   // The symbolic operands (the ones in square brackets) bind
-                   // to the symbols of the memref's layout map.
-                   Variadic<Index>:$symbolOperands,
-                   Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
+                       // The symbolic operands (the ones in square brackets)
+                       // bind to the symbols of the memref's layout map.
+                       Variadic<Index>:$symbolOperands,
+                       Confined<OptionalAttr<I64Attr>,
+                                [IntMinValue<0>]>:$alignment);
   let results = (outs Res<AnyMemRef, "", [MemAlloc<resource>]>:$memref);
 
   let builders = [
@@ -753,11 +754,9 @@ def MemRef_DmaWaitOp : MemRef_Op<"dma_wait"> {
     dma_wait %tag[%index], %num_elements : memref<1 x i32, (d0) -> (d0), 2>
     ```
   }];
-  let arguments = (ins
-    AnyMemRef:$tagMemRef,
-    Variadic<Index>:$tagIndices,
-    Index:$numElements
-  );
+  let arguments = (ins AnyMemRef:$tagMemRef,
+                       Variadic<Index>:$tagIndices,
+                       Index:$numElements);
   let assemblyFormat = [{
     $tagMemRef `[` $tagIndices `]` `,` $numElements attr-dict `:`
     type($tagMemRef)
@@ -853,14 +852,12 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
     ```
   }];
 
-  let arguments = (ins
-      SymbolNameAttr:$sym_name,
-      OptionalAttr<StrAttr>:$sym_visibility,
-      MemRefTypeAttr:$type,
-      OptionalAttr<AnyAttr>:$initial_value,
-      UnitAttr:$constant,
-      OptionalAttr<I64Attr>:$alignment
-  );
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       MemRefTypeAttr:$type,
+                       OptionalAttr<AnyAttr>:$initial_value,
+                       UnitAttr:$constant,
+                       OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
        ($sym_visibility^)?
@@ -978,10 +975,10 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
   }];
 
   let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
-                   BoolAttr:$isWrite,
-                   Confined<I32Attr, [IntMinValue<0>,
-                     IntMaxValue<3>]>:$localityHint,
-                   BoolAttr:$isDataCache);
+                       BoolAttr:$isWrite,
+                       Confined<I32Attr, [IntMinValue<0>,
+                                          IntMaxValue<3>]>:$localityHint,
+                       BoolAttr:$isDataCache);
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1024,15 +1021,13 @@ def MemRef_ReinterpretCastOp:
     ```
   }];
 
-  let arguments = (ins
-    Arg<AnyRankedOrUnrankedMemRef, "", []>:$source,
-    Variadic<Index>:$offsets,
-    Variadic<Index>:$sizes,
-    Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
-  );
+  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", []>:$source,
+                       Variadic<Index>:$offsets,
+                       Variadic<Index>:$sizes,
+                       Variadic<Index>:$strides,
+                       I64ArrayAttr:$static_offsets,
+                       I64ArrayAttr:$static_sizes,
+                       I64ArrayAttr:$static_strides);
   let results = (outs AnyMemRef:$result);
 
   let assemblyFormat = [{
@@ -1130,10 +1125,8 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
     ```
   }];
 
-  let arguments = (ins
-    AnyRankedOrUnrankedMemRef:$source,
-    MemRefRankOf<[AnySignlessInteger, Index], [1]>:$shape
-  );
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
+                       MemRefRankOf<[AnySignlessInteger, Index], [1]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
   let builders = [OpBuilder<
@@ -1504,15 +1497,13 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     }
   }];
 
-  let arguments = (ins
-    AnyMemRef:$source,
-    Variadic<Index>:$offsets,
-    Variadic<Index>:$sizes,
-    Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
-  );
+  let arguments = (ins AnyMemRef:$source,
+                       Variadic<Index>:$offsets,
+                       Variadic<Index>:$sizes,
+                       Variadic<Index>:$strides,
+                       I64ArrayAttr:$static_offsets,
+                       I64ArrayAttr:$static_sizes,
+                       I64ArrayAttr:$static_strides);
   let results = (outs AnyMemRef:$result);
 
   let assemblyFormat = [{
@@ -1774,8 +1765,8 @@ def MemRef_ViewOp : MemRef_Op<"view", [
   }];
 
   let arguments = (ins MemRefRankOf<[I8], [1]>:$source,
-                   Index:$byte_shift,
-                   Variadic<Index>:$sizes);
+                       Index:$byte_shift,
+                       Variadic<Index>:$sizes);
   let results = (outs AnyMemRef);
 
   let extraClassDeclaration = [{

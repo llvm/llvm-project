@@ -1,10 +1,13 @@
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestGDBRemoteLoad(GDBRemoteTestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
                         bugnumber="llvm.org/pr49414")

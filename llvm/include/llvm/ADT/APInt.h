@@ -31,7 +31,7 @@ class raw_ostream;
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
 template <typename T> class Optional;
-template <typename T> struct DenseMapInfo;
+template <typename T, typename Enable> struct DenseMapInfo;
 
 class APInt;
 
@@ -1817,7 +1817,7 @@ private:
 
   unsigned BitWidth; ///< The number of bits in this APInt.
 
-  friend struct DenseMapInfo<APInt>;
+  friend struct DenseMapInfo<APInt, void>;
   friend class APSInt;
 
   /// This constructor is used only internally for speed of construction of
@@ -2251,7 +2251,7 @@ void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst, unsigned StoreBytes);
 void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
 
 /// Provide DenseMapInfo for APInt.
-template <> struct DenseMapInfo<APInt> {
+template <> struct DenseMapInfo<APInt, void> {
   static inline APInt getEmptyKey() {
     APInt V(nullptr, 0);
     V.U.VAL = 0;

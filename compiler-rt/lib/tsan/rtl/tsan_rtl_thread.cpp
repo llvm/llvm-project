@@ -228,6 +228,9 @@ void ThreadFinish(ThreadState *thr) {
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
   thr->is_dead = true;
   thr->is_inited = false;
+#if !SANITIZER_GO
+  thr->ignore_interceptors++;
+#endif
   ctx->thread_registry.FinishThread(thr->tid);
 }
 

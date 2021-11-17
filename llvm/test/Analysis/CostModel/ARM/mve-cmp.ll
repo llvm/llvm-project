@@ -2,6 +2,8 @@
 ; RUN: opt -cost-model -analyze -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MVE
 ; RUN: opt -cost-model -analyze -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve.fp < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MVEFP
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define void @icmp() {
 ; CHECK-LABEL: 'icmp'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v2i8 = icmp slt <2 x i8> undef, undef

@@ -35,7 +35,6 @@ namespace llvm {
   class APInt;
   class hash_code;
   template <typename T> class SmallVectorImpl;
-  template <typename T> struct DenseMapInfo;
   class StringRef;
 
   /// Helper functions for StringRef::getAsInteger.
@@ -949,7 +948,7 @@ namespace llvm {
   hash_code hash_value(StringRef S);
 
   // Provide DenseMapInfo for StringRefs.
-  template <> struct DenseMapInfo<StringRef> {
+  template <> struct DenseMapInfo<StringRef, void> {
     static inline StringRef getEmptyKey() {
       return StringRef(
           reinterpret_cast<const char *>(~static_cast<uintptr_t>(0)), 0);

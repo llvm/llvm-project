@@ -172,11 +172,11 @@ entry:
 define i64 @alloca_addrspacecast_bitcast_volatile_store(i64 %X) {
 ; CHECK-LABEL: @alloca_addrspacecast_bitcast_volatile_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8]
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 1
 ; CHECK-NEXT:    [[A_CAST:%.*]] = addrspacecast [8 x i8]* [[A]] to [8 x i8] addrspace(1)*
 ; CHECK-NEXT:    [[B:%.*]] = bitcast [8 x i8] addrspace(1)* [[A_CAST]] to i64 addrspace(1)*
-; CHECK-NEXT:    store volatile i64 [[X:%.*]], i64 addrspace(1)* [[B]]
-; CHECK-NEXT:    [[Z:%.*]] = load i64, i64 addrspace(1)* [[B]]
+; CHECK-NEXT:    store volatile i64 [[X:%.*]], i64 addrspace(1)* [[B]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = load i64, i64 addrspace(1)* [[B]], align 4
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
 entry:
@@ -192,11 +192,11 @@ entry:
 define i64 @alloca_addrspacecast_bitcast_volatile_load(i64 %X) {
 ; CHECK-LABEL: @alloca_addrspacecast_bitcast_volatile_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8]
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 1
 ; CHECK-NEXT:    [[A_CAST:%.*]] = addrspacecast [8 x i8]* [[A]] to [8 x i8] addrspace(1)*
 ; CHECK-NEXT:    [[B:%.*]] = bitcast [8 x i8] addrspace(1)* [[A_CAST]] to i64 addrspace(1)*
-; CHECK-NEXT:    store i64 [[X:%.*]], i64 addrspace(1)* [[B]]
-; CHECK-NEXT:    [[Z:%.*]] = load volatile i64, i64 addrspace(1)* [[B]]
+; CHECK-NEXT:    store i64 [[X:%.*]], i64 addrspace(1)* [[B]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = load volatile i64, i64 addrspace(1)* [[B]], align 4
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
 entry:
@@ -214,12 +214,12 @@ declare void @llvm.memset.p1i8.i32(i8 addrspace(1)* nocapture, i8, i32, i1) noun
 define i32 @volatile_memset() {
 ; CHECK-LABEL: @volatile_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [4 x i8], [4 x i8]* [[A]], i32 0, i32 0
 ; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast i8* [[PTR]] to i8 addrspace(1)*
 ; CHECK-NEXT:    call void @llvm.memset.p1i8.i32(i8 addrspace(1)* [[ASC]], i8 42, i32 4, i1 true)
 ; CHECK-NEXT:    [[IPTR:%.*]] = bitcast i8* [[PTR]] to i32*
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[IPTR]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[IPTR]], align 4
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
 entry:
@@ -236,11 +236,11 @@ entry:
 define void @volatile_memcpy(i8* %src, i8* %dst) {
 ; CHECK-LABEL: @volatile_memcpy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [4 x i8], [4 x i8]* [[A]], i32 0, i32 0
 ; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast i8* [[PTR]] to i8 addrspace(1)*
-; CHECK-NEXT:    call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* [[ASC]], i8* [[SRC:%.*]], i32 4, i1 true), !tbaa !0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p1i8.i32(i8* [[DST:%.*]], i8 addrspace(1)* [[ASC]], i32 4, i1 true), !tbaa !3
+; CHECK-NEXT:    call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* [[ASC]], i8* [[SRC:%.*]], i32 4, i1 true), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p1i8.i32(i8* [[DST:%.*]], i8 addrspace(1)* [[ASC]], i32 4, i1 true), !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -298,6 +298,21 @@ define void @select_addrspacecast_gv(i1 %a, i1 %b) {
 
   %cond.in = select i1 undef, i64 addrspace(1)* %asc, i64 addrspace(1)* @gv
   %cond = load i64, i64 addrspace(1)* %cond.in, align 8
+  ret void
+}
+
+define void @select_addrspacecast_gv_constexpr(i1 %a, i1 %b) {
+; CHECK-LABEL: @select_addrspacecast_gv_constexpr(
+; CHECK-NEXT:    [[COND_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i64, i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*), align 8
+; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 undef, i64 undef, i64 [[COND_SROA_SPECULATE_LOAD_FALSE]]
+; CHECK-NEXT:    ret void
+;
+  %c = alloca i64, align 8
+  %p.0.c = select i1 undef, i64* %c, i64* %c
+  %asc = addrspacecast i64* %p.0.c to i64 addrspace(2)*
+
+  %cond.in = select i1 undef, i64 addrspace(2)* %asc, i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*)
+  %cond = load i64, i64 addrspace(2)* %cond.in, align 8
   ret void
 }
 

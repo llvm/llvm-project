@@ -20,26 +20,6 @@
 namespace __llvm_libc {
 namespace internal {
 
-// Shifts right and rounds according to the following rules:
-// 1) If the part being cut off is more than 2^(amountToShift - 1) then round
-// up
-// 2) If it is less than that number then round down
-// 3) If it is exactly that number, then round so that the final number will be
-// even
-template <class T>
-static inline T shiftRightAndRound(T numToShift, unsigned int amountToShift) {
-  T result = numToShift >> amountToShift;
-  T truncated = numToShift & ((1 << amountToShift) - 1);
-
-  if (truncated < (1 << (amountToShift - 1))) {
-    return result;
-  } else if (truncated > (1 << (amountToShift - 1))) {
-    return result + 1;
-  } else {
-    return result + (result & 1); // This rounds towards even.
-  }
-}
-
 template <class T> uint32_t inline leadingZeroes(T inputNumber) {
   // TODO(michaelrj): investigate the portability of using something like
   // __builtin_clz for specific types.
@@ -461,72 +441,85 @@ decimalExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
 template <class T>
 static inline void
 binaryExpToFloat(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp2,
+                 bool truncated,
                  typename fputil::FPBits<T>::UIntType *outputMantissa,
                  uint32_t *outputExp2) {
   using BitsType = typename fputil::FPBits<T>::UIntType;
 
   // This is the number of leading zeroes a properly normalized float of type T
   // should have.
-  constexpr int32_t NORMALIZED_LEADING_ZEROES =
-      (sizeof(BitsType) * 8) - fputil::FloatProperties<T>::mantissaWidth - 1;
-  constexpr BitsType OVERFLOWED_MANTISSA =
-      BitsType(1) << (fputil::FloatProperties<T>::mantissaWidth + 1);
+  constexpr int32_t NUMBITS = sizeof(BitsType) * 8;
+  constexpr int32_t INF_EXP =
+      (1 << fputil::FloatProperties<T>::exponentWidth) - 1;
 
-  // Normalization
-  int32_t amountToShift =
-      NORMALIZED_LEADING_ZEROES -
-      static_cast<int32_t>(leadingZeroes<BitsType>(mantissa));
-  if (amountToShift < 0) {
-    mantissa <<= -amountToShift;
-  } else {
-    mantissa = shiftRightAndRound(mantissa, amountToShift);
-    if (mantissa == OVERFLOWED_MANTISSA) {
-      mantissa >>= 1;
-      exp2 += 1;
+  // Normalization step 1: Bring the leading bit to the highest bit of BitsType.
+  uint32_t amountToShiftLeft = leadingZeroes<BitsType>(mantissa);
+  mantissa <<= amountToShiftLeft;
+
+  // Keep exp2 representing the exponent of the lowest bit of BitsType.
+  exp2 -= amountToShiftLeft;
+
+  // biasedExponent represents the biased exponent of the most significant bit.
+  int32_t biasedExponent = exp2 + NUMBITS + fputil::FPBits<T>::exponentBias - 1;
+
+  // Handle numbers that're too large and get squashed to inf
+  if (biasedExponent >= INF_EXP) {
+    // This indicates an overflow, so we make the result INF and set errno.
+    *outputExp2 = (1 << fputil::FloatProperties<T>::exponentWidth) - 1;
+    *outputMantissa = 0;
+    errno = ERANGE; // NOLINT
+    return;
+  }
+
+  uint32_t amountToShiftRight =
+      NUMBITS - fputil::FloatProperties<T>::mantissaWidth - 1;
+
+  // Handle subnormals.
+  if (biasedExponent <= 0) {
+    amountToShiftRight += 1 - biasedExponent;
+    biasedExponent = 0;
+
+    if (amountToShiftRight > NUMBITS) {
+      // Return 0 if the exponent is too small.
+      *outputMantissa = 0;
+      *outputExp2 = 0;
+      errno = ERANGE; // NOLINT
+      return;
     }
   }
-  exp2 += amountToShift;
 
-  // Account for the fact that the mantissa represented an integer
-  // previously, but now represents the fractional part of a normalized
-  // number.
-  exp2 += fputil::FloatProperties<T>::mantissaWidth;
+  BitsType roundBitMask = BitsType(1) << (amountToShiftRight - 1);
+  BitsType stickyMask = roundBitMask - 1;
+  bool roundBit = mantissa & roundBitMask;
+  bool stickyBit = static_cast<bool>(mantissa & stickyMask) || truncated;
 
-  int32_t biasedExponent = exp2 + fputil::FPBits<T>::exponentBias;
-  // handle subnormals
-  if (biasedExponent <= 0) {
+  if (amountToShiftRight < NUMBITS) {
+    // Shift the mantissa and clear the implicit bit.
+    mantissa >>= amountToShiftRight;
+    mantissa &= fputil::FloatProperties<T>::mantissaMask;
+  } else {
+    mantissa = 0;
+  }
+  bool leastSignificantBit = mantissa & BitsType(1);
+  // Perform rounding-to-nearest, tie-to-even.
+  if (roundBit && (leastSignificantBit || stickyBit)) {
+    ++mantissa;
+  }
 
-    // the most mantissa is currently normalized, meaning that the msb is
-    // one bit left of where the decimal point should go.
-    amountToShift = 1;
-    BitsType mantissaCopy = mantissa >> 1;
-    while (biasedExponent < 0 && mantissaCopy > 0) {
-      mantissaCopy = mantissaCopy >> 1;
-      ++amountToShift;
-      ++biasedExponent;
-    }
-    // If we cut off any bits to fit this number into a subnormal, then it's
-    // out of range for this size of float.
-    if ((mantissa & ((1 << amountToShift) - 1)) > 0) {
+  if (mantissa > fputil::FloatProperties<T>::mantissaMask) {
+    // Rounding causes the exponent to increase.
+    ++biasedExponent;
+
+    if (biasedExponent == INF_EXP) {
       errno = ERANGE; // NOLINT
     }
-    mantissa = shiftRightAndRound(mantissa, amountToShift);
-    if (mantissa == OVERFLOWED_MANTISSA) {
-      mantissa >>= 1;
-      exp2 += 1;
-    } else if (mantissa == 0) {
-      biasedExponent = 0;
-    }
   }
-  // handle numbers that're too large and get squashed to inf
-  else if (biasedExponent >
-           (1 << fputil::FloatProperties<T>::exponentWidth) - 1) {
-    // This indicates an overflow, so we make the result INF and set errno.
-    biasedExponent = (1 << fputil::FloatProperties<T>::exponentWidth) - 1;
-    mantissa = 0;
+
+  if (biasedExponent == 0) {
     errno = ERANGE; // NOLINT
   }
-  *outputMantissa = mantissa;
+
+  *outputMantissa = mantissa & fputil::FloatProperties<T>::mantissaMask;
   *outputExp2 = biasedExponent;
 }
 
@@ -666,11 +659,10 @@ hexadecimalStringToFloat(const char *__restrict src, const char DECIMAL_POINT,
   while (true) {
     if (isalnum(*src)) {
       uint32_t digit = b36_char_to_int(*src);
-      if (digit >= BASE) {
-        seenDigit = false;
+      if (digit < BASE)
+        seenDigit = true;
+      else
         break;
-      }
-      seenDigit = true;
 
       if (mantissa < BITSTYPE_MAX_DIV_BY_BASE) {
         mantissa = (mantissa * BASE) + digit;
@@ -722,7 +714,8 @@ hexadecimalStringToFloat(const char *__restrict src, const char DECIMAL_POINT,
     *outputMantissa = 0;
     *outputExponent = 0;
   } else {
-    binaryExpToFloat<T>(mantissa, exponent, outputMantissa, outputExponent);
+    binaryExpToFloat<T>(mantissa, exponent, truncated, outputMantissa,
+                        outputExponent);
   }
   return true;
 }

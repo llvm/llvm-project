@@ -363,3 +363,21 @@ define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer
   ret <2 x i64> %r
 }
+
+; SVE
+
+define <vscale x 16 x i8> @signbit_mask_xor_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: signbit_mask_xor_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmplt p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    mov z0.b, p0/m, #0 // =0x0
+; CHECK-NEXT:    ret
+  %cond = icmp slt <vscale x 16 x i8> %a, zeroinitializer
+  %xor = xor <vscale x 16 x i8> %a, %b
+  %r = select <vscale x 16 x i1> %cond, <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> %xor
+  ret <vscale x 16 x i8> %r
+}
+
+attributes #0 = { "target-features"="+sve" }

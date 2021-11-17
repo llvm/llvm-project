@@ -12,6 +12,8 @@
 ; RUN: opt < %s -cost-model -analyze -cost-kind=throughput -mtriple=thumbv8.1m.main -mattr=+mve | FileCheck %s --check-prefix=CHECK-MVE-THROUGHPUT
 ; RUN: opt < %s -cost-model -analyze -cost-kind=throughput -mtriple=armv8a -mattr=+neon | FileCheck %s --check-prefix=CHECK-NEON-THROUGHPUT
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define i32 @simple_loop_cost(i32 %N) {
 ; CHECK-T1-SIZE-LABEL: 'simple_loop_cost'
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0

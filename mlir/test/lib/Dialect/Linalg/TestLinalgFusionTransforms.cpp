@@ -31,81 +31,81 @@ static void fillFusionPatterns(MLIRContext *context,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({2}),
       LinalgTransformationFilter(
-          Identifier::get("basic_fusion", context),
-          Identifier::get("after_basic_fusion", context)),
+          StringAttr::get(context, "basic_fusion"),
+          StringAttr::get(context, "after_basic_fusion")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_basic_fusion_producer", context)),
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_basic_fusion_producer")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_basic_fusion_original", context)));
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_basic_fusion_original")));
 
   patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0}),
-      LinalgTransformationFilter(Identifier::get("lhs_fusion", context),
-                                 Identifier::get("after_lhs_fusion", context)),
+      LinalgTransformationFilter(StringAttr::get(context, "lhs_fusion"),
+                                 StringAttr::get(context, "after_lhs_fusion")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_lhs_fusion_producer", context)),
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_lhs_fusion_producer")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_lhs_fusion_original", context)));
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_lhs_fusion_original")));
 
   patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({2}),
-      LinalgTransformationFilter(Identifier::get("out_fusion", context),
-                                 Identifier::get("after_out_fusion", context)),
+      LinalgTransformationFilter(StringAttr::get(context, "out_fusion"),
+                                 StringAttr::get(context, "after_out_fusion")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_out_fusion_producer", context)),
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_out_fusion_producer")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_out_fusion_original", context)));
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_out_fusion_original")));
 
   patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({1}),
-      LinalgTransformationFilter(Identifier::get("rhs_fusion", context),
-                                 Identifier::get("after_rhs_fusion", context)),
+      LinalgTransformationFilter(StringAttr::get(context, "rhs_fusion"),
+                                 StringAttr::get(context, "after_rhs_fusion")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_rhs_fusion_producer", context)),
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_rhs_fusion_producer")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_rhs_fusion_original", context)));
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_rhs_fusion_original")));
 
   patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0, 2}),
       LinalgTransformationFilter(
-          Identifier::get("two_operand_fusion", context),
-          Identifier::get("after_two_operand_fusion", context)),
+          StringAttr::get(context, "two_operand_fusion"),
+          StringAttr::get(context, "after_two_operand_fusion")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_two_operand_fusion_producer", context)),
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_two_operand_fusion_producer")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_two_operand_fusion_original", context)));
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_two_operand_fusion_original")));
 
   patterns.add<LinalgTileAndFusePattern<GenericOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0, 1}),
       LinalgTransformationFilter(
-          Identifier::get("transpose_fusion", context),
-          Identifier::get("after_transpose_fusion", context)),
+          StringAttr::get(context, "transpose_fusion"),
+          StringAttr::get(context, "after_transpose_fusion")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_transpose_fusion_producer", context)),
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_transpose_fusion_producer")),
       LinalgTransformationFilter(
-          ArrayRef<Identifier>(),
-          Identifier::get("after_transpose_fusion_original", context)));
+          ArrayRef<StringAttr>(),
+          StringAttr::get(context, "after_transpose_fusion_original")));
 }
 
 namespace {

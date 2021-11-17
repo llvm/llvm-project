@@ -40,25 +40,6 @@ class VerCapExtAttr;
 
 namespace llvm {
 
-/// spirv::Function ops hash just like pointers.
-template <>
-struct DenseMapInfo<mlir::spirv::FuncOp> {
-  static mlir::spirv::FuncOp getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::spirv::FuncOp::getFromOpaquePointer(pointer);
-  }
-  static mlir::spirv::FuncOp getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::spirv::FuncOp::getFromOpaquePointer(pointer);
-  }
-  static unsigned getHashValue(mlir::spirv::FuncOp val) {
-    return hash_value(val.getAsOpaquePointer());
-  }
-  static bool isEqual(mlir::spirv::FuncOp LHS, mlir::spirv::FuncOp RHS) {
-    return LHS == RHS;
-  }
-};
-
 /// Allow stealing the low bits of spirv::Function ops.
 template <>
 struct PointerLikeTypeTraits<mlir::spirv::FuncOp> {

@@ -7,20 +7,20 @@
 
 __attribute__((objc_root_class)) @interface MyObject {
 @public
-    id _myMaster;
+    id _myLeader;
     id _isTickledPink;
 }
-@property(retain) id myMaster;
+@property(retain) id myLeader;
 @property(assign) id isTickledPink;
 @end
 
 @implementation MyObject
 
-@synthesize myMaster = _myMaster;
+@synthesize myLeader = _myLeader;
 @synthesize isTickledPink = _isTickledPink;
 
 - (void) doSomething {
-    _myMaster = _isTickledPink;
+    _myLeader = _isTickledPink;
 }
 
 @end
@@ -28,8 +28,8 @@ __attribute__((objc_root_class)) @interface MyObject {
 MyObject * foo ()
 {
 	MyObject* p;
-        p.isTickledPink = p.myMaster;	// ok
-	p->_isTickledPink = p->_myMaster;
+        p.isTickledPink = p.myLeader;	// ok
+	p->_isTickledPink = p->_myLeader;
 	return p->_isTickledPink;
 }
 

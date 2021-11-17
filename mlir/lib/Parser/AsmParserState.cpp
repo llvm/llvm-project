@@ -258,9 +258,9 @@ void AsmParserState::addUses(Value value, ArrayRef<llvm::SMLoc> locations) {
     unsigned resultNo = result.getResultNumber();
     OperationDefinition &def = *impl->operations[existingIt->second];
     for (auto &resultGroup : llvm::reverse(def.resultGroups)) {
-      if (resultNo >= resultGroup.first) {
+      if (resultNo >= resultGroup.startIndex) {
         for (llvm::SMLoc loc : locations)
-          resultGroup.second.uses.push_back(convertIdLocToRange(loc));
+          resultGroup.definition.uses.push_back(convertIdLocToRange(loc));
         return;
       }
     }

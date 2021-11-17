@@ -447,8 +447,8 @@ public:
     auto *ctx = patterns.getContext();
     patterns.add<LinalgTilingPattern<OpTy>>(
         ctx, options,
-        LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                   Identifier::get("tiled", ctx)));
+        LinalgTransformationFilter(ArrayRef<StringAttr>{},
+                                   StringAttr::get(ctx, "tiled")));
     RewritePatternList<OpTypes...>::insert(patterns, options);
   }
 };

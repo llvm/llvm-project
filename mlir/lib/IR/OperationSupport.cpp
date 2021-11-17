@@ -62,7 +62,7 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
 
 /// Add an attribute with the specified name.
 void NamedAttrList::append(StringRef name, Attribute attr) {
-  append(Identifier::get(name, attr.getContext()), attr);
+  append(StringAttr::get(attr.getContext(), name), attr);
 }
 
 /// Replaces the attributes with new list of attributes.
@@ -86,7 +86,7 @@ Attribute NamedAttrList::get(StringRef name) const {
   auto it = findAttr(*this, name);
   return it.second ? it.first->second : Attribute();
 }
-Attribute NamedAttrList::get(Identifier name) const {
+Attribute NamedAttrList::get(StringAttr name) const {
   auto it = findAttr(*this, name);
   return it.second ? it.first->second : Attribute();
 }
@@ -96,14 +96,14 @@ Optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
   auto it = findAttr(*this, name);
   return it.second ? *it.first : Optional<NamedAttribute>();
 }
-Optional<NamedAttribute> NamedAttrList::getNamed(Identifier name) const {
+Optional<NamedAttribute> NamedAttrList::getNamed(StringAttr name) const {
   auto it = findAttr(*this, name);
   return it.second ? *it.first : Optional<NamedAttribute>();
 }
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value.  Otherwise, add a new attribute with the specified name/value.
-Attribute NamedAttrList::set(Identifier name, Attribute value) {
+Attribute NamedAttrList::set(StringAttr name, Attribute value) {
   assert(value && "attributes may never be null");
 
   // Look for an existing attribute with the given name, and set its value
@@ -131,7 +131,7 @@ Attribute NamedAttrList::set(Identifier name, Attribute value) {
 
 Attribute NamedAttrList::set(StringRef name, Attribute value) {
   assert(value && "attributes may never be null");
-  return set(mlir::Identifier::get(name, value.getContext()), value);
+  return set(mlir::StringAttr::get(value.getContext(), name), value);
 }
 
 Attribute
@@ -143,7 +143,7 @@ NamedAttrList::eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it) {
   return attr;
 }
 
-Attribute NamedAttrList::erase(Identifier name) {
+Attribute NamedAttrList::erase(StringAttr name) {
   auto it = findAttr(*this, name);
   return it.second ? eraseImpl(it.first) : Attribute();
 }

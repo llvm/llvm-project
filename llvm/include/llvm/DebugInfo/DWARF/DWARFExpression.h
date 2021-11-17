@@ -97,7 +97,9 @@ public:
     bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
                const DWARFExpression *Expr, const MCRegisterInfo *RegInfo,
                DWARFUnit *U, bool isEH) const;
-    bool verify(DWARFUnit *U);
+
+    /// Verify \p Op. Does not affect the return of \a isError().
+    static bool verify(const Operation &Op, DWARFUnit *U);
 
   private:
     bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
@@ -107,11 +109,11 @@ public:
   /// An iterator to go through the expression operations.
   class iterator
       : public iterator_facade_base<iterator, std::forward_iterator_tag,
-                                    Operation> {
+                                    const Operation> {
     friend class DWARFExpression;
     const DWARFExpression *Expr;
     uint64_t Offset;
-    mutable Operation Op;
+    Operation Op;
     iterator(const DWARFExpression *Expr, uint64_t Offset)
         : Expr(Expr), Offset(Offset) {
       Op.Error =
@@ -128,9 +130,7 @@ public:
       return *this;
     }
 
-    class Operation &operator*() const {
-      return Op;
-    }
+    const Operation &operator*() const { return Op; }
 
     iterator skipBytes(uint64_t Add) const {
       return iterator(Expr, Op.EndOffset + Add);

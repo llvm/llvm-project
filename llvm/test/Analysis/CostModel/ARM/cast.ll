@@ -9,6 +9,8 @@
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE-SIZE
 ; RUN: opt -cost-model -analyze -cost-kind=code-size -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R-SIZE
 
+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
 define i32 @casts() {
   ; -- scalars --
 ; CHECK-NEON-RECIP-LABEL: 'casts'
@@ -124,7 +126,7 @@ define i32 @casts() {
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rext_9 = zext <2 x i16> undef to <2 x i64>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_a = sext <2 x i32> undef to <2 x i64>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_b = zext <2 x i32> undef to <2 x i64>
-; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv4i32i8 = trunc <4 x i32> undef to <4 x i8>
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tv4i32i8 = trunc <4 x i32> undef to <4 x i8>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv4i32i16 = trunc <4 x i32> undef to <4 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tv4i16i8 = trunc <4 x i16> undef to <4 x i8>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %tv8i32i8 = trunc <8 x i32> undef to <8 x i8>
@@ -1700,7 +1702,7 @@ define i32 @casts() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rext_9 = zext <2 x i16> undef to <2 x i64>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_a = sext <2 x i32> undef to <2 x i64>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_b = zext <2 x i32> undef to <2 x i64>
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv4i32i8 = trunc <4 x i32> undef to <4 x i8>
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tv4i32i8 = trunc <4 x i32> undef to <4 x i8>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv4i32i16 = trunc <4 x i32> undef to <4 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tv4i16i8 = trunc <4 x i16> undef to <4 x i8>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %tv8i32i8 = trunc <8 x i32> undef to <8 x i8>
@@ -3276,7 +3278,7 @@ define i32 @casts() {
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_9 = zext <2 x i16> undef to <2 x i64>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_a = sext <2 x i32> undef to <2 x i64>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_b = zext <2 x i32> undef to <2 x i64>
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv4i32i8 = trunc <4 x i32> undef to <4 x i8>
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tv4i32i8 = trunc <4 x i32> undef to <4 x i8>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv4i32i16 = trunc <4 x i32> undef to <4 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tv4i16i8 = trunc <4 x i16> undef to <4 x i8>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tv8i32i8 = trunc <8 x i32> undef to <8 x i8>

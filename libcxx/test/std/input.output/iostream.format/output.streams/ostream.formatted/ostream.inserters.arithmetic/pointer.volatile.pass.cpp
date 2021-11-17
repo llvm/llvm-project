@@ -10,6 +10,13 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// This test fails on MinGW DLL configurations, due to
+// __exclude_from_explicit_instantiation__ not behaving as it should in
+// combination with dllimport (https://llvm.org/PR41018), in combination
+// with running tests in c++2b mode while building the library in c++20 mode.
+// (If the library was built in c++2b mode, this test would succeed.)
+// XFAIL: target={{.+}}-windows-gnu && windows-dll
+
 // template <class charT, class traits = char_traits<charT> >
 //   class basic_ostream;
 

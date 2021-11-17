@@ -95,7 +95,7 @@ define i3 @test(i3* %a, i3 %n) {
 ; UNROLL-4-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i3, i3* [[A]], i64 [[INDVARS_IV_NEXT_2]]
 ; UNROLL-4-NEXT:    [[TMP5:%.*]] = load i3, i3* [[ARRAYIDX_3]], align 1
 ; UNROLL-4-NEXT:    [[ADD_3]] = add nsw i3 [[TMP5]], [[ADD_2]]
-; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_3]] = add i64 [[INDVARS_IV_NEXT_2]], 1
+; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
 ; UNROLL-4-NEXT:    [[NITER_NEXT_3]] = add i3 [[NITER_NEXT_2]], 1
 ; UNROLL-4-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i3 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; UNROLL-4-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

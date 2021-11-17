@@ -165,7 +165,7 @@ MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
                                 intptr_t dataLength, const char *data,
                                 MlirType type) {
   return wrap(
-      OpaqueAttr::get(Identifier::get(unwrap(dialectNamespace), unwrap(ctx)),
+      OpaqueAttr::get(StringAttr::get(unwrap(ctx), unwrap(dialectNamespace)),
                       StringRef(data, dataLength), unwrap(type)));
 }
 

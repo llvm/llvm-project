@@ -1145,7 +1145,7 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   if (tree.getNumArgs() == 1) {
     DagLeaf leaf = tree.getArgAsLeaf(0);
     if (leaf.isStringAttr())
-      return formatv("::mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"))",
+      return formatv("::mlir::NameLoc::get(rewriter.getStringAttr(\"{0}\"))",
                      leaf.getStringAttr())
           .str();
     return lookUpArgLoc(0);
@@ -1607,7 +1607,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 
   const char *addAttrCmd =
       "if (auto tmpAttr = {1}) {\n"
-      "  tblgen_attrs.emplace_back(rewriter.getIdentifier(\"{0}\"), "
+      "  tblgen_attrs.emplace_back(rewriter.getStringAttr(\"{0}\"), "
       "tmpAttr);\n}\n";
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
     if (resultOp.getArg(argIndex).is<NamedAttribute *>()) {

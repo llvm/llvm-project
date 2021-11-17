@@ -22,7 +22,7 @@
 namespace mlir {
 class DataLayout;
 class DataLayoutEntryInterface;
-using DataLayoutEntryKey = llvm::PointerUnion<Type, Identifier>;
+using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 // Using explicit SmallVector size because we cannot infer the size from the
 // forward declaration, and we need the typedef in the actual declaration.
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
@@ -65,7 +65,7 @@ DataLayoutEntryList filterEntriesForType(DataLayoutEntryListRef entries,
 /// Given a list of data layout entries, returns the entry that has the given
 /// identifier as key, if such an entry exists in the list.
 DataLayoutEntryInterface
-filterEntryForIdentifier(DataLayoutEntryListRef entries, Identifier id);
+filterEntryForIdentifier(DataLayoutEntryListRef entries, StringAttr id);
 
 /// Verifies that the operation implementing the data layout interface, or a
 /// module operation, is valid. This calls the verifier of the spec attribute

@@ -398,6 +398,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   WideReg = Builder.buildConstant(WideValueTy, WideConst).getReg(0);
   auto NewStore =
       Builder.buildStore(WideReg, FirstStore->getPointerReg(), *WideMMO);
+  (void) NewStore;
   LLVM_DEBUG(dbgs() << "Created merged store: " << *NewStore);
   NumStoresMerged += Stores.size();
 
