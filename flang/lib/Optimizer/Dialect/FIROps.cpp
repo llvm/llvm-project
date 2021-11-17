@@ -760,19 +760,9 @@ static mlir::ParseResult parseConstcOp(mlir::OpAsmParser &parser,
 }
 
 static void print(mlir::OpAsmPrinter &p, fir::ConstcOp &op) {
-  p << " (0x";
-  auto f1 = op.getOperation()
-                ->getAttr(fir::ConstcOp::realAttrName())
-                .cast<mlir::FloatAttr>();
-  auto i1 = f1.getValue().bitcastToAPInt();
-  p.getStream().write_hex(i1.getZExtValue());
-  p << ", 0x";
-  auto f2 = op.getOperation()
-                ->getAttr(fir::ConstcOp::imagAttrName())
-                .cast<mlir::FloatAttr>();
-  auto i2 = f2.getValue().bitcastToAPInt();
-  p.getStream().write_hex(i2.getZExtValue());
-  p << ") : ";
+  p << '(';
+  p << op.getOperation()->getAttr(fir::ConstcOp::realAttrName()) << ", ";
+  p << op.getOperation()->getAttr(fir::ConstcOp::imagAttrName()) << ") : ";
   p.printType(op.getType());
 }
 
