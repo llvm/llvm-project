@@ -150,7 +150,7 @@ public:
 };
 
 // Verify ConcatInputSection's size on 64-bit builds.
-static_assert(sizeof(int) != 8 || sizeof(ConcatInputSection) == 112,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) == 120,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
