@@ -26,6 +26,7 @@
 #define HWLOC_GROUP_KIND_INTEL_DIE 104
 #define HWLOC_GROUP_KIND_WINDOWS_PROCESSOR_GROUP 220
 #endif
+#include <ctype.h>
 
 // The machine topology
 kmp_topology_t *__kmp_topology = nullptr;
@@ -1030,7 +1031,67 @@ kmp_str_buf_t *__kmp_affinity_str_buf_mask(kmp_str_buf_t *buf,
   return buf;
 }
 
-void __kmp_affinity_entire_machine_mask(kmp_affin_mask_t *mask) {
+// Return (possibly empty) affinity mask representing the offline CPUs
+// Caller must free the mask
+kmp_affin_mask_t *__kmp_affinity_get_offline_cpus() {
+  kmp_affin_mask_t *offline;
+  KMP_CPU_ALLOC(offline);
+  KMP_CPU_ZERO(offline);
+#if KMP_OS_LINUX
+  int n, begin_cpu, end_cpu;
+  kmp_safe_raii_file_t offline_file;
+  auto skip_ws = [](FILE *f) {
+    int c;
+    do {
+      c = fgetc(f);
+    } while (isspace(c));
+    if (c != EOF)
+      ungetc(c, f);
+  };
+  // File contains CSV of integer ranges representing the offline CPUs
+  // e.g., 1,2,4-7,9,11-15
+  int status = offline_file.try_open("/sys/devices/system/cpu/offline", "r");
+  if (status != 0)
+    return offline;
+  while (!feof(offline_file)) {
+    skip_ws(offline_file);
+    n = fscanf(offline_file, "%d", &begin_cpu);
+    if (n != 1)
+      break;
+    skip_ws(offline_file);
+    int c = fgetc(offline_file);
+    if (c == EOF || c == ',') {
+      // Just single CPU
+      end_cpu = begin_cpu;
+    } else if (c == '-') {
+      // Range of CPUs
+      skip_ws(offline_file);
+      n = fscanf(offline_file, "%d", &end_cpu);
+      if (n != 1)
+        break;
+      skip_ws(offline_file);
+      c = fgetc(offline_file); // skip ','
+    } else {
+      // Syntax problem
+      break;
+    }
+    // Ensure a valid range of CPUs
+    if (begin_cpu < 0 || begin_cpu >= __kmp_xproc || end_cpu < 0 ||
+        end_cpu >= __kmp_xproc || begin_cpu > end_cpu) {
+      continue;
+    }
+    // Insert [begin_cpu, end_cpu] into offline mask
+    for (int cpu = begin_cpu; cpu <= end_cpu; ++cpu) {
+      KMP_CPU_SET(cpu, offline);
+    }
+  }
+#endif
+  return offline;
+}
+
+// Return the number of available procs
+int __kmp_affinity_entire_machine_mask(kmp_affin_mask_t *mask) {
+  int avail_proc = 0;
   KMP_CPU_ZERO(mask);
 
 #if KMP_GROUP_AFFINITY
@@ -1043,6 +1104,7 @@ void __kmp_affinity_entire_machine_mask(kmp_affin_mask_t *mask) {
       int num = __kmp_GetActiveProcessorCount(group);
       for (i = 0; i < num; i++) {
         KMP_CPU_SET(i + group * (CHAR_BIT * sizeof(DWORD_PTR)), mask);
+        avail_proc++;
       }
     }
   } else
@@ -1051,10 +1113,18 @@ void __kmp_affinity_entire_machine_mask(kmp_affin_mask_t *mask) {
 
   {
     int proc;
+    kmp_affin_mask_t *offline_cpus = __kmp_affinity_get_offline_cpus();
     for (proc = 0; proc < __kmp_xproc; proc++) {
+      // Skip offline CPUs
+      if (KMP_CPU_ISSET(proc, offline_cpus))
+        continue;
       KMP_CPU_SET(proc, mask);
+      avail_proc++;
     }
+    KMP_CPU_FREE(offline_cpus);
   }
+
+  return avail_proc;
 }
 
 // All of the __kmp_affinity_create_*_map() routines should allocate the
@@ -3561,8 +3631,8 @@ static void __kmp_aux_affinity_initialize(void) {
                                   __kmp_affin_fullMask);
         KMP_INFORM(InitOSProcSetNotRespect, "KMP_AFFINITY", buf);
       }
-      __kmp_affinity_entire_machine_mask(__kmp_affin_fullMask);
-      __kmp_avail_proc = __kmp_xproc;
+      __kmp_avail_proc =
+          __kmp_affinity_entire_machine_mask(__kmp_affin_fullMask);
 #if KMP_OS_WINDOWS
       // Set the process affinity mask since threads' affinity
       // masks must be subset of process mask in Windows* OS
