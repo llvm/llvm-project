@@ -1624,6 +1624,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, 2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i8,  2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i16, 2 },
+    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v32i16, 2 },
     { ISD::TRUNCATE,    MVT::v64i1,  MVT::v64i8,  2 },
   };
 
