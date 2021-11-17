@@ -95,8 +95,8 @@ uint64_t Defined::getVA() const {
 }
 
 void Defined::canonicalize() {
-  if (compactUnwind)
-    compactUnwind = compactUnwind->canonical();
+  if (unwindEntry)
+    unwindEntry = unwindEntry->canonical();
   if (isec)
     isec = isec->canonical();
 }
