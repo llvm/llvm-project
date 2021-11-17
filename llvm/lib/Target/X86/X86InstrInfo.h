@@ -249,7 +249,7 @@ public:
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                       unsigned LEAOpcode, bool AllowSP, Register &NewSrc,
                       bool &isKill, MachineOperand &ImplicitOp,
-                      LiveVariables *LV) const;
+                      LiveVariables *LV, LiveIntervals *LIS) const;
 
   /// convertToThreeAddress - This method must be implemented by targets that
   /// set the M_CONVERTIBLE_TO_3_ADDR flag.  When this flag is set, the target
@@ -261,8 +261,8 @@ public:
   /// This method returns a null pointer if the transformation cannot be
   /// performed, otherwise it returns the new instruction.
   ///
-  MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                      LiveVariables *LV) const override;
+  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+                                      LiveIntervals *LIS) const override;
 
   /// Returns true iff the routine could find two commutable operands in the
   /// given machine instruction.
@@ -589,9 +589,9 @@ private:
   /// This is a helper for convertToThreeAddress for 8 and 16-bit instructions.
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit
   /// super-register and then truncating back down to a 8/16-bit sub-register.
-  MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc,
-                                             MachineInstr &MI,
+  MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc, MachineInstr &MI,
                                              LiveVariables *LV,
+                                             LiveIntervals *LIS,
                                              bool Is8BitOp) const;
 
   /// Handles memory folding for special case instructions, for instance those
