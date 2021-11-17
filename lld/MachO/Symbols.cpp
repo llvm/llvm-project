@@ -14,6 +14,19 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
+static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 48,
+              "Try to minimize Symbol's size; we create many instances");
+
+// The Microsoft ABI doesn't support using parent class tail padding for child
+// members, hence the _MSC_VER check.
+#if !defined(_MSC_VER)
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 80,
+              "Try to minimize Defined's size; we create many instances");
+#endif
+
+static_assert(sizeof(SymbolUnion) == sizeof(Defined),
+              "Defined should be the largest Symbol kind");
+
 // Returns a symbol for an error message.
 static std::string demangle(StringRef symName) {
   if (config->demangle)

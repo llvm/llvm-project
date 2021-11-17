@@ -26,6 +26,11 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
+// Verify ConcatInputSection's size on 64-bit builds.
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) == 120,
+              "Try to minimize ConcatInputSection's size, we create many "
+              "instances of it");
+
 std::vector<ConcatInputSection *> macho::inputSections;
 
 uint64_t InputSection::getFileSize() const {

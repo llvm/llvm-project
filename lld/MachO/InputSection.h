@@ -149,11 +149,6 @@ public:
   uint64_t outSecOff = 0;
 };
 
-// Verify ConcatInputSection's size on 64-bit builds.
-static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) == 120,
-              "Try to minimize ConcatInputSection's size, we create many "
-              "instances of it");
-
 // Helper functions to make it easy to sprinkle asserts.
 
 inline bool shouldOmitFromOutput(InputSection *isec) {

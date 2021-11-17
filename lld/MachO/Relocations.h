@@ -63,9 +63,6 @@ struct Reloc {
   llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
 };
 
-static_assert(sizeof(void *) != 8 || sizeof(Reloc) == 24,
-              "Try to minimize Reloc's size; we create many instances");
-
 bool validateSymbolRelocation(const Symbol *, const InputSection *,
                               const Reloc &);
 
