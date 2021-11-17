@@ -50,6 +50,8 @@ class MachOWriter {
   void writeDataInCodeData();
   void writeLinkerOptimizationHint();
   void writeFunctionStartsData();
+  void writeChainedFixupsData();
+  void writeExportsTrieData();
   void writeTail();
 
 public:

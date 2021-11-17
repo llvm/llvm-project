@@ -315,6 +315,8 @@ struct Object {
   LinkData DataInCode;
   LinkData LinkerOptimizationHint;
   LinkData FunctionStarts;
+  LinkData ExportsTrie;
+  LinkData ChainedFixups;
 
   Optional<uint32_t> SwiftVersion;
 
@@ -332,6 +334,10 @@ struct Object {
   Optional<size_t> LinkerOptimizationHintCommandIndex;
   /// The index LC_FUNCTION_STARTS load comamnd if present.
   Optional<size_t> FunctionStartsCommandIndex;
+  /// The index LC_DYLD_CHAINED_FIXUPS load comamnd if present.
+  Optional<size_t> ChainedFixupsCommandIndex;
+  /// The index LC_DYLD_EXPORTS_TRIE load comamnd if present.
+  Optional<size_t> ExportsTrieCommandIndex;
   /// The index of the LC_SEGMENT or LC_SEGMENT_64 load command
   /// corresponding to the __TEXT segment.
   Optional<size_t> TextSegmentCommandIndex;
