@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +avx512fp16 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-C
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  < %s | FileCheck %s --check-prefixes=CHECK,CHECK-C
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +avx512fp16 -x c++ -std=c++11 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -x c++ -std=c++11 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
 
 struct half1 {
   _Float16 a;
