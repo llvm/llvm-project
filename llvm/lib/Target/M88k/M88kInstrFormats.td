@@ -237,6 +237,72 @@ class F_LSINDSC<bits<4> func, bits<2> ty, bits<1> user,
    : F_LSINDIRECT<func, ty, /*scaled=*/ 0b1, user, outs, ins, asm,
                   "$rd, $rs1$rs2", pattern, itin>;
 
+// Format: Load register indirect with scaled or unscaled index (GRF, unsigned)
+class F_LSINDIRECTUNSIGNED<bits<1> ty, bits<1> scaled, bits<1> user,
+                           dag outs, dag ins, string asm, string operands,
+                          list<dag> pattern = [],
+                          InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asm, operands, pattern, itin> {
+  bits<5>  rd;
+  bits<5>  rs1;
+  bits<5>  rs2;
+
+  let Inst{31-26} = 0b111101;
+  let Inst{25-21} = rd;
+  let Inst{20-16} = rs1;
+  let Inst{15-11} = 0b00001;
+  let Inst{10}    = ty;
+  let Inst{9}     = scaled;
+  let Inst{8}     = user;
+  let Inst{7-5}   = 0b000;
+  let Inst{4-0}   = rs2;
+}
+
+class F_LSINDUSCUNS<bits<1> ty, bits<1> user,
+                    dag outs, dag ins, string asm, list<dag> pattern = [],
+                    InstrItinClass itin = NoItinerary>
+   : F_LSINDIRECTUNSIGNED<ty, /*scaled=*/ 0b0, user, outs, ins, asm,
+                          "$rd, $rs1, $rs2", pattern, itin>;
+
+class F_LSINDSCUNS<bits<1> ty, bits<1> user,
+                   dag outs, dag ins, string asm, list<dag> pattern = [],
+                   InstrItinClass itin = NoItinerary>
+   : F_LSINDIRECTUNSIGNED<ty, /*scaled=*/ 0b1, user, outs, ins, asm,
+                          "$rd, $rs1$rs2", pattern, itin>;
+
+class F_XMEMUNS<bits<1> ty, bits<1> user,
+             dag outs, dag ins, string asm, list<dag> pattern = [],
+             InstrItinClass itin = NoItinerary>
+   : F_LSINDIRECTUNSIGNED<ty, /*scaled=*/ 0b0, user, outs, ins, asm,
+                          "$rd, $rs1, $rs2", pattern, itin> {
+  let Inst{15-11} = 0b00000;
+}
+
+class F_XMEMSC<bits<1> ty, bits<1> user,
+               dag outs, dag ins, string asm, list<dag> pattern = [],
+               InstrItinClass itin = NoItinerary>
+   : F_LSINDIRECTUNSIGNED<ty, /*scaled=*/ 0b1, user, outs, ins, asm,
+                          "$rd, $rs1$rs2", pattern, itin> {
+  let Inst{15-11} = 0b00000;
+}
+
+// Format: Load/Store register indirect with scaled or unscaled index
+class F_LADDR<bits<2> ty, dag outs, dag ins, string asm,
+              list<dag> pattern = [], InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asm, "$rd, $rs1$rs2", pattern, itin> {
+  bits<5>  rd;
+  bits<5>  rs1;
+  bits<5>  rs2;
+
+  let Inst{31-26} = 0b111101;
+  let Inst{25-21} = rd;
+  let Inst{20-16} = rs1;
+  let Inst{15-12} = 0b0011;
+  let Inst{11-10} = ty;
+  let Inst{9-5}   = 0b10000;
+  let Inst{4-0}   = rs2;
+}
+
 // Category: Flow control.
 
 // Format: JMP/JSR
@@ -279,6 +345,35 @@ class F_BCOND<bits<5> func,
   let Inst{25-21} = m5;
   let Inst{20-16} = rs1;
   let Inst{15-0}  = d16;
+}
+
+// Format: TB0/TB1
+class F_TB<bits<7> func,
+           dag outs, dag ins, string asm, InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asm, "$b5, $rs1, $vec9", [], itin> {
+  bits<5>  b5;
+  bits<5>  rs1;
+  bits<9>  vec9;
+
+  let Inst{31-26} = 0b111100;
+  let Inst{25-21} = b5;
+  let Inst{20-16} = rs1;
+  let Inst{15-9}  = func;
+  let Inst{8-0}   = vec9;
+}
+
+// Format: TCND
+class F_TCND<dag outs, dag ins, string asm, InstrItinClass itin = NoItinerary>
+   : InstM88k<outs, ins, asm, "$m5, $rs1, $vec9", [], itin> {
+  bits<5>  m5;
+  bits<5>  rs1;
+  bits<9>  vec9;
+
+  let Inst{31-26} = 0b111100;
+  let Inst{25-21} = m5;
+  let Inst{20-16} = rs1;
+  let Inst{15-9}  = 0b1110100;
+  let Inst{8-0}   = vec9;
 }
 
 // Format: RTE/ILLOP

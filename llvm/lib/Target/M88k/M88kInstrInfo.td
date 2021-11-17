@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 
+def IsMC881000 : Predicate<"Subtarget->getCPU() == \"mc88100\"">;
 def IsMC881100 : Predicate<"Subtarget->getCPU() == \"mc88110\"">;
 class MC881100 { list<Predicate> Predicates = [IsMC881100]; }
 
@@ -462,6 +463,22 @@ multiclass LoadUnsigned<InstrItinClass itin = NoItinerary> {
                   "ld.bu",
                   [(set (i32 GPR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))],
                   itin>;
+  foreach U = 0-1 in {
+    defvar Suffix = !if(U, ".usr", "");
+    defvar S = !if(U, "u", "");
+    def urrub#S : F_LSINDUSCUNS</*ty=*/ 0b1, /*user=*/ U,
+                                (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                                !strconcat("ld.bu", Suffix), [], itin>;
+    def urruh#S : F_LSINDUSCUNS</*ty=*/ 0b0, /*user=*/ U,
+                                (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                                !strconcat("ld.hu", Suffix), [], itin>;
+    def urrsb#S : F_LSINDSCUNS</*ty=*/ 0b1, /*user=*/ U,
+                               (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                               !strconcat("ld.bu", Suffix), [], itin>;
+    def urrsh#S : F_LSINDSCUNS</*ty=*/ 0b0, /*user=*/ U,
+                               (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                               !strconcat("ld.hu", Suffix), [], itin>;
+  }
 }
 
 class LoadXR<bits<6> Func, string OpcStr, ValueType VT, InstrItinClass itin = NoItinerary>
@@ -626,6 +643,42 @@ multiclass LoadScaled<bits<4> Func, string OpcStr,
   }
 }
 
+multiclass LoadAddr<InstrItinClass itin = NoItinerary> {
+  def d : F_LADDR</*ty=*/ 0b00, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                  "lda.d", [], itin>;
+  def w : F_LADDR</*ty=*/ 0b01, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                  "lda", [], itin>;
+  def h : F_LADDR</*ty=*/ 0b10, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                  "lda.h", [], itin>;
+// TODO
+//  let Predicates = [IsMC881000] in
+//    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+//                    "lda.b", [], itin>;
+  let Predicates = [IsMC881100] in
+    def x : F_LADDR</*ty=*/ 0b11, (outs XR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                    "lda.x", [], itin>;
+}
+
+multiclass Xmem<InstrItinClass itin = NoItinerary> {
+// TODO Instruction with immediate.
+  foreach U = 0-1 in {
+    defvar Suffix = !if(U, ".usr", "");
+    defvar S = !if(U, "u", "");
+    def urrub#S : F_XMEMUNS</*ty=*/ 0b0, /*user=*/ U,
+                            (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                            !strconcat("xmem.bu", Suffix), [], itin>;
+    def urruh#S : F_XMEMUNS</*ty=*/ 0b1, /*user=*/ U,
+                            (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                            !strconcat("xmem", Suffix), [], itin>;
+    def urrsb#S : F_XMEMSC</*ty=*/ 0b0, /*user=*/ U,
+                           (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                           !strconcat("xmem.bu", Suffix), [], itin>;
+    def urrsh#S : F_XMEMSC</*ty=*/ 0b1, /*user=*/ U,
+                           (outs GPR:$rd), (ins GPR:$rs1, GPRScaled:$rs2),
+                           !strconcat("xmem", Suffix), [], itin>;
+  }
+}
+
 defm LD : LoadIndexImm<0b0001, "ld">;
 defm ST : StoreIndexImm<0b0010, "st">;
 
@@ -634,11 +687,15 @@ defm LD : LoadUnsigned<>;
 defm LD : LoadUnscaled<0b0001, "ld">;
 defm LD : LoadScaled<0b0001, "ld">;
 
+defm LDA : LoadAddr<>;
+
 let Predicates = [IsMC881100] in {
   def LDxri : LoadXR<0b000001, "ld", f32>;
   def LDxrid : LoadXR<0b000000, "ld.d", f64>;
   def LDxrix : LoadXR<0b001111, "ld.x", f80>;
 }
+
+defm XMEM : Xmem<>;
 
 //def : Pat<(load (ADDRri GPR:$rs1, imm32zx16:$si16)),
 //          (LDriw GPR:$rs1, imm32zx16:$si16)>;

@@ -107,15 +107,15 @@ isns:
   bcnd.n     3, %r1, 10
   bcnd.n     3, %r1, -10
 
-  # uncoditional branch
-#  br       0
-#  br       -10
-#  br       10
-#  br.n     0
-#  br.n     -10
-#  br.n     10
+# uncoditional branch
+  br       0
+  br       -10
+  br       10
+  br.n     0
+  br.n     -10
+  br.n     10
 
-  # branch to subroutine
+# branch to subroutine
 #  bsr       0
 #  bsr       -10
 #  bsr       10
@@ -337,50 +337,63 @@ isns:
 # CHECK: ld.d     %r0, %r1, 0            | encoding: [0x10,0x01,0x00,0x00]
 # CHECK: ld.d     %r0, %r1, 4096         | encoding: [0x10,0x01,0x10,0x00]
   ld.b         %r0, %r1, %r2
-#  ld.bu        %r1, %r2, %r3
+  ld.bu        %r1, %r2, %r3
   ld.h         %r2, %r3, %r4
-#  ld.hu        %r3, %r4, %r5
+  ld.hu        %r3, %r4, %r5
   ld           %r4, %r5, %r6
   ld.d         %r5, %r6, %r7
   ld.b.usr     %r6, %r7, %r8
-#  ld.bu.usr    %r7, %r8, %r9
+  ld.bu.usr    %r7, %r8, %r9
   ld.h.usr     %r8, %r9, %r1
-#  ld.hu.usr    %r9, %r1, %r2
+  ld.hu.usr    %r9, %r1, %r2
   ld.usr       %r1, %r2, %r3
   ld.d.usr     %r2, %r3, %r4
 # CHECK: ld.b         %r0, %r1, %r2      | encoding: [0xf4,0x01,0x1c,0x02]
-# COM: CHECK: ld.bu        %r1, %r2, %r3      | encoding: [0xf4,0x22,0x0c,0x03]
+# CHECK: ld.bu        %r1, %r2, %r3      | encoding: [0xf4,0x22,0x0c,0x03]
 # CHECK: ld.h         %r2, %r3, %r4      | encoding: [0xf4,0x43,0x18,0x04]
-# COM: CHECK: ld.hu        %r3, %r4, %r5      | encoding: [0xf4,0x64,0x08,0x05]
+# CHECK: ld.hu        %r3, %r4, %r5      | encoding: [0xf4,0x64,0x08,0x05]
 # CHECK: ld           %r4, %r5, %r6      | encoding: [0xf4,0x85,0x14,0x06]
 # CHECK: ld.d         %r5, %r6, %r7      | encoding: [0xf4,0xa6,0x10,0x07]
 # CHECK: ld.b.usr     %r6, %r7, %r8      | encoding: [0xf4,0xc7,0x1d,0x08]
-# COM: CHECK: ld.bu.usr    %r7, %r8, %r9      | encoding: [0xf4,0xe8,0x0d,0x09]
+# CHECK: ld.bu.usr    %r7, %r8, %r9      | encoding: [0xf4,0xe8,0x0d,0x09]
 # CHECK: ld.h.usr     %r8, %r9, %r1      | encoding: [0xf5,0x09,0x19,0x01]
-# COM: CHECK: ld.hu.usr    %r9, %r1, %r2      | encoding: [0xf5,0x21,0x09,0x02]
+# CHECK: ld.hu.usr    %r9, %r1, %r2      | encoding: [0xf5,0x21,0x09,0x02]
 # CHECK: ld.usr       %r1, %r2, %r3      | encoding: [0xf4,0x22,0x15,0x03]
 # CHECK: ld.d.usr     %r2, %r3, %r4      | encoding: [0xf4,0x43,0x11,0x04]
 
   ld.b         %r0, %r1[%r2]
-#  ld.bu        %r1, %r2[%r3]
+  ld.bu        %r1, %r2[%r3]
   ld.h         %r2, %r3[%r4]
-#  ld.hu        %r3, %r4[%r5]
+  ld.hu        %r3, %r4[%r5]
   ld           %r4, %r5[%r6]
   ld.d         %r5, %r6[%r7]
   ld.b.usr     %r6, %r7[%r8]
-#  ld.bu.usr    %r7, %r8[%r9]
+  ld.bu.usr    %r7, %r8[%r9]
   ld.h.usr     %r8, %r9[%r1]
-#  ld.hu.usr    %r9, %r1[%r2]
+  ld.hu.usr    %r9, %r1[%r2]
   ld.usr       %r1, %r2[%r3]
   ld.d.usr     %r2, %r3[%r4]
+# CHECK: ld.b         %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x1e,0x02]
+# CHECK: ld.bu        %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x0e,0x03]
+# CHECK: ld.h         %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x1a,0x04]
+# CHECK: ld.hu        %r3, %r4[%r5]      | encoding: [0xf4,0x64,0x0a,0x05]
+# CHECK: ld           %r4, %r5[%r6]      | encoding: [0xf4,0x85,0x16,0x06]
+# CHECK: ld.d         %r5, %r6[%r7]      | encoding: [0xf4,0xa6,0x12,0x07]
+# CHECK: ld.b.usr     %r6, %r7[%r8]      | encoding: [0xf4,0xc7,0x1f,0x08]
+# CHECK: ld.bu.usr    %r7, %r8[%r9]      | encoding: [0xf4,0xe8,0x0f,0x09]
+# CHECK: ld.h.usr     %r8, %r9[%r1]      | encoding: [0xf5,0x09,0x1b,0x01]
+# CHECK: ld.hu.usr    %r9, %r1[%r2]      | encoding: [0xf5,0x21,0x0b,0x02]
+# CHECK: ld.usr       %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x17,0x03]
+# CHECK: ld.d.usr     %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x13,0x04]
 
 # load address
-#  lda.h        %r0, %r1[%r2]
-#  lda          %r1, %r2[%r3]
-#  lda.d        %r2, %r3[%r4]
-# COM: CHECK: lda.h        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3a,0x02]
-# COM: CHECK: lda          %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x36,0x03]
-# COM: CHECK: lda.d        %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x32,0x04]
+# TODO ld.b %r0, %r1[%r2]
+  lda.h        %r0, %r1[%r2]
+  lda          %r1, %r2[%r3]
+  lda.d        %r2, %r3[%r4]
+# CHECK: lda.h        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3a,0x02]
+# CHECK: lda          %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x36,0x03]
+# CHECK: lda.d        %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x32,0x04]
 
 # load from control register
   ldcr         %r0, %cr10
@@ -453,8 +466,6 @@ isns:
 # CHECK: set      %r2, %r4, %r6          | encoding: [0xf4,0x44,0x88,0x06]
 # CHECK: set      %r3, %r7, 0<6>         | encoding: [0xf0,0x67,0x88,0x06]
 # CHECK: set      %r3, %r7, 0<6>         | encoding: [0xf0,0x67,0x88,0x06]
-
-####### All instruction until here
 
 # store register to memory
   st.b     %r0, %r1, 0
@@ -538,14 +549,41 @@ isns:
 # CHECK: subu     %r5, %r6, 0            | encoding: [0x64,0xa6,0x00,0x00]
 # CHECK: subu     %r5, %r6, 4096         | encoding: [0x64,0xa6,0x10,0x00]
 
+# trap on bit clear
+#  tb0          0, %r10, 10
+#  tb0          31, %r11, 10
+# CHECK: tb0          0, %r10, 10        | encoding: [0xf0,0x0a,0xd0,0x0a]
+# CHECK: tb0          31, %r11, 10       | encoding: [0xf3,0xeb,0xd0,0x0a]
+
+# trap on bit set
+#  tb1          0, %r10, 10
+#  tb1          31, %r11, 10
+# CHECK: tb1          0, %r10, 10        | encoding: [0xf0,0x0a,0xd8,0x0a]
+# CHECK: tb1          31, %r11, 10       | encoding: [0xf3,0xeb,0xd8,0x0a]
+
+# trap on bounds check
+#  tbnd         %r0, %r1
+#  tbnd         %r7, 0
+#  tbnd         %r7, 4096
+# CHECK: tbnd         %r0, %r1           | encoding: [0xf4,0x00,0xf8,0x01]
+# CHECK: tbnd         %r7, 0             | encoding: [0xf8,0x07,0x00,0x00]
+# CHECK: tbnd         %r7, 4096          | encoding: [0xf8,0x07,0x10,0x00]
+
 # conditional trap
-#  tcnd  eq0, %r10, 12
-#  tcnd  ne0, %r9, 12
-#  tcnd  gt0, %r8, 7
-#  tcnd  lt0, %r7, 1
-#  tcnd  ge0, %r6, 35
-#  tcnd  le0, %r5, 33
-#  tcnd  10, %r4, 12
+#  tcnd         eq0, %r10, 12
+#  tcnd         ne0, %r9, 12
+#  tcnd         gt0, %r8, 7
+#  tcnd         lt0, %r7, 1
+#  tcnd         ge0, %r6, 35
+#  tcnd         le0, %r5, 33
+#  tcnd         10, %r4, 12
+# CHECK: tcnd         eq0, %r10, 12      | encoding: [0xf0,0x4a,0xe8,0x0c]
+# CHECK: tcnd         ne0, %r9, 12       | encoding: [0xf1,0xa9,0xe8,0x0c]
+# CHECK: tcnd         gt0, %r8, 7        | encoding: [0xf0,0x28,0xe8,0x07]
+# CHECK: tcnd         lt0, %r7, 1        | encoding: [0xf1,0x87,0xe8,0x01]
+# CHECK: tcnd         ge0, %r6, 35       | encoding: [0xf0,0x66,0xe8,0x23]
+# CHECK: tcnd         le0, %r5, 33       | encoding: [0xf1,0xc5,0xe8,0x21]
+# CHECK: tcnd         10, %r4, 12        | encoding: [0xf1,0x44,0xe8,0x0c]
 
 # truncate floating point to integer
   trnc.ss      %r0, %r1
@@ -562,14 +600,26 @@ isns:
 #  xmem.bu      %r0, %r1, 10
 #  xmem         %r0, %r1, 0
 #  xmem         %r1, %r2, 4096
-#  xmem.bu      %r0, %r1, %r2
-#  xmem         %r1, %r2, %r3
-#  xmem.bu.usr  %r4, %r5, %r6
-#  xmem.usr     %r5, %r6, %r7
-#  xmem.bu      %r2, %r3[%r4]
-#  xmem         %r3, %r4[%r5]
-#  xmem.bu.usr  %r4, %r5[%r9]
-#  xmem.usr     %r5, %r6[%r10]
+  xmem.bu      %r0, %r1, %r2
+  xmem         %r1, %r2, %r3
+  xmem.bu.usr  %r4, %r5, %r6
+  xmem.usr     %r5, %r6, %r7
+  xmem.bu      %r2, %r3[%r4]
+  xmem         %r3, %r4[%r5]
+  xmem.bu.usr  %r4, %r5[%r9]
+  xmem.usr     %r5, %r6[%r10]
+# COM: CHECK: xmem.bu      %r0, %r1, 0        | encoding: [0x]
+# COM: CHECK: xmem.bu      %r0, %r1, 10       | encoding: [0x]
+# COM: CHECK: xmem         %r0, %r1, 0        | encoding: [0x]
+# COM: CHECK: xmem         %r1, %r2, 4096     | encoding: [0x]
+# CHECK: xmem.bu      %r0, %r1, %r2      | encoding: [0xf4,0x01,0x00,0x02]
+# CHECK: xmem         %r1, %r2, %r3      | encoding: [0xf4,0x22,0x04,0x03]
+# CHECK: xmem.bu.usr  %r4, %r5, %r6      | encoding: [0xf4,0x85,0x01,0x06]
+# CHECK: xmem.usr     %r5, %r6, %r7      | encoding: [0xf4,0xa6,0x05,0x07]
+# CHECK: xmem.bu      %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x02,0x04]
+# CHECK: xmem         %r3, %r4[%r5]      | encoding: [0xf4,0x64,0x06,0x05]
+# CHECK: xmem.bu.usr  %r4, %r5[%r9]      | encoding: [0xf4,0x85,0x03,0x09]
+# CHECK: xmem.usr     %r5, %r6[%r10]     | encoding: [0xf4,0xa6,0x07,0x0a]
 
 # logical exclusive or
   xor      %r0, %r1, %r2
