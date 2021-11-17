@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(x, y) 0
+#endif
+
 extern "C" {
 void malloc_enable(void);
 void malloc_disable(void);
@@ -258,8 +262,10 @@ TEST(ScudoWrappersCTest, OtherAlloc) {
 
 #if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallInfo) {
+  // mallinfo is deprecated.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   const size_t BypassQuarantineSize = 1024U;
-
   struct mallinfo MI = mallinfo();
   size_t Allocated = MI.uordblks;
   void *P = malloc(BypassQuarantineSize);
@@ -271,6 +277,24 @@ TEST(ScudoWrappersCTest, MallInfo) {
   free(P);
   MI = mallinfo();
   EXPECT_GE(static_cast<size_t>(MI.fordblks), Free + BypassQuarantineSize);
+#pragma clang diagnostic pop
+}
+#endif
+
+#if __GLIBC_PREREQ(2, 33)
+TEST(ScudoWrappersCTest, MallInfo2) {
+  const size_t BypassQuarantineSize = 1024U;
+  struct mallinfo2 MI = mallinfo2();
+  size_t Allocated = MI.uordblks;
+  void *P = malloc(BypassQuarantineSize);
+  EXPECT_NE(P, nullptr);
+  MI = mallinfo2();
+  EXPECT_GE(MI.uordblks, Allocated + BypassQuarantineSize);
+  EXPECT_GT(MI.hblkhd, 0U);
+  size_t Free = MI.fordblks;
+  free(P);
+  MI = mallinfo2();
+  EXPECT_GE(MI.fordblks, Free + BypassQuarantineSize);
 }
 #endif
 
