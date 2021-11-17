@@ -844,9 +844,8 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
       // architectures that we should be using (in the correct order) and see
       // if we can find a match that way
       ModuleSpec arch_module_spec(module_spec);
-      for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-               idx, arch_module_spec.GetArchitecture());
-           ++idx) {
+      for (const ArchSpec &arch : GetSupportedArchitectures()) {
+        arch_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(arch_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr,
                                             nullptr);
@@ -891,9 +890,9 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
     // ask the platform for the architectures that we should be using (in the
     // correct order) and see if we can find a match that way
     StreamString arch_names;
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, resolved_module_spec.GetArchitecture());
-         ++idx) {
+    llvm::ListSeparator LS;
+    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      resolved_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           module_search_paths_ptr, nullptr,
                                           nullptr);
@@ -905,10 +904,7 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
           error.SetErrorToGenericError();
       }
 
-      if (idx > 0)
-        arch_names.PutCString(", ");
-      arch_names.PutCString(
-          resolved_module_spec.GetArchitecture().GetArchitectureName());
+      arch_names << LS << arch.GetArchitectureName();
     }
 
     if (error.Fail() || !exe_module_sp) {
@@ -1250,26 +1246,13 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
   // If the architecture is invalid, we must answer true...
   if (arch.IsValid()) {
     ArchSpec platform_arch;
-    // Try for an exact architecture match first.
-    if (exact_arch_match) {
-      for (uint32_t arch_idx = 0;
-           GetSupportedArchitectureAtIndex(arch_idx, platform_arch);
-           ++arch_idx) {
-        if (arch.IsExactMatch(platform_arch)) {
-          if (compatible_arch_ptr)
-            *compatible_arch_ptr = platform_arch;
-          return true;
-        }
-      }
-    } else {
-      for (uint32_t arch_idx = 0;
-           GetSupportedArchitectureAtIndex(arch_idx, platform_arch);
-           ++arch_idx) {
-        if (arch.IsCompatibleMatch(platform_arch)) {
-          if (compatible_arch_ptr)
-            *compatible_arch_ptr = platform_arch;
-          return true;
-        }
+    auto match = exact_arch_match ? &ArchSpec::IsExactMatch
+                                  : &ArchSpec::IsCompatibleMatch;
+    for (const ArchSpec &platform_arch : GetSupportedArchitectures()) {
+      if ((arch.*match)(platform_arch)) {
+        if (compatible_arch_ptr)
+          *compatible_arch_ptr = platform_arch;
+        return true;
       }
     }
   }
@@ -1630,9 +1613,8 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     // architectures that we should be using (in the correct order) and see if
     // we can find a match that way
     ModuleSpec arch_module_spec(module_spec);
-    for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-             idx, arch_module_spec.GetArchitecture());
-         ++idx) {
+    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+      arch_module_spec.GetArchitecture() = arch;
       error = ModuleList::GetSharedModule(arch_module_spec, module_sp, nullptr,
                                           nullptr, nullptr);
       // Did we find an executable using one of the
