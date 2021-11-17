@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace clang {
@@ -67,6 +68,8 @@ public:
                   Optional<unsigned> RequiredArgs = None,
                   Optional<size_t> RequiredParams = None);
 
+  CallDescription(std::nullptr_t) = delete;
+
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
 
@@ -104,7 +107,7 @@ public:
   CallDescriptionMap(const CallDescriptionMap &) = delete;
   CallDescriptionMap &operator=(const CallDescription &) = delete;
 
-  const T *lookup(const CallEvent &Call) const {
+  LLVM_NODISCARD const T *lookup(const CallEvent &Call) const {
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
     for (const std::pair<CallDescription, T> &I : LinearMap)
