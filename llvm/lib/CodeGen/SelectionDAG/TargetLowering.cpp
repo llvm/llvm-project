@@ -2809,6 +2809,25 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       if (DemandedElts.isSubsetOf(KnownUndef))
         return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
       KnownUndef.clearAllBits();
+
+      // zext - if we just need the bottom element then we can mask:
+      // zext(and(x,c)) -> and(x,c') iff the zext is the only user of the and.
+      if (DemandedSrcElts == 1 && TLO.DAG.getDataLayout().isLittleEndian() &&
+          Src.getOpcode() == ISD::AND && Op->isOnlyUserOf(Src.getNode()) &&
+          Op.getValueSizeInBits() == Src.getValueSizeInBits()) {
+        SDLoc DL(Op);
+        EVT SrcVT = Src.getValueType();
+        EVT SrcSVT = SrcVT.getScalarType();
+        SmallVector<SDValue> MaskElts;
+        MaskElts.push_back(TLO.DAG.getAllOnesConstant(DL, SrcSVT));
+        MaskElts.append(NumSrcElts - 1, TLO.DAG.getConstant(0, DL, SrcSVT));
+        SDValue Mask = TLO.DAG.getBuildVector(SrcVT, DL, MaskElts);
+        if (SDValue Fold = TLO.DAG.FoldConstantArithmetic(
+                ISD::AND, DL, SrcVT, {Src.getOperand(1), Mask})) {
+          Fold = TLO.DAG.getNode(ISD::AND, DL, SrcVT, Src.getOperand(0), Fold);
+          return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Fold));
+        }
+      }
     }
     break;
   }
