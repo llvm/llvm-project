@@ -12,6 +12,7 @@
 #include "Config.h"
 #include "ConfigProvider.h"
 #include "Feature.h"
+#include "IncludeCleaner.h"
 #include "PathMapping.h"
 #include "Protocol.h"
 #include "TidyProvider.h"
@@ -249,6 +250,15 @@ opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
         clEnumValN(
             CodeCompleteOptions::NeverInsert, "never",
             "Never insert #include directives as part of code completion")),
+};
+
+opt<bool> IncludeCleanerStdlib{
+    "include-cleaner-stdlib",
+    cat(Features),
+    desc("Apply include-cleaner analysis to standard library headers "
+         "(immature!)"),
+    init(false),
+    Hidden,
 };
 
 opt<bool> HeaderInsertionDecorators{
@@ -932,6 +942,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
+  setIncludeCleanerAnalyzesStdlib(IncludeCleanerStdlib);
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
