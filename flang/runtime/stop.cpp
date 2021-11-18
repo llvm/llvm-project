@@ -71,11 +71,19 @@ static void CloseAllExternalUnits(const char *why) {
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
   CloseAllExternalUnits("STOP statement");
   if (!quiet) {
-    std::fprintf(stderr, "Fortran %s: %.*s\n",
-        isErrorStop ? "ERROR STOP" : "STOP", static_cast<int>(length), code);
+    if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
+      std::fprintf(stderr, "%.*s\n", static_cast<int>(length), code);
+    } else {
+      std::fprintf(stderr, "Fortran %s: %.*s\n",
+          isErrorStop ? "ERROR STOP" : "STOP", static_cast<int>(length), code);
+    }
     DescribeIEEESignaledExceptions();
   }
-  std::exit(EXIT_FAILURE);
+  if (isErrorStop) {
+    std::exit(EXIT_FAILURE);
+  } else {
+    std::exit(EXIT_SUCCESS);
+  }
 }
 
 static bool StartPause() {
