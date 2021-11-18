@@ -88,7 +88,7 @@ void *lldb_private::LLDBSwigPythonCreateSyntheticProvider(
 
 void *lldb_private::LLDBSwigPythonCreateCommandObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::DebuggerSP debugger_sp) {
+    lldb::DebuggerSP debugger_sp) {
   return nullptr;
 }
 
@@ -172,14 +172,14 @@ PyObject *lldb_private::LLDBSwigPython_GetValueSynthProviderInstance(
 
 bool lldb_private::LLDBSwigPythonCallCommand(
     const char *python_function_name, const char *session_dictionary_name,
-    lldb::DebuggerSP &debugger, const char *args,
+    lldb::DebuggerSP debugger, const char *args,
     lldb_private::CommandReturnObject &cmd_retobj,
     lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
   return false;
 }
 
 bool lldb_private::LLDBSwigPythonCallCommandObject(
-    PyObject *implementor, lldb::DebuggerSP &debugger, const char *args,
+    PyObject *implementor, lldb::DebuggerSP debugger, const char *args,
     lldb_private::CommandReturnObject &cmd_retobj,
     lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
   return false;
@@ -187,7 +187,7 @@ bool lldb_private::LLDBSwigPythonCallCommandObject(
 
 bool lldb_private::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
-    lldb::DebuggerSP &debugger) {
+    lldb::DebuggerSP debugger) {
   return false;
 }
 
@@ -228,10 +228,10 @@ bool lldb_private::LLDBSWIGPythonRunScriptKeywordProcess(
   return false;
 }
 
-bool lldb_private::LLDBSWIGPythonRunScriptKeywordThread(
+llvm::Optional<std::string> lldb_private::LLDBSWIGPythonRunScriptKeywordThread(
     const char *python_function_name, const char *session_dictionary_name,
-    lldb::ThreadSP &thread, std::string &output) {
-  return false;
+    lldb::ThreadSP thread) {
+  return llvm::None;
 }
 
 bool lldb_private::LLDBSWIGPythonRunScriptKeywordTarget(
@@ -240,10 +240,10 @@ bool lldb_private::LLDBSWIGPythonRunScriptKeywordTarget(
   return false;
 }
 
-bool lldb_private::LLDBSWIGPythonRunScriptKeywordFrame(
+llvm::Optional<std::string> lldb_private::LLDBSWIGPythonRunScriptKeywordFrame(
     const char *python_function_name, const char *session_dictionary_name,
-    lldb::StackFrameSP &frame, std::string &output) {
-  return false;
+    lldb::StackFrameSP frame) {
+  return llvm::None;
 }
 
 bool lldb_private::LLDBSWIGPythonRunScriptKeywordValue(

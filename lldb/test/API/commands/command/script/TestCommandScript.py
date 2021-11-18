@@ -165,3 +165,9 @@ class CmdPythonTestCase(TestBase):
         self.runCmd('command script add -f bug11569 bug11569')
         # This should not crash.
         self.runCmd('bug11569', check=False)
+
+    def test_persistence(self):
+        self.runCmd("command script import persistence.py")
+        self.runCmd("command script add -f persistence.save_debugger save_debugger")
+        self.expect("save_debugger", substrs=[str(self.dbg)])
+        self.expect("script str(persistence.debugger_copy)", substrs=[str(self.dbg)])
