@@ -646,7 +646,7 @@ void SIFoldOperands::foldOperand(
     return;
 
   if (frameIndexMayFold(TII, *UseMI, UseOpIdx, OpToFold)) {
-    // Sanity check that this is a stack access.
+    // Verify that this is a stack access.
     // FIXME: Should probably use stack pseudos before frame lowering.
 
     if (TII->isMUBUF(*UseMI)) {

@@ -2657,7 +2657,7 @@ bool X86AsmParser::ParseATTOperand(OperandVector &Operands) {
         Expr = nullptr;
         Reg = RE->getRegNo();
 
-        // Sanity check register.
+        // Check the register.
         if (Reg == X86::EIZ || Reg == X86::RIZ)
           return Error(
               Loc, "%eiz and %riz can only be used as index registers",
@@ -2917,7 +2917,7 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
         check(!isa<X86MCExpr>(E), BaseLoc, "expected register here"))
       return true;
 
-    // Sanity check register.
+    // Check the register.
     BaseReg = cast<X86MCExpr>(E)->getRegNo();
     if (BaseReg == X86::EIZ || BaseReg == X86::RIZ)
       return Error(BaseLoc, "eiz and riz can only be used as index registers",

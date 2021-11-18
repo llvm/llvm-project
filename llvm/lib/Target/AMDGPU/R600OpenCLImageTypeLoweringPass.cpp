@@ -86,7 +86,7 @@ GetFunctionFromMDNode(MDNode *Node) {
   if (!F)
     return nullptr;
 
-  // Sanity checks.
+  // Validation checks.
   size_t ExpectNumArgNodeOps = F->arg_size() + 1;
   for (size_t i = 0; i < NumKernelArgMDNodes; ++i) {
     MDNode *ArgNode = dyn_cast_or_null<MDNode>(Node->getOperand(i + 1));
