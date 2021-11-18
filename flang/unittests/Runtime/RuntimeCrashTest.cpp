@@ -13,7 +13,6 @@
 #include "CrashHandlerFixture.h"
 #include "../../runtime/terminator.h"
 #include "flang/Runtime/io-api.h"
-#include "flang/Runtime/stop.h"
 #include <gtest/gtest.h>
 
 using namespace Fortran::runtime;
@@ -156,21 +155,3 @@ TEST(TestIOCrash, OverwriteBufferIntegerTest) {
   ASSERT_DEATH(IONAME(OutputInteger64)(cookie, 0xdeadbeef),
       "Internal write overran available records");
 }
-
-TEST(TestIOCrash, StopTest) {
-  EXPECT_EXIT(RTNAME(StopStatement)(), testing::ExitedWithCode(EXIT_SUCCESS),
-      "Fortran STOP");
-}
-
-TEST(TestIOCrash, FailImageTest) {
-  EXPECT_EXIT(
-      RTNAME(FailImageStatement)(), testing::ExitedWithCode(EXIT_FAILURE), "");
-}
-
-TEST(TestIOCrash, ExitTest) {
-  EXPECT_EXIT(RTNAME(Exit)(), testing::ExitedWithCode(EXIT_SUCCESS), "");
-  EXPECT_EXIT(
-      RTNAME(Exit)(EXIT_FAILURE), testing::ExitedWithCode(EXIT_FAILURE), "");
-}
-
-TEST(TestIOCrash, AbortTest) { EXPECT_DEATH(RTNAME(Abort)(), ""); }
