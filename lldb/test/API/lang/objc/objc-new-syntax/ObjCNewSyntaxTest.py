@@ -10,9 +10,12 @@ class ObjCNewSyntaxTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    def target(self):
+        return _target
+
     def runToBreakpoint(self):
         self.build()
-        self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+        self._target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, '// Set breakpoint 0 here.', lldb.SBFileSpec(
                 'main.m', False))
 
