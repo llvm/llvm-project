@@ -180,6 +180,26 @@ private:
   /// Per-module type mapping from clang AST to CIR.
   std::unique_ptr<CIRGenTypes> genTypes;
 
+  /// Use to track source locations across nested visitor traversals.
+  /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
+  std::optional<mlir::Location> currSrcLoc;
+  class SourceLocRAIIObject {
+    CIRBuildImpl &P;
+    std::optional<mlir::Location> OldVal;
+
+  public:
+    SourceLocRAIIObject(CIRBuildImpl &p, mlir::Location Value) : P(p) {
+      if (P.currSrcLoc)
+        OldVal = P.currSrcLoc;
+      P.currSrcLoc = Value;
+    }
+
+    /// Can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { P.currSrcLoc = OldVal; }
+    ~SourceLocRAIIObject() { restore(); }
+  };
+
   /// Helper conversion from Clang source location to an MLIR location.
   mlir::Location getLoc(SourceLocation SLoc) {
     const SourceManager &SM = astCtx.getSourceManager();
@@ -663,9 +683,8 @@ public:
         SrcAlloca.setInitAttr(InitStyleAttr::get(builder.getContext(), IS));
       }
     }
-    assert(SrcAlloca && "find a better way to retrieve source location");
-    builder.create<mlir::cir::StoreOp>(SrcAlloca.getLoc(), Value,
-                                       Addr.getPointer());
+    assert(currSrcLoc && "must pass in source location");
+    builder.create<mlir::cir::StoreOp>(*currSrcLoc, Value, Addr.getPointer());
   }
 
   /// Store the specified rvalue into the specified
@@ -681,6 +700,7 @@ public:
   void buildScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue) {
     // TODO: this is where a lot of ObjC lifetime stuff would be done.
     mlir::Value value = buildScalarExpr(init);
+    SourceLocRAIIObject Loc{*this, getLoc(D->getSourceRange().getBegin())};
     buldStoreThroughLValue(RValue::get(value), lvalue, D);
     return;
   }
@@ -1104,6 +1124,8 @@ public:
 
       RValue RV = buildAnyExpr(E->getRHS());
       LValue LV = buildLValue(E->getLHS());
+
+      SourceLocRAIIObject Loc{*this, getLoc(E->getSourceRange().getBegin())};
       buldStoreThroughLValue(RV, LV, nullptr /*InitDecl*/);
       assert(!astCtx.getLangOpts().OpenMP && "last priv cond not implemented");
       return LV;
