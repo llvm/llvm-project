@@ -22,6 +22,8 @@ namespace __sanitizer {
 
 class StackStore {
  public:
+  constexpr StackStore() = default;
+
   using Id = uptr;
 
   Id store(const StackTrace &trace);
@@ -34,17 +36,17 @@ class StackStore {
   uptr *alloc(uptr count = 1);
   uptr *tryAlloc(uptr count);
   uptr *refillAndAlloc(uptr count);
-  mutable StaticSpinMutex mtx;  // Protects alloc of new blocks.
-  atomic_uintptr_t region_pos;  // Region allocator for Node's.
-  atomic_uintptr_t region_end;
-  atomic_uintptr_t mapped_size;
+  mutable StaticSpinMutex mtx = {};  // Protects alloc of new blocks.
+  atomic_uintptr_t region_pos = {};  // Region allocator for Node's.
+  atomic_uintptr_t region_end = {};
+  atomic_uintptr_t mapped_size = {};
 
   struct BlockInfo {
     const BlockInfo *next;
     uptr ptr;
     uptr size;
   };
-  const BlockInfo *curr;
+  const BlockInfo *curr = nullptr;
 };
 
 }  // namespace __sanitizer
