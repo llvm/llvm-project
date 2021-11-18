@@ -188,6 +188,8 @@ end
   if an actual argument acceptable to one could not be passed to
   the other & vice versa because exactly one is polymorphic or
   exactly one is unlimited polymorphic).
+* External unit 0 is predefined and connected to the standard error output,
+  and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 
 ### Extensions supported when enabled by options
 

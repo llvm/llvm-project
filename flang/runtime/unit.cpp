@@ -21,18 +21,22 @@ namespace Fortran::runtime::io {
 // should work without a Fortran main program.
 static Lock unitMapLock;
 static UnitMap *unitMap{nullptr};
-static ExternalFileUnit *defaultInput{nullptr};
-static ExternalFileUnit *defaultOutput{nullptr};
+static ExternalFileUnit *defaultInput{nullptr}; // unit 5
+static ExternalFileUnit *defaultOutput{nullptr}; // unit 6
+static ExternalFileUnit *errorOutput{nullptr}; // unit 0 extension
 
 void FlushOutputOnCrash(const Terminator &terminator) {
-  if (!defaultOutput) {
+  if (!defaultOutput && !errorOutput) {
     return;
   }
+  IoErrorHandler handler{terminator};
+  handler.HasIoStat(); // prevent nested crash if flush has error
   CriticalSection critical{unitMapLock};
   if (defaultOutput) {
-    IoErrorHandler handler{terminator};
-    handler.HasIoStat(); // prevent nested crash if flush has error
     defaultOutput->FlushOutput(handler);
+  }
+  if (errorOutput) {
+    errorOutput->FlushOutput(handler);
   }
 }
 
@@ -210,6 +214,7 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   Terminator terminator{__FILE__, __LINE__};
   IoErrorHandler handler{terminator};
   UnitMap *newUnitMap{New<UnitMap>{terminator}().release()};
+
   bool wasExtant{false};
   ExternalFileUnit &out{newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
@@ -217,12 +222,21 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   out.SetDirection(Direction::Output, handler);
   out.isUnformatted = false;
   defaultOutput = &out;
+
   ExternalFileUnit &in{newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   in.SetDirection(Direction::Input, handler);
   in.isUnformatted = false;
   defaultInput = &in;
+
+  ExternalFileUnit &error{newUnitMap->LookUpOrCreate(0, terminator, wasExtant)};
+  RUNTIME_CHECK(terminator, !wasExtant);
+  error.Predefine(2);
+  error.SetDirection(Direction::Output, handler);
+  error.isUnformatted = false;
+  errorOutput = &error;
+
   // TODO: Set UTF-8 mode from the environment
   unitMap = newUnitMap;
   return *unitMap;
@@ -235,6 +249,8 @@ void ExternalFileUnit::CloseAll(IoErrorHandler &handler) {
     FreeMemoryAndNullify(unitMap);
   }
   defaultOutput = nullptr;
+  defaultInput = nullptr;
+  errorOutput = nullptr;
 }
 
 void ExternalFileUnit::FlushAll(IoErrorHandler &handler) {
@@ -627,8 +643,13 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
 
 void ExternalFileUnit::BeginSequentialVariableFormattedInputRecord(
     IoErrorHandler &handler) {
-  if (this == defaultInput && defaultOutput) {
-    defaultOutput->FlushOutput(handler);
+  if (this == defaultInput) {
+    if (defaultOutput) {
+      defaultOutput->FlushOutput(handler);
+    }
+    if (errorOutput) {
+      errorOutput->FlushOutput(handler);
+    }
   }
   std::size_t length{0};
   do {
