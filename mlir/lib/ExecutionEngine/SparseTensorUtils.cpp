@@ -247,12 +247,9 @@ public:
     if (tensor) {
       uint64_t nnz = tensor->getElements().size();
       values.reserve(nnz);
-      fromCOO(tensor, sparsity, 0, nnz, 0);
-    } else {
-      if (allDense)
-        values.resize(sz, 0);
-      for (uint64_t r = 0; r < rank; r++)
-        idx[r] = -1u;
+      fromCOO(tensor, 0, nnz, 0);
+    } else if (allDense) {
+      values.resize(sz, 0);
     }
   }
 
@@ -279,16 +276,26 @@ public:
   void getValues(std::vector<V> **out) override { *out = &values; }
 
   /// Partially specialize lexicographic insertions based on template types.
-  // TODO: 1-dim tensors only for now, generalize soon
   void lexInsert(uint64_t *cursor, V val) override {
-    assert((idx[0] == -1u || idx[0] < cursor[0]) && "not lexicographic");
-    indices[0].push_back(cursor[0]);
-    values.push_back(val);
-    idx[0] = cursor[0];
+    // First, wrap up pending insertion path.
+    uint64_t diff = 0;
+    uint64_t top = 0;
+    if (!values.empty()) {
+      diff = lexDiff(cursor);
+      endPath(diff + 1);
+      top = idx[diff] + 1;
+    }
+    // Then continue with insertion path.
+    insPath(cursor, diff, top, val);
   }
 
   /// Finalizes lexicographic insertions.
-  void endInsert() override { pointers[0].push_back(indices[0].size()); }
+  void endInsert() override {
+    if (values.empty())
+      endDim(0);
+    else
+      endPath(0);
+  }
 
   /// Returns this sparse tensor storage scheme as a new memory-resident
   /// sparse tensor in coordinate scheme with the given dimension order.
@@ -342,14 +349,14 @@ private:
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
   /// tensor in coordinate scheme. This method prepares the pointers and
   /// indices arrays under the given per-dimension dense/sparse annotations.
-  void fromCOO(SparseTensorCOO<V> *tensor, const DimLevelType *sparsity,
-               uint64_t lo, uint64_t hi, uint64_t d) {
+  void fromCOO(SparseTensorCOO<V> *tensor, uint64_t lo, uint64_t hi,
+               uint64_t d) {
     const std::vector<Element<V>> &elements = tensor->getElements();
     // Once dimensions are exhausted, insert the numerical values.
     assert(d <= getRank());
     if (d == getRank()) {
-      assert(lo >= hi || lo < elements.size());
-      values.push_back(lo < hi ? elements[lo].value : 0);
+      assert(lo < hi && hi <= elements.size());
+      values.push_back(elements[lo].value);
       return;
     }
     // Visit all elements in this interval.
@@ -362,28 +369,28 @@ private:
       while (seg < hi && elements[seg].indices[d] == i)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
-      if (sparsity[d] == DimLevelType::kCompressed) {
+      if (isCompressedDim(d)) {
         indices[d].push_back(i);
       } else {
         // For dense storage we must fill in all the zero values between
         // the previous element (when last we ran this for-loop) and the
         // current element.
         for (; full < i; full++)
-          fromCOO(tensor, sparsity, 0, 0, d + 1); // pass empty
+          endDim(d + 1);
         full++;
       }
-      fromCOO(tensor, sparsity, lo, seg, d + 1);
+      fromCOO(tensor, lo, seg, d + 1);
       // And move on to next segment in interval.
       lo = seg;
     }
     // Finalize the sparse pointer structure at this dimension.
-    if (sparsity[d] == DimLevelType::kCompressed) {
+    if (isCompressedDim(d)) {
       pointers[d].push_back(indices[d].size());
     } else {
       // For dense storage we must fill in all the zero values after
       // the last element.
       for (uint64_t sz = sizes[d]; full < sz; full++)
-        fromCOO(tensor, sparsity, 0, 0, d + 1); // pass empty
+        endDim(d + 1);
     }
   }
 
@@ -395,19 +402,81 @@ private:
     if (d == getRank()) {
       assert(pos < values.size());
       tensor->add(idx, values[pos]);
-    } else if (pointers[d].empty()) {
-      // Dense dimension.
-      for (uint64_t i = 0, sz = sizes[d], off = pos * sz; i < sz; i++) {
-        idx[reord[d]] = i;
-        toCOO(tensor, reord, off + i, d + 1);
-      }
-    } else {
+    } else if (isCompressedDim(d)) {
       // Sparse dimension.
       for (uint64_t ii = pointers[d][pos]; ii < pointers[d][pos + 1]; ii++) {
         idx[reord[d]] = indices[d][ii];
         toCOO(tensor, reord, ii, d + 1);
       }
+    } else {
+      // Dense dimension.
+      for (uint64_t i = 0, sz = sizes[d], off = pos * sz; i < sz; i++) {
+        idx[reord[d]] = i;
+        toCOO(tensor, reord, off + i, d + 1);
+      }
     }
+  }
+
+  /// Ends a deeper, never seen before dimension.
+  void endDim(uint64_t d) {
+    assert(d <= getRank());
+    if (d == getRank()) {
+      values.push_back(0);
+    } else if (isCompressedDim(d)) {
+      pointers[d].push_back(indices[d].size());
+    } else {
+      for (uint64_t full = 0, sz = sizes[d]; full < sz; full++)
+        endDim(d + 1);
+    }
+  }
+
+  /// Wraps up a single insertion path, inner to outer.
+  void endPath(uint64_t diff) {
+    uint64_t rank = getRank();
+    assert(diff <= rank);
+    for (uint64_t i = 0; i < rank - diff; i++) {
+      uint64_t d = rank - i - 1;
+      if (isCompressedDim(d)) {
+        pointers[d].push_back(indices[d].size());
+      } else {
+        for (uint64_t full = idx[d] + 1, sz = sizes[d]; full < sz; full++)
+          endDim(d + 1);
+      }
+    }
+  }
+
+  /// Continues a single insertion path, outer to inner.
+  void insPath(uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
+    uint64_t rank = getRank();
+    assert(diff < rank);
+    for (uint64_t d = diff; d < rank; d++) {
+      uint64_t i = cursor[d];
+      if (isCompressedDim(d)) {
+        indices[d].push_back(i);
+      } else {
+        for (uint64_t full = top; full < i; full++)
+          endDim(d + 1);
+      }
+      top = 0;
+      idx[d] = i;
+    }
+    values.push_back(val);
+  }
+
+  /// Finds the lexicographic differing dimension.
+  uint64_t lexDiff(uint64_t *cursor) {
+    for (uint64_t r = 0, rank = getRank(); r < rank; r++)
+      if (cursor[r] > idx[r])
+        return r;
+      else
+        assert(cursor[r] == idx[r] && "non-lexicographic insertion");
+    assert(0 && "duplication insertion");
+    return -1u;
+  }
+
+  /// Returns true if dimension is compressed.
+  inline bool isCompressedDim(uint64_t d) const {
+    return (!pointers[d].empty());
   }
 
 private:
