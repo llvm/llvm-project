@@ -140,6 +140,30 @@ public:
     /// Complexity: O(N)
     ///             where N = size(Original)
     RangeSet add(RangeSet Original, const llvm::APSInt &Point);
+    /// Create a new set which is a union of two given ranges.
+    /// Possible intersections are not checked here.
+    ///
+    /// Complexity: O(N + M)
+    ///             where N = size(LHS), M = size(RHS)
+    RangeSet unite(RangeSet LHS, RangeSet RHS);
+    /// Create a new set by uniting given range set with the given range.
+    /// All intersections and adjacent ranges are handled here.
+    ///
+    /// Complexity: O(N)
+    ///             where N = size(Original)
+    RangeSet unite(RangeSet Original, Range Element);
+    /// Create a new set by uniting given range set with the given point.
+    /// All intersections and adjacent ranges are handled here.
+    ///
+    /// Complexity: O(N)
+    ///             where N = size(Original)
+    RangeSet unite(RangeSet Original, llvm::APSInt Point);
+    /// Create a new set by uniting given range set with the given range
+    /// between points. All intersections and adjacent ranges are handled here.
+    ///
+    /// Complexity: O(N)
+    ///             where N = size(Original)
+    RangeSet unite(RangeSet Original, llvm::APSInt From, llvm::APSInt To);
 
     RangeSet getEmptySet() { return &EmptySet; }
 
@@ -224,6 +248,9 @@ public:
     ContainerType *construct(ContainerType &&From);
 
     RangeSet intersect(const ContainerType &LHS, const ContainerType &RHS);
+    /// NOTE: This function relies on the fact that all values in the
+    /// containers are persistent (created via BasicValueFactory::getValue).
+    ContainerType unite(const ContainerType &LHS, const ContainerType &RHS);
 
     // Many operations include producing new APSInt values and that's why
     // we need this factory.
