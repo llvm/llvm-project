@@ -9,6 +9,7 @@
 // <algorithm>
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 
 #include "test_macros.h"
@@ -28,9 +29,9 @@ struct Tester {
 
 struct UnaryVoid { TEST_CONSTEXPR_CXX14 void operator()(void*) const {} };
 struct UnaryTrue { TEST_CONSTEXPR bool operator()(void*) const { return true; } };
-struct NullaryValue { TEST_CONSTEXPR decltype(nullptr) operator()() const { return nullptr; } };
-struct UnaryTransform { TEST_CONSTEXPR decltype(nullptr) operator()(void*) const { return nullptr; } };
-struct BinaryTransform { TEST_CONSTEXPR decltype(nullptr) operator()(void*, void*) const { return nullptr; } };
+struct NullaryValue { TEST_CONSTEXPR std::nullptr_t operator()() const { return nullptr; } };
+struct UnaryTransform { TEST_CONSTEXPR std::nullptr_t operator()(void*) const { return nullptr; } };
+struct BinaryTransform { TEST_CONSTEXPR std::nullptr_t operator()(void*, void*) const { return nullptr; } };
 
 TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
 {
