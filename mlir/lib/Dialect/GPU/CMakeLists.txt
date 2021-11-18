@@ -162,6 +162,7 @@ if(MLIR_ENABLE_ROCM_RUNNER)
   target_link_libraries(MLIRGPUOps
     PRIVATE
     lldELF
+    MLIRExecutionEngine
     MLIRROCDLToLLVMIRTranslation
   )
 
