@@ -12,10 +12,14 @@ class TestPty(GDBRemoteTestBase):
 
     def get_term_attrs(self):
         import termios
-        return termios.tcgetattr(self.server._socket._secondary)
+        return termios.tcgetattr(self._secondary_socket)
 
     def setUp(self):
         super().setUp()
+        # Duplicate the pty descriptors so we can inspect the pty state after
+        # they are closed
+        self._primary_socket = os.dup(self.server._socket._primary.name)
+        self._secondary_socket = os.dup(self.server._socket._secondary.name)
         self.orig_attr = self.get_term_attrs()
 
     def assert_raw_mode(self, current_attr):

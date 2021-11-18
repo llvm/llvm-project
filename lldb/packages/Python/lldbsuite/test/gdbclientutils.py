@@ -86,6 +86,7 @@ class MockGDBServerResponder:
 
     registerCount = 40
     packetLog = None
+    class RESPONSE_DISCONNECT: pass
 
     def __init__(self):
         self.packetLog = []
@@ -327,7 +328,7 @@ class MockGDBServerResponder:
         return ""
 
     def k(self):
-        return ""
+        return ["W01", self.RESPONSE_DISCONNECT]
 
     """
     Raised when we receive a packet for which there is no default action.
@@ -492,17 +493,20 @@ class MockGDBServer:
         self._receivedData = ""
         self._receivedDataOffset = 0
         data = None
-        while True:
-            try:
+        try:
+            while True:
                 data = seven.bitcast_to_string(self._socket.recv())
                 if data is None or len(data) == 0:
                     break
                 self._receive(data)
-            except Exception as e:
-                print("An exception happened when receiving the response from the gdb server. Closing the client...")
-                traceback.print_exc()
-                self._socket.close_connection()
-                break
+        except self.TerminateConnectionException:
+            pass
+        except Exception as e:
+            print("An exception happened when receiving the response from the gdb server. Closing the client...")
+            traceback.print_exc()
+        finally:
+            self._socket.close_connection()
+            self._socket.close_server()
 
     def _receive(self, data):
         """
@@ -510,13 +514,10 @@ class MockGDBServer:
         Any leftover data is kept for parsing the next time around.
         """
         self._receivedData += data
-        try:
+        packet = self._parsePacket()
+        while packet is not None:
+            self._handlePacket(packet)
             packet = self._parsePacket()
-            while packet is not None:
-                self._handlePacket(packet)
-                packet = self._parsePacket()
-        except self.InvalidPacketException:
-            self._socket.close_connection()
 
     def _parsePacket(self):
         """
@@ -583,6 +584,9 @@ class MockGDBServer:
         self._receivedDataOffset = 0
         return packet
 
+    def _sendPacket(self, packet):
+        self._socket.sendall(seven.bitcast_to_bytes(frame_packet(packet)))
+
     def _handlePacket(self, packet):
         if packet is self.PACKET_ACK:
             # Ignore ACKs from the client. For the future, we can consider
@@ -600,14 +604,18 @@ class MockGDBServer:
         elif self.responder is not None:
             # Delegate everything else to our responder
             response = self.responder.respond(packet)
-        # Handle packet framing since we don't want to bother tests with it.
-        if response is not None:
-            framed = frame_packet(response)
-            self._socket.sendall(seven.bitcast_to_bytes(framed))
+        if not isinstance(response, list):
+            response = [response]
+        for part in response:
+            if part is MockGDBServerResponder.RESPONSE_DISCONNECT:
+                raise self.TerminateConnectionException()
+            self._sendPacket(part)
 
     PACKET_ACK = object()
     PACKET_INTERRUPT = object()
 
-    class InvalidPacketException(Exception):
+    class TerminateConnectionException(Exception):
         pass
 
+    class InvalidPacketException(Exception):
+        pass
