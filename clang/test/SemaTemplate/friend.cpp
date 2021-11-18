@@ -50,7 +50,7 @@ C<int> c;
 
 namespace qualified_friend {
   void f(int); // expected-note 2{{type mismatch at 1st parameter}}
-  template<typename T> void f(T*); // expected-note 2{{could not match 'type-parameter-0-0 *' against 'double'}}
+  template<typename T> void f(T*); // expected-note 2{{could not match 'T *' against 'double'}}
   template<typename T> void nondep();
 
   template<typename> struct X1 {
@@ -66,7 +66,7 @@ namespace qualified_friend {
 
   struct Y {
     void f(int); // expected-note 2{{type mismatch at 1st parameter}}
-    template<typename T> void f(T*); // expected-note 2{{could not match 'type-parameter-0-0 *' against 'double'}}
+    template<typename T> void f(T*); // expected-note 2{{could not match 'T *' against 'double'}}
     template<typename T> void nondep();
   };
 

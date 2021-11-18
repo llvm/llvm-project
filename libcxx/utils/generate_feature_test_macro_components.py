@@ -95,53 +95,39 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_atomic_flag_test",
     "values": { "c++20": 201907 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_float",
     "values": { "c++20": 201711 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_is_always_lock_free",
     "values": { "c++17": 201603 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_lock_free_type_aliases",
     "values": { "c++20": 201907 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_ref",
     "values": { "c++20": 201806 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_shared_ptr",
     "values": { "c++20": 201711 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_value_initialization",
     "values": { "c++20": 201911 },
     "headers": ["atomic", "memory"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_wait",
     "values": { "c++20": 201907 },
     "headers": ["atomic"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)",
+    "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)",
+    "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)",
   }, {
     "name": "__cpp_lib_barrier",
     "values": { "c++20": 201907 },
@@ -258,7 +244,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_coroutine",
     "values": { "c++20": 201902 },
     "headers": ["coroutine"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_destroying_delete",
     "values": { "c++20": 201806 },
@@ -672,7 +657,6 @@ assert all(all(key in ["name", "values", "headers", "libcxx_guard", "test_suite_
 # that includes <thread> should be marked as UNSUPPORTED, because including
 # <thread> is a hard error in that case.
 lit_markup = {
-  "atomic": ["UNSUPPORTED: libcpp-has-no-threads"],
   "barrier": ["UNSUPPORTED: libcpp-has-no-threads"],
   "filesystem": ["UNSUPPORTED: libcpp-has-no-filesystem-library"],
   "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],

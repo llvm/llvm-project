@@ -339,20 +339,20 @@ void testBuiltinTypes3(vector int v, __vector_pair *vp2, signed long l, unsigned
 
 void testRestrictQualifiedPointer1(int *__restrict acc) {
   vector float arr[4];
-  __builtin_mma_disassemble_acc((void *)arr, acc); // expected-error {{passing 'int *restrict' to parameter of incompatible type '__vector_quad *'}}
+  __builtin_mma_disassemble_acc(arr, acc); // expected-error {{passing 'int *restrict' to parameter of incompatible type '__vector_quad *'}}
 }
 
 void testRestrictQualifiedPointer2(__vector_quad *__restrict acc) {
   vector float arr[4];
-  __builtin_mma_disassemble_acc((void *)arr, acc);
+  __builtin_mma_disassemble_acc(arr, acc);
 }
 
 void testVolatileQualifiedPointer1(int *__volatile acc) {
   vector float arr[4];
-  __builtin_mma_disassemble_acc((void *)arr, acc); // expected-error {{passing 'int *volatile' to parameter of incompatible type '__vector_quad *'}}
+  __builtin_mma_disassemble_acc(arr, acc); // expected-error {{passing 'int *volatile' to parameter of incompatible type '__vector_quad *'}}
 }
 
 void testVolatileQualifiedPointer2(__vector_quad *__volatile acc) {
   vector float arr[4];
-  __builtin_mma_disassemble_acc((void *)arr, acc);
+  __builtin_mma_disassemble_acc(arr, acc);
 }

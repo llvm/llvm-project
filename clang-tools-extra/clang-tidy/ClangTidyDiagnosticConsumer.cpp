@@ -517,16 +517,6 @@ static bool lineIsMarkedWithNOLINTinMacro(
 namespace clang {
 namespace tidy {
 
-bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                              const Diagnostic &Info, ClangTidyContext &Context,
-                              bool AllowIO) {
-  SmallVector<ClangTidyError, 1> Unused;
-  bool ShouldSuppress =
-      shouldSuppressDiagnostic(DiagLevel, Info, Context, Unused, AllowIO);
-  assert(Unused.empty());
-  return ShouldSuppress;
-}
-
 bool shouldSuppressDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info,
     ClangTidyContext &Context,

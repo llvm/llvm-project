@@ -103,6 +103,8 @@ json::Value TargetStats::ToJSON(Target &target) {
     if (unix_signals_sp)
       target_metrics_json.try_emplace("signals",
                                       unix_signals_sp->GetHitCountStatistics());
+    uint32_t stop_id = process_sp->GetStopID();
+    target_metrics_json.try_emplace("stopCount", stop_id);
   }
   target_metrics_json.try_emplace("breakpoints", std::move(breakpoints_array));
   target_metrics_json.try_emplace("totalBreakpointResolveTime",

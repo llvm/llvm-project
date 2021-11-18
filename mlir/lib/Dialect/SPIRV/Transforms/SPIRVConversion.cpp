@@ -580,9 +580,9 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
 
   // Copy over all attributes other than the function name and type.
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.first != function_like_impl::getTypeAttrName() &&
-        namedAttr.first != SymbolTable::getSymbolAttrName())
-      newFuncOp->setAttr(namedAttr.first, namedAttr.second);
+    if (namedAttr.getName() != function_like_impl::getTypeAttrName() &&
+        namedAttr.getName() != SymbolTable::getSymbolAttrName())
+      newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),

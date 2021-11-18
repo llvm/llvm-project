@@ -478,11 +478,13 @@ public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
   explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
-                                      bool EagerlyInvalidate)
-      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
+                                      bool EagerlyInvalidate, bool NoRerun)
+      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate),
+        NoRerun(NoRerun) {}
 
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)), EagerlyInvalidate(Arg.EagerlyInvalidate) {}
+      : Pass(std::move(Arg.Pass)), EagerlyInvalidate(Arg.EagerlyInvalidate),
+        NoRerun(Arg.NoRerun) {}
 
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
@@ -513,6 +515,7 @@ public:
 private:
   std::unique_ptr<PassConceptT> Pass;
   bool EagerlyInvalidate;
+  bool NoRerun;
 };
 
 /// A function to deduce a function pass type and wrap it in the
@@ -520,7 +523,8 @@ private:
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor
 createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
-                                 bool EagerlyInvalidate = false) {
+                                 bool EagerlyInvalidate = false,
+                                 bool NoRerun = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
@@ -529,8 +533,22 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
   return CGSCCToFunctionPassAdaptor(
       std::unique_ptr<CGSCCToFunctionPassAdaptor::PassConceptT>(
           new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate);
+      EagerlyInvalidate, NoRerun);
 }
+
+// A marker to determine if function passes should be run on a function within a
+// CGSCCToFunctionPassAdaptor. This is used to prevent running an expensive
+// function pass (manager) on a function multiple times if SCC mutations cause a
+// function to be visited multiple times and the function is not modified by
+// other SCC passes.
+class ShouldNotRunFunctionPassesAnalysis
+    : public AnalysisInfoMixin<ShouldNotRunFunctionPassesAnalysis> {
+public:
+  static AnalysisKey Key;
+  struct Result {};
+
+  Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
+};
 
 /// A helper that repeats an SCC pass each time an indirect call is refined to
 /// a direct call by that pass.

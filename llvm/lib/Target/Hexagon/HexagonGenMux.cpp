@@ -183,12 +183,11 @@ void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
   unsigned NR = HRI->getNumRegs();
   BitVector Defs(NR), Uses(NR);
 
-  for (MachineBasicBlock::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    MachineInstr *MI = &*I;
-    I2X.insert(std::make_pair(MI, Index));
+  for (MachineInstr &MI : B) {
+    I2X.insert(std::make_pair(&MI, Index));
     Defs.reset();
     Uses.reset();
-    getDefsUses(MI, Defs, Uses);
+    getDefsUses(&MI, Defs, Uses);
     DUM.insert(std::make_pair(Index, DefUseInfo(Defs, Uses)));
     Index++;
   }

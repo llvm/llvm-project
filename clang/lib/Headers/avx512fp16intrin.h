@@ -3306,6 +3306,42 @@ _mm512_permutexvar_ph(__m512i __A, __m512h __B) {
   return (__m512h)__builtin_ia32_permvarhi512((__v32hi)__B, (__v32hi)__A);
 }
 
+// intrinsics below are alias for f*mul_*ch
+#define _mm512_mul_pch(A, B) _mm512_fmul_pch(A, B)
+#define _mm512_mask_mul_pch(W, U, A, B) _mm512_mask_fmul_pch(W, U, A, B)
+#define _mm512_maskz_mul_pch(U, A, B) _mm512_maskz_fmul_pch(U, A, B)
+#define _mm512_mul_round_pch(A, B, R) _mm512_fmul_round_pch(A, B, R)
+#define _mm512_mask_mul_round_pch(W, U, A, B, R)                               \
+  _mm512_mask_fmul_round_pch(W, U, A, B, R)
+#define _mm512_maskz_mul_round_pch(U, A, B, R)                                 \
+  _mm512_maskz_fmul_round_pch(U, A, B, R)
+
+#define _mm512_cmul_pch(A, B) _mm512_fcmul_pch(A, B)
+#define _mm512_mask_cmul_pch(W, U, A, B) _mm512_mask_fcmul_pch(W, U, A, B)
+#define _mm512_maskz_cmul_pch(U, A, B) _mm512_maskz_fcmul_pch(U, A, B)
+#define _mm512_cmul_round_pch(A, B, R) _mm512_fcmul_round_pch(A, B, R)
+#define _mm512_mask_cmul_round_pch(W, U, A, B, R)                              \
+  _mm512_mask_fcmul_round_pch(W, U, A, B, R)
+#define _mm512_maskz_cmul_round_pch(U, A, B, R)                                \
+  _mm512_maskz_fcmul_round_pch(U, A, B, R)
+
+#define _mm_mul_sch(A, B) _mm_fmul_sch(A, B)
+#define _mm_mask_mul_sch(W, U, A, B) _mm_mask_fmul_sch(W, U, A, B)
+#define _mm_maskz_mul_sch(U, A, B) _mm_maskz_fmul_sch(U, A, B)
+#define _mm_mul_round_sch(A, B, R) _mm_fmul_round_sch(A, B, R)
+#define _mm_mask_mul_round_sch(W, U, A, B, R)                                  \
+  _mm_mask_fmul_round_sch(W, U, A, B, R)
+#define _mm_maskz_mul_round_sch(U, A, B, R) _mm_maskz_fmul_round_sch(U, A, B, R)
+
+#define _mm_cmul_sch(A, B) _mm_fcmul_sch(A, B)
+#define _mm_mask_cmul_sch(W, U, A, B) _mm_mask_fcmul_sch(W, U, A, B)
+#define _mm_maskz_cmul_sch(U, A, B) _mm_maskz_fcmul_sch(U, A, B)
+#define _mm_cmul_round_sch(A, B, R) _mm_fcmul_round_sch(A, B, R)
+#define _mm_mask_cmul_round_sch(W, U, A, B, R)                                 \
+  _mm_mask_fcmul_round_sch(W, U, A, B, R)
+#define _mm_maskz_cmul_round_sch(U, A, B, R)                                   \
+  _mm_maskz_fcmul_round_sch(U, A, B, R)
+
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
 #undef __DEFAULT_FN_ATTRS512

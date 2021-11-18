@@ -1,7 +1,7 @@
 
-# RUN: llvm-mc -triple s390x-unknown-unknown --show-encoding %s | FileCheck %s
+# RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=z13 --show-encoding %s | FileCheck %s
 
-# RUN: llvm-mc -triple s390x-unknown-unknown -filetype=obj %s | \
+# RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=z13 -filetype=obj %s | \
 # RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 # CHECK: larl %r14, target                      # encoding: [0xc0,0xe0,A,A,A,A]
@@ -77,6 +77,215 @@
 # CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
 	.align 16
 	bras %r14, target@plt:tls_ldcall:sym
+
+
+# Symbolic displacements
+
+## BD12
+# CHECK: vl %v0, src                            # encoding: [0xe7,0x00,0b0000AAAA,A,0x00,0x06]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        vl %v0, src
+
+# CHECK: vl %v0, src(%r1)                       # encoding: [0xe7,0x00,0b0001AAAA,A,0x00,0x06]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        vl %v0, src(%r1)
+
+# CHECK: .insn vrx,253987186016262,%v0,src(%r1),3  # encoding: [0xe7,0x00,0b0001AAAA,A,0x30,0x06]
+# CHECK-NEXT:                                      # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                       0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        .insn vrx,0xe70000000006,%v0,src(%r1),3	   # vl
+
+## BD20
+# CHECK: lmg %r6, %r15, src                     # encoding: [0xeb,0x6f,0b0000AAAA,A,A,0x04]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+        lmg %r6, %r15, src
+
+# CHECK: lmg %r6, %r15, src(%r1)                # encoding: [0xeb,0x6f,0b0001AAAA,A,A,0x04]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+        lmg %r6, %r15, src(%r1)
+
+# CHECK: .insn siy,258385232527441,src(%r15),240  # encoding: [0xeb,0xf0,0b1111AAAA,A,A,0x51]
+# CHECK-NEXT:                                     # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                      0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+        .insn siy,0xeb0000000051,src(%r15),240	  # tmy
+
+## BDX12
+# CHECK: la %r14, src                           # encoding: [0x41,0xe0,0b0000AAAA,A]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        la %r14, src
+
+# CHECK: la %r14, src(%r1)                      # encoding: [0x41,0xe0,0b0001AAAA,A]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        la %r14, src(%r1)
+
+# CHECK: la %r14, src(%r1,%r2)                  # encoding: [0x41,0xe1,0b0010AAAA,A]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        la %r14, src(%r1, %r2)
+
+# CHECK: .insn vrx,253987186016262,%v2,src(%r2,%r3),3  # encoding: [0xe7,0x22,0b0011AAAA,A,0x30,0x06]
+# CHECK-NEXT:	                                       # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                           0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        .insn vrx,0xe70000000006,%v2,src(%r2, %r3),3   # vl
+
+##BDX20
+# CHECK: lg %r14, src                           # encoding: [0xe3,0xe0,0b0000AAAA,A,A,0x04]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+	lg %r14, src
+
+# CHECK: lg %r14, src(%r1)                      # encoding: [0xe3,0xe0,0b0001AAAA,A,A,0x04]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+	lg %r14, src(%r1)
+
+# CHECK: lg %r14, src(%r1,%r2)                  # encoding: [0xe3,0xe1,0b0010AAAA,A,A,0x04]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+	lg %r14, src(%r1, %r2)
+
+# CHECK:  .insn rxy,260584255783013,%f1,src(%r2,%r15)  # encoding: [0xed,0x12,0b1111AAAA,A,A,0x65]
+# CHECK-NEXT:                                          # fixup A - offset: 2, value: src, kind: FK_390_20
+# CHECK-REL:                                           0x{{[0-9A-F]*2}} R_390_20 src 0x0
+	.align 16
+	.insn rxy,0xed0000000065,%f1,src(%r2,%r15)     # ldy
+
+##BD12L4
+# CHECK: tp src(16)                             # encoding: [0xeb,0xf0,0b0000AAAA,A,0x00,0xc0]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+	.align 16
+        tp src(16)
+
+# CHECK: tp src(16,%r1)                         # encoding: [0xeb,0xf0,0b0001AAAA,A,0x00,0xc0]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+	.align 16
+        tp src(16, %r1)
+
+##BD12L8
+#SSa
+# CHECK: mvc dst(1,%r1), src(%r1)               # encoding: [0xd2,0x00,0b0001AAAA,A,0b0001BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: dst, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 dst 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        mvc dst(1,%r1), src(%r1)
+
+#SSb
+# CHECK: mvo src(16,%r1), src(1,%r2)            # encoding: [0xf1,0xf0,0b0001AAAA,A,0b0010BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        mvo src(16,%r1), src(1,%r2)
+
+#SSc
+# CHECK: srp src(1,%r1), src(%r15), 0           # encoding: [0xf0,0x00,0b0001AAAA,A,0b1111BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        srp src(1,%r1), src(%r15), 0
+
+##BDR12
+#SSd
+# CHECK: mvck dst(%r2,%r1), src, %r3            # encoding: [0xd9,0x23,0b0001AAAA,A,0b0000BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: dst, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 dst 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+	mvck dst(%r2,%r1), src, %r3
+
+# CHECK: .insn ss,238594023227392,dst(%r2,%r1),src,%r3  # encoding: [0xd9,0x23,0b0001AAAA,A,0b0000BBBB,B]
+# CHECK-NEXT:                                           # fixup A - offset: 2, value: dst, kind: FK_390_12
+# CHECK-NEXT:                                           # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                            0x{{[0-9A-F]*2}} R_390_12 dst 0x0
+# CHECK-REL:                                            0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        .insn ss,0xd90000000000,dst(%r2,%r1),src,%r3	# mvck
+
+#SSe
+# CHECK: lmd %r2, %r4, src1(%r1), src2(%r1)     # encoding: [0xef,0x24,0b0001AAAA,A,0b0001BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src1, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src2, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src1 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src2 0x0
+        .align 16
+        lmd %r2, %r4, src1(%r1), src2(%r1)
+
+#SSf
+# CHECK: pka dst(%r15), src(256,%r15)           # encoding: [0xe9,0xff,0b1111AAAA,A,0b1111BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: dst, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 dst 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+	pka     dst(%r15), src(256,%r15)
+
+#SSE
+# CHECK: strag dst(%r1), src(%r15)              # encoding: [0xe5,0x02,0b0001AAAA,A,0b1111BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: dst, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 dst 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        strag dst(%r1), src(%r15)
+
+# CHECK: .insn sse,251796752695296,dst(%r1),src(%r15)  # encoding: [0xe5,0x02,0b0001AAAA,A,0b1111BBBB,B]
+# CHECK-NEXT:                                          # fixup A - offset: 2, value: dst, kind: FK_390_12
+# CHECK-NEXT:                                          # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                           0x{{[0-9A-F]*2}} R_390_12 dst 0x0
+# CHECK-REL:                                           0x{{[0-9A-F]*4}} R_390_12 src 0x0
+	.align 16
+	.insn sse,0xe50200000000,dst(%r1),src(%r15)    # strag
+
+#SSF
+# CHECK: ectg src, src(%r15), %r2               # encoding: [0xc8,0x21,0b0000AAAA,A,0b1111BBBB,B]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-NEXT:                                   # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        ectg src, src(%r15), %r2
+
+# CHECK: .insn ssf,219906620522496,src,src(%r15),%r2   # encoding: [0xc8,0x21,0b0000AAAA,A,0b1111BBBB,B]
+# CHECK-NEXT:                                          # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-NEXT:                                          # fixup B - offset: 4, value: src, kind: FK_390_12
+# CHECK-REL:                                           0x{{[0-9A-F]*2}} R_390_12 src 0x0
+# CHECK-REL:                                           0x{{[0-9A-F]*4}} R_390_12 src 0x0
+        .align 16
+        .insn ssf,0xc80100000000,src,src(%r15),%r2     # ectg
+
+##BDV12
+# CHECK: vgeg %v0, src(%v0,%r1), 0              # encoding: [0xe7,0x00,0b0001AAAA,A,0x00,0x12]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: src, kind: FK_390_12
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_12 src 0x0
+        .align 16
+        vgeg %v0, src(%v0,%r1), 0
 
 
 # Data relocs

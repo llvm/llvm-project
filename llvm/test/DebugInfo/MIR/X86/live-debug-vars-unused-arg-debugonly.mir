@@ -1,4 +1,4 @@
-# RUN: llc -O1 -start-before=greedy -stop-after=virtregrewriter -o /dev/null %s -debug-only=livedebugvars 2>&1 | FileCheck -check-prefix=CHECKDBG %s
+# RUN: llc -O1 -start-before=greedy -stop-after=virtregrewriter -o /dev/null %s -debug-only=livedebugvars 2>&1 -experimental-debug-variable-locations=false | FileCheck -check-prefix=CHECKDBG %s
 
 # REQUIRES: asserts
 

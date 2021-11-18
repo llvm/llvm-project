@@ -22,4 +22,5 @@ add_llvm_unittest(GlobalISelTests
   KnownBitsTest.cpp
   KnownBitsVectorTest.cpp
   GISelUtilsTest.cpp
+  GISelAliasTest.cpp
   )

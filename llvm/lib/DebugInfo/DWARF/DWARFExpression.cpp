@@ -222,7 +222,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
 }
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
-                                   DIDumpOptions DumpOpts, uint64_t Operands[2],
+                                   DIDumpOptions DumpOpts,
+                                   const uint64_t Operands[2],
                                    unsigned Operand) {
   assert(Operand < 2 && "operand out of bounds");
   auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
@@ -241,7 +242,7 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
 
 static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                                   DIDumpOptions DumpOpts, uint8_t Opcode,
-                                  uint64_t Operands[2],
+                                  const uint64_t Operands[2],
                                   const MCRegisterInfo *MRI, bool isEH) {
   if (!MRI)
     return false;
@@ -279,7 +280,7 @@ static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
 bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
                                        const DWARFExpression *Expr,
                                        const MCRegisterInfo *RegInfo,
-                                       DWARFUnit *U, bool isEH) {
+                                       DWARFUnit *U, bool isEH) const {
   if (Error) {
     OS << "<decoding error>";
     return false;
@@ -375,10 +376,9 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
   }
 }
 
-bool DWARFExpression::Operation::verify(DWARFUnit *U) {
-
+bool DWARFExpression::Operation::verify(const Operation &Op, DWARFUnit *U) {
   for (unsigned Operand = 0; Operand < 2; ++Operand) {
-    unsigned Size = Desc.Op[Operand];
+    unsigned Size = Op.Desc.Op[Operand];
 
     if (Size == Operation::SizeNA)
       break;
@@ -388,13 +388,11 @@ bool DWARFExpression::Operation::verify(DWARFUnit *U) {
       // the generic type should be done, so don't look up a base type in that
       // case. The same holds for DW_OP_reinterpret, which is currently not
       // supported.
-      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+      if (Op.Opcode == DW_OP_convert && Op.Operands[Operand] == 0)
         continue;
-      auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
-      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type) {
-        Error = true;
+      auto Die = U->getDIEForOffset(U->getOffset() + Op.Operands[Operand]);
+      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type)
         return false;
-      }
     }
   }
 
@@ -403,7 +401,7 @@ bool DWARFExpression::Operation::verify(DWARFUnit *U) {
 
 bool DWARFExpression::verify(DWARFUnit *U) {
   for (auto &Op : *this)
-    if (!Op.verify(U))
+    if (!Operation::verify(Op, U))
       return false;
 
   return true;
@@ -429,7 +427,7 @@ static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
   SmallVector<PrintedExpr, 4> Stack;
 
   while (I != E) {
-    DWARFExpression::Operation &Op = *I;
+    const DWARFExpression::Operation &Op = *I;
     uint8_t Opcode = Op.getCode();
     switch (Opcode) {
     case dwarf::DW_OP_regx: {

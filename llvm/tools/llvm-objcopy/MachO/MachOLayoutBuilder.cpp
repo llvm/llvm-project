@@ -249,8 +249,12 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfExportTrie =
       StartOfLazyBindingInfo + O.LazyBinds.Opcodes.size();
   uint64_t StartOfFunctionStarts = StartOfExportTrie + O.Exports.Trie.size();
-  uint64_t StartOfDataInCode =
+  uint64_t StartOfDyldExportsTrie =
       StartOfFunctionStarts + O.FunctionStarts.Data.size();
+  uint64_t StartOfChainedFixups =
+      StartOfDyldExportsTrie + O.ExportsTrie.Data.size();
+  uint64_t StartOfDataInCode =
+      StartOfChainedFixups + O.ChainedFixups.Data.size();
   uint64_t StartOfLinkerOptimizationHint =
       StartOfDataInCode + O.DataInCode.Data.size();
   uint64_t StartOfSymbols =
@@ -352,6 +356,14 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_FUNCTION_STARTS:
       MLC.linkedit_data_command_data.dataoff = StartOfFunctionStarts;
       MLC.linkedit_data_command_data.datasize = O.FunctionStarts.Data.size();
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      MLC.linkedit_data_command_data.dataoff = StartOfChainedFixups;
+      MLC.linkedit_data_command_data.datasize = O.ChainedFixups.Data.size();
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      MLC.linkedit_data_command_data.dataoff = StartOfDyldExportsTrie;
+      MLC.linkedit_data_command_data.datasize = O.ExportsTrie.Data.size();
       break;
     case MachO::LC_DYLD_INFO:
     case MachO::LC_DYLD_INFO_ONLY:

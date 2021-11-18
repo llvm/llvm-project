@@ -25,17 +25,11 @@ bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
   return false;
 }
 
-bool IoStatementBase::Emit(const char *, std::size_t) {
-  return false;
-}
+bool IoStatementBase::Emit(const char *, std::size_t) { return false; }
 
-bool IoStatementBase::Emit(const char16_t *, std::size_t) {
-  return false;
-}
+bool IoStatementBase::Emit(const char16_t *, std::size_t) { return false; }
 
-bool IoStatementBase::Emit(const char32_t *, std::size_t) {
-  return false;
-}
+bool IoStatementBase::Emit(const char32_t *, std::size_t) { return false; }
 
 std::size_t IoStatementBase::GetNextInputBytes(const char *&p) {
   p = nullptr;
@@ -71,9 +65,7 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, char *, std::size_t) {
   return false;
 }
 
-bool IoStatementBase::Inquire(InquiryKeywordHash, bool &) {
-  return false;
-}
+bool IoStatementBase::Inquire(InquiryKeywordHash, bool &) { return false; }
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t, bool &) {
   return false;
@@ -264,7 +256,16 @@ template <Direction DIR>
 ExternalIoStatementState<DIR>::ExternalIoStatementState(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : ExternalIoStatementBase{unit, sourceFile, sourceLine}, mutableModes_{
-                                                                 unit.modes} {}
+                                                                 unit.modes} {
+  if constexpr (DIR == Direction::Output) {
+    // If the last statement was a non advancing IO input statement, the unit
+    // furthestPositionInRecord was not advanced, but the positionInRecord may
+    // have been advanced. Advance furthestPositionInRecord here to avoid
+    // overwriting the part of the record that has been read with blanks.
+    unit.furthestPositionInRecord =
+        std::max(unit.furthestPositionInRecord, unit.positionInRecord);
+  }
+}
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
@@ -914,7 +915,7 @@ bool InquireUnitState::Inquire(
       auto pos{unit().position()};
       if (pos == size.value_or(pos + 1)) {
         str = "APPEND";
-      } else if (pos == 0) {
+      } else if (pos == 0 && unit().mayPosition()) {
         str = "REWIND";
       } else {
         str = "ASIS"; // processor-dependent & no common behavior
@@ -1239,9 +1240,8 @@ InquireIOLengthState::InquireIOLengthState(
     const char *sourceFile, int sourceLine)
     : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
 
-bool InquireIOLengthState::Emit(
-    const char *, std::size_t n, std::size_t elementBytes) {
-  bytes_ += n * elementBytes;
+bool InquireIOLengthState::Emit(const char *, std::size_t n, std::size_t) {
+  bytes_ += n;
   return true;
 }
 

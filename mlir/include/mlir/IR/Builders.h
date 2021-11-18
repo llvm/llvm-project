@@ -53,7 +53,7 @@ public:
 
   MLIRContext *getContext() const { return context; }
 
-  Identifier getIdentifier(const Twine &str);
+  StringAttr getIdentifier(const Twine &str);
 
   // Locations.
   Location getUnknownLoc();
@@ -408,8 +408,8 @@ public:
 
 private:
   /// Helper for sanity checking preconditions for create* methods below.
-  void checkHasAbstractOperation(const OperationName &name) {
-    if (LLVM_UNLIKELY(!name.getAbstractOperation()))
+  void checkHasRegisteredInfo(const OperationName &name) {
+    if (LLVM_UNLIKELY(!name.isRegistered()))
       llvm::report_fatal_error(
           "Building op `" + name.getStringRef() +
           "` but it isn't registered in this MLIRContext: the dialect may not "
@@ -423,7 +423,7 @@ public:
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args &&...args) {
     OperationState state(location, OpTy::getOperationName());
-    checkHasAbstractOperation(state.name);
+    checkHasRegisteredInfo(state.name);
     OpTy::build(*this, state, std::forward<Args>(args)...);
     auto *op = createOperation(state);
     auto result = dyn_cast<OpTy>(op);
@@ -440,7 +440,7 @@ public:
     // Create the operation without using 'createOperation' as we don't want to
     // insert it yet.
     OperationState state(location, OpTy::getOperationName());
-    checkHasAbstractOperation(state.name);
+    checkHasRegisteredInfo(state.name);
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 

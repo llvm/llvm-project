@@ -228,7 +228,7 @@ private:
 
         MachO::relocation_info RI = getRelocationInfo(RelItr);
 
-        // Sanity check the relocation kind.
+        // Validate the relocation kind.
         auto Kind = getRelocationKind(RI);
         if (!Kind)
           return Kind.takeError();

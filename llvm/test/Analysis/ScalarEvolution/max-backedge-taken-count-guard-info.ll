@@ -1288,6 +1288,42 @@ exit:
   ret void
 }
 
+; Same as @optimized_range_check_unsigned, but with the icmp operands swapped.
+define void @optimized_range_check_unsigned_icmp_ops_swapped(i16* %pred, i32 %N) {
+; CHECK-LABEL: 'optimized_range_check_unsigned_icmp_ops_swapped'
+; CHECK-NEXT:  Classifying expressions for: @optimized_range_check_unsigned_icmp_ops_swapped
+; CHECK-NEXT:    %N.off = add i32 %N, -1
+; CHECK-NEXT:    --> (-1 + %N) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr inbounds i16, i16* %pred, i32 %iv
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned_icmp_ops_swapped
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %N.off = add i32 %N, -1
+  %cmp = icmp ugt i32 7, %N.off
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds i16, i16* %pred, i32 %iv
+  store i16 0, i16* %gep, align 2
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; The function below uses a single condition to ensure %N > 2 && %N < 22.
 ; InstCombine transforms such checks with 2 conditions to a single check as in
 ; the test function.

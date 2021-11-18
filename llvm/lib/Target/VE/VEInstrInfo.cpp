@@ -99,7 +99,7 @@ static bool isUncondBranchOpcode(int Opc) {
 
 #define BRKIND(NAME) (Opc == NAME##a || Opc == NAME##a_nt || Opc == NAME##a_t)
   // VE has other branch relative always instructions for word/double/float,
-  // but we use only long branches in our lower.  So, sanity check it here.
+  // but we use only long branches in our lower.  So, check it here.
   assert(!BRKIND(BRCFW) && !BRKIND(BRCFD) && !BRKIND(BRCFS) &&
          "Branch relative word/double/float always instructions should not be "
          "used!");
@@ -127,7 +127,7 @@ static bool isIndirectBranchOpcode(int Opc) {
 #define BRKIND(NAME)                                                           \
   (Opc == NAME##ari || Opc == NAME##ari_nt || Opc == NAME##ari_t)
   // VE has other branch always instructions for word/double/float, but
-  // we use only long branches in our lower.  So, sanity check it here.
+  // we use only long branches in our lower.  So, check it here.
   assert(!BRKIND(BCFW) && !BRKIND(BCFD) && !BRKIND(BCFS) &&
          "Branch word/double/float always instructions should not be used!");
   return BRKIND(BCFL);

@@ -54,6 +54,23 @@ INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   return Info;
 }
 
+INTERFACE WEAK struct __scudo_mallinfo2 SCUDO_PREFIX(mallinfo2)(void) {
+  struct __scudo_mallinfo2 Info = {};
+  scudo::StatCounters Stats;
+  SCUDO_ALLOCATOR.getStats(Stats);
+  // Space allocated in mmapped regions (bytes)
+  Info.hblkhd = Stats[scudo::StatMapped];
+  // Maximum total allocated space (bytes)
+  Info.usmblks = Info.hblkhd;
+  // Space in freed fastbin blocks (bytes)
+  Info.fsmblks = Stats[scudo::StatFree];
+  // Total allocated space (bytes)
+  Info.uordblks = Stats[scudo::StatAllocated];
+  // Total free space (bytes)
+  Info.fordblks = Info.fsmblks;
+  return Info;
+}
+
 INTERFACE WEAK void *SCUDO_PREFIX(malloc)(size_t size) {
   return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
       size, scudo::Chunk::Origin::Malloc, SCUDO_MALLOC_ALIGNMENT));

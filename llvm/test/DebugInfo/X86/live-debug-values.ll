@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm %s -o - | FileCheck %s
+; RUN: llc -filetype=asm %s -o - -experimental-debug-variable-locations=false | FileCheck %s
 
 ; Test the extension of debug ranges from predecessors.
 ; Generated from the source file LiveDebugValues.c:

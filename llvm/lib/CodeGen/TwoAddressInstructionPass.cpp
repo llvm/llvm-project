@@ -676,7 +676,7 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
     Register RegA, Register RegB, unsigned &Dist) {
   MachineInstrSpan MIS(mi, MBB);
-  MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV);
+  MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV, LIS);
   if (!NewMI)
     return false;
 
@@ -701,27 +701,7 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
                                    std::make_pair(NewInstrNum, NewIdx));
   }
 
-  // If convertToThreeAddress created a single new instruction, assume it has
-  // exactly the same effect on liveness as the old instruction. This is much
-  // more efficient than calling repairIntervalsInRange.
-  bool SingleInst = std::next(MIS.begin(), 2) == MIS.end();
-  if (LIS && SingleInst)
-    LIS->ReplaceMachineInstrInMaps(*mi, *NewMI);
-
-  SmallVector<Register> OrigRegs;
-  if (LIS && !SingleInst) {
-    for (const MachineOperand &MO : mi->operands()) {
-      if (MO.isReg())
-        OrigRegs.push_back(MO.getReg());
-    }
-
-    LIS->RemoveMachineInstrFromMaps(*mi);
-  }
-
   MBB->erase(mi); // Nuke the old inst.
-
-  if (LIS && !SingleInst)
-    LIS->repairIntervalsInRange(MBB, MIS.begin(), MIS.end(), OrigRegs);
 
   for (MachineInstr &MI : MIS)
     DistanceMap.insert(std::make_pair(&MI, Dist++));

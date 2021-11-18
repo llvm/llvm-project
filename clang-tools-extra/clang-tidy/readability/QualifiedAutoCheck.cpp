@@ -125,18 +125,22 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
       };
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
+  auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
+  auto IsAutoDeducedToPointer = [](const auto &...InnerMatchers) {
+    return autoType(hasDeducedType(
+        hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...)))));
+  };
 
   Finder->addMatcher(
-      ExplicitSingleVarDecl(hasType(autoType(hasDeducedType(
-                                pointerType(pointee(unless(functionType())))))),
+      ExplicitSingleVarDecl(hasType(IsAutoDeducedToPointer(UnlessFunctionType)),
                             "auto"),
       this);
 
   Finder->addMatcher(
       ExplicitSingleVarDeclInTemplate(
-          allOf(hasType(autoType(hasDeducedType(pointerType(
-                    pointee(hasUnqualifiedType(qualType().bind("type")),
-                            unless(functionType())))))),
+          allOf(hasType(IsAutoDeducedToPointer(
+                    hasUnqualifiedType(qualType().bind("type")),
+                    UnlessFunctionType)),
                 anyOf(hasAncestor(
                           functionDecl(hasAnyTemplateArgument(IsBoundToType))),
                       hasAncestor(classTemplateSpecializationDecl(

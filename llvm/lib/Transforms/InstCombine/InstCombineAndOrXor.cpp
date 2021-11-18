@@ -1418,15 +1418,15 @@ static Instruction *reassociateFCmps(BinaryOperator &BO,
     std::swap(Op0, Op1);
 
   // Match inner binop and the predicate for combining 2 NAN checks into 1.
-  BinaryOperator *BO1;
+  Value *BO10, *BO11;
   FCmpInst::Predicate NanPred = Opcode == Instruction::And ? FCmpInst::FCMP_ORD
                                                            : FCmpInst::FCMP_UNO;
   if (!match(Op0, m_FCmp(Pred, m_Value(X), m_AnyZeroFP())) || Pred != NanPred ||
-      !match(Op1, m_BinOp(BO1)) || BO1->getOpcode() != Opcode)
+      !match(Op1, m_BinOp(Opcode, m_Value(BO10), m_Value(BO11))))
     return nullptr;
 
   // The inner logic op must have a matching fcmp operand.
-  Value *BO10 = BO1->getOperand(0), *BO11 = BO1->getOperand(1), *Y;
+  Value *Y;
   if (!match(BO10, m_FCmp(Pred, m_Value(Y), m_AnyZeroFP())) ||
       Pred != NanPred || X->getType() != Y->getType())
     std::swap(BO10, BO11);
@@ -1475,14 +1475,11 @@ static Instruction *matchDeMorgansLaws(BinaryOperator &I,
   // (~B & A) & ~C --> A & ~(B | C)
   // (A | ~B) | ~C --> A | ~(B & C)
   // (~B | A) | ~C --> A | ~(B & C)
-  BinaryOperator *BO;
-  if (match(Op0, m_OneUse(m_BinOp(BO))) && BO->getOpcode() == Opcode) {
-    Value *C;
-    if (match(BO, m_c_BinOp(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1, m_Not(m_Value(C)))) {
-      Value *FlippedBO = Builder.CreateBinOp(FlippedOpcode, B, C);
-      return BinaryOperator::Create(Opcode, A, Builder.CreateNot(FlippedBO));
-    }
+  Value *C;
+  if (match(Op0, m_OneUse(m_c_BinOp(Opcode, m_Value(A), m_Not(m_Value(B))))) &&
+      match(Op1, m_Not(m_Value(C)))) {
+    Value *FlippedBO = Builder.CreateBinOp(FlippedOpcode, B, C);
+    return BinaryOperator::Create(Opcode, A, Builder.CreateNot(FlippedBO));
   }
 
   return nullptr;
@@ -1718,6 +1715,72 @@ Instruction *InstCombinerImpl::narrowMaskedBinOp(BinaryOperator &And) {
   return new ZExtInst(Builder.CreateAnd(NewBO, X), Ty);
 }
 
+/// Try folding relatively complex patterns for both And and Or operations
+/// with all And and Or swapped.
+static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
+                                             InstCombiner::BuilderTy &Builder) {
+  const Instruction::BinaryOps Opcode = I.getOpcode();
+  assert(Opcode == Instruction::And || Opcode == Instruction::Or);
+
+  // Flip the logic operation.
+  const Instruction::BinaryOps FlippedOpcode =
+      (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
+
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *A, *B, *C;
+
+  // (~(A | B) & C) | ... --> ...
+  // (~(A & B) | C) & ... --> ...
+  // TODO: One use checks are conservative. We just need to check that a total
+  //       number of multiple used values does not exceed reduction
+  //       in operations.
+  if (match(Op0, m_c_BinOp(FlippedOpcode,
+                           m_Not(m_BinOp(Opcode, m_Value(A), m_Value(B))),
+                           m_Value(C)))) {
+    // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
+    // (~(A & B) | C) & (~(A & C) | B) --> ~((B ^ C) & A)
+    if (match(Op1,
+              m_OneUse(m_c_BinOp(FlippedOpcode,
+                                 m_OneUse(m_Not(m_c_BinOp(Opcode, m_Specific(A),
+                                                          m_Specific(C)))),
+                                 m_Specific(B))))) {
+      Value *Xor = Builder.CreateXor(B, C);
+      return (Opcode == Instruction::Or)
+                 ? BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A))
+                 : BinaryOperator::CreateNot(Builder.CreateAnd(Xor, A));
+    }
+
+    // (~(A | B) & C) | (~(B | C) & A) --> (A ^ C) & ~B
+    // (~(A & B) | C) & (~(B & C) | A) --> ~((A ^ C) & B)
+    if (match(Op1,
+              m_OneUse(m_c_BinOp(FlippedOpcode,
+                                 m_OneUse(m_Not(m_c_BinOp(Opcode, m_Specific(B),
+                                                          m_Specific(C)))),
+                                 m_Specific(A))))) {
+      Value *Xor = Builder.CreateXor(A, C);
+      return (Opcode == Instruction::Or)
+                 ? BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B))
+                 : BinaryOperator::CreateNot(Builder.CreateAnd(Xor, B));
+    }
+
+    // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
+    // (~(A & B) | C) & ~(A & C) --> ~((B | C) & A)
+    if (match(Op1, m_OneUse(m_Not(m_OneUse(
+                       m_c_BinOp(Opcode, m_Specific(A), m_Specific(C)))))))
+      return BinaryOperator::CreateNot(Builder.CreateBinOp(
+          Opcode, Builder.CreateBinOp(FlippedOpcode, B, C), A));
+
+    // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
+    // (~(A & B) | C) & ~(B & C) --> ~((A | C) & B)
+    if (match(Op1, m_OneUse(m_Not(m_OneUse(
+                       m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)))))))
+      return BinaryOperator::CreateNot(Builder.CreateBinOp(
+          Opcode, Builder.CreateBinOp(FlippedOpcode, A, C), B));
+  }
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -1742,6 +1805,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // Do this before using distributive laws to catch simple and/or/not patterns.
   if (Instruction *Xor = foldAndToXor(I, Builder))
     return Xor;
+
+  if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
+    return X;
 
   // (A|B)&(A|C) -> A|(B&C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
@@ -2492,6 +2558,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Xor = foldOrToXor(I, Builder))
     return Xor;
 
+  if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
+    return X;
+
   // (A&B)|(A&C) -> A&(B|C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
@@ -2627,40 +2696,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
 
-  // (~(A | B) & C) | ... --> ...
-  // TODO: One use checks are conservative. We just need to check that a total
-  //       number of multiple used values does not exceed reduction
-  //       in operations.
-  if (match(Op0, m_c_And(m_Not(m_Or(m_Value(A), m_Value(B))), m_Value(C)))) {
-    // (~(A | B) & C) | (~(A | C) & B) --> (B ^ C) & ~A
-    if (match(Op1, m_OneUse(m_c_And(
-                       m_OneUse(m_Not(m_c_Or(m_Specific(A), m_Specific(C)))),
-                       m_Specific(B))))) {
-      Value *Xor = Builder.CreateXor(B, C);
-      return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(A));
-    }
-
-    // (~(A | B) & C) | (~(B | C) & A) --> (A ^ C) & ~B
-    if (match(Op1, m_OneUse(m_c_And(
-                       m_OneUse(m_Not(m_c_Or(m_Specific(B), m_Specific(C)))),
-                       m_Specific(A))))) {
-      Value *Xor = Builder.CreateXor(A, C);
-      return BinaryOperator::CreateAnd(Xor, Builder.CreateNot(B));
-    }
-
-    // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
-    if (match(Op1,
-              m_OneUse(m_Not(m_OneUse(m_c_Or(m_Specific(A), m_Specific(C)))))))
-      return BinaryOperator::CreateNot(
-          Builder.CreateOr(Builder.CreateAnd(B, C), A));
-
-    // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
-    if (match(Op1,
-              m_OneUse(m_Not(m_OneUse(m_c_Or(m_Specific(B), m_Specific(C)))))))
-      return BinaryOperator::CreateNot(
-          Builder.CreateOr(Builder.CreateAnd(A, C), B));
-  }
-
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
     return DeMorgan;
 
@@ -2674,6 +2709,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // A | ( A ^ B) -> A |  B
   // A | (~A ^ B) -> A | ~B
   // (A & B) | (A ^ B)
+  // ~A | (A ^ B) -> ~(A & B)
+  // The swap above should always make Op0 the 'not' for the last case.
   if (match(Op1, m_Xor(m_Value(A), m_Value(B)))) {
     if (Op0 == A || Op0 == B)
       return BinaryOperator::CreateOr(A, B);
@@ -2681,6 +2718,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
         match(Op0, m_And(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(A, B);
+
+    if ((Op0->hasOneUse() || Op1->hasOneUse()) &&
+        (match(Op0, m_Not(m_Specific(A))) || match(Op0, m_Not(m_Specific(B)))))
+      return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
     if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {
       Value *Not = Builder.CreateNot(B, B->getName() + ".not");

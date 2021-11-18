@@ -74,18 +74,7 @@ for.end:
 
 define i32 @pr51794_signed_negative(i16 %iv.start, i32 %xor.start) {
 ; CHECK-LABEL: define {{.*}} @pr51794_signed_negative(
-; CHECK:   [[XOR_START:%.+]] = insertelement <4 x i32> zeroinitializer, i32 %xor.start, i32 0
-; CHECK-LABEL: vector.body:
-; CHECK:         [[XOR_RED:%.+]] = phi <4 x i32> [ [[XOR_START]], %vector.ph ], [ [[XOR_SEXT:%.+]], %vector.body ]
-; CHECK:         [[AND:%.+]] = and <4 x i32> [[XOR_RED]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[XOR:%.+]] = xor <4 x i32> [[AND]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK:         [[XOR_TRUNC:%.+]] = trunc <4 x i32> [[XOR]] to <4 x i1>
-; CHECK-NEXT:    [[XOR_SEXT]] = sext <4 x i1> [[XOR_TRUNC]] to <4 x i32>
-;
-; CHECK-LABEL: middle.block:
-; CHECK-NEXT:   [[RES_TRUNC:%.+]] = trunc <4 x i32> [[XOR_SEXT]] to <4 x i1>
-; CHECK-NEXT:   [[RES_RED:%.+]]  = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> [[RES_TRUNC]])
-; CHECK-NEXT:   sext i1 [[RES_RED]] to i32
+; CHECK-NOT: vector.body:
 ;
 entry:
   br label %loop
@@ -106,18 +95,7 @@ exit:
 
 define i32 @pr52485_signed_negative(i32 %xor.start) {
 ; CHECK-LABEL: define {{.*}} @pr52485_signed_negative(
-; CHECK:   [[XOR_START:%.+]] = insertelement <4 x i32> zeroinitializer, i32 %xor.start, i32 0
-; CHECK-LABEL: vector.body:
-; CHECK:         [[XOR_RED:%.+]] = phi <4 x i32> [ [[XOR_START]], %vector.ph ], [ [[XOR_SEXT:%.+]], %vector.body ]
-; CHECK:         [[AND:%.+]] = and <4 x i32> [[XOR_RED]], <i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[XOR:%.+]] = xor <4 x i32> [[AND]], <i32 -9, i32 -9, i32 -9, i32 -9>
-; CHECK:         [[XOR_TRUNC:%.+]] = trunc <4 x i32> [[XOR]] to <4 x i8>
-; CHECK-NEXT:    [[XOR_SEXT]] = sext <4 x i8> [[XOR_TRUNC]] to <4 x i32>
-;
-; CHECK-LABEL: middle.block:
-; CHECK-NEXT:   [[RES_TRUNC:%.+]] = trunc <4 x i32> [[XOR_SEXT]] to <4 x i8>
-; CHECK-NEXT:   [[RES_RED:%.+]]  = call i8 @llvm.vector.reduce.xor.v4i8(<4 x i8> [[RES_TRUNC]])
-; CHECK-NEXT:   sext i8 [[RES_RED]] to i32
+; CHECK-NOT: vector.body:
 ;
 entry:
   br label %loop

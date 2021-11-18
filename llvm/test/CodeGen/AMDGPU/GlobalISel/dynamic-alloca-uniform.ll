@@ -286,8 +286,8 @@ define void @func_dynamic_stackalloc_sgpr_align32(i32 addrspace(1)* %out) {
 ; GFX10-NEXT:    s_and_b32 s4, s4, -16
 ; GFX10-NEXT:    s_lshl_b32 s4, s4, 5
 ; GFX10-NEXT:    s_add_u32 s4, s32, s4
-; GFX10-NEXT:    s_and_b32 s4, s4, 0xfffffc00
 ; GFX10-NEXT:    s_addk_i32 s32, 0xf800
+; GFX10-NEXT:    s_and_b32 s4, s4, 0xfffffc00
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0

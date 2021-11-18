@@ -126,7 +126,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
                       "present.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForIdentifier",
-      /*args=*/(ins "::mlir::Identifier":$identifier),
+      /*args=*/(ins "::mlir::StringAttr":$identifier),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::detail::filterEntryForIdentifier($_attr.getEntries(),
@@ -159,7 +159,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
     /// method directly.
     void bucketEntriesByType(
         ::llvm::DenseMap<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
-        ::llvm::DenseMap<::mlir::Identifier,
+        ::llvm::DenseMap<::mlir::StringAttr,
                          ::mlir::DataLayoutEntryInterface> &ids);
   }];
 }

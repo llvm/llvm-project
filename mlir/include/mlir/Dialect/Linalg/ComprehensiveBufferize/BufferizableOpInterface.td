@@ -215,6 +215,29 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return false;
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the `uRead` and `uWrite` do not constitute a RaW
+          conflict. If they are conflicting or if it is unknown whether they are
+          conflicting, return `false`. This method will never be called with
+          OpOperands that do not have a tensor type. At least one of the two
+          given OpOperands belongs to this operation.
+
+          This method can be implemented to specify custom RaW analysis rules.
+          If this method returns `true` the given OpOperands are not considered
+          to be conflicting and do not force out-of-place bufferization. (There
+          may still be other conflicts that do.)
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isNotConflicting",
+        /*args=*/(ins "OpOperand *":$uRead,
+                      "OpOperand *":$uWrite,
+                      "const BufferizationAliasInfo &":$aliasInfo),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
       >
   ];
 

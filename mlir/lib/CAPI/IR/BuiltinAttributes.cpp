@@ -83,7 +83,7 @@ MlirNamedAttribute mlirDictionaryAttrGetElement(MlirAttribute attr,
                                                 intptr_t pos) {
   NamedAttribute attribute =
       unwrap(attr).cast<DictionaryAttr>().getValue()[pos];
-  return {wrap(attribute.first), wrap(attribute.second)};
+  return {wrap(attribute.getName()), wrap(attribute.getValue())};
 }
 
 MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,
@@ -165,7 +165,7 @@ MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
                                 intptr_t dataLength, const char *data,
                                 MlirType type) {
   return wrap(
-      OpaqueAttr::get(Identifier::get(unwrap(dialectNamespace), unwrap(ctx)),
+      OpaqueAttr::get(StringAttr::get(unwrap(ctx), unwrap(dialectNamespace)),
                       StringRef(data, dataLength), unwrap(type)));
 }
 

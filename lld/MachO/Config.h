@@ -122,6 +122,7 @@ struct Configuration {
   bool dataConst = false;
   bool dedupLiterals = true;
   bool omitDebugInfo = false;
+  bool warnDylibInstallName = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;

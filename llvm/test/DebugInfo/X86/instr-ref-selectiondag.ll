@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
+; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel -experimental-debug-variable-locations=false \
 ; RUN:   | FileCheck %s --check-prefix=NORMAL \
 ; RUN:     --implicit-check-not=debug-instr-number \
 ; RUN:     --implicit-check-not=DBG_INSTR_REF

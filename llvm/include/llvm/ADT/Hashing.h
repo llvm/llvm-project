@@ -56,7 +56,7 @@
 #include <utility>
 
 namespace llvm {
-template <typename T> struct DenseMapInfo;
+template <typename T, typename Enable> struct DenseMapInfo;
 
 /// An opaque object representing a hash code.
 ///
@@ -678,7 +678,7 @@ hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
 }
 
-template <> struct DenseMapInfo<hash_code> {
+template <> struct DenseMapInfo<hash_code, void> {
   static inline hash_code getEmptyKey() { return hash_code(-1); }
   static inline hash_code getTombstoneKey() { return hash_code(-2); }
   static unsigned getHashValue(hash_code val) { return val; }

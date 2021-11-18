@@ -1030,7 +1030,7 @@ def fir_UnboxCharOp : fir_SimpleOp<"unboxchar", [NoSideEffect]> {
 
     ```mlir
       %45   = ... : !fir.boxchar<1>
-      %46:2 = fir.unboxchar %45 : (!fir.boxchar<1>) -> (!fir.ref<!fir.character<1>>, i32)
+      %46:2 = fir.unboxchar %45 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, i32)
     ```
   }];
 
@@ -1661,7 +1661,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
     TypeAttr:$baseType
   );
 
-  let results = (outs fir_ReferenceType);
+  let results = (outs RefOrLLVMPtr);
 
   let parser =  "return parseCoordinateCustom(parser, result);";
   let printer = "::print(p, *this);";
@@ -2797,8 +2797,8 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
     ```mlir
       global @g : !fir.type<t(len1:i32)> {
         fir.global_len len1, 10 : i32
-        %1 = fir.undefined : !fir.type<t(len1:i32)>
-        return %1 : !fir.type<t(len1:i32)>
+        %1 = fir.undefined !fir.type<t(len1:i32)>
+        fir.has_value %1 : !fir.type<t(len1:i32)>
       }
     ```
   }];
@@ -2870,7 +2870,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
   }];
 }
 
-def fir_DTEntryOp : fir_Op<"dt_entry", []> {
+def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"DispatchTableOp">]> {
   let summary = "map entry in a dispatch table";
 
   let description = [{

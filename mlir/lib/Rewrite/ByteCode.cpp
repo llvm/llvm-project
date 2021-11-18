@@ -721,11 +721,8 @@ void Generator::generate(pdl_interp::CreateOperationOp op,
   // Add the attributes.
   OperandRange attributes = op.attributes();
   writer.append(static_cast<ByteCodeField>(attributes.size()));
-  for (auto it : llvm::zip(op.attributeNames(), op.attributes())) {
-    writer.append(
-        Identifier::get(std::get<0>(it).cast<StringAttr>().getValue(), ctx),
-        std::get<1>(it));
-  }
+  for (auto it : llvm::zip(op.attributeNames(), op.attributes()))
+    writer.append(std::get<0>(it), std::get<1>(it));
   writer.appendPDLValueList(op.types());
 }
 void Generator::generate(pdl_interp::CreateTypeOp op, ByteCodeWriter &writer) {
@@ -745,7 +742,7 @@ void Generator::generate(pdl_interp::FinalizeOp op, ByteCodeWriter &writer) {
 void Generator::generate(pdl_interp::GetAttributeOp op,
                          ByteCodeWriter &writer) {
   writer.append(OpCode::GetAttribute, op.attribute(), op.operation(),
-                Identifier::get(op.name(), ctx));
+                op.nameAttr());
 }
 void Generator::generate(pdl_interp::GetAttributeTypeOp op,
                          ByteCodeWriter &writer) {
@@ -1307,7 +1304,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
   OperationState state(mainRewriteLoc, read<OperationName>());
   readValueList(state.operands);
   for (unsigned i = 0, e = read(); i != e; ++i) {
-    Identifier name = read<Identifier>();
+    StringAttr name = read<StringAttr>();
     if (Attribute attr = read<Attribute>())
       state.addAttribute(name, attr);
   }
@@ -1326,7 +1323,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
 
     // Handle the case where the operation has inferred types.
     InferTypeOpInterface::Concept *concept =
-        state.name.getAbstractOperation()->getInterface<InferTypeOpInterface>();
+        state.name.getRegisteredInfo()->getInterface<InferTypeOpInterface>();
 
     // TODO: Handle failure.
     state.types.clear();
@@ -1364,7 +1361,7 @@ void ByteCodeExecutor::executeGetAttribute() {
   LLVM_DEBUG(llvm::dbgs() << "Executing GetAttribute:\n");
   unsigned memIndex = read();
   Operation *op = read<Operation *>();
-  Identifier attrName = read<Identifier>();
+  StringAttr attrName = read<StringAttr>();
   Attribute attr = op->getAttr(attrName);
 
   LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n"

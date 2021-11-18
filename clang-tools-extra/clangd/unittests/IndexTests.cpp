@@ -22,7 +22,6 @@
 
 using ::testing::_;
 using ::testing::AllOf;
-using ::testing::AnyOf;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Pair;

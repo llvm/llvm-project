@@ -126,6 +126,11 @@ def soft_plus_poly(
       PrimFn.log(cast(U, const(1.0)) + cast(U, PrimFn.exp(I[D.m, D.n])))
 
 
+@linalg_structured_op(op_name="custom_op_name")
+def non_default_op_name(I=TensorDef(T, S.N), O=TensorDef(T, S.N, output=True)):
+  O[D.n] = I[D.n]
+
+
 with Context() as ctx, Location.unknown():
   module = Module.create()
   f16 = F16Type.get()
@@ -295,7 +300,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
     # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: i32)
     # CHECK-NEXT:   %[[IN_CAST:.+]] = arith.fptosi %[[IN:.+]] : f32 to i32
-    # CHECK-NEXT:   %[[MAX:.+]] = maxsi %[[OUT]], %[[IN_CAST:.+]] : i32
+    # CHECK-NEXT:   %[[MAX:.+]] = arith.maxsi %[[OUT]], %[[IN_CAST:.+]] : i32
     # CHECK-NEXT:   linalg.yield %[[MAX]] : i32
     # CHECK-NEXT: -> tensor<2x4xi32>
     @builtin.FuncOp.from_py_func(
@@ -307,7 +312,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32i32_max_unsigned_pooling
     # CHECK:   = arith.fptoui
-    # CHECK:   = maxui
+    # CHECK:   = arith.maxui
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
@@ -320,7 +325,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: indexing_maps = [#[[$CONV_MAP_I]], #[[$POOL_MAP_K]], #[[$CONV_MAP_O]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
     # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: f32)
-    # CHECK-NEXT:   %[[MAX:.+]] = maxf %[[OUT]], %[[IN:.+]] : f32
+    # CHECK-NEXT:   %[[MAX:.+]] = arith.maxf %[[OUT]], %[[IN:.+]] : f32
     # CHECK-NEXT:   linalg.yield %[[MAX]] : f32
     # CHECK-NEXT: -> tensor<2x4xf32>
     @builtin.FuncOp.from_py_func(
@@ -332,7 +337,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32i32_min_pooling
     # CHECK:   = arith.fptosi
-    # CHECK:   = minsi
+    # CHECK:   = arith.minsi
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
@@ -342,7 +347,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32i32_min_unsigned_pooling
     # CHECK:   = arith.fptoui
-    # CHECK:   = minui
+    # CHECK:   = arith.minui
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
@@ -351,7 +356,7 @@ with Context() as ctx, Location.unknown():
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
     # CHECK-LABEL: @test_f32f32_min_pooling
-    # CHECK:   = minf
+    # CHECK:   = arith.minf
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), f32))
@@ -391,6 +396,13 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_soft_plus(input, init_result):
       return soft_plus_poly(input, outs=[init_result])
+
+    # Just check that we don't assert out on name mismatch.
+    # CHECK-LABEL: @test_non_default_op_name
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((42,), f32), RankedTensorType.get((42,), f32))
+    def test_non_default_op_name(input, init_result):
+      return non_default_op_name(input, outs=[init_result])
 
 
 print(module)
