@@ -437,6 +437,7 @@ struct LinalgTransformationFilter {
   LogicalResult checkAndNotify(PatternRewriter &rewriter, Operation *op) const;
   void replaceLinalgTransformationFilter(PatternRewriter &rewriter,
                                          Operation *op) const;
+  bool hasReplacementFilter(Operation *op) const;
 
   LinalgTransformationFilter &addFilter(FilterFunction f) {
     if (f)
