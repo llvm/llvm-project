@@ -301,12 +301,6 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
     DenseElementsAttr input1Attr;
     if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
         input2.getType() == op.getType()) {
-      if (input1Attr.getType().getElementType().isa<FloatType>() &&
-          input1Attr.getSplatValue<APFloat>().isZero()) {
-        rewriter.replaceOp(op, op.input2());
-        return success();
-      }
-
       if (input1Attr.getType().getElementType().isa<IntegerType>() &&
           input1Attr.getSplatValue<APInt>().isZero()) {
         rewriter.replaceOp(op, op.input2());
@@ -317,12 +311,6 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
     DenseElementsAttr input2Attr;
     if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
         input1.getType() == op.getType()) {
-      if (input2Attr.getType().getElementType().isa<FloatType>() &&
-          input2Attr.getSplatValue<APFloat>().isZero()) {
-        rewriter.replaceOp(op, op.input1());
-        return success();
-      }
-
       if (input2Attr.getType().getElementType().isa<IntegerType>() &&
           input2Attr.getSplatValue<APInt>().isZero()) {
         rewriter.replaceOp(op, op.input1());
