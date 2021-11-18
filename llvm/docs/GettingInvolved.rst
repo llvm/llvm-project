@@ -226,7 +226,6 @@ This channel has several bots.
 
   * llvmbb - Bot for the main LLVM buildbot master.
     http://lab.llvm.org:8011/console
-  * smooshlab - Apple's internal buildbot master.
 
 * robot - Bugzilla linker. %bug <number>
 
