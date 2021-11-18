@@ -1,17 +1,17 @@
-//===- RISCVCompressInstEmitter.cpp - Generator for RISCV Compression -===//
+//===-------- CompressInstEmitter.cpp - Generator for Compression ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// RISCVCompressInstEmitter implements a tablegen-driven CompressPat based
-// RISCV Instruction Compression mechanism.
+// CompressInstEmitter implements a tablegen-driven CompressPat based
+// Instruction Compression mechanism.
 //
-//===--------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
-// RISCVCompressInstEmitter implements a tablegen-driven CompressPat Instruction
-// Compression mechanism for generating RISCV compressed instructions
-// (C ISA Extension) from the expanded instruction form.
+// CompressInstEmitter implements a tablegen-driven CompressPat Instruction
+// Compression mechanism for generating compressed instructions from the
+// expanded instruction form.
 
 // This tablegen backend processes CompressPat declarations in a
 // td file and generates all the required checks to validate the pattern
@@ -21,10 +21,18 @@
 // immediate inputs.
 //
 // Example:
-// class CompressPat<dag input, dag output> {
+// /// Defines a Pat match between compressed and uncompressed instruction.
+// /// The relationship and helper function generation are handled by
+// /// CompressInstEmitter backend.
+// class CompressPat<dag input, dag output, list<Predicate> predicates = []> {
+//   /// Uncompressed instruction description.
 //   dag Input  = input;
-//   dag Output    = output;
-//   list<Predicate> Predicates = [];
+//   /// Compressed instruction description.
+//   dag Output = output;
+//   /// Predicates that must be true for this to match.
+//   list<Predicate> Predicates = predicates;
+//   /// Duplicate match when tied operand is just different.
+//   bit isCompressOnly = false;
 // }
 //
 // let Predicates = [HasStdExtC] in {
@@ -32,10 +40,9 @@
 //                   (C_ADD GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 // }
 //
-// The result is an auto-generated header file
-// 'RISCVGenCompressInstEmitter.inc' which exports two functions for
-// compressing/uncompressing MCInst instructions, plus
-// some helper functions:
+// The <TargetName>GenCompressInstEmitter.inc is an auto-generated header
+// file which exports two functions for compressing/uncompressing MCInst
+// instructions, plus some helper functions:
 //
 // bool compressInst(MCInst &OutInst, const MCInst &MI,
 //                   const MCSubtargetInfo &STI,
@@ -49,9 +56,9 @@
 // an instruction is compressable:
 //
 // bool isCompressibleInst(const MachineInstr& MI,
-//                           const RISCVSubtarget *Subtarget,
-//                           const MCRegisterInfo &MRI,
-//                           const MCSubtargetInfo &STI);
+//                         const <TargetName>Subtarget *Subtarget,
+//                         const MCRegisterInfo &MRI,
+//                         const MCSubtargetInfo &STI);
 //
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
@@ -79,28 +86,35 @@ using namespace llvm;
 #define DEBUG_TYPE "compress-inst-emitter"
 
 namespace {
-class RISCVCompressInstEmitter {
+class CompressInstEmitter {
   struct OpData {
     enum MapKind { Operand, Imm, Reg };
     MapKind Kind;
     union {
-      unsigned Operand; // Operand number mapped to.
-      int64_t Imm;      // Integer immediate value.
-      Record *Reg;      // Physical register.
+      // Operand number mapped to.
+      unsigned Operand;
+      // Integer immediate value.
+      int64_t Imm;
+      // Physical register.
+      Record *Reg;
     } Data;
-    int TiedOpIdx = -1; // Tied operand index within the instruction.
+    // Tied operand index within the instruction.
+    int TiedOpIdx = -1;
   };
   struct CompressPat {
-    CodeGenInstruction Source; // The source instruction definition.
-    CodeGenInstruction Dest;   // The destination instruction to transform to.
-    std::vector<Record *>
-        PatReqFeatures; // Required target features to enable pattern.
-    IndexedMap<OpData>
-        SourceOperandMap; // Maps operands in the Source Instruction to
-                          // the corresponding Dest instruction operand.
-    IndexedMap<OpData>
-        DestOperandMap; // Maps operands in the Dest Instruction
-                        // to the corresponding Source instruction operand.
+    // The source instruction definition.
+    CodeGenInstruction Source;
+    // The destination instruction to transform to.
+    CodeGenInstruction Dest;
+    // Required target features to enable pattern.
+    std::vector<Record *> PatReqFeatures;
+    // Maps operands in the Source Instruction to
+    IndexedMap<OpData> SourceOperandMap;
+    // the corresponding Dest instruction operand.
+    // Maps operands in the Dest Instruction
+    // to the corresponding Source instruction operand.
+    IndexedMap<OpData> DestOperandMap;
+
     bool IsCompressOnly;
     CompressPat(CodeGenInstruction &S, CodeGenInstruction &D,
                 std::vector<Record *> RF, IndexedMap<OpData> &SourceMap,
@@ -132,13 +146,13 @@ class RISCVCompressInstEmitter {
                                 CodeGenInstruction &DestInst);
 
 public:
-  RISCVCompressInstEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  CompressInstEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   void run(raw_ostream &o);
 };
 } // End anonymous namespace.
 
-bool RISCVCompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
+bool CompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
   assert(Reg->isSubClassOf("Register") && "Reg record should be a Register");
   assert(RegClass->isSubClassOf("RegisterClass") &&
          "RegClass record should be a RegisterClass");
@@ -148,9 +162,8 @@ bool RISCVCompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
   return RC.contains(R);
 }
 
-bool RISCVCompressInstEmitter::validateTypes(Record *DagOpType,
-                                             Record *InstOpType,
-                                             bool IsSourceInst) {
+bool CompressInstEmitter::validateTypes(Record *DagOpType, Record *InstOpType,
+                                        bool IsSourceInst) {
   if (DagOpType == InstOpType)
     return true;
   // Only source instruction operands are allowed to not match Input Dag
@@ -187,9 +200,10 @@ bool RISCVCompressInstEmitter::validateTypes(Record *DagOpType,
 /// operands and fixed registers it expects the Dag operand type to be contained
 /// in the instantiated instruction operand type. For immediate operands and
 /// immediates no validation checks are enforced at pattern validation time.
-void RISCVCompressInstEmitter::addDagOperandMapping(
-    Record *Rec, DagInit *Dag, CodeGenInstruction &Inst,
-    IndexedMap<OpData> &OperandMap, bool IsSourceInst) {
+void CompressInstEmitter::addDagOperandMapping(Record *Rec, DagInit *Dag,
+                                               CodeGenInstruction &Inst,
+                                               IndexedMap<OpData> &OperandMap,
+                                               bool IsSourceInst) {
   // TiedCount keeps track of the number of operands skipped in Inst
   // operands list to get to the corresponding Dag operand. This is
   // necessary because the number of operands in Inst might be greater
@@ -293,7 +307,7 @@ static bool validateArgsTypes(Init *Arg1, Init *Arg2) {
 // name have the same types. For example in 'C_ADD $rs1, $rs2' we generate the
 // mapping $rs1 --> 0, $rs2 ---> 1. If the operand appears twice in the (tied)
 // same Dag we use the last occurrence for indexing.
-void RISCVCompressInstEmitter::createDagOperandMapping(
+void CompressInstEmitter::createDagOperandMapping(
     Record *Rec, StringMap<unsigned> &SourceOperands,
     StringMap<unsigned> &DestOperands, DagInit *SourceDag, DagInit *DestDag,
     IndexedMap<OpData> &SourceOperandMap) {
@@ -340,7 +354,7 @@ void RISCVCompressInstEmitter::createDagOperandMapping(
 /// Map operand names in the Dag to their index in both corresponding input and
 /// output instructions. Validate that operands defined in the input are
 /// used in the output pattern while populating the maps.
-void RISCVCompressInstEmitter::createInstOperandMapping(
+void CompressInstEmitter::createInstOperandMapping(
     Record *Rec, DagInit *SourceDag, DagInit *DestDag,
     IndexedMap<OpData> &SourceOperandMap, IndexedMap<OpData> &DestOperandMap,
     StringMap<unsigned> &SourceOperands, CodeGenInstruction &DestInst) {
@@ -409,7 +423,7 @@ void RISCVCompressInstEmitter::createInstOperandMapping(
 ///   and generate warning.
 /// - Immediate operand type in Dag Input differs from the corresponding Source
 ///   Instruction type  and generate a warning.
-void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
+void CompressInstEmitter::evaluateCompressPat(Record *Rec) {
   // Validate input Dag operands.
   DagInit *SourceDag = Rec->getValueAsDag("Input");
   assert(SourceDag && "Missing 'Input' in compress pattern!");
@@ -417,9 +431,6 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
 
   // Checking we are transforming from compressed to uncompressed instructions.
   Record *Operator = SourceDag->getOperatorAsDef(Rec->getLoc());
-  if (!Operator->isSubClassOf("RVInst"))
-    PrintFatalError(Rec->getLoc(), "Input instruction '" + Operator->getName() +
-                                       "' is not a 32 bit wide instruction!");
   CodeGenInstruction SourceInst(Operator);
   verifyDagOpCount(SourceInst, SourceDag, true);
 
@@ -429,12 +440,15 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
   LLVM_DEBUG(dbgs() << "Output: " << *DestDag << "\n");
 
   Record *DestOperator = DestDag->getOperatorAsDef(Rec->getLoc());
-  if (!DestOperator->isSubClassOf("RVInst16"))
-    PrintFatalError(Rec->getLoc(), "Output instruction  '" +
-                                       DestOperator->getName() +
-                                       "' is not a 16 bit wide instruction!");
   CodeGenInstruction DestInst(DestOperator);
   verifyDagOpCount(DestInst, DestDag, false);
+
+  if (Operator->getValueAsInt("Size") <= DestOperator->getValueAsInt("Size"))
+    PrintFatalError(
+        Rec->getLoc(),
+        "Compressed instruction '" + DestOperator->getName() +
+            "'is not strictly smaller than the uncompressed instruction '" +
+            Operator->getName() + "' !");
 
   // Fill the mapping from the source to destination instructions.
 
@@ -548,15 +562,15 @@ static void mergeCondAndCode(raw_ostream &CombinedStream, StringRef CondStr,
   CombinedStream.indent(4) << "} // if\n";
 }
 
-void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
-                                                       EmitterType EType) {
+void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
+                                                  EmitterType EType) {
   Record *AsmWriter = Target.getAsmWriter();
   if (!AsmWriter->getValueAsInt("PassSubtarget"))
     PrintFatalError(AsmWriter->getLoc(),
                     "'PassSubtarget' is false. SubTargetInfo object is needed "
                     "for target features.\n");
 
-  StringRef Namespace = Target.getName();
+  StringRef TargetName = Target.getName();
 
   // Sort entries in CompressPatterns to handle instructions that can have more
   // than one candidate for compression\uncompression, e.g ADD can be
@@ -599,14 +613,14 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     FuncH.indent(25) << "const MCInst &MI,\n";
     FuncH.indent(25) << "const MCSubtargetInfo &STI,\n";
     FuncH.indent(25) << "MCContext &Context) {\n";
-  } else if (EType == EmitterType::Uncompress){
+  } else if (EType == EmitterType::Uncompress) {
     FuncH << "static bool uncompressInst(MCInst &OutInst,\n";
     FuncH.indent(27) << "const MCInst &MI,\n";
     FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
-    FuncH.indent(27) << "const RISCVSubtarget *Subtarget,\n";
+    FuncH.indent(27) << "const " << TargetName << "Subtarget *Subtarget,\n";
     FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   }
@@ -631,9 +645,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   CaseStream << "    default: return false;\n";
 
   bool CompressOrCheck =
-    EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
+      EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
   bool CompressOrUncompress =
-    EType == EmitterType::Compress || EType == EmitterType::Uncompress;
+      EType == EmitterType::Compress || EType == EmitterType::Uncompress;
 
   for (auto &CompressPat : CompressPatterns) {
     if (EType == EmitterType::Uncompress && CompressPat.IsCompressOnly)
@@ -644,20 +658,22 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     raw_string_ostream CondStream(CondString);
     raw_string_ostream CodeStream(CodeString);
     CodeGenInstruction &Source =
-        CompressOrCheck ?  CompressPat.Source : CompressPat.Dest;
+        CompressOrCheck ? CompressPat.Source : CompressPat.Dest;
     CodeGenInstruction &Dest =
         CompressOrCheck ? CompressPat.Dest : CompressPat.Source;
-    IndexedMap<OpData> SourceOperandMap = CompressOrCheck ?
-      CompressPat.SourceOperandMap : CompressPat.DestOperandMap;
-    IndexedMap<OpData> &DestOperandMap = CompressOrCheck ?
-      CompressPat.DestOperandMap : CompressPat.SourceOperandMap;
+    IndexedMap<OpData> SourceOperandMap = CompressOrCheck
+                                              ? CompressPat.SourceOperandMap
+                                              : CompressPat.DestOperandMap;
+    IndexedMap<OpData> &DestOperandMap = CompressOrCheck
+                                             ? CompressPat.DestOperandMap
+                                             : CompressPat.SourceOperandMap;
 
     CurOp = Source.TheDef->getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
       if (!PrevOp.empty())
         CaseStream.indent(6) << "break;\n    } // case " + PrevOp + "\n";
-      CaseStream.indent(4) << "case " + Namespace + "::" + CurOp + ": {\n";
+      CaseStream.indent(4) << "case " + TargetName + "::" + CurOp + ": {\n";
     }
 
     std::set<std::pair<bool, StringRef>> FeaturesSet;
@@ -676,7 +692,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     // Emit checks for all required features.
     for (auto &Op : FeaturesSet) {
       StringRef Not = Op.first ? "!" : "";
-      CondStream.indent(6) << Not << "STI.getFeatureBits()[" << Namespace
+      CondStream.indent(6) << Not << "STI.getFeatureBits()[" << TargetName
                            << "::" << Op.second << "]"
                            << " &&\n";
     }
@@ -687,7 +703,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       for (auto &Op : Set) {
         bool isLast = &Op == &*Set.rbegin();
         StringRef Not = Op.first ? "!" : "";
-        CondStream << Not << "STI.getFeatureBits()[" << Namespace
+        CondStream << Not << "STI.getFeatureBits()[" << TargetName
                    << "::" << Op.second << "]";
         if (!isLast)
           CondStream << " || ";
@@ -720,7 +736,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       case OpData::Reg: {
         Record *Reg = SourceOperandMap[OpNo].Data.Reg;
         CondStream.indent(6)
-            << "(MI.getOperand(" << OpNo << ").getReg() == " << Namespace
+            << "(MI.getOperand(" << OpNo << ").getReg() == " << TargetName
             << "::" << Reg->getName() << ") &&\n";
         break;
       }
@@ -728,7 +744,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     }
     CodeStream.indent(6) << "// " << Dest.AsmString << "\n";
     if (CompressOrUncompress)
-      CodeStream.indent(6) << "OutInst.setOpcode(" << Namespace
+      CodeStream.indent(6) << "OutInst.setOpcode(" << TargetName
                            << "::" << Dest.TheDef->getName() << ");\n";
     OpNo = 0;
     for (const auto &DestOperand : Dest.Operands) {
@@ -744,7 +760,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           // Don't check register class if this is a tied operand, it was done
           // for the operand its tied to.
           if (DestOperand.getTiedRegister() == -1)
-            CondStream.indent(6) << "(MRI.getRegClass(" << Namespace
+            CondStream.indent(6) << "(MRI.getRegClass(" << TargetName
                                  << "::" << DestOperand.Rec->getName()
                                  << "RegClassID).contains(MI.getOperand("
                                  << OpIdx << ").getReg())) &&\n";
@@ -759,7 +775,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                 getPredicates(MCOpPredicateMap, MCOpPredicates, DestOperand.Rec,
                               "MCOperandPredicate");
             CondStream.indent(6)
-                << Namespace << "ValidateMCOperand("
+                << TargetName << "ValidateMCOperand("
                 << "MI.getOperand(" << OpIdx << "), STI, " << Entry << ") &&\n";
           } else {
             unsigned Entry =
@@ -767,7 +783,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                               DestOperand.Rec, "ImmediateCode");
             CondStream.indent(6)
                 << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
-            CondStream.indent(6) << Namespace << "ValidateMachineOperand("
+            CondStream.indent(6) << TargetName << "ValidateMachineOperand("
                                  << "MI.getOperand(" << OpIdx
                                  << "), Subtarget, " << Entry << ") &&\n";
           }
@@ -782,14 +798,14 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
                                          DestOperand.Rec, "MCOperandPredicate");
           CondStream.indent(6)
-              << Namespace << "ValidateMCOperand("
+              << TargetName << "ValidateMCOperand("
               << "MCOperand::createImm(" << DestOperandMap[OpNo].Data.Imm
               << "), STI, " << Entry << ") &&\n";
         } else {
           unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
                                          DestOperand.Rec, "ImmediateCode");
           CondStream.indent(6)
-              << Namespace
+              << TargetName
               << "ValidateMachineOperand(MachineOperand::CreateImm("
               << DestOperandMap[OpNo].Data.Imm << "), SubTarget, " << Entry
               << ") &&\n";
@@ -803,7 +819,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           // Fixed register has been validated at pattern validation time.
           Record *Reg = DestOperandMap[OpNo].Data.Reg;
           CodeStream.indent(6)
-              << "OutInst.addOperand(MCOperand::createReg(" << Namespace
+              << "OutInst.addOperand(MCOperand::createReg(" << TargetName
               << "::" << Reg->getName() << "));\n";
         }
       } break;
@@ -822,7 +838,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   Func.indent(2) << "return false;\n}\n";
 
   if (!MCOpPredicates.empty()) {
-    o << "static bool " << Namespace
+    o << "static bool " << TargetName
       << "ValidateMCOperand(const MCOperand &MCOp,\n"
       << "                  const MCSubtargetInfo &STI,\n"
       << "                  unsigned PredicateIndex) {\n"
@@ -838,9 +854,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   }
 
   if (!ImmLeafPredicates.empty()) {
-    o << "static bool " << Namespace
+    o << "static bool " << TargetName
       << "ValidateMachineOperand(const MachineOperand &MO,\n"
-      << "                  const RISCVSubtarget *Subtarget,\n"
+      << "                  const " << TargetName << "Subtarget *Subtarget,\n"
       << "                  unsigned PredicateIndex) {\n"
       << "  int64_t Imm = MO.getImm();\n"
       << "  switch (PredicateIndex) {\n"
@@ -867,7 +883,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     o << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
 }
 
-void RISCVCompressInstEmitter::run(raw_ostream &o) {
+void CompressInstEmitter::run(raw_ostream &o) {
   std::vector<Record *> Insts = Records.getAllDerivedDefinitions("CompressPat");
 
   // Process the CompressPat definitions, validating them as we do so.
@@ -887,7 +903,7 @@ void RISCVCompressInstEmitter::run(raw_ostream &o) {
 namespace llvm {
 
 void EmitCompressInst(RecordKeeper &RK, raw_ostream &OS) {
-  RISCVCompressInstEmitter(RK).run(OS);
+  CompressInstEmitter(RK).run(OS);
 }
 
 } // namespace llvm
