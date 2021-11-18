@@ -526,11 +526,11 @@ Once your change is submitted it will be picked up by automated build
 bots that will build and test your patch in a variety of configurations.
 
 You can see all configurations and their current state in a waterfall
-view at http://lab.llvm.org:8011/waterfall. The waterfall view is good
+view at http://lab.llvm.org/buildbot/#/waterfall. The waterfall view is good
 to get a general overview over the tested configurations and to see
 which configuration have been broken for a while.
 
-The console view at http://lab.llvm.org:8011/console helps to get a
+The console view at http://lab.llvm.org/buildbot/#/console helps to get a
 better understanding of the build results of a specific patch. If you
 want to follow along how your change is affecting the build bots, **this
 should be the first place to look at** - the colored bubbles correspond
