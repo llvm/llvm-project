@@ -48,10 +48,8 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   CI.getLangOpts()->ImplicitModules = false;
 
   // Report the prebuilt modules this module uses.
-  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps) {
+  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
-    CI.getFrontendOpts().ModuleMapFiles.push_back(PrebuiltModule.ModuleMapFile);
-  }
 
   Optimize(CI);
 
