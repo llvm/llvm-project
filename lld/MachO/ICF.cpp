@@ -114,7 +114,8 @@ static bool equalsConstant(const ConcatInputSection *ia,
       if (sa->kind() != sb->kind())
         return false;
       if (!isa<Defined>(sa)) {
-        assert(isa<DylibSymbol>(sa));
+        // ICF runs before Undefineds are reported.
+        assert(isa<DylibSymbol>(sa) || isa<Undefined>(sa));
         return sa == sb;
       }
       const auto *da = cast<Defined>(sa);
@@ -275,7 +276,7 @@ void ICF::run() {
             } else {
               hash += defined->value;
             }
-          } else if (!isa<Undefined>(sym))
+          } else if (!isa<Undefined>(sym)) // ICF runs before Undefined diags.
             llvm_unreachable("foldIdenticalSections symbol kind");
         }
       }
