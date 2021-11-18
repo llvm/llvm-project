@@ -57,6 +57,15 @@ public:
   /// Get a reference to the kind map.
   const fir::KindMapping &getKindMap() { return kindMap; }
 
+  /// The LHS and RHS are not always in agreement in terms of
+  /// type. In some cases, the disagreement is between COMPLEX and other scalar
+  /// types. In that case, the conversion must insert/extract out of a COMPLEX
+  /// value to have the proper semantics and be strongly typed. For e.g for
+  /// converting an integer/real to a complex, the real part is filled using
+  /// the integer/real after type conversion and the imaginary part is zero.
+  mlir::Value convertWithSemantics(mlir::Location loc, mlir::Type toTy,
+                                   mlir::Value val);
+
   /// Get the entry block of the current Function
   mlir::Block *getEntryBlock() { return &getFunction().front(); }
 
