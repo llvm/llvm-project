@@ -6,13 +6,13 @@
 // Test sequence types `!fir.array`
 
 func private @foo0(%arg0: !fir.array<10x10xi64>)
-// CHECK-LABEL: foo0 
+// CHECK-LABEL: foo0
 // CHECK-SAME: !llvm.array<10 x array<10 x i64>>
 func private @foo1(%arg0: !fir.array<?xf32>)
 // CHECK-LABEL: foo1
 // CHECK-SAME: !llvm.ptr<f32>
 func private @foo2(%arg0: !fir.array<?x?xf128>)
-// CHECK-LABEL: foo2 
+// CHECK-LABEL: foo2
 // CHECK-SAME: !llvm.ptr<f128>
 func private @foo3(%arg0: !fir.array<*:i32>)
 // CHECK-LABEL: foo3
