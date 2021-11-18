@@ -132,7 +132,7 @@ public:
 
   // Predicate for deallocations caused by intrinsic assignment
   static bool DeallocateNonCoarray(const Symbol &component) {
-    return !IsCoarray(component);
+    return !evaluate::IsCoarray(component);
   }
 
   static bool WillDeallocatePolymorphic(const Symbol &entity,

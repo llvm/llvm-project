@@ -372,7 +372,7 @@ void CheckHelper::CheckValue(
     messages_.Say(
         "VALUE attribute may not apply to an assumed-size array"_err_en_US);
   }
-  if (IsCoarray(symbol)) {
+  if (evaluate::IsCoarray(symbol)) {
     messages_.Say("VALUE attribute may not apply to a coarray"_err_en_US);
   }
   if (IsAllocatable(symbol)) {
@@ -432,7 +432,7 @@ void CheckHelper::CheckAssumedTypeEntity( // C709
             "Assumed-type argument '%s' cannot be INTENT(OUT)"_err_en_US,
             symbol.name());
       }
-      if (IsCoarray(symbol)) {
+      if (evaluate::IsCoarray(symbol)) {
         messages_.Say(
             "Assumed-type argument '%s' cannot be a coarray"_err_en_US,
             symbol.name());
@@ -486,7 +486,7 @@ void CheckHelper::CheckObjectEntity(
   if (details.isDummy()) {
     if (symbol.attrs().test(Attr::INTENT_OUT)) {
       if (FindUltimateComponent(symbol, [](const Symbol &x) {
-            return IsCoarray(x) && IsAllocatable(x);
+            return evaluate::IsCoarray(x) && IsAllocatable(x);
           })) { // C846
         messages_.Say(
             "An INTENT(OUT) dummy argument may not be, or contain, an ALLOCATABLE coarray"_err_en_US);
@@ -545,7 +545,7 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "A dummy argument of an ELEMENTAL procedure may not be ALLOCATABLE"_err_en_US);
       }
-      if (IsCoarray(symbol)) {
+      if (evaluate::IsCoarray(symbol)) {
         messages_.Say(
             "A dummy argument of an ELEMENTAL procedure may not be a coarray"_err_en_US);
       }
@@ -1448,7 +1448,7 @@ void CheckHelper::CheckVolatile(const Symbol &symbol,
   }
   if (symbol.has<UseDetails>() || symbol.has<HostAssocDetails>()) {
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsCoarray(ultimate)) {
+    if (evaluate::IsCoarray(ultimate)) {
       messages_.Say(
           "VOLATILE attribute may not apply to a coarray accessed by USE or host association"_err_en_US);
     }

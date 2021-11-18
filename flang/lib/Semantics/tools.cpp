@@ -924,7 +924,7 @@ public:
 private:
   bool IsCoarrayObject(const parser::AllocateObject &allocateObject) {
     const parser::Name &name{GetLastName(allocateObject)};
-    return name.symbol && IsCoarray(*name.symbol);
+    return name.symbol && evaluate::IsCoarray(*name.symbol);
   }
 };
 
@@ -988,7 +988,7 @@ parser::CharBlock GetImageControlStmtLocation(
 bool HasCoarray(const parser::Expr &expression) {
   if (const auto *expr{GetExpr(expression)}) {
     for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
-      if (IsCoarray(GetAssociationRoot(symbol))) {
+      if (evaluate::IsCoarray(symbol)) {
         return true;
       }
     }
@@ -1248,7 +1248,8 @@ template class ComponentIterator<ComponentKind::Scope>;
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
-  return std::find_if(ultimates.begin(), ultimates.end(), IsCoarray);
+  return std::find_if(ultimates.begin(), ultimates.end(),
+      [](const Symbol &symbol) { return evaluate::IsCoarray(symbol); });
 }
 
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
@@ -1288,7 +1289,7 @@ FindPolymorphicAllocatableNonCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
   return std::find_if(ultimates.begin(), ultimates.end(), [](const Symbol &x) {
-    return IsPolymorphicAllocatable(x) && !IsCoarray(x);
+    return IsPolymorphicAllocatable(x) && !evaluate::IsCoarray(x);
   });
 }
 
