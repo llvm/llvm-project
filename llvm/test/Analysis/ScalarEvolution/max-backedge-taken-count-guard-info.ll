@@ -1295,14 +1295,14 @@ define void @optimized_range_check_unsigned_icmp_ops_swapped(i16* %pred, i32 %N)
 ; CHECK-NEXT:    %N.off = add i32 %N, -1
 ; CHECK-NEXT:    --> (-1 + %N) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, i16* %pred, i32 %iv
 ; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned_icmp_ops_swapped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
