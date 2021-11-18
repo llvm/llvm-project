@@ -1368,3 +1368,165 @@ func @box_tdesc(%arg0: !fir.box<f64>) {
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[TYPE_POS]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32) -> !llvm.ptr<i8>
 // CHECK:         %[[LOAD:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i{{.*}}>
 // CHECK:         %{{.*}} = llvm.inttoptr %[[LOAD]] : i{{.*}} to !llvm.ptr<i{{.*}}>
+
+// -----
+
+// Test `fir.embox` conversion.
+
+// Check basic creation of a descriptor and insertion of values.
+// The indices used to insert values into the descriptor correspond the 
+// position of the fields in the descriptor as defined in `CFI_cdesc_t` in
+// flang/ISO_Fortran_binding.h.
+
+func @embox0(%arg0: !fir.ref<!fir.array<100xi32>>) {
+  %0 = fir.embox %arg0() : (!fir.ref<!fir.array<100xi32>>) -> !fir.box<!fir.array<100xi32>>
+  return
+}
+
+// CHECK-LABEL: func @embox0(
+// CHECK-SAME:               %[[ARG0:.*]]: !llvm.ptr<array<100 x i32>>
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[ALLOCA:.*]] = llvm.alloca %[[C1]] x !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>
+// CHECK:         %[[DESC:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[ELEM_SIZE:.*]] = llvm.mlir.constant(4 : i32) : i32
+// CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(9 : i32) : i32
+// CHECK:         %[[I64_ELEM_SIZE:.*]] = llvm.sext %[[ELEM_SIZE]] : i32 to i64
+// CHECK:         %[[DESC0:.*]] = llvm.insertvalue %[[I64_ELEM_SIZE]], %[[DESC]][1 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[CFI_VERSION:.*]] = llvm.mlir.constant(20180515 : i32) : i32
+// CHECK:         %[[DESC1:.*]] = llvm.insertvalue %[[CFI_VERSION]], %[[DESC0]][2 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[RANK:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[RANK_I8:.*]] = llvm.trunc %[[RANK]] : i32 to i8
+// CHECK:         %[[DESC2:.*]] = llvm.insertvalue %[[RANK_I8]], %[[DESC1]][3 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
+// CHECK:         %[[DESC3:.*]] = llvm.insertvalue %[[TYPE_CODE_I8]], %[[DESC2]][4 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[ATTR:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[ATTR_I8:.*]] = llvm.trunc %[[ATTR]] : i32 to i8
+// CHECK:         %[[DESC4:.*]] = llvm.insertvalue %[[ATTR_I8]], %[[DESC3]][5 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[F18ADDENDUM:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[F18ADDENDUM_I8:.*]] = llvm.trunc %[[F18ADDENDUM]] : i32 to i8
+// CHECK:         %[[DESC5:.*]] = llvm.insertvalue %[[F18ADDENDUM_I8]], %[[DESC4]][6 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         %[[ADDR:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<array<100 x i32>> to !llvm.ptr<array<100 x i32>>
+// CHECK:         %[[DESC6:.*]] = llvm.insertvalue %[[ADDR]], %[[DESC5]][0 : i32] : !llvm.struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+// CHECK:         llvm.store %[[DESC6]], %[[ALLOCA]] : !llvm.ptr<struct<(ptr<array<100 x i32>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>
+
+// Check `fir.embox` in a `fir.global`. Descriptors created by `fir.embox` 
+// conversion are not generating `alloca` instructions. This test make sure of
+// that.
+
+fir.global @box_global : !fir.ref<!fir.array<?xi32>> {
+  %arr = fir.zero_bits !fir.ref<!fir.array<?xi32>>
+  %0 = arith.constant 0 : index
+  %3 = fir.embox %arr: (!fir.ref<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  fir.has_value %arr : !fir.ref<!fir.array<?xi32>>
+}
+
+// CHECK-LABEL: llvm.mlir.global external @box_global
+// CHECK-NOT:     llvm.alloca
+
+// Check `fir.embox` conversion of a POINTER entity. Make sure that the
+// attribute in the descriptor is set to 1 (value of CFI_attribute_pointer
+// in flang/ISO_Fortran_binding.h).
+
+func @embox_pointer(%arg0: !fir.ref<i32>) {
+  %0 = fir.embox %arg0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_pointer
+// Check 1st 1 constant to skip it.
+// CHECK: %{{.*}} = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[CFI_ATTR_POINTER:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[ATTR_I8:.*]] = llvm.trunc %[[CFI_ATTR_POINTER]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[ATTR_I8]], %{{.*}}[5 : i32] : !llvm.struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+// Check `fir.embox` conversion of an ALLOCATABLE entity. Make sure that the
+// attribute in the descriptor is set to 2 (value of CFI_attribute_allocatable
+// in flang/ISO_Fortran_binding.h).
+
+func @embox_allocatable(%arg0: !fir.heap<!fir.array<?x!fir.char<1,10>>>) {
+  %0 = fir.embox %arg0 : (!fir.heap<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_allocatable
+// CHECK: %[[CFI_ATTR_ALLOCATABLE:.*]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK: %[[ATTR_I8:.*]] = llvm.trunc %[[CFI_ATTR_ALLOCATABLE]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[ATTR_I8]], %{{.*}}[5 : i32] : !llvm.struct<(ptr<array<10 x i8>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+// Check `fir.embox` conversion of a type code.
+
+func @embox_typecode0(%arg0: !fir.ref<i64>) {
+  %0 = fir.embox %arg0 : (!fir.ref<i64>) -> !fir.box<!fir.ptr<i64>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_typecode0
+// CHECK: %[[TYPE_CODE_I64:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK: %[[TYPE_CODE_I64_I8:.*]] = llvm.trunc %[[TYPE_CODE_I64]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I64_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<i64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+func @embox_typecode1(%arg0: !fir.ref<f32>) {
+  %0 = fir.embox %arg0 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_typecode1
+// CHECK: %[[TYPE_CODE_F32:.*]] = llvm.mlir.constant(25 : i32) : i32
+// CHECK: %[[TYPE_CODE_F32_I8:.*]] = llvm.trunc %[[TYPE_CODE_I64]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_F32_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<f32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+func @embox_typecode2(%arg0: !fir.ref<f128>) {
+  %0 = fir.embox %arg0 : (!fir.ref<f128>) -> !fir.box<!fir.ptr<f128>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_typecode2
+// CHECK: %[[TYPE_CODE_F128:.*]] = llvm.mlir.constant(27 : i32) : i32
+// CHECK: %[[TYPE_CODE_F128_I8:.*]] = llvm.trunc %[[TYPE_CODE_F128]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_F128_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<f128>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+func @embox_typecode3(%arg0: !fir.ref<!fir.complex<4>>) {
+  %0 = fir.embox %arg0 : (!fir.ref<!fir.complex<4>>) -> !fir.box<!fir.ptr<!fir.complex<4>>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_typecode3
+// CHECK: %[[TYPE_CODE_CPLX4:.*]] = llvm.mlir.constant(28 : i32) : i32
+// CHECK: %[[TYPE_CODE_CPLX4_I8:.*]] = llvm.trunc %[[TYPE_CODE_F128]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_CPLX4_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<struct<(f32, f32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+func @embox_typecode4(%arg0: !fir.ref<!fir.logical<1>>) {
+  %0 = fir.embox %arg0 : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.ptr<!fir.logical<1>>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @embox_typecode4
+// CHECK: %[[TYPE_CODE_I64:.*]] = llvm.mlir.constant(31 : i32) : i32
+// CHECK: %[[TYPE_CODE_I64_I8:.*]] = llvm.trunc %[[TYPE_CODE_I64]] : i32 to i8
+// CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I64_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<i8>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
+
+// -----
+
+// Test `fir.embox` conversion. This test creates a global so it needs to be
+// split from others.
+
+// Check descriptor for a derived type. Check that the f18Addendum flag is set
+// to 1 meaning the addendum is present (true) and the addendum values are
+// inserted.
+
+func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
+  %0 = fir.embox %arg0() : (!fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
+  return
+}
+
+// CHECK: llvm.mlir.global extern_weak @_QMtest_dinitE.dt.tseq() : i8
+// CHECK-LABEL: llvm.func @embox1
+// CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(34 : i32) : i32
+// CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
+// CHECK:         %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<struct<"_QMtest_dinitTtseq", (i32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>
+// CHECK:         %[[F18ADDENDUM:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[F18ADDENDUM_I8:.*]] = llvm.trunc %[[F18ADDENDUM]] : i32 to i8
+// CHECK:         %{{.*}} = llvm.insertvalue %[[F18ADDENDUM_I8]], %18[6 : i32] : !llvm.struct<(ptr<struct<"_QMtest_dinitTtseq", (i32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>
+// CHECK:         %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr<i8>
+// CHECK:         %[[TDESC_CAST:.*]] = llvm.bitcast %22 : !llvm.ptr<i8> to !llvm.ptr<i8>
+// CHECK:         %{{.*}} = llvm.insertvalue %[[TDESC_CAST]], %{{.*}}[7 : i32] : !llvm.struct<(ptr<struct<"_QMtest_dinitTtseq", (i32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>
