@@ -345,10 +345,8 @@ bool X86LowerAMXType::visit() {
           continue;
         }
         StoreInst *ST = nullptr;
-        for (auto UI = Bitcast->use_begin(), UE = Bitcast->use_end();
-             UI != UE;) {
-          Value *I = (UI++)->getUser();
-          ST = dyn_cast<StoreInst>(I);
+        for (Use &U : Bitcast->uses()) {
+          ST = dyn_cast<StoreInst>(U.getUser());
           if (ST)
             break;
         }

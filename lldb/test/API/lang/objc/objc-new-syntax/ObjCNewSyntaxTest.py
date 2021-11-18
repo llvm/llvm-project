@@ -11,7 +11,7 @@ class ObjCNewSyntaxTest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def target(self):
-        return _target
+        return self._target
 
     def runToBreakpoint(self):
         self.build()

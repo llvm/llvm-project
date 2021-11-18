@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -255,6 +256,33 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   bodyBuilder(*this);
   restoreInsertionPoint(insertPt);
   return glob;
+}
+
+mlir::Value fir::FirOpBuilder::convertWithSemantics(mlir::Location loc,
+                                                    mlir::Type toTy,
+                                                    mlir::Value val) {
+  assert(toTy && "store location must be typed");
+  auto fromTy = val.getType();
+  if (fromTy == toTy)
+    return val;
+  fir::factory::Complex helper{*this, loc};
+  if ((fir::isa_real(fromTy) || fir::isa_integer(fromTy)) &&
+      fir::isa_complex(toTy)) {
+    // imaginary part is zero
+    auto eleTy = helper.getComplexPartType(toTy);
+    auto cast = createConvert(loc, eleTy, val);
+    llvm::APFloat zero{
+        kindMap.getFloatSemantics(toTy.cast<fir::ComplexType>().getFKind()), 0};
+    auto imag = createRealConstant(loc, eleTy, zero);
+    return helper.createComplex(toTy, cast, imag);
+  }
+  if (fir::isa_complex(fromTy) &&
+      (fir::isa_integer(toTy) || fir::isa_real(toTy))) {
+    // drop the imaginary part
+    auto rp = helper.extractComplexPart(val, /*isImagPart=*/false);
+    return createConvert(loc, toTy, rp);
+  }
+  return createConvert(loc, toTy, val);
 }
 
 mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,

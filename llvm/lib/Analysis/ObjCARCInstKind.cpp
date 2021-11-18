@@ -296,9 +296,8 @@ ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
       // operand isn't actually being dereferenced, it is being stored to
       // memory where we can no longer track who might read it and dereference
       // it, so we have to consider it potentially used.
-      for (User::const_op_iterator OI = I->op_begin(), OE = I->op_end();
-           OI != OE; ++OI)
-        if (IsPotentialRetainableObjPtr(*OI))
+      for (const Use &U : I->operands())
+        if (IsPotentialRetainableObjPtr(U))
           return ARCInstKind::User;
     }
   }

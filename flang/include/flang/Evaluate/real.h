@@ -150,8 +150,8 @@ public:
   static constexpr int DIGITS{binaryPrecision};
   static constexpr int PRECISION{Details::decimalPrecision};
   static constexpr int RANGE{Details::decimalRange};
-  static constexpr int MAXEXPONENT{maxExponent - 1 - exponentBias};
-  static constexpr int MINEXPONENT{1 - exponentBias};
+  static constexpr int MAXEXPONENT{maxExponent - exponentBias};
+  static constexpr int MINEXPONENT{2 - exponentBias};
 
   constexpr Real FlushSubnormalToZero() const {
     if (IsSubnormal()) {
