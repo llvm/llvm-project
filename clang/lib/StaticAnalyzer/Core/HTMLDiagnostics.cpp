@@ -792,8 +792,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
 
   // Stores the different ranges where we have reported something.
   std::vector<SourceRange> PopUpRanges;
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    const auto &Piece = *I->get();
+  for (const PathDiagnosticPieceRef &I : llvm::reverse(path)) {
+    const auto &Piece = *I.get();
 
     if (isa<PathDiagnosticPopUpPiece>(Piece)) {
       ++IndexMap[NumRegularPieces];
@@ -835,8 +835,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   // Secondary indexing if we are having multiple pop-ups between two notes.
   // (e.g. [(13) 'a' is 'true'];  [(13.1) 'b' is 'false'];  [(13.2) 'c' is...)
   NumRegularPieces = TotalRegularPieces;
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    const auto &Piece = *I->get();
+  for (const PathDiagnosticPieceRef &I : llvm::reverse(path)) {
+    const auto &Piece = *I.get();
 
     if (const auto *PopUpP = dyn_cast<PathDiagnosticPopUpPiece>(&Piece)) {
       int PopUpPieceIndex = IndexMap[NumRegularPieces];

@@ -757,9 +757,8 @@ void ExprEngine::VisitInitListExpr(const InitListExpr *IE,
       return;
     }
 
-    for (InitListExpr::const_reverse_iterator it = IE->rbegin(),
-         ei = IE->rend(); it != ei; ++it) {
-      SVal V = state->getSVal(cast<Expr>(*it), LCtx);
+    for (const Stmt *S : llvm::reverse(*IE)) {
+      SVal V = state->getSVal(cast<Expr>(S), LCtx);
       vals = getBasicVals().prependSVal(V, vals);
     }
 

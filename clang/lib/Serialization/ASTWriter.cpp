@@ -3429,11 +3429,9 @@ public:
       // Only emit declarations that aren't from a chained PCH, though.
       SmallVector<NamedDecl *, 16> Decls(IdResolver.begin(II),
                                          IdResolver.end());
-      for (SmallVectorImpl<NamedDecl *>::reverse_iterator D = Decls.rbegin(),
-                                                          DEnd = Decls.rend();
-           D != DEnd; ++D)
+      for (NamedDecl *D : llvm::reverse(Decls))
         LE.write<uint32_t>(
-            Writer.getDeclID(getDeclForLocalLookup(PP.getLangOpts(), *D)));
+            Writer.getDeclID(getDeclForLocalLookup(PP.getLangOpts(), D)));
     }
   }
 };

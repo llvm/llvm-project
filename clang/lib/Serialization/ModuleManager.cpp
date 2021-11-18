@@ -383,16 +383,14 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
 
       // For any module that this module depends on, push it on the
       // stack (if it hasn't already been marked as visited).
-      for (auto M = CurrentModule->Imports.rbegin(),
-                MEnd = CurrentModule->Imports.rend();
-           M != MEnd; ++M) {
+      for (ModuleFile *M : llvm::reverse(CurrentModule->Imports)) {
         // Remove our current module as an impediment to visiting the
         // module we depend on. If we were the last unvisited module
         // that depends on this particular module, push it into the
         // queue to be visited.
-        unsigned &NumUnusedEdges = UnusedIncomingEdges[(*M)->Index];
+        unsigned &NumUnusedEdges = UnusedIncomingEdges[M->Index];
         if (NumUnusedEdges && (--NumUnusedEdges == 0))
-          Queue.push_back(*M);
+          Queue.push_back(M);
       }
     }
 
