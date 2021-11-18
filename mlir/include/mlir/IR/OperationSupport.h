@@ -382,7 +382,7 @@ template <typename IteratorT, typename NameT>
 std::pair<IteratorT, bool> findAttrUnsorted(IteratorT first, IteratorT last,
                                             NameT name) {
   for (auto it = first; it != last; ++it)
-    if (it->first == name)
+    if (it->getName() == name)
       return {it, true};
   return {last, false};
 }
@@ -399,7 +399,7 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
   while (length > 0) {
     ptrdiff_t half = length / 2;
     IteratorT mid = first + half;
-    int compare = mid->first.strref().compare(name);
+    int compare = mid->getName().strref().compare(name);
     if (compare < 0) {
       first = mid + 1;
       length = length - half - 1;

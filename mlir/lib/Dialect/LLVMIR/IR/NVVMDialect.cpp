@@ -57,7 +57,7 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
     return failure();
 
   for (auto &attr : result.attributes) {
-    if (attr.first != "return_value_and_is_valid")
+    if (attr.getName() != "return_value_and_is_valid")
       continue;
     auto structType = resultType.dyn_cast<LLVM::LLVMStructType>();
     if (structType && !structType.getBody().empty())
@@ -249,7 +249,7 @@ void NVVMDialect::initialize() {
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   // Kernel function attribute should be attached to functions.
-  if (attr.first == NVVMDialect::getKernelFuncAttrName()) {
+  if (attr.getName() == NVVMDialect::getKernelFuncAttrName()) {
     if (!isa<LLVM::LLVMFuncOp>(op)) {
       return op->emitError() << "'" << NVVMDialect::getKernelFuncAttrName()
                              << "' attribute attached to unexpected op";

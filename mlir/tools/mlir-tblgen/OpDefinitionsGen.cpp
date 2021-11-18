@@ -1449,11 +1449,11 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
        << "AttrName(" << builderOpState
        << ".name);\n"
           "  for (auto attr : attributes) {\n"
-          "    if (attr.first != attrName) continue;\n";
+          "    if (attr.getName() != attrName) continue;\n";
   if (namedAttr.attr.isTypeAttr()) {
-    resultType = "attr.second.cast<::mlir::TypeAttr>().getValue()";
+    resultType = "attr.getValue().cast<::mlir::TypeAttr>().getValue()";
   } else {
-    resultType = "attr.second.getType()";
+    resultType = "attr.getValue().getType()";
   }
 
   // Operands
