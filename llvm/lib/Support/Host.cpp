@@ -1638,7 +1638,8 @@ int computeHostNumPhysicalCores() {
   }
   return CPU_COUNT(&Enabled);
 }
-#elif defined(__linux__) && defined(__s390x__)
+#elif defined(__linux__) && defined(__s390x__) || defined(__OpenBSD__) ||    \
+    defined(__FreeBSD__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
 #elif defined(__linux__) && !defined(__ANDROID__)
 int computeHostNumPhysicalCores() {
