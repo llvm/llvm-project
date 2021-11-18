@@ -68,10 +68,7 @@ def testFill():
       @builtin.FuncOp.from_py_func(RankedTensorType.get((12, -1), f32))
       def fill_tensor(out):
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
-        # TODO: FillOp.result is None. When len(results) == 1 we expect it to
-        # be results[0] as per _linalg_ops_gen.py. This seems like an
-        # orthogonal bug in the generator of _linalg_ops_gen.py.
-        return linalg.FillOp(output=out, value=zero).results[0]
+        return linalg.FillOp(output=out, value=zero).result
 
       # CHECK-LABEL: func @fill_buffer
       #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>

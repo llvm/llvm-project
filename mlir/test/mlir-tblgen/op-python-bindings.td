@@ -304,7 +304,7 @@ def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
 
   // CHECK: @builtins.property
   // CHECK: def optional(self):
-  // CHECK:   return self.operation.operands[1] if len(self.operation.operands) > 2 else None
+  // CHECK:   return None if len(self.operation.operands) < 2 else self.operation.operands[1]
 
 }
 
