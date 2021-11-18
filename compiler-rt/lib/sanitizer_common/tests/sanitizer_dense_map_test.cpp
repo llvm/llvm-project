@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseMap.h"
-#include "gtest/gtest.h"
 #include <map>
 #include <set>
+
+#include "gtest/gtest.h"
+#include "llvm/ADT/DenseMap.h"
 
 using namespace llvm;
 
@@ -35,7 +36,7 @@ class CtorTester {
   static std::set<CtorTester *> Constructed;
   int Value;
 
-public:
+ public:
   explicit CtorTester(int Value = 0) : Value(Value) {
     EXPECT_TRUE(Constructed.insert(this).second);
   }
@@ -46,9 +47,7 @@ public:
     EXPECT_TRUE(Constructed.insert(this).second);
   }
   CtorTester &operator=(const CtorTester &) = default;
-  ~CtorTester() {
-    EXPECT_EQ(1u, Constructed.erase(this));
-  }
+  ~CtorTester() { EXPECT_EQ(1u, Constructed.erase(this)); }
   operator uint32_t() const { return Value; }
 
   int getValue() const { return Value; }
@@ -77,7 +76,7 @@ CtorTester getTestValue(int i, CtorTester *) { return CtorTester(42 + i); }
 // implementations of helper routines.
 template <typename T>
 class DenseMapTest : public ::testing::Test {
-protected:
+ protected:
   T Map;
 
   static typename T::key_type *const dummy_key_ptr;
@@ -97,14 +96,12 @@ template <typename T>
 typename T::mapped_type *const DenseMapTest<T>::dummy_value_ptr = nullptr;
 
 // Register these types for testing.
-typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
-                         DenseMap<uint32_t *, uint32_t *>,
-                         DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
-                         SmallDenseMap<uint32_t, uint32_t>,
-                         SmallDenseMap<uint32_t *, uint32_t *>,
-                         SmallDenseMap<CtorTester, CtorTester, 4,
-                                       CtorTesterMapInfo>
-                         > DenseMapTestTypes;
+typedef ::testing::Types<
+    DenseMap<uint32_t, uint32_t>, DenseMap<uint32_t *, uint32_t *>,
+    DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
+    SmallDenseMap<uint32_t, uint32_t>, SmallDenseMap<uint32_t *, uint32_t *>,
+    SmallDenseMap<CtorTester, CtorTester, 4, CtorTesterMapInfo>>
+    DenseMapTestTypes;
 TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
 
 // Empty map tests
@@ -276,8 +273,7 @@ TYPED_TEST(DenseMapTest, SwapTest) {
   EXPECT_EQ(this->getValue(), this->Map[this->getKey()]);
 
   // Make this more interesting by inserting 100 numbers into the map.
-  for (int i = 0; i < 100; ++i)
-    this->Map[this->getKey(i)] = this->getValue(i);
+  for (int i = 0; i < 100; ++i) this->Map[this->getKey(i)] = this->getValue(i);
 
   this->Map.swap(otherMap);
   EXPECT_EQ(0u, this->Map.size());
@@ -350,7 +346,7 @@ struct CountCopyAndMove {
 int CountCopyAndMove::Copy = 0;
 int CountCopyAndMove::Move = 0;
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // Test initializer list construction.
 TEST(DenseMapCustomTest, InitializerList) {
@@ -442,8 +438,7 @@ TEST(DenseMapCustomTest, InitFromIterator) {
   std::vector<std::pair<int, CountCopyAndMove>> Values;
   // The size is a random value greater than 64 (hardcoded DenseMap min init)
   const int Count = 65;
-  for (int i = 0; i < Count; i++)
-    Values.emplace_back(i, CountCopyAndMove());
+  for (int i = 0; i < Count; i++) Values.emplace_back(i, CountCopyAndMove());
 
   CountCopyAndMove::Move = 0;
   CountCopyAndMove::Copy = 0;
@@ -511,14 +506,14 @@ TEST(DenseMapCustomTest, StringRefTest) {
 struct TestDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
-  static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
-  static unsigned getHashValue(const char* Val) {
+  static unsigned getHashValue(const unsigned &Val) { return Val * 37U; }
+  static unsigned getHashValue(const char *Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
   }
-  static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
+  static bool isEqual(const unsigned &LHS, const unsigned &RHS) {
     return LHS == RHS;
   }
-  static bool isEqual(const char* LHS, const unsigned& RHS) {
+  static bool isEqual(const char *LHS, const unsigned &RHS) {
     return (unsigned)(LHS[0] - 'a') == RHS;
   }
 };
@@ -559,8 +554,8 @@ TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
 struct ContiguousDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
-  static unsigned getHashValue(const unsigned& Val) { return Val; }
-  static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
+  static unsigned getHashValue(const unsigned &Val) { return Val; }
+  static bool isEqual(const unsigned &LHS, const unsigned &RHS) {
     return LHS == RHS;
   }
 };
@@ -572,12 +567,9 @@ TEST(DenseMapCustomTest, SmallDenseMapGrowTest) {
   // Add some number of elements, then delete a few to leave us some tombstones.
   // If we just filled the map with 32 elements we'd grow because of not enough
   // tombstones which masks the issue here.
-  for (unsigned i = 0; i < 20; ++i)
-    map[i] = i + 1;
-  for (unsigned i = 0; i < 10; ++i)
-    map.erase(i);
-  for (unsigned i = 20; i < 32; ++i)
-    map[i] = i + 1;
+  for (unsigned i = 0; i < 20; ++i) map[i] = i + 1;
+  for (unsigned i = 0; i < 10; ++i) map.erase(i);
+  for (unsigned i = 20; i < 32; ++i) map[i] = i + 1;
 
   // Size tests
   EXPECT_EQ(22u, map.size());
@@ -592,14 +584,11 @@ TEST(DenseMapCustomTest, SmallDenseMapGrowTest) {
 TEST(DenseMapCustomTest, LargeSmallDenseMapCompaction) {
   SmallDenseMap<unsigned, unsigned, 128, ContiguousDenseMapInfo> map;
   // Fill to < 3/4 load.
-  for (unsigned i = 0; i < 95; ++i)
-    map[i] = i;
+  for (unsigned i = 0; i < 95; ++i) map[i] = i;
   // And erase, leaving behind tombstones.
-  for (unsigned i = 0; i < 95; ++i)
-    map.erase(i);
+  for (unsigned i = 0; i < 95; ++i) map.erase(i);
   // Fill further, so that less than 1/8 are empty, but still below 3/4 load.
-  for (unsigned i = 95; i < 128; ++i)
-    map[i] = i;
+  for (unsigned i = 95; i < 128; ++i) map[i] = i;
 
   EXPECT_EQ(33u, map.size());
   // Similar to the previous test, check for a non-existing element, as an
@@ -655,4 +644,4 @@ TEST(DenseMapCustomTest, OpaquePointerKey) {
   EXPECT_EQ(Map.find(K2), Map.end());
   EXPECT_EQ(Map.find(K3), Map.end());
 }
-}
+}  // namespace
