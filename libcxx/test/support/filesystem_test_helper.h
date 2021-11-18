@@ -193,10 +193,10 @@ struct scoped_test_env
             abort();
         }
 
-#ifndef _WIN32
-#define FOPEN_CLOEXEC_FLAG "e"
+#if defined(_WIN32) || defined(__MVS__)
+#  define FOPEN_CLOEXEC_FLAG ""
 #else
-#define FOPEN_CLOEXEC_FLAG ""
+#  define FOPEN_CLOEXEC_FLAG "e"
 #endif
         FILE* file = large_file_fopen(filename.c_str(), "w" FOPEN_CLOEXEC_FLAG);
         if (file == nullptr) {
