@@ -38,6 +38,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -330,6 +331,15 @@ public:
       LValue R;
       R.V = address.getPointer();
       R.Initialize(address.getAlignment(), T, LValueBaseInfo(Source));
+      R.LVType = Simple;
+      return R;
+    }
+
+    // FIXME: only have one of these static methods.
+    static LValue makeAddr(RawAddress address, QualType T, LValueBaseInfo LBI) {
+      LValue R;
+      R.V = address.getPointer();
+      R.Initialize(address.getAlignment(), T, LBI);
       R.LVType = Simple;
       return R;
     }
@@ -1139,6 +1149,168 @@ public:
     llvm_unreachable("bad evaluation kind");
   }
 
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  /// Return the best known alignment for an unknown pointer to a
+  /// particular class.
+  CharUnits getClassPointerAlignment(const CXXRecordDecl *RD) {
+    if (!RD->hasDefinition())
+      return CharUnits::One(); // Hopefully won't be used anywhere.
+
+    auto &layout = astCtx.getASTRecordLayout(RD);
+
+    // If the class is final, then we know that the pointer points to an
+    // object of that type and can use the full alignment.
+    if (RD->isEffectivelyFinal())
+      return layout.getAlignment();
+
+    // Otherwise, we have to assume it could be a subclass.
+    return layout.getNonVirtualAlignment();
+  }
+
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  /// TODO: Add TBAAAccessInfo
+  CharUnits getNaturalPointeeTypeAlignment(QualType T,
+                                           LValueBaseInfo *BaseInfo) {
+    return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo,
+                                   /* forPointeeType= */ true);
+  }
+
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  /// TODO: Add TBAAAccessInfo
+  CharUnits getNaturalTypeAlignment(QualType T, LValueBaseInfo *BaseInfo,
+                                    bool forPointeeType) {
+    // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown. But
+    // that doesn't return the information we need to compute BaseInfo.
+
+    // Honor alignment typedef attributes even on incomplete types.
+    // We also honor them straight for C++ class types, even as pointees;
+    // there's an expressivity gap here.
+    if (auto TT = T->getAs<TypedefType>()) {
+      if (auto Align = TT->getDecl()->getMaxAlignment()) {
+        if (BaseInfo)
+          *BaseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
+        return astCtx.toCharUnitsFromBits(Align);
+      }
+    }
+
+    bool AlignForArray = T->isArrayType();
+
+    // Analyze the base element type, so we don't get confused by incomplete
+    // array types.
+    T = astCtx.getBaseElementType(T);
+
+    if (T->isIncompleteType()) {
+      // We could try to replicate the logic from
+      // ASTContext::getTypeAlignIfKnown, but nothing uses the alignment if the
+      // type is incomplete, so it's impossible to test. We could try to reuse
+      // getTypeAlignIfKnown, but that doesn't return the information we need
+      // to set BaseInfo.  So just ignore the possibility that the alignment is
+      // greater than one.
+      if (BaseInfo)
+        *BaseInfo = LValueBaseInfo(AlignmentSource::Type);
+      return CharUnits::One();
+    }
+
+    if (BaseInfo)
+      *BaseInfo = LValueBaseInfo(AlignmentSource::Type);
+
+    CharUnits Alignment;
+    const CXXRecordDecl *RD;
+    if (T.getQualifiers().hasUnaligned()) {
+      Alignment = CharUnits::One();
+    } else if (forPointeeType && !AlignForArray &&
+               (RD = T->getAsCXXRecordDecl())) {
+      // For C++ class pointees, we don't know whether we're pointing at a
+      // base or a complete object, so we generally need to use the
+      // non-virtual alignment.
+      Alignment = getClassPointerAlignment(RD);
+    } else {
+      Alignment = astCtx.getTypeAlignInChars(T);
+    }
+
+    // Cap to the global maximum type alignment unless the alignment
+    // was somehow explicit on the type.
+    if (unsigned MaxAlign = astCtx.getLangOpts().MaxTypeAlign) {
+      if (Alignment.getQuantity() > MaxAlign && !astCtx.isAlignmentRequired(T))
+        Alignment = CharUnits::fromQuantity(MaxAlign);
+    }
+    return Alignment;
+  }
+
+  /// Given an expression of pointer type, try to
+  /// derive a more accurate bound on the alignment of the pointer.
+  RawAddress buildPointerWithAlignment(const Expr *E,
+                                       LValueBaseInfo *BaseInfo) {
+    // We allow this with ObjC object pointers because of fragile ABIs.
+    assert(E->getType()->isPointerType() ||
+           E->getType()->isObjCObjectPointerType());
+    E = E->IgnoreParens();
+
+    // Casts:
+    if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
+      if (const auto *ECE = dyn_cast<ExplicitCastExpr>(CE))
+        assert(0 && "not implemented");
+
+      switch (CE->getCastKind()) {
+      default:
+        assert(0 && "not implemented");
+      // Nothing to do here...
+      case CK_LValueToRValue:
+        break;
+      }
+    }
+
+    // Unary &.
+    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      assert(0 && "not implemented");
+      // if (UO->getOpcode() == UO_AddrOf) {
+      //   LValue LV = buildLValue(UO->getSubExpr());
+      //   if (BaseInfo)
+      //     *BaseInfo = LV.getBaseInfo();
+      //   // TODO: TBBA info
+      //   return LV.getAddress();
+      // }
+    }
+
+    // TODO: conditional operators, comma.
+    // Otherwise, use the alignment of the type.
+    CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(), BaseInfo);
+    return RawAddress(buildScalarExpr(E), Align);
+  }
+
+  LValue buildUnaryOpLValue(const UnaryOperator *E) {
+    // __extension__ doesn't affect lvalue-ness.
+    assert(E->getOpcode() != UO_Extension && "not implemented");
+
+    switch (E->getOpcode()) {
+    default:
+      llvm_unreachable("Unknown unary operator lvalue!");
+    case UO_Deref: {
+      QualType T = E->getSubExpr()->getType()->getPointeeType();
+      assert(!T.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
+
+      LValueBaseInfo BaseInfo;
+      // TODO: add TBAAInfo
+      RawAddress Addr = buildPointerWithAlignment(E->getSubExpr(), &BaseInfo);
+      LValue LV = LValue::makeAddr(Addr, T, BaseInfo);
+      // TODO: set addr space
+      // TODO: ObjC/GC/__weak write barrier stuff.
+      return LV;
+    }
+    case UO_Real:
+    case UO_Imag: {
+      assert(0 && "not implemented");
+    }
+    case UO_PreInc:
+    case UO_PreDec: {
+      assert(0 && "not implemented");
+    }
+    }
+  }
+
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
   /// FIXME: document this function better.
@@ -1154,6 +1326,8 @@ public:
       return buildBinaryOperatorLValue(cast<BinaryOperator>(E));
     case Expr::DeclRefExprClass:
       return buildDeclRefLValue(cast<DeclRefExpr>(E));
+    case Expr::UnaryOperatorClass:
+      return buildUnaryOpLValue(cast<UnaryOperator>(E));
     case Expr::ObjCPropertyRefExprClass:
       llvm_unreachable("cannot emit a property reference directly");
     }
