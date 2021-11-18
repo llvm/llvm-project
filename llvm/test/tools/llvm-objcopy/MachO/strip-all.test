@@ -2,6 +2,7 @@
 
 # RUN: yaml2obj %p/Inputs/strip-all.yaml -o %t.exec
 # RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml -o %t.dwarf
+# RUN: yaml2obj %p/Inputs/strip-chained-fixups.yaml -o %t.fixups
 
 ## Check that the symbol list satisfies the order: local / defined external /
 ## undefined external, otherwise llvm-objcopy will fail.
@@ -14,6 +15,10 @@
 # RUN: llvm-objcopy --strip-all %t.dwarf %t.dwarf.stripped
 # RUN: llvm-readobj --sections --relocations --symbols %t.dwarf.stripped \
 # RUN:   | FileCheck --check-prefixes=COMMON,DWARF %s
+
+# RUN: llvm-objcopy --strip-all %t.fixups %t.fixups.stripped
+# RUN: llvm-readobj --sections --relocations --symbols %t.fixups.stripped \
+# RUN:   | FileCheck --check-prefix=COMMON %s
 
 ## The output of "llvm-strip" should be identical with that of
 ## "llvm-strip --strip-all" and "llvm-objcopy --strip-all".
@@ -31,6 +36,11 @@
 # RUN: llvm-strip %t.dwarf.universal -o %t.dwarf.universal.stripped
 # RUN: llvm-lipo %t.dwarf.universal.stripped -thin x86_64 -output %t6
 # RUN: cmp %t6 %t.dwarf.stripped
+
+# RUN: llvm-strip %t.exec -o %t7
+# RUN: llvm-strip --strip-all %t.exec -o %t8
+# cmp %t7 %t.fixups.stripped
+# cmp %t8 %t.fixups.stripped
 
 ## Make sure that debug sections are removed.
 # DWARF:       Sections [

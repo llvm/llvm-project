@@ -133,6 +133,26 @@ size_t MachOWriter::totalSize() const {
                      LinkEditDataCommand.datasize);
   }
 
+  if (O.ChainedFixupsCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.ChainedFixupsCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Ends.push_back(LinkEditDataCommand.dataoff +
+                     LinkEditDataCommand.datasize);
+  }
+
+  if (O.ExportsTrieCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.ExportsTrieCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Ends.push_back(LinkEditDataCommand.dataoff +
+                     LinkEditDataCommand.datasize);
+  }
+
   // Otherwise, use the last section / reloction.
   for (const LoadCommand &LC : O.LoadCommands)
     for (const std::unique_ptr<Section> &S : LC.Sections) {
@@ -585,6 +605,14 @@ void MachOWriter::writeFunctionStartsData() {
   return writeLinkData(O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
 
+void MachOWriter::writeChainedFixupsData() {
+  return writeLinkData(O.ChainedFixupsCommandIndex, O.ChainedFixups);
+}
+
+void MachOWriter::writeExportsTrieData() {
+  return writeLinkData(O.ExportsTrieCommandIndex, O.ExportsTrie);
+}
+
 void MachOWriter::writeTail() {
   typedef void (MachOWriter::*WriteHandlerType)(void);
   typedef std::pair<uint64_t, WriteHandlerType> WriteOperation;
@@ -668,6 +696,26 @@ void MachOWriter::writeTail() {
     if (LinkEditDataCommand.dataoff)
       Queue.emplace_back(LinkEditDataCommand.dataoff,
                          &MachOWriter::writeFunctionStartsData);
+  }
+
+  if (O.ChainedFixupsCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.ChainedFixupsCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Queue.emplace_back(LinkEditDataCommand.dataoff,
+                         &MachOWriter::writeChainedFixupsData);
+  }
+
+  if (O.ExportsTrieCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.ExportsTrieCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Queue.emplace_back(LinkEditDataCommand.dataoff,
+                         &MachOWriter::writeExportsTrieData);
   }
 
   llvm::sort(Queue, [](const WriteOperation &LHS, const WriteOperation &RHS) {

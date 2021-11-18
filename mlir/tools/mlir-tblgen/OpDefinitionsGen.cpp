@@ -669,7 +669,7 @@ void OpEmitter::genAttrNameGetters() {
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
     method->body() << "assert(index < " << attributeNames.size()
                    << " && \"invalid attribute index\");\n"
-                      "  return name.getAbstractOperation()"
+                      "  return name.getRegisteredInfo()"
                       "->getAttributeNames()[index];";
   }
 
@@ -1449,11 +1449,11 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
        << "AttrName(" << builderOpState
        << ".name);\n"
           "  for (auto attr : attributes) {\n"
-          "    if (attr.first != attrName) continue;\n";
+          "    if (attr.getName() != attrName) continue;\n";
   if (namedAttr.attr.isTypeAttr()) {
-    resultType = "attr.second.cast<::mlir::TypeAttr>().getValue()";
+    resultType = "attr.getValue().cast<::mlir::TypeAttr>().getValue()";
   } else {
-    resultType = "attr.second.getType()";
+    resultType = "attr.getValue().getType()";
   }
 
   // Operands

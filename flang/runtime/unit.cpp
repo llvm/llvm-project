@@ -215,11 +215,13 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
   out.SetDirection(Direction::Output, handler);
+  out.isUnformatted = false;
   defaultOutput = &out;
   ExternalFileUnit &in{newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   in.SetDirection(Direction::Input, handler);
+  in.isUnformatted = false;
   defaultInput = &in;
   // TODO: Set UTF-8 mode from the environment
   unitMap = newUnitMap;

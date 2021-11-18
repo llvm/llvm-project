@@ -486,7 +486,7 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
   traitAttrsSet.insert(attrNames.begin(), attrNames.end());
   SmallVector<NamedAttribute, 8> attrs;
   for (auto attr : op->getAttrs())
-    if (traitAttrsSet.count(attr.first.strref()) > 0)
+    if (traitAttrsSet.count(attr.getName().strref()) > 0)
       attrs.push_back(attr);
 
   auto dictAttr = DictionaryAttr::get(op.getContext(), attrs);

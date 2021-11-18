@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------------- __config ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1190,10 +1190,9 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_HAS_GCC_ATOMIC_IMP
 #endif
 
-#if (!defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
-     !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
-     !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)) \
-     || defined(_LIBCPP_HAS_NO_THREADS)
+#if !defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
+    !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
+    !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)
 #  define _LIBCPP_HAS_NO_ATOMIC_HEADER
 #else
 #  ifndef _LIBCPP_ATOMIC_FLAG_TYPE
@@ -1304,10 +1303,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 
 #if !defined(__cpp_impl_coroutine) || __cpp_impl_coroutine < 201902L
 #define _LIBCPP_HAS_NO_CXX20_COROUTINES
-#endif
-
-#if !defined(__cpp_impl_three_way_comparison) || __cpp_impl_three_way_comparison < 201907L
-#define _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
 #endif
 
 #if defined(_LIBCPP_COMPILER_IBM)

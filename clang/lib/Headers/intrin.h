@@ -455,7 +455,9 @@ static __inline__ void __DEFAULT_FN_ATTRS __movsb(unsigned char *__dst,
                        :
                        : "memory");
 #else
-  __asm__ __volatile__("xchg %%esi, %1\nrep movsb\nxchg %%esi, %1"
+  __asm__ __volatile__("xchg {%%esi, %1|%1, esi}\n"
+                       "rep movsb\n"
+                       "xchg {%%esi, %1|%1, esi}"
                        : "+D"(__dst), "+r"(__src), "+c"(__n)
                        :
                        : "memory");
@@ -465,12 +467,14 @@ static __inline__ void __DEFAULT_FN_ATTRS __movsd(unsigned long *__dst,
                                                   unsigned long const *__src,
                                                   size_t __n) {
 #if defined(__x86_64__)
-  __asm__ __volatile__("rep movsl"
+  __asm__ __volatile__("rep movs{l|d}"
                        : "+D"(__dst), "+S"(__src), "+c"(__n)
                        :
                        : "memory");
 #else
-  __asm__ __volatile__("xchg %%esi, %1\nrep movsl\nxchg %%esi, %1"
+  __asm__ __volatile__("xchg {%%esi, %1|%1, esi}\n"
+                       "rep movs{l|d}\n"
+                       "xchg {%%esi, %1|%1, esi}"
                        : "+D"(__dst), "+r"(__src), "+c"(__n)
                        :
                        : "memory");
@@ -485,7 +489,9 @@ static __inline__ void __DEFAULT_FN_ATTRS __movsw(unsigned short *__dst,
                        :
                        : "memory");
 #else
-  __asm__ __volatile__("xchg %%esi, %1\nrep movsw\nxchg %%esi, %1"
+  __asm__ __volatile__("xchg {%%esi, %1|%1, esi}\n"
+                       "rep movsw\n"
+                       "xchg {%%esi, %1|%1, esi}"
                        : "+D"(__dst), "+r"(__src), "+c"(__n)
                        :
                        : "memory");
@@ -494,7 +500,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __movsw(unsigned short *__dst,
 static __inline__ void __DEFAULT_FN_ATTRS __stosd(unsigned long *__dst,
                                                   unsigned long __x,
                                                   size_t __n) {
-  __asm__ __volatile__("rep stosl"
+  __asm__ __volatile__("rep stos{l|d}"
                        : "+D"(__dst), "+c"(__n)
                        : "a"(__x)
                        : "memory");
@@ -536,9 +542,9 @@ static __inline__ void __DEFAULT_FN_ATTRS __stosq(unsigned __int64 *__dst,
 #else
 /* x86-64 uses %rbx as the base register, so preserve it. */
 #define __cpuid_count(__leaf, __count, __eax, __ebx, __ecx, __edx)             \
-  __asm("xchgq %%rbx,%q1\n"                                                    \
+  __asm("xchg{q} {%%rbx, %q1|%q1, rbx}\n"                                      \
         "cpuid\n"                                                              \
-        "xchgq %%rbx,%q1"                                                      \
+        "xchg{q} {%%rbx, %q1|%q1, rbx}"                                        \
         : "=a"(__eax), "=r"(__ebx), "=c"(__ecx), "=d"(__edx)                   \
         : "0"(__leaf), "2"(__count))
 #endif
@@ -598,13 +604,17 @@ __readmsr(unsigned long __register) {
 
 static __inline__ unsigned __LPTRINT_TYPE__ __DEFAULT_FN_ATTRS __readcr3(void) {
   unsigned __LPTRINT_TYPE__ __cr3_val;
-  __asm__ __volatile__ ("mov %%cr3, %0" : "=r"(__cr3_val) : : "memory");
+  __asm__ __volatile__(
+                       "mov {%%cr3, %0|%0, cr3}"
+                       : "=r"(__cr3_val)
+                       :
+                       : "memory");
   return __cr3_val;
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 __writecr3(unsigned __INTPTR_TYPE__ __cr3_val) {
-  __asm__ ("mov %0, %%cr3" : : "r"(__cr3_val) : "memory");
+  __asm__ ("mov {%0, %%cr3|cr3, %0}" : : "r"(__cr3_val) : "memory");
 }
 
 #ifdef __cplusplus

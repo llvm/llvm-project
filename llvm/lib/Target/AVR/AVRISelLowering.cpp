@@ -1200,7 +1200,7 @@ SDValue AVRTargetLowering::LowerFormalArguments(
 
       InVals.push_back(ArgValue);
     } else {
-      // Sanity check.
+      // Only arguments passed on the stack should make it here.
       assert(VA.isMemLoc());
 
       EVT LocVT = VA.getLocVT();

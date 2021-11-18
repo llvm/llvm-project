@@ -245,9 +245,8 @@ bool OperationOp::hasTypeInference() {
   if (!opName)
     return false;
 
-  OperationName name(*opName, getContext());
-  if (const AbstractOperation *op = name.getAbstractOperation())
-    return op->getInterface<InferTypeOpInterface>();
+  if (auto rInfo = RegisteredOperationName::lookup(*opName, getContext()))
+    return rInfo->hasInterface<InferTypeOpInterface>();
   return false;
 }
 

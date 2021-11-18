@@ -32,9 +32,9 @@ endif()
 
 if (LLDB_ENABLE_PYTHON)
   set(cachestring_LLDB_PYTHON_RELATIVE_PATH
-    "Path where Python modules are installed, relative to install prefix")
+    "Path where Python modules are installed, relative to LLDB's install prefix")
   set(cachestring_LLDB_PYTHON_EXE_RELATIVE_PATH
-    "Path to python interpreter exectuable, relative to install prefix")
+    "Path to python interpreter exectuable, relative to python's install prefix")
   set(cachestring_LLDB_PYTHON_EXT_SUFFIX
     "Filename extension for native code python modules")
 

@@ -23,8 +23,7 @@ struct AsmParserState::Impl {
 
   struct PartialOpDef {
     explicit PartialOpDef(const OperationName &opName) {
-      const auto *abstractOp = opName.getAbstractOperation();
-      if (abstractOp && abstractOp->hasTrait<OpTrait::SymbolTable>())
+      if (opName.hasTrait<OpTrait::SymbolTable>())
         symbolTable = std::make_unique<SymbolUseMap>();
     }
 

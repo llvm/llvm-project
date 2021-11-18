@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------------- compare -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -149,7 +149,7 @@ namespace std {
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
+#if _LIBCPP_STD_VER > 17
 
 // [cmp.alg], comparison algorithms
 // TODO: unimplemented
@@ -157,7 +157,7 @@ template<class _Tp> constexpr strong_ordering strong_order(const _Tp& __lhs, con
 template<class _Tp> constexpr weak_ordering weak_order(const _Tp& __lhs, const _Tp& __rhs);
 template<class _Tp> constexpr partial_ordering partial_order(const _Tp& __lhs, const _Tp& __rhs);
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_SPACESHIP_OPERATOR)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

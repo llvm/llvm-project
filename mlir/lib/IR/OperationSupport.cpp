@@ -72,11 +72,8 @@ void NamedAttrList::assign(const_iterator in_start, const_iterator in_end) {
 }
 
 void NamedAttrList::push_back(NamedAttribute newAttribute) {
-  assert(newAttribute.second && "unexpected null attribute");
-  if (isSorted()) {
-    dictionarySorted.setInt(attrs.empty() ||
-                            attrs.back().first.compare(newAttribute.first) < 0);
-  }
+  if (isSorted())
+    dictionarySorted.setInt(attrs.empty() || attrs.back() < newAttribute);
   dictionarySorted.setPointer(nullptr);
   attrs.push_back(newAttribute);
 }
@@ -84,11 +81,11 @@ void NamedAttrList::push_back(NamedAttribute newAttribute) {
 /// Return the specified attribute if present, null otherwise.
 Attribute NamedAttrList::get(StringRef name) const {
   auto it = findAttr(*this, name);
-  return it.second ? it.first->second : Attribute();
+  return it.second ? it.first->getValue() : Attribute();
 }
 Attribute NamedAttrList::get(StringAttr name) const {
   auto it = findAttr(*this, name);
-  return it.second ? it.first->second : Attribute();
+  return it.second ? it.first->getValue() : Attribute();
 }
 
 /// Return the specified named attribute if present, None otherwise.
@@ -112,12 +109,14 @@ Attribute NamedAttrList::set(StringAttr name, Attribute value) {
   if (it.second) {
     // Update the existing attribute by swapping out the old value for the new
     // value. Return the old value.
-    if (it.first->second != value) {
-      std::swap(it.first->second, value);
+    Attribute oldValue = it.first->getValue();
+    if (it.first->getValue() != value) {
+      it.first->setValue(value);
+
       // If the attributes have changed, the dictionary is invalidated.
       dictionarySorted.setPointer(nullptr);
     }
-    return value;
+    return oldValue;
   }
   // Perform a string lookup to insert the new attribute into its sorted
   // position.
@@ -137,7 +136,7 @@ Attribute NamedAttrList::set(StringRef name, Attribute value) {
 Attribute
 NamedAttrList::eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it) {
   // Erasing does not affect the sorted property.
-  Attribute attr = it->second;
+  Attribute attr = it->getValue();
   attrs.erase(it);
   dictionarySorted.setPointer(nullptr);
   return attr;
@@ -485,11 +484,12 @@ void MutableOperandRange::updateLength(unsigned newLength) {
 
   // Update any of the provided segment attributes.
   for (OperandSegment &segment : operandSegments) {
-    auto attr = segment.second.second.cast<DenseIntElementsAttr>();
+    auto attr = segment.second.getValue().cast<DenseIntElementsAttr>();
     SmallVector<int32_t, 8> segments(attr.getValues<int32_t>());
     segments[segment.first] += diff;
-    segment.second.second = DenseIntElementsAttr::get(attr.getType(), segments);
-    owner->setAttr(segment.second.first, segment.second.second);
+    segment.second.setValue(
+        DenseIntElementsAttr::get(attr.getType(), segments));
+    owner->setAttr(segment.second.getName(), segment.second.getValue());
   }
 }
 
@@ -500,21 +500,21 @@ MutableOperandRangeRange::MutableOperandRangeRange(
     const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
     : MutableOperandRangeRange(
           OwnerT(operands, operandSegmentAttr), 0,
-          operandSegmentAttr.second.cast<DenseElementsAttr>().size()) {}
+          operandSegmentAttr.getValue().cast<DenseElementsAttr>().size()) {}
 
 MutableOperandRange MutableOperandRangeRange::join() const {
   return getBase().first;
 }
 
 MutableOperandRangeRange::operator OperandRangeRange() const {
-  return OperandRangeRange(getBase().first,
-                           getBase().second.second.cast<DenseElementsAttr>());
+  return OperandRangeRange(
+      getBase().first, getBase().second.getValue().cast<DenseElementsAttr>());
 }
 
 MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
   auto sizeData =
-      object.second.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+      object.second.getValue().cast<DenseElementsAttr>().getValues<uint32_t>();
   uint32_t startIndex =
       std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
   return object.first.slice(

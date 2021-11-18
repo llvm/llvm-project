@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: clang
-// UNSUPPORTED: libcpp-has-no-threads
 
 // Adding "-fsanitize=thread" directly causes many platforms to fail (because
 // they don't support tsan), and causes other sanitizer builds to fail (e.g.

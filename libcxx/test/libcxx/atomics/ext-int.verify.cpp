@@ -14,7 +14,6 @@
 
 // UNSUPPORTED: apple-clang-12
 
-// UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03
 
 #include <atomic>

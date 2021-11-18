@@ -18,6 +18,6 @@ void test__cpuid(int *info, int level) {
 // X86-SAME:   (i32 %{{.*}}, i32 0)
 
 // X64-LABEL: define {{.*}} @test__cpuid(i32* %{{.*}}, i32 %{{.*}})
-// X64: call { i32, i32, i32, i32 } asm "xchgq %rbx{{.*}}cpuid{{.*}}xchgq %rbx{{.*}}",
+// X64: call { i32, i32, i32, i32 } asm "xchg$(q$) $(%rbx{{.*}}$){{.*}}cpuid{{.*}}xchg$(q$) $(%rbx{{.*}}$)",
 // X64-SAME:   "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"
 // X64-SAME:   (i32 %{{.*}}, i32 0)

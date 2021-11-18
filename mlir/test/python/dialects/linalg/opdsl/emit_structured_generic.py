@@ -126,6 +126,11 @@ def soft_plus_poly(
       PrimFn.log(cast(U, const(1.0)) + cast(U, PrimFn.exp(I[D.m, D.n])))
 
 
+@linalg_structured_op(op_name="custom_op_name")
+def non_default_op_name(I=TensorDef(T, S.N), O=TensorDef(T, S.N, output=True)):
+  O[D.n] = I[D.n]
+
+
 with Context() as ctx, Location.unknown():
   module = Module.create()
   f16 = F16Type.get()
@@ -391,6 +396,13 @@ with Context() as ctx, Location.unknown():
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_soft_plus(input, init_result):
       return soft_plus_poly(input, outs=[init_result])
+
+    # Just check that we don't assert out on name mismatch.
+    # CHECK-LABEL: @test_non_default_op_name
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((42,), f32), RankedTensorType.get((42,), f32))
+    def test_non_default_op_name(input, init_result):
+      return non_default_op_name(input, outs=[init_result])
 
 
 print(module)

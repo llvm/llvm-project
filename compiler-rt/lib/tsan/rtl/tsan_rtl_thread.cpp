@@ -270,29 +270,8 @@ struct ConsumeThreadContext {
   ThreadContextBase *tctx;
 };
 
-static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
-  ConsumeThreadContext *findCtx = (ConsumeThreadContext *)arg;
-  if (tctx->user_id == findCtx->uid && tctx->status != ThreadStatusInvalid) {
-    if (findCtx->tctx) {
-      // Ensure that user_id is unique. If it's not the case we are screwed.
-      // Something went wrong before, but now there is no way to recover.
-      // Returning a wrong thread is not an option, it may lead to very hard
-      // to debug false positives (e.g. if we join a wrong thread).
-      Report("ThreadSanitizer: dup thread with used id 0x%zx\n", findCtx->uid);
-      Die();
-    }
-    findCtx->tctx = tctx;
-    tctx->user_id = 0;
-  }
-  return false;
-}
-
 Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
-  ConsumeThreadContext findCtx = {uid, nullptr};
-  ctx->thread_registry.FindThread(ConsumeThreadByUid, &findCtx);
-  Tid tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
-  DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
-  return tid;
+  return ctx->thread_registry.ConsumeThreadUserId(uid);
 }
 
 void ThreadJoin(ThreadState *thr, uptr pc, Tid tid) {

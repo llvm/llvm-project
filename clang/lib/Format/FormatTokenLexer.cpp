@@ -506,11 +506,11 @@ void FormatTokenLexer::tryParseJSRegexLiteral() {
     return;
 
   FormatToken *Prev = nullptr;
-  for (auto I = Tokens.rbegin() + 1, E = Tokens.rend(); I != E; ++I) {
+  for (FormatToken *FT : llvm::drop_begin(llvm::reverse(Tokens))) {
     // NB: Because previous pointers are not initialized yet, this cannot use
     // Token.getPreviousNonComment.
-    if ((*I)->isNot(tok::comment)) {
-      Prev = *I;
+    if (FT->isNot(tok::comment)) {
+      Prev = FT;
       break;
     }
   }

@@ -30,35 +30,6 @@ LLDB_PLUGIN_DEFINE(PlatformWindows)
 
 static uint32_t g_initialize_count = 0;
 
-namespace {
-class SupportedArchList {
-public:
-  SupportedArchList() {
-    AddArch(ArchSpec("i686-pc-windows"));
-    AddArch(HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
-    AddArch(HostInfo::GetArchitecture(HostInfo::eArchKind32));
-    AddArch(HostInfo::GetArchitecture(HostInfo::eArchKind64));
-    AddArch(ArchSpec("i386-pc-windows"));
-  }
-
-  size_t Count() const { return m_archs.size(); }
-
-  const ArchSpec &operator[](int idx) { return m_archs[idx]; }
-
-private:
-  void AddArch(const ArchSpec &spec) {
-    if (llvm::any_of(m_archs, [spec](const ArchSpec &rhs) {
-          return spec.IsExactMatch(rhs);
-        }))
-      return;
-    if (spec.IsValid())
-      m_archs.push_back(spec);
-  }
-
-  std::vector<ArchSpec> m_archs;
-};
-} // anonymous namespace
-
 PlatformSP PlatformWindows::CreateInstance(bool force,
                                            const lldb_private::ArchSpec *arch) {
   // The only time we create an instance is when we are creating a remote
@@ -134,7 +105,21 @@ void PlatformWindows::Terminate() {
 }
 
 /// Default Constructor
-PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {}
+PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {
+  const auto &AddArch = [&](const ArchSpec &spec) {
+    if (llvm::any_of(m_supported_architectures, [spec](const ArchSpec &rhs) {
+          return spec.IsExactMatch(rhs);
+        }))
+      return;
+    if (spec.IsValid())
+      m_supported_architectures.push_back(spec);
+  };
+  AddArch(ArchSpec("i686-pc-windows"));
+  AddArch(HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
+  AddArch(HostInfo::GetArchitecture(HostInfo::eArchKind32));
+  AddArch(HostInfo::GetArchitecture(HostInfo::eArchKind64));
+  AddArch(ArchSpec("i386-pc-windows"));
+}
 
 Status PlatformWindows::ConnectRemote(Args &args) {
   Status error;
@@ -266,16 +251,6 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
     error = process_sp->Attach(attach_info);
 
   return process_sp;
-}
-
-bool PlatformWindows::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                      ArchSpec &arch) {
-  static SupportedArchList architectures;
-
-  if (idx >= architectures.Count())
-    return false;
-  arch = architectures[idx];
-  return true;
 }
 
 void PlatformWindows::GetStatus(Stream &strm) {

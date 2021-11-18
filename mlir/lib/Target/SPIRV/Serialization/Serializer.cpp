@@ -205,7 +205,7 @@ void Serializer::processMemoryModel() {
 
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
-  auto attrName = attr.first.strref();
+  auto attrName = attr.getName().strref();
   auto decorationName = llvm::convertToCamelFromSnakeCase(attrName, true);
   auto decoration = spirv::symbolizeDecoration(decorationName);
   if (!decoration) {
@@ -219,13 +219,13 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
-    if (auto intAttr = attr.second.dyn_cast<IntegerAttr>()) {
+    if (auto intAttr = attr.getValue().dyn_cast<IntegerAttr>()) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
     }
     return emitError(loc, "expected integer attribute for ") << attrName;
   case spirv::Decoration::BuiltIn:
-    if (auto strAttr = attr.second.dyn_cast<StringAttr>()) {
+    if (auto strAttr = attr.getValue().dyn_cast<StringAttr>()) {
       auto enumVal = spirv::symbolizeBuiltIn(strAttr.getValue());
       if (enumVal) {
         args.push_back(static_cast<uint32_t>(enumVal.getValue()));
@@ -243,7 +243,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RelaxedPrecision:
     // For unit attributes, the args list has no values so we do nothing
-    if (auto unitAttr = attr.second.dyn_cast<UnitAttr>())
+    if (auto unitAttr = attr.getValue().dyn_cast<UnitAttr>())
       break;
     return emitError(loc, "expected unit attribute for ") << attrName;
   default:

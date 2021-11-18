@@ -1,17 +1,17 @@
-// Verify ubsan doesn't emit checks for blacklisted functions and files
-// RUN: echo "fun:hash" > %t-func.blacklist
-// RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t-file.blacklist
+// Verify ubsan doesn't emit checks for ignorelisted functions and files
+// RUN: echo "fun:hash" > %t-func.ignorelist
+// RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t-file.ignorelist
 
 // RUN: rm -f %t-vfsoverlay.yaml
-// RUN: rm -f %t-nonexistent.blacklist
-// RUN: sed -e "s|@DIR@|%/T|g" %S/Inputs/sanitizer-blacklist-vfsoverlay.yaml | sed -e "s|@REAL_FILE@|%/t-func.blacklist|g" | sed -e "s|@NONEXISTENT_FILE@|%/t-nonexistent.blacklist|g" > %t-vfsoverlay.yaml
-// RUN: %clang_cc1 -fsanitize=unsigned-integer-overflow -ivfsoverlay %t-vfsoverlay.yaml -fsanitize-blacklist=%/T/only-virtual-file.blacklist -emit-llvm %s -o - | FileCheck %s --check-prefix=FUNC
+// RUN: rm -f %t-nonexistent.ignorelist
+// RUN: sed -e "s|@DIR@|%/T|g" %S/Inputs/sanitizer-ignorelist-vfsoverlay.yaml | sed -e "s|@REAL_FILE@|%/t-func.ignorelist|g" | sed -e "s|@NONEXISTENT_FILE@|%/t-nonexistent.ignorelist|g" > %t-vfsoverlay.yaml
+// RUN: %clang_cc1 -fsanitize=unsigned-integer-overflow -ivfsoverlay %t-vfsoverlay.yaml -fsanitize-ignorelist=%/T/only-virtual-file.ignorelist -emit-llvm %s -o - | FileCheck %s --check-prefix=FUNC
 
-// RUN: not %clang_cc1 -fsanitize=unsigned-integer-overflow -ivfsoverlay %t-vfsoverlay.yaml -fsanitize-blacklist=%/T/invalid-virtual-file.blacklist -emit-llvm %s -o - 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=INVALID-MAPPED-FILE
-// INVALID-MAPPED-FILE: invalid-virtual-file.blacklist': [[MSG]]
+// RUN: not %clang_cc1 -fsanitize=unsigned-integer-overflow -ivfsoverlay %t-vfsoverlay.yaml -fsanitize-ignorelist=%/T/invalid-virtual-file.ignorelist -emit-llvm %s -o - 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=INVALID-MAPPED-FILE
+// INVALID-MAPPED-FILE: invalid-virtual-file.ignorelist': [[MSG]]
 
-// RUN: not %clang_cc1 -fsanitize=unsigned-integer-overflow -ivfsoverlay %t-vfsoverlay.yaml -fsanitize-blacklist=%t-nonexistent.blacklist -emit-llvm %s -o - 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=INVALID
-// INVALID: nonexistent.blacklist': [[MSG]]
+// RUN: not %clang_cc1 -fsanitize=unsigned-integer-overflow -ivfsoverlay %t-vfsoverlay.yaml -fsanitize-ignorelist=%t-nonexistent.ignorelist -emit-llvm %s -o - 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=INVALID
+// INVALID: nonexistent.ignorelist': [[MSG]]
 
 unsigned i;
 
