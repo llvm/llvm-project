@@ -157,6 +157,10 @@ writing, the following sync-ups are organized:
      - Frequency
      - Calendar link
      - Minutes/docs link
+   * - Loop Optimization Working Group
+     - Every 2 weeks on Wednesday
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit>`__
    * - RISC-V
      - Every 2 weeks on Thursday
      - `ics <https://calendar.google.com/calendar/ical/lowrisc.org_0n5pkesfjcnp0bh5hps1p0bd80%40group.calendar.google.com/public/basic.ics>`__

@@ -431,6 +431,20 @@ func @extract_element(%arg0: vector<16xf32>) -> f32 {
 
 // -----
 
+func @extract_element_index(%arg0: vector<16xf32>) -> f32 {
+  %0 = arith.constant 15 : index
+  %1 = vector.extractelement %arg0[%0 : index]: vector<16xf32>
+  return %1 : f32
+}
+// CHECK-LABEL: @extract_element_index(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>)
+//       CHECK:   %[[c:.*]] = arith.constant 15 : index
+//       CHECK:   %[[i:.*]] = builtin.unrealized_conversion_cast %[[c]] : index to i64
+//       CHECK:   %[[x:.*]] = llvm.extractelement %[[A]][%[[i]] : i64] : vector<16xf32>
+//       CHECK:   return %[[x]] : f32
+
+// -----
+
 func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
   %0 = vector.extract %arg0[15]: vector<16xf32>
   return %0 : f32
@@ -498,6 +512,21 @@ func @insert_element(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
 // CHECK-SAME: %[[B:.*]]: vector<4xf32>)
 //       CHECK:   %[[c:.*]] = arith.constant 3 : i32
 //       CHECK:   %[[x:.*]] = llvm.insertelement %[[A]], %[[B]][%[[c]] : i32] : vector<4xf32>
+//       CHECK:   return %[[x]] : vector<4xf32>
+
+// -----
+
+func @insert_element_index(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
+  %0 = arith.constant 3 : index
+  %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<4xf32>
+  return %1 : vector<4xf32>
+}
+// CHECK-LABEL: @insert_element_index(
+//  CHECK-SAME: %[[A:.*]]: f32,
+//  CHECK-SAME: %[[B:.*]]: vector<4xf32>)
+//       CHECK:   %[[c:.*]] = arith.constant 3 : index
+//       CHECK:   %[[i:.*]] = builtin.unrealized_conversion_cast %[[c]] : index to i64
+//       CHECK:   %[[x:.*]] = llvm.insertelement %[[A]], %[[B]][%[[i]] : i64] : vector<4xf32>
 //       CHECK:   return %[[x]] : vector<4xf32>
 
 // -----

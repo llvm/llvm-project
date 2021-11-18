@@ -347,8 +347,9 @@ struct TwoDimMultiReductionToReduction
           loc, getElementTypeOrSelf(multiReductionOp.getDestType()),
           rewriter.getStringAttr(getKindStr(multiReductionOp.kind())), v,
           ValueRange{});
-      result = rewriter.create<vector::InsertElementOp>(loc, reducedValue,
-                                                        result, i);
+      result = rewriter.create<vector::InsertElementOp>(
+          loc, reducedValue, result,
+          rewriter.create<arith::ConstantIndexOp>(loc, i));
     }
     rewriter.replaceOp(multiReductionOp, result);
     return success();

@@ -68,7 +68,7 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _Rando
   const _D1 __len1 = __last1 - __first1;
   if (__len1 < __len2)
     return _VSTD::make_pair(__last1, __last1);
-  const _RandomAccessIterator1 __s = __last1 - (__len2 - 1); // Start of pattern match can't go beyond here
+  const _RandomAccessIterator1 __s = __last1 - _D1(__len2 - 1); // Start of pattern match can't go beyond here
 
   while (true) {
     while (true) {
@@ -83,7 +83,7 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _Rando
     _RandomAccessIterator2 __m2 = __first2;
     while (true) {
       if (++__m2 == __last2)
-        return _VSTD::make_pair(__first1, __first1 + __len2);
+        return _VSTD::make_pair(__first1, __first1 + _D1(__len2));
       ++__m1; // no need to check range on __m1 because __s guarantees we have enough source
       if (!__pred(*__m1, *__m2)) {
         ++__first1;

@@ -21,9 +21,9 @@
 
 
 # CHECK: DW_TAG_template_type_parameter
-# CHECK:   DW_AT_type (0x00000058 "t1")
+# CHECK:   DW_AT_type ({{.*}} "t1")
 # CHECK: DW_TAG_template_type_parameter
-# CHECK:   DW_AT_type (0x00000061 "t2")
+# CHECK:   DW_AT_type ({{.*}} "t2")
 
 	.text
 	.file	"test.cpp"
