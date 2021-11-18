@@ -500,7 +500,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
 
   for (Symbol &symbol : symbols)
     symtab.AddSymbol(std::move(symbol));
-  symtab.CalculateSymbolSizes();
+  symtab.Finalize();
 }
 
 llvm::Expected<lldb::addr_t>
@@ -927,4 +927,3 @@ uint64_t SymbolFileBreakpad::GetDebugInfoSize() {
   // Breakpad files are all debug info.
   return m_objfile_sp->GetByteSize();
 }
-

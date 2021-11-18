@@ -119,20 +119,13 @@ public:
       lldb::addr_t file_addr, std::function<bool(Symbol *)> const &callback);
   void FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
                            SymbolContextList &sc_list);
-  void CalculateSymbolSizes();
 
   void SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
                                 bool remove_duplicates) const;
 
   static void DumpSymbolHeader(Stream *s);
 
-  void Finalize() {
-    // Shrink to fit the symbols so we don't waste memory
-    if (m_symbols.capacity() > m_symbols.size()) {
-      collection new_symbols(m_symbols.begin(), m_symbols.end());
-      m_symbols.swap(new_symbols);
-    }
-  }
+  void Finalize();
 
   void AppendSymbolNamesToMap(const IndexCollection &indexes,
                               bool add_demangled, bool add_mangled,

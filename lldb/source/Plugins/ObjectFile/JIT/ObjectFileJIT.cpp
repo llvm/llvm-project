@@ -106,23 +106,10 @@ uint32_t ObjectFileJIT::GetAddressByteSize() const {
   return m_data.GetAddressByteSize();
 }
 
-Symtab *ObjectFileJIT::GetSymtab() {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_up == nullptr) {
-      ElapsedTime elapsed(module_sp->GetSymtabParseTime());
-      m_symtab_up = std::make_unique<Symtab>(this);
-      std::lock_guard<std::recursive_mutex> symtab_guard(
-          m_symtab_up->GetMutex());
-      ObjectFileJITDelegateSP delegate_sp(m_delegate_wp.lock());
-      if (delegate_sp)
-        delegate_sp->PopulateSymtab(this, *m_symtab_up);
-      // TODO: get symbols from delegate
-      m_symtab_up->Finalize();
-    }
-  }
-  return m_symtab_up.get();
+void ObjectFileJIT::ParseSymtab(Symtab &symtab) {
+  ObjectFileJITDelegateSP delegate_sp(m_delegate_wp.lock());
+  if (delegate_sp)
+    delegate_sp->PopulateSymtab(this, symtab);
 }
 
 bool ObjectFileJIT::IsStripped() {

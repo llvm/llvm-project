@@ -110,7 +110,7 @@ public:
 
   lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
 
-  lldb_private::Symtab *GetSymtab() override;
+  void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override;
 
@@ -123,7 +123,7 @@ public:
   lldb_private::UUID GetUUID() override;
 
   /// Return the contents of the .gnu_debuglink section, if the object file
-  /// contains it. 
+  /// contains it.
   llvm::Optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
@@ -278,8 +278,9 @@ private:
   /// number of dynamic symbols parsed.
   size_t ParseDynamicSymbols();
 
-  /// Populates m_symtab_up will all non-dynamic linker symbols.  This method
-  /// will parse the symbols only once.  Returns the number of symbols parsed.
+  /// Populates the symbol table with all non-dynamic linker symbols.  This
+  /// method will parse the symbols only once.  Returns the number of symbols
+  /// parsed.
   unsigned ParseSymbolTable(lldb_private::Symtab *symbol_table,
                             lldb::user_id_t start_id,
                             lldb_private::Section *symtab);
@@ -384,7 +385,7 @@ private:
                               lldb_private::UUID &uuid);
 
   bool AnySegmentHasPhysicalAddress();
-  
+
   /// Takes the .gnu_debugdata and returns the decompressed object file that is
   /// stored within that section.
   ///

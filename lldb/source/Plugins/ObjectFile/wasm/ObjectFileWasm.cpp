@@ -246,7 +246,7 @@ bool ObjectFileWasm::ParseHeader() {
   return true;
 }
 
-Symtab *ObjectFileWasm::GetSymtab() { return nullptr; }
+void ObjectFileWasm::ParseSymtab(Symtab &symtab) {}
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_")) {
