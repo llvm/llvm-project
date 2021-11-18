@@ -17,7 +17,7 @@ Section,Description,Dependencies,Assignee,Complete
 | *no-throw-input-range*
 | *no-throw-forward-iterator*
 | *no-throw-forward-range*","| [iterator.concepts]
-| [range.refinements]",Unassigned,Not started
+| [range.refinements]",Konstantin Varlamov,Not started
 `[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| ranges::uninitialized_default_construct
 | ranges::uninitialized_default_construct_n
 | ranges::uninitialized_value_construct
@@ -31,7 +31,7 @@ Section,Description,Dependencies,Assignee,Complete
 | ranges::construct_at
 | ranges::destroy
 | ranges::destroy_at
-| ranges::destroy_n",[special.mem.concepts],Unassigned,Not started
+| ranges::destroy_n",[special.mem.concepts],Konstantin Varlamov,Not started
 [strings],Adds begin/end and updates const_iterator.,[iterator.concepts],Unassigned,Not started
 [views.span],Same as [strings],[iterator.concepts],Unassigned,Not started
 `[iterator.cust.move] <http://wg21.link/iterator.cust.move>`_,`ranges::iter_move <https://llvm.org/D99873>`_,,Zoe Carver,✅
