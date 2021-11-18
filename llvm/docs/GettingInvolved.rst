@@ -225,7 +225,7 @@ This channel has several bots.
 * Buildbot reporters
 
   * llvmbb - Bot for the main LLVM buildbot master.
-    http://lab.llvm.org:8011/console
+    http://lab.llvm.org/buildbot/#/console
 
 * robot - Bugzilla linker. %bug <number>
 
