@@ -133,10 +133,10 @@ void Lexer::InitLexer(const char *BufStart, const char *BufPtr,
 /// assumes that the associated file buffer and Preprocessor objects will
 /// outlive it, so it doesn't take ownership of either of them.
 Lexer::Lexer(FileID FID, const llvm::MemoryBufferRef &InputFile,
-             Preprocessor &PP)
+             Preprocessor &PP, bool IsFirstIncludeOfFile)
     : PreprocessorLexer(&PP, FID),
       FileLoc(PP.getSourceManager().getLocForStartOfFile(FID)),
-      LangOpts(PP.getLangOpts()) {
+      LangOpts(PP.getLangOpts()), IsFirstTimeLexingFile(IsFirstIncludeOfFile) {
   InitLexer(InputFile.getBufferStart(), InputFile.getBufferStart(),
             InputFile.getBufferEnd());
 
@@ -147,8 +147,10 @@ Lexer::Lexer(FileID FID, const llvm::MemoryBufferRef &InputFile,
 /// suitable for calls to 'LexFromRawLexer'.  This lexer assumes that the text
 /// range will outlive it, so it doesn't take ownership of it.
 Lexer::Lexer(SourceLocation fileloc, const LangOptions &langOpts,
-             const char *BufStart, const char *BufPtr, const char *BufEnd)
-    : FileLoc(fileloc), LangOpts(langOpts) {
+             const char *BufStart, const char *BufPtr, const char *BufEnd,
+             bool IsFirstIncludeOfFile)
+    : FileLoc(fileloc), LangOpts(langOpts),
+      IsFirstTimeLexingFile(IsFirstIncludeOfFile) {
   InitLexer(BufStart, BufPtr, BufEnd);
 
   // We *are* in raw mode.
@@ -159,9 +161,11 @@ Lexer::Lexer(SourceLocation fileloc, const LangOptions &langOpts,
 /// suitable for calls to 'LexFromRawLexer'.  This lexer assumes that the text
 /// range will outlive it, so it doesn't take ownership of it.
 Lexer::Lexer(FileID FID, const llvm::MemoryBufferRef &FromFile,
-             const SourceManager &SM, const LangOptions &langOpts)
+             const SourceManager &SM, const LangOptions &langOpts,
+             bool IsFirstIncludeOfFile)
     : Lexer(SM.getLocForStartOfFile(FID), langOpts, FromFile.getBufferStart(),
-            FromFile.getBufferStart(), FromFile.getBufferEnd()) {}
+            FromFile.getBufferStart(), FromFile.getBufferEnd(),
+            IsFirstIncludeOfFile) {}
 
 void Lexer::resetExtendedTokenMode() {
   assert(PP && "Cannot reset token mode without a preprocessor");

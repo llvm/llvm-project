@@ -67,7 +67,8 @@ PreprocessorLexer *Preprocessor::getCurrentFileLexer() const {
 /// EnterSourceFile - Add a source file to the top of the include stack and
 /// start lexing tokens from it instead of the current buffer.
 bool Preprocessor::EnterSourceFile(FileID FID, const DirectoryLookup *CurDir,
-                                   SourceLocation Loc) {
+                                   SourceLocation Loc,
+                                   bool IsFirstIncludeOfFile) {
   assert(!CurTokenLexer && "Cannot #include a file inside a macro!");
   ++NumEnteredSourceFiles;
 
@@ -91,7 +92,8 @@ bool Preprocessor::EnterSourceFile(FileID FID, const DirectoryLookup *CurDir,
         CodeCompletionFileLoc.getLocWithOffset(CodeCompletionOffset);
   }
 
-  EnterSourceFileWithLexer(new Lexer(FID, *InputFile, *this), CurDir);
+  EnterSourceFileWithLexer(
+      new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile), CurDir);
   return false;
 }
 
@@ -377,7 +379,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, SourceLocation EndLoc,
               CurPPLexer->MIOpt.GetDefinedMacro()) {
           if (!isMacroDefined(ControllingMacro) &&
               DefinedMacro != ControllingMacro &&
-              HeaderInfo.FirstTimeLexingFile(FE)) {
+              CurLexer->isFirstTimeLexingFile()) {
 
             // If the edit distance between the two macros is more than 50%,
             // DefinedMacro may not be header guard, or can be header guard of
