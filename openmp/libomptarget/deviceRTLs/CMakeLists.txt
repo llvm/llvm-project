@@ -10,9 +10,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-if (OPENMP_ENABLE_LIBOMPTARGET_HSA)
-  add_subdirectory(amdgcn)
-endif()
+add_subdirectory(amdgcn)
 add_subdirectory(nvptx)
 # Currently device libm functions are created by clang headers.  These do not
 # work for FORTRAN. The libm here  builds a libm device library by turning on
