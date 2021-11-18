@@ -273,7 +273,15 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
           unsigned OpFlags = MI->getOperand(OpNo).getImm();
           ++OpNo; // Skip over the ID number.
 
-          if (InlineAsm::isMemKind(OpFlags)) {
+          // FIXME: Shouldn't arch-independent output template handling go into
+          // PrintAsmOperand?
+          // Labels are target independent.
+          if (MI->getOperand(OpNo).isBlockAddress()) {
+            const BlockAddress *BA = MI->getOperand(OpNo).getBlockAddress();
+            MCSymbol *Sym = AP->GetBlockAddressSymbol(BA);
+            Sym->print(OS, AP->MAI);
+            MMI->getContext().registerInlineAsmLabel(Sym);
+          } else if (InlineAsm::isMemKind(OpFlags)) {
             Error = AP->PrintAsmMemoryOperand(
                 MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
           } else {
