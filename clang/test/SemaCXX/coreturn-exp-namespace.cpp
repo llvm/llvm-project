@@ -83,7 +83,7 @@ struct std::experimental::coroutine_traits<float, T...> { using promise_type = p
 template <typename... T>
 struct std::experimental::coroutine_traits<int, T...> { using promise_type = promise_int; };
 
-void test0() { co_await a; }
+void test0() { co_await a; } // expected-warning {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
 float test1() { co_await a; }
 
 int test2() {

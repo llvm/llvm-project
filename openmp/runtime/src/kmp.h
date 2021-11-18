@@ -4274,6 +4274,15 @@ public:
       }
     }
   }
+  /// Instead of erroring out, return non-zero when
+  /// unsuccessful fopen() for any reason
+  int try_open(const char *filename, const char *mode) {
+    KMP_ASSERT(!f);
+    f = fopen(filename, mode);
+    if (!f)
+      return errno;
+    return 0;
+  }
   /// Set the FILE* object to stdout and output there
   /// No open call should happen before this call.
   void set_stdout() {

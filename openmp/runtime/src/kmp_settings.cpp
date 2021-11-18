@@ -3136,6 +3136,7 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
   }
 #if KMP_GROUP_AFFINITY
   else if (__kmp_str_match("group", 1, value)) {
+    KMP_WARNING(StgDeprecatedValue, name, value, "all");
     __kmp_affinity_top_method = affinity_top_method_group;
   }
 #endif /* KMP_GROUP_AFFINITY */
@@ -6029,65 +6030,27 @@ void __kmp_env_initialize(char const *string) {
       // Handle the Win 64 group affinity stuff if there are multiple
       // processor groups, or if the user requested it, and OMP 4.0
       // affinity is not in effect.
-      if (((__kmp_num_proc_groups > 1) &&
-           (__kmp_affinity_type == affinity_default) &&
-           (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default)) ||
-          (__kmp_affinity_top_method == affinity_top_method_group)) {
+      if (__kmp_num_proc_groups > 1 &&
+          __kmp_affinity_type == affinity_default &&
+          __kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
+        // Do not respect the initial processor affinity mask if it is assigned
+        // exactly one Windows Processor Group since this is interpreted as the
+        // default OS assignment. Not respecting the mask allows the runtime to
+        // use all the logical processors in all groups.
         if (__kmp_affinity_respect_mask == affinity_respect_mask_default &&
             exactly_one_group) {
           __kmp_affinity_respect_mask = FALSE;
         }
+        // Use compact affinity with anticipation of pinning to at least the
+        // group granularity since threads can only be bound to one group.
         if (__kmp_affinity_type == affinity_default) {
           __kmp_affinity_type = affinity_compact;
           __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
         }
-        if (__kmp_affinity_top_method == affinity_top_method_default) {
-          if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
-            __kmp_affinity_top_method = affinity_top_method_group;
-            __kmp_affinity_gran = KMP_HW_PROC_GROUP;
-          } else if (__kmp_affinity_gran == KMP_HW_PROC_GROUP) {
-            __kmp_affinity_top_method = affinity_top_method_group;
-          } else {
-            __kmp_affinity_top_method = affinity_top_method_all;
-          }
-        } else if (__kmp_affinity_top_method == affinity_top_method_group) {
-          if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
-            __kmp_affinity_gran = KMP_HW_PROC_GROUP;
-          } else if ((__kmp_affinity_gran != KMP_HW_PROC_GROUP) &&
-                     (__kmp_affinity_gran != KMP_HW_THREAD)) {
-            const char *str = __kmp_hw_get_keyword(__kmp_affinity_gran);
-            KMP_WARNING(AffGranTopGroup, var, str);
-            __kmp_affinity_gran = KMP_HW_THREAD;
-          }
-        } else {
-          if (__kmp_affinity_gran == KMP_HW_UNKNOWN) {
-            __kmp_affinity_gran = KMP_HW_CORE;
-          } else if (__kmp_affinity_gran == KMP_HW_PROC_GROUP) {
-            const char *str = NULL;
-            switch (__kmp_affinity_type) {
-            case affinity_physical:
-              str = "physical";
-              break;
-            case affinity_logical:
-              str = "logical";
-              break;
-            case affinity_compact:
-              str = "compact";
-              break;
-            case affinity_scatter:
-              str = "scatter";
-              break;
-            case affinity_explicit:
-              str = "explicit";
-              break;
-            // No MIC on windows, so no affinity_balanced case
-            default:
-              KMP_DEBUG_ASSERT(0);
-            }
-            KMP_WARNING(AffGranGroupType, var, str);
-            __kmp_affinity_gran = KMP_HW_CORE;
-          }
-        }
+        if (__kmp_affinity_top_method == affinity_top_method_default)
+          __kmp_affinity_top_method = affinity_top_method_all;
+        if (__kmp_affinity_gran == KMP_HW_UNKNOWN)
+          __kmp_affinity_gran = KMP_HW_PROC_GROUP;
       } else
 
 #endif /* KMP_GROUP_AFFINITY */

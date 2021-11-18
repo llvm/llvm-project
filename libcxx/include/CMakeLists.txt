@@ -283,6 +283,7 @@ set(files
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
+  __thread/poll_with_backoff.h
   __threading_support
   __tree
   __tuple

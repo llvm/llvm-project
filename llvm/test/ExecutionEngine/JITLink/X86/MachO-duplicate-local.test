@@ -1,0 +1,123 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec -show-graph %t | FileCheck %s
+
+# The below describes an object with two local symbols named _foo, each
+# referenced by _main to keep it live. Ensure we can link it.
+
+# CHECK: scope: local, live  -   _foo
+# CHECK: scope: local, live  -   _foo
+# CHECK: scope: default, live  -   _main
+# CHECK-NEXT: edges:
+# CHECK-NEXT:   target = _foo
+# CHECK-NEXT:   target = _foo
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      280
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          13
+    fileoff:         312
+    filesize:        13
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            13
+        offset:          0x138
+        align:           0
+        reloff:          0x145
+        nreloc:          2
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         9090E800000000E80000000090
+        relocations:
+          - address:         0x8
+            symbolnum:       1
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+          - address:         0x3
+            symbolnum:       0
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           786432
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          341
+    nsyms:           3
+    stroff:          389
+    strsize:         16
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      1
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         1
+    - n_strx:          6
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         2
+  StringTable:
+    - ''
+    - _foo
+    - _main
+    - ''
+    - ''
+    - ''
+    - ''

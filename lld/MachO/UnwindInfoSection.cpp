@@ -154,8 +154,8 @@ void UnwindInfoSection::prepareRelocations() {
   // entries to the GOT. Hence the use of a MapVector for
   // UnwindInfoSection::symbols.
   for (const Defined *d : make_second_range(symbols))
-    if (d->compactUnwind)
-      prepareRelocations(d->compactUnwind);
+    if (d->unwindEntry)
+      prepareRelocations(d->unwindEntry);
 }
 
 // Record function symbols that may need entries emitted in __unwind_info, which
@@ -169,7 +169,7 @@ void UnwindInfoSection::prepareRelocations() {
 // symbols for each unique address regardless of whether they have associated
 // unwind info.
 void UnwindInfoSection::addSymbol(const Defined *d) {
-  if (d->compactUnwind)
+  if (d->unwindEntry)
     allEntriesAreOmitted = false;
   // We don't yet know the final output address of this symbol, but we know that
   // they are uniquely determined by a combination of the isec and value, so
@@ -177,8 +177,8 @@ void UnwindInfoSection::addSymbol(const Defined *d) {
   auto p = symbols.insert({{d->isec, d->value}, d});
   // If we have multiple symbols at the same address, only one of them can have
   // an associated CUE.
-  if (!p.second && d->compactUnwind) {
-    assert(!p.first->second->compactUnwind);
+  if (!p.second && d->unwindEntry) {
+    assert(!p.first->second->unwindEntry);
     p.first->second = d;
   }
 }
@@ -202,11 +202,19 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     Reloc &r = isec->relocs[i];
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
 
+    // Functions and LSDA entries always reside in the same object file as the
+    // compact unwind entries that references them, and thus appear as section
+    // relocs. There is no need to prepare them. We only prepare relocs for
+    // personality functions.
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
         offsetof(CompactUnwindEntry<Ptr>, personality))
       continue;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
+      // Personality functions are nearly always system-defined (e.g.,
+      // ___gxx_personality_v0 for C++) and relocated as dylib symbols.  When an
+      // application provides its own personality function, it might be
+      // referenced by an extern Defined symbol reloc, or a local section reloc.
       if (auto *defined = dyn_cast<Defined>(s)) {
         // XXX(vyng) This is a a special case for handling duplicate personality
         // symbols. Note that LD64's behavior is a bit different and it is
@@ -291,13 +299,13 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
     const Defined *d = symbolsVec[i].second;
     // Write the functionAddress.
     writeAddress(buf, d->getVA(), sizeof(Ptr) == 8 ? 3 : 2);
-    if (!d->compactUnwind)
+    if (!d->unwindEntry)
       return;
 
     // Write the rest of the CUE.
-    memcpy(buf + sizeof(Ptr), d->compactUnwind->data.data(),
-           d->compactUnwind->data.size());
-    for (const Reloc &r : d->compactUnwind->relocs) {
+    memcpy(buf + sizeof(Ptr), d->unwindEntry->data.data(),
+           d->unwindEntry->data.size());
+    for (const Reloc &r : d->unwindEntry->relocs) {
       uint64_t referentVA = 0;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
@@ -432,9 +440,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
       // So we check their relocations instead.
       // FIXME: should we account for an LSDA at an absolute address? ld64 seems
       // to support it, but it seems unlikely to be used in practice.
-      Reloc *lsda1 =
-          findLsdaReloc(symbolsVec[*foldBegin].second->compactUnwind);
-      Reloc *lsda2 = findLsdaReloc(symbolsVec[*foldEnd].second->compactUnwind);
+      Reloc *lsda1 = findLsdaReloc(symbolsVec[*foldBegin].second->unwindEntry);
+      Reloc *lsda2 = findLsdaReloc(symbolsVec[*foldEnd].second->unwindEntry);
       if (lsda1 == nullptr && lsda2 == nullptr)
         continue;
       if (lsda1 == nullptr || lsda2 == nullptr)
@@ -536,7 +543,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
   for (size_t idx : cuIndices) {
     lsdaIndex[idx] = entriesWithLsda.size();
-    if (findLsdaReloc(symbolsVec[idx].second->compactUnwind))
+    const Defined *d = symbolsVec[idx].second;
+    if (findLsdaReloc(d->unwindEntry))
       entriesWithLsda.push_back(idx);
   }
 
@@ -614,7 +622,7 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
   for (size_t idx : entriesWithLsda) {
     const CompactUnwindEntry<Ptr> &cu = cuEntries[idx];
     const Defined *d = symbolsVec[idx].second;
-    if (Reloc *r = findLsdaReloc(d->compactUnwind)) {
+    if (Reloc *r = findLsdaReloc(d->unwindEntry)) {
       uint64_t va;
       if (auto *isec = r->referent.dyn_cast<InputSection *>()) {
         va = isec->getVA(r->addend);

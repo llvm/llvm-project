@@ -693,12 +693,6 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     : SM(SM), LangOpts(LangOpts), Diags(Diags),
       ThisTokBegin(TokSpelling.begin()), ThisTokEnd(TokSpelling.end()) {
 
-  // This routine assumes that the range begin/end matches the regex for integer
-  // and FP constants (specifically, the 'pp-number' regex), and assumes that
-  // the byte at "*end" is both valid and not part of the regex.  Because of
-  // this, it doesn't have to check for 'overscan' in various places.
-  assert(!isPreprocessingNumberBody(*ThisTokEnd) && "didn't maximally munch?");
-
   s = DigitsBegin = ThisTokBegin;
   saw_exponent = false;
   saw_period = false;
@@ -717,6 +711,16 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isFract = false;
   isAccum = false;
   hadError = false;
+
+  // This routine assumes that the range begin/end matches the regex for integer
+  // and FP constants (specifically, the 'pp-number' regex), and assumes that
+  // the byte at "*end" is both valid and not part of the regex.  Because of
+  // this, it doesn't have to check for 'overscan' in various places.
+  if (isPreprocessingNumberBody(*ThisTokEnd)) {
+    Diags.Report(TokLoc, diag::err_lexing_numeric);
+    hadError = true;
+    return;
+  }
 
   if (*s == '0') { // parse radix
     ParseNumberStartingWithZero(TokLoc);
@@ -1432,7 +1436,12 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
     ++begin;
 
   // Skip over the entry quote.
-  assert(begin[0] == '\'' && "Invalid token lexed");
+  if (begin[0] != '\'') {
+    PP.Diag(Loc, diag::err_lexing_char);
+    HadError = true;
+    return;
+  }
+
   ++begin;
 
   // Remove an optional ud-suffix.

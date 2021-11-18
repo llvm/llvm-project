@@ -641,7 +641,7 @@ bool AArch64SIMDInstrOpt::processSeqRegInst(MachineInstr *DefiningMI,
     StReg[i]     = DefiningMI->getOperand(2*i+1).getReg();
     StRegKill[i] = getKillRegState(DefiningMI->getOperand(2*i+1).isKill());
 
-    // Sanity check for the other arguments.
+    // Validation check for the other arguments.
     if (DefiningMI->getOperand(2*i+2).isImm()) {
       switch (DefiningMI->getOperand(2*i+2).getImm()) {
       default:

@@ -6,9 +6,12 @@
 
 int f() {
 // CHECK-INTEL: -x86-asm-syntax=intel
+// CHECK-INTEL: -inline-asm=intel
 // CHECK-ATT: -x86-asm-syntax=att
+// CHECK-ATT: -inline-asm=att
 // CHECK-SOMEREQUIRED: error: unsupported argument 'somerequired' to option 'masm='
 // CHECK-ARM: warning: argument unused during compilation: '-masm=intel'
 // CHECK-CL: -x86-asm-syntax=intel
+// CHECK-CL-NOT: -inline-asm=intel
   return 0;
 }

@@ -16611,10 +16611,8 @@ void Sema::RefersToMemberWithReducedAlignment(
 
   // Synthesize offset of the whole access.
   CharUnits Offset;
-  for (auto I = ReverseMemberChain.rbegin(); I != ReverseMemberChain.rend();
-       I++) {
-    Offset += Context.toCharUnitsFromBits(Context.getFieldOffset(*I));
-  }
+  for (const FieldDecl *FD : llvm::reverse(ReverseMemberChain))
+    Offset += Context.toCharUnitsFromBits(Context.getFieldOffset(FD));
 
   // Compute the CompleteObjectAlignment as the alignment of the whole chain.
   CharUnits CompleteObjectAlignment = Context.getTypeAlignInChars(

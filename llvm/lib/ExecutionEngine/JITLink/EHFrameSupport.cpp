@@ -299,7 +299,7 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
     if (auto Err = RecordReader.skip(PC.G.getPointerSize()))
       return Err;
 
-  // Read and sanity check the code alignment factor.
+  // Read and validate the code alignment factor.
   {
     uint64_t CodeAlignmentFactor = 0;
     if (auto Err = RecordReader.readULEB128(CodeAlignmentFactor))
@@ -310,7 +310,7 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
                                       " (expected 1)");
   }
 
-  // Read and sanity check the data alignment factor.
+  // Read and validate the data alignment factor.
   {
     int64_t DataAlignmentFactor = 0;
     if (auto Err = RecordReader.readSLEB128(DataAlignmentFactor))

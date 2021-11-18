@@ -54,8 +54,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   unsigned ptr = 0;
   unsigned ind = 0;
   for (const NamedAttribute &attr : dict) {
-    if (attr.first == "dimLevelType") {
-      auto arrayAttr = attr.second.dyn_cast<ArrayAttr>();
+    if (attr.getName() == "dimLevelType") {
+      auto arrayAttr = attr.getValue().dyn_cast<ArrayAttr>();
       if (!arrayAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an array for dimension level types");
@@ -82,24 +82,24 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
           return {};
         }
       }
-    } else if (attr.first == "dimOrdering") {
-      auto affineAttr = attr.second.dyn_cast<AffineMapAttr>();
+    } else if (attr.getName() == "dimOrdering") {
+      auto affineAttr = attr.getValue().dyn_cast<AffineMapAttr>();
       if (!affineAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an affine map for dimension ordering");
         return {};
       }
       map = affineAttr.getValue();
-    } else if (attr.first == "pointerBitWidth") {
-      auto intAttr = attr.second.dyn_cast<IntegerAttr>();
+    } else if (attr.getName() == "pointerBitWidth") {
+      auto intAttr = attr.getValue().dyn_cast<IntegerAttr>();
       if (!intAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an integral pointer bitwidth");
         return {};
       }
       ptr = intAttr.getInt();
-    } else if (attr.first == "indexBitWidth") {
-      auto intAttr = attr.second.dyn_cast<IntegerAttr>();
+    } else if (attr.getName() == "indexBitWidth") {
+      auto intAttr = attr.getValue().dyn_cast<IntegerAttr>();
       if (!intAttr) {
         parser.emitError(parser.getNameLoc(),
                          "expected an integral index bitwidth");
@@ -108,7 +108,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       ind = intAttr.getInt();
     } else {
       parser.emitError(parser.getNameLoc(), "unexpected key: ")
-          << attr.first.str();
+          << attr.getName().strref();
       return {};
     }
   }

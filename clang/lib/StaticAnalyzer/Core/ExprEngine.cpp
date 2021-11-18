@@ -393,8 +393,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   SVal BaseReg = Reg;
 
   // Make the necessary adjustments to obtain the sub-object.
-  for (auto I = Adjustments.rbegin(), E = Adjustments.rend(); I != E; ++I) {
-    const SubobjectAdjustment &Adj = *I;
+  for (const SubobjectAdjustment &Adj : llvm::reverse(Adjustments)) {
     switch (Adj.Kind) {
     case SubobjectAdjustment::DerivedToBaseAdjustment:
       Reg = StoreMgr.evalDerivedToBase(Reg, Adj.DerivedToBase.BasePath);

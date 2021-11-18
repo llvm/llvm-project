@@ -110,10 +110,6 @@ bool ToolChain::useRelaxRelocations() const {
   return ENABLE_X86_RELAX_RELOCATIONS;
 }
 
-bool ToolChain::isNoExecStackDefault() const {
-    return false;
-}
-
 SanitizerArgs
 ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);

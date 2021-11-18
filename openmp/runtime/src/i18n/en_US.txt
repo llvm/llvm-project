@@ -469,6 +469,8 @@ AffHWSubsetNotExistGeneric   "KMP_HW_SUBSET ignored: %1$s: level not detected in
 AffHWSubsetEqvLayers         "KMP_HW_SUBSET ignored: %1$s, %2$s: layers are equivalent, please only specify one."
 AffHWSubsetOutOfOrder        "KMP_HW_SUBSET ignored: %1$s layer should come after %2$s."
 AffEqualTopologyTypes        "%1$s: topology layer \"%2$s\" is equivalent to \"%3$s\"."
+AffGranTooCoarseProcGroup    "%1$s: granularity=%2$s is too coarse, setting granularity=group."
+StgDeprecatedValue           "%1$s: \"%2$s\" value is deprecated. Please use \"%3$s\" instead."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

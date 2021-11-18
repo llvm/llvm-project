@@ -67,7 +67,7 @@ LLVM_READONLY
 static bool opMustUseVOP3Encoding(const MachineInstr &MI,
                                   const MachineRegisterInfo &MRI) {
   return MI.getNumOperands() >
-             (MI.getOpcode() == AMDGPU::G_INTRINSIC ? 4 : 3) ||
+             (MI.getOpcode() == AMDGPU::G_INTRINSIC ? 4u : 3u) ||
          MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits() == 64;
 }
 
