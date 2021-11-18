@@ -60,9 +60,9 @@ func @bar_select_type(%arg : !fir.box<!fir.type<derived3{f:f32}>>) -> i32 {
   %2 = arith.constant 3 : i32
 
   // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
-  fir.select_type %arg : !fir.box<!fir.type<derived3{f:f32}>> [ 
-    #fir.instance<!fir.int<4>>,^bb1(%0:i32), 
-    #fir.instance<!fir.int<8>>,^bb2(%2:i32), 
+  fir.select_type %arg : !fir.box<!fir.type<derived3{f:f32}>> [
+    #fir.instance<!fir.int<4>>,^bb1(%0:i32),
+    #fir.instance<!fir.int<8>>,^bb2(%2:i32),
     unit,^bb5 ]
 ^bb1(%a : i32) :
   return %a : i32
@@ -148,3 +148,35 @@ func @shape_shift_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: 
   %1 = fir.array_coor %arg0(%0) %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<f32>
   return
 }
+
+// -----
+
+// Test that the type `fir.boxproc` fails to be legalized.
+// Not implemented yet.
+
+// expected-error@+1{{failed to legalize operation 'builtin.func'}}
+func private @foo0(%arg0: !fir.boxproc<() -> ()>)
+
+// -----
+
+// Test that `fir.emboxproc` fails to be legalized.
+// Not implemented yet.
+
+func private @method_impl(i32)
+
+func @emboxproc_test() {
+  %host_vars = fir.alloca tuple<i32,f64>
+// expected-error@+1{{failed to legalize operation 'fir.emboxproc'}}
+  %bproc = fir.emboxproc @method_impl, %host_vars : ((i32) -> (), !fir.ref<tuple<i32,f64>>) -> !fir.boxproc<(i32) -> ()>
+  return
+}
+
+// Test that `fir.unboxproc` and `fir.boxproc_host` also fails to be legalized.
+// At the moment these cannot be tested since the `fir.boxproc` type does not have a conversion.
+
+// -----
+
+// Test `fir.end` conversion failure. Not implemented yet.
+
+// expected-error@+1{{failed to legalize operation 'fir.end'}}
+"fir.end"() : () -> ()
