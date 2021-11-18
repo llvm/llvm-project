@@ -510,7 +510,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
                                       ::mlir::Type type) const {{
   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
   ::llvm::StringRef attrTag;
-  if (failed(parser.parseKeyword(&attrTag)))
+  if (::mlir::failed(parser.parseKeyword(&attrTag)))
     return {{};
   {{
     ::mlir::Attribute attr;
@@ -525,7 +525,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
 /// Print an attribute registered to this dialect.
 void {0}::printAttribute(::mlir::Attribute attr,
                          ::mlir::DialectAsmPrinter &printer) const {{
-  if (succeeded(generatedAttributePrinter(attr, printer)))
+  if (::mlir::succeeded(generatedAttributePrinter(attr, printer)))
     return;
 }
 )";
@@ -535,13 +535,12 @@ void {0}::printAttribute(::mlir::Attribute attr,
 static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 /// Parse a type registered to this dialect.
 ::mlir::Type {0}::parseType(::mlir::DialectAsmParser &parser) const {{
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  StringRef mnemonic;
+  ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  ::llvm::StringRef mnemonic;
   if (parser.parseKeyword(&mnemonic))
-    return Type();
-  Type genType;
-  OptionalParseResult parseResult =
-      generatedTypeParser(parser, mnemonic, genType);
+    return ::mlir::Type();
+  ::mlir::Type genType;
+  auto parseResult = generatedTypeParser(parser, mnemonic, genType);
   if (parseResult.hasValue())
     return genType;
   parser.emitError(typeLoc) << "unknown  type `"
@@ -551,7 +550,7 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 /// Print a type registered to this dialect.
 void {0}::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {{
-  if (succeeded(generatedTypePrinter(type, printer)))
+  if (::mlir::succeeded(generatedTypePrinter(type, printer)))
     return;
 }
 )";
@@ -1040,17 +1039,22 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
          << "::" << def.getCppClassName() << ")\n";
   }
 
-  // Emit the default parser/printer for Attributes if the dialect asked for it.
+  Dialect firstDialect = defs.front().getDialect();
+  // Emit the default parser/printer for Attributes if the dialect asked for
+  // it.
   if (valueType == "Attribute" &&
-      defs.front().getDialect().useDefaultAttributePrinterParser())
+      firstDialect.useDefaultAttributePrinterParser()) {
+    NamespaceEmitter nsEmitter(os, firstDialect);
     os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
-                        defs.front().getDialect().getCppClassName());
+                        firstDialect.getCppClassName());
+  }
 
   // Emit the default parser/printer for Types if the dialect asked for it.
-  if (valueType == "Type" &&
-      defs.front().getDialect().useDefaultTypePrinterParser())
+  if (valueType == "Type" && firstDialect.useDefaultTypePrinterParser()) {
+    NamespaceEmitter nsEmitter(os, firstDialect);
     os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
-                        defs.front().getDialect().getCppClassName());
+                        firstDialect.getCppClassName());
+  }
 
   return false;
 }
