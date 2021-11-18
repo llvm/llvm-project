@@ -50,8 +50,7 @@ struct MyForLoopArrayAwaiter {
 };
 MyForLoopArrayAwaiter g() {
   int arr[10] = {0};
-  for
-    co_await(auto i : arr) {}
+  for co_await (auto i : arr) {} // expected-warning {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
   // expected-error@-1 {{call to deleted member function 'await_transform'}}
   // expected-note@-2 {{'await_transform' implicitly required by 'co_await' here}}
 }
@@ -73,16 +72,14 @@ struct ForLoopAwaiterBadBeginTransform {
 };
 ForLoopAwaiterBadBeginTransform bad_begin() {
   Range<int> R;
-  for
-    co_await(auto i : R) {}
+  for co_await (auto i : R) {}
   // expected-error@-1 {{call to deleted member function 'await_transform'}}
   // expected-note@-2 {{'await_transform' implicitly required by 'co_await' here}}
 }
 template <class Dummy>
 ForLoopAwaiterBadBeginTransform bad_begin_template(Dummy) {
   Range<Dummy> R;
-  for
-    co_await(auto i : R) {}
+  for co_await (auto i : R) {}
   // expected-error@-1 {{call to deleted member function 'await_transform'}}
   // expected-note@-2 {{'await_transform' implicitly required by 'co_await' here}}
 }
@@ -109,8 +106,7 @@ struct ForLoopAwaiterBadIncTransform {
 };
 ForLoopAwaiterBadIncTransform bad_inc_transform() {
   Range<float> R;
-  for
-    co_await(auto i : R) {}
+  for co_await (auto i : R) {}
   // expected-error@-1 {{overload resolution selected deleted operator 'co_await'}}
   // expected-note@-2 {{in implicit call to 'operator++' for iterator of type 'Range<float>'}}
 }
@@ -118,8 +114,7 @@ ForLoopAwaiterBadIncTransform bad_inc_transform() {
 template <class Dummy>
 ForLoopAwaiterBadIncTransform bad_inc_transform_template(Dummy) {
   Range<Dummy> R;
-  for
-    co_await(auto i : R) {}
+  for co_await (auto i : R) {}
   // expected-error@-1 {{overload resolution selected deleted operator 'co_await'}}
   // expected-note@-2 {{in implicit call to 'operator++' for iterator of type 'Range<long>'}}
 }
@@ -130,8 +125,7 @@ template ForLoopAwaiterBadIncTransform bad_inc_transform_template(long); // expe
 template <class T>
 constexpr void never_instant(T) {
   static_assert(sizeof(T) != sizeof(T), "function should not be instantiated");
-  for
-    co_await(auto i : foo(T{})) {}
+  for co_await (auto i : foo(T{})) {}
   // expected-error@-1 {{'co_await' cannot be used in a constexpr function}}
 }
 
@@ -155,8 +149,7 @@ using NS::ForLoopAwaiterCoawaitLookup;
 template <class T>
 ForLoopAwaiterCoawaitLookup test_coawait_lookup(T) {
   Range<T> R;
-  for
-    co_await(auto i : R) {}
+  for co_await (auto i : R) {}
   // expected-error@-1 {{no member named 'await_ready' in 'CoawaitTag<Iter<int>, false>'}}
 }
 template ForLoopAwaiterCoawaitLookup test_coawait_lookup(int); // expected-note {{requested here}}

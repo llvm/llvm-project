@@ -62,7 +62,7 @@ struct task {
 
 task<NoCopyNoMove> local2val() {
   NoCopyNoMove value;
-  co_return value;
+  co_return value; // expected-warning {{Please move from std::experimental::coroutine_traits to std::coroutine_traits}}
 }
 
 task<NoCopyNoMove &> local2ref() {

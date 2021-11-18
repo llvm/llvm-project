@@ -1,4 +1,4 @@
-// This file is to test the mixed use of `std::experimental::coroutine*` and `std::coroutine*`
+// This file is to test the mixed use of `std::experimental::coroutine_traits` and `std::coroutine_traits`
 // which is similar to coroutine-mixed-exp-namesapce. This file tests the relative order of
 // included header wouldn't affect the diagnostic messages.
 // RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
