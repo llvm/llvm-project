@@ -6,8 +6,8 @@
 // RUN: %clang -### %s -mieee-fp -S 2>&1 | FileCheck --check-prefix=IEEE %s
 // IEEE-NOT: error: unknown argument
 
-// RUN: %clang -### %s -mskip-rax-setup -S 2>&1 | FileCheck --check-prefix=SRS %s
+// RUN: %clang -target i386-unknown-unknown -### %s -mskip-rax-setup -S 2>&1 | FileCheck --check-prefix=SRS %s
 // SRS: "-mskip-rax-setup"
 
-// RUN: %clang -### %s -mno-skip-rax-setup -S 2>&1 | FileCheck --check-prefix=NO-SRS %s
+// RUN: %clang -target i386-unknown-unknown -### %s -mno-skip-rax-setup -S 2>&1 | FileCheck --check-prefix=NO-SRS %s
 // NO-SRS-NOT: "-mskip-rax-setup"
