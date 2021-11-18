@@ -296,9 +296,8 @@ static void setMemoryPhiValueForBlock(MemoryPhi *MP, const BasicBlock *BB,
   assert(i != -1 && "Should have found the basic block in the phi");
   // We can't just compare i against getNumOperands since one is signed and the
   // other not. So use it to index into the block iterator.
-  for (auto BBIter = MP->block_begin() + i; BBIter != MP->block_end();
-       ++BBIter) {
-    if (*BBIter != BB)
+  for (const BasicBlock *BlockBB : llvm::drop_begin(MP->blocks(), i)) {
+    if (BlockBB != BB)
       break;
     MP->setIncomingValue(i, NewDef);
     ++i;

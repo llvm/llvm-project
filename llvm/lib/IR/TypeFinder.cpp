@@ -106,11 +106,9 @@ void TypeFinder::incorporateType(Type *Ty) {
         StructTypes.push_back(STy);
 
     // Add all unvisited subtypes to worklist for processing
-    for (Type::subtype_reverse_iterator I = Ty->subtype_rbegin(),
-                                        E = Ty->subtype_rend();
-         I != E; ++I)
-      if (VisitedTypes.insert(*I).second)
-        TypeWorklist.push_back(*I);
+    for (Type *SubTy : llvm::reverse(Ty->subtypes()))
+      if (VisitedTypes.insert(SubTy).second)
+        TypeWorklist.push_back(SubTy);
   } while (!TypeWorklist.empty());
 }
 
