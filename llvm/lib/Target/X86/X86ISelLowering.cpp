@@ -2371,6 +2371,11 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (VT == MVT::v3f16 && Subtarget.hasFP16())
     return MVT::v8f16;
 
+  // We will use more GPRs for f64 and f80 on 32 bits when x87 is disabled.
+  if ((VT == MVT::f64 || VT == MVT::f80) && !Subtarget.is64Bit() &&
+      !Subtarget.hasX87())
+    return MVT::i32;
+
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -2393,6 +2398,15 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
   // So its default register number is 3. We override the number to 1 here.
   if (VT == MVT::v3f16 && Subtarget.hasFP16())
     return 1;
+
+  // We have to split f64 to 2 registers and f80 to 3 registers on 32 bits if
+  // x87 is disabled.
+  if (!Subtarget.is64Bit() && !Subtarget.hasX87()) {
+    if (VT == MVT::f64)
+      return 2;
+    if (VT == MVT::f80)
+      return 3;
+  }
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
