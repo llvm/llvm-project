@@ -34,7 +34,7 @@ define void @test_trip_multiple_4_icmp_ops_swapped(i32 %num) {
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK:       Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
