@@ -872,6 +872,28 @@ struct ScoredSignature {
   SignatureQualitySignals Quality;
 };
 
+// Returns the index of the parameter matching argument number "Arg.
+// This is usually just "Arg", except for variadic functions/templates, where
+// "Arg" might be higher than the number of parameters. When that happens, we
+// assume the last parameter is variadic and assume all further args are
+// part of it.
+int paramIndexForArg(const CodeCompleteConsumer::OverloadCandidate &Candidate,
+                     int Arg) {
+  int NumParams = 0;
+  if (const auto *F = Candidate.getFunction()) {
+    NumParams = F->getNumParams();
+    if (F->isVariadic())
+      ++NumParams;
+  } else if (auto *T = Candidate.getFunctionType()) {
+    if (auto *Proto = T->getAs<FunctionProtoType>()) {
+      NumParams = Proto->getNumParams();
+      if (Proto->isVariadic())
+        ++NumParams;
+    }
+  }
+  return std::min(Arg, std::max(NumParams - 1, 0));
+}
+
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 public:
   SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
@@ -902,7 +924,9 @@ public:
     SigHelp.activeSignature = 0;
     assert(CurrentArg <= (unsigned)std::numeric_limits<int>::max() &&
            "too many arguments");
+
     SigHelp.activeParameter = static_cast<int>(CurrentArg);
+
     for (unsigned I = 0; I < NumCandidates; ++I) {
       OverloadCandidate Candidate = Candidates[I];
       // We want to avoid showing instantiated signatures, because they may be
@@ -911,6 +935,14 @@ public:
       if (auto *Func = Candidate.getFunction()) {
         if (auto *Pattern = Func->getTemplateInstantiationPattern())
           Candidate = OverloadCandidate(Pattern);
+      }
+      if (static_cast<int>(I) == SigHelp.activeSignature) {
+        // The activeParameter in LSP relates to the activeSignature. There is
+        // another, per-signature field, but we currently do not use it and not
+        // all clients might support it.
+        // FIXME: Add support for per-signature activeParameter field.
+        SigHelp.activeParameter =
+            paramIndexForArg(Candidate, SigHelp.activeParameter);
       }
 
       const auto *CCS = Candidate.CreateSignatureString(
