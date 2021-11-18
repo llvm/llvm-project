@@ -9,7 +9,9 @@
 #ifndef SANITIZER_DENSE_MAP_INFO_H
 #define SANITIZER_DENSE_MAP_INFO_H
 
+#include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_type_traits.h"
 
 namespace __sanitizer {
 
@@ -17,7 +19,7 @@ namespace detail {
 
 /// Simplistic combination of 32-bit hash values into 32-bit hash values.
 static inline unsigned combineHashValue(unsigned a, unsigned b) {
-  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
+  u64 key = (u64)a << 32 | (u64)b;
   key += ~(key << 32);
   key ^= (key >> 22);
   key += ~(key << 13);
@@ -28,6 +30,31 @@ static inline unsigned combineHashValue(unsigned a, unsigned b) {
   key ^= (key >> 31);
   return (unsigned)key;
 }
+
+// We extend a pair to allow users to override the bucket type with their own
+// implementation without requiring two members.
+template <typename KeyT, typename ValueT>
+struct DenseMapPair {
+  KeyT first = {};
+  ValueT second = {};
+  DenseMapPair() = default;
+  DenseMapPair(const KeyT &f, const ValueT &s) : first(f), second(s) {}
+
+  template <typename KeyT2, typename ValueT2>
+  DenseMapPair(KeyT2 &&f, ValueT2 &&s)
+      : first(__sanitizer::forward<KeyT2>(f)),
+        second(__sanitizer::forward<ValueT2>(s)) {}
+
+  DenseMapPair(const DenseMapPair &other) = default;
+  DenseMapPair &operator=(const DenseMapPair &other) = default;
+  DenseMapPair(DenseMapPair &&other) = default;
+  DenseMapPair &operator=(DenseMapPair &&other) = default;
+
+  KeyT &getFirst() { return first; }
+  const KeyT &getFirst() const { return first; }
+  ValueT &getSecond() { return second; }
+  const ValueT &getSecond() const { return second; }
+};
 
 }  // end namespace detail
 
@@ -50,23 +77,22 @@ struct DenseMapInfo<T *> {
   // static_assert(alignof(T) <= (1 << Log2MaxAlign),
   //               "DenseMap does not support pointer keys requiring more than "
   //               "Log2MaxAlign bits of alignment");
-  static constexpr uintptr_t Log2MaxAlign = 12;
+  static constexpr uptr Log2MaxAlign = 12;
 
   static inline T *getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
+    uptr Val = static_cast<uptr>(-1);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T *>(Val);
   }
 
   static inline T *getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
+    uptr Val = static_cast<uptr>(-2);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T *>(Val);
   }
 
   static unsigned getHashValue(const T *PtrVal) {
-    return (unsigned((uintptr_t)PtrVal) >> 4) ^
-           (unsigned((uintptr_t)PtrVal) >> 9);
+    return (unsigned((uptr)PtrVal) >> 4) ^ (unsigned((uptr)PtrVal) >> 9);
   }
 
   static bool isEqual(const T *LHS, const T *RHS) { return LHS == RHS; }
@@ -203,18 +229,19 @@ struct DenseMapInfo<long long> {
 
 // Provide DenseMapInfo for all pairs whose members have info.
 template <typename T, typename U>
-struct DenseMapInfo<std::pair<T, U>> {
-  using Pair = std::pair<T, U>;
+struct DenseMapInfo<detail::DenseMapPair<T, U>> {
+  using Pair = detail::DenseMapPair<T, U>;
   using FirstInfo = DenseMapInfo<T>;
   using SecondInfo = DenseMapInfo<U>;
 
   static inline Pair getEmptyKey() {
-    return std::make_pair(FirstInfo::getEmptyKey(), SecondInfo::getEmptyKey());
+    return detail::DenseMapPair<T, U>(FirstInfo::getEmptyKey(),
+                                      SecondInfo::getEmptyKey());
   }
 
   static inline Pair getTombstoneKey() {
-    return std::make_pair(FirstInfo::getTombstoneKey(),
-                          SecondInfo::getTombstoneKey());
+    return detail::DenseMapPair<T, U>(FirstInfo::getTombstoneKey(),
+                                      SecondInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const Pair &PairVal) {
